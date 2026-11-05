@@ -195,15 +195,17 @@ export function getCurrentElementalFury(
   )
     return undefined
 
+  const option = (reference: NormalizedChoiceOptionReference) => {
+    const target = optionTarget(reference)
+    const feature = target && currentFeature(catalogs, target)
+    return feature && Array.isArray(feature.entries) && feature.entries.length > 0
+      ? feature
+      : undefined
+  }
   return {
     rootIntro: entries[0],
-    option(option: NormalizedChoiceOptionReference) {
-      const target = optionTarget(option)
-      const feature = target && currentFeature(catalogs, target)
-      return feature && Array.isArray(feature.entries) && feature.entries.length > 0
-        ? feature
-        : undefined
-    },
+    option,
+    hasAvailableOption: choice.options.some(option),
     improvementFor(option: NormalizedChoiceOptionReference) {
       const upgrade = currentGain(catalogs, druid, IMPROVED_ELEMENTAL_FURY_TARGET)?.entries
       const group = record(upgrade?.[1])

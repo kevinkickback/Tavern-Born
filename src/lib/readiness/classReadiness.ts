@@ -5,11 +5,6 @@ import { CLASS_ORDERS, PRIMAL_ORDER } from '@/lib/5etools/classOrderIdentity'
 import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
-import {
-  ELEMENTAL_FURY_ID,
-  ELEMENTAL_FURY_LEVEL,
-  ELEMENTAL_FURY_NAME,
-} from '@/lib/5etools/elementalFurySource'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -249,26 +244,6 @@ export function validateClassChoices(
         entry.source.trim().toLowerCase() === 'xphb',
     )
     const choices = getCharacterClassChoices(classData, subclassData, activity, catalogs)
-    if (
-      entry.name.trim().toLowerCase() === 'druid' &&
-      entry.source.trim().toLowerCase() === 'xphb' &&
-      entry.levels >= ELEMENTAL_FURY_LEVEL &&
-      calculation.classChoices.catalogs &&
-      !choices.some((choice) => choice.id === ELEMENTAL_FURY_ID) &&
-      !featureOptionStates.some(
-        (state) => state.projectedBranch && state.selection.choiceId === ELEMENTAL_FURY_ID,
-      )
-    )
-      issues.push(
-        readinessIssue(
-          classChoiceReadinessId(ELEMENTAL_FURY_ID),
-          'blocking',
-          'class',
-          `Review ${ELEMENTAL_FURY_NAME}`,
-          `Restore the exact ${ELEMENTAL_FURY_NAME} source to make this required choice.`,
-          classChoiceTarget(entry, ELEMENTAL_FURY_LEVEL, ELEMENTAL_FURY_ID),
-        ),
-      )
     const orderNeedsRecovery =
       order &&
       character.classChoiceSelections?.some(

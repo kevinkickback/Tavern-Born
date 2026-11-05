@@ -15,6 +15,7 @@ import {
 } from '@/lib/character/classChoiceFeatureCatalogs'
 import {
   createClassChoiceCatalogs,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -26,6 +27,7 @@ import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -91,15 +93,16 @@ for (const [source, file] of sourceFiles) {
             actor,
             actor.provenance,
             choice,
-            resolveClassChoiceOptions(
-              choice,
-              createClassChoiceCatalogs(live),
-              [],
-              actor.classProgression[0].levels,
-              actor,
-            )
-              .filter((row) => row.reference.name === branch)
-              .map((row) => row.reference),
+            [
+              resolveClassChoiceOptions(
+                choice,
+                createClassChoiceCatalogs(live),
+                [],
+                actor.classProgression[0].levels,
+                actor,
+              ).find((row) => row.reference.name === branch)?.reference ??
+                choice.options.find((row) => row.name === branch)!,
+            ],
             { classes: data.classes, catalogs: live },
           ),
         )
@@ -107,9 +110,9 @@ for (const [source, file] of sourceFiles) {
         calculate(actor, live).character.features.find(
           (row) => row.name === name && row.id.startsWith('class-choice:'),
         )?.description
-      const withdraw = (target: string) => {
+      const withdraw = (...targets: string[]) => {
         const candidates = new Map(catalogs.classFeatureCandidates)
-        candidates.delete(target)
+        for (const target of targets) candidates.delete(target)
         return { ...catalogs, classFeatureCandidates: candidates }
       }
 
@@ -119,6 +122,28 @@ for (const [source, file] of sourceFiles) {
         allowedSources: ['XPHB'],
         classProgression: [{ ...druid, levels: 15 }],
       })
+      const leafTargets = branches.map(
+        (branch) => `class-feature|${branch.name.toLowerCase()}|druid|xphb|7|xphb`,
+      )
+      const lastOption = withdraw(leafTargets[0])
+      expect(
+        resolveClassChoiceOptions(choice, createClassChoiceCatalogs(lastOption)),
+      ).toMatchObject([{ reference: { name: branches[1].name }, availability: 'eligible' }])
+      expect(
+        description(choose(actor, branches[1].name, lastOption), branches[1].name, lastOption),
+      ).toContain(branches[1].base)
+      const noOptions = withdraw(...leafTargets)
+      expect(
+        getClassChoiceCandidates(cls!, undefined, noOptions).some(
+          (row) => row.id === ELEMENTAL_FURY_ID,
+        ),
+      ).toBe(false)
+      const noOptionsCalculation = calculate(actor, noOptions)
+      expect(
+        validateClassChoices(actor, noOptionsCalculation, createClassChoiceCatalogs(noOptions)),
+      ).toContainEqual(
+        expect.objectContaining({ title: 'Review unresolved Elemental Fury choice' }),
+      )
       for (const branch of branches) {
         actor = choose(actor, branch.name)
         const opposite = branch === branches[0] ? branches[1] : branches[0]
@@ -190,6 +215,21 @@ for (const [source, file] of sourceFiles) {
       }
       const saved = actor.classChoiceSelections?.find((row) => row.choiceId === ELEMENTAL_FURY_ID)
       if (!saved) throw new Error('Missing saved Elemental Fury branch')
+      for (const rows of [
+        [saved, saved],
+        [{ ...saved, className: 'Cleric' }],
+        [{ ...saved, selected: [{ ...saved.selected[0], slotLevel: 8 }] }],
+      ]) {
+        const rejected = characterPersistenceSchema.safeParse({
+          ...actor,
+          classChoiceSelections: rows,
+        })
+        expect(rejected.success).toBe(false)
+        if (!rejected.success)
+          expect(
+            rejected.error.issues.some((issue) => issue.path[0] === 'classChoiceSelections'),
+          ).toBe(true)
+      }
       const cleared = reopen(
         actor,
         retainSavedFeatureOptionsCommand(
