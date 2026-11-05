@@ -159,17 +159,16 @@ function buildSpellProfiles(progression, edition) {
     ...wizardSpellsByLevel[4].slice(0, 2),
     ...wizardSpellsByLevel[5].slice(0, 2),
   ]
-  const lifeDomainSpells = requireSpellReferences(
-    [
-      'Bless',
-      'Cure Wounds',
-      'Lesser Restoration',
-      'Spiritual Weapon',
-      'Beacon of Hope',
-      'Revivify',
-    ],
-    edition,
+  const currentCleric = requireEntity(parsedCastingData.classes, cleric.name, cleric.source)
+  const lifeDomainGrants = getEarnedSubclassSpellGrants(currentCleric, cleric)?.filter(
+    (grant) => grant.mode === 'prepared',
   )
+  if (!lifeDomainGrants?.length) throw new Error('Missing current Life Domain spell grants.')
+  const lifeDomainSpells = lifeDomainGrants.map(({ spellName: reference }) => {
+    const spell = nativeSpellsByReference.get(getSpellReferenceKey(reference))
+    if (!spell) throw new Error(`Missing Life Domain spell: ${reference}`)
+    return key(spell)
+  })
   const clericCantrips = selectClassSpells('Cleric', cleric.source, edition, { 0: 4 })
   const clericPrepared = selectClassSpells(
     'Cleric',
@@ -1322,6 +1321,42 @@ function authorManagedSpellState(input, selections, dailyPreparation) {
     )
     character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
   }
+  for (const entry of character.classProgression) {
+    const slots = getSavantSpellbookSlots(entry)
+    if (!slots.length) continue
+    const learned = new Set(
+      character.managedClassSpellChoices
+        .filter((choice) => choice.slot[1] === 'class-spellbook')
+        .map((choice) => getSpellNameKey(choice.target.name)),
+    )
+    const requests = slots.map((slot) => {
+      const { spells: pool, defaultReferences } = getManagedClassSpellPool(character, slot, context)
+      const spell = pool
+        .filter(
+          (candidate) =>
+            candidate.source === entry.source &&
+            !learned.has(getSpellNameKey(candidate.name)) &&
+            defaultReferences.has(getSpellReferenceKey(candidate.name, candidate.source)),
+        )
+        .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name, 'en'))[0]
+      if (!spell) throw new Error(`Missing an eligible Savant fixture spell at Wizard ${slot[3]}.`)
+      learned.add(getSpellNameKey(spell.name))
+      return {
+        slot,
+        expected: null,
+        expectedEmptyRevision: character.managedClassSpellRevision,
+        target: { name: spell.name, source: spell.source },
+        policy: 'default',
+      }
+    })
+    const result = setManagedClassSpellChoicesCommand(
+      character,
+      character.provenance,
+      requests,
+      context,
+    )
+    character = { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
+  }
   if (dailyPreparation)
     for (const reference of dailyPreparation.references) {
       const entry = dailyPreparation.entry
@@ -1455,9 +1490,13 @@ function buildCompanionFixture(baseFixture, edition) {
     baseFixture.backgroundSource,
   )
   const raceTag = makeTag('race', baseFixture.race, 'fixed', baseFixture.raceSource)
+  const currentRanger = requireEntity(parsedCastingData.classes, ranger.name, ranger.source)
   const proficiencies = {
     armor: ['Light Armor', 'Medium Armor', 'Shields'],
-    weapons: ['Simple Weapons', 'Martial Weapons'],
+    weapons:
+      edition === '2024'
+        ? currentRanger.startingProficiencies.weapons
+        : ['Simple Weapons', 'Martial Weapons'],
     tools: [],
     skills:
       edition === '2024'
@@ -1727,6 +1766,11 @@ let parseRaces,
   createEmptyGameData,
   createCharacterCalculationContext,
   getClassSpellProfilePolicy,
+  getEarnedSubclassSpellGrants,
+  getSavantSpellbookSlots,
+  getManagedClassSpellPool,
+  getSpellNameKey,
+  getSpellReferenceKey,
   setManagedClassSpellChoicesCommand,
   setDailyClassSpellPreparedCommand,
   deriveNativeRacialSpellProfiles,
@@ -1787,6 +1831,18 @@ try {
   ;({ getClassSpellProfilePolicy } = await runtime.ssrLoadModule(
     '/src/lib/5etools/classCastingRules.ts',
   ))
+  ;({ getEarnedSubclassSpellGrants } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/subclassSpells.ts',
+  ))
+  ;({ getSavantSpellbookSlots } = await runtime.ssrLoadModule(
+    '/src/lib/5etools/savantSpellbookRules.ts',
+  ))
+  ;({ getManagedClassSpellPool } = await runtime.ssrLoadModule(
+    '/src/lib/character/managedClassSpells.ts',
+  ))
+  ;({ getSpellNameKey, getSpellReferenceKey } = await runtime.ssrLoadModule(
+    '/src/lib/calculations/spellIdentity.ts',
+  ))
   ;({ setManagedClassSpellChoicesCommand } = await runtime.ssrLoadModule(
     '/src/lib/character/commands/managedClassSpellCommands.ts',
   ))
@@ -1839,6 +1895,12 @@ const startingItemTypes = Object.fromEntries(
 )
 const parsedFixtureSpells = parseSpells(spells, { sourceLookup: spellSourceLookup })
 const nativeSpellLookup = buildSpellLookup(parsedFixtureSpells)
+const nativeSpellsByReference = new Map(
+  Object.values(nativeSpellLookup).map((spell) => [
+    getSpellReferenceKey(spell.name, spell.source),
+    spell,
+  ]),
+)
 const parsedCastingData = composeGameDataLayers(
   classPayloads.map((payload, index) => {
     const parsed = parseClassDocument(payload, `fixture-author:${index}`)

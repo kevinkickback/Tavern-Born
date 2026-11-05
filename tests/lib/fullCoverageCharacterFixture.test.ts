@@ -34,7 +34,11 @@ import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { normalizeRaceMovement } from '@/lib/calculations/movement'
-import { parseSpellReference, resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
+import {
+  getSpellReferenceKey,
+  parseSpellReference,
+  resolveSpellReferenceFromMap,
+} from '@/lib/calculations/spellIdentity'
 import {
   buildClassSpellSelectionsByLevel,
   isSpellOnClassList,
@@ -213,9 +217,11 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
   const allowedSources = new Set(character.allowedSources)
   const fromAllowedSource = (entity: { source?: string }) =>
     !entity.source || allowedSources.has(entity.source)
+  const currentFeats = feats.filter(fromAllowedSource)
   return {
     ...buildClassChoiceFeatureCatalogs({
       classes: DataFilter.filterClasses(classes, { sources: character.allowedSources }),
+      feats: currentFeats,
       classFeatures: classFeatures.filter(fromAllowedSource),
       classCastingSources: castingData.classCastingSources,
       skills: collection(readJson(join(dataRoot, 'skills.json')), 'skill').filter((row) =>
@@ -226,7 +232,7 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
       ).filter(fromAllowedSource),
     }),
     creatures: companionCreatures.filter(fromAllowedSource),
-    feats: feats.filter(fromAllowedSource),
+    feats: currentFeats,
     items: items.filter(fromAllowedSource),
     itemsBase: itemsBase.filter(fromAllowedSource),
     itemMasteries: itemMasteries.filter(fromAllowedSource),
@@ -295,6 +301,16 @@ describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
 
     const calculation = createCharacterCalculationContext(character, inputs)
     if (edition === '2024') {
+      const cleric = character.spells.spellProfiles.find(
+        (profile) => profile.id === 'class:Cleric|XPHB',
+      )!
+      expect(cleric.alwaysPreparedSpells?.map((ref) => getSpellReferenceKey(ref))).toContain(
+        'aid|xphb',
+      )
+      expect(cleric.preparedSpells.map((ref) => getSpellReferenceKey(ref))).not.toContain(
+        'aid|xphb',
+      )
+      expect(cleric.preparedSpells).toHaveLength(9)
       const scholar = character.classChoiceSelections?.find(
         (row) =>
           decodeClassProficiencyChoiceId(row.choiceId)?.target ===
