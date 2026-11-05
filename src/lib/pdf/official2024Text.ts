@@ -61,12 +61,14 @@ export function fitOfficial2024Text(
     ? value.replace(/\n{2,}/g, '\n')
     : value
 
+  // Lost Loot's scaled class-feature appearances can clip a glyph at a measured line edge.
+  const preWrap = scale > 1 && (id === 57 || id === 58)
   const fitted = fitPdfText(
     normalized,
     font,
-    width / scale,
+    width / scale - (preWrap ? 2 : 0),
     height / scale,
-    bounds,
+    { ...bounds, preWrap },
     borderWidth / scale,
   )
   return { ...fitted, fontSize: fitted.fontSize * scale }

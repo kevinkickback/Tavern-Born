@@ -89,6 +89,8 @@ import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 
+import { getDruidStaticFeatureSummaries } from './druidStaticFeatureSummaries'
+
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
@@ -208,6 +210,7 @@ export interface CharacterSheetViewModel {
   featuresSummary: string
   featureOptionSummaries?: Array<{ text: string; compactText: string }>
   optionalClassFeatureSummaries?: Array<{ text: string; compactText: string }>
+  declaredClassFeatureSummaries?: Array<{ text: string; compactText: string }>
   managedSpellCastingSummaries?: string[]
   proficiencyCheckNotes?: ProficiencyCheckNoteRow[]
   equipmentSummary: string
@@ -391,9 +394,11 @@ function withFeatureOptionSummaries(
   optionalFeatures: NonNullable<CharacterSheetViewModel['optionalClassFeatureSummaries']> = [],
   castingSummaries: readonly string[] = [],
   resourceSummary?: string,
+  declaredFeatures: NonNullable<CharacterSheetViewModel['declaredClassFeatureSummaries']> = [],
 ): string {
   return [
     resourceSummary,
+    ...declaredFeatures.map((row) => (descriptions ? row.text : row.compactText)),
     summary,
     ...optionalFeatures.map((row) => (descriptions ? row.text : row.compactText)),
     ...(selections ?? []).map((selection) =>
@@ -419,6 +424,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       vm.optionalClassFeatureSummaries,
       vm.managedSpellCastingSummaries,
       vm.classResourceSummary,
+      vm.declaredClassFeatureSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(vm.character, false),
@@ -428,6 +434,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       vm.optionalClassFeatureSummaries,
       vm.managedSpellCastingSummaries,
       vm.classResourceSummary,
+      vm.declaredClassFeatureSummaries,
     ),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
@@ -918,6 +925,11 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
+  const declaredClassFeatureSummaries = getDruidStaticFeatureSummaries(
+    getCharacterClassEntries(character),
+    primaryLookups.classChoiceFeatureCatalogs,
+    !!unlimitedWildShape,
+  )
   const managedSpellCastingSummaries = calculationContext.managedClassSpellStatuses.flatMap(
     (status) =>
       status.active && status.castingNote
@@ -931,6 +943,7 @@ export function createCharacterSheetViewModel(
     level,
     featureOptionSummaries,
     optionalClassFeatureSummaries,
+    declaredClassFeatureSummaries,
     managedSpellCastingSummaries,
     proficiencyCheckNotes,
     classSummary: getClassSummary(character),
@@ -1016,6 +1029,7 @@ export function createCharacterSheetViewModel(
       optionalClassFeatureSummaries,
       managedSpellCastingSummaries,
       classResourceSummary,
+      declaredClassFeatureSummaries,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(character),
@@ -1025,6 +1039,7 @@ export function createCharacterSheetViewModel(
       optionalClassFeatureSummaries,
       managedSpellCastingSummaries,
       classResourceSummary,
+      declaredClassFeatureSummaries,
     ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
