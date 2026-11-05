@@ -52,6 +52,8 @@ export function BuildClassSpellSection({
                       `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
                     spellGain.spells > 0 &&
                       `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
+                    spellGain.savantSpellbook &&
+                      `${spellGain.savantSpellbook.name} (${spellGain.savantSpellbook.count} extra spellbook ${spellGain.savantSpellbook.count === 1 ? 'choice' : 'choices'}, up to ${getOrdinalForm(spellGain.savantSpellbook.maxSpellLevel)} level)`,
                     spellGain.spellbookSpecialty &&
                       `${spellGain.spellbookSpecialty.name} (${spellGain.spellbookSpecialty.count} choices)`,
                   ]

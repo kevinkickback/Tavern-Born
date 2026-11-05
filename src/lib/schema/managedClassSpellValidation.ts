@@ -3,8 +3,10 @@ import {
   isManagedClassSpellSlot,
 } from '@/lib/5etools/classCastingRules'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
+import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
+  getManagedClassSpellOwnerEntry,
   isManagedClassSpellProfile,
   isManagedClassSpellTag,
   isPlainSpellIdentityPart,
@@ -52,6 +54,10 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||
       (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
+      (getSavantSpellbookGain(choice.slot) &&
+        (choice.policy !== 'default' ||
+          (getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)?.levels ?? 0) <
+            choice.slot[3])) ||
       !Number.isSafeInteger(choice.revision) ||
       choice.revision < 1 ||
       choice.revision > (watermark ?? 0) ||

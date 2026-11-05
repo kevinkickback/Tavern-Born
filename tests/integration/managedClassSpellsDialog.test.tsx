@@ -1,4 +1,13 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -10,7 +19,9 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
+import { validateSpells } from '@/lib/readiness/spellReadiness'
 import { ManagedClassSpellsDialog } from '@/pages/build/class/components/ManagedClassSpellsDialog'
+import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -83,6 +94,104 @@ afterEach(() => {
 })
 
 describe('Class spell Finish and current-state adapter', () => {
+  test('Evocation Savant is a separate gain that learns and prepares from the shared Wizard book', async () => {
+    const data = makeBundledClassCastingLayer('class/class-wizard.json')
+    data.spells = fixture.spells
+    data.lookups = buildGameDataLookups(data)
+    const original = makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: ['XPHB'],
+      classProgression: [
+        { name: 'Wizard', source: 'XPHB', levels: 5, subclass: 'Evoker', subclassSource: 'XPHB' },
+      ],
+    })
+    install(original)
+    useGameDataStore.setState({ gameData: data })
+    const wizard = data.classes.find((row) => row.source === 'XPHB')!
+    const evoker = wizard.subclasses?.find((row) => row.name === 'Evoker')
+    expect(evoker).toBeDefined()
+    const summary = renderHook(
+      ({ subclass }: { subclass?: typeof evoker }) =>
+        useClassSpellChoiceController(wizard, subclass),
+      { initialProps: { subclass: evoker } },
+    )
+    expect(summary.result.current.choicesByLevel.get(3)).toMatchObject({
+      spells: 2,
+      savantSpellbook: { name: 'Evocation Savant', count: 2, maxSpellLevel: 2 },
+    })
+    expect(summary.result.current.choicesByLevel.get(5)).toMatchObject({
+      spells: 2,
+      savantSpellbook: { name: 'Evocation Savant', count: 1, maxSpellLevel: 3 },
+    })
+    const earned = summary.result.current.choicesByLevel.get(3)?.savantSpellbook
+    summary.rerender({ subclass: undefined })
+    expect(summary.result.current.choicesByLevel.get(3)?.savantSpellbook).toEqual(earned)
+    summary.unmount()
+    render(<Flow level={3} />)
+    await choose(1, 'Magic Missile', 'Spell')
+
+    const savantRow = () => screen.getByRole('group', { name: 'Evocation Savant 1' })
+    fireEvent.click(within(savantRow()).getByRole('button', { name: 'Choose' }))
+    const picker = screen.getByRole('dialog', { name: 'Choose Evocation Savant 1' })
+    expect(picker.textContent).toContain('Evocation spell of up to 2nd level')
+    expect(screen.queryByRole('switch', { name: 'Ignore class restrictions' })).toBeNull()
+    const search = screen.getByRole('textbox', { name: /Search/ })
+    for (const name of ['Magic Missile', 'Shield', 'Fireball']) {
+      fireEvent.change(search, { target: { value: name } })
+      expect(screen.queryByText(name)).toBeNull()
+    }
+    fireEvent.change(search, { target: { value: 'Scorching Ray' } })
+    fireEvent.click(await screen.findByText('Scorching Ray'))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    fireEvent.click(within(savantRow()).getByRole('checkbox', { name: 'Prepare this spell' }))
+
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Spell 2' })).getByRole('button', {
+        name: 'Choose',
+      }),
+    )
+    expect(screen.getByRole('switch', { name: 'Ignore class restrictions' })).toBeTruthy()
+    fireEvent.change(screen.getByRole('textbox', { name: /Search/ }), {
+      target: { value: 'Scorching Ray' },
+    })
+    expect(screen.queryByText('Scorching Ray')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(
+      saved.managedClassSpellChoices?.map(({ slot, target, prepare }) => [
+        slot[0][0],
+        target,
+        prepare,
+      ]),
+    ).toEqual([
+      ['class', { name: 'Magic Missile', source: 'XPHB' }, undefined],
+      ['subclass', { name: 'Scorching Ray', source: 'XPHB' }, true],
+    ])
+    expect(
+      saved.spells.spellProfiles.find((profile) => profile.className === 'Wizard')?.preparedSpells,
+    ).toContain('Scorching Ray|XPHB')
+
+    const view = renderHook(() => useCharacterCalculationContext(saved))
+    const readiness = validateSpells(saved, view.result.current!, data.lookups.spellsByKey)
+    expect(readiness).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: 'Finish Wizard Evocation Savant spellbook choices at level 3',
+          explanation: '2 extra spellbook choices are earned here. 1 of 2 complete.',
+        }),
+        expect.objectContaining({ title: 'Finish Wizard spell choices at level 3' }),
+      ]),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    expect(within(savantRow()).getByText('Scorching Ray (XPHB)')).toBeTruthy()
+    expect(
+      within(savantRow())
+        .getByRole('checkbox', { name: 'Prepare this spell' })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
+  })
+
   test('Spell Mastery uses same-dialog draft learning and removal without saving the preview', async () => {
     const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
     wizard.spells = fixture.spells

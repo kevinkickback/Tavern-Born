@@ -2,6 +2,7 @@ import {
   CLASS_CASTING_PRODUCERS,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
+import { getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
@@ -67,10 +68,13 @@ export function getManagedClassSpellSlots(
   )
   return [
     ...new Map(
-      [...ordinary, ...arcanum, ...feature, ...getSpellbookSpecialtySlots(entry)].map((slot) => [
-        managedClassSpellId(slot),
-        slot,
-      ]),
+      [
+        ...ordinary,
+        ...arcanum,
+        ...feature,
+        ...getSavantSpellbookSlots(entry),
+        ...getSpellbookSpecialtySlots(entry),
+      ].map((slot) => [managedClassSpellId(slot), slot]),
     ).values(),
   ]
 }

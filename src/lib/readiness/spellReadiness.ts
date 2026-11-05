@@ -1,3 +1,4 @@
+import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
@@ -147,6 +148,8 @@ export function validateSpells(
       if (active === slots.length) continue
       const unavailable = rows.flatMap((row) => (row && !row.active ? [row] : []))
       const level = slots[0][3]
+      const savant = getSavantSpellbookGain(slots[0])
+      const featureLabel = getManagedClassSpellFeatureLabel(slots[0])
       const kind =
         slots[0][1] === 'feature-cantrip'
           ? `${featureSetups.find((setup) => setup.producer === slots[0][2])?.name ?? 'feature'} cantrip`
@@ -154,7 +157,9 @@ export function validateSpells(
             ? 'cantrip'
             : slots[0][1] === 'class-arcanum'
               ? 'Mystic Arcanum'
-              : (getManagedClassSpellFeatureLabel(slots[0]) ?? 'spell')
+              : savant
+                ? `${featureLabel ?? 'Savant'} spellbook`
+                : (featureLabel ?? 'spell')
       issues.push(
         readinessIssue(
           `spells:managed:${managedClassSpellId(slots[0])}`,
@@ -167,7 +172,9 @@ export function validateSpells(
                   (row) => `${row.choice.target.name} (${row.choice.target.source}): ${row.reason}`,
                 )
                 .join(' ')
-            : `${slots.length} choices are earned here; ${active} are active.`,
+            : savant
+              ? `${slots.length} extra spellbook ${slots.length === 1 ? 'choice is' : 'choices are'} earned here. ${active} of ${slots.length} complete.`
+              : `${slots.length} choices are earned here; ${active} are active.`,
           `/build/class?${new URLSearchParams({ class: `${entry.name}|${entry.source}`, level: String(level) })}`,
         ),
       )

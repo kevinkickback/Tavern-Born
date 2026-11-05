@@ -1,4 +1,5 @@
 import { getManagedClassSpellRule, isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -35,7 +36,7 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
 
 export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
   if (slot[1] === 'class-spellbook-specialty') return getSpellbookSpecialtyRule(slot)?.name
-  if (slot[1] !== 'class-arcanum') return undefined
+  if (slot[1] !== 'class-arcanum') return getSavantSpellbookLabel(slot)
   const declaration = getManagedClassSpellRule(slot)?.rule.declaration
   return declaration?.target.split('|')[1]?.replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 }
@@ -85,7 +86,9 @@ export function makeManagedClassSpellTag(
     owner[0] === 'class' ? (entry?.source ?? owner[2]) : (entry?.subclassSource ?? owner[4])
   return {
     ...makeSourceTag(owner[0], name, 'choice', source),
-    ...(choice.slot[1] === 'feature-cantrip' || choice.slot[1] === 'class-arcanum'
+    ...(choice.slot[1] === 'feature-cantrip' ||
+    choice.slot[1] === 'class-arcanum' ||
+    getSavantSpellbookLabel(choice.slot)
       ? {
           label:
             featureName ??
@@ -112,7 +115,7 @@ export function matchesManagedClassSpellTag(
     tag.sourceType === owner[0] &&
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
-    (choice.slot[1] === 'class-arcanum'
+    (choice.slot[1] === 'class-arcanum' || getSavantSpellbookLabel(choice.slot)
       ? normalizeOwnerIdentity(tag.label) ===
         normalizeOwnerIdentity(getManagedClassSpellFeatureLabel(choice.slot))
       : choice.slot[1] === 'feature-cantrip'

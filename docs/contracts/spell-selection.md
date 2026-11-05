@@ -101,6 +101,23 @@ without expending a spell slot. Uses are not tracked. Independent casting paths 
 This supports initial selection/correction; spent-use/reset accounting and level-up replacement events
 remain separate. New source producers and unknown prose meanings still require reviewed certification.
 
+## Evocation Savant
+
+The native revised Evoker earns extra spellbook picks from the linked Evocation Savant
+declaration and its subclass's structured schedule. The initial gain offers two spells at
+Wizard level 3, then one more whenever a higher Wizard spell slot tier becomes available.
+Each slot uses the Wizard's historical class tier and the schedule's Evocation and Wizard-list
+filters. A spellbook contains level 1+ spells, so the source filter's level 0 contributes no
+candidates. Enabled exact routes follow the pinned joined Wizard class filter.
+
+These selections use the shared managed spellbook. They share book uniqueness, can be prepared
+using ordinary capacity, and can qualify for Spell Mastery or Signature Spells. They do not
+satisfy ordinary learning slots or grant additional casting or preparation capacity. The
+current exact subclass, feature, schedule and parent casting authority must agree. Source
+loss retains intent. Intentional subclass or gain removal retires the affected book choices
+and their editor lifetimes, and unrelated learning remains available. Classic School of
+Evocation uses its copying rule. Other Savant producers require separate source verification.
+
 ## Wizard spellbook specialties
 
 Spell Mastery and Signature Spells reuse the managed Class editor and revision allocator. A

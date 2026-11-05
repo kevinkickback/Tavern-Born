@@ -3,10 +3,12 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
 import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
+import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { SpellGain } from '../model/levelsUtils'
@@ -31,12 +33,22 @@ export function useClassSpellChoiceController(
     }
     const currentCatalogs = calculation?.classChoices.catalogs
     const catalogs = currentCatalogs && { ...currentCatalogs }
-    for (const slot of getManagedClassSpellSlots(
+    const slots = getManagedClassSpellSlots(
       entry,
       character ?? undefined,
       catalogs,
       calculation?.classChoices.prerequisites,
-    )) {
+    )
+    if (!viewingSubclassData) {
+      // The exact saved owner remains editable when the selected subclass data is unavailable.
+      const saved = character?.classProgression.find(
+        (row) =>
+          normalizeOwnerIdentity(row.name) === normalizeOwnerIdentity(entry.name) &&
+          normalizeOwnerIdentity(row.source) === normalizeOwnerIdentity(entry.source),
+      )
+      if (saved) slots.push(...getSavantSpellbookSlots({ ...saved, levels: entry.levels }))
+    }
+    for (const slot of slots) {
       const gain = choices.get(slot[3]) ?? {
         cantrips: 0,
         spells: 0,
@@ -44,6 +56,16 @@ export function useClassSpellChoiceController(
         canSwap: false,
       }
       choices.set(slot[3], gain)
+      const savant = getSavantSpellbookGain(slot)
+      if (savant) {
+        gain.savantSpellbook ??= {
+          name: getManagedClassSpellFeatureLabel(slot) ?? 'Savant',
+          count: 0,
+          maxSpellLevel: savant.tier,
+        }
+        gain.savantSpellbook.count++
+        continue
+      }
       const domain = slot[1]
       if (domain === 'class-spellbook-specialty') {
         gain.spellbookSpecialty ??= {

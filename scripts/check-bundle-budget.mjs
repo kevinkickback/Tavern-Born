@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Wizard spellbook specialties: 6,503,884 B renderer, 1,257,379 B initial.
+  // Revised Evoker Savant: 6,509,298 B renderer, 1,261,894 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6352 * KIB,
-  initialRendererScript: 1228 * KIB,
+  rendererCode: 6357 * KIB,
+  initialRendererScript: 1233 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

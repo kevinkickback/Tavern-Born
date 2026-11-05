@@ -2,6 +2,7 @@ import type { CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import generated from './classCastingRuntime.generated'
 import type { CastingProducerRule } from './classCastingStructure'
+import { getSavantSpellbookGain } from './savantSpellbookRules'
 import { isSelectedFeatureSpellSlot } from './selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from './spellbookSpecialtyRules'
 
@@ -58,6 +59,7 @@ export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
 /** Admission checks the feature protocol structurally; it never grants current authority. */
 export const isManagedClassSpellSlot = (slot: ManagedClassSpellSlot) =>
   !!getManagedClassSpellRule(slot) ||
+  !!getSavantSpellbookGain(slot) ||
   isSelectedFeatureSpellSlot(slot) ||
   !!getSpellbookSpecialtyRule(slot)
 
