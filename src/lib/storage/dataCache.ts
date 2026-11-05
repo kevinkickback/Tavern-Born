@@ -141,27 +141,20 @@ export async function writeGameDataCache(
   const now = new Date().toISOString()
   const contentFingerprint = computeGameDataFingerprint(data)
   const previous = await readGameDataCache()
-  const previousFingerprint =
-    previous && isCacheForSource(previous, identity)
-      ? (previous.contentFingerprint ?? computeGameDataFingerprint(previous.data))
-      : null
+  const sameSource = previous !== null && isCacheForSource(previous, identity)
+  const previousFingerprint = sameSource
+    ? (previous.contentFingerprint ?? computeGameDataFingerprint(previous.data))
+    : null
 
   let lastDataChangedAt: string
-  if (previous && previousFingerprint != null && previousFingerprint === contentFingerprint) {
-    // Same source and same content in the existing cache — data hasn't changed.
+  if (previous && previousFingerprint === contentFingerprint) {
     lastDataChangedAt = previous.lastDataChangedAt ?? previous.cachedAt
   } else if (
-    isCacheForSource(
-      previous ?? ({ sourceSnapshot: createSourceSnapshot(identity) } as GameDataCacheEntry),
-      identity,
-    ) &&
-    options?.fingerprint != null &&
-    options.fingerprint === contentFingerprint &&
+    (!previous || sameSource) &&
+    options?.fingerprint === contentFingerprint &&
     options.lastDataChangedAt != null
   ) {
-    // Either: cache was cleared (no previous), or previous cache exists but lacks a
-    // fingerprint (pre-fingerprinting cache). In both cases the store's persisted
-    // fingerprint matches the new content — data hasn't actually changed.
+    // The store can remember a fingerprint and date after the cache has been cleared.
     lastDataChangedAt = options.lastDataChangedAt
   } else {
     lastDataChangedAt = now

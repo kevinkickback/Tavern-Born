@@ -444,7 +444,7 @@ interface SpellSlotState {
   used: number
 }
 
-export type SpellSlots = Partial<Record<number, SpellSlotState>>
+type SpellSlots = Partial<Record<number, SpellSlotState>>
 
 export interface Equipment {
   id: string

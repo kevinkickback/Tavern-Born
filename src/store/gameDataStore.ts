@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   type DataSourceStackLoaderOptions,
-  loadDataFromSource,
   loadGameDataSourceStack,
-} from '@/lib/5etools'
-import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+} from '@/lib/5etools/contentLayers'
+import { loadDataFromSource } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   clearGameDataCache,

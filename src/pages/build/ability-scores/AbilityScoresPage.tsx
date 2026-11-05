@@ -39,7 +39,7 @@ import {
   isBaseAbilityScoreReadinessFocus,
   isRaceAbilityChoiceReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
-import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
+import { getPendingBackgroundAbilityRows } from '@/lib/provenance/abilityBonusRows'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'

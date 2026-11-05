@@ -1,5 +1,5 @@
 import { ABILITY_FULL_TO_ABBREV } from '@/lib/calculations/abilityNames'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import {
   formatProfLabel,

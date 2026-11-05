@@ -1,6 +1,6 @@
 import { isAuditedSkilledFeat, isSkilledFeatTarget } from '@/lib/5etools/featSkillRules'
 import { ALL_SKILLS } from '@/lib/calculations/skills'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Feat5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
 import {

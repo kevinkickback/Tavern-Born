@@ -19,8 +19,13 @@ const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
   resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
 }))
 
-vi.mock('@/lib/5etools', () => ({
+vi.mock(import('@/lib/5etools/dataLoader'), async (importOriginal) => ({
+  ...(await importOriginal()),
   loadDataFromSource: loadDataFromSourceMock,
+}))
+
+vi.mock(import('@/lib/5etools/contentLayers'), async (importOriginal) => ({
+  ...(await importOriginal()),
   loadGameDataSourceStack: loadGameDataSourceStackMock,
 }))
 

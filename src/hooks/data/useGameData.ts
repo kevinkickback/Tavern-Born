@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type ClassFilters, DataFilter, searchByName, sortByName } from '@/lib/5etools'
+import { sortByName } from '@/lib/5etools/filters'
 import type { ItemTextContext } from '@/lib/5etools/itemTypeEntries'
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { useCharacterStore } from '@/store/characterStore'
@@ -31,30 +31,11 @@ const EMPTY_ORGANIZATION_LIST: readonly Organization5e[] = []
  * Raw unfiltered class list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
  * For character-scoped build pages use `useFilteredGameData()` instead.
  */
-export function useClasses(filters?: ClassFilters, searchQuery?: string) {
-  const gameData = useGameDataStore((state) => state.gameData)
-
-  return useMemo(() => {
-    if (!gameData?.classes) return []
-
-    let classes = gameData.classes
-
-    if (filters) {
-      classes = DataFilter.filterClasses(classes, filters)
-    }
-
-    if (searchQuery) {
-      classes = searchByName(classes, searchQuery)
-    }
-
-    return sortByName(classes)
-  }, [gameData?.classes, filters, searchQuery])
+export function useClasses() {
+  const classes = useGameDataStore((state) => state.gameData?.classes)
+  return useMemo(() => (classes ? sortByName(classes) : []), [classes])
 }
 
-/**
- * Raw unfiltered spell list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
- * For character-scoped build pages use `useFilteredGameData()` instead.
- */
 export function useClassLookup() {
   const gameData = useGameDataStore((state) => state.gameData)
 

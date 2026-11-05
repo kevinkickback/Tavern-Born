@@ -39,7 +39,7 @@ import { getFeatExpertiseSkillPool } from '@/lib/character/featExpertiseSelectio
 import { canChangeSkilledSkills, getSkilledSkillPool } from '@/lib/character/featSkillSelections'
 import { assignSavedFeatSpells, createFeatSpellMatcher } from '@/lib/character/featSpellChoices'
 import { SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'

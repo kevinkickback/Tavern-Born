@@ -1,7 +1,9 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
+import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
+import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Class5e } from '@/types/5etools'
@@ -67,7 +69,7 @@ describe('useProvenance mutations', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useProvenance())
+    const { result } = renderHook(useRaceProvenanceMutations)
 
     result.current.applyRaceSelection({
       name: 'Elf',
@@ -105,7 +107,7 @@ describe('useProvenance mutations', () => {
       },
     }
     setGameDataItems([], [cls])
-    const { result } = renderHook(() => useProvenance())
+    const { result } = renderHook(useClassProvenanceMutations)
     result.current.applyClassSelection(cls)
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -142,7 +144,7 @@ describe('useProvenance mutations', () => {
       ],
       [cls],
     )
-    const { result } = renderHook(() => useProvenance())
+    const { result } = renderHook(useClassProvenanceMutations)
     result.current.applyClassSelection(cls)
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -178,7 +180,7 @@ describe('useProvenance mutations', () => {
       ],
     }
     setGameDataItems([{ name: 'Pouch', source: 'phb', type: 'G' }], [], [background])
-    const { result } = renderHook(() => useProvenance())
+    const { result } = renderHook(useBackgroundProvenanceMutations)
     result.current.applyBackgroundSelection(background, ['b'])
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -206,7 +208,7 @@ describe('useProvenance mutations', () => {
       isActiveCharacterDirty: false,
     })
     useCharacterStore.getState().updateCharacter(character.id, { name: 'Unsaved Name' })
-    const { result } = renderHook(() => useProvenance())
+    const { result } = renderHook(useBackgroundProvenanceMutations)
 
     result.current.reconcileBackgroundAbilityChoices(
       {

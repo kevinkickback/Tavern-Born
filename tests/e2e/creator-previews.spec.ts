@@ -134,7 +134,7 @@ test.use({ viewport: { width: 1280, height: 900 } })
 
 type PreviewFrame = {
   phase: string
-  animationName: string
+  opacity: number
   animating: boolean
   transform: string
   filter: string
@@ -269,7 +269,9 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
     const sample = () => {
       if (capture.stopped) return
       const dialog = document.querySelector<HTMLElement>('.character-wizard-modal')
-      const host = dialog?.querySelector('[data-rules-preview-host]')?.getBoundingClientRect()
+      const host = dialog
+        ?.querySelector('[data-slot="dialog-viewport-portal-host"]')
+        ?.getBoundingClientRect()
       const pinned = dialog?.querySelector('[data-preview-pinned]')?.getBoundingClientRect()
       if (dialog && host && pinned) {
         const closing = dialog.dataset.state === 'closed'
@@ -277,7 +279,7 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
         const style = getComputedStyle(dialog)
         capture.frames.push({
           phase: closing ? 'closing' : sawClosing ? 'reopening' : 'open',
-          animationName: style.animationName,
+          opacity: Number(style.opacity),
           animating: dialog.getAnimations().some((animation) => animation.playState === 'running'),
           transform: style.transform,
           filter: style.filter,
@@ -319,22 +321,18 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
   expect(
     animationFrames.some(
       (frame) =>
-        frame.phase === 'closing' &&
-        frame.animating &&
-        frame.animationName === 'modal-preview-exit',
+        frame.phase === 'closing' && frame.animating && frame.opacity > 0 && frame.opacity < 1,
     ),
   ).toBe(true)
   expect(
     animationFrames.some(
       (frame) =>
-        frame.phase === 'reopening' &&
-        frame.animating &&
-        frame.animationName === 'modal-preview-enter',
+        frame.phase === 'reopening' && frame.animating && frame.opacity > 0 && frame.opacity < 1,
     ),
   ).toBe(true)
   expect(
     animationFrames.map(
-      ({ phase: _phase, animationName: _name, animating: _animating, ...frame }) => frame,
+      ({ phase: _phase, opacity: _opacity, animating: _animating, ...frame }) => frame,
     ),
   ).toEqual(
     animationFrames.map(() => ({

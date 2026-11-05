@@ -331,15 +331,14 @@ test.skipIf(!existsSync(classDirectory))(
           })
           const rule = FIXED_PROFICIENCY_RULES.find(
             (row) =>
-              row.kind === 'proficient-tools' &&
               row.target ===
-                getClassFeatureIdentity({
-                  name,
-                  className,
-                  classSource,
-                  source,
-                  level: Number(levelPart),
-                }),
+              getClassFeatureIdentity({
+                name,
+                className,
+                classSource,
+                source,
+                level: Number(levelPart),
+              }),
           )
           const expected = rule
             ? {

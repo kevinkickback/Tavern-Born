@@ -1,5 +1,5 @@
 import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceRow } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 import { getClassChoiceOptionKey, isClassChoiceOptionEligible } from './classChoiceOptions'

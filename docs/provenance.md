@@ -37,8 +37,7 @@ materialized fields and provenance atomically; intermediate Finish patches are n
 | Domain mutation hooks | Gather active state/data and commit one command result. |
 | `useProvenanceRows` / UI components | Read-only explanation of current ownership. |
 
-Production pages call their domain hook directly. `useProvenance` and
-`useProvenanceMutations` are integration-test aggregators, not a production mutation API.
+Production pages and hook tests call the relevant domain mutation hooks directly.
 
 ## Command pattern
 

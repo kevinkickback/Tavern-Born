@@ -10,7 +10,7 @@ import {
 import { deriveFeatOptionSteps } from '@/lib/5etools/parsers/featOptions'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Feat5e } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character, FeatOptionSelections } from '@/types/character'

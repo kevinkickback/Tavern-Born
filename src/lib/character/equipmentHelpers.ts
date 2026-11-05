@@ -1,4 +1,4 @@
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import { stripItemTag } from '@/lib/provenance/normalization'
 
 export function extractFixedGrantNames(blocks: unknown[] | undefined): string[] {

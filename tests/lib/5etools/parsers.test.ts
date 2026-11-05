@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildSourcesList,
-  extractProficiencyBlockNames,
   parseClasses,
   parseClassFeatures,
   parseItemMasteries,
@@ -11,6 +10,7 @@ import {
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import type { Class5e, Race5e } from '@/types/5etools'
 
 describe('5etools/parsers', () => {

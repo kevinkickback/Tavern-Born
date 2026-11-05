@@ -1,121 +1,74 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
 import type { BundledSrdManifestSummary } from './bundledResources'
+import type { UpdateEventPayloads, UpdateSignal } from './updateEvents'
 
-function onIpcEvent(channel: string, callback: () => void): () => void {
+function onIpcEvent(channel: 'app:confirmClose' | UpdateSignal, callback: () => void): () => void {
   const listener = () => callback()
   ipcRenderer.on(channel, listener)
   return () => ipcRenderer.removeListener(channel, listener)
 }
 
-function onIpcPayload<T>(channel: string, callback: (data: T) => void): () => void {
-  const listener = (_event: IpcRendererEvent, data: T) => callback(data)
-  ipcRenderer.on(channel, listener)
-  return () => ipcRenderer.removeListener(channel, listener)
+function subscribeToUpdate<Channel extends keyof UpdateEventPayloads>(channel: Channel) {
+  return (callback: (data: UpdateEventPayloads[Channel]) => void): (() => void) => {
+    const listener = (_event: IpcRendererEvent, data: UpdateEventPayloads[Channel]) =>
+      callback(data)
+    ipcRenderer.on(channel, listener)
+    return () => ipcRenderer.removeListener(channel, listener)
+  }
 }
 
-contextBridge.exposeInMainWorld('electronAPI', {
+interface UpdateResult<Data = null> {
+  success: boolean
+  data: Data
+  error: string | null
+}
+
+const electronAPI = {
   platform: process.platform,
   versions: {
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     node: process.versions.node,
   },
-  selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
-  readLocalJson: (filePath: string) => ipcRenderer.invoke('fs:readJson', filePath),
-  readBundledJson: (relativePath: string) =>
+  selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
+  readLocalJson: (filePath: string): Promise<unknown> =>
+    ipcRenderer.invoke('fs:readJson', filePath),
+  readBundledJson: (relativePath: string): Promise<unknown> =>
     ipcRenderer.invoke('resources:readBundledJson', relativePath),
-  getBundledManifest: () => ipcRenderer.invoke('resources:getBundledManifest'),
+  getBundledManifest: (): Promise<BundledSrdManifestSummary> =>
+    ipcRenderer.invoke('resources:getBundledManifest'),
   setUnsavedChanges: (value: boolean) => ipcRenderer.send('state:setUnsavedChanges', value),
   onConfirmClose: (callback: () => void) => onIpcEvent('app:confirmClose', callback),
   forceClose: () => ipcRenderer.send('app:forceClose'),
   setTitleBarOverlay: (color: string, symbolColor: string, height: number) =>
     ipcRenderer.send('window:set-title-bar-overlay', { color, symbolColor, height }),
 
-  checkForUpdate: () => ipcRenderer.invoke('update:check'),
-  downloadUpdate: () => ipcRenderer.invoke('update:download'),
-  openPortableUpdatePage: () => ipcRenderer.invoke('update:open-portable-page'),
-  cancelUpdate: () => ipcRenderer.invoke('update:cancel'),
-  installUpdate: () => ipcRenderer.invoke('update:install'),
-  getUpdateStatus: () => ipcRenderer.invoke('update:status'),
-  setAutoCheck: (enabled: boolean) => ipcRenderer.invoke('update:set-auto-check', enabled),
-  getAppVersion: () => ipcRenderer.invoke('update:get-version'),
-  getCurrentChangelog: () =>
-    ipcRenderer.invoke('update:get-current-changelog') as Promise<{
-      version: string
-      changelog: string | null
-    }>,
+  checkForUpdate: (): Promise<UpdateResult<unknown>> => ipcRenderer.invoke('update:check'),
+  downloadUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:download'),
+  openPortableUpdatePage: (): Promise<UpdateResult> =>
+    ipcRenderer.invoke('update:open-portable-page'),
+  cancelUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:cancel'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  getUpdateStatus: (): Promise<unknown> => ipcRenderer.invoke('update:status'),
+  setAutoCheck: (enabled: boolean): Promise<void> =>
+    ipcRenderer.invoke('update:set-auto-check', enabled),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('update:get-version'),
+  getCurrentChangelog: (): Promise<{ version: string; changelog: string | null }> =>
+    ipcRenderer.invoke('update:get-current-changelog'),
 
   onUpdateChecking: (callback: () => void) => onIpcEvent('update-checking', callback),
-  onUpdateAvailable: (
-    callback: (data: { version: string; changelog: string | null; isPortable: boolean }) => void,
-  ) => onIpcPayload('update-available', callback),
+  onUpdateAvailable: subscribeToUpdate('update-available'),
   onUpdateNotAvailable: (callback: () => void) => onIpcEvent('update-not-available', callback),
-  onUpdateError: (callback: (data: { message: string }) => void) =>
-    onIpcPayload('update-error', callback),
-  onDownloadProgress: (
-    callback: (data: {
-      percentage: number
-      bytesPerSecond: number
-      total: number
-      transferred: number
-    }) => void,
-  ) => onIpcPayload('download-progress', callback),
-  onUpdateDownloaded: (callback: (data: { version: string }) => void) =>
-    onIpcPayload('update-downloaded', callback),
+  onUpdateError: subscribeToUpdate('update-error'),
+  onDownloadProgress: subscribeToUpdate('download-progress'),
+  onUpdateDownloaded: subscribeToUpdate('update-downloaded'),
   onUpdateCancelled: (callback: () => void) => onIpcEvent('update-cancelled', callback),
-})
+}
+
+contextBridge.exposeInMainWorld('electronAPI', electronAPI)
 
 declare global {
   interface Window {
-    electronAPI: {
-      platform: string
-      versions: {
-        electron: string
-        chrome: string
-        node: string
-      }
-      selectFolder: () => Promise<string | null>
-      readLocalJson: (filePath: string) => Promise<unknown>
-      readBundledJson: (relativePath: string) => Promise<unknown>
-      getBundledManifest: () => Promise<BundledSrdManifestSummary>
-      setUnsavedChanges?: (value: boolean) => void
-      onConfirmClose: (callback: () => void) => () => void
-      forceClose: () => void
-      setTitleBarOverlay: (color: string, symbolColor: string, height: number) => void
-      // Update methods
-      checkForUpdate: () => Promise<{ success: boolean; data: unknown; error: string | null }>
-      downloadUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
-      openPortableUpdatePage: () => Promise<{
-        success: boolean
-        data: null
-        error: string | null
-      }>
-      cancelUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
-      installUpdate: () => Promise<void>
-      getUpdateStatus: () => Promise<unknown>
-      setAutoCheck: (enabled: boolean) => Promise<void>
-      getAppVersion: () => Promise<string>
-      getCurrentChangelog: () => Promise<{ version: string; changelog: string | null }>
-      onUpdateChecking: (callback: () => void) => () => void
-      onUpdateAvailable: (
-        callback: (data: {
-          version: string
-          changelog: string | null
-          isPortable: boolean
-        }) => void,
-      ) => () => void
-      onUpdateNotAvailable: (callback: () => void) => () => void
-      onUpdateError: (callback: (data: { message: string }) => void) => () => void
-      onDownloadProgress: (
-        callback: (data: {
-          percentage: number
-          bytesPerSecond: number
-          total: number
-          transferred: number
-        }) => void,
-      ) => () => void
-      onUpdateDownloaded: (callback: (data: { version: string }) => void) => () => void
-      onUpdateCancelled: (callback: () => void) => () => void
-    }
+    electronAPI: typeof electronAPI
   }
 }

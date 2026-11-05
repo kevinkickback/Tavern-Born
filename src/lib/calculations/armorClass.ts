@@ -10,7 +10,6 @@ import {
   validateItemTypeFallbacks,
 } from './itemClassification'
 
-export { ARMOR_CATEGORY_LABEL_TO_CODE } from './itemClassification'
 export type { ArmorCategory }
 
 /**

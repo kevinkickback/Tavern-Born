@@ -2,7 +2,7 @@ import {
   getRacialSourceDisplayName,
   type RaceDisplaySelection,
 } from '@/lib/calculations/raceDisplay'
-import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance'
+import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance/normalization'
 import type { ChoiceRecord } from '@/lib/provenance/types'
 
 type ToolGenericKind = 'musical instrument' | "artisan's tools" | 'gaming set' | 'tool'

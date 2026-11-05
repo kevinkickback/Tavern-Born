@@ -1,4 +1,4 @@
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import { hasProfInArray } from '@/pages/build/proficiencies/model/data'
 import {

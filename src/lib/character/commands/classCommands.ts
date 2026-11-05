@@ -9,7 +9,7 @@ import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSp
  * return a single result object for callers to apply.
  */
 
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import {
   assertStartingEquipmentSelections,
   getClassDefaultEquipmentBlocks,

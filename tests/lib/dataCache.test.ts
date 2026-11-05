@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { parseItems, parseOptionalFeatures } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
@@ -61,6 +61,8 @@ describe('writeGameDataCache', () => {
     vi.clearAllMocks()
     idbGetMock.mockResolvedValue(null)
   })
+
+  afterEach(() => vi.useRealTimers())
 
   test('retains named target ambiguity through cache and permits an exact unique winning overlay', async () => {
     const weapon = { name: 'Example weapon', source: 'TEST', type: 'M' }
@@ -186,19 +188,16 @@ describe('writeGameDataCache', () => {
 
   test('preserves lastDataChangedAt when fingerprint matches existing cache', async () => {
     const data = makeGameData()
-    // First write to establish a cache entry
     const first = await writeGameDataCache(data, config)
+    const lastDataChangedAt = '2025-01-01T00:00:00.000Z'
 
-    // Simulate the IDB cache having been written
-    idbGetMock.mockResolvedValue({
-      ...first,
-      sourceSnapshot: { type: config.type, path: config.path },
+    idbGetMock.mockResolvedValue({ ...first, lastDataChangedAt })
+    const second = await writeGameDataCache(data, config, {
+      fingerprint: first.contentFingerprint,
+      lastDataChangedAt: '2025-02-01T00:00:00.000Z',
     })
 
-    // Second write with identical data — should not bump the timestamp
-    const second = await writeGameDataCache(data, config)
-
-    expect(second.lastDataChangedAt).toBe(first.lastDataChangedAt)
+    expect(second.lastDataChangedAt).toBe(lastDataChangedAt)
   })
 
   test('updates lastDataChangedAt when content actually changes', async () => {
@@ -212,36 +211,22 @@ describe('writeGameDataCache', () => {
       sourceSnapshot: { type: config.type, path: config.path },
     })
 
-    // Advance time so the new "now" differs from the first write
     vi.setSystemTime(new Date('2026-06-01T12:00:00.000Z'))
 
     const second = await writeGameDataCache(makeGameData('b'), config)
 
-    vi.useRealTimers()
-
     expect(second.lastDataChangedAt).toBe('2026-06-01T12:00:00.000Z')
-    expect(second.lastDataChangedAt).not.toBe(first.lastDataChangedAt)
   })
 
   test('preserves lastDataChangedAt via fallback when cache was cleared but data unchanged', async () => {
-    // Simulate: cache was cleared (idbGet returns null) but we know the fingerprint
     const data = makeGameData('x')
-
-    // Get the fingerprint by doing a first write
-    const first = await writeGameDataCache(data, config)
-    const knownFingerprint = first.contentFingerprint as string
-    const knownChangedAt = first.lastDataChangedAt
-
-    // Clear the mock — no cache exists now
-    idbGetMock.mockResolvedValue(null)
-
-    // Re-write with same data and provide the fallback
-    const second = await writeGameDataCache(data, config, {
-      fingerprint: knownFingerprint,
-      lastDataChangedAt: knownChangedAt,
+    const lastDataChangedAt = '2025-01-01T00:00:00.000Z'
+    const entry = await writeGameDataCache(data, config, {
+      fingerprint: computeGameDataFingerprint(data),
+      lastDataChangedAt,
     })
 
-    expect(second.lastDataChangedAt).toBe(knownChangedAt)
+    expect(entry.lastDataChangedAt).toBe(lastDataChangedAt)
   })
 
   test('ignores fallback when fingerprints differ (data actually changed)', async () => {
@@ -282,31 +267,44 @@ describe('writeGameDataCache', () => {
     expect(new Date(entry.lastDataChangedAt!).getTime()).toBeLessThanOrEqual(after)
   })
 
-  test('preserves lastDataChangedAt via fallback when existing cache lacks a fingerprint (legacy cache)', async () => {
+  test('uses the matching cache write date when its fingerprint and change date are missing', async () => {
     const data = makeGameData('y')
-
-    // First write to get the real fingerprint and changed-at
     const first = await writeGameDataCache(data, config)
-    const knownFingerprint = first.contentFingerprint as string
-    const knownChangedAt = first.lastDataChangedAt
+    const cachedAt = '2025-01-01T00:00:00.000Z'
 
-    // Simulate a legacy cache entry — same source, same data, but no contentFingerprint
     idbGetMock.mockResolvedValue({
-      data,
-      cachedAt: first.cachedAt,
-      // contentFingerprint intentionally absent (legacy)
-      lastDataChangedAt: knownChangedAt,
-      sourceSnapshot: { type: config.type, path: config.path },
+      ...first,
+      cachedAt,
+      contentFingerprint: undefined,
+      lastDataChangedAt: undefined,
     })
-
-    // Re-write with the same data, passing the fallback fingerprint from the store
     const second = await writeGameDataCache(data, config, {
-      fingerprint: knownFingerprint,
-      lastDataChangedAt: knownChangedAt,
+      fingerprint: first.contentFingerprint,
+      lastDataChangedAt: '2025-02-01T00:00:00.000Z',
     })
 
-    // Should preserve the old timestamp even though the cache lacked a fingerprint
-    expect(second.lastDataChangedAt).toBe(knownChangedAt)
+    expect(second.lastDataChangedAt).toBe(cachedAt)
+  })
+
+  test('uses the current write date for identical content from a different source', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+    const data = makeGameData()
+    const first = await writeGameDataCache(data, config)
+    idbGetMock.mockResolvedValue(first)
+
+    const now = '2026-01-01T00:00:00.000Z'
+    vi.setSystemTime(new Date(now))
+    const second = await writeGameDataCache(
+      data,
+      { ...config, path: 'https://other.example' },
+      {
+        fingerprint: first.contentFingerprint,
+        lastDataChangedAt: first.lastDataChangedAt,
+      },
+    )
+
+    expect(second.lastDataChangedAt).toBe(now)
   })
 
   test('does not reuse timestamps from an obsolete cache schema without a fallback', async () => {
@@ -316,7 +314,6 @@ describe('writeGameDataCache', () => {
     idbGetMock.mockResolvedValue({
       data,
       cachedAt: before,
-      // contentFingerprint intentionally absent (legacy)
       lastDataChangedAt: before,
       sourceSnapshot: { type: config.type, path: config.path },
     })

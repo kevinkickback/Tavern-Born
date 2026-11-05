@@ -5,6 +5,7 @@ import {
   type ProgressInfo,
   type UpdateInfo,
 } from 'electron-updater'
+import type { UpdateEventPayloads, UpdateSignal } from './updateEvents'
 
 const GITHUB_OWNER = 'kevinkickback'
 const GITHUB_REPO = 'Tavern-Born'
@@ -112,7 +113,12 @@ function getMainWindow(): BrowserWindow | null {
   return windows.length > 0 ? (windows[0] ?? null) : null
 }
 
-function sendToRenderer(channel: string, data?: unknown) {
+function sendToRenderer(channel: UpdateSignal): void
+function sendToRenderer<Channel extends keyof UpdateEventPayloads>(
+  channel: Channel,
+  data: UpdateEventPayloads[Channel],
+): void
+function sendToRenderer(channel: UpdateSignal | keyof UpdateEventPayloads, data?: unknown) {
   const win = getMainWindow()
   if (win && !win.isDestroyed()) {
     win.webContents.send(channel, data)

@@ -12,10 +12,10 @@ const { validateDataSourceMock } = vi.hoisted(() => ({
   validateDataSourceMock: vi.fn(),
 }))
 
-vi.mock('@/lib/5etools', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/5etools')>('@/lib/5etools')
-  return { ...actual, validateDataSource: validateDataSourceMock }
-})
+vi.mock(import('@/lib/5etools/validator'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  validateDataSource: validateDataSourceMock,
+}))
 
 vi.mock('sonner', () => ({
   toast: {

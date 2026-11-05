@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { RulesPreviewButton } from '@/components/editor/RulesPreviewButton'
-import { getSpellPreviewDescriptor } from '@/components/editor/RulesPreviewManager'
+import { getSpellPreviewDescriptor } from '@/components/editor/rulesPreviewReferences'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Spell5e } from '@/types/5etools'

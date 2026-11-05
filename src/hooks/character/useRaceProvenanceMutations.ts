@@ -8,7 +8,7 @@ import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
-import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'

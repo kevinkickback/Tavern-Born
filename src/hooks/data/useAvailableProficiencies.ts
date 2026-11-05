@@ -8,7 +8,7 @@ import {
   collectWeaponOrArmorFromProfBlocks,
   sanitizeProficiencyLabel,
 } from '@/lib/calculations/proficiencyLabels'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 
 export interface AvailableProficiencies {
   armor: string[]
