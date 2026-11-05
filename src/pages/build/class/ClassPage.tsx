@@ -20,6 +20,7 @@ import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
+import { PRIMAL_ORDER } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -390,6 +391,8 @@ export function BuildClassPage() {
         if (f.className !== viewingClass) return false
         if (src && f.classSource !== src) return false
         const target = getClassFeatureIdentity(f)
+        if (target === PRIMAL_ORDER.training.target || target === PRIMAL_ORDER.caster.target)
+          return false
         return (
           !!target &&
           activity.declared(

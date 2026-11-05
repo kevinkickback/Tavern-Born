@@ -217,19 +217,21 @@ describe('representative character consumers', () => {
         'Restore the exact item rules for leather armor. Restore the exact item rules for shield. Restore the exact item rules for sickle.',
     }
     const explanation = missingStartingRules[fixture.id]
+    // These abbreviated fixtures have saved intent but lack the exact order rules.
+    const order = {
+      '2024-cleric': ['Cleric', 'Divine Order', 'divine-order'],
+      '2024-druid': ['Druid', 'Primal Order', 'primal-order'],
+    }[fixture.id]
     const expectedIssues = [
-      // This abbreviated Cleric fixture has saved intent but lacks the exact Divine Order rules.
-      ...(fixture.id === '2024-cleric'
+      ...(order
         ? [
             {
-              id: 'class-choice:class:cleric|xphb|choice:divine-order|1',
+              id: `class-choice:class:${order[0].toLowerCase()}|xphb|choice:${order[2]}|1`,
               section: 'class',
               severity: 'blocking',
-              title: 'Review Divine Order',
-              explanation:
-                'Restore the exact Divine Order and selected option sources or change the selection.',
-              navigationTarget:
-                '/build/class?class=Cleric%7CXPHB&level=1&choice=class%3Acleric%7Cxphb%7Cchoice%3Adivine-order%7C1',
+              title: `Review ${order[1]}`,
+              explanation: `Restore the exact ${order[1]} and selected option sources or change the selection.`,
+              navigationTarget: `/build/class?class=${order[0]}%7CXPHB&level=1&choice=class%3A${order[0].toLowerCase()}%7Cxphb%7Cchoice%3A${order[2]}%7C1`,
             },
           ]
         : []),

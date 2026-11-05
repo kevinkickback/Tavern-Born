@@ -151,11 +151,12 @@ Class context, with its complete prerequisite payload checked. The generic prere
 continues to reject unsupported conditions elsewhere. TCE options keep the existing guarded pool
 checks, so supported structured prerequisites can change without an absence fingerprint.
 
-Revised Cleric Thaumaturge uses the same feature-cantrip editor for the
-single extra cantrip expressed by its exact Divine Order prose. The current
-revised Cleric list supplies eligible targets. The slot belongs to the exact
-selected class-feature reference and shares cantrip uniqueness with that
-Cleric's ordinary selections. It has its own saved address and revision.
+Revised Cleric Thaumaturge and revised Druid Magician use the feature-cantrip
+editor for the extra cantrip expressed by their respective order's prose.
+Each uses the current revised list for its own class and shares cantrip
+uniqueness with that owner's ordinary selections. Each slot belongs to the
+exact selected class-feature reference and has its own saved address and
+revision.
 
 Choice addresses remain stable while supported count/filter/ability values change. Current target
 eligibility is reevaluated; a reduced count suspends excess intent and exact regrowth can restore it.

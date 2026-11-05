@@ -21,6 +21,7 @@ import {
   getSelectedFeatureCantripPool,
   getSelectedFeatureCantripSlots,
 } from '@/lib/character/selectedFeatureSpells'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
 import type { Class5e, ClassFeature, GameData, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -31,10 +32,31 @@ const bundled = 'resources/srd/core/data'
 const configured = 'data'
 const read = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'))
 
-function setup(path: string) {
+const cases = [
+  {
+    name: 'Divine Order',
+    className: 'Cleric',
+    training: 'Protector',
+    armor: 'heavy',
+    caster: 'Thaumaturge',
+    skill: 'religion',
+  },
+  {
+    name: 'Primal Order',
+    className: 'Druid',
+    training: 'Warden',
+    armor: 'medium',
+    caster: 'Magician',
+    skill: 'nature',
+  },
+] as const
+
+type OrderCase = (typeof cases)[number]
+
+function setup(path: string, order: OrderCase) {
   const parsed = parseClassDocument(
-    read(`${path}/class/class-cleric.json`),
-    'class/class-cleric.json',
+    read(`${path}/class/class-${order.className.toLowerCase()}.json`),
+    `class/class-${order.className.toLowerCase()}.json`,
   )
   const data: GameData = makeGameDataFixture({
     ...parsed,
@@ -45,9 +67,9 @@ function setup(path: string) {
     }) as Spell5e[],
   })
   const catalogs = buildClassChoiceFeatureCatalogs(data)
-  const cls = data.classes.find((row) => row.name === 'Cleric' && row.source === 'XPHB')
-  const choice = cls?.normalizedRules?.choices.find((row) => row.label === 'Divine Order')
-  if (!choice) throw new Error('The current Divine Order choice is missing')
+  const cls = data.classes.find((row) => row.name === order.className && row.source === 'XPHB')
+  const choice = cls?.normalizedRules?.choices.find((row) => row.label === order.name)
+  if (!choice) throw new Error(`The current ${order.name} choice is missing`)
   const lookup = buildGameDataLookups(data)
   const calculate = (actor: Character, currentCatalogs: ClassChoiceFeatureCatalogs = catalogs) =>
     createCharacterCalculationContext(actor, {
@@ -71,10 +93,10 @@ function setup(path: string) {
     return reopen({ ...actor, ...result.characterPatch, provenance: result.provenanceUpdate })
   }
   const actor = createEmptyCharacter({
-    name: 'Divine Order Cleric',
+    name: `${order.name} ${order.className}`,
     originSystem: '2024',
     allowedSources: ['XPHB'],
-    classProgression: [{ name: 'Cleric', source: 'XPHB', levels: 1 }],
+    classProgression: [{ name: order.className, source: 'XPHB', levels: 1 }],
     abilityScores: {
       strength: 10,
       dexterity: 10,
@@ -90,12 +112,13 @@ function setup(path: string) {
 const reopen = (actor: Character) =>
   characterPersistenceSchema.parse(JSON.parse(JSON.stringify(actor)))
 
-function verifyDivineOrder(path: string) {
-  const { actor, catalogs, calculate, confirm } = setup(path)
+function verifyOrder(path: string, order: OrderCase) {
+  const { actor, catalogs, calculate, confirm } = setup(path, order)
   // An independent manual source for the same training survives a choice change.
-  actor.proficiencies.armor = ['heavy']
-  const protector = confirm(actor, 'Protector')
-  expect(protector.proficiencies.armor).toContain('heavy')
+  expect(confirm(actor, order.training).proficiencies.armor).toContain(order.armor)
+  actor.proficiencies.armor = [order.armor]
+  const protector = confirm(actor, order.training)
+  expect(protector.proficiencies.armor).toContain(order.armor)
   expect(protector.proficiencies.weapons).toContain('martial')
   const halfOwned = structuredClone(protector)
   delete halfOwned.provenance.proficiencies.weapons.martial
@@ -105,24 +128,24 @@ function verifyDivineOrder(path: string) {
   const conflictingProtector = {
     ...catalogs,
     classFeatures: catalogs.classFeatures.map((row) =>
-      row.name === 'Protector' ? { ...row, entries: ['This is a different rule.'] } : row,
+      row.name === order.training ? { ...row, entries: ['This is a different rule.'] } : row,
     ),
     classFeatureCandidates: undefined,
   }
   const suspended = calculate(protector, conflictingProtector).character
-  expect(suspended.proficiencies.armor).toContain('heavy')
+  expect(suspended.proficiencies.armor).toContain(order.armor)
   expect(suspended.proficiencies.weapons).not.toContain('martial')
   const orderWithdrawn = {
     ...catalogs,
     classes: catalogs.classes?.map((row) => ({
       ...row,
       classFeatures: row.classFeatures?.filter(
-        (uid): uid is string => typeof uid === 'string' && !uid.startsWith('Divine Order|'),
+        (uid): uid is string => typeof uid === 'string' && !uid.startsWith(`${order.name}|`),
       ),
-      classFeatureRefs: row.classFeatureRefs?.filter((ref) => ref.name !== 'Divine Order'),
+      classFeatureRefs: row.classFeatureRefs?.filter((ref) => ref.name !== order.name),
       normalizedRules: row.normalizedRules && {
         ...row.normalizedRules,
-        choices: row.normalizedRules.choices.filter((choice) => choice.label !== 'Divine Order'),
+        choices: row.normalizedRules.choices.filter((choice) => choice.label !== order.name),
       },
     })),
   }
@@ -130,9 +153,9 @@ function verifyDivineOrder(path: string) {
     protector,
     orderWithdrawn.classes ?? [],
     orderWithdrawn,
-  ).find((state) => state.divineOrder)
-  expect(recovery).toMatchObject({ recovery: true, selection: { label: 'Divine Order' } })
-  if (!recovery) throw new Error('Divine Order recovery was not offered')
+  ).find((state) => state.classOrder)
+  expect(recovery).toMatchObject({ recovery: true, selection: { label: order.name } })
+  if (!recovery) throw new Error(`${order.name} recovery was not offered`)
   const recovered = retainSavedFeatureOptionsCommand(
     protector,
     protector.provenance,
@@ -147,10 +170,40 @@ function verifyDivineOrder(path: string) {
     provenance: recovered.provenanceUpdate,
   })
   expect(removed.classChoiceSelections).toEqual([])
-  expect(removed.proficiencies.armor).toContain('heavy')
+  expect(removed.proficiencies.armor).toContain(order.armor)
   expect(removed.proficiencies.weapons).not.toContain('martial')
-  const thaumaturge = confirm(protector, 'Thaumaturge')
-  expect(thaumaturge.proficiencies.armor).toContain('heavy')
+  if (order.className === 'Druid') {
+    for (const candidate of [actor, removed]) {
+      expect(validateClassChoices(candidate, calculate(candidate, orderWithdrawn))).toContainEqual(
+        expect.objectContaining({
+          title: 'Review Primal Order',
+          severity: 'blocking',
+        }),
+      )
+    }
+    expect(validateClassChoices(actor, calculate(actor))).toContainEqual(
+      expect.objectContaining({ title: 'Finish Primal Order', severity: 'blocking' }),
+    )
+    const dualRoute = {
+      ...catalogs,
+      classes: catalogs.classes?.map((row) =>
+        row.name === 'Druid' && row.source === 'XPHB'
+          ? {
+              ...row,
+              classFeatures: [
+                ...(row.classFeatures ?? []).filter(
+                  (uid): uid is string => typeof uid === 'string',
+                ),
+                'Magician|Druid|XPHB|1',
+              ],
+            }
+          : row,
+      ),
+    }
+    expect(calculate(protector, dualRoute).character.proficiencies.weapons).not.toContain('martial')
+  }
+  const thaumaturge = confirm(protector, order.caster)
+  expect(thaumaturge.proficiencies.armor).toContain(order.armor)
   expect(thaumaturge.proficiencies.weapons).not.toContain('martial')
   const calculation = calculate(thaumaturge)
   const skills = (modifiers = calculation.abilityScores.modifiers, map?: Record<string, string>) =>
@@ -160,7 +213,7 @@ function verifyDivineOrder(path: string) {
       [],
       2,
       map,
-      ['arcana', 'religion'],
+      ['arcana', order.skill],
       calculation.effects.declarations,
     )
   expect(skills().map((row) => row.modifier)).toEqual([4, 4])
@@ -170,24 +223,35 @@ function verifyDivineOrder(path: string) {
   })
   expect(
     lowWisdom.effects.declarations
-      .filter((row) => row.label === 'Thaumaturge')
+      .filter((row) => row.label === order.caster)
       .map((row) => row.operation),
   ).toEqual([
     { kind: 'add', value: 1 },
     { kind: 'add', value: 1 },
   ])
   expect(
-    skills(undefined, { arcana: 'wisdom', religion: 'intelligence' }).map((row) => row.modifier),
+    skills(undefined, { arcana: 'wisdom', [order.skill]: 'intelligence' }).map(
+      (row) => row.modifier,
+    ),
   ).toEqual([3, 4])
   const slots = getSelectedFeatureCantripSlots(thaumaturge, catalogs)
   expect(slots).toHaveLength(1)
+  if (order.className === 'Druid') {
+    const pool = getSelectedFeatureCantripPool(
+      thaumaturge,
+      slots[0],
+      calculation.classChoices.spellContext,
+    )
+    expect(pool.spells.map((spell) => spell.name)).toContain('Guidance')
+    expect(pool.spells.map((spell) => spell.name)).not.toContain('Fire Bolt')
+  }
   const foreignList = parseSpells({
     spell: [
       {
         name: 'Guidance',
         source: 'XPHB',
         level: 0,
-        classes: { fromClassList: [{ name: 'Cleric (Different)', source: 'XPHB' }] },
+        classes: { fromClassList: [{ name: `${order.className} (Different)`, source: 'XPHB' }] },
       },
     ],
   })[0] as Spell5e
@@ -202,7 +266,7 @@ function verifyDivineOrder(path: string) {
       thaumaturge,
       calculation,
       calculation.classChoices.spellContext?.spellsByKey,
-    ).some((row) => row.title.includes('Thaumaturge')),
+    ).some((row) => row.title.includes(order.caster)),
   ).toBe(true)
   const result = setManagedClassSpellChoiceCommand(
     thaumaturge,
@@ -224,7 +288,7 @@ function verifyDivineOrder(path: string) {
   expect(calculate(saved).managedClassSpellStatuses[0]).toMatchObject({ active: true })
   const withoutLeaf = {
     ...catalogs,
-    classFeatures: catalogs.classFeatures.filter((row) => row.name !== 'Thaumaturge'),
+    classFeatures: catalogs.classFeatures.filter((row) => row.name !== order.caster),
     classFeatureCandidates: undefined,
   }
   expect(calculate(saved, withoutLeaf).managedClassSpellStatuses[0]).toMatchObject({
@@ -233,16 +297,17 @@ function verifyDivineOrder(path: string) {
   expect(calculate(saved).managedClassSpellStatuses[0]).toMatchObject({ active: true })
   const cleared = confirm(saved)
   expect(cleared.managedClassSpellChoices).toEqual([])
-  expect(calculate(cleared).effects.declarations.some((row) => row.label === 'Thaumaturge')).toBe(
+  expect(calculate(cleared).effects.declarations.some((row) => row.label === order.caster)).toBe(
     false,
   )
 }
 
-test('bundled Divine Order grants current benefits and preserves independently owned training', () => {
-  verifyDivineOrder(bundled)
-})
-
-test.runIf(existsSync(`${configured}/class/class-cleric.json`))(
-  'configured Divine Order uses the same source-qualified choices and lifecycle',
-  () => verifyDivineOrder(configured),
-)
+for (const order of cases) {
+  test(`bundled ${order.name} grants current benefits and preserves independently owned training`, () => {
+    verifyOrder(bundled, order)
+  })
+  test.runIf(existsSync(`${configured}/class/class-${order.className.toLowerCase()}.json`))(
+    `configured ${order.name} uses the same source-qualified choices and lifecycle`,
+    () => verifyOrder(configured, order),
+  )
+}

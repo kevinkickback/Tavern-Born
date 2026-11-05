@@ -5,6 +5,7 @@ import {
 } from '@/lib/5etools/blessedStrikesSource'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { getClassOrderById, getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
@@ -86,6 +87,12 @@ function buildEffectiveClassChoiceFeatureRoutes(
   const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
+    const order = getClassOrderById(selection.choiceId)
+    if (
+      order?.owner === 'druid' &&
+      (getSavedClassOrder(character, order)?.selection !== selection || selection.inactive)
+    )
+      continue
     if (
       selection.choiceId === BLESSED_STRIKES_ID &&
       (selection !== blessedStrikes || selection.inactive)

@@ -109,6 +109,10 @@
       "sha256": "03426e9f2eef3f9332278633527f51adb4554ea34731e99292c9ecd3e328e60b"
     },
     {
+      "file": "src/lib/5etools/classOrderIdentity.ts",
+      "sha256": "7f2bf1ff5e2924629b86064b47387246587e24e60dc9e599ce6c4c61be1d4953"
+    },
+    {
       "file": "src/lib/5etools/classProficiencyChoices.ts",
       "sha256": "a66e9ac70ea1aa0f08665ba14bc47bace73cb38f86f46932e17553849559531c"
     },
@@ -165,10 +169,6 @@
       "sha256": "4ff0e8a2885a86bc9c16598fc2b7937e345d0b35498da37ef5ca06f94c1baf94"
     },
     {
-      "file": "src/lib/5etools/divineOrderIdentity.ts",
-      "sha256": "ac37833938cc09ac256ecff1bafd44de7cf62dc00f5ca1331c438ab2befc6599"
-    },
-    {
       "file": "src/lib/5etools/entityIdentity.ts",
       "sha256": "01ea66819047ff0d97ace224f34667ef1d2e7bcba3b255dad0d4a746babca47b"
     },
@@ -222,7 +222,7 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "fe4774b95417b1ef65528a113a3df11dc2eba7da4c12c3689c6ebf0bf4232fcf"
+      "sha256": "3b20886d92845bc7541aaed33c7fb2e0cf8b3f4e0ef8631b2532e229e277ea3c"
     },
     {
       "file": "src/lib/5etools/inlineTagSegments.ts",

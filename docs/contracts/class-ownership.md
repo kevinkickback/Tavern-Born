@@ -7,15 +7,16 @@ Read this reference only when changing this contract. Start with the [topic inde
 Class tags include source-qualified class identity and, where needed, the granting level/choice.
 This allows multiclass-safe removal, per-level spell editing, level rollback, and subclass changes.
 
-Revised Cleric Divine Order uses the existing level-1 class-feature choice.
-The current direct XPHB declaration and its exact selected option establish
-benefit authority. The bundled and configured sources express the mechanics
-in tagged prose, so a finite source adapter verifies those bodies before
-applying the grants. Protector supplies martial weapon proficiency and heavy
-armor training through the shared fixed-proficiency projection. Thaumaturge
-adds the current Wisdom modifier (minimum +1) to Intelligence checks for
-Arcana and Religion. Choice removal or unavailable authority removes only
-that provider's effects. Existing independent providers survive.
+Revised Cleric Divine Order and revised Druid Primal Order use existing
+level-1 class-feature choices. The current direct XPHB declaration and its
+exact selected option establish benefit authority. A shared source adapter
+verifies the tagged prose in the bundled and configured sources before
+applying grants. Protector and Warden supply martial weapon proficiency and
+heavy or medium armor training, respectively, through the shared fixed
+proficiency projection. Thaumaturge and Magician add the current Wisdom
+modifier (minimum +1) to Intelligence checks for Arcana and for Religion
+or Nature, respectively. Removing a choice or losing its source removes
+that provider's effects. Independent providers survive.
 
 Classic PHB Life Domain grants heavy armor training at level 1 through
 the same fixed proficiency projection. The selected PHB Cleric and PHB

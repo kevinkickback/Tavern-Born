@@ -1,3 +1,4 @@
+import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import {
   type EntityLookupSet,
   type ResolvedRaceReference,
@@ -8,12 +9,12 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { getCurrentClassOrder } from '@/lib/character/classOrder'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
-import { getCurrentDivineOrder } from '@/lib/character/divineOrder'
 import {
   type ClassChoicePrerequisiteContext,
   projectEffectiveClassChoiceFeatures,
@@ -525,25 +526,21 @@ export function createCharacterCalculationContext(
     prerequisites,
   )
   // Skill modifiers and explanatory notes do not feed back into ability or prerequisite calculations.
-  const divineOrder = getCurrentDivineOrder(character, choiceCatalogs)
-  const thaumaturgeSkillEffects: CharacterEffect[] =
-    divineOrder?.branch === 'thaumaturge'
-      ? ['arcana', 'religion'].map((skill) => ({
-          id: `${divineOrder.selection.choiceId}:thaumaturge:${skill}`,
-          label: 'Thaumaturge',
-          source: {
-            kind: 'class',
-            name: 'Thaumaturge',
-            source: 'XPHB',
-            provenance: { choiceId: divineOrder.selection.choiceId },
-          },
-          target: { kind: 'skill-modifier', skill, ability: 'intelligence' },
-          operation: { kind: 'add', value: Math.max(1, abilityScores.modifiers.wisdom) },
-        }))
-      : []
+  const orderSkillEffects = CLASS_ORDERS.flatMap((order): CharacterEffect[] => {
+    const current = getCurrentClassOrder(character, order, choiceCatalogs)
+    if (current?.branch !== 'caster') return []
+    const label = order.caster.name
+    return order.caster.skills.map((skill) => ({
+      id: `${order.id}:${label.toLowerCase()}:${skill}`,
+      label,
+      source: { kind: 'class', name: label, source: 'XPHB', provenance: { choiceId: order.id } },
+      target: { kind: 'skill-modifier', skill, ability: 'intelligence' },
+      operation: { kind: 'add', value: Math.max(1, abilityScores.modifiers.wisdom) },
+    }))
+  })
   const sourceEffects = [
     ...baseSourceEffects,
-    ...thaumaturgeSkillEffects,
+    ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
       choiceCatalogs,

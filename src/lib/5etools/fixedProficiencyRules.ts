@@ -1,4 +1,4 @@
-import { DIVINE_ORDER_OPTIONS } from './divineOrderIdentity'
+import { CLASS_ORDERS } from './classOrderIdentity'
 import generated from './fixedProficiencyRules.generated.json' with { type: 'json' }
 
 export interface FixedProficiencyRule {
@@ -37,17 +37,21 @@ export const FIXED_PROFICIENCY_RULES =
 export const DIRECT_FIXED_CLASS_CERTIFICATES =
   generated.directClasses as DirectFixedClassCertificate[]
 export const CONCRETE_TOOL_PROFICIENCY_NAMES: readonly string[] = generated.toolNames
-const rules = new Map(FIXED_PROFICIENCY_RULES.map((row) => [row.target, row]))
+const rules = new Map<string, FixedProficiencyRule>(
+  FIXED_PROFICIENCY_RULES.map((row) => [row.target, row]),
+)
 
-// Source authority for this selected branch is checked by the Divine Order adapter.
-export const PROTECTOR_TRAINING: FixedProficiencyRule = {
-  target: DIVINE_ORDER_OPTIONS.protector,
-  name: 'Protector',
-  className: 'Cleric',
-  classSource: 'XPHB',
-  level: 1,
-  kind: 'fixed-training',
-  training: { armor: ['heavy'], weapons: ['martial'] },
+// The selected Order branch is checked against its live source before granting training.
+for (const order of CLASS_ORDERS) {
+  const { target, name, armor } = order.training
+  rules.set(target, {
+    target,
+    name,
+    className: order.className,
+    classSource: 'XPHB',
+    level: 1,
+    kind: 'fixed-training',
+    training: { armor: [armor], weapons: ['martial'] },
+  })
 }
-export const fixedProficiencyRule = (target: string) =>
-  target === PROTECTOR_TRAINING.target ? PROTECTOR_TRAINING : rules.get(target)
+export const fixedProficiencyRule = (target: string) => rules.get(target)

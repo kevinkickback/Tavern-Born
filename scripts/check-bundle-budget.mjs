@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Circle of the Land: measured 6,475,266 B renderer and 1,235,248 B initial.
+  // Primal Order: measured 6,478,053 B renderer and 1,237,632 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6324 * KIB,
-  initialRendererScript: 1207 * KIB,
+  rendererCode: 6327 * KIB,
+  initialRendererScript: 1209 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

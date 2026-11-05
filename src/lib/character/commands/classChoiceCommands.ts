@@ -8,13 +8,18 @@ import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
+  getClassOrderBranch,
+  getClassOrderById,
+  getSavedClassOrder,
+} from '@/lib/5etools/classOrderIdentity'
+import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
+import {
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
   getProficiencyOption,
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
-import { DIVINE_ORDER_OPTIONS, getSavedDivineOrder } from '@/lib/5etools/divineOrderIdentity'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
@@ -120,6 +125,32 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
+  const order = getClassOrderById(choice.id)
+  if (order?.owner === 'druid') {
+    const owner = findOwner(character, choice)
+    const cls = authority && findClassReference(choice.owner, authority.classes)
+    const catalogs = authority?.catalogs
+    const current =
+      cls &&
+      owner &&
+      catalogs &&
+      getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, owner),
+        createOptionalClassFeatureActivity(character, catalogs),
+        catalogs,
+      ).find((row) => row.id === choice.id)
+    if (
+      !current ||
+      JSON.stringify(current) !== JSON.stringify(choice) ||
+      selected.some((option) => {
+        const branch = getClassOrderBranch(option, order)
+        return !branch || !getCurrentClassOrderOption(catalogs, order, branch)
+      })
+    )
+      throw new RangeError(`${order.name} source rules changed. Review the current choices.`)
+    return current
+  }
   if (choice.id === BLESSED_STRIKES_ID) {
     const owner = findOwner(character, choice)
     const catalogs = authority?.catalogs
@@ -457,7 +488,9 @@ export function retainSavedFeatureOptionsCommand(
   }
   const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
   const registeredCompanion = isRegisteredCompanionSelection(selection)
-  const registeredOrder = getSavedDivineOrder(character)?.selection === selection
+  const order = getClassOrderById(choiceId)
+  const registeredOrder =
+    order && getSavedClassOrder(character, order)?.selection === selection ? order : undefined
   const registeredBlessedStrikes =
     getSavedBlessedStrikes(character.classChoiceSelections ?? []) === selection
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
@@ -555,18 +588,18 @@ export function retainSavedFeatureOptionsCommand(
           (registeredPool ? { classes: [], classFeatures: [], subclassFeatures: [] } : undefined),
         authority?.spellContext,
       )
-  const protectorId =
+  const trainingId =
     registeredOrder && !selected.length
       ? getFixedProficiencyId({
-          owner: ['cleric', 'xphb'],
-          target: DIVINE_ORDER_OPTIONS.protector,
+          owner: [registeredOrder.owner, 'xphb'],
+          target: registeredOrder.training.target,
           level: 1,
         })
       : undefined
-  const afterOrderClear = protectorId
+  const afterOrderClear = trainingId
     ? stripFixedProficiencyGrants(
         { ...character, provenance: ledger },
-        (tag) => tag.grantVariant === protectorId,
+        (tag) => tag.grantVariant === trainingId,
       )
     : undefined
   const grants = {
@@ -699,6 +732,7 @@ export function applyClassChoiceSelectionCommand(
   }
   if (
     (choice.id === BLESSED_STRIKES_ID ||
+      getClassOrderById(choice.id) ||
       getLandChoiceRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
       decodeLegacySubclassChoice(choice.id)) &&
