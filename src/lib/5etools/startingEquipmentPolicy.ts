@@ -1,9 +1,6 @@
 import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import { matchesClassChoiceFilter } from '@/lib/character/classChoiceFilters'
-import {
-  sameStartingReference,
-  startingEquipmentLotKey,
-} from '@/lib/character/startingEquipmentGrants'
+import { sameStartingReference } from '@/lib/character/startingEquipmentGrants'
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import type { Item5e } from '@/types/5etools'
@@ -13,6 +10,7 @@ import { filterCharacterItems } from './playerItemAvailability'
 import { buildSuppressedKeys } from './reprints'
 import {
   type StartingEquipmentSlotAddress,
+  startingEquipmentBranchText,
   startingEquipmentTextFragments,
   startingFilterRule,
   startingGroupRule,
@@ -216,6 +214,127 @@ const itemReference = (value: unknown) =>
 export const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owner']) =>
   owner.kind === 'class' && sameStartingReference(owner, { name: 'Druid', source: 'XPHB' })
 
+const focusEntry = 3
+const restoreFocus = 'Restore the exact Wooden Staff starting focus rules.'
+const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
+const memberEntry = (value: unknown) =>
+  sameStartingReference(entryReference(value), quarterstaffFocus.member)
+
+function declaresQuarterstaffFocus(policy: StartingEquipmentPolicy): boolean {
+  const fragments = startingEquipmentTextFragments(
+    'class',
+    policy.startingEquipment,
+    policy.owner.entries,
+    0,
+  )
+  return (
+    fragments.length === 1 &&
+    !startingGroupRule(
+      fragments,
+      druidicFocus,
+      [`${quarterstaffFocus.member.name}|${quarterstaffFocus.member.source}`],
+      { option: 'a', entry: focusEntry },
+      quarterstaffFocus,
+    ).diagnostic
+  )
+}
+
+function validEquipmentEntry(value: unknown): boolean {
+  if (typeof value === 'string') return !!itemReference(value)
+  const row = entryRecord(value)
+  if (!row) return false
+  const named = ['item', 'equipmentType', 'special'].filter((key) => row[key] !== undefined)
+  const coins = ['value', 'containsValue'].filter((key) => row[key] !== undefined)
+  return (
+    (named.length > 0 || coins.length > 0) &&
+    named.length <= 1 &&
+    named.every((key) => typeof row[key] === 'string' && row[key].trim()) &&
+    (row.item === undefined || !!itemReference(row.item)) &&
+    coins.every(
+      (key) => typeof row[key] === 'number' && Number.isSafeInteger(row[key]) && row[key] >= 0,
+    ) &&
+    (row.quantity === undefined ||
+      (typeof row.quantity === 'number' &&
+        Number.isSafeInteger(row.quantity) &&
+        row.quantity > 0)) &&
+    (row.displayName === undefined || typeof row.displayName === 'string')
+  )
+}
+
+function isCanonicalFocusEntry(value: unknown): boolean {
+  const row = entryRecord(value)
+  return (
+    !!row &&
+    Object.keys(row).every((key) => ['item', 'quantity', 'displayName'].includes(key)) &&
+    (row.quantity === undefined || row.quantity === 1) &&
+    (row.displayName === undefined ||
+      (typeof row.displayName === 'string' &&
+        row.displayName.trim().toLowerCase() === quarterstaffFocus.display.toLowerCase())) &&
+    sameStartingReference(itemReference(row.item), druidicFocus)
+  )
+}
+
+function currentPackage(block: Record<string, unknown>, option: string): unknown[] | undefined {
+  const keys = Object.keys(block).filter((key) => key.toLowerCase() === option)
+  const entries = keys.length === 1 ? block[keys[0]] : undefined
+  return Array.isArray(entries) && entries.length && entries.every(validEquipmentEntry)
+    ? entries
+    : undefined
+}
+
+/** Suspend incomplete or conflicting declarations before generic package fallback or lot issuance. */
+export function getRevisedDruidPackageIssues(
+  policy: StartingEquipmentPolicy,
+  blocks: readonly unknown[],
+): Record<string, string | undefined> | undefined {
+  if (!isRevisedDruidStartingOwner(policy.owner)) return undefined
+  if (!policy.ownerAvailable || policy.owner.sourceIdentityConflict) {
+    const issue = 'Restore the exact Druid source rules.'
+    return { a: issue, b: issue }
+  }
+  const data = entryRecord(policy.startingEquipment)?.defaultData
+  if (!Array.isArray(data) || (data !== blocks && JSON.stringify(data) !== JSON.stringify(blocks)))
+    return { a: restoreFocus, b: restoreFocus }
+  const current = entryRecord(data[0])
+  if (!current) return { a: restoreFocus, b: restoreFocus }
+  const a = currentPackage(current, 'a')
+  const b = currentPackage(current, 'b')
+  const groupClaim = (row: unknown) =>
+    normalizeKey(entryReference(row)?.name ?? '') === 'druidic focus'
+  const groups = a?.filter(groupClaim)
+  const rawClaim = Object.entries(current).some(
+    ([key, entries]) =>
+      key.toLowerCase() === 'a' && Array.isArray(entries) && entries.some(groupClaim),
+  )
+  const proseClaim = startingEquipmentTextFragments(
+    'class',
+    policy.startingEquipment,
+    policy.owner.entries,
+    0,
+  ).some((fragment) =>
+    /\bdruidic focus\b/i.test(startingEquipmentBranchText(fragment, 'a') ?? fragment),
+  )
+  const canonicalIntent = rawClaim || proseClaim
+  const conflictingShared = data.some((rawBlock) => {
+    const shared = entryRecord(rawBlock)?._
+    return (
+      shared !== undefined &&
+      (!Array.isArray(shared) ||
+        !shared.every(validEquipmentEntry) ||
+        (canonicalIntent && shared.some(memberEntry)))
+    )
+  })
+  if (conflictingShared) return { a: restoreFocus, b: restoreFocus }
+  const memberCount = a?.filter(memberEntry).length
+  const validA = canonicalIntent
+    ? isCanonicalFocusEntry(a?.[focusEntry]) && groups?.length === 1 && !memberCount
+    : memberCount === 1
+  return {
+    a: validA ? undefined : restoreFocus,
+    b: b ? undefined : 'Restore the exact Druid Package B rules.',
+  }
+}
+
 /** SRD 5.2.1 pp. 41 and 97 bind this exact package qualifier to the Wooden Staff focus. */
 export function resolveFixedStartingEquipmentMember(
   policy: StartingEquipmentPolicy,
@@ -226,8 +345,6 @@ export function resolveFixedStartingEquipmentMember(
   | {
       reference: StartingItemReference
       entry: number
-      replacesEntry: boolean
-      unavailablePackage?: boolean
       item?: Item5e
       diagnostic?: string
     }
@@ -235,84 +352,11 @@ export function resolveFixedStartingEquipmentMember(
   if (!isRevisedDruidStartingOwner(policy.owner) || block !== 0 || option.toLowerCase() !== 'a')
     return undefined
 
-  const entry = 3
+  const entry = focusEntry
   const reference = quarterstaffFocus.member
-  const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
-  const groupEntry = (value: unknown) => sameStartingReference(entryReference(value), druidicFocus)
-  const memberEntry = (value: unknown) => sameStartingReference(entryReference(value), reference)
-  const currentEntry = entries[entry]
-  const declaresGroup = groupEntry(currentEntry)
-  const directMember = memberEntry(currentEntry)
-  const replacesEntry = declaresGroup || directMember
-  const fragments = startingEquipmentTextFragments(
-    'class',
-    policy.startingEquipment,
-    policy.owner.entries,
-    block,
-  )
-  const declaredInText =
-    fragments.length === 1 &&
-    !startingGroupRule(
-      fragments,
-      druidicFocus,
-      [`${reference.name}|${reference.source}`],
-      { option, entry },
-      quarterstaffFocus,
-    ).diagnostic
-  const prior = policy.character.startingEquipmentGrants?.class
-  const key = startingEquipmentLotKey(block, 'a', entry, { kind: 'item', ...reference })
-  const retained =
-    prior &&
-    sameStartingReference(prior.owner, policy.owner) &&
-    prior.items.some(
-      (lot) =>
-        lot.key === key &&
-        lot.reference.kind === 'item' &&
-        sameStartingReference(lot.reference, reference),
-    )
-  if (!declaresGroup && !declaredInText && (directMember || !retained)) return undefined
-
-  const unavailable = {
-    reference,
-    entry,
-    replacesEntry,
-    diagnostic: 'Restore the exact Wooden Staff starting focus rules.',
-  }
-  const packageData = entryRecord(policy.startingEquipment)?.defaultData
-  const currentBlock = Array.isArray(packageData) ? entryRecord(packageData[block]) : undefined
-  const packageKeys = currentBlock
-    ? Object.keys(currentBlock).filter((key) => key.toLowerCase() === 'a')
-    : []
-  const packageA =
-    currentBlock && packageKeys.length === 1 ? currentBlock[packageKeys[0]] : undefined
-  const sharedEntries = currentBlock?._
-  if (
-    (Array.isArray(packageA) &&
-      packageA.some((row, index) => index !== entry && memberEntry(row))) ||
-    (Array.isArray(sharedEntries) && sharedEntries.some(memberEntry))
-  )
-    return { ...unavailable, unavailablePackage: true }
-  const entryMatches = (value: unknown) => {
-    const row = entryRecord(value)
-    return (
-      row &&
-      Object.keys(row).every((key) => ['item', 'quantity', 'displayName'].includes(key)) &&
-      (row.quantity === undefined || row.quantity === 1) &&
-      (row.displayName === undefined ||
-        (typeof row.displayName === 'string' &&
-          row.displayName.trim().toLowerCase() === quarterstaffFocus.display.toLowerCase())) &&
-      sameStartingReference(itemReference(row.item), druidicFocus)
-    )
-  }
-  if (
-    !policy.ownerAvailable ||
-    !Array.isArray(packageA) ||
-    !entryMatches(entries[entry]) ||
-    !entryMatches(packageA[entry]) ||
-    packageA.filter(groupEntry).length !== 1 ||
-    !declaredInText
-  )
-    return unavailable
+  if (!isCanonicalFocusEntry(entries[entry])) return undefined
+  const unavailable = { reference, entry, diagnostic: restoreFocus }
+  if (!policy.ownerAvailable || !declaresQuarterstaffFocus(policy)) return unavailable
 
   const group = policy.raw.get(startingItemKey(druidicFocus))
   const item = policy.raw.get(startingItemKey(reference))
@@ -344,7 +388,7 @@ export function resolveFixedStartingEquipmentMember(
     memberUids.filter((uid) => sameStartingReference(startingItemUid(uid), reference)).length !== 1
   )
     return unavailable
-  return { reference, entry, replacesEntry, item }
+  return { reference, entry, item }
 }
 
 export interface StartingEquipmentCandidates {

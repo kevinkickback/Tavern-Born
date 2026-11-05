@@ -6,7 +6,10 @@ import {
 } from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { needsStartingEquipmentApplication } from '@/lib/character/startingEquipmentGrants'
+import {
+  needsStartingEquipmentApplication,
+  sameStartingReference,
+} from '@/lib/character/startingEquipmentGrants'
 import type { Character } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
@@ -39,9 +42,15 @@ export function validateStartingEquipment(
           ? { name: character.background, source: character.backgroundSource }
           : undefined
     if (!reference) continue
+    const currentClasses =
+      role === 'class'
+        ? primary.classChoiceClasses?.filter((row) => sameStartingReference(row, reference))
+        : undefined
     const current =
       role === 'class'
-        ? resolveClassReference(reference, primary)
+        ? currentClasses
+          ? currentClasses[0]
+          : resolveClassReference(reference, primary)
         : resolveBackgroundReference(reference, primary)
     const owner =
       current ??
@@ -68,7 +77,9 @@ export function validateStartingEquipment(
       {
         ...reference,
         kind: role,
-        sourceIdentityConflict: owner.sourceIdentityConflict === true,
+        sourceIdentityConflict:
+          owner.sourceIdentityConflict === true ||
+          (role === 'class' && (currentClasses?.length ?? 0) > 1),
         entries: Array.isArray(owner.entries) ? owner.entries : undefined,
       },
       owner.startingEquipment,

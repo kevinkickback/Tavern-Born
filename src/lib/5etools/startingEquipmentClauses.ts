@@ -47,7 +47,11 @@ export function startingEquipmentTextFragments(
   return visit(ownerEntries)
 }
 
-function branchText(text: string, option: string, requireMarker = false): string | undefined {
+export function startingEquipmentBranchText(
+  text: string,
+  option: string,
+  requireMarker = false,
+): string | undefined {
   const markers = splitInlineTagSegments(text)
     .filter((segment) => !segment.tag)
     .flatMap((segment) =>
@@ -185,7 +189,7 @@ export function startingGroupRule(
   if (!address || !Number.isSafeInteger(address.entry) || address.entry < 0) return unsupported()
   const rules: GroupRule[] = []
   for (const fragment of fragments) {
-    const text = branchText(fragment, address.option, !!fixed)
+    const text = startingEquipmentBranchText(fragment, address.option, !!fixed)
     if (text === undefined) continue
     const segments = splitInlineTagSegments(text)
     if (segments.some((segment) => segment.malformed)) return unsupported()
@@ -258,7 +262,7 @@ export function startingFilterRule(
   if (!address || !Number.isSafeInteger(address.entry) || address.entry < 0) return unsupported()
   const rules: GroupRule[] = []
   for (const fragment of fragments) {
-    const text = branchText(fragment, address.option)
+    const text = startingEquipmentBranchText(fragment, address.option)
     if (text === undefined) continue
     const segments = splitInlineTagSegments(text)
     if (segments.some((segment) => segment.malformed)) return unsupported()

@@ -288,7 +288,11 @@ export function applyClassEquipmentChoiceCommand(
     createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
       ...itemLookup.values(),
     ])
-  if (!policy.ownerAvailable || !sameStartingReference(policy.owner, owner))
+  if (
+    !policy.ownerAvailable ||
+    policy.owner.kind !== 'class' ||
+    !sameStartingReference(policy.owner, owner)
+  )
     throw new RangeError('Restore the current initial Class rules first.')
   if (JSON.stringify(policy.startingEquipment) !== JSON.stringify(cls.startingEquipment))
     throw new RangeError('Starting equipment rules changed. Review the current Class.')
@@ -985,6 +989,7 @@ export function applyClassSelectionCommand(
   if (
     options?.startingEquipmentPolicy &&
     (!options.startingEquipmentPolicy.ownerAvailable ||
+      options.startingEquipmentPolicy.owner.kind !== 'class' ||
       !sameStartingReference(options.startingEquipmentPolicy.owner, cls) ||
       JSON.stringify(options.startingEquipmentPolicy.startingEquipment) !==
         JSON.stringify(cls.startingEquipment))

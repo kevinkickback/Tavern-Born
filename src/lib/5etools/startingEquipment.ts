@@ -15,8 +15,8 @@ import type {
   StartingEquipmentReference,
 } from '@/types/character'
 import {
+  getRevisedDruidPackageIssues,
   getStartingEquipmentCandidates,
-  isRevisedDruidStartingOwner,
   resolveFixedStartingEquipmentMember,
   type StartingEquipmentPolicy,
   startingItemKey,
@@ -112,7 +112,8 @@ function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
 
 export function getClassDefaultEquipmentBlocks(startingEquipment: unknown): unknown[] {
   if (!startingEquipment || typeof startingEquipment !== 'object') return []
-  return (startingEquipment as { defaultData?: unknown[] }).defaultData ?? []
+  const { defaultData } = startingEquipment as { defaultData?: unknown }
+  return Array.isArray(defaultData) ? defaultData : []
 }
 
 export function getBackgroundEquipmentBlocks(startingEquipment: unknown): unknown[] {
@@ -329,7 +330,7 @@ function resolveEntries(
   entries.forEach((entry, entryIndex) => {
     if (fixed?.entry === entryIndex) {
       appendFixed()
-      if (fixed.replacesEntry) return
+      return
     }
     if (typeof entry === 'object' && entry !== null) {
       if (typeof entry.value === 'number') {
@@ -450,7 +451,6 @@ function resolveEntries(
       if (item._unresolved) issues.push(`Restore the exact item rules for ${item.name}.`)
     }
   })
-  if (fixed && fixed.entry >= entries.length) appendFixed()
 
   return {
     items: resolved,
@@ -585,6 +585,7 @@ export function getSelectedEquipmentPackage(
     genericChoices: packages.flatMap((pkg) => pkg.genericChoices ?? []),
     lots: packages.flatMap((pkg) => pkg.lots ?? []),
     issues: packages.flatMap((pkg) => pkg.issues ?? []),
+    unavailablePackage: packages.some((pkg) => pkg.unavailablePackage) ? true : undefined,
   }
 }
 
@@ -603,22 +604,11 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
 }
 
 function unavailableDruidPackage(
-  blocks: readonly unknown[],
+  diagnostic: string,
   policy?: StartingEquipmentPolicy,
-  option = 'a',
-): BackgroundStartingPackage | undefined {
-  if (!policy || !isRevisedDruidStartingOwner(policy.owner)) return undefined
-  let diagnostic = 'Restore the exact Druid source rules.'
-  if (!policy.owner.sourceIdentityConflict) {
-    if (option !== 'a') return undefined
-    const block = normalizeChoiceBlock(blocks[0])
-    const entries = block?.A ?? block?.a ?? []
-    const fixed = resolveFixedStartingEquipmentMember(policy, 0, option, entries)
-    if (!fixed?.diagnostic || (entries.length && !fixed.unavailablePackage)) return undefined
-    diagnostic = fixed.diagnostic
-  }
-  const saved = policy.character.startingEquipmentGrants?.class
-  const grant = saved && sameStartingReference(saved.owner, policy.owner) ? saved : undefined
+): BackgroundStartingPackage {
+  const saved = policy?.character.startingEquipmentGrants?.class
+  const grant = saved && sameStartingReference(saved.owner, policy?.owner) ? saved : undefined
   return {
     items: [],
     currency: grant?.declaredCurrency ?? emptyCurrency(),
@@ -640,8 +630,14 @@ export function resolveEquipmentWithBlockChoices(
   genericSelections: Readonly<StartingEquipmentItemChoices> = {},
   policy?: StartingEquipmentPolicy,
 ): BackgroundStartingPackage {
-  const pending = unavailableDruidPackage(blocks, policy, blockChoices[0]?.toLowerCase())
-  if (pending) return pending
+  const issuesByPackage = policy && getRevisedDruidPackageIssues(policy, blocks)
+  const choice = blockChoices[0]?.toLowerCase() ?? 'a'
+  const pending =
+    issuesByPackage &&
+    (choice === 'a' || choice === 'b'
+      ? issuesByPackage[choice]
+      : 'Restore the selected Druid starting equipment rules.')
+  if (pending) return unavailableDruidPackage(pending, policy)
   const allItems: EquipmentLike[] = []
   const currency = emptyCurrency()
   const genericChoices: GenericEquipmentChoice[] = []
@@ -701,13 +697,16 @@ function resolveBlocksToStructure(
   itemLookup: Map<string, Item5e>,
   genericSelections: Readonly<StartingEquipmentItemChoices> = {},
   policy?: StartingEquipmentPolicy,
+  firstBlockIssues?: Readonly<Record<string, string | undefined>>,
 ): ResolvedEquipmentBlock[] {
-  return blocks.flatMap((rawBlock, index) => {
-    const block = normalizeChoiceBlock(rawBlock)
+  const presented = blocks.length || !firstBlockIssues ? blocks : [{}]
+  return presented.flatMap((rawBlock, index) => {
+    const packageIssues = index === 0 ? firstBlockIssues : undefined
+    const block = normalizeChoiceBlock(rawBlock) ?? (packageIssues ? {} : null)
     if (!block) return []
 
     const rawKeys = Object.keys(block)
-    const choiceKeys = getBlockChoiceKeys(block)
+    const choiceKeys = packageIssues ? ['a', 'b'] : getBlockChoiceKeys(block)
     const isFixed = choiceKeys.length === 0
     const displayText = displayTexts[index] ?? null
 
@@ -722,6 +721,11 @@ function resolveBlocksToStructure(
       })
     } else {
       for (const key of choiceKeys) {
+        const issue = packageIssues?.[key]
+        if (issue) {
+          options[key] = unavailableDruidPackage(issue)
+          continue
+        }
         const actualKey = rawKeys.find((k) => k.toLowerCase() === key) ?? key
         const fixed = resolveEntries(block._ ?? [], itemLookup, {
           blockIndex: index,
@@ -774,32 +778,15 @@ export function resolveClassEquipmentBlocks(
     return null
   })
 
-  const blocks = resolveBlocksToStructure(
-    defaultData,
+  const issues = policy && getRevisedDruidPackageIssues(policy, defaultData)
+  return resolveBlocksToStructure(
+    issues?.a && issues.b ? defaultData.slice(0, 1) : defaultData,
     displayTexts,
     itemLookup,
     genericSelections,
     policy,
+    issues,
   )
-  const pending = unavailableDruidPackage(defaultData, policy)
-  if (!pending) return blocks
-  const first = blocks[0]?.index === 0 ? blocks[0] : undefined
-  return [
-    {
-      index: 0,
-      displayText: first?.displayText ?? null,
-      isFixed: false,
-      choiceKeys: policy?.owner.sourceIdentityConflict
-        ? ['a', 'b']
-        : ['a', ...(first?.choiceKeys.filter((key) => key !== 'a') ?? [])],
-      options: {
-        ...first?.options,
-        a: pending,
-        ...(policy?.owner.sourceIdentityConflict ? { b: pending } : {}),
-      },
-    },
-    ...blocks.filter((block) => block.index !== 0),
-  ]
 }
 
 export function resolveBackgroundEquipmentBlocks(

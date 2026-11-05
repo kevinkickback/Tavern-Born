@@ -31,9 +31,11 @@ own proficiency clause. Unknown, conflicting or unbound qualifiers stay unsuppor
 can corroborate exact source references. The revised Druid's Package A specifies a Quarterstaff
 form of Druidic Focus. The SRD Druidic Focuses table identifies Wooden Staff, so the exact live
 Druid XPHB package declaration and group member authorize one fixed Wooden Staff XPHB lot.
-If the declaration, group or member becomes unavailable, that slot stays pending and retains
-any existing owned lot for exact source restoration. An ambiguous Druid owner or a competing
-Wooden Staff entry in that package leaves the entire package pending and preserves its saved grants.
+When the exact group stays at its authored address but the corroborating text or item rules are
+unavailable, the focus lot stays pending and retains its existing grant. Missing or disputed package
+structure leaves the selected package pending and preserves its saved grants. A conflict in the
+shared entries suspends both options. A conflict confined to Package A leaves a valid B usable.
+An independently declared exact Wooden Staff uses the ordinary item rule at its own address.
 
 `startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
 address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and

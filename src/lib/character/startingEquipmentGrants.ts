@@ -81,8 +81,13 @@ export interface StartingEquipmentResolvedLot {
 export function needsStartingEquipmentApplication(
   character: Character,
   role: StartingEquipmentRole,
-  pkg: { lots?: readonly StartingEquipmentResolvedLot[]; currency: Currency },
+  pkg: {
+    lots?: readonly StartingEquipmentResolvedLot[]
+    currency: Currency
+    unavailablePackage?: true
+  },
 ): boolean {
+  if (pkg.unavailablePackage) return false
   const grant = character.startingEquipmentGrants?.[role]
   return (
     (pkg.lots ?? []).some(

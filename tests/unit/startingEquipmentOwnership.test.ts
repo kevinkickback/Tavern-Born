@@ -5,7 +5,11 @@ import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItems } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
-import { buildItemLookup, resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
+import {
+  buildItemLookup,
+  getSelectedEquipmentPackage,
+  resolveClassEquipmentBlocks,
+} from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { duplicateCharacter, prepareCharacterImport } from '@/lib/character/characterTransfer'
@@ -862,17 +866,21 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     }),
   )
 
-  for (const placement of ['package', 'shared'] as const) {
+  const onB = choose(initial, 'b')
+  for (const placement of ['package', 'shared', 'shared-block'] as const) {
     const extraStaff = { item: 'Wooden Staff|XPHB' }
     const duplicate = {
       ...cls,
       startingEquipment: {
         ...declared,
-        defaultData: [
-          placement === 'package'
-            ? { ...originalBlock, A: [...originalBlock.A, extraStaff] }
-            : { ...originalBlock, _: [extraStaff] },
-        ],
+        defaultData:
+          placement === 'shared-block'
+            ? [originalBlock, { _: [extraStaff] }]
+            : [
+                placement === 'package'
+                  ? { ...originalBlock, A: [...originalBlock.A, extraStaff] }
+                  : { ...originalBlock, _: [extraStaff] },
+              ],
       },
     }
     const select = (character: Character) =>
@@ -891,6 +899,18 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     expect(retained.equipment).toEqual(initial.equipment)
     expect(retained.currency).toEqual(initial.currency)
     expect(retained.startingEquipmentGrants).toEqual(initial.startingEquipmentGrants)
+    const existingB = select(onB)
+    expect(existingB.equipment).toEqual(onB.equipment)
+    expect(existingB.currency).toEqual(gp(55))
+    const switchToB = () =>
+      applyClassEquipmentChoiceCommand(initial, initial.provenance, duplicate, 0, 'b', itemLookup)
+    if (placement !== 'package') {
+      expect(switchToB).toThrow(
+        'Restore the exact starting equipment rules before switching packages.',
+      )
+    } else {
+      expect(apply(initial, switchToB()).equipment).toEqual(onB.equipment)
+    }
   }
 
   for (const missing of [lostSlot, lostPackage]) {
@@ -950,7 +970,122 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     ...cls,
     startingEquipment: { ...declared, defaultData: [{ ...originalBlock, A: [] }] },
   }
-  const onB = choose(initial, 'b')
+  const noB = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ A: originalBlock.A }] },
+  }
+  const consumedPack = initial.equipment.find((row) => row.name === "Explorer's Pack")
+  if (!consumedPack) throw new Error('Missing canonical Explorer’s Pack')
+  const afterConsumption = apply(
+    initial,
+    updateEquipmentQuantityCommand(initial, initial.provenance, consumedPack.id, 0),
+  )
+  const malformedB = [[], [null], [{}], [{ value: '5000' }], [{ item: 5 }]].map((B) => ({
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, B }] },
+  }))
+  const disputedFocus = [{ quantity: 2 }, { displayName: 'Different Focus' }, { value: 2000 }].map(
+    (changes) => ({
+      ...cls,
+      startingEquipment: {
+        ...declared,
+        defaultData: [
+          {
+            ...originalBlock,
+            A: originalBlock.A.map((entry, index) =>
+              index === 3
+                ? { ...(entry as { item: string }), ...changes }
+                : index === 6
+                  ? { value: 3000 }
+                  : entry,
+            ),
+          },
+        ],
+      },
+    }),
+  )
+  const unavailablePackages = [
+    ...[bothMissing, lostSlot, noA, ...disputedFocus].map((owner) => ({
+      owner,
+      saved: afterConsumption,
+    })),
+    ...[lostPackage, noB, ...malformedB].map((owner) => ({ owner, saved: onB })),
+  ]
+  for (const { owner: unavailable, saved } of unavailablePackages) {
+    const reopened = apply(
+      saved,
+      applyClassSelectionCommand(saved, saved.provenance, unavailable, undefined, itemLookup),
+    )
+    expect(reopened.startingEquipmentGrants).toEqual(saved.startingEquipmentGrants)
+    expect(reopened.equipment).toEqual(saved.equipment)
+    expect(reopened.currency).toEqual(saved.currency)
+    const current = { classesByKey: buildClassLookup([unavailable]), itemLookup }
+    expect(
+      validateStartingEquipment(
+        reopened,
+        createCharacterCalculationContext(reopened, current, current),
+      ),
+    ).toContainEqual(
+      expect.objectContaining({ id: 'starting-equipment:class', severity: 'blocking' }),
+    )
+    const policy = createStartingEquipmentPolicy(
+      saved,
+      { ...unavailable, kind: 'class' },
+      unavailable.startingEquipment,
+      raw,
+    )
+    const options = resolveClassEquipmentBlocks(
+      unavailable.startingEquipment,
+      itemLookup,
+      {},
+      policy,
+    )
+    const selected = getSelectedEquipmentPackage(
+      options,
+      saved.classEquipmentChoices?.['Druid|XPHB'] ?? [],
+    )
+    expect(selected).toMatchObject({ currency: gp(0), unavailablePackage: true })
+    expect(needsStartingEquipmentApplication(saved, 'class', selected)).toBe(false)
+  }
+  for (const missing of [lostPackage, bothMissing, lostSlot, noA]) {
+    const fresh = apply(
+      empty,
+      applyClassSelectionCommand(empty, empty.provenance, missing, undefined, itemLookup),
+    )
+    expect(fresh.equipment).toEqual([])
+    expect(fresh.currency).toEqual(empty.currency)
+  }
+  const duplicateLookup = {
+    classesByKey: buildClassLookup([cls, lostPackage]),
+    classChoiceClasses: [cls, lostPackage],
+    itemLookup,
+  }
+  expect(
+    validateStartingEquipment(
+      initial,
+      createCharacterCalculationContext(initial, duplicateLookup, duplicateLookup),
+    ),
+  ).toContainEqual(
+    expect.objectContaining({
+      id: 'starting-equipment:class',
+      explanation: 'Restore the exact Druid source rules.',
+    }),
+  )
+  const direct = {
+    ...cls,
+    startingEquipment: {
+      entries: [],
+      defaultData: [{ A: [{ item: 'Wooden Staff|XPHB' }, { value: 1300 }], B: originalBlock.B }],
+    },
+  }
+  const directCharacter = apply(
+    initial,
+    applyClassSelectionCommand(initial, initial.provenance, direct, undefined, itemLookup),
+  )
+  expect(directCharacter.currency).toEqual(gp(18))
+  expect(directCharacter.startingEquipmentGrants?.class?.items).toMatchObject([
+    { key: '[0,"a",0,"item","wooden staff","xphb"]', remainingQuantity: 1 },
+  ])
   const disputedB = {
     ...cls,
     startingEquipment: { ...declared, defaultData: [{ ...originalBlock, B: [{ value: 9900 }] }] },

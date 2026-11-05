@@ -19,6 +19,7 @@ import {
 import { WorkspacePaneHeader } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { isRevisedDruidStartingOwner } from '@/lib/5etools/startingEquipmentPolicy'
 import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
 import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
 import {
@@ -234,6 +235,13 @@ export function BuildClassLevelsPanel({
   focusLevel,
   readinessFocus,
 }: BuildClassLevelsPanelProps) {
+  const initialClass = character.initialClass
+  const viewingInitialClass =
+    !!initialClass &&
+    initialClass.name === viewingClass &&
+    initialClass.source === viewingClassSource
+  const showEquipmentWithoutLevels =
+    viewingInitialClass && isRevisedDruidStartingOwner({ ...initialClass, kind: 'class' })
   const [openSections, setOpenSections] = useState<string[]>([])
   const configurations = getSubclassConfigurations(
     classChoices,
@@ -421,7 +429,7 @@ export function BuildClassLevelsPanel({
                 Choose a Class
               </Button>
             </div>
-          ) : levelsToShow.length === 0 ? (
+          ) : levelsToShow.length === 0 && !showEquipmentWithoutLevels ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No feature data available
             </p>
@@ -432,39 +440,38 @@ export function BuildClassLevelsPanel({
               onValueChange={setOpenSections}
               className="space-y-2"
             >
-              {character.initialClass?.name === viewingClass &&
-                character.initialClass.source === viewingClassSource && (
-                  <AccordionItem
-                    value="starting-equipment"
-                    className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
-                  >
-                    <AccordionTrigger className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">Starting Equipment</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div
-                        ref={equipmentChoiceRef}
-                        className={cn(
-                          'px-3 pb-2 pt-3',
-                          equipmentChoiceHighlighted && 'animate-route-focus',
-                        )}
-                      >
-                        <BuildClassEquipmentSection
-                          viewingClassData={viewingClassData}
-                          blockChoices={classEquipmentBlockChoices}
-                          itemChoices={classEquipmentItemChoices}
-                          detailCollapsed={detailCollapsed}
-                          onBlockChoiceChange={onBlockChoiceChange}
-                          onItemChoiceChange={onItemChoiceChange}
-                          onSelectFeature={onSelectFeature}
-                          onExpandDetails={onExpandDetails}
-                        />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                )}
+              {viewingInitialClass && (
+                <AccordionItem
+                  value="starting-equipment"
+                  className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
+                >
+                  <AccordionTrigger className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Starting Equipment</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div
+                      ref={equipmentChoiceRef}
+                      className={cn(
+                        'px-3 pb-2 pt-3',
+                        equipmentChoiceHighlighted && 'animate-route-focus',
+                      )}
+                    >
+                      <BuildClassEquipmentSection
+                        viewingClassData={viewingClassData}
+                        blockChoices={classEquipmentBlockChoices}
+                        itemChoices={classEquipmentItemChoices}
+                        detailCollapsed={detailCollapsed}
+                        onBlockChoiceChange={onBlockChoiceChange}
+                        onItemChoiceChange={onItemChoiceChange}
+                        onSelectFeature={onSelectFeature}
+                        onExpandDetails={onExpandDetails}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
 
               {levelsToShow.map((lv) => {
                 const epicBoon = lv === EPIC_BOON_LEVEL ? epicBoonSlot : undefined
