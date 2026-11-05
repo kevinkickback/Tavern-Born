@@ -91,6 +91,14 @@
       },
       {
         "collection": "itemGroup",
+        "identity": "Druidic Focus|PHB",
+        "officialSection": "Equipment — Adventuring Gear — Druidic Focus",
+        "reason": "The SRD 5.1 Druid starting package references the four Druidic Focus entries in the Adventuring Gear table.",
+        "reference": "druidic focus|phb",
+        "srdVersion": "5.1"
+      },
+      {
+        "collection": "itemGroup",
         "identity": "Druidic Focus|XPHB",
         "officialSection": "Equipment — Adventuring Gear — Druidic Focus and Holy Symbol",
         "reason": "SRD starting-equipment records reference these 5etools equipment-group representations.",
@@ -19809,6 +19817,16 @@
       },
       {
         "collection": "itemGroup",
+        "identity": "Druidic Focus|PHB",
+        "officialSection": "Equipment — Adventuring Gear — Druidic Focus",
+        "provenanceType": "approved-dependency",
+        "reason": "The SRD 5.1 Druid starting package references the four Druidic Focus entries in the Adventuring Gear table.",
+        "recordSha256": "f2c729033cec99f426b7d3a37fdeabd9158d2ad9505355049153bbae98a53f5a",
+        "relativePath": "data/items.json",
+        "srdVersion": "5.1"
+      },
+      {
+        "collection": "itemGroup",
         "identity": "Druidic Focus|XPHB",
         "officialSection": "Equipment — Adventuring Gear — Druidic Focus and Holy Symbol",
         "provenanceType": "approved-dependency",
@@ -29584,7 +29602,7 @@
     "data/fluff-races.json": "6c987caed1a314bb0c00879821a75791994e9c903ae05917475eb82b060cffb6",
     "data/generated/gendata-spell-source-lookup.json": "d85731f65fffbec3b7b7f57610585d87e78d1accd5b903f73cdc8d82d4792961",
     "data/items-base.json": "85bef6c4ae30c3eb0066a0ba0f1de2e690ed59e3aed0b1a9de7e616ffbc4a161",
-    "data/items.json": "50de52b3a479acb6afc7a3f07e212821880a39347b81310f374072859d2c621e",
+    "data/items.json": "e2ead0b123dd85337620abecde15ad4421686f7e6d3af4a2b4093245fc305d88",
     "data/languages.json": "e37cd45474b73677ea7ebb4c94f2029084a3ca3d273ebb18d7c11121db0d45a6",
     "data/magicvariants.json": "aff14c12095a3ae501b63b6e26caba7a11d70a143679eb3400b1d6e46658ddb1",
     "data/optionalfeatures.json": "447c51209d050ef746350669475b8f960b0ae2fdb965a94d9b28ee0fecff5e82",
@@ -29605,7 +29623,7 @@
     "url": "https://creativecommons.org/licenses/by/4.0/legalcode"
   },
   "packId": "tavern-born-srd-core",
-  "packVersion": "1.0.0",
+  "packVersion": "1.0.1",
   "schemaVersion": 1,
   "transformationNotice": "Tavern Born converts selected SRD material into a structured, 5etools-compatible data snapshot and may omit SRD material that the application does not consume.",
   "upstreamRevision": "e5d052071b635f58cc8006e9727053eaf78ea8f9"

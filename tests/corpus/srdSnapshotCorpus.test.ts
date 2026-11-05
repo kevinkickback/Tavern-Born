@@ -4,14 +4,26 @@ import { resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import type { JsonResourceReader } from '@/lib/5etools/resourceReader'
+import { resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
+import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import {
+  applyClassEquipmentChoiceCommand,
+  applyClassSelectionCommand,
+} from '@/lib/character/commands/classCommands'
+import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
+import { validateStartingEquipment } from '@/lib/readiness/startingEquipmentReadiness'
 import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const RESOURCE_ROOT = resolve(process.cwd(), 'resources', 'srd', 'core')
 const DATA_ROOT = resolve(RESOURCE_ROOT, 'data')
@@ -27,7 +39,7 @@ describe('committed bundled SRD corpus', () => {
 
     expect(manifest).toMatchObject({
       packId: 'tavern-born-srd-core',
-      packVersion: '1.0.0',
+      packVersion: '1.0.1',
       distributionStatus: 'approved-for-distribution',
       upstreamRevision: 'e5d052071b635f58cc8006e9727053eaf78ea8f9',
     })
@@ -38,13 +50,14 @@ describe('committed bundled SRD corpus', () => {
       unresolvedRecords: 0,
       staleApprovals: 0,
     })
-    expect(manifest.coverage.records).toHaveLength(3102)
+    expect(provenance.packVersion).toBe(manifest.packVersion)
+    expect(manifest.coverage.records).toHaveLength(3103)
     expect(
       manifest.coverage.records.filter(
         (record: { provenanceType: string }) => record.provenanceType === 'root-marker',
       ),
     ).toHaveLength(3021)
-    expect(manifest.coverage.dependencies).toHaveLength(81)
+    expect(manifest.coverage.dependencies).toHaveLength(82)
     expect(manifest.coverage.structuredCorrections).toMatchObject({
       officialSrdName2014: 31,
       officialSrdName2024: 32,
@@ -91,6 +104,93 @@ describe('committed bundled SRD corpus', () => {
     const rawTraps = await readJson(resolve(DATA_ROOT, 'trapshazards.json'))
     expect(gameData.trapHazards).toHaveLength(rawTraps.trap.length + rawTraps.hazard.length)
     expect(createCorpusCapabilityReport(gameData).issues).toEqual([])
+    const druid = gameData.classes.find((row) => row.name === 'Druid' && row.source === 'PHB')!
+    const lookups = buildGameDataLookups(gameData)
+    const rawItems = [...gameData.items, ...gameData.itemsBase]
+    let character = makeCharacterFixture({
+      classProgression: [],
+      initialClass: undefined,
+      allowedSources: ['PHB'],
+      background: '',
+      backgroundSource: undefined,
+    })
+    const policy = (items = rawItems) =>
+      createStartingEquipmentPolicy(
+        character,
+        { ...druid, kind: 'class' },
+        druid.startingEquipment,
+        items,
+      )
+    const apply = (result: CharacterCommandResult) => {
+      character = characterPersistenceSchema.parse({
+        ...character,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    }
+    const select = (items = rawItems) =>
+      apply(
+        applyClassSelectionCommand(
+          character,
+          character.provenance,
+          druid,
+          undefined,
+          lookups.itemLookup,
+          {
+            startingEquipmentPolicy: policy(items),
+          },
+        ),
+      )
+    const readiness = (items = rawItems) =>
+      validateStartingEquipment(
+        character,
+        createCharacterCalculationContext(character, lookups, {
+          ...lookups,
+          startingEquipmentItems: items,
+        }),
+      )
+
+    select()
+    const slot = resolveClassEquipmentBlocks(
+      druid.startingEquipment,
+      lookups.itemLookup,
+      {},
+      policy(),
+    )[2].options._.genericChoices?.[0]
+    expect(slot?.candidates).toEqual(
+      ['Sprig of Mistletoe', 'Totem', 'Wooden Staff', 'Yew Wand'].map((name) => ({
+        name,
+        source: 'PHB',
+      })),
+    )
+    apply(
+      applyClassEquipmentChoiceCommand(
+        character,
+        character.provenance,
+        druid,
+        2,
+        '_',
+        lookups.itemLookup,
+        {
+          [slot!.key]: [{ name: 'Wooden Staff', source: 'PHB' }],
+        },
+        policy(),
+      ),
+    )
+    const staff = character.equipment.find((item) => item.name === 'Wooden Staff')
+    expect(staff).toMatchObject({ source: 'PHB', quantity: 1, dmg1: '1d6', dmg2: '1d8' })
+    expect(readiness()).toEqual([])
+
+    const withdrawn = rawItems.filter((row) => row.name !== 'Druidic Focus' || row.source !== 'PHB')
+    select(withdrawn)
+    expect(character.equipment.find((item) => item.id === staff!.id)).toEqual(staff)
+    expect(readiness(withdrawn)).toContainEqual(
+      expect.objectContaining({ id: 'starting-equipment:class', severity: 'blocking' }),
+    )
+    select()
+    expect(character.equipment.filter((item) => item.name === 'Wooden Staff')).toEqual([staff])
+    expect(readiness()).toEqual([])
+
     const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(gameData))
     const ranger = gameData.classes.find((row) => row.name === 'Ranger' && row.source === 'PHB')!
     expect(

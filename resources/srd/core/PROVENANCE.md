@@ -44,3 +44,13 @@ references are:
 - <https://www.dndbeyond.com/srd>
 - <https://www.dndbeyond.com/creator-faq>
 - <https://creativecommons.org/licenses/by/4.0/>
+
+## Pack 1.0.1 maintenance
+
+Restored the source-qualified classic Druidic Focus equipment group. The SRD 5.1
+starting package calls for a Druidic Focus, and the Adventuring Gear table lists
+the four existing PHB members. The manifest records the new dependency and
+checksum. The 1.0.0 audit counts above describe the original snapshot.
+
+- [Druid starting equipment, PDF page 19](https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf#page=19)
+- [Adventuring Gear table, PDF page 69](https://media.wizards.com/2023/downloads/dnd/SRD_CC_v5.1.pdf#page=69)
