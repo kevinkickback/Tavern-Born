@@ -9,7 +9,7 @@ import {
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
@@ -70,23 +70,40 @@ function wildShapeSummary(
   return { text: text ? `${wildShape.name}: ${text}` : wildShape.name, compactText: wildShape.name }
 }
 
+function featureSummary(feature: ClassFeature | undefined, entries = feature?.entries) {
+  const text = renderEntriesToText(entries)
+  return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
+}
+
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
-export function getDruidStaticFeatureSummaries(
+export function getClassStaticFeatureSummaries(
   progression: readonly CharacterClassEntry[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   unlimited: boolean,
 ) {
   if (!catalogs) return []
   return progression.flatMap((entry) => {
+    const name = entry.name.trim().toLowerCase()
+    const source = entry.source.trim().toLowerCase()
     if (
-      entry.name.trim().toLowerCase() !== 'druid' ||
-      !['phb', 'xphb'].includes(entry.source.trim().toLowerCase()) ||
+      (name !== 'druid' && name !== 'wizard') ||
+      (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
       return []
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'wizard') {
+      if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
+      return featureSummary(
+        getCurrentDirectClassFeature(
+          cls,
+          catalogs,
+          `class-feature|arcane recovery|wizard|${source}|1|${source}`,
+        ),
+      )
+    }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
     const subclasses = cls.subclasses?.filter((subclass) =>
       findClassReference({ name: entry.subclass, source: entry.subclassSource }, [subclass]),
@@ -106,8 +123,7 @@ export function getDruidStaticFeatureSummaries(
         if (!immunity) return []
         entries = [`${immunity[1]}.`]
       }
-      const text = renderEntriesToText(entries)
-      return text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
+      return featureSummary(feature, entries)
     })
     return [...(shape ? [shape] : []), ...landSummaries]
   })

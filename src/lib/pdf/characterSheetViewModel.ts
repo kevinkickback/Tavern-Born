@@ -92,7 +92,7 @@ import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 
-import { getDruidStaticFeatureSummaries } from './druidStaticFeatureSummaries'
+import { getClassStaticFeatureSummaries } from './classStaticFeatureSummaries'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
@@ -928,7 +928,7 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
-  const declaredClassFeatureSummaries = getDruidStaticFeatureSummaries(
+  const declaredClassFeatureSummaries = getClassStaticFeatureSummaries(
     getCharacterClassEntries(character),
     primaryLookups.classChoiceFeatureCatalogs,
     !!unlimitedWildShape,
