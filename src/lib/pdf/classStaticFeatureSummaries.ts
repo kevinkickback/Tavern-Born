@@ -8,9 +8,16 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Class5e, ClassFeature } from '@/types/5etools'
+import type { Character, Feature } from '@/types/character'
+
+export interface ClassStaticFeatureSummary {
+  text: string
+  compactText: string
+  replaces?: Feature
+}
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
@@ -70,23 +77,60 @@ function wildShapeSummary(
   return { text: text ? `${wildShape.name}: ${text}` : wildShape.name, compactText: wildShape.name }
 }
 
+function featureSummary(feature: ClassFeature | undefined, entries = feature?.entries) {
+  const text = renderEntriesToText(entries)
+  return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
+}
+
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
-export function getDruidStaticFeatureSummaries(
-  progression: readonly CharacterClassEntry[],
+export function getClassStaticFeatureSummaries(
+  character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   unlimited: boolean,
-) {
+): ClassStaticFeatureSummary[] {
   if (!catalogs) return []
+  const progression = getCharacterClassEntries(character)
   return progression.flatMap((entry) => {
+    const name = entry.name.trim().toLowerCase()
+    const source = entry.source.trim().toLowerCase()
     if (
-      entry.name.trim().toLowerCase() !== 'druid' ||
-      !['phb', 'xphb'].includes(entry.source.trim().toLowerCase()) ||
+      (name !== 'druid' && name !== 'wizard') ||
+      (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
       return []
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'wizard') {
+      if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
+      const feature = getCurrentDirectClassFeature(
+        cls,
+        catalogs,
+        `class-feature|arcane recovery|wizard|${source}|1|${source}`,
+      )
+      if (!feature) return []
+      const [summary] = featureSummary(feature)
+      if (!summary) return []
+      // A saved class label can coexist with the derived rules in an imported character.
+      const tags = character.provenance?.features['arcane recovery']
+      const tag = tags?.[0]
+      if (
+        tags?.length !== 1 ||
+        tag?.sourceType !== 'class' ||
+        tag.grantType !== 'fixed' ||
+        tag.grantVariant ||
+        (tag.grantSource && tag.grantSource.trim().toLowerCase() !== source) ||
+        !findClassReference(entry, [{ name: tag.sourceName, source: tag.sourceRef }])
+      ) {
+        return [summary]
+      }
+      const labels = character.features.filter(
+        (row) => row.level === 1 && findClassReference(feature, [row]),
+      )
+      const label = labels.length === 1 ? labels[0] : undefined
+      return [{ ...summary, replaces: label?.description?.trim() ? undefined : label }]
+    }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
     const subclasses = cls.subclasses?.filter((subclass) =>
       findClassReference({ name: entry.subclass, source: entry.subclassSource }, [subclass]),
@@ -106,8 +150,7 @@ export function getDruidStaticFeatureSummaries(
         if (!immunity) return []
         entries = [`${immunity[1]}.`]
       }
-      const text = renderEntriesToText(entries)
-      return text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
+      return featureSummary(feature, entries)
     })
     return [...(shape ? [shape] : []), ...landSummaries]
   })
