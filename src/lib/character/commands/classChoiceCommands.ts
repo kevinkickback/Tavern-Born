@@ -3,6 +3,7 @@ import {
   getSavedBlessedStrikes,
   isBlessedStrikesOption,
 } from '@/lib/5etools/blessedStrikesSource'
+import { getLandChoiceRule, LAND_GROUP } from '@/lib/5etools/circleOfTheLand'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
@@ -394,8 +395,9 @@ function currentLiteralChoice(
     return choice
   }
   const classData = authority && findClassReference(choice.owner, authority.classes)
-  const hunter = getRevisedHunterRule(choice.id)
-  const owner = hunter && findOwner(character, choice)
+  const subclassLiteral = getRevisedHunterRule(choice.id) || getLandChoiceRule(choice.id)
+  const owner = subclassLiteral && findOwner(character, choice)
+  if (getLandChoiceRule(choice.id) && !selected.length) return choice
   const current =
     classData &&
     getCharacterClassChoices(
@@ -660,6 +662,14 @@ export function applyClassChoiceSelectionCommand(
     })
   )
     throw new RangeError('Choose a Hunter option through its exact subclass feature.')
+  if (
+    !getLandChoiceRule(choice.id) &&
+    selected.some((option) => {
+      const target = decodeFeatureOptionReference(option)
+      return target?.format === 'source-group' && target.group === LAND_GROUP
+    })
+  )
+    throw new RangeError('Choose a terrain through its exact Circle of the Land feature.')
   if (choice.id.startsWith('psionic-choice:')) {
     const relation = decodePsionicChoiceId(choice.id)
     if (
@@ -689,6 +699,7 @@ export function applyClassChoiceSelectionCommand(
   }
   if (
     (choice.id === BLESSED_STRIKES_ID ||
+      getLandChoiceRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
       decodeLegacySubclassChoice(choice.id)) &&
     expectedSelectionHandle !== undefined
@@ -761,9 +772,11 @@ export function applyClassChoiceSelectionCommand(
       throw new RangeError(
         decodeFavoredEnemyChoiceId(choice.id)
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
-          : getRevisedHunterRule(choice.id)
-            ? 'Choose one current option for the exact Hunter feature.'
-            : 'Choose a different favored terrain for each earned Natural Explorer choice.',
+          : getLandChoiceRule(choice.id)
+            ? 'Choose one current terrain for the exact Circle of the Land.'
+            : getRevisedHunterRule(choice.id)
+              ? 'Choose one current option for the exact Hunter feature.'
+              : 'Choose a different favored terrain for each earned Natural Explorer choice.',
       )
   }
   if (

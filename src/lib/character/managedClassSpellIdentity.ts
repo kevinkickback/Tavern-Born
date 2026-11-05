@@ -19,12 +19,14 @@ export const isPlainSpellReference = (reference: string) => {
 export const managedClassSpellId = (slot: ManagedClassSpellSlot) =>
   MANAGED_CLASS_SPELL_PREFIX + encodeURIComponent(JSON.stringify(slot))
 
-/** Thaumaturge extends the same class's known cantrips by one distinct spell. */
+/** Thaumaturge and the classic Circle bonus share the parent class cantrip pool. */
 export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
   if (slot[1] === 'class-arcanum') return slot[2]
   if (
     slot[1] === 'feature-cantrip' &&
-    decodeSelectedFeatureSpellAddress(slot[2])?.[1] !== 'classFeature'
+    !['classFeature', 'subclassFeature'].includes(
+      decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
+    )
   )
     return slot[2]
   return null

@@ -46,6 +46,13 @@ export {
 } from './classChoiceFeatureCatalogs'
 
 import { getCurrentCannyChoices, normalizeCannyChoices } from '@/lib/5etools/cannyChoices'
+import {
+  getLandChoiceRule,
+  getLandTerrainSetup,
+  isCircleOfTheLand,
+  LAND_GROUP,
+  resolveLandTerrainOption,
+} from '@/lib/5etools/circleOfTheLand'
 import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classData'
 import {
   decodeClassFeatureReference,
@@ -500,6 +507,8 @@ export function resolveFeatureOptionEntity(
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): FeatureTableOption | SourceGroupOption | undefined {
   const target = decodeFeatureOptionReference(option)
+  if (target?.format === 'source-group' && target.group === LAND_GROUP)
+    return resolveLandTerrainOption(option, catalogs.classes)
   if (target?.format === 'source-group')
     return target.group === REVISED_HUNTER_GROUP
       ? resolveRevisedHunterOption(option, catalogs)
@@ -583,9 +592,11 @@ function resolveExplicitOption(
           'group' in match
             ? match.group === REVISED_HUNTER_GROUP
               ? 'Hunter option'
-              : isFavoredEnemyOption(option)
-                ? 'Favored enemy'
-                : 'Favored terrain'
+              : match.group === LAND_GROUP
+                ? 'Circle terrain'
+                : isFavoredEnemyOption(option)
+                  ? 'Favored enemy'
+                  : 'Favored terrain'
             : 'Dragon ancestry',
         ],
       },
@@ -688,6 +699,7 @@ export function resolveClassChoiceOptions(
   if (
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
+    !getLandChoiceRule(choice.id) &&
     (!literal ||
       !(enemy
         ? getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET) &&
@@ -1163,6 +1175,30 @@ export function getCharacterClassFeatureVariantChoices(
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 
+function getCurrentLandTerrainSetup(
+  cls: { name?: string; source?: string },
+  subclass: { name?: string; source?: string } | undefined,
+  catalogs: Pick<ClassChoiceFeatureCatalogs, 'classes'> | undefined,
+) {
+  if (
+    !subclass?.name ||
+    !isCircleOfTheLand(cls.name ?? '', cls.source ?? '', subclass.name, subclass.source)
+  )
+    return undefined
+  const owners = catalogs?.classes?.filter(
+    (row) =>
+      normalized(row.name) === normalized(cls.name) &&
+      normalized(row.source) === normalized(cls.source),
+  )
+  const owner = owners?.length === 1 ? owners[0] : undefined
+  const subclasses = owner?.subclasses?.filter(
+    (row) =>
+      normalized(row.name) === normalized(subclass.name) &&
+      normalized(row.source) === normalized(subclass.source),
+  )
+  return owner && subclasses?.length === 1 ? getLandTerrainSetup(owner, subclasses[0]) : undefined
+}
+
 /** Source-only candidates include both sides; no permission or character intent is inferred. */
 export function getClassChoiceCandidates(
   classData: {
@@ -1279,6 +1315,9 @@ export function getClassChoiceCandidates(
         ),
     ).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
+    ...[getCurrentLandTerrainSetup(classData, subclass, catalogs)].filter(
+      (row) => row !== undefined,
+    ),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 
@@ -1561,6 +1600,27 @@ export function getClassChoiceDiagnosticCandidates(
         ),
     ).diagnostics,
   ]
+  if (
+    subclass?.name &&
+    isCircleOfTheLand(
+      classData.name ?? '',
+      classData.source ?? '',
+      subclass.name,
+      subclass.source,
+    ) &&
+    !getCurrentLandTerrainSetup(classData, subclass, catalogs)
+  ) {
+    rows.push({
+      code: 'unverified-required-choice',
+      className: 'Druid',
+      classSource: classData.source ?? '',
+      subclassName: subclass.name,
+      subclassSource: subclass.source,
+      level: normalized(classData.source) === 'phb' ? 2 : 3,
+      featureName: 'Circle Spells',
+      message: 'The exact Circle of the Land terrain rules are unavailable or unsupported.',
+    })
+  }
   if (
     catalogs &&
     normalized(classData.name) === 'cleric' &&

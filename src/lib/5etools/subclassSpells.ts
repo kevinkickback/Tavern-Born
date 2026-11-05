@@ -1,6 +1,8 @@
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Class5e, SubclassAdditionalSpells } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
+import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import { parseSpellToken } from './spellTokens'
 
@@ -16,22 +18,28 @@ export function getEarnedSubclassSpellGrants(
   classData: Class5e | undefined,
   entry: CharacterClassEntry,
   classLevel = entry.levels,
+  landContext?: {
+    selections?: Character['classChoiceSelections']
+    spells?: ReadonlyMap<string, number>
+  },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
+  const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
+  const unavailable = land ? [] : undefined
   const norm = normalizeOwnerIdentity
   if (
     !classData ||
     norm(classData.name) !== norm(entry.name) ||
     norm(classData.source) !== norm(entry.source)
   )
-    return undefined
+    return unavailable
   const boundaries = (classData.classFeatureRefs ?? []).filter(
     (ref) => ref.gainSubclassFeature === true,
   )
   const levels = boundaries.map(getClassFeatureReferenceLevel)
-  if (!levels.length || levels.some((level) => level === undefined)) return undefined
+  if (!levels.length || levels.some((level) => level === undefined)) return unavailable
   const first = Math.min(...(levels as number[]))
-  if (levels.filter((level) => level === first).length !== 1) return undefined
+  if (levels.filter((level) => level === first).length !== 1) return unavailable
   if (classLevel < first) return []
   const subclasses = (classData.subclasses ?? []).filter(
     (row) =>
@@ -40,9 +48,25 @@ export function getEarnedSubclassSpellGrants(
       norm(row.className) === norm(entry.name) &&
       norm(row.classSource) === norm(entry.source),
   )
-  return subclasses.length === 1
-    ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
-    : undefined
+  if (subclasses.length !== 1) return unavailable
+  if (!land) return parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+  const terrain = getChosenLandTerrain(classData, subclasses[0], landContext?.selections ?? [])
+  if (!terrain) return []
+  const grants = parseSubclassSpells([{ prepared: terrain.block.prepared }], classLevel)
+  const seen = new Set<string>()
+  return grants.flatMap((grant) => {
+    const spellName = landTerrainSpellToken(
+      terrain.block.name,
+      grant.level,
+      grant.spellName,
+      terrain.feature,
+    ).name
+    const key = getSpellReferenceKey(spellName)
+    const spells = landContext?.spells
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [{ ...grant, spellName, isCantrip: spells ? spells.get(key) === 0 : grant.isCantrip }]
+  })
 }
 
 function pushSpellList(

@@ -1,3 +1,4 @@
+import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
@@ -99,6 +100,7 @@ export function ensureSpellProfiles(
     effectiveSpellProfiles?: readonly SpellProfile[]
     /** Exact current visible targets; omitted authority cannot grant fixed spell benefits. */
     availableSpellReferences?: ReadonlySet<string>
+    visibleSpellLevels?: ReadonlyMap<string, number>
   },
 ): SpellProfile[] {
   if (options?.effectiveSpellProfiles !== undefined)
@@ -118,7 +120,10 @@ export function ensureSpellProfiles(
     const metadata = getClassSpellProfileMetadata(entry)
     const existingProfile = byId.get(metadata.id)
     const classData = findClassReference(entry, classesById?.values())
-    const subclassSpells = getEarnedSubclassSpellGrants(classData, entry)
+    const subclassSpells = getEarnedSubclassSpellGrants(classData, entry, entry.levels, {
+      selections: character.classChoiceSelections,
+      spells: options?.visibleSpellLevels,
+    })
     if (
       options?.preserveUnavailableClassProfiles &&
       existingProfile &&
@@ -127,10 +132,18 @@ export function ensureSpellProfiles(
       next.push(existingProfile)
       continue
     }
+    const land = isCircleOfTheLand(
+      entry.name,
+      entry.source,
+      entry.subclass ?? '',
+      entry.subclassSource,
+    )
     const grantedSubclassSpells = (subclassSpells ?? []).filter(
       (grant) =>
         grant.mode !== 'expanded' &&
-        options?.availableSpellReferences?.has(getSpellReferenceKey(grant.spellName)),
+        (land ? options?.visibleSpellLevels : options?.availableSpellReferences)?.has(
+          getSpellReferenceKey(grant.spellName),
+        ),
     )
     const grantedSubclassCantrips = grantedSubclassSpells
       .filter((grant) => grant.isCantrip)

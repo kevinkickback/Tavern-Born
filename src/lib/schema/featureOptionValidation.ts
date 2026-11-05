@@ -1,16 +1,19 @@
 import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
+import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
 import {
   decodeFeatureOptionReference,
   getFeatureOptionChoiceId,
   getFeatureOptionKey,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Character } from '@/types/character'
 import { getInvalidFeatureLiteralSelectionIds } from './featureLiteralValidation'
 
 /** New literal relations validate structurally even while their rules are unavailable. */
 export function getInvalidFeatureOptionSelectionPaths(
-  character: Pick<Character, 'classChoiceSelections'>,
+  character: Pick<Character, 'classChoiceSelections'> &
+    Partial<Pick<Character, 'classProgression'>>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
   const invalidGroups = getInvalidFeatureLiteralSelectionIds(character.classChoiceSelections ?? [])
@@ -19,6 +22,20 @@ export function getInvalidFeatureOptionSelectionPaths(
     if (selection.choiceId === BLESSED_STRIKES_ID && selection !== blessedStrikes) {
       paths.push(['classChoiceSelections', index])
       continue
+    }
+    const land = getLandChoiceRule(selection.choiceId)
+    if (land && character.classProgression) {
+      const owners = character.classProgression.filter(
+        (entry) =>
+          norm(entry.name) === norm(land.owner.name) &&
+          norm(entry.source) === norm(land.owner.source) &&
+          norm(entry.subclass) === norm(land.owner.subclassName) &&
+          norm(entry.subclassSource) === norm(land.owner.subclassSource),
+      )
+      if (owners.length !== 1 || owners[0].levels < land.level) {
+        paths.push(['classChoiceSelections', index])
+        continue
+      }
     }
     if (
       selection.favoredEnemy !== undefined ||

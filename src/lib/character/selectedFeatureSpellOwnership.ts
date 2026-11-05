@@ -5,6 +5,8 @@ import {
 } from '@/lib/5etools/divineOrderIdentity'
 import {
   decodeSelectedFeatureSpellAddress,
+  LAND_BONUS_SPELL_ADDRESS,
+  LAND_BONUS_SPELL_SLOT,
   selectedFeatureSpellAddress,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -63,12 +65,24 @@ export function getSelectedFeatureSpellProducer(
 }
 
 /** Saved ownership only; missing source data or suspended permission does not remove intent. */
+function hasClassicLandOwner(character: Character) {
+  const entries = character.classProgression.filter(
+    (entry) =>
+      norm(entry.name) === 'druid' &&
+      norm(entry.source) === 'phb' &&
+      norm(entry.subclass) === 'circle of the land' &&
+      norm(entry.subclassSource) === 'phb',
+  )
+  return entries.length === 1 && entries[0].levels >= LAND_BONUS_SPELL_SLOT[3]
+}
+
 export function hasSavedSelectedFeatureSpellOwner(
   character: Character,
   slot: ManagedClassSpellSlot,
 ) {
   const address = decodeSelectedFeatureSpellAddress(slot[2])
   if (!address) return false
+  if (slot[2] === LAND_BONUS_SPELL_ADDRESS) return hasClassicLandOwner(character)
   if (address[1] === 'classFeature' && getSavedDivineOrder(character)?.branch !== 'thaumaturge')
     return false
   const matches = (character.classChoiceSelections ?? []).filter(
@@ -85,7 +99,7 @@ export function hasSavedSelectedFeatureSpellOwner(
 }
 
 export function getSavedSelectedFeatureSpellProducers(character: Character) {
-  return new Set(
+  const producers = new Set(
     (character.classChoiceSelections ?? []).flatMap((selection) =>
       selection.selected.flatMap((option) => {
         const producer = getSelectedFeatureSpellProducer(selection, option)
@@ -95,4 +109,9 @@ export function getSavedSelectedFeatureSpellProducers(character: Character) {
       }),
     ),
   )
+  if (hasClassicLandOwner(character)) {
+    const [owner, , producer, level] = LAND_BONUS_SPELL_SLOT
+    producers.add(JSON.stringify([owner, producer, level]))
+  }
+  return producers
 }

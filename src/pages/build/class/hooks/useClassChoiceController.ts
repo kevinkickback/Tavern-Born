@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
+import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import {
   canonicalProficiencyName,
@@ -79,6 +80,14 @@ interface ClassChoiceControllerParams {
 
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
+function getOptionalPoolSelectionHandleForChoice(
+  id: string,
+  character: Character | null | undefined,
+) {
+  const row = character?.classChoiceSelections?.find((selection) => selection.choiceId === id)
+  return (row && getOptionalPoolSelectionHandle(row)) ?? ''
+}
+
 export function useClassChoiceController({
   character: savedCharacter,
   viewingClassData,
@@ -136,6 +145,7 @@ export function useClassChoiceController({
     ids: string[]
     contextKey: string
     catalogs: typeof catalogs
+    landHandles: ReadonlyMap<string, string>
   } | null>(null)
   const enemySuggestions = useMemo(
     () =>
@@ -343,6 +353,9 @@ export function useClassChoiceController({
           .find(
             (choice) =>
               choice &&
+              (!queue.landHandles.has(choice.id) ||
+                queue.landHandles.get(choice.id) ===
+                  getOptionalPoolSelectionHandleForChoice(choice.id, character)) &&
               (selectedViewsByChoiceId.get(choice.id) ?? []).filter(isClassChoiceOptionEligible)
                 .length < getRequiredChoiceSelectionCount(choice, viewingClassLevel),
           )
@@ -428,7 +441,8 @@ export function useClassChoiceController({
             activeSaved.legacySubclass ||
             activeSaved.companion ||
             activeSaved.divineOrder ||
-            activeSaved.blessedStrikes
+            activeSaved.blessedStrikes ||
+            getLandChoiceRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
             : undefined,
         )
@@ -492,10 +506,12 @@ export function useClassChoiceController({
           undefined,
           current.id === BLESSED_STRIKES_ID
             ? request?.savedHandle
-            : decodeLegacySubclassChoice(current.id)
-              ? (request?.savedHandle ??
-                (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
-              : undefined,
+            : getLandChoiceRule(current.id)
+              ? (request?.savedHandle ?? queue?.landHandles.get(current.id))
+              : decodeLegacySubclassChoice(current.id)
+                ? (request?.savedHandle ??
+                  (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
+                : undefined,
         )
       }
     } catch (error) {
@@ -569,6 +585,14 @@ export function useClassChoiceController({
         ids: candidates.map((choice) => choice.id),
         contextKey: ownerContext(subclass.name, subclass.source, latest),
         catalogs,
+        landHandles: new Map(
+          candidates
+            .filter((choice) => getLandChoiceRule(choice.id))
+            .map((choice) => [
+              choice.id,
+              getOptionalPoolSelectionHandleForChoice(choice.id, latest),
+            ]),
+        ),
       })
     },
     recoveries,
@@ -683,6 +707,7 @@ export function useClassChoiceController({
                   ? getOptionalPoolSelectionHandle(saved)
                   : choice.kind === 'creature' ||
                       choice.id === BLESSED_STRIKES_ID ||
+                      getLandChoiceRule(choice.id) ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
                       decodeLegacySubclassChoice(choice.id)
                     ? saved
@@ -707,7 +732,8 @@ export function useClassChoiceController({
                 state.legacySubclass ||
                 state.companion ||
                 state.divineOrder ||
-                state.blessedStrikes
+                state.blessedStrikes ||
+                getLandChoiceRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

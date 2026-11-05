@@ -2,13 +2,17 @@ import {
   type AdditionalSpellChoiceDescriptor,
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
+import { getClassicLandBonusCantrip } from '@/lib/5etools/circleOfTheLand'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getClassCastingLevelAccess } from '@/lib/5etools/classCastingSource'
 import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
-import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  decodeSelectedFeatureSpellAddress,
+  LAND_BONUS_SPELL_SLOT,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -64,7 +68,7 @@ export function getSelectedFeatureCantripSetups(
     prerequisites,
   ).selectedOptions
   const allowed = sources(character)
-  return (character.classChoiceSelections ?? []).flatMap((selection) =>
+  const setups = (character.classChoiceSelections ?? []).flatMap((selection) =>
     selection.selected.flatMap((option) => {
       const producer = getSelectedFeatureSpellProducer(selection, option)
       if (!producer) return []
@@ -192,6 +196,37 @@ export function getSelectedFeatureCantripSetups(
       return [setup]
     }),
   )
+  if (hasSavedSelectedFeatureSpellOwner(character, LAND_BONUS_SPELL_SLOT)) {
+    const classes = catalogs?.classes?.filter(
+      (row) => norm(row.name) === 'druid' && norm(row.source) === 'phb',
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const circles = cls?.subclasses?.filter(
+      (row) => norm(row.name) === 'circle of the land' && norm(row.source) === 'phb',
+    )
+    const available =
+      cls &&
+      circles?.length === 1 &&
+      permitted(allowed, 'phb') &&
+      getClassicLandBonusCantrip(cls, circles[0])
+    const [owner, , producer, level] = LAND_BONUS_SPELL_SLOT
+    const choice = parseAdditionalSpellBlocks([
+      { ability: 'wis', known: { _: [{ choose: 'level=0|class=Druid' }] } },
+    ])[0].choices[0]
+    setups.push({
+      owner,
+      producer,
+      level,
+      name: 'Bonus Cantrip',
+      offered: true,
+      count: 1,
+      choice,
+      ...(available
+        ? {}
+        : { reason: 'Restore the exact classic Circle of the Land Bonus Cantrip source.' }),
+    })
+  }
+  return setups
 }
 
 export function getSelectedFeatureCantripSlots(
@@ -240,7 +275,9 @@ export function getSelectedFeatureCantripPool(
     unique.set(key, unique.has(key) ? undefined : spell)
   }
   const choice = setup?.choice
-  const isDivineOrder = decodeSelectedFeatureSpellAddress(slot[2])?.[1] === 'classFeature'
+  const ownerScoped = ['classFeature', 'subclassFeature'].includes(
+    decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
+  )
   const spells =
     reason || !choice
       ? []
@@ -259,7 +296,7 @@ export function getSelectedFeatureCantripPool(
             checked.classSpellRoutes?.some(
               (route) =>
                 matchesJoinedSpellClassFilter(route, filter.classes) &&
-                (!isDivineOrder || (route[3] === slot[0][1] && route[4] === slot[0][2])) &&
+                (!ownerScoped || (route[3] === slot[0][1] && route[4] === slot[0][2])) &&
                 [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
                   permitted(allowed, source),
                 ),

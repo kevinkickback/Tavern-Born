@@ -1,3 +1,4 @@
+import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
@@ -153,6 +154,7 @@ export function hasCurrentClassSpellListRoute(
       : []
   if (
     currentSubclasses?.length === 1 &&
+    !isCircleOfTheLand(entry.name, entry.source, entry.subclass ?? '', entry.subclassSource) &&
     permitted(allowed, entry.subclassSource ?? '') &&
     exactSubclassPath(spell, entry, currentSubclasses[0], options.requestedTarget)
   )
