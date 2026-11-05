@@ -1,6 +1,7 @@
 import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { ELEMENTAL_FURY_ID } from '@/lib/5etools/elementalFurySource'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
@@ -158,7 +159,7 @@ export function buildRetainedCharacterDetails(
       choiceDetailsById.set(state.selection.choiceId, details)
     }
     for (const choice of character.classChoiceSelections ?? []) {
-      if (choice.choiceId === BLESSED_STRIKES_ID) continue
+      if (choice.choiceId === BLESSED_STRIKES_ID || choice.choiceId === ELEMENTAL_FURY_ID) continue
       if (data !== primary && isValidClassProficiencySelection(choice)) {
         const relation = decodeClassProficiencyChoiceId(choice.choiceId)!
         const dormant = createOptionalClassFeatureActivity(character, primaryCatalogs).dormant(
@@ -244,7 +245,7 @@ export function buildRetainedCharacterDetails(
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
   for (const selection of character.classChoiceSelections ?? []) {
-    if (selection.choiceId === BLESSED_STRIKES_ID) {
+    if (selection.choiceId === BLESSED_STRIKES_ID || selection.choiceId === ELEMENTAL_FURY_ID) {
       const retained = choiceDetailsById.get(selection.choiceId)
       choiceDetailsById.set(
         selection.choiceId,

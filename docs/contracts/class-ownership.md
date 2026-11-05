@@ -33,6 +33,13 @@ branch at the verified level-14 gain. Character details and PDF include
 the rules for player adjudication. Classic subclass features retain their
 own authority.
 
+Revised Druid Elemental Fury uses the structured level-7 class-feature choice.
+The selected option supplies its current rules to Class details, the character
+sheet and PDF. The separate level-15 declaration adds only the named improvement
+matching that selection. Losing the improvement source or dropping below level
+15 preserves the base choice. If the base source is unavailable, the saved choice
+is retained for restoration or removal.
+
 Mystic talent, discipline and order-bonus selections use the same Class-choice ownership and
 current-benefit projection. Their distinct catalog, saved relation and setup limits are described
 in [psionic setup](psionic-selection.md).

@@ -11,6 +11,7 @@ import {
   getProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { ELEMENTAL_FURY_ID } from '@/lib/5etools/elementalFurySource'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
@@ -42,7 +43,7 @@ import {
 import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
-  hasBlessedStrikesRecovery,
+  hasProjectedBranchRecovery,
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import {
@@ -240,7 +241,7 @@ export function useClassChoiceController({
         state.legacySubclass ||
         state.companion ||
         state.classOrder ||
-        state.blessedStrikes
+        state.projectedBranch
       )
         return (
           !!state.owner &&
@@ -442,7 +443,7 @@ export function useClassChoiceController({
             activeSaved.legacySubclass ||
             activeSaved.companion ||
             activeSaved.classOrder ||
-            activeSaved.blessedStrikes ||
+            activeSaved.projectedBranch ||
             getLandChoiceRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
             : undefined,
@@ -505,7 +506,9 @@ export function useClassChoiceController({
           current,
           confirmedSelections.map((option) => option.reference),
           undefined,
-          current.id === BLESSED_STRIKES_ID || getClassOrderById(current.id)
+          current.id === BLESSED_STRIKES_ID ||
+            current.id === ELEMENTAL_FURY_ID ||
+            getClassOrderById(current.id)
             ? request?.savedHandle
             : getLandChoiceRule(current.id)
               ? (request?.savedHandle ?? queue?.landHandles.get(current.id))
@@ -611,7 +614,7 @@ export function useClassChoiceController({
               !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
               !hasClassProficiencyRecovery(diagnostic, featureOptionStates) &&
               !hasRevisedHunterRecovery(diagnostic, featureOptionStates) &&
-              !hasBlessedStrikesRecovery(diagnostic, featureOptionStates),
+              !hasProjectedBranchRecovery(diagnostic, featureOptionStates),
           )
         : [],
     selectionByChoiceId,
@@ -708,6 +711,7 @@ export function useClassChoiceController({
                   ? getOptionalPoolSelectionHandle(saved)
                   : choice.kind === 'creature' ||
                       choice.id === BLESSED_STRIKES_ID ||
+                      choice.id === ELEMENTAL_FURY_ID ||
                       getClassOrderById(choice.id) ||
                       getLandChoiceRule(choice.id) ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
@@ -734,7 +738,7 @@ export function useClassChoiceController({
                 state.legacySubclass ||
                 state.companion ||
                 state.classOrder ||
-                state.blessedStrikes ||
+                state.projectedBranch ||
                 getLandChoiceRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,

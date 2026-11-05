@@ -20,6 +20,11 @@ import {
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import {
+  ELEMENTAL_FURY_ID,
+  getCurrentElementalFury,
+  getSavedElementalFury,
+} from '@/lib/5etools/elementalFurySource'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
@@ -126,7 +131,8 @@ function currentLiteralChoice(
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
   const order = getClassOrderById(choice.id)
-  if (order?.owner === 'druid') {
+  const fury = choice.id === ELEMENTAL_FURY_ID
+  if (order?.owner === 'druid' || fury) {
     const owner = findOwner(character, choice)
     const cls = authority && findClassReference(choice.owner, authority.classes)
     const catalogs = authority?.catalogs
@@ -140,15 +146,19 @@ function currentLiteralChoice(
         createOptionalClassFeatureActivity(character, catalogs),
         catalogs,
       ).find((row) => row.id === choice.id)
+    const furyRules = fury ? getCurrentElementalFury(catalogs) : undefined
     if (
       !current ||
       JSON.stringify(current) !== JSON.stringify(choice) ||
       selected.some((option) => {
-        const branch = getClassOrderBranch(option, order)
-        return !branch || !getCurrentClassOrderOption(catalogs, order, branch)
+        if (fury) return !furyRules?.option(option)
+        const branch = order && getClassOrderBranch(option, order)
+        return !order || !branch || !getCurrentClassOrderOption(catalogs, order, branch)
       })
     )
-      throw new RangeError(`${order.name} source rules changed. Review the current choices.`)
+      throw new RangeError(
+        `${current?.label ?? choice.label} source rules changed. Review the current choices.`,
+      )
     return current
   }
   if (choice.id === BLESSED_STRIKES_ID) {
@@ -491,12 +501,13 @@ export function retainSavedFeatureOptionsCommand(
   const order = getClassOrderById(choiceId)
   const registeredOrder =
     order && getSavedClassOrder(character, order)?.selection === selection ? order : undefined
-  const registeredBlessedStrikes =
-    getSavedBlessedStrikes(character.classChoiceSelections ?? []) === selection
+  const registeredBranch =
+    getSavedBlessedStrikes(character.classChoiceSelections ?? []) === selection ||
+    getSavedElementalFury(character.classChoiceSelections ?? []) === selection
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
-    ((registeredPool || registeredCompanion || registeredOrder || registeredBlessedStrikes) &&
+    ((registeredPool || registeredCompanion || registeredOrder || registeredBranch) &&
       expectedSelectionHandle === undefined) ||
     (registeredCompanion &&
       character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
@@ -508,7 +519,7 @@ export function retainSavedFeatureOptionsCommand(
     !registeredPool &&
     !registeredCompanion &&
     !registeredOrder &&
-    !registeredBlessedStrikes &&
+    !registeredBranch &&
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
     !isValidPsionicSelection(selection) &&
@@ -732,6 +743,7 @@ export function applyClassChoiceSelectionCommand(
   }
   if (
     (choice.id === BLESSED_STRIKES_ID ||
+      choice.id === ELEMENTAL_FURY_ID ||
       getClassOrderById(choice.id) ||
       getLandChoiceRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||

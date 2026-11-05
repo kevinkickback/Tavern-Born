@@ -6,6 +6,7 @@ import {
 import { getClassOrderBranch, getClassOrderById } from '@/lib/5etools/classOrderIdentity'
 import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { ELEMENTAL_FURY_ID, getCurrentElementalFury } from '@/lib/5etools/elementalFurySource'
 import {
   normalizeFavoredEnemyChoices,
   resolveFavoredEnemyOption,
@@ -645,6 +646,19 @@ export function resolveClassChoiceOptions(
         branch && classLevel >= choice.level && getCurrentClassOrderOption(catalogs, order, branch)
       return feature
         ? { ...resolveExplicitOption(reference, catalogs), entries: feature.entries ?? [] }
+        : { reference, availability: 'retained', entries: [] }
+    })
+  }
+  if (choice.id === ELEMENTAL_FURY_ID) {
+    const rules = getCurrentElementalFury(catalogs)
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((row) => [getClassChoiceOptionKey(row), row]),
+      ).values(),
+    ].map((reference) => {
+      const feature = classLevel >= choice.level && rules?.option(reference)
+      return feature
+        ? { ...toView('classFeature', feature, catalogs, 'eligible'), reference }
         : { reference, availability: 'retained', entries: [] }
     })
   }

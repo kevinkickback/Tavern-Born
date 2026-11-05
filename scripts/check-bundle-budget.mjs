@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Primal Order: measured 6,478,053 B renderer and 1,237,632 B initial.
+  // Elemental Fury: measured 6,483,144 B renderer and 1,242,288 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6327 * KIB,
-  initialRendererScript: 1209 * KIB,
+  rendererCode: 6332 * KIB,
+  initialRendererScript: 1214 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

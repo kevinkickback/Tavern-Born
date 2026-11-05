@@ -223,6 +223,20 @@ describe('representative character consumers', () => {
       '2024-druid': ['Druid', 'Primal Order', 'primal-order'],
     }[fixture.id]
     const expectedIssues = [
+      ...(fixture.id === '2024-druid'
+        ? [
+            {
+              id: 'class-choice:class:druid|xphb|choice:elemental-fury|7',
+              section: 'class',
+              severity: 'blocking',
+              title: 'Restore or remove Elemental Fury',
+              explanation:
+                'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
+              navigationTarget:
+                '/build/class?class=Druid%7CXPHB&level=7&choice=class%3Adruid%7Cxphb%7Cchoice%3Aelemental-fury%7C7',
+            },
+          ]
+        : []),
       ...(order
         ? [
             {
