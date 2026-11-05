@@ -199,7 +199,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "1a6afd14348fcee7dbee7928935fc2ad6c3fa01e4b1fa2f115f14ff849f2e3ef"
+      "sha256": "845d01df34403891d4a0b54aee6a3dc297e65241d3edaf0df58d410c3c74e58b"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -235,7 +235,7 @@
     },
     {
       "file": "src/lib/5etools/classRuleNormalization.ts",
-      "sha256": "a15123a2c475c45ec6798304fe5008f589bde8be05f6c3fa85a3f159bbd80f70"
+      "sha256": "02db887e72e8bf3b7f8af88bc675ed688f4b20390fd944df84e550e37ee5bd59"
     },
     {
       "file": "src/lib/5etools/classSpellSlotTable.ts",
@@ -275,11 +275,19 @@
     },
     {
       "file": "src/lib/5etools/directFixedProficiencySource.ts",
-      "sha256": "b443e8df4082d30603e62339f9c0966d941b61a5a43b64033d3491332038dc9d"
+      "sha256": "4ff0e8a2885a86bc9c16598fc2b7937e345d0b35498da37ef5ca06f94c1baf94"
+    },
+    {
+      "file": "src/lib/5etools/divineOrderIdentity.ts",
+      "sha256": "ac37833938cc09ac256ecff1bafd44de7cf62dc00f5ca1331c438ab2befc6599"
     },
     {
       "file": "src/lib/5etools/entityIdentity.ts",
       "sha256": "01ea66819047ff0d97ace224f34667ef1d2e7bcba3b255dad0d4a746babca47b"
+    },
+    {
+      "file": "src/lib/5etools/epicBoonAdvancement.ts",
+      "sha256": "f3a809e67f1c1672cfda5c8864628f5f361eace9ba9e93a47b0ddd227890c701"
     },
     {
       "file": "src/lib/5etools/favoredEnemyChoices.ts",
@@ -327,7 +335,7 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "a059ce8111c2340898b5d6a2fb446cfb8e8f7e0fc6905d9db8b3e75edd1b7547"
+      "sha256": "fe4774b95417b1ef65528a113a3df11dc2eba7da4c12c3689c6ebf0bf4232fcf"
     },
     {
       "file": "src/lib/5etools/fixedProficiencySource.ts",
@@ -399,7 +407,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "6688772f367e646457493129c322d1f8f94cfd36a5dd583b72ef69d298eaddb8"
+      "sha256": "00cb354d6e70ba52970e86d0825afabaf66d1ac70e077f9b645efd3fc2e555aa"
     },
     {
       "file": "src/lib/5etools/parsers/shared.ts",
@@ -443,7 +451,7 @@
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "283fefdddd014d4e9235fe9f08810f70b8549bd7def83d20b748740fd081dd92"
+      "sha256": "1e8f6469b788425acf83988a6e0b326a7544a68de74f67c46187941b42d37260"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -567,7 +575,7 @@
     },
     {
       "file": "src/lib/calculations/skills.ts",
-      "sha256": "607aac7f09a671346a0f89148cdc099ce3c2a2d68188b57247df5e9354604799"
+      "sha256": "2e10e45a8bc78bd86253605e3420ff98d5229619ee351e4b2bc8231e49395102"
     },
     {
       "file": "src/lib/calculations/spellIdentity.ts",
@@ -651,7 +659,7 @@
     },
     {
       "file": "src/types/effects.ts",
-      "sha256": "076341c2b15da9c5868c4d9f8875da4ba77001d8791472f2315ca14a8e049acd"
+      "sha256": "a1559309e301829ca30714ee2f6f8853d2fe9875a55698ecfdcd8285f53fa6c8"
     },
     {
       "file": "src/types/feat.ts",
