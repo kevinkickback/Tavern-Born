@@ -9,7 +9,10 @@ import {
 export type { ManagedClassSpellContext } from './classSpellAuthority'
 
 import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
-import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
+import {
+  getClassSpellProfilePolicy,
+  getManagedClassSpellRule,
+} from '@/lib/5etools/classCastingRules'
 import {
   type ClassCastingCatalog,
   createClassCastingSourceAccess,
@@ -17,9 +20,15 @@ import {
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import {
+  getCurrentSavantSpellbookGrant,
+  getSavantSpellbookGain,
+} from '@/lib/5etools/savantSpellbookRules'
+import {
   getSpellbookSpecialtyRule,
   isCurrentSpellbookSpecialty,
 } from '@/lib/5etools/spellbookSpecialtyRules'
+import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
+import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
@@ -76,10 +85,15 @@ function resolveSlot(
 ) {
   if (slot[1] === 'feature-cantrip' || slot[1] === 'class-spellbook-specialty')
     return 'Use this selected feature’s spell choices.'
-  const finite = getManagedClassSpellRule(slot)
+  const savantGain = getSavantSpellbookGain(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
-  if (!finite) return 'The saved class spell ownership is invalid.'
-  if (!entry || entry.levels < slot[3] || entry.levels < finite.rule.declaration.level)
+  const rule =
+    savantGain && entry
+      ? getClassSpellProfilePolicy({ name: entry.name, source: entry.source, levels: entry.levels })
+          .rule
+      : getManagedClassSpellRule(slot)?.rule
+  if (!rule) return 'The saved class spell ownership is invalid.'
+  if (!entry || entry.levels < slot[3] || entry.levels < rule.declaration.level)
     return 'This spell choice is not earned by the selected class or subclass.'
   if (!context?.catalogs || !context.spellsByKey)
     return 'Restore the current class and spell sources.'
@@ -92,9 +106,9 @@ function resolveSlot(
   )
   const authority = gainAuthority(
     catalog,
-    owner,
-    slot[2],
-    finite.rule.declaration.level,
+    rule.declaration.owner,
+    rule.declaration.target,
+    rule.declaration.level,
     slot[1],
     slot[3],
   )
@@ -122,20 +136,21 @@ function resolveSlot(
     if (!introduction || !permitted(allowed, introduction.declaration.feature.source))
       return 'Restore the introductory casting feature for this spell choice.'
   }
-  const fixedAtGain = getEarnedSubclassSpellGrants(
-    classes.find(
-      (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
-    ),
-    entry,
-    slot[3],
-    { selections: character.classChoiceSelections },
+  const classData = classes.find(
+    (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
   )
+  const savant = savantGain && classData && getCurrentSavantSpellbookGrant(slot, classData, catalog)
+  if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
+    return 'Restore the current Evocation Savant feature and its spellbook schedule.'
+  const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
+    selections: character.classChoiceSelections,
+  })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const privileged =
     slot[1] === 'class-known' &&
     slot[4] === 0 &&
     authority.rule.unrestrictedGains?.includes(slot[3]) === true
-  return { entry, authority, fixedAtGain, privileged }
+  return { entry, authority, fixedAtGain, privileged, savant, allowed }
 }
 
 function targetError(
@@ -152,6 +167,25 @@ function targetError(
         : spell.level < 1 || spell.level > state.authority.maxSpellLevel
   )
     return 'This spell is outside the level available for this choice.'
+  const savant = state.savant
+  if (savant) {
+    if (!savant.levels.includes(spell.level) || spell.school !== savant.school)
+      return 'Choose an Evocation spell of an eligible level for this gain.'
+    const checked = auditSpellRouteMultiplicity([spell])[0]
+    if (
+      !checked.classSpellRouteSource ||
+      checked.classSpellRouteSource.input.targetOccurrences.length !== 1 ||
+      !checked.classSpellRoutes?.some(
+        (route) =>
+          ['phb', 'xphb'].includes(route[4]) &&
+          matchesJoinedSpellClassFilter(route, savant.classes) &&
+          [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
+            permitted(state.allowed, source),
+          ),
+      )
+    )
+      return 'Choose a spell from the feature’s current Wizard spell list.'
+  }
   if (
     !(
       saved &&
@@ -329,23 +363,26 @@ export function getManagedClassSpellPool(
     spells,
     defaultReferences: new Set(
       spells
-        .filter((spell) =>
-          hasCurrentClassSpellListRoute(character, state.entry, spell, context ?? {}, {
-            owner: slot[0],
-            requestedTarget: slot[2],
-          }),
+        .filter(
+          (spell) =>
+            !!state.savant ||
+            hasCurrentClassSpellListRoute(character, state.entry, spell, context ?? {}, {
+              owner: slot[0],
+              requestedTarget: slot[2],
+            }),
         )
         .map((spell) => getSpellReferenceKey(spell.name, spell.source)),
     ),
     maxSpellLevel: state.authority.maxSpellLevel,
-    allowedLevels:
-      slot[1] === 'class-cantrip'
+    allowedLevels: state.savant
+      ? state.savant.levels
+      : slot[1] === 'class-cantrip'
         ? [0]
         : slot[1] === 'class-arcanum'
           ? [state.authority.maxSpellLevel]
           : Array.from({ length: state.authority.maxSpellLevel }, (_, index) => index + 1),
     reason: undefined,
-    schools: state.authority.rule.schools,
+    schools: state.savant ? [state.savant.school] : state.authority.rule.schools,
     privileged: state.privileged,
   }
 }
@@ -446,6 +483,7 @@ export function projectManagedClassSpellState(
       continue
     }
     if (
+      !state.savant &&
       choice.policy !== 'ignore-class-list' &&
       !hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, {
         owner,

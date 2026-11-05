@@ -5,11 +5,15 @@ export interface SpellGain {
   spells: number
   maxSpellLevel: number
   canSwap: boolean
+  savantSpellbook?: { name: string; count: number; maxSpellLevel: number }
   spellbookSpecialty?: { name: string; count: number }
 }
 
 export const countSpellGainChoices = (gain: SpellGain) =>
-  gain.cantrips + gain.spells + (gain.spellbookSpecialty?.count ?? 0)
+  gain.cantrips +
+  gain.spells +
+  (gain.savantSpellbook?.count ?? 0) +
+  (gain.spellbookSpecialty?.count ?? 0)
 
 interface ComputeLevelDisplayDataParams {
   level: number

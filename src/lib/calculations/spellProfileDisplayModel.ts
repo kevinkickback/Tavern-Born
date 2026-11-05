@@ -1,3 +1,4 @@
+import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
@@ -159,8 +160,9 @@ export function buildSpellProfileDisplayModels({
         )
     const currentSpells = classSelections
       ? classSelections.filter(
-          (status) =>
-            status.choice.slot[1] === 'class-known' || status.choice.slot[1] === 'class-spellbook',
+          ({ choice }) =>
+            choice.slot[1] === 'class-known' ||
+            (choice.slot[1] === 'class-spellbook' && !getSavantSpellbookGain(choice.slot)),
         ).length
       : countUniqueSpellNames(
           items.filter((item) => item.kind === 'spell' && !item.isFixed).map((item) => item.name),

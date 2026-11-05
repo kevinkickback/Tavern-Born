@@ -11,12 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import {
   formatSpellReference,
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
-import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
+import { formatSpellLevel, getOrdinalForm, getSchoolName } from '@/lib/calculations/spellUtils'
 import {
   type ManagedClassSpellRequest,
   setManagedClassSpellChoicesCommand,
@@ -94,9 +95,13 @@ export function ManagedClassSpellsDialog({
   )
   const selected = picker && rows[picker.index]
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
-  const allowClassListBypass = !isBookSpecialty && selected?.slot[1] !== 'feature-cantrip'
+  const savantGain = selected ? getSavantSpellbookGain(selected.slot) : undefined
+  const allowClassListBypass =
+    !isBookSpecialty && !savantGain && selected?.slot[1] !== 'feature-cantrip'
   const pickerKind =
-    (isBookSpecialty && getManagedClassSpellFeatureLabel(selected.slot)) ||
+    (selected &&
+      (isBookSpecialty || savantGain) &&
+      getManagedClassSpellFeatureLabel(selected.slot)) ||
     (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
       ? 'cantrip'
       : 'spell')
@@ -105,6 +110,10 @@ export function ManagedClassSpellsDialog({
     () => selected && getManagedClassSpellPool(draftBook ?? character, selected.slot, context),
     [character, selected, context, draftBook],
   )
+  const savantHint =
+    savantGain && pool?.schools
+      ? `Add an ${pool.schools.map(getSchoolName).join(' or ')} spell of up to ${getOrdinalForm(savantGain.tier)} level to your Wizard spellbook.`
+      : undefined
   const scoped = new Set(rows.map((row) => managedClassSpellId(row.slot)))
   const peers = new Set([
     ...(opening.managedClassSpellChoices ?? [])
@@ -318,6 +327,7 @@ export function ManagedClassSpellsDialog({
           categories={[{ key: 'spell', label: 'spell', max: 1, test: () => true }]}
           selectionHint={
             pool.reason ??
+            savantHint ??
             (isBookSpecialty
               ? `Choose a ${pool.allowedLevels?.map(formatSpellLevel).join(' or ')} spell from your Wizard spellbook.`
               : pool.schools && !pool.privileged && selected.slot[1] !== 'class-cantrip'
