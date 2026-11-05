@@ -52,7 +52,8 @@
       "Light Armor",
       "Medium Armor",
       "Heavy Armor",
-      "Shields"
+      "Shields",
+      "heavy"
     ],
     "weapons": [
       "Simple Weapons",
@@ -60,7 +61,8 @@
       "Longsword",
       "Longbow",
       "Dagger",
-      "Light Crossbow"
+      "Light Crossbow",
+      "martial"
     ],
     "tools": [
       "Calligrapher's Supplies",
@@ -334,6 +336,7 @@
         "label": "Wizard (Lv 10)",
         "className": "Wizard",
         "classSource": "XPHB",
+        "alwaysPrepared": false,
         "cantrips": [
           "Acid Splash|XPHB",
           "Blade Ward|XPHB",
@@ -365,7 +368,12 @@
           "Animate Objects|XPHB",
           "Bigby's Hand|XPHB",
           "Circle of Power|XPHB",
-          "Cloudkill|XPHB"
+          "Cloudkill|XPHB",
+          "Continual Flame|XPHB",
+          "Darkness|XPHB",
+          "Fireball|XPHB",
+          "Fire Shield|XPHB",
+          "Cone of Cold|XPHB"
         ],
         "preparedSpells": [
           "Alarm|XPHB",
@@ -380,8 +388,7 @@
           "Banishment|XPHB",
           "Animate Objects|XPHB",
           "Bigby's Hand|XPHB"
-        ],
-        "alwaysPrepared": false
+        ]
       },
       {
         "id": "class:Fighter|XPHB",
@@ -389,10 +396,10 @@
         "label": "Fighter (Lv 5)",
         "className": "Fighter",
         "classSource": "XPHB",
+        "alwaysPrepared": false,
         "cantrips": [],
         "spellsKnown": [],
-        "preparedSpells": [],
-        "alwaysPrepared": false
+        "preparedSpells": []
       },
       {
         "id": "class:Cleric|XPHB",
@@ -400,6 +407,7 @@
         "label": "Cleric (Lv 5)",
         "className": "Cleric",
         "classSource": "XPHB",
+        "alwaysPrepared": false,
         "cantrips": [
           "Guidance|XPHB",
           "Light|XPHB",
@@ -420,8 +428,8 @@
           "Create or Destroy Water|XPHB",
           "Detect Evil and Good|XPHB",
           "Detect Magic|XPHB",
-          "Aid|XPHB",
           "Augury|XPHB",
+          "Blindness/Deafness|XPHB",
           "Animate Dead|XPHB",
           "Aura of Vitality|XPHB"
         ],
@@ -440,8 +448,7 @@
           "lesser restoration|xphb",
           "mass healing word|xphb",
           "revivify|xphb"
-        ],
-        "alwaysPrepared": false
+        ]
       },
       {
         "id": "special:unrestricted",
@@ -2220,6 +2227,16 @@
             "grantType": "choice",
             "label": "Fighter"
           }
+        ],
+        "heavy": [
+          {
+            "sourceType": "class",
+            "sourceName": "Cleric",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Cleric",
+            "grantVariant": "feature-fixed-proficiencies:%5B%5B%22cleric%22%2C%22xphb%22%5D%2C%22class-feature%7Cprotector%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C1%5D"
+          }
         ]
       },
       "weapons": {
@@ -2275,6 +2292,16 @@
             "sourceRef": "XPHB",
             "grantType": "choice",
             "label": "Wizard"
+          }
+        ],
+        "martial": [
+          {
+            "sourceType": "class",
+            "sourceName": "Cleric",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Cleric",
+            "grantVariant": "feature-fixed-proficiencies:%5B%5B%22cleric%22%2C%22xphb%22%5D%2C%22class-feature%7Cprotector%7Ccleric%7Cxphb%7C1%7Cxphb%22%2C1%5D"
           }
         ]
       },
@@ -3501,6 +3528,80 @@
           "spellAttributionMode": "exact"
         }
       ],
+      "continual flame": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Evocation Savant",
+          "grantVariant": "class-spell-choice:%5B%5B%22subclass%22%2C%22wizard%22%2C%22xphb%22%2C%22evoker%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22subclass-feature%7Cevocation%20savant%7Cwizard%7Cxphb%7Cevoker%7Cxphb%7C3%7Cxphb%22%2C3%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "darkness": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Evocation Savant",
+          "grantVariant": "class-spell-choice:%5B%5B%22subclass%22%2C%22wizard%22%2C%22xphb%22%2C%22evoker%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22subclass-feature%7Cevocation%20savant%7Cwizard%7Cxphb%7Cevoker%7Cxphb%7C3%7Cxphb%22%2C3%2C1%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage",
+          "grantVariant": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522xphb%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%252C%2522subrace%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22%5C%22%2C%5B%5C%22cha%5C%22%2C%5C%22int%5C%22%2C%5C%22wis%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%22%2C1%2Ctrue%2Cnull%2C%5C%5C%5C%22known%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%22%2C5%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%22%2C3%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%5D%2C%5B%5D%2C%5B%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C3%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C5%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2C%5C%5C%5C%5C%5C%5C%5C%22c%5C%5C%5C%5C%5C%5C%5C%22%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D",
+          "grantSource": "xphb"
+        }
+      ],
+      "fireball": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Evocation Savant",
+          "grantVariant": "class-spell-choice:%5B%5B%22subclass%22%2C%22wizard%22%2C%22xphb%22%2C%22evoker%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22subclass-feature%7Cevocation%20savant%7Cwizard%7Cxphb%7Cevoker%7Cxphb%7C3%7Cxphb%22%2C5%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "fire shield": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Evocation Savant",
+          "grantVariant": "class-spell-choice:%5B%5B%22subclass%22%2C%22wizard%22%2C%22xphb%22%2C%22evoker%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22subclass-feature%7Cevocation%20savant%7Cwizard%7Cxphb%7Cevoker%7Cxphb%7C3%7Cxphb%22%2C7%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 7,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cone of cold": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Evocation Savant",
+          "grantVariant": "class-spell-choice:%5B%5B%22subclass%22%2C%22wizard%22%2C%22xphb%22%2C%22evoker%22%2C%22xphb%22%5D%2C%22class-spellbook%22%2C%22subclass-feature%7Cevocation%20savant%7Cwizard%7Cxphb%7Cevoker%7Cxphb%7C3%7Cxphb%22%2C9%2C0%5D",
+          "grantSource": "XPHB",
+          "spellGrantedAtLevel": 9,
+          "spellAttributionMode": "exact"
+        }
+      ],
       "friends": [
         {
           "sourceType": "feat",
@@ -3513,17 +3614,6 @@
         }
       ],
       "faerie fire": [
-        {
-          "sourceType": "subrace",
-          "sourceName": "Drow Lineage",
-          "sourceRef": "XPHB",
-          "grantType": "fixed",
-          "label": "Drow Lineage",
-          "grantVariant": "racial-suite:%5B%22racial%3A%255B%2522elf%2522%252C%2522xphb%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%252C%2522subrace%2522%252C%2522drow%2520lineage%2522%252C%2522xphb%2522%255D%22%2C%22%5B%5C%22%5C%22%2C%5C%22%5C%22%2C%5B%5C%22cha%5C%22%2C%5C%22int%5C%22%2C%5C%22wis%5C%22%5D%2C%5B%5C%22%5B%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%22%2C1%2Ctrue%2Cnull%2C%5C%5C%5C%22known%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%22%2C5%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%22%2C3%2Cfalse%2C1%2C%5C%5C%5C%22innate%5C%5C%5C%22%5D%5C%22%5D%2C%5B%5D%2C%5B%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C3%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22faerie%20fire%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22innate%5C%5C%5C%22%2C5%2C%5C%5C%5C%22daily%3A1%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22darkness%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2Cnull%5D%5C%5C%5C%22%5D%5D%5C%22%2C%5C%22%5B%5C%5C%5C%22known%5C%5C%5C%22%2C1%2C%5C%5C%5C%22direct%5C%5C%5C%22%2C%5B%5C%5C%5C%22%5B%5C%5C%5C%5C%5C%5C%5C%22dancing%20lights%7Cxphb%5C%5C%5C%5C%5C%5C%5C%22%2C%5C%5C%5C%5C%5C%5C%5C%22c%5C%5C%5C%5C%5C%5C%5C%22%5D%5C%5C%5C%22%5D%5D%5C%22%5D%2C%5B%5D%5D%22%5D",
-          "grantSource": "xphb"
-        }
-      ],
-      "darkness": [
         {
           "sourceType": "subrace",
           "sourceName": "Drow Lineage",
@@ -5260,9 +5350,114 @@
       },
       "revision": 33,
       "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "subclass",
+          "wizard",
+          "xphb",
+          "evoker",
+          "xphb"
+        ],
+        "class-spellbook",
+        "subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb",
+        3,
+        0
+      ],
+      "target": {
+        "name": "Continual Flame",
+        "source": "XPHB"
+      },
+      "revision": 34,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "subclass",
+          "wizard",
+          "xphb",
+          "evoker",
+          "xphb"
+        ],
+        "class-spellbook",
+        "subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb",
+        3,
+        1
+      ],
+      "target": {
+        "name": "Darkness",
+        "source": "XPHB"
+      },
+      "revision": 35,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "subclass",
+          "wizard",
+          "xphb",
+          "evoker",
+          "xphb"
+        ],
+        "class-spellbook",
+        "subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb",
+        5,
+        0
+      ],
+      "target": {
+        "name": "Fireball",
+        "source": "XPHB"
+      },
+      "revision": 36,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "subclass",
+          "wizard",
+          "xphb",
+          "evoker",
+          "xphb"
+        ],
+        "class-spellbook",
+        "subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb",
+        7,
+        0
+      ],
+      "target": {
+        "name": "Fire Shield",
+        "source": "XPHB"
+      },
+      "revision": 37,
+      "policy": "default"
+    },
+    {
+      "slot": [
+        [
+          "subclass",
+          "wizard",
+          "xphb",
+          "evoker",
+          "xphb"
+        ],
+        "class-spellbook",
+        "subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb",
+        9,
+        0
+      ],
+      "target": {
+        "name": "Cone of Cold",
+        "source": "XPHB"
+      },
+      "revision": 38,
+      "policy": "default"
     }
   ],
-  "managedClassSpellRevision": 33,
+  "managedClassSpellRevision": 38,
   "backgroundAsiBlockIndex": 0,
   "backgroundAsiChoices": [
     "dexterity",

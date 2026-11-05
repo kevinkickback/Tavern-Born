@@ -40,8 +40,8 @@
       "Shields"
     ],
     "weapons": [
-      "Simple Weapons",
-      "Martial Weapons"
+      "simple",
+      "martial"
     ],
     "tools": [],
     "skills": [
@@ -92,7 +92,7 @@
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Bonus Spells",
+        "label": "Special (Unrestricted)",
         "cantrips": [],
         "spellsKnown": [],
         "preparedSpells": [],
@@ -544,7 +544,7 @@
         ]
       },
       "weapons": {
-        "simple weapons": [
+        "simple": [
           {
             "sourceType": "class",
             "sourceName": "Ranger",
@@ -553,7 +553,7 @@
             "label": "Ranger"
           }
         ],
-        "martial weapons": [
+        "martial": [
           {
             "sourceType": "class",
             "sourceName": "Ranger",
