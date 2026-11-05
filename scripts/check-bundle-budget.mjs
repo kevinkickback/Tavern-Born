@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Divine Order grants and recovery: measured 6,452,663 B renderer and 1,213,410 B initial.
+  // Divine Order grants and recovery: measured 6,452,539 B renderer and 1,213,286 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6302 * KIB,
   initialRendererScript: 1185 * KIB,
