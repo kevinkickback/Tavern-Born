@@ -92,7 +92,10 @@ import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 
-import { getClassStaticFeatureSummaries } from './classStaticFeatureSummaries'
+import {
+  type ClassStaticFeatureSummary,
+  getClassStaticFeatureSummaries,
+} from './classStaticFeatureSummaries'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
@@ -213,7 +216,7 @@ export interface CharacterSheetViewModel {
   featuresSummary: string
   featureOptionSummaries?: Array<{ text: string; compactText: string }>
   optionalClassFeatureSummaries?: Array<{ text: string; compactText: string }>
-  declaredClassFeatureSummaries?: Array<{ text: string; compactText: string }>
+  declaredClassFeatureSummaries?: ClassStaticFeatureSummary[]
   managedSpellCastingSummaries?: string[]
   proficiencyCheckNotes?: ProficiencyCheckNoteRow[]
   equipmentSummary: string
@@ -354,64 +357,58 @@ function getBackgroundFeature(
   }
 }
 
-function buildFeaturesSummary(character: Character, descriptions = true): string {
-  return character.features
-    .map((feature) => {
-      const body = descriptions ? feature.description?.trim() : ''
-      return body ? `${feature.name}: ${body}` : feature.name
-    })
-    .join('\n\n')
-}
-
-function buildClassFeaturesSummary(character: Character, descriptions = true): string {
-  const provenanceFeatures = character.provenance?.features ?? {}
-  if (Object.keys(provenanceFeatures).length === 0)
-    return buildFeaturesSummary(character, descriptions)
-  const classFeatureNames = new Set(
-    Object.entries(provenanceFeatures)
-      .filter(([, tags]) =>
-        tags.some(
-          (tag) =>
-            tag.sourceType === 'class' ||
-            tag.sourceType === 'subclass' ||
-            tag.sourceType === 'optionalFeature',
-        ),
-      )
-      .map(([name]) => name),
+function buildFeatureSummaries(
+  vm: Pick<
+    CharacterSheetViewModel,
+    | 'character'
+    | 'classResourceSummary'
+    | 'declaredClassFeatureSummaries'
+    | 'optionalClassFeatureSummaries'
+    | 'featureOptionSummaries'
+    | 'proficiencyCheckNotes'
+    | 'managedSpellCastingSummaries'
+  >,
+  descriptions = true,
+) {
+  const declared = vm.declaredClassFeatureSummaries ?? []
+  const saved = vm.character.features.filter(
+    (row) => !declared.some((feature) => feature.replaces === row),
   )
-  const knownNames = new Set(Object.keys(provenanceFeatures))
-  return character.features
-    .filter((feature) => classFeatureNames.has(feature.name) || !knownNames.has(feature.name))
-    .map((feature) => {
-      const body = descriptions ? feature.description?.trim() : ''
-      return body ? `${feature.name}: ${body}` : feature.name
-    })
-    .join('\n\n')
-}
-
-function withFeatureOptionSummaries(
-  summary: string,
-  selections: CharacterSheetViewModel['featureOptionSummaries'],
-  descriptions: boolean,
-  notes: readonly ProficiencyCheckNoteRow[] = [],
-  optionalFeatures: NonNullable<CharacterSheetViewModel['optionalClassFeatureSummaries']> = [],
-  castingSummaries: readonly string[] = [],
-  resourceSummary?: string,
-  declaredFeatures: NonNullable<CharacterSheetViewModel['declaredClassFeatureSummaries']> = [],
-): string {
-  return [
-    resourceSummary,
-    ...declaredFeatures.map((row) => (descriptions ? row.text : row.compactText)),
-    summary,
-    ...optionalFeatures.map((row) => (descriptions ? row.text : row.compactText)),
-    ...(selections ?? []).map((selection) =>
-      descriptions ? selection.text : selection.compactText,
-    ),
-    ...notes.map((row) => row.text),
-    ...castingSummaries,
+  const provenance = vm.character.provenance?.features ?? {}
+  const knownNames = new Set(Object.keys(provenance))
+  const classRows = saved.filter(({ name }) => {
+    const tags = knownNames.has(name) ? provenance[name] : undefined
+    return (
+      !tags ||
+      tags.some(
+        ({ sourceType }) =>
+          sourceType === 'class' || sourceType === 'subclass' || sourceType === 'optionalFeature',
+      )
+    )
+  })
+  const format = (row: { text: string; compactText: string }) =>
+    descriptions ? row.text : row.compactText
+  const trailing = [
+    ...(vm.optionalClassFeatureSummaries ?? []).map(format),
+    ...(vm.featureOptionSummaries ?? []).map(format),
+    ...(vm.proficiencyCheckNotes ?? []).map((row) => row.text),
+    ...(vm.managedSpellCastingSummaries ?? []),
   ]
-    .filter(Boolean)
-    .join('\n\n')
+  const render = (rows: typeof saved) =>
+    [
+      vm.classResourceSummary,
+      ...declared.map(format),
+      rows
+        .map((row) => {
+          const body = descriptions ? row.description?.trim() : ''
+          return body ? `${row.name}: ${body}` : row.name
+        })
+        .join('\n\n'),
+      ...trailing,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+  return { classFeaturesSummary2014: render(classRows), featuresSummary: render(saved) }
 }
 
 /** Print-only projection: preserve names and combat numbers without changing source rules. */
@@ -419,26 +416,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
   return {
     ...vm,
     racialTraitsSummary: buildRacialTraitsSummary(vm.character, vm.mergedRace, false),
-    classFeaturesSummary2014: withFeatureOptionSummaries(
-      buildClassFeaturesSummary(vm.character, false),
-      vm.featureOptionSummaries,
-      false,
-      vm.proficiencyCheckNotes,
-      vm.optionalClassFeatureSummaries,
-      vm.managedSpellCastingSummaries,
-      vm.classResourceSummary,
-      vm.declaredClassFeatureSummaries,
-    ),
-    featuresSummary: withFeatureOptionSummaries(
-      buildFeaturesSummary(vm.character, false),
-      vm.featureOptionSummaries,
-      false,
-      vm.proficiencyCheckNotes,
-      vm.optionalClassFeatureSummaries,
-      vm.managedSpellCastingSummaries,
-      vm.classResourceSummary,
-      vm.declaredClassFeatureSummaries,
-    ),
+    ...buildFeatureSummaries(vm, false),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
     magicItems: vm.magicItems.map((item) => ({ ...item, description: '' })),
@@ -929,7 +907,7 @@ export function createCharacterSheetViewModel(
     },
   )
   const declaredClassFeatureSummaries = getClassStaticFeatureSummaries(
-    getCharacterClassEntries(character),
+    character,
     primaryLookups.classChoiceFeatureCatalogs,
     !!unlimitedWildShape,
   )
@@ -940,15 +918,21 @@ export function createCharacterSheetViewModel(
         : [],
   )
 
-  return {
+  const featureSummaryModel = {
     character,
-    feats,
-    level,
+    classResourceSummary,
     featureOptionSummaries,
     optionalClassFeatureSummaries,
     declaredClassFeatureSummaries,
     managedSpellCastingSummaries,
     proficiencyCheckNotes,
+  }
+
+  return {
+    ...featureSummaryModel,
+    ...buildFeatureSummaries(featureSummaryModel),
+    feats,
+    level,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
     classLevelSummary: getClassLevelSummary(character),
@@ -976,7 +960,6 @@ export function createCharacterSheetViewModel(
     walkingSpeed: getWalkingSpeed(calculationContext.movement),
     remainingHitDice: Math.max(0, level - getHitDiceUsedTotal(character.hitDiceUsed)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
-    classResourceSummary,
     classResourceRows: buildClassResourceRows(
       character,
       rawLookups,
@@ -1024,26 +1007,6 @@ export function createCharacterSheetViewModel(
     visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),
-    classFeaturesSummary2014: withFeatureOptionSummaries(
-      buildClassFeaturesSummary(character),
-      featureOptionSummaries,
-      true,
-      proficiencyCheckNotes,
-      optionalClassFeatureSummaries,
-      managedSpellCastingSummaries,
-      classResourceSummary,
-      declaredClassFeatureSummaries,
-    ),
-    featuresSummary: withFeatureOptionSummaries(
-      buildFeaturesSummary(character),
-      featureOptionSummaries,
-      true,
-      proficiencyCheckNotes,
-      optionalClassFeatureSummaries,
-      managedSpellCastingSummaries,
-      classResourceSummary,
-      declaredClassFeatureSummaries,
-    ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
       .join('\n'),

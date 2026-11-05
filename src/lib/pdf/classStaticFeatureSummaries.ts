@@ -8,9 +8,16 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Class5e, ClassFeature } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Character, Feature } from '@/types/character'
+
+export interface ClassStaticFeatureSummary {
+  text: string
+  compactText: string
+  replaces?: Feature
+}
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
@@ -77,11 +84,12 @@ function featureSummary(feature: ClassFeature | undefined, entries = feature?.en
 
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
 export function getClassStaticFeatureSummaries(
-  progression: readonly CharacterClassEntry[],
+  character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   unlimited: boolean,
-) {
+): ClassStaticFeatureSummary[] {
   if (!catalogs) return []
+  const progression = getCharacterClassEntries(character)
   return progression.flatMap((entry) => {
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
@@ -96,13 +104,32 @@ export function getClassStaticFeatureSummaries(
     const cls = classes[0]
     if (name === 'wizard') {
       if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
-      return featureSummary(
-        getCurrentDirectClassFeature(
-          cls,
-          catalogs,
-          `class-feature|arcane recovery|wizard|${source}|1|${source}`,
-        ),
+      const feature = getCurrentDirectClassFeature(
+        cls,
+        catalogs,
+        `class-feature|arcane recovery|wizard|${source}|1|${source}`,
       )
+      if (!feature) return []
+      const [summary] = featureSummary(feature)
+      if (!summary) return []
+      // A saved class label can coexist with the derived rules in an imported character.
+      const tags = character.provenance?.features['arcane recovery']
+      const tag = tags?.[0]
+      if (
+        tags?.length !== 1 ||
+        tag?.sourceType !== 'class' ||
+        tag.grantType !== 'fixed' ||
+        tag.grantVariant ||
+        (tag.grantSource && tag.grantSource.trim().toLowerCase() !== source) ||
+        !findClassReference(entry, [{ name: tag.sourceName, source: tag.sourceRef }])
+      ) {
+        return [summary]
+      }
+      const labels = character.features.filter(
+        (row) => row.level === 1 && findClassReference(feature, [row]),
+      )
+      const label = labels.length === 1 ? labels[0] : undefined
+      return [{ ...summary, replaces: label?.description?.trim() ? undefined : label }]
     }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
     const subclasses = cls.subclasses?.filter((subclass) =>

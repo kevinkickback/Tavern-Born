@@ -11,6 +11,7 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
+import { emptyProvenance } from '@/lib/provenance/ledger'
 import type { GameData } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -85,29 +86,59 @@ test.each(stacks)(
     const current = lookups(data)
     for (const { source, origin, reuse } of printings) {
       const wizard = { name: 'Wizard', source, levels: 1 }
+      const imported = characterPersistenceSchema.parse(
+        JSON.parse(await readFile(`tests/fixtures/full-coverage-character-${origin}.tbc`, 'utf8')),
+      )
+      const savedLabel = imported.features.find((feature) => feature.name === 'Arcane Recovery')!
       const character = characterPersistenceSchema.parse(
         makeCharacterFixture({
           originSystem: origin,
           allowedSources: [source],
           classProgression: [wizard],
           classResources: { 'wizard-arcane-recovery': 0 },
+          provenance: {
+            ...emptyProvenance(),
+            features: { 'arcane recovery': imported.provenance!.features['arcane recovery'] },
+          },
           // Fill both 2024 feature columns so the earned rule also needs the Notes fallback.
-          features: ['Field notes', 'Travel notes'].map((name) => ({
-            id: `manual:${name}`,
-            name,
-            source: 'Manual',
-            description: 'These independent notes are available on the character sheet. '.repeat(
-              175,
-            ),
-          })),
+          features: [
+            savedLabel,
+            ...['Field notes', 'Travel notes'].map((name) => ({
+              id: `manual:${name}`,
+              name,
+              source: 'Manual',
+              description: 'These independent notes are available on the character sheet. '.repeat(
+                175,
+              ),
+            })),
+          ],
         }),
       )
       const project = (actor = character, primary = current) =>
         createCharacterSheetViewModel(actor, current, primary)
       const vm = project()
       expect(vm.declaredClassFeatureSummaries).toEqual([
-        { text: expect.stringMatching(reuse), compactText: 'Arcane Recovery' },
+        {
+          text: expect.stringMatching(reuse),
+          compactText: 'Arcane Recovery',
+          replaces: savedLabel,
+        },
       ])
+      expect(project(imported).featuresSummary.match(/Arcane Recovery/g)).toHaveLength(1)
+      expect(vm.character.features).toContainEqual(savedLabel)
+      const manual = project({
+        ...character,
+        features: [
+          ...character.features,
+          {
+            id: 'manual:arcane-recovery',
+            name: 'Arcane Recovery',
+            source: 'Manual',
+            description: 'An independent personal note.',
+          },
+        ],
+      })
+      expect(manual.featuresSummary).toContain('Arcane Recovery: An independent personal note.')
 
       for (const template of [`${origin}-official`, `${origin}-custom`] as const) {
         const full = await readText(vm, template, 'full')
@@ -119,7 +150,7 @@ test.each(stacks)(
         expect(full.all).not.toMatch(source === 'PHB' ? printings[1].reuse : printings[0].reuse)
 
         const names = await readText(vm, template, 'names')
-        expect(names.features).toContain('Arcane Recovery')
+        expect(names.features.match(/Arcane Recovery/g)).toHaveLength(1)
         for (const rule of [...recoveryRules, reuse]) expect(names.all).not.toMatch(rule)
         if (template === '2014-custom') {
           expect(full.form.getTextField('Limited Feature Used 1').getText()).toBe('1')
@@ -140,6 +171,8 @@ test.each(stacks)(
         }),
       )
       expect(absent.declaredClassFeatureSummaries).toEqual([])
+      expect(absent.featuresSummary.match(/Arcane Recovery/g)).toHaveLength(1)
+      expect(absent.featuresSummary).not.toMatch(reuse)
       expect(absent.classResourceRows).toEqual(vm.classResourceRows)
       expect(absent.character.spells).toEqual(vm.character.spells)
       expect(project().declaredClassFeatureSummaries).toEqual(vm.declaredClassFeatureSummaries)
