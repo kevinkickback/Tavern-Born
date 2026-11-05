@@ -47,7 +47,7 @@ export function isEpicBoonAdvancement(feature: ClassFeature): boolean {
   )
 }
 
-export function getEpicBoonAdvancementTarget(owner: Pick<Class5e, 'name' | 'source'>) {
+function getEpicBoonAdvancementTarget(owner: Pick<Class5e, 'name' | 'source'>) {
   if (identityPart(owner.source) !== 'xphb') return undefined
   return getClassFeatureIdentity({
     name: 'Epic Boon',
