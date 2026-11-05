@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 interface RulesPreviewShellProps extends React.HTMLAttributes<HTMLDivElement> {
   emphasized?: boolean
   label: string
-  layer: 'pinned' | 'primary' | 'transient'
+  layer: 'pinned' | 'transient'
   position: PreviewPosition
 }
 

@@ -2,7 +2,7 @@ import { BookOpen, MagnifyingGlass, Shield, Toolbox, X } from '@phosphor-icons/r
 import { useEffect, useMemo, useState } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'

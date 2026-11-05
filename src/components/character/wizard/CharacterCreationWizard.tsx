@@ -303,7 +303,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        rulesPreviewPortalRef={setPortalHost}
+        viewportPortalHostRef={setPortalHost}
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}
         aria-busy={isCreating}

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import type { SkillExpertiseAction } from '@/lib/character/skillExpertiseChoices'
 import type { SkillProficiencyAction } from '@/lib/character/skillProficiencyChoices'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import {
   formatProfLabel,

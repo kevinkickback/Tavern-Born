@@ -4,7 +4,7 @@ import {
   isKnownFeatExpertiseTarget,
 } from '@/lib/5etools/featExpertiseRules'
 import { ALL_SKILLS } from '@/lib/calculations/skills'
-import { addGrant } from '@/lib/provenance'
+import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Feat5e } from '@/types/5etools'

@@ -1,10 +1,10 @@
-import { makeSourceTag } from '@/lib/provenance'
 import {
   type FeatSelectionKind,
   getFeatSelectionKey,
   getSelectedFeatOwnerKey,
 } from '@/lib/provenance/featSelectionIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 

@@ -25,11 +25,11 @@ source element. A pinned preview therefore survives route content changes and vi
 unmounts without retaining hidden rows or increasing overscan. The visible pinned title is the
 pointer and keyboard drag handle through `useDraggablePreview`.
 
-`RulesPreviewManager` owns one stable portal root, normally at `document.body`. Ordinary shared
-dialogs also portal into this root, so modal accessibility hiding targets existing surfaces rather
-than hiding the ancestor of newly opened previews. The creator's own dialog stays at the body to
-avoid an ancestor cycle, then opts into
-`DialogContent.rulesPreviewPortalRef`, moving that root into a viewport-fixed host inside the Radix
+`RulesPreviewManager` owns one stable portal root, normally at `document.body`. It supplies
+shared dialogs with the portal container and identifies preview surfaces as part of the active
+interaction. Ordinary shared dialogs portal into this root so modal accessibility hiding can
+target individual surfaces. The creator's own dialog stays at the body to avoid an ancestor
+cycle. Its `DialogContent.viewportPortalHostRef` moves that root into a viewport-fixed host inside the Radix
 modal's focus/scroll boundary. Opted-in content uses transform-free centering and fade-only entry so
 fixed preview coordinates stay relative to the viewport. Registration moves the root before Radix
 hides siblings. Leaving the host returns it to the body; changing hosts clears only transient chains.

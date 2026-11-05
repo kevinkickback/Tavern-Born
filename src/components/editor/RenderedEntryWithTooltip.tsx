@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { RenderedHtml } from '@/components/editor/RenderedHtml'
-import { getRulesPreviewDescriptor, useRulesPreview } from '@/components/editor/RulesPreviewManager'
+import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
+import {
+  findRulesReferenceTrigger,
+  getRulesPreviewDescriptor,
+} from '@/components/editor/rulesPreviewReferences'
 import { getEntryWithHoverTitles, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 
 interface RenderedEntryWithTooltipProps {
@@ -21,12 +25,6 @@ export function RenderedEntryWithTooltip({
         ? entry.map((item) => getEntryWithHoverTitles(item)).join('')
         : getEntryWithHoverTitles(entry),
     [entry],
-  )
-
-  const findTrigger = useCallback(
-    (target: EventTarget | null) =>
-      target instanceof HTMLElement ? target.closest<HTMLElement>('[data-recursive-title]') : null,
-    [],
   )
 
   const showPreview = useCallback(
@@ -51,12 +49,12 @@ export function RenderedEntryWithTooltip({
     // biome-ignore lint/a11y/noStaticElementInteractions: generated inline references provide button semantics and delegate to this boundary.
     <div
       onMouseMove={(event) => {
-        const trigger = findTrigger(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (trigger && event.currentTarget.contains(trigger)) showPreview(trigger)
       }}
       onMouseLeave={scheduleClose}
       onFocus={(event) => {
-        const trigger = findTrigger(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (trigger && event.currentTarget.contains(trigger)) showPreview(trigger)
       }}
       onBlur={(event) => {
@@ -73,14 +71,14 @@ export function RenderedEntryWithTooltip({
         scheduleClose()
       }}
       onClick={(event) => {
-        const trigger = findTrigger(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (!trigger || !event.currentTarget.contains(trigger)) return
         event.preventDefault()
         event.stopPropagation()
         pin(trigger, false)
       }}
       onKeyDown={(event) => {
-        const trigger = findTrigger(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (!trigger || (event.key !== 'Enter' && event.key !== ' ')) return
         event.preventDefault()
         event.stopPropagation()

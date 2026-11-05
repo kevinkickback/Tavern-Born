@@ -5,7 +5,7 @@ import {
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceOptions'
 import type { ExpertiseAuthority } from '@/lib/character/skillExpertiseChoices'
 import { getSkillProficiencyChoices } from '@/lib/character/skillProficiencyChoices'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 import {

@@ -1,5 +1,5 @@
 import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { formatSourceType } from '@/lib/provenance/summaries'
 import type { SourceRow } from '@/lib/provenance/types'
 import { isFixedProficiencyTag } from '@/lib/schema/fixedProficiencyValidation'

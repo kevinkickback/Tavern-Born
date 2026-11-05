@@ -203,33 +203,6 @@ function parseBooks(data: unknown): unknown[] {
   return []
 }
 
-/**
- * Extract named proficiencies from a 5etools proficiency/language block array.
- * Returns an array of string labels (name, "choose N", "any N standard").
- * Omits structural keys like `choose` and `anyStandard`.
- *
- * @param blocks  - e.g. `race.languageProficiencies`, `bg.skillProficiencies`, etc.
- * @param includeAnyStandard - include "any N standard" entries (default true)
- */
-export function extractProficiencyBlockNames(
-  blocks: unknown[],
-  { includeAnyStandard = true } = {},
-): string[] {
-  const out: string[] = []
-  for (const block of blocks) {
-    const blockObj = asObject(block)
-    for (const [key, val] of Object.entries(blockObj)) {
-      if (key !== 'choose' && key !== 'anyStandard' && val === true) out.push(key)
-    }
-    const anyStandard = blockObj.anyStandard
-    if (includeAnyStandard && typeof anyStandard === 'number')
-      out.push(`any ${anyStandard} standard`)
-    const chooseObj = asObject(blockObj.choose)
-    if (typeof chooseObj.count === 'number') out.push(`choose ${chooseObj.count}`)
-  }
-  return out
-}
-
 export function buildSourcesList(
   sourceAbbreviations: string[],
   booksData: unknown,

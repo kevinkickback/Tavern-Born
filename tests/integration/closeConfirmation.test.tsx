@@ -59,6 +59,21 @@ describe('close-confirmation preload and application lifecycle', () => {
     vi.unstubAllGlobals()
   })
 
+  test('update subscriptions forward only the payload and clean up individually', () => {
+    const callback = vi.fn()
+    const unsubscribeFirst = api.onUpdateAvailable(callback)
+    const unsubscribeSecond = api.onUpdateAvailable(callback)
+    const update = { version: '2.0.0', changelog: null, isPortable: true }
+    const nativeEvent = { sender: { send: vi.fn() } }
+
+    unsubscribeFirst()
+    ipcRenderer.emit('update-available', nativeEvent, update, 'unexpected extra argument')
+    unsubscribeSecond()
+    ipcRenderer.emit('update-available', nativeEvent, update)
+
+    expect(callback.mock.calls).toEqual([[update]])
+  })
+
   test('delivers no event or payload and removes the exact wrapper', () => {
     const callback = vi.fn()
     const unsubscribe = api.onConfirmClose(callback)

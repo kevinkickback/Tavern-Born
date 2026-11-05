@@ -29,7 +29,7 @@ import {
   findFocusedProvenanceChoice,
   getReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
-import { normalizeKey } from '@/lib/provenance'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'

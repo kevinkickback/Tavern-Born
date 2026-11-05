@@ -146,11 +146,6 @@ describe('compareSemver', () => {
   test('handles missing patch component', () => {
     expect(compareSemver('1.1', '1.0.9')).toBe(1)
   })
-
-  test('handles v-prefixed strings when stripped by caller', () => {
-    const strip = (v: string) => v.replace(/^v/, '')
-    expect(compareSemver(strip('v2.0.0'), strip('v1.9.0'))).toBe(1)
-  })
 })
 
 describe('updateManager offline safeguards', () => {

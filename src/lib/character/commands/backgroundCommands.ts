@@ -1,4 +1,4 @@
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import {
   assertStartingEquipmentSelections,
   getBackgroundEquipmentBlocks,

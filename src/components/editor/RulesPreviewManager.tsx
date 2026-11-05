@@ -18,11 +18,16 @@ import { PreviewPinButton } from '@/components/editor/PreviewPinButton'
 import { RenderedHtml } from '@/components/editor/RenderedHtml'
 import { RulesPreviewShell } from '@/components/editor/RulesPreviewShell'
 import {
+  findRulesReferenceTrigger,
+  getRulesPreviewDescriptor,
+} from '@/components/editor/rulesPreviewReferences'
+import {
   initialRulesPreviewState,
   type RulesPreviewDescriptor,
   rulesPreviewReducer,
   type TransientRulesPreview,
 } from '@/components/editor/rulesPreviewState'
+import { DialogPortalContext } from '@/components/ui/dialogPortalContext'
 import { useDraggablePreview } from '@/hooks/ui/useDraggablePreview'
 import {
   formatCastingTime,
@@ -39,17 +44,9 @@ import {
   type PreviewBounds,
   type PreviewPosition,
 } from '@/lib/overlayPosition'
-import {
-  getEntryWithHoverTitles,
-  getRecursiveTooltipData,
-  normalizeKind,
-  parseRecursiveReference,
-  type RecursiveLookup,
-  resolveRecursiveEntity,
-} from '@/lib/renderer/recursiveTooltip'
+import { getEntryWithHoverTitles, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
-import type { Spell5e } from '@/types/5etools'
 
 const PREVIEW_WIDTH = 320
 const PREVIEW_ESTIMATED_HEIGHT = 260
@@ -59,7 +56,6 @@ const PREVIEW_HOVER_INTENT_DELAY = 120
 const PINNED_PREVIEW_ID = 'rules-preview-pinned'
 
 interface RulesPreviewContextValue {
-  portalContainer: HTMLElement | null
   cancelClose: () => void
   openPreview: (descriptor: RulesPreviewDescriptor, sourceElement: HTMLElement) => void
   pinPreview: (
@@ -73,7 +69,6 @@ interface RulesPreviewContextValue {
 
 const noOp = () => undefined
 const fallbackContext: RulesPreviewContextValue = {
-  portalContainer: null,
   cancelClose: noOp,
   openPreview: noOp,
   pinPreview: noOp,
@@ -100,60 +95,6 @@ function getInitialPosition(
     placement,
     placement === 'right-start' ? PREVIEW_GAP : 4,
   )
-}
-
-export function getRulesPreviewDescriptor(
-  trigger: HTMLElement,
-  recursiveLookup: RecursiveLookup,
-): RulesPreviewDescriptor | null {
-  const rawTitle = trigger.getAttribute('data-recursive-title')
-  if (!rawTitle) return null
-
-  const reference = parseRecursiveReference(
-    rawTitle,
-    trigger.textContent?.trim() ?? '',
-    trigger.getAttribute('data-hover-type') ?? undefined,
-    trigger.getAttribute('data-hover-name') ?? undefined,
-    trigger.getAttribute('data-hover-source') ?? undefined,
-    trigger.getAttribute('data-hover-class-name') ?? undefined,
-    trigger.getAttribute('data-hover-class-source') ?? undefined,
-    trigger.getAttribute('data-hover-subclass-name') ?? undefined,
-    trigger.getAttribute('data-hover-subclass-source') ?? undefined,
-  )
-
-  if (normalizeKind(reference.kind) === 'spell') {
-    const spell = resolveRecursiveEntity(recursiveLookup.spells, reference.name, reference.source)
-    if (spell) return getSpellPreviewDescriptor(spell, recursiveLookup)
-  }
-
-  const resolved = getRecursiveTooltipData(
-    reference,
-    recursiveLookup,
-    rawTitle,
-    formatSpellLevel,
-    getSchoolName,
-  )
-  return {
-    key: `${reference.kind}|${reference.name}|${reference.source ?? ''}|${reference.className ?? ''}|${reference.subclassName ?? ''}`.toLowerCase(),
-    kind: 'generic',
-    ...resolved,
-    recursiveLookup,
-  }
-}
-
-export function getSpellPreviewDescriptor(
-  spell: Spell5e,
-  recursiveLookup: RecursiveLookup,
-  sourceContext?: string,
-): RulesPreviewDescriptor {
-  return {
-    key: `spell|${spell.name}|${spell.source ?? ''}`.toLowerCase(),
-    kind: 'spell',
-    title: spell.name,
-    spell,
-    sourceContext,
-    recursiveLookup,
-  }
 }
 
 interface PreviewContentsProps {
@@ -328,9 +269,6 @@ function PreviewSurface({
     onPositionChange: onPinnedPositionChange,
   })
 
-  const findReference = (target: EventTarget | null) =>
-    target instanceof HTMLElement ? target.closest<HTMLElement>('[data-recursive-title]') : null
-
   return (
     <RulesPreviewShell
       id={id}
@@ -345,7 +283,7 @@ function PreviewSurface({
         scheduleClose()
       }}
       onMouseMove={(event) => {
-        const trigger = findReference(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (trigger && event.currentTarget.contains(trigger)) {
           onReferenceIntent(trigger)
         } else {
@@ -355,7 +293,7 @@ function PreviewSurface({
         }
       }}
       onFocus={(event) => {
-        const trigger = findReference(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (trigger && event.currentTarget.contains(trigger)) onReferenceImmediate(trigger)
       }}
       onBlur={(event) => {
@@ -370,14 +308,14 @@ function PreviewSurface({
         scheduleClose()
       }}
       onClick={(event) => {
-        const trigger = findReference(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (!trigger || !event.currentTarget.contains(trigger)) return
         event.preventDefault()
         event.stopPropagation()
         onReferencePin(trigger)
       }}
       onKeyDown={(event) => {
-        const trigger = findReference(event.target)
+        const trigger = findRulesReferenceTrigger(event.target)
         if (!trigger || (event.key !== 'Enter' && event.key !== ' ')) return
         event.preventDefault()
         event.stopPropagation()
@@ -983,9 +921,16 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
       pinPreview,
       scheduleClose,
       setPortalHost,
-      portalContainer: portalRoot,
     }),
-    [cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost, portalRoot],
+    [cancelClose, openPreview, pinPreview, scheduleClose, setPortalHost],
+  )
+  const dialogPortal = useMemo(
+    () => ({
+      container: portalRoot,
+      isAuxiliarySurface: (target: Element) =>
+        target.closest('[data-rules-preview-layer]') !== null,
+    }),
+    [portalRoot],
   )
 
   const pinnedPreview = state.pinned
@@ -1061,8 +1006,10 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
 
   return (
     <RulesPreviewContext.Provider value={context}>
-      {children}
-      {portal}
+      <DialogPortalContext.Provider value={dialogPortal}>
+        {children}
+        {portal}
+      </DialogPortalContext.Provider>
     </RulesPreviewContext.Provider>
   )
 }

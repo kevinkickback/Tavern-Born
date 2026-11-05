@@ -1,4 +1,4 @@
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import { getRaceDefenseField, RACE_DEFENSE_FIELDS } from '@/lib/calculations/raceDefenseFields'
 import type { Race5e } from '@/types/5etools'
@@ -105,10 +105,6 @@ export function getDarkvisionDisplay(race: Race5e | undefined): string {
   return `${race.darkvision} ft.`
 }
 
-/**
- * Format language proficiencies as a comma-separated display string.
- * Uses `extractProficiencyBlockNames` from the 5etools parsers.
- */
 export function getLanguageDisplay(race: Race5e | undefined): string {
   if (!race?.languageProficiencies) {
     if (typeof race?.lineage === 'string') return 'Common, + 1 of your choice'
