@@ -16,6 +16,7 @@ import type {
 } from '@/types/character'
 import {
   getStartingEquipmentCandidates,
+  isRevisedDruidStartingOwner,
   resolveFixedStartingEquipmentMember,
   type StartingEquipmentPolicy,
   startingItemKey,
@@ -601,22 +602,29 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
   return keys.sort()
 }
 
-function unavailableFixedPackageA(
+function unavailableDruidPackage(
   blocks: readonly unknown[],
   policy?: StartingEquipmentPolicy,
+  option = 'a',
 ): BackgroundStartingPackage | undefined {
-  const block = normalizeChoiceBlock(blocks[0])
-  if ((block?.A ?? block?.a)?.length || !policy) return undefined
-  const fixed = resolveFixedStartingEquipmentMember(policy, 0, 'a', [])
-  if (!fixed?.diagnostic) return undefined
+  if (!policy || !isRevisedDruidStartingOwner(policy.owner)) return undefined
+  let diagnostic = 'Restore the exact Druid source rules.'
+  if (!policy.owner.sourceIdentityConflict) {
+    if (option !== 'a') return undefined
+    const block = normalizeChoiceBlock(blocks[0])
+    const entries = block?.A ?? block?.a ?? []
+    const fixed = resolveFixedStartingEquipmentMember(policy, 0, option, entries)
+    if (!fixed?.diagnostic || (entries.length && !fixed.unavailablePackage)) return undefined
+    diagnostic = fixed.diagnostic
+  }
   const saved = policy.character.startingEquipmentGrants?.class
   const grant = saved && sameStartingReference(saved.owner, policy.owner) ? saved : undefined
   return {
     items: [],
     currency: grant?.declaredCurrency ?? emptyCurrency(),
     lots: grant?.items.map(({ key, reference }) => ({ key, reference })) ?? [],
-    issues: [fixed.diagnostic],
-    fixedIssues: [fixed.diagnostic],
+    issues: [diagnostic],
+    fixedIssues: [diagnostic],
     unavailablePackage: true,
   }
 }
@@ -632,10 +640,8 @@ export function resolveEquipmentWithBlockChoices(
   genericSelections: Readonly<StartingEquipmentItemChoices> = {},
   policy?: StartingEquipmentPolicy,
 ): BackgroundStartingPackage {
-  if ((blockChoices[0]?.toLowerCase() ?? 'a') === 'a') {
-    const pending = unavailableFixedPackageA(blocks, policy)
-    if (pending) return pending
-  }
+  const pending = unavailableDruidPackage(blocks, policy, blockChoices[0]?.toLowerCase())
+  if (pending) return pending
   const allItems: EquipmentLike[] = []
   const currency = emptyCurrency()
   const genericChoices: GenericEquipmentChoice[] = []
@@ -775,7 +781,7 @@ export function resolveClassEquipmentBlocks(
     genericSelections,
     policy,
   )
-  const pending = unavailableFixedPackageA(defaultData, policy)
+  const pending = unavailableDruidPackage(defaultData, policy)
   if (!pending) return blocks
   const first = blocks[0]?.index === 0 ? blocks[0] : undefined
   return [
@@ -783,8 +789,14 @@ export function resolveClassEquipmentBlocks(
       index: 0,
       displayText: first?.displayText ?? null,
       isFixed: false,
-      choiceKeys: ['a', ...(first?.choiceKeys.filter((key) => key !== 'a') ?? [])],
-      options: { ...first?.options, a: pending },
+      choiceKeys: policy?.owner.sourceIdentityConflict
+        ? ['a', 'b']
+        : ['a', ...(first?.choiceKeys.filter((key) => key !== 'a') ?? [])],
+      options: {
+        ...first?.options,
+        a: pending,
+        ...(policy?.owner.sourceIdentityConflict ? { b: pending } : {}),
+      },
     },
     ...blocks.filter((block) => block.index !== 0),
   ]

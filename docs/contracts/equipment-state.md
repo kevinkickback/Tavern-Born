@@ -32,7 +32,8 @@ can corroborate exact source references. The revised Druid's Package A specifies
 form of Druidic Focus. The SRD Druidic Focuses table identifies Wooden Staff, so the exact live
 Druid XPHB package declaration and group member authorize one fixed Wooden Staff XPHB lot.
 If the declaration, group or member becomes unavailable, that slot stays pending and retains
-any existing owned lot for exact source restoration.
+any existing owned lot for exact source restoration. An ambiguous Druid owner or a competing
+Wooden Staff entry in that package leaves the entire package pending and preserves its saved grants.
 
 `startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
 address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and

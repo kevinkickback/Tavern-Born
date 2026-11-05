@@ -302,7 +302,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "65253006d8d10828ce8fd66896ca504fa23350d59562761ea5fd823c8917f434"
+      "sha256": "1c4c21f218075db77c702a9f28517dcb2aab5f5b08ecf86556ca71fdf42174a2"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
@@ -314,7 +314,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipmentPolicy.ts",
-      "sha256": "a1da5c988b35b04bb4be138897d318b66a7f17a3a49470f1be69a7d9cd15bdec"
+      "sha256": "b93b5db4a0bd9f33ddfe81636add8a8ad3b067b6868df954722338d542b98017"
     },
     {
       "file": "src/lib/5etools/startingItemCategory.ts",

@@ -80,6 +80,7 @@ import { projectProficiencyCommandResult } from './proficiencyProjection'
 export interface ClassSelectionEntity {
   name: string
   source: string
+  sourceIdentityConflict?: boolean
   proficiency?: string[]
   startingEquipment?: unknown
   startingProficiencies?: {
@@ -229,9 +230,17 @@ function replaceClassEquipmentGrants(
   return nextLedger
 }
 
-function withCurrentStartingGrants(policy: StartingEquipmentPolicy, character: Character) {
+function withCurrentStartingGrants(
+  policy: StartingEquipmentPolicy,
+  character: Character,
+  cls: Pick<ClassSelectionEntity, 'sourceIdentityConflict'>,
+) {
   return {
     ...policy,
+    owner: {
+      ...policy.owner,
+      sourceIdentityConflict: policy.owner.sourceIdentityConflict || cls.sourceIdentityConflict,
+    },
     character: { ...policy.character, startingEquipmentGrants: character.startingEquipmentGrants },
   }
 }
@@ -239,7 +248,10 @@ function withCurrentStartingGrants(policy: StartingEquipmentPolicy, character: C
 export function applyClassEquipmentChoiceCommand(
   character: Character,
   ledger: ProvenanceLedger,
-  cls: Pick<ClassSelectionEntity, 'name' | 'source' | 'startingEquipment'>,
+  cls: Pick<
+    ClassSelectionEntity,
+    'name' | 'source' | 'startingEquipment' | 'sourceIdentityConflict'
+  >,
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
@@ -285,9 +297,12 @@ export function applyClassEquipmentChoiceCommand(
     itemLookup,
     choices,
     itemSelections,
-    withCurrentStartingGrants(policy, character),
+    withCurrentStartingGrants(policy, character, cls),
   )
-  if (resolved.unavailablePackage && previousChoices[blockIndex]?.toLowerCase() === 'b')
+  if (
+    resolved.unavailablePackage &&
+    choices[blockIndex] !== (previousChoices[blockIndex]?.toLowerCase() ?? 'a')
+  )
     throw new RangeError('Restore the exact starting equipment rules before switching packages.')
   assertStartingEquipmentSelections(
     resolved,
@@ -989,7 +1004,7 @@ export function applyClassSelectionCommand(
     cls,
     subclass,
     itemLookup,
-    withCurrentStartingGrants(equipmentPolicy, character),
+    withCurrentStartingGrants(equipmentPolicy, character, cls),
   )
   const identityCharacter = {
     ...character,

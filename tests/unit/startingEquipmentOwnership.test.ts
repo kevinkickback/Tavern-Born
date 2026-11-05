@@ -1,9 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test, vi } from 'vitest'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItems } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildItemLookup, resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { duplicateCharacter, prepareCharacterImport } from '@/lib/character/characterTransfer'
 import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
 import {
@@ -23,6 +27,7 @@ import {
   reconcileStartingEquipmentGrant,
   setStartingCurrencyCommand,
 } from '@/lib/character/startingEquipmentGrants'
+import { validateStartingEquipment } from '@/lib/readiness/startingEquipmentReadiness'
 import { validateCharacterData } from '@/store/characterStore'
 import type { Background5e, Class5e, Item5e } from '@/types/5etools'
 import type { Character, Currency } from '@/types/character'
@@ -829,6 +834,65 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     },
   }
   const lostPackage = { ...cls, startingEquipment: undefined }
+  const [ambiguousOwner] = composeGameDataLayers([
+    { ...createEmptyGameData(), classes: [cls, lostPackage] },
+  ]).classes
+  expect(ambiguousOwner).toMatchObject({ sourceIdentityConflict: true })
+  expect(ambiguousOwner.startingEquipment).toBeUndefined()
+  const partial = apply(
+    empty,
+    applyClassSelectionCommand(empty, empty.provenance, cls, undefined, buildItemLookup(withdrawn)),
+  )
+  expect(partial.equipment).not.toHaveLength(0)
+  expect(partial.currency).toEqual(gp(14))
+  const conflicted = apply(
+    partial,
+    applyClassSelectionCommand(partial, partial.provenance, ambiguousOwner, undefined, itemLookup),
+  )
+  expect(conflicted.equipment).toEqual(partial.equipment)
+  expect(conflicted.currency).toEqual(partial.currency)
+  expect(conflicted.startingEquipmentGrants).toEqual(partial.startingEquipmentGrants)
+  const lookups = { classesByKey: buildClassLookup([ambiguousOwner]), itemLookup }
+  const calculation = createCharacterCalculationContext(conflicted, lookups, lookups)
+  expect(validateStartingEquipment(conflicted, calculation)).toContainEqual(
+    expect.objectContaining({
+      id: 'starting-equipment:class',
+      severity: 'blocking',
+      explanation: 'Restore the exact Druid source rules.',
+    }),
+  )
+
+  for (const placement of ['package', 'shared'] as const) {
+    const extraStaff = { item: 'Wooden Staff|XPHB' }
+    const duplicate = {
+      ...cls,
+      startingEquipment: {
+        ...declared,
+        defaultData: [
+          placement === 'package'
+            ? { ...originalBlock, A: [...originalBlock.A, extraStaff] }
+            : { ...originalBlock, _: [extraStaff] },
+        ],
+      },
+    }
+    const select = (character: Character) =>
+      apply(
+        character,
+        applyClassSelectionCommand(
+          character,
+          character.provenance,
+          duplicate,
+          undefined,
+          itemLookup,
+        ),
+      )
+    expect(select(empty).equipment).toEqual(empty.equipment)
+    const retained = select(initial)
+    expect(retained.equipment).toEqual(initial.equipment)
+    expect(retained.currency).toEqual(initial.currency)
+    expect(retained.startingEquipmentGrants).toEqual(initial.startingEquipmentGrants)
+  }
+
   for (const missing of [lostSlot, lostPackage]) {
     const policy = createStartingEquipmentPolicy(
       initial,
@@ -887,6 +951,37 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     startingEquipment: { ...declared, defaultData: [{ ...originalBlock, A: [] }] },
   }
   const onB = choose(initial, 'b')
+  const disputedB = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, B: [{ value: 9900 }] }] },
+  }
+  const [conflictingB] = composeGameDataLayers([
+    { ...createEmptyGameData(), classes: [cls, disputedB] },
+  ]).classes
+  const preservedB = apply(
+    onB,
+    applyClassSelectionCommand(onB, onB.provenance, ambiguousOwner, undefined, itemLookup),
+  )
+  expect(preservedB.startingEquipmentGrants).toEqual(onB.startingEquipmentGrants)
+  expect(preservedB.currency).toEqual(gp(55))
+  const staleB = createStartingEquipmentPolicy(
+    initial,
+    { ...disputedB, kind: 'class' },
+    disputedB.startingEquipment,
+    raw,
+  )
+  expect(() =>
+    applyClassEquipmentChoiceCommand(
+      initial,
+      initial.provenance,
+      conflictingB,
+      0,
+      'b',
+      itemLookup,
+      undefined,
+      staleB,
+    ),
+  ).toThrow('Restore the exact starting equipment rules before switching packages.')
   expect(() =>
     applyClassEquipmentChoiceCommand(onB, onB.provenance, noA, 0, 'a', itemLookup),
   ).toThrow('Restore the exact starting equipment rules before switching packages.')

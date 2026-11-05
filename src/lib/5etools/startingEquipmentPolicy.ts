@@ -213,6 +213,9 @@ const entryRecord = (value: unknown) =>
 const itemReference = (value: unknown) =>
   typeof value === 'string' ? startingItemUid(value) : undefined
 
+export const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owner']) =>
+  owner.kind === 'class' && sameStartingReference(owner, { name: 'Druid', source: 'XPHB' })
+
 /** SRD 5.2.1 pp. 41 and 97 bind this exact package qualifier to the Wooden Staff focus. */
 export function resolveFixedStartingEquipmentMember(
   policy: StartingEquipmentPolicy,
@@ -224,28 +227,22 @@ export function resolveFixedStartingEquipmentMember(
       reference: StartingItemReference
       entry: number
       replacesEntry: boolean
+      unavailablePackage?: boolean
       item?: Item5e
       diagnostic?: string
     }
   | undefined {
-  if (
-    policy.owner.kind !== 'class' ||
-    !sameStartingReference(policy.owner, { name: 'Druid', source: 'XPHB' }) ||
-    block !== 0 ||
-    option.toLowerCase() !== 'a'
-  )
+  if (!isRevisedDruidStartingOwner(policy.owner) || block !== 0 || option.toLowerCase() !== 'a')
     return undefined
 
   const entry = 3
   const reference = quarterstaffFocus.member
-  const groupEntry = (value: unknown) =>
-    sameStartingReference(itemReference(entryRecord(value)?.item ?? value), druidicFocus)
+  const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
+  const groupEntry = (value: unknown) => sameStartingReference(entryReference(value), druidicFocus)
+  const memberEntry = (value: unknown) => sameStartingReference(entryReference(value), reference)
   const currentEntry = entries[entry]
   const declaresGroup = groupEntry(currentEntry)
-  const directMember = sameStartingReference(
-    itemReference(entryRecord(currentEntry)?.item ?? currentEntry),
-    reference,
-  )
+  const directMember = memberEntry(currentEntry)
   const replacesEntry = declaresGroup || directMember
   const fragments = startingEquipmentTextFragments(
     'class',
@@ -282,12 +279,19 @@ export function resolveFixedStartingEquipmentMember(
     diagnostic: 'Restore the exact Wooden Staff starting focus rules.',
   }
   const packageData = entryRecord(policy.startingEquipment)?.defaultData
-  const currentBlock = Array.isArray(packageData) && entryRecord(packageData[block])
+  const currentBlock = Array.isArray(packageData) ? entryRecord(packageData[block]) : undefined
   const packageKeys = currentBlock
     ? Object.keys(currentBlock).filter((key) => key.toLowerCase() === 'a')
     : []
   const packageA =
     currentBlock && packageKeys.length === 1 ? currentBlock[packageKeys[0]] : undefined
+  const sharedEntries = currentBlock?._
+  if (
+    (Array.isArray(packageA) &&
+      packageA.some((row, index) => index !== entry && memberEntry(row))) ||
+    (Array.isArray(sharedEntries) && sharedEntries.some(memberEntry))
+  )
+    return { ...unavailable, unavailablePackage: true }
   const entryMatches = (value: unknown) => {
     const row = entryRecord(value)
     return (
@@ -302,7 +306,6 @@ export function resolveFixedStartingEquipmentMember(
   }
   if (
     !policy.ownerAvailable ||
-    policy.owner.sourceIdentityConflict ||
     !Array.isArray(packageA) ||
     !entryMatches(entries[entry]) ||
     !entryMatches(packageA[entry]) ||
