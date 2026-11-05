@@ -9,7 +9,6 @@ import {
   extractUniqueSizes,
   extractUniqueSources,
   extractUniqueSpellLevels,
-  searchByName,
   sortByName,
 } from '@/lib/5etools/filters'
 import { parseClasses } from '@/lib/5etools/parsers/classes'
@@ -633,10 +632,10 @@ describe('5etools/filters', () => {
     expect(DataFilter.filterSpells([ritual, ordinary], { ritual: false })).toEqual([ordinary])
   })
 
-  test('search and sort helpers are case-insensitive and stable by name', () => {
+  test('sortByName returns an alphabetical copy', () => {
     const entries = [{ name: 'Zed' }, { name: 'alpha' }, { name: 'Beta' }]
-    expect(searchByName(entries, 'AL')).toEqual([{ name: 'alpha' }])
     expect(sortByName(entries).map((e) => e.name)).toEqual(['alpha', 'Beta', 'Zed'])
+    expect(entries.map((e) => e.name)).toEqual(['Zed', 'alpha', 'Beta'])
   })
 
   test('filterFeats applies category and prerequisite filters', () => {

@@ -117,9 +117,11 @@ describe('abilityScores', () => {
   })
 
   test('normalizeAbilityName and formatModifier handle common inputs', () => {
-    expect(normalizeAbilityName('STR')).toBe('strength')
+    expect(normalizeAbilityName(' STR ')).toBe('strength')
     expect(normalizeAbilityName('charisma')).toBe('charisma')
     expect(normalizeAbilityName('foo')).toBeNull()
+    expect(normalizeAbilityName('constructor')).toBeNull()
+    expect(normalizeAbilityName('__proto__')).toBeNull()
     expect(formatModifier(2)).toBe('+2')
     expect(formatModifier(-1)).toBe('-1')
   })

@@ -2,8 +2,7 @@ import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { buildSpellNameKeySet, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getTotalClassLevels } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
-import type { AbilityName } from './abilityScores'
+import type { AbilityName, CharacterClassEntry } from '@/types/character'
 
 export interface PrereqCharacterSnapshot {
   progression: readonly (CharacterClassEntry & { subclassShortName?: string })[]
@@ -46,11 +45,6 @@ function parseSpellPrereqRef(ref: string): {
   const [spellRef, suffix] = ref.split('#')
   // Accept both canonical source|suffix ordering and older source-decorated selections.
   return { name: parseSpellReference(spellRef).name, suffix: suffix?.split('|')[0] }
-}
-
-function normalizeAbilityName(input: string): AbilityName | null {
-  const name = toAbilityName(input)
-  return typeof name === 'string' ? (name as AbilityName) : null
 }
 
 export interface CheckPrereqOptions {
@@ -150,7 +144,7 @@ function checkAbilityPrerequisite(
     let needsReview = false
     let unmet = false
     for (const [name, required] of Object.entries(requirements)) {
-      const ability = normalizeAbilityName(name)
+      const ability = toAbilityName(name)
       if (!ability || typeof required !== 'number' || !Number.isInteger(required) || required < 0) {
         needsReview = true
         continue

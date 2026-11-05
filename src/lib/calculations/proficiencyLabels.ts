@@ -1,10 +1,9 @@
 import {
   iterateProficiencyBlocks,
-  normalizeGenericToolChoice,
-  normalizeKey,
-  resolveRaceGrantFilterOptions,
   toProficiencyBlocks,
-} from '@/lib/provenance'
+} from '@/lib/provenance/applyProficiencyBlocks'
+import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance/normalization'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
 
 export function sanitizeProficiencyLabel(value: unknown): string | null {
   if (typeof value !== 'string') return null

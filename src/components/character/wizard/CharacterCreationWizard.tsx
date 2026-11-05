@@ -24,7 +24,7 @@ import {
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'

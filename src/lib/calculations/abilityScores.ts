@@ -3,7 +3,7 @@ import {
   ABILITY_ABBREV_ORDER,
   ABILITY_ABBREV_TO_FULL,
   ABILITY_ABBREV_TO_TITLE,
-  toAbilityName,
+  toAbilityName as normalizeAbilityName,
 } from './abilityNames'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
@@ -17,9 +17,10 @@ import {
 } from './gameRules'
 
 export type { AbilityName, AbilityScores } from '@/types/character'
+export { normalizeAbilityName }
 
 export const ABILITY_NAMES: readonly AbilityName[] = ABILITY_ABBREV_ORDER.map(
-  (abv) => ABILITY_ABBREV_TO_FULL[abv] as AbilityName,
+  (abv) => ABILITY_ABBREV_TO_FULL[abv],
 )
 
 export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = Object.fromEntries(
@@ -261,10 +262,6 @@ export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null
 }
 
 export type RaceLineageAsiBlockIndex = 0 | 1
-
-export function normalizeAbilityName(input: string): AbilityName | null {
-  return toAbilityName(input) as AbilityName | null
-}
 
 interface BackgroundAbilityBlock {
   from: AbilityName[]

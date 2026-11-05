@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { applyRaceGrants, emptyProvenance } from '@/lib/provenance'
-import { resolveRaceGrantFilterOptions } from '@/lib/provenance/applyRaceGrants'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
 
 describe('provenance/applyRaceGrants', () => {
   test('matches item sources without regard to source-code casing', () => {

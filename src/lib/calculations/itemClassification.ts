@@ -1,5 +1,4 @@
 import {
-  ARMOR_CATEGORY_LABEL_TO_CODE,
   ITEM_TYPE_CATALOG_FALLBACKS,
   type ItemTypeFallback,
   LEGACY_ITEM_TYPE_FALLBACKS,
@@ -50,8 +49,6 @@ export interface NormalizedItemTraits {
   isWondrous: boolean
   isEquippable: boolean
 }
-
-export { ARMOR_CATEGORY_LABEL_TO_CODE }
 
 export function getItemTypeCodes(type: ClassifiableItem['type']): string[] {
   const values = Array.isArray(type) ? type : [type]

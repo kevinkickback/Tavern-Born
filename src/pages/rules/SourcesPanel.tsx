@@ -2,6 +2,7 @@ import { BookOpen, Books, Database, Warning } from '@phosphor-icons/react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { SourcebookChoice } from '@/components/SourcebookChoice'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
@@ -386,44 +387,16 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                     </h5>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                       {groupSources.map((source) => {
-                        const enabled = allowedSources.includes(source.abbreviation)
                         const compatibility = getSourceCompatibility(source, character.originSystem)
                         return (
-                          <button
-                            type="button"
+                          <SourcebookChoice
                             key={source.abbreviation}
+                            source={source}
+                            selected={allowedSources.includes(source.abbreviation)}
+                            compatibility={compatibility}
                             onClick={() => toggleSource(source.abbreviation)}
-                            aria-pressed={enabled}
-                            disabled={!compatibility.compatible}
-                            title={compatibility.reason}
-                            className={cn(
-                              'flex min-h-14 cursor-pointer items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition-colors',
-                              !compatibility.compatible &&
-                                'cursor-not-allowed opacity-50 hover:border-border hover:text-muted-foreground',
-                              enabled
-                                ? 'border-accent bg-accent/10 text-foreground'
-                                : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
-                            )}
-                          >
-                            <BookOpen
-                              className={cn(
-                                'h-4 w-4 shrink-0 mt-0.5',
-                                enabled ? 'text-primary' : 'text-muted-foreground',
-                              )}
-                            />
-                            <div className="min-w-0">
-                              <div className="font-semibold truncate">{source.name}</div>
-                              <div className="text-xs font-mono text-muted-foreground">
-                                {source.abbreviation}
-                                {source.year && ` (${source.year})`}
-                              </div>
-                              {!compatibility.compatible && (
-                                <div className="mt-0.5 text-[11px] text-warning">
-                                  {compatibility.reason}
-                                </div>
-                              )}
-                            </div>
-                          </button>
+                            className="min-h-14 cursor-pointer transition-colors"
+                          />
                         )
                       })}
                     </div>
