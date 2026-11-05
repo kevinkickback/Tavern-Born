@@ -40,6 +40,7 @@ import {
 import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
+  hasBlessedStrikesRecovery,
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import {
@@ -584,7 +585,8 @@ export function useClassChoiceController({
               !hasFavoredEnemyRecovery(diagnostic, featureOptionStates) &&
               !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
               !hasClassProficiencyRecovery(diagnostic, featureOptionStates) &&
-              !hasRevisedHunterRecovery(diagnostic, featureOptionStates),
+              !hasRevisedHunterRecovery(diagnostic, featureOptionStates) &&
+              !hasBlessedStrikesRecovery(diagnostic, featureOptionStates),
           )
         : [],
     selectionByChoiceId,

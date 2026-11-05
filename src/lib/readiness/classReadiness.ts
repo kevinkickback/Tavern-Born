@@ -29,6 +29,7 @@ import {
 } from '@/lib/character/favoredEnemySelections'
 import {
   getFeatureOptionSelectionStates,
+  hasBlessedStrikesRecovery,
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
@@ -380,8 +381,7 @@ export function validateClassChoices(
         hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
         hasRevisedHunterRecovery(diagnostic, featureOptionStates) ||
-        (diagnostic.featureName === 'Blessed Strikes' &&
-          featureOptionStates.some((state) => state.blessedStrikes && state.recovery)) ||
+        hasBlessedStrikesRecovery(diagnostic, featureOptionStates) ||
         (diagnostic.featureName === 'Deft Explorer' &&
           featureOptionStates.some(
             (state) =>

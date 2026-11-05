@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Blessed Strikes choice and recovery: measured 6,458,396 B renderer and 1,218,686 B initial.
+  // Blessed Strikes choice and recovery: measured 6,458,594 B renderer and 1,218,928 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6308 * KIB,
   initialRendererScript: 1191 * KIB,

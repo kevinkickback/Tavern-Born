@@ -133,6 +133,24 @@ function getBlessedStrikesRecovery(
   ]
 }
 
+export function hasBlessedStrikesRecovery(
+  diagnostic: ClassChoiceDiagnostic,
+  states: readonly FeatureOptionSelectionState[],
+): boolean {
+  return (
+    diagnostic.featureName === 'Blessed Strikes' &&
+    !diagnostic.subclassName &&
+    states.some(
+      (state) =>
+        state.blessedStrikes &&
+        state.recovery &&
+        getFeatureOwnerKey(state.selection.className, state.selection.classSource) ===
+          getFeatureOwnerKey(diagnostic.className, diagnostic.classSource) &&
+        state.selection.classLevel === diagnostic.level,
+    )
+  )
+}
+
 export function hasRevisedHunterRecovery(
   diagnostic: ClassChoiceDiagnostic,
   states: readonly FeatureOptionSelectionState[],
