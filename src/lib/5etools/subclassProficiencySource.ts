@@ -7,6 +7,7 @@ import {
   getSubclassProficiencyOwner,
   isExactSubclassProficiencyReference,
   type SubclassProficiencyFeatureCertificate,
+  type SubclassProficiencyPackage,
   type SubclassProficiencyRootCertificate,
   type SubclassProficiencySourceAudit,
   subclassProficiencyDigest,
@@ -15,11 +16,28 @@ import {
 import {
   isConditionalOnlySubclassProficiencyTarget,
   SUBCLASS_PROFICIENCY_CHECKPOINT,
+  SUBCLASS_PROFICIENCY_PACKAGES,
 } from './subclassProficiencyRegistry'
 
 const certificates = SUBCLASS_PROFICIENCY_CHECKPOINT
 const features = new Map(certificates.features.map((row) => [row.target, row]))
 const roots = new Map(certificates.roots.map((row) => [JSON.stringify(row.owner), row]))
+const packagedRoots = new Map(
+  SUBCLASS_PROFICIENCY_PACKAGES.flatMap((source) => source.roots).map((row) => [
+    JSON.stringify(row.owner),
+    row,
+  ]),
+)
+const packagedFeatures = new Map(
+  SUBCLASS_PROFICIENCY_PACKAGES.flatMap((source) => source.features).map((row) => [
+    row.target,
+    row,
+  ]),
+)
+interface RawPackage {
+  source: SubclassProficiencyPackage
+  key: string
+}
 const rootDerived = [
   'entries',
   'subclassFeatureRefs',
@@ -34,15 +52,18 @@ const stamp = (
   certificate: unknown,
   origin: string,
   verified: boolean,
+  packageKey?: string,
 ): SubclassProficiencySourceAudit => ({
   version: 1,
   certificate: subclassProficiencyDigest(certificate)!,
   origin,
   verified,
+  ...(packageKey ? { package: packageKey } : {}),
 })
 const isStamped = (
   value: unknown,
   certificate: unknown,
+  packageKey?: string,
 ): value is SubclassProficiencySourceAudit => {
   if (!value || typeof value !== 'object') return false
   const audit = value as SubclassProficiencySourceAudit
@@ -52,10 +73,60 @@ const isStamped = (
     typeof audit.origin === 'string' &&
     !!audit.origin &&
     audit.certificate === subclassProficiencyDigest(certificate) &&
+    audit.package === packageKey &&
     Object.keys(audit).every((key) =>
-      ['version', 'certificate', 'origin', 'verified'].includes(key),
+      ['version', 'certificate', 'origin', 'verified', ...(packageKey ? ['package'] : [])].includes(
+        key,
+      ),
     )
   )
+}
+
+/** Recognize complete raw packages before enrichment or layer composition can fill missing links. */
+export function auditSubclassProficiencyPackage(
+  classes: readonly Record<string, unknown>[],
+  rawRoots: readonly Record<string, unknown>[],
+  rawFeatures: readonly Record<string, unknown>[],
+  origin: string,
+): RawPackage | undefined {
+  for (const source of SUBCLASS_PROFICIENCY_PACKAGES) {
+    const members: Record<string, unknown>[] = []
+    const verify = (rows: Record<string, unknown>[], digest: string) => {
+      if (rows.length !== 1 || subclassProficiencyDigest(rows[0]) !== digest) return false
+      members.push(rows[0])
+      return true
+    }
+    if (
+      !source.roots.every((root) => {
+        const parents = classes.filter(
+          (cls) =>
+            typeof cls.name === 'string' &&
+            cls.name.trim().toLowerCase() === root.owner[0] &&
+            typeof cls.source === 'string' &&
+            cls.source.trim().toLowerCase() === root.owner[1],
+        )
+        return (
+          parents.length === 1 &&
+          !parents[0]._copy &&
+          !parents[0].sourceIdentityConflict &&
+          verify(
+            rawRoots.filter((row) => same(getSubclassProficiencyOwner(row), root.owner)),
+            root.rawDigest,
+          )
+        )
+      }) ||
+      !source.features.every((feature) =>
+        verify(
+          rawFeatures.filter((row) => getSubclassFeatureIdentity(row) === feature.target),
+          feature.rawDigest,
+        ),
+      )
+    )
+      continue
+    const key = subclassProficiencyDigest([origin, members])
+    if (key) return { source, key }
+  }
+  return undefined
 }
 
 /** Audit all raw occurrences, even roots whose mutated declaration removed every supported leaf. */
@@ -63,6 +134,7 @@ export function auditSubclassProficiencyRoots(
   raw: Record<string, unknown>[],
   materialized: Record<string, unknown>[],
   origin: string,
+  packageAudit?: RawPackage,
 ) {
   const byOwner = new Map<string, Record<string, unknown>[]>()
   const byCopy = new Map<string, Record<string, unknown>[]>()
@@ -73,10 +145,14 @@ export function auditSubclassProficiencyRoots(
     if (key) byCopy.set(key, [...(byCopy.get(key) ?? []), row])
   })
   return materialized.map((row, index) => {
-    const certificate = roots.get(JSON.stringify(getSubclassProficiencyOwner(row)))
+    const owner = JSON.stringify(getSubclassProficiencyOwner(row))
+    const packaged = packageAudit?.source.roots.find((root) => JSON.stringify(root.owner) === owner)
+    const ordinary = roots.get(owner)
+    const certificate = ordinary ?? packaged ?? packagedRoots.get(owner)
     if (!certificate) return row
     const producers = byOwner.get(JSON.stringify(certificate.owner)) ?? []
     const valid =
+      !!(ordinary || packaged) &&
       producers.length === 1 &&
       subclassProficiencyDigest(raw[index]) === certificate.rawDigest &&
       subclassProficiencyDigest(subclassProficiencyMetadata(row, true)) ===
@@ -92,7 +168,12 @@ export function auditSubclassProficiencyRoots(
       })
     return {
       ...row,
-      subclassProficiencySourceAudit: stamp(certificate, `${origin}:subclass:${index}`, valid),
+      subclassProficiencySourceAudit: stamp(
+        certificate,
+        `${origin}:subclass:${index}`,
+        valid,
+        packaged && packageAudit?.key,
+      ),
     }
   })
 }
@@ -102,6 +183,7 @@ export function auditSubclassProficiencyFeatures(
   raw: Record<string, unknown>[],
   materialized: Record<string, unknown>[],
   origin: string,
+  packageAudit?: RawPackage,
 ) {
   const byTarget = new Map<string, Record<string, unknown>[]>()
   raw.forEach((row) => {
@@ -110,10 +192,13 @@ export function auditSubclassProficiencyFeatures(
   })
   return materialized.map((row, index) => {
     const target = getSubclassFeatureIdentity(row) ?? ''
-    const certificate = features.get(target)
+    const packaged = packageAudit?.source.features.find((feature) => feature.target === target)
+    const ordinary = features.get(target)
+    const certificate = ordinary ?? packaged ?? packagedFeatures.get(target)
     if (!certificate) return row
     const producers = byTarget.get(target) ?? []
     const valid =
+      !!(ordinary || packaged) &&
       producers.length === 1 &&
       subclassProficiencyDigest(raw[index]) === certificate.rawDigest &&
       subclassProficiencyDigest(subclassProficiencyMetadata(row)) === certificate.metadataDigest &&
@@ -127,6 +212,7 @@ export function auditSubclassProficiencyFeatures(
         certificate,
         `${origin}:subclassFeature:${index}`,
         valid,
+        packaged && packageAudit?.key,
       ),
       ...(!valid && !isConditionalOnlySubclassProficiencyTarget(target)
         ? { featureOptionSourceConflict: true }
@@ -138,10 +224,11 @@ export function auditSubclassProficiencyFeatures(
 function currentFeatureMatches(
   feature: SubclassFeature,
   certificate: SubclassProficiencyFeatureCertificate,
+  packageKey?: string,
 ) {
   if (
     feature.featureOptionSourceConflict ||
-    !isStamped(feature.subclassProficiencySourceAudit, certificate) ||
+    !isStamped(feature.subclassProficiencySourceAudit, certificate, packageKey) ||
     Object.keys(feature).some(
       (key) => !certificate.fields.includes(key) && !featureDerived.includes(key),
     ) ||
@@ -164,15 +251,22 @@ function currentFeatureMatches(
 }
 
 /** Enriched copies of one certified occurrence may agree; an extra raw occurrence never does. */
-function resolveSubclassProficiencyFeature(target: string, candidates: readonly SubclassFeature[]) {
-  const certificate = features.get(target)
+function resolveSubclassProficiencyFeature(
+  target: string,
+  candidates: readonly SubclassFeature[],
+  packageSource?: SubclassProficiencyPackage,
+  packageKey?: string,
+) {
+  const certificate = packageSource
+    ? packageSource.features.find((feature) => feature.target === target)
+    : features.get(target)
   if (
     !certificate ||
     !candidates.length ||
     candidates.some(
       (feature) =>
         getSubclassFeatureIdentity(feature) !== target ||
-        !currentFeatureMatches(feature, certificate),
+        !currentFeatureMatches(feature, certificate, packageKey),
     )
   )
     return undefined
@@ -196,16 +290,29 @@ function orderedDeclarations(values: readonly unknown[], expected: readonly stri
 
 /** Current filtered declarations are authoritative; retained detail bodies cannot repopulate an empty view. */
 export function getCurrentSubclassProficiencyCertificate(
-  classData: Pick<Class5e, 'name' | 'source'>,
+  classData: Pick<Class5e, 'name' | 'source' | 'sourceIdentityConflict'>,
   subclass: Subclass5e,
   candidates: ReadonlyMap<string, readonly SubclassFeature[]>,
 ): SubclassProficiencyRootCertificate | undefined {
-  const certificate = roots.get(JSON.stringify(getSubclassProficiencyOwner(subclass)))
+  const owner = JSON.stringify(getSubclassProficiencyOwner(subclass))
+  const packageKey = subclass.subclassProficiencySourceAudit?.package
+  const packageSource = packageKey
+    ? SUBCLASS_PROFICIENCY_PACKAGES.find((source) =>
+        source.roots.some(
+          (root) =>
+            JSON.stringify(root.owner) === owner &&
+            isStamped(subclass.subclassProficiencySourceAudit, root, packageKey),
+        ),
+      )
+    : undefined
+  const certificate =
+    packageSource?.roots.find((root) => JSON.stringify(root.owner) === owner) ?? roots.get(owner)
   if (
     !certificate ||
     certificate.owner[0] !== classData.name.trim().toLowerCase() ||
     certificate.owner[1] !== classData.source.trim().toLowerCase() ||
-    !isStamped(subclass.subclassProficiencySourceAudit, certificate) ||
+    (packageSource && classData.sourceIdentityConflict) ||
+    !isStamped(subclass.subclassProficiencySourceAudit, certificate, packageSource && packageKey) ||
     subclass.shortName !== certificate.shortName ||
     Object.keys(subclass).some(
       (key) => !certificate.fields.includes(key) && !rootDerived.includes(key),
@@ -240,8 +347,9 @@ export function getCurrentSubclassProficiencyCertificate(
     )
   )
     return undefined
-  const resolve = (target: string) =>
-    resolveSubclassProficiencyFeature(target, candidates.get(target) ?? [])
+  const resolveWitness = (target: string, rows: readonly SubclassFeature[]) =>
+    resolveSubclassProficiencyFeature(target, rows, packageSource, packageKey)
+  const resolve = (target: string) => resolveWitness(target, candidates.get(target) ?? [])
   const embedded = new Map<string, SubclassFeature[]>()
   const visit = (feature: SubclassFeature | undefined) => {
     if (!feature) return
@@ -269,25 +377,24 @@ export function getCurrentSubclassProficiencyCertificate(
     subclass.subclassFeatures.filter((ref) => ref === certificate.intro).length !== 1 ||
     subclass.subclassFeatureRefs.filter((ref) => ref.ref === certificate.intro).length !== 1 ||
     !resolve(introTarget) ||
-    !resolveSubclassProficiencyFeature(introTarget, embedded.get(introTarget) ?? [])
+    !resolveWitness(introTarget, embedded.get(introTarget) ?? [])
   )
     return undefined
-  const currentPaths = collectSubclassProficiencyPaths(subclass.subclassFeatureRefs, (target) => {
-    const current = resolve(target)
-    return current && resolveSubclassProficiencyFeature(target, embedded.get(target) ?? [])
-      ? current
-      : undefined
-  })
+  const currentPaths = collectSubclassProficiencyPaths(
+    subclass.subclassFeatureRefs,
+    (target) => {
+      const current = resolve(target)
+      return current && resolveWitness(target, embedded.get(target) ?? []) ? current : undefined
+    },
+    packageSource ? (target, feature) => !!resolveWitness(target, [feature]) : undefined,
+  )
   // A retained leaf cannot bypass its certified original intro or any enabling ancestor.
   const validPaths = certificate.paths.filter(
     (path) =>
       currentPaths.some((current) => same(current, path)) &&
       path.refs.every((uid) => {
         const target = getSubclassFeatureIdentity(decodeSubclassFeatureReference(uid))!
-        return (
-          !!resolve(target) &&
-          !!resolveSubclassProficiencyFeature(target, embedded.get(target) ?? [])
-        )
+        return !!resolve(target) && !!resolveWitness(target, embedded.get(target) ?? [])
       }),
   )
   return validPaths.length ? { ...certificate, paths: validPaths } : undefined

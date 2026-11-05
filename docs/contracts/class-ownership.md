@@ -17,6 +17,13 @@ adds the current Wisdom modifier (minimum +1) to Intelligence checks for
 Arcana and Religion. Choice removal or unavailable authority removes only
 that provider's effects. Existing independent providers survive.
 
+Classic PHB Life Domain grants heavy armor training at level 1 through
+the same fixed proficiency projection. The selected PHB Cleric and PHB
+Life Domain must supply a current, certified path from the domain intro
+to Bonus Proficiency. Bundled and configured data have separate complete
+certificates. Training is suspended when that path is unavailable and
+restored with the source. Independent armor training keeps its own owner.
+
 Revised Cleric Blessed Strikes is one required Class choice at level 7.
 The exact XPHB declaration uses qualified feature references with a
 choose-one clause in prose. The chosen branch is active only while its

@@ -218,7 +218,7 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "d2ab044abb54862987cb4e5a306d16fdb255e4c074f311fcfdd32c3b0e69522a"
+      "sha256": "385197f98269c7630ed9a85dcde71aa518b90149bd25a3615fcd101eb171916a"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
@@ -338,11 +338,11 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.json",
-      "sha256": "1dc8733885ee13d766786c3473e5f305a46ae0b4a17644895ecae0b6c99208d9"
+      "sha256": "c4b2de4fbade490fae26bc9518726870119f48c2b6d4a869b914af4916202742"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "2aeac0fccbfb1b05dc76a6a9ecbd47274d32744bf436f071464dae8b53b01bae"
+      "sha256": "ca165663de7d909b1b199fc7dd76e6cbf6cc99eed664b90336db64e6dc5a3d4c"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
@@ -350,7 +350,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRegistry.ts",
-      "sha256": "822b1d0af1213b84e16de667f9d3a74808c9f2b3d7b160ea5c14f507c215cb81"
+      "sha256": "41a9a1a9337d64d2e69394612f195ecb1c37d492b886b869648fe220c18a6531"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
@@ -358,7 +358,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
-      "sha256": "8ef0aa6483f908cc5b71b3565aff35b85b3875491c7e99da3fa4f2d1d057639b"
+      "sha256": "c7a9b5d25b381d732e42ed724347e4af0204811e80693928efe0a21afd113cea"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",

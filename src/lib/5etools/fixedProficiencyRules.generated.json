@@ -73,6 +73,33 @@
       ]
     },
     {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"]
+      },
+      "digest": "0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235",
+      "metadataDigest": "8ea467b2c2dec3730861e16da5ad63ea648ce21d5594d52206422201a8418d46",
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
       "name": "Royal Envoy",
       "className": "Fighter",

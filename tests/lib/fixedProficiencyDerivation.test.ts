@@ -26,7 +26,7 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
     class: fixedSources.class.filter((row) => row.name !== 'Rogue'),
   }
   expect(deriveFixedProficiencyRules([sources, rogueLanguageSources], api)).toEqual({
-    features: FIXED_PROFICIENCY_RULES,
+    features: FIXED_PROFICIENCY_RULES.filter((row) => row.kind !== 'fixed-training'),
     directClasses: DIRECT_FIXED_CLASS_CERTIFICATES,
   })
 })

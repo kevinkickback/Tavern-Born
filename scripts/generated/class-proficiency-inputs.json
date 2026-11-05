@@ -87,6 +87,20 @@
       "sha256": "602e6c018962729b292810b4f5c2dca7f4f25ab5bc6241bdd18a058d171a13ed"
     }
   ],
+  "bundledLifeDomainInput": {
+    "file": "resources/srd/core/data/class/class-cleric.json",
+    "sha256": "0109e94731de36c37234b59b598b05e92fb8f1ff192e933af0c5de950fb3d1fe"
+  },
+  "lifeDomainProficiencyDependencies": [
+    {
+      "file": "scripts/lib/life-domain-proficiency-source.mjs",
+      "sha256": "1d91d6004435ff7955e3a7fb7e369c4c580943f029a9dd0410bca5bfa091cd93"
+    },
+    {
+      "file": "scripts/lib/subclass-proficiency-source.mjs",
+      "sha256": "06e38ac250cb4357322539d406ce0fe1e26321d9984997299779fdbb2437a12d"
+    }
+  ],
   "toolClassificationDependencies": [
     {
       "file": "src/lib/calculations/itemClassification.ts",
