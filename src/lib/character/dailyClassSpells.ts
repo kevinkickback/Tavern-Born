@@ -1,5 +1,6 @@
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getClassCastingLevelAccess } from '@/lib/5etools/classCastingSource'
+import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
@@ -100,7 +101,7 @@ export function projectDailyClassSpellIntent(
     if (!targets) {
       targets = new Map()
       for (const spell of Object.values(context?.spellsByKey ?? {})) {
-        const key = getSpellReferenceKey(spell.name, spell.source)
+        const key = getEntityLookupKey(spell.name, spell.source).toLowerCase()
         targets.set(key, targets.has(key) ? undefined : spell)
       }
     }

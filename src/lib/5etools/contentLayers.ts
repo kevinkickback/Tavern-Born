@@ -496,7 +496,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
                 )
               : key === 'spells'
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
-                : layerValues
+                : key === 'languages'
+                  ? auditFixedLayerMultiplicity(layerValues as GameData['languages'], 'named')
+                  : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values

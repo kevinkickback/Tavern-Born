@@ -164,13 +164,15 @@ test('classic terrain is optional only until level two, and Swamp and its indepe
   expect(hasCurrentClassSpellListRoute(swamp, swamp.classProgression[0], spell, base)).toBe(false)
 })
 
-test('revised grants only the current terrain and changes its cantrip and printable resistance', () => {
+test('revised terrain changes its own grants and preserves Druidic', () => {
   const { actor, change, choice, profile, catalogs, calc } = setup('XPHB', 14)
   expect(choice.options).toHaveLength(4)
-  expect(profile(actor).fixedSpells).toBeUndefined()
+  const druidicSpell = 'Speak with Animals|XPHB'
+  expect(profile(actor).fixedSpells).toEqual([druidicSpell])
   const arid = change(actor, 'Arid Land')
   expect(profile(arid).cantrips.map((row) => row.toLowerCase())).toEqual(['fire bolt|xphb'])
-  expect(profile(arid).fixedSpells).toHaveLength(6)
+  expect(profile(arid).fixedSpells).toHaveLength(7)
+  expect(profile(arid).fixedSpells).toContain(druidicSpell)
   const slot = getManagedClassSpellSlots(arid.classProgression[0]).find(
     (row) => row[1] === 'class-cantrip' && row[3] === 4,
   )
@@ -232,7 +234,8 @@ test('revised grants only the current terrain and changes its cantrip and printa
     ]),
   )
   expect(profile(polar).cantrips.map((row) => row.toLowerCase())).toEqual(['ray of frost|xphb'])
-  expect(profile(polar).fixedSpells).toHaveLength(6)
+  expect(profile(polar).fixedSpells).toHaveLength(7)
+  expect(profile(polar).fixedSpells).toContain(druidicSpell)
   expect(profile(polar).fixedSpells?.some((row) => row.toLowerCase() === 'fire bolt|xphb')).toBe(
     false,
   )
@@ -257,7 +260,7 @@ test('revised grants only the current terrain and changes its cantrip and printa
   })
   expect(
     withdrawn.character.spells.spellProfiles.find((row) => row.className === 'Druid')?.fixedSpells,
-  ).toBeUndefined()
+  ).toEqual([druidicSpell])
   expect(withdrawn.character.classChoiceSelections).toEqual(polar.classChoiceSelections)
   expect(profile(polar).cantrips.map((row) => row.toLowerCase())).toEqual(['ray of frost|xphb'])
 })

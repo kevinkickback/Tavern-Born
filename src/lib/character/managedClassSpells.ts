@@ -15,6 +15,7 @@ import {
   createClassCastingSourceAccess,
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
+import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
@@ -37,6 +38,7 @@ import type { ManagedClassSpellChoice, ManagedClassSpellSlot } from '@/types/cla
 import { scopeClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import { projectDailyClassSpellIntent } from './dailyClassSpells'
+import { getDirectClassPreparedSpellGrants } from './directClassPreparedSpells'
 import {
   getManagedClassSpellOwnerEntry,
   makeManagedClassSpellTag,
@@ -248,7 +250,7 @@ export function projectManagedClassSpellState(
   const classMap = new Map(classes.map((row) => [toClassProfileId(row.name, row.source), row]))
   const targets = new Map<string, Spell5e | undefined>()
   for (const spell of Object.values(context?.spellsByKey ?? {})) {
-    const key = getSpellReferenceKey(spell.name, spell.source)
+    const key = getEntityLookupKey(spell.name, spell.source).toLowerCase()
     targets.set(key, targets.has(key) ? undefined : spell)
   }
   const visibleSpells = [...targets.entries()].filter(
@@ -397,11 +399,17 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
-  const grants = getOptionalClassFixedSpellGrants(character, context?.catalogs)
+  const preparedGrants = getDirectClassPreparedSpellGrants(character, classes, context?.catalogs)
   const rangerGrant = getRevisedRangerFixedSpell(character, context?.catalogs)
-  if (rangerGrant) grants.push(rangerGrant)
-  for (const grant of grants) {
-    const prepared = grant === rangerGrant
+  if (rangerGrant) preparedGrants.push(rangerGrant)
+  const grants = [
+    ...getOptionalClassFixedSpellGrants(character, context?.catalogs).map((grant) => ({
+      grant,
+      prepared: false,
+    })),
+    ...preparedGrants.map((grant) => ({ grant, prepared: true })),
+  ]
+  for (const { grant, prepared } of grants) {
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
       !spell ||

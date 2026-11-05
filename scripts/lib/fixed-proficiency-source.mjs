@@ -47,6 +47,30 @@ function validateFeature(feature, fields) {
     fail('Unsupported fixed proficiency producer')
 }
 
+function deriveDruidic(feature) {
+  validateFeature(feature, [...FEATURE_FIELDS, 'srd', 'srd52', 'basicRules2024'])
+  const classic = feature.source === 'PHB'
+  const match = classic
+    ? /^You know \{@language ([^|{}]+)\}, the secret language of druids\. You can speak the language and use it to leave hidden messages\. /.exec(
+        feature.entries[0],
+      )
+    : /^You know ([^.,{}]+), the secret language of Druids\. While learning this ancient tongue, you also unlocked the magic of communicating with animals; you always have the \{@spell ([^|#{}]+\|[^|#{}]+)\} spell prepared\.$/.exec(
+        feature.entries[0],
+      )
+  if (
+    !match ||
+    feature.entries.length !== (classic ? 1 : 2) ||
+    match[1] !== feature.name ||
+    feature.classSource !== feature.source
+  )
+    fail('Unsupported Druidic grant clause')
+  return {
+    languages: [match[1].toLowerCase()],
+    languageSource: feature.source,
+    ...(match[2] && { alwaysPreparedSpell: match[2] }),
+  }
+}
+
 export function deriveFixedProficiencyRules(documents, api) {
   const features = []
   const push = (feature, kind, mechanics, identity) => {
@@ -115,14 +139,21 @@ export function deriveFixedProficiencyRules(documents, api) {
     }
     for (const feature of document.classFeature ?? []) {
       const cant = deriveThievesCant(feature)
-      if (cant) {
+      const language = cant
+        ? { languages: [cant.language] }
+        : feature.name === 'Druidic' &&
+            feature.className === 'Druid' &&
+            ['PHB', 'XPHB'].includes(feature.source)
+          ? deriveDruidic(feature)
+          : undefined
+      if (language) {
         // The bundled SRD strips the printed page and Basic Rules availability flags.
         const { page: _page, basicRules: _basic, basicRules2024: _basic2024, ...bundled } = feature
         push(
           feature,
           'fixed-languages',
           {
-            languages: [cant.language],
+            ...language,
             bundledMetadataDigest: api.digest(api.metadata(bundled)),
           },
           api.classIdentity,
