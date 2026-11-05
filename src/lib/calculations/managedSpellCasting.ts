@@ -3,6 +3,22 @@ import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells
 import type { SpellProfile } from '@/types/character'
 import { getSpellReferenceKey } from './spellIdentity'
 
+/** Arcanum casts without ordinary preparation. Specialty notes alone do not grant preparation. */
+export function hasActiveMysticArcanum(
+  statuses: readonly ManagedClassSpellStatus[],
+  reference: string,
+  profile: SpellProfile,
+): boolean {
+  const key = getSpellReferenceKey(reference)
+  return statuses.some(
+    ({ active, choice }) =>
+      active &&
+      choice.slot[1] === 'class-arcanum' &&
+      isManagedClassSpellProfile(choice.slot, profile) &&
+      getSpellReferenceKey(choice.target.name, choice.target.source) === key,
+  )
+}
+
 /** Only current projected grants supply casting semantics; saved membership alone supplies none. */
 export function getManagedSpellCastingNotes(
   statuses: readonly ManagedClassSpellStatus[],

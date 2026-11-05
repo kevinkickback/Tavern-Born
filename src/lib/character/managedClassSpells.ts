@@ -16,6 +16,10 @@ import {
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
+import {
+  getSpellbookSpecialtyRule,
+  isCurrentSpellbookSpecialty,
+} from '@/lib/5etools/spellbookSpecialtyRules'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
@@ -41,6 +45,7 @@ import { projectDailyClassSpellIntent } from './dailyClassSpells'
 import { getDirectClassPreparedSpellGrants } from './directClassPreparedSpells'
 import {
   getManagedClassSpellOwnerEntry,
+  isManagedClassSpellProfile,
   makeManagedClassSpellTag,
   managedClassSpellId,
 } from './managedClassSpellIdentity'
@@ -59,6 +64,7 @@ export interface ManagedClassSpellStatus {
   reason?: string
   prepared?: boolean
   castingNote?: string
+  specialtyAlwaysPrepared?: boolean
 }
 
 function resolveSlot(
@@ -68,7 +74,8 @@ function resolveSlot(
   classes: readonly Class5e[] = currentClasses(character, context),
   gainAuthority = getClassCastingGainAuthority,
 ) {
-  if (slot[1] === 'feature-cantrip') return 'Use this selected feature’s spell choices.'
+  if (slot[1] === 'feature-cantrip' || slot[1] === 'class-spellbook-specialty')
+    return 'Use this selected feature’s spell choices.'
   const finite = getManagedClassSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
   if (!finite) return 'The saved class spell ownership is invalid.'
@@ -171,6 +178,95 @@ function targetError(
     return 'This spell is outside the schools available for this choice.'
 }
 
+type LearnedSpell = { choice: ManagedClassSpellChoice; spell: Spell5e }
+
+function getSpellbookSpecialtyPool(
+  character: Character,
+  slot: ManagedClassSpellSlot,
+  context: ManagedClassSpellContext | undefined,
+  classes: readonly Class5e[],
+  learned: readonly LearnedSpell[],
+) {
+  const rule = getSpellbookSpecialtyRule(slot)
+  const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
+  const cls = classes.filter(
+    (row) => norm(row.name) === slot[0][1] && norm(row.source) === slot[0][2],
+  )
+  const level = slot[3] === 20 ? 3 : slot[4] + 1
+  const current =
+    rule &&
+    entry &&
+    entry.levels >= slot[3] &&
+    context?.catalogs &&
+    cls.length === 1 &&
+    permitted(sources(character), rule.source) &&
+    isCurrentSpellbookSpecialty(slot, cls[0], context.catalogs)
+  const spells = current
+    ? learned.flatMap(({ choice, spell }) =>
+        choice.slot[1] === 'class-spellbook' &&
+        getManagedClassSpellOwnerEntry(choice.slot, character.classProgression) === entry &&
+        spell.level === level &&
+        (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) <= 1 &&
+        (rule.source !== 'phb' ||
+          hasCurrentClassSpellListRoute(character, entry, spell, context)) &&
+        (rule.source !== 'xphb' ||
+          slot[3] !== 18 ||
+          (Array.isArray(spell.time) &&
+            spell.time.some((time) => time?.unit === 'action' && time.number === 1)))
+          ? [spell]
+          : [],
+      )
+    : []
+  return {
+    spells,
+    defaultReferences: new Set(
+      spells.map((spell) => getSpellReferenceKey(spell.name, spell.source)),
+    ),
+    maxSpellLevel: level,
+    allowedLevels: [level],
+    entry,
+    reason: !current ? 'Restore the current Wizard feature and its spellbook.' : undefined,
+    schools: undefined,
+    privileged: false,
+  }
+}
+
+const specialtyCastingNote = (slot: ManagedClassSpellSlot) => {
+  if (slot[3] === 20)
+    return 'Signature Spells — cast at level 3 once per short or long rest without expending a spell slot. Higher-level casting expends a slot.'
+  return slot[0][2] === 'phb'
+    ? 'Spell Mastery — while prepared, cast at its lowest level without expending a spell slot. Higher-level casting expends a slot.'
+    : 'Spell Mastery — always prepared. Cast at its lowest level without expending a spell slot. Higher-level casting expends a slot.'
+}
+
+/** Only the effective view receives this overlay. Saved spell profiles keep independent ownership. */
+export function applySpellbookSpecialtyPreparation(
+  character: Character,
+  statuses: readonly ManagedClassSpellStatus[],
+): Character {
+  const automatic = statuses.filter((status) => status.active && status.specialtyAlwaysPrepared)
+  if (!automatic.length) return character
+  return {
+    ...character,
+    spells: {
+      ...character.spells,
+      spellProfiles: character.spells.spellProfiles.map((profile) => {
+        const refs = new Map(
+          (profile.alwaysPreparedSpells ?? []).map((ref) => [getSpellReferenceKey(ref), ref]),
+        )
+        for (const { choice } of automatic) {
+          if (!isManagedClassSpellProfile(choice.slot, profile)) continue
+          const ref = formatSpellReference(choice.target.name, choice.target.source)
+          if (!refs.has(getSpellReferenceKey(ref))) refs.set(getSpellReferenceKey(ref), ref)
+        }
+        return refs.size > (profile.alwaysPreparedSpells?.length ?? 0)
+          ? { ...profile, alwaysPreparedSpells: [...refs.values()] }
+          : profile
+      }),
+    },
+  }
+}
+
 /** Picker and command share all hard bounds; the explicit bypass changes only default list membership. */
 export function getManagedClassSpellPool(
   character: Character,
@@ -179,6 +275,27 @@ export function getManagedClassSpellPool(
 ) {
   if (slot[1] === 'feature-cantrip')
     return getSelectedFeatureCantripPool(character, slot, sourceContext)
+  if (slot[1] === 'class-spellbook-specialty') {
+    const targets = new Map(
+      Object.values(sourceContext?.spellsByKey ?? {}).map(
+        (spell) => [getSpellReferenceKey(spell.name, spell.source), spell] as const,
+      ),
+    )
+    const learned = projectManagedClassSpellState(character, sourceContext).statuses.flatMap(
+      ({ choice, active }) => {
+        if (!active || choice.slot[1] !== 'class-spellbook') return []
+        const spell = targets.get(getSpellReferenceKey(choice.target.name, choice.target.source))
+        return spell ? [{ choice, spell }] : []
+      },
+    )
+    return getSpellbookSpecialtyPool(
+      character,
+      slot,
+      sourceContext,
+      currentClasses(character, sourceContext),
+      learned,
+    )
+  }
   const context = sourceContext?.catalogs
     ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
     : sourceContext
@@ -286,6 +403,7 @@ export function projectManagedClassSpellState(
   }
   const active: Array<{
     choice: ManagedClassSpellChoice
+    spell: Spell5e
     entry: CharacterClassEntry
     authority: NonNullable<ReturnType<typeof getClassCastingGainAuthority>>
   }> = []
@@ -296,7 +414,8 @@ export function projectManagedClassSpellState(
     const deny = (reason: string) => {
       status.reason = reason
     }
-    if (choice.slot[1] === 'feature-cantrip') continue
+    if (choice.slot[1] === 'feature-cantrip' || choice.slot[1] === 'class-spellbook-specialty')
+      continue
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
       : resolveSlot(character, choice.slot, context, classes, gainAuthority)
@@ -340,7 +459,7 @@ export function projectManagedClassSpellState(
     if (choice.slot[1] === 'class-arcanum')
       status.castingNote =
         'Mystic Arcanum — once per long rest, without expending a spell slot. Uses are not tracked.'
-    active.push({ choice, entry, authority })
+    active.push({ choice, spell, entry, authority })
   }
   // Saved fixed tags are intent, just like saved profile cells. Only the current
   // selected provider and exact visible target can contribute to the shared view.
@@ -481,8 +600,33 @@ export function projectManagedClassSpellState(
       ),
     )
   }
+  // Specialty choices borrow learned entries. They never materialize another grant or fulfill their own eligibility.
+  const automaticByOwner = new Map<CharacterClassEntry, Set<string>>()
+  for (const status of statuses) {
+    const { choice } = status
+    if (choice.slot[1] !== 'class-spellbook-specialty') continue
+    const pool = getSpellbookSpecialtyPool(character, choice.slot, context, classes, active)
+    const key = getSpellReferenceKey(choice.target.name, choice.target.source)
+    if (invalid || !pool.entry || !pool.defaultReferences.has(key)) {
+      status.reason = invalid
+        ? 'The saved class spell ownership is invalid.'
+        : (pool.reason ?? 'Restore the eligible learned spell in this Wizard’s spellbook.')
+      continue
+    }
+    status.active = true
+    status.castingNote = specialtyCastingNote(choice.slot)
+    if (choice.slot[3] === 20 || choice.slot[0][2] === 'xphb') {
+      status.specialtyAlwaysPrepared = true
+      const keys = automaticByOwner.get(pool.entry) ?? new Set<string>()
+      keys.add(key)
+      automaticByOwner.set(pool.entry, keys)
+    }
+  }
   // Learned preparation requests reserve capacity in stable gain/ordinal order, even if source-dormant.
   for (const entry of character.classProgression) {
+    const automatic = automaticByOwner.get(entry)
+    const isAutomatic = (choice: ManagedClassSpellChoice) =>
+      automatic?.has(getSpellReferenceKey(choice.target.name, choice.target.source)) === true
     const requested = (character.managedClassSpellChoices ?? [])
       .filter((choice) => choice.prepare && getManagedClassSpellOwnerEntry(choice.slot, [entry]))
       .sort(
@@ -516,14 +660,18 @@ export function projectManagedClassSpellState(
       ).length ?? 0
     const eligible = new Set(
       requested
+        .filter((choice) => !isAutomatic(choice))
         .slice(0, Math.max(0, (capacity ?? 0) - independent))
         .map((choice) => managedClassSpellId(choice.slot)),
     )
     for (const status of statuses.filter(
       (row) => row.choice.prepare && getManagedClassSpellOwnerEntry(row.choice.slot, [entry]),
     )) {
-      status.prepared = status.active && eligible.has(managedClassSpellId(status.choice.slot))
-      if (!status.prepared) continue
+      const automaticPreparation = isAutomatic(status.choice)
+      status.prepared =
+        status.active &&
+        (automaticPreparation || eligible.has(managedClassSpellId(status.choice.slot)))
+      if (!status.prepared || automaticPreparation) continue
       const reference = formatSpellReference(status.choice.target.name, status.choice.target.source)
       profiles = profiles.map((row) =>
         row.id === profile?.id &&

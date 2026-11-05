@@ -123,7 +123,7 @@ export function buildSpellProfileDisplayModels({
         )
       : new Set(
           items
-            .filter((item) => item.kind === 'spell' && item.prepared)
+            .filter((item) => item.kind === 'spell' && item.prepared && !item.alwaysPrepared)
             .map((item) => getSpellNameKey(item.name)),
         )
     const preparedCount = preparedSet.size

@@ -109,6 +109,7 @@ export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
       profile &&
       character?.managedClassSpellChoices?.find(
         (choice) =>
+          choice.slot[1] !== 'class-spellbook-specialty' &&
           isManagedClassSpellProfile(choice.slot, profile) &&
           getSpellReferenceKey(choice.target.name, choice.target.source) ===
             getSpellReferenceKey(reference),

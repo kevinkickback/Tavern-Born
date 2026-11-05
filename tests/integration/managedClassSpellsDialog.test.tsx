@@ -17,6 +17,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeBundledClassCastingLayer } from '../fixtures/classCastingFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
 const fixture = makeManagedClassSpellFixtures()
@@ -35,7 +36,7 @@ const install = (character: Character) => {
     characters: [character],
   })
 }
-function Flow() {
+function Flow({ level = 1 }: { level?: number }) {
   const character = useCharacterStore((state) => state.activeCharacter)!
   const calculation = useCharacterCalculationContext(character)
   const { finishClassSpellChoices } = useSpellProvenanceMutations()
@@ -44,7 +45,7 @@ function Flow() {
     <ManagedClassSpellsDialog
       character={character}
       entry={character.classProgression[0]}
-      level={1}
+      level={level}
       context={calculation?.classChoices.spellContext}
       statuses={calculation?.managedClassSpellStatuses ?? []}
       onOpenChange={setOpen}
@@ -56,8 +57,8 @@ function Flow() {
     </button>
   )
 }
-async function choose(index: number, name: string) {
-  const group = screen.getByRole('group', { name: `Cantrip ${index}` })
+async function choose(index: number, name: string, kind = 'Cantrip') {
+  const group = screen.getByRole('group', { name: `${kind} ${index}` })
   fireEvent.click(within(group).getByRole('button', { name: /Choose|Change/ }))
   fireEvent.change(screen.getByRole('textbox', { name: /Search/ }), { target: { value: name } })
   await waitFor(() => expect(screen.getByText(name)).toBeTruthy())
@@ -82,6 +83,49 @@ afterEach(() => {
 })
 
 describe('Class spell Finish and current-state adapter', () => {
+  test('Spell Mastery uses same-dialog draft learning and removal without saving the preview', async () => {
+    const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
+    wizard.spells = fixture.spells
+    wizard.lookups = buildGameDataLookups(wizard)
+    const original = makeCharacterFixture({
+      allowedSources: ['PHB'],
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 18 }],
+    })
+    install(original)
+    useGameDataStore.setState({ gameData: wizard })
+    const before = JSON.stringify(original)
+    render(<Flow level={18} />)
+
+    await choose(1, 'Shield', 'Spell')
+    await choose(1, 'Shield', 'Spell Mastery')
+    expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.managedClassSpellChoices?.map(({ slot, target }) => [slot[1], target])).toEqual([
+      ['class-spellbook', { name: 'Shield', source: 'PHB' }],
+      ['class-spellbook-specialty', { name: 'Shield', source: 'PHB' }],
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', {
+        name: 'Clear',
+      }),
+    )
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Spell Mastery 1' })).getByRole('button', {
+        name: 'Change',
+      }),
+    )
+    expect(screen.getByRole('dialog', { name: 'Choose Spell Mastery 1' })).toBeTruthy()
+    expect(screen.queryByText('Shield')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(useCharacterStore.getState().activeCharacter?.managedClassSpellChoices).toEqual(
+      saved.managedClassSpellChoices,
+    )
+  })
+
   test('Spells Sources shows a current fixed subclass grant once', async () => {
     const saved = makeCharacterFixture({
       allowedSources: ['PHB'],

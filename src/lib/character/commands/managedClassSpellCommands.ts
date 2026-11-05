@@ -69,7 +69,12 @@ export function setManagedClassSpellChoicesCommand(
     .map((request) => {
       if (!isManagedClassSpellSlot(request.slot))
         throw new RangeError('This class spell slot is invalid.')
-      if (request.slot[1] === 'feature-cantrip' && request.target && request.policy !== 'default')
+      if (
+        (request.slot[1] === 'feature-cantrip' ||
+          request.slot[1] === 'class-spellbook-specialty') &&
+        request.target &&
+        request.policy !== 'default'
+      )
         throw new RangeError('Feature spell choices must use their declared spell list.')
       const id = managedClassSpellId(request.slot)
       if (addressed.has(id)) throw new RangeError('A spell choice was addressed more than once.')
@@ -182,6 +187,7 @@ export function setManagedClassSpellChoicesCommand(
   for (const edit of grants) {
     if (
       edit.request.slot[1] !== 'feature-cantrip' &&
+      edit.request.slot[1] !== 'class-spellbook-specialty' &&
       !edit.sameTarget &&
       edit.request.target &&
       getOptionalClassFixedSpellNamesAtGain(character, edit.request.slot, context?.catalogs).has(

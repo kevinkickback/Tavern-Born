@@ -2,6 +2,7 @@ import {
   CLASS_CASTING_PRODUCERS,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
+import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
@@ -17,11 +18,10 @@ export function getManagedClassSpellSlots(
   prerequisites?: ClassChoicePrerequisiteContext,
 ): ManagedClassSpellSlot[] {
   const { rule } = getClassSpellProfilePolicy(entry)
-  const domains: Exclude<ManagedClassSpellDomain, 'feature-cantrip'>[] = [
-    'class-cantrip',
-    'class-known',
-    'class-spellbook',
-  ]
+  const domains: Extract<
+    ManagedClassSpellDomain,
+    'class-cantrip' | 'class-known' | 'class-spellbook'
+  >[] = ['class-cantrip', 'class-known', 'class-spellbook']
   const ordinary =
     !rule || entry.levels < rule.declaration.level
       ? []
@@ -67,7 +67,10 @@ export function getManagedClassSpellSlots(
   )
   return [
     ...new Map(
-      [...ordinary, ...arcanum, ...feature].map((slot) => [managedClassSpellId(slot), slot]),
+      [...ordinary, ...arcanum, ...feature, ...getSpellbookSpecialtySlots(entry)].map((slot) => [
+        managedClassSpellId(slot),
+        slot,
+      ]),
     ).values(),
   ]
 }

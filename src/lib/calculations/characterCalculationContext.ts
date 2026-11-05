@@ -28,6 +28,7 @@ import {
 } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
+  applySpellbookSpecialtyPreparation,
   type ManagedClassSpellContext,
   type ManagedClassSpellStatus,
   projectManagedClassSpellState,
@@ -521,7 +522,7 @@ export function createCharacterCalculationContext(
     },
   }
   character = projectEffectiveClassChoiceFeatures(
-    managedSpells.character,
+    applySpellbookSpecialtyPreparation(managedSpells.character, managedSpells.statuses),
     choiceCatalogs,
     prerequisites,
   )

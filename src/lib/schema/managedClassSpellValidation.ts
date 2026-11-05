@@ -51,6 +51,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
       (choice.slot[1] === 'feature-cantrip' &&
         (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||
+      (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
       !Number.isSafeInteger(choice.revision) ||
       choice.revision < 1 ||
       choice.revision > (watermark ?? 0) ||
@@ -163,6 +164,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
           : 'spellsKnown'
       if (
         !choice ||
+        choice.slot[1] === 'class-spellbook-specialty' ||
         name !== getSpellNameKey(name) ||
         !isPlainSpellIdentityPart(name) ||
         !matchesManagedClassSpellTag(choice, name, tag) ||

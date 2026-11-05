@@ -27,7 +27,10 @@ import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
 import type { EffectResolutionContext } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
-import { getManagedSpellCastingNotes } from '@/lib/calculations/managedSpellCasting'
+import {
+  getManagedSpellCastingNotes,
+  hasActiveMysticArcanum,
+} from '@/lib/calculations/managedSpellCasting'
 import {
   type EffectiveMovement,
   formatEffectiveMovement,
@@ -619,7 +622,7 @@ function buildSpellRows(
     ])
       prepared.add(getSpellReferenceKey(reference))
     for (const reference of profile.spellsKnown)
-      if (getManagedSpellCastingNotes(statuses, reference, profile).length)
+      if (hasActiveMysticArcanum(statuses, reference, profile))
         prepared.add(getSpellReferenceKey(reference))
   }
   const references = profiles.flatMap((profile) => [

@@ -1,13 +1,8 @@
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
-import { getClassFeatureIdentity } from './classFeatureIdentity'
+import { getCurrentDirectClassFeature } from './directClassFeatureSource'
 import type { ClassFeatureSourceCatalog } from './featureSourceAudit'
-import {
-  decodeOptionalDeclaration,
-  exactOptionalDeclarationReference,
-  optionalDeclarationObject,
-} from './optionalClassDeclarationStructure'
 
 export const CLASSIC_WILD_SHAPE_RESOURCE_ID = 'druid-wild-shape'
 export const CLASSIC_WILD_SHAPE_TARGET = 'class-feature|wild shape|druid|phb|2|phb'
@@ -19,59 +14,6 @@ export function isClassicDruid(entry: Pick<CharacterClassEntry, 'name' | 'source
   return (
     normalizeOwnerIdentity(entry.name) === 'druid' && normalizeOwnerIdentity(entry.source) === 'phb'
   )
-}
-
-const targetOf = (uid: unknown) =>
-  typeof uid === 'string' ? decodeOptionalDeclaration(uid, 'classFeature')?.target : undefined
-
-export function getCurrentDirectClassFeature(
-  cls: Class5e,
-  catalogs: ClassFeatureSourceCatalog,
-  target: string,
-) {
-  if (cls.sourceIdentityConflict || cls._copy) return undefined
-  const declared = cls.classFeatures?.filter(
-    (row) => (targetOf(row) ?? targetOf(optionalDeclarationObject(row).classFeature)) === target,
-  )
-  const declaration = declared?.length === 1 ? declared[0] : undefined
-  const declarationRow = optionalDeclarationObject(declaration)
-  const uid = typeof declaration === 'string' ? declaration : declarationRow.classFeature
-  if (
-    typeof uid !== 'string' ||
-    targetOf(uid) !== target ||
-    declarationRow.gainSubclassFeature ||
-    declarationRow.isClassFeatureVariant ||
-    declarationRow.sourceIdentityConflict ||
-    !exactOptionalDeclarationReference(declarationRow, uid, 'classFeature')
-  )
-    return undefined
-  const refs = cls.classFeatureRefs?.filter(
-    (row) => targetOf(row.ref) === target || getClassFeatureIdentity(row) === target,
-  )
-  const ref = refs?.length === 1 ? refs[0] : undefined
-  const refRow = optionalDeclarationObject(ref)
-  if (
-    !ref?.feature ||
-    ref.feature.sourceIdentityConflict ||
-    ref.feature.isClassFeatureVariant ||
-    refRow.sourceIdentityConflict ||
-    refRow.isClassFeatureVariant ||
-    ref.gainSubclassFeature ||
-    targetOf(ref.ref) !== target ||
-    !exactOptionalDeclarationReference(refRow, ref.ref, 'classFeature') ||
-    getClassFeatureIdentity(ref.feature) !== target
-  )
-    return undefined
-  const rows = catalogs.classFeatureCandidates
-    ? catalogs.classFeatureCandidates.get(target)
-    : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === target)
-  const feature = rows?.length === 1 ? rows[0] : undefined
-  return feature &&
-    !feature.sourceIdentityConflict &&
-    !feature.isClassFeatureVariant &&
-    getClassFeatureIdentity(feature) === target
-    ? feature
-    : undefined
 }
 
 /** The classic capstone changes its finite pool only while both exact gains are current. */

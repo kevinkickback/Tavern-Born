@@ -1,5 +1,6 @@
 import { getManagedClassSpellRule, isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -21,7 +22,7 @@ export const managedClassSpellId = (slot: ManagedClassSpellSlot) =>
 
 /** Thaumaturge and the classic Circle bonus share the parent class cantrip pool. */
 export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
-  if (slot[1] === 'class-arcanum') return slot[2]
+  if (slot[1] === 'class-arcanum' || slot[1] === 'class-spellbook-specialty') return slot[2]
   if (
     slot[1] === 'feature-cantrip' &&
     !['classFeature', 'subclassFeature'].includes(
@@ -33,6 +34,7 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
 }
 
 export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
+  if (slot[1] === 'class-spellbook-specialty') return getSpellbookSpecialtyRule(slot)?.name
   if (slot[1] !== 'class-arcanum') return undefined
   const declaration = getManagedClassSpellRule(slot)?.rule.declaration
   return declaration?.target.split('|')[1]?.replace(/\b[a-z]/g, (letter) => letter.toUpperCase())

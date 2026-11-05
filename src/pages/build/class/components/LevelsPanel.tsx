@@ -49,7 +49,11 @@ import type { ClassDetailsSelection } from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
-import { computeLevelDisplayData } from '../model/levelsUtils'
+import {
+  computeLevelDisplayData,
+  countSpellGainChoices,
+  type SpellGain,
+} from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
 import { BuildClassChoicesSection } from './ClassChoicesSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
@@ -76,15 +80,7 @@ interface BuildClassLevelsPanelProps {
   levelsToShow: number[]
   subclassLevel: number | undefined
   asiLevels: number[]
-  spellChoicesByLevel: Map<
-    number,
-    {
-      cantrips: number
-      spells: number
-      maxSpellLevel: number
-      canSwap: boolean
-    }
-  >
+  spellChoicesByLevel: Map<number, SpellGain>
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   subclassFeatureName: string | null
   selectedFeature: SelectedFeatureState | null
@@ -512,8 +508,10 @@ export function BuildClassLevelsPanel({
                     row.choice.slot[0][2] === viewingClassSource?.trim().toLowerCase() &&
                     row.choice.slot[3] === lv,
                 ).length
-                const spellChoiceComplete =
-                  !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
+                const pendingSpellChoices = spellGain
+                  ? Math.max(0, countSpellGainChoices(spellGain) - selectedSpellCount)
+                  : 0
+                const spellChoiceComplete = pendingSpellChoices === 0
                 const normalizedPendingCount =
                   levelDiagnostics.length +
                   levelClassChoices.reduce((sum, choice) => {
@@ -527,9 +525,7 @@ export function BuildClassLevelsPanel({
                 const pendingChoiceCount =
                   (asiChoiceComplete ? 0 : 1) +
                   (subclassChoiceComplete ? 0 : 1) +
-                  (spellGain
-                    ? Math.max(0, spellGain.cantrips + spellGain.spells - selectedSpellCount)
-                    : 0) +
+                  pendingSpellChoices +
                   normalizedPendingCount
                 const normalizedChoicesComplete = normalizedPendingCount === 0
                 const allChoicesComplete =

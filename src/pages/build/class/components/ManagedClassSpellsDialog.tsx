@@ -16,8 +16,11 @@ import {
   getSpellReferenceKey,
   parseSpellReference,
 } from '@/lib/calculations/spellIdentity'
-import { getSchoolName } from '@/lib/calculations/spellUtils'
-import type { ManagedClassSpellRequest } from '@/lib/character/commands/managedClassSpellCommands'
+import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
+import {
+  type ManagedClassSpellRequest,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
 import {
   getManagedClassSpellFeatureLabel,
   managedClassSpellId,
@@ -42,6 +45,9 @@ interface Props {
   onOpenChange: (open: boolean) => void
   onFinish: (requests: readonly ManagedClassSpellRequest[]) => void
 }
+
+const targetKey = (target?: ManagedClassSpellChoice['target']) =>
+  target && getSpellReferenceKey(target.name, target.source)
 
 export function ManagedClassSpellsDialog({
   character,
@@ -75,7 +81,7 @@ export function ManagedClassSpellsDialog({
         }
       }),
   )
-  const [picker, setPicker] = useState<number | null>(null)
+  const [picker, setPicker] = useState<{ index: number; draftBook?: Character } | null>(null)
   const featureNames = useMemo(
     () =>
       new Map(
@@ -86,10 +92,18 @@ export function ManagedClassSpellsDialog({
       ),
     [character, context],
   )
-  const selected = picker === null ? undefined : rows[picker]
+  const selected = picker && rows[picker.index]
+  const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
+  const allowClassListBypass = !isBookSpecialty && selected?.slot[1] !== 'feature-cantrip'
+  const pickerKind =
+    (isBookSpecialty && getManagedClassSpellFeatureLabel(selected.slot)) ||
+    (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
+      ? 'cantrip'
+      : 'spell')
+  const draftBook = picker?.draftBook
   const pool = useMemo(
-    () => selected && getManagedClassSpellPool(character, selected.slot, context),
-    [character, selected, context],
+    () => selected && getManagedClassSpellPool(draftBook ?? character, selected.slot, context),
+    [character, selected, context, draftBook],
   )
   const scoped = new Set(rows.map((row) => managedClassSpellId(row.slot)))
   const peers = new Set([
@@ -105,7 +119,7 @@ export function ManagedClassSpellsDialog({
       )
       .map((choice) => choice.target.name),
     ...rows.flatMap((row, index) =>
-      index !== picker &&
+      index !== picker?.index &&
       row.target &&
       (!selected ||
         managedClassSpellUniquenessGroup(row.slot) ===
@@ -122,18 +136,56 @@ export function ManagedClassSpellsDialog({
       prepare?: boolean
     },
   ) => setRows((current) => current.map((row, at) => (at === index ? { ...row, ...patch } : row)))
+  const getRequest = (row: (typeof rows)[number]): ManagedClassSpellRequest => ({
+    slot: row.slot,
+    expected: row.old ?? null,
+    expectedEmptyRevision: opening.managedClassSpellRevision ?? 0,
+    target: row.target,
+    policy: row.policy,
+    ...(row.slot[1] === 'class-spellbook' ? { prepare: row.prepare } : {}),
+  })
+  const openPicker = (index: number) => {
+    if (rows[index].slot[1] !== 'class-spellbook-specialty') {
+      setPicker({ index })
+      return
+    }
+    const bookEdits = rows
+      .filter(
+        (row) =>
+          row.slot[1] === 'class-spellbook' &&
+          (targetKey(row.target) !== targetKey(row.old?.target) ||
+            (row.target && row.policy !== (row.old?.policy ?? 'default'))),
+      )
+      .map((row) => ({ ...getRequest(row), prepare: false }))
+    if (!bookEdits.length) {
+      setPicker({ index })
+      return
+    }
+    try {
+      // Preview eligible learned entries independently of draft daily preparation.
+      const preview = setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        bookEdits,
+        context,
+      )
+      setPicker({
+        index,
+        draftBook: {
+          ...character,
+          ...preview.characterPatch,
+          provenance: preview.provenanceUpdate,
+        },
+      })
+    } catch (error) {
+      toast.error('Review the draft spellbook choices first.', {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
+  }
   const confirm = () => {
     try {
-      finish(
-        rows.map((row) => ({
-          slot: row.slot,
-          expected: row.old ?? null,
-          expectedEmptyRevision: opening.managedClassSpellRevision ?? 0,
-          target: row.target,
-          policy: row.policy,
-          ...(row.slot[1] === 'class-spellbook' ? { prepare: row.prepare } : {}),
-        })),
-      )
+      finish(rows.map(getRequest))
       onOpenChange(false)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'The spell choices could not be saved.')
@@ -160,16 +212,14 @@ export function ManagedClassSpellsDialog({
                 (item) => managedClassSpellId(item.choice.slot) === managedClassSpellId(row.slot),
               )
               const unchangedTarget =
-                row.old &&
-                row.target &&
-                getSpellReferenceKey(row.old.target.name, row.old.target.source) ===
-                  getSpellReferenceKey(row.target.name, row.target.source)
+                row.target && targetKey(row.old?.target) === targetKey(row.target)
+              const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const kind =
                 row.slot[1] === 'class-arcanum'
                   ? 'Mystic Arcanum'
                   : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
                     ? 'Cantrip'
-                    : 'Spell'
+                    : (featureLabel ?? 'Spell')
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
@@ -179,10 +229,7 @@ export function ManagedClassSpellsDialog({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">
-                        {featureNames.get(row.slot[2]) ??
-                          getManagedClassSpellFeatureLabel(row.slot) ??
-                          kind}{' '}
-                        {row.slot[4] + 1}
+                        {featureNames.get(row.slot[2]) ?? featureLabel ?? kind} {row.slot[4] + 1}
                       </p>
                       <p className="font-medium">
                         {row.target ? `${row.target.name} (${row.target.source})` : 'Not chosen'}
@@ -199,7 +246,7 @@ export function ManagedClassSpellsDialog({
                       )}
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setPicker(index)}>
+                      <Button size="sm" variant="outline" onClick={() => openPicker(index)}>
                         {row.target ? 'Change' : 'Choose'}
                       </Button>
                       <Button
@@ -238,18 +285,18 @@ export function ManagedClassSpellsDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {selected && pool && (
+      {picker && selected && pool && (
         <SpellSelectionModal
           open
           onOpenChange={(open) => {
             if (!open) setPicker(null)
           }}
-          title={`Choose ${selected.slot[1] === 'class-cantrip' || selected.slot[1] === 'feature-cantrip' ? 'cantrip' : 'spell'} ${selected.slot[4] + 1}`}
+          title={`Choose ${pickerKind} ${selected.slot[4] + 1}`}
           spells={pool.spells}
           className={entry.name}
           classSource={entry.source}
           classListReferences={pool.defaultReferences}
-          allowClassListBypass={selected.slot[1] !== 'feature-cantrip'}
+          allowClassListBypass={allowClassListBypass}
           allowedSpellReferences={
             new Set(pool.spells.map((spell) => getSpellReferenceKey(spell.name, spell.source)))
           }
@@ -257,7 +304,9 @@ export function ManagedClassSpellsDialog({
           initialFilters={{
             level: allowedLevels,
             visibility: new Set(
-              selected.policy === 'ignore-class-list' ? ['ignore-class-list'] : [],
+              allowClassListBypass && selected.policy === 'ignore-class-list'
+                ? ['ignore-class-list']
+                : [],
             ),
           }}
           initialSelectedNames={
@@ -269,19 +318,21 @@ export function ManagedClassSpellsDialog({
           categories={[{ key: 'spell', label: 'spell', max: 1, test: () => true }]}
           selectionHint={
             pool.reason ??
-            (pool.schools && !pool.privileged && selected.slot[1] !== 'class-cantrip'
-              ? `Allowed schools: ${pool.schools.map(getSchoolName).join(', ')}.`
-              : pool.privileged
-                ? 'This choice allows any school.'
-                : 'Choose one spell.')
+            (isBookSpecialty
+              ? `Choose a ${pool.allowedLevels?.map(formatSpellLevel).join(' or ')} spell from your Wizard spellbook.`
+              : pool.schools && !pool.privileged && selected.slot[1] !== 'class-cantrip'
+                ? `Allowed schools: ${pool.schools.map(getSchoolName).join(', ')}.`
+                : pool.privileged
+                  ? 'This choice allows any school.'
+                  : 'Choose one spell.')
           }
           onConfirm={(references, policy) => {
             const reference = references[0] ? parseSpellReference(references[0]) : undefined
-            update(picker ?? 0, {
+            update(picker.index, {
               target: reference?.source
                 ? { name: reference.name, source: reference.source }
                 : undefined,
-              policy: selected.slot[1] === 'feature-cantrip' ? 'default' : policy,
+              policy: allowClassListBypass ? policy : 'default',
             })
             setPicker(null)
           }}
