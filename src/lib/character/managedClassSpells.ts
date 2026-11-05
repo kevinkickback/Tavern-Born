@@ -8,6 +8,7 @@ import {
 
 export type { ManagedClassSpellContext } from './classSpellAuthority'
 
+import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
 import {
   type ClassCastingCatalog,
@@ -118,6 +119,7 @@ function resolveSlot(
     ),
     entry,
     slot[3],
+    { selections: character.classChoiceSelections },
   )
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const privileged =
@@ -131,6 +133,7 @@ function targetError(
   spell: Spell5e,
   slot: ManagedClassSpellSlot,
   state: Exclude<ReturnType<typeof resolveSlot>, string>,
+  saved = false,
 ) {
   if (
     slot[1] === 'class-cantrip'
@@ -141,6 +144,15 @@ function targetError(
   )
     return 'This spell is outside the level available for this choice.'
   if (
+    !(
+      saved &&
+      isCircleOfTheLand(
+        state.entry.name,
+        state.entry.source,
+        state.entry.subclass ?? '',
+        state.entry.subclassSource,
+      )
+    ) &&
     state.fixedAtGain.some(
       (grant) =>
         grant.mode !== 'expanded' &&
@@ -224,6 +236,7 @@ export function projectManagedClassSpellState(
   character: Character,
   sourceContext?: ManagedClassSpellContext,
   dailyIntentSource: Character = character,
+  newManagedSpellIds?: ReadonlySet<string>,
 ) {
   const context = sourceContext?.catalogs
     ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
@@ -238,10 +251,16 @@ export function projectManagedClassSpellState(
     const key = getSpellReferenceKey(spell.name, spell.source)
     targets.set(key, targets.has(key) ? undefined : spell)
   }
-  const availableSpellReferences = new Set(
-    [...targets.entries()]
-      .filter(([, spell]) => spell && permitted(allowed, spell.source))
-      .map(([key]) => key),
+  const visibleSpells = [...targets.entries()].filter(
+    ([, spell]) => spell && permitted(allowed, spell.source),
+  )
+  const availableSpellReferences = new Set(visibleSpells.map(([key]) => key))
+  const visibleSpellLevels = new Map(
+    visibleSpells.flatMap(([key, spell]) =>
+      spell && (spell.classSpellRouteSource?.input?.targetOccurrences.length ?? 0) <= 1
+        ? [[key, spell.level] as const]
+        : [],
+    ),
   )
   const base = {
     ...stripped,
@@ -249,6 +268,7 @@ export function projectManagedClassSpellState(
       ...stripped.spells,
       spellProfiles: ensureSpellProfiles(stripped, classMap, undefined, {
         availableSpellReferences,
+        visibleSpellLevels,
       }),
     },
   }
@@ -294,7 +314,12 @@ export function projectManagedClassSpellState(
       deny('Restore the exact selected spell printing.')
       continue
     }
-    const constraint = targetError(spell, choice.slot, state)
+    const constraint = targetError(
+      spell,
+      choice.slot,
+      state,
+      !newManagedSpellIds?.has(managedClassSpellId(choice.slot)),
+    )
     if (constraint) {
       deny(constraint)
       continue
@@ -332,18 +357,39 @@ export function projectManagedClassSpellState(
       }),
     ),
   }
+  const fixedClassSpellStatuses: ClassFixedSpellStatus[] = []
   for (const entry of character.classProgression) {
     if (!entry.subclass) continue
+    const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
     const grants = getEarnedSubclassSpellGrants(
       classMap.get(toClassProfileId(entry.name, entry.source)),
       entry,
+      entry.levels,
+      { selections: character.classChoiceSelections, spells: visibleSpellLevels },
     )
     for (const grant of grants ?? []) {
-      if (
-        grant.mode === 'expanded' ||
-        !availableSpellReferences.has(getSpellReferenceKey(grant.spellName))
-      )
-        continue
+      if (grant.mode === 'expanded') continue
+      const spellKey = getSpellReferenceKey(grant.spellName)
+      const active = land
+        ? visibleSpellLevels.has(spellKey)
+        : availableSpellReferences.has(spellKey)
+      if (land && !active)
+        fixedClassSpellStatuses.push({
+          owner: [
+            'subclass',
+            norm(entry.name),
+            norm(entry.source),
+            norm(entry.subclass),
+            norm(entry.subclassSource),
+          ],
+          target: 'circle-of-the-land-terrain',
+          featureName: 'Circle of the Land',
+          level: grant.level,
+          reference: grant.spellName,
+          prepared: true,
+          active,
+        })
+      if (!active) continue
       provenance = addSpellGrant(provenance, grant.spellName, {
         ...makeSourceTag('subclass', entry.subclass, 'fixed', entry.subclassSource),
         grantSource: parseSpellReference(grant.spellName).source,
@@ -351,7 +397,6 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
-  const fixedClassSpellStatuses: ClassFixedSpellStatus[] = []
   const grants = getOptionalClassFixedSpellGrants(character, context?.catalogs)
   const rangerGrant = getRevisedRangerFixedSpell(character, context?.catalogs)
   if (rangerGrant) grants.push(rangerGrant)

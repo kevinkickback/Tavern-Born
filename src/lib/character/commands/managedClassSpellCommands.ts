@@ -172,7 +172,12 @@ export function setManagedClassSpellChoicesCommand(
     throw new RangeError('A class already owns that spell choice or its slot is invalid.')
   const grants = edits.filter((edit) => edit.request.target && !edit.withdraw)
   const projected = grants.length
-    ? projectManagedClassSpellState(proposed, context)
+    ? projectManagedClassSpellState(
+        proposed,
+        context,
+        proposed,
+        new Set(grants.filter((edit) => !edit.sameTarget).map((edit) => edit.id)),
+      )
     : { character: proposed, statuses: [] }
   for (const edit of grants) {
     if (

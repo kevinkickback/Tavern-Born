@@ -101,6 +101,26 @@ without expending a spell slot. Uses are not tracked. Independent casting paths 
 This supports initial selection/correction; spent-use/reset accounting and level-up replacement events
 remain separate. New source producers and unknown prose meanings still require reviewed certification.
 
+## Circle of the Land
+
+The Class page saves one terrain for the exact Circle of the Land subclass on its
+matching Druid printing. The named spell blocks supply the options and the
+earned spell schedule. A missing choice leaves the terrain grants empty.
+An unavailable source retains the saved choice for recovery. Removing the
+subclass or its earned level removes the choice. Ordinary Druid spells and
+independent preparations retain their own ownership.
+
+The PHB Bonus Cantrip is a separate level-2 managed choice from the Druid list.
+XPHB terrain choices are editable as part of the saved character loadout.
+The rules preview and full PDF include the Long Rest rule. The sheet summary
+also identifies the current Nature's Ward resistance and its Sanctuary
+relationship at the appropriate levels.
+
+The configured PHB Circle copy attached to an XPHB Druid has a different
+ownership and gain path. The standard revised source filter hides it. If a
+source configuration exposes that copy, the creator reports its terrain setup
+as unsupported.
+
 ## Selected feature cantrips
 
 Supported selected Class optional-feature and feat cantrips use the same atomic editor, revision

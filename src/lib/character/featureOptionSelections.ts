@@ -1,4 +1,10 @@
 import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
+import {
+  getLandChoiceRule,
+  getLandWardResistance,
+  hasLandSanctuary,
+  isValidLandSelection,
+} from '@/lib/5etools/circleOfTheLand'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   decodeSubclassFeatureReference,
@@ -68,6 +74,7 @@ export interface FeatureOptionSelectionState {
   recovery: boolean
   details: Array<{ name: string; damageType?: string; entries: unknown[]; available: boolean }>
   affinity?: { available: boolean; entries: unknown[] }
+  landWard?: string
   storm?: StormAuraRules
   literalGroup?: { family: string; group: string; gain: number; title?: string }
   enemy?: { complete: boolean; languageAvailable: boolean }
@@ -238,10 +245,12 @@ export function getFeatureOptionSelectionStates(
         selection.kind === 'feature-option' &&
         !selection.inactive &&
         (!isFeatureLiteralChoiceId(selection.choiceId) ||
-          !!getRevisedHunterRule(selection.choiceId)),
+          !!getRevisedHunterRule(selection.choiceId) ||
+          !!getLandChoiceRule(selection.choiceId)),
     )
     .map((selection) => {
       const hunter = getRevisedHunterRule(selection.choiceId)
+      const land = getLandChoiceRule(selection.choiceId)
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
         character.classProgression,
@@ -276,6 +285,7 @@ export function getFeatureOptionSelectionStates(
                 candidate.level === selection.classLevel &&
                 candidate.level <= owner.levels &&
                 (!hunter || isValidRevisedHunterSelection(selection)) &&
+                (!land || isValidLandSelection(selection)) &&
                 selection.selected.every(
                   (row) => row.slotLevel >= candidate.level && row.slotLevel <= owner.levels,
                 ),
@@ -299,14 +309,22 @@ export function getFeatureOptionSelectionStates(
         !options.some(
           (option) =>
             isClassChoiceOptionEligible(option) &&
-            (!hunter ||
+            ((!hunter && !land) ||
               selection.selected.some(
                 (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
               )),
         )
       const affinity =
-        !hunter && !recovery && owner && subclass
+        !hunter && !land && !recovery && owner && subclass
           ? affinityRules(owner, subclass, catalogs)
+          : undefined
+      const landWard =
+        land?.source === 'XPHB' && !recovery && subclass && owner && owner.levels >= 10
+          ? getLandWardResistance(subclass, selection.selected[0].name)
+          : undefined
+      const wardText =
+        landWard && owner && subclass
+          ? `Nature’s Ward grants ${landWard.toLowerCase()} resistance.${owner.levels >= 14 && hasLandSanctuary(subclass) ? ' Nature’s Sanctuary shares it with allies in the area.' : ''}`
           : undefined
       const details = selection.selected.map((selected) => {
         const option = options.find(
@@ -316,15 +334,18 @@ export function getFeatureOptionSelectionStates(
           !recovery &&
           !!option &&
           isClassChoiceOptionEligible(option) &&
-          !!(hunter ? option.sourceGroup : option.featureOption)
+          !!(hunter || land ? option.sourceGroup : option.featureOption)
         const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
           : [
-              hunter
-                ? 'Restore the exact Hunter feature source or remove the saved choice.'
-                : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
+              land
+                ? 'Restore the exact Circle of the Land source or remove the saved terrain.'
+                : hunter
+                  ? 'Restore the exact Hunter feature source or remove the saved choice.'
+                  : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]
+        if (available && wardText) entries.push(wardText)
         if (available && affinity) {
           entries.push({
             type: 'entries',
@@ -346,6 +367,7 @@ export function getFeatureOptionSelectionStates(
         recovery,
         details,
         affinity,
+        landWard: wardText,
         ...(hunter && {
           literalGroup: {
             family: hunter.id,
@@ -428,6 +450,7 @@ export function summarizeFeatureOptionSelection(
   if (!descriptions) {
     return (
       title +
+      (state.landWard ? ` · ${state.landWard}` : '') +
       (state.storm
         ? '; ' +
           state.storm.stages

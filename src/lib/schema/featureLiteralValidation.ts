@@ -1,3 +1,4 @@
+import { getLandChoiceRule, isValidLandSelection } from '@/lib/5etools/circleOfTheLand'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
@@ -22,11 +23,16 @@ export function getInvalidFeatureLiteralSelectionIds(
     ),
     ...getInvalidFavoredEnemySelectionIds(rows),
   ])
-  const seenHunter = new Set<string>()
+  const seen = new Set<string>()
   for (const s of rows) {
-    if (getRevisedHunterRule(s.choiceId)) {
-      if (seenHunter.has(s.choiceId) || !isValidRevisedHunterSelection(s)) invalid.add(s.choiceId)
-      seenHunter.add(s.choiceId)
+    const land = getLandChoiceRule(s.choiceId)
+    if (land || getRevisedHunterRule(s.choiceId)) {
+      if (
+        seen.has(s.choiceId) ||
+        !(land ? isValidLandSelection(s) : isValidRevisedHunterSelection(s))
+      )
+        invalid.add(s.choiceId)
+      seen.add(s.choiceId)
       continue
     }
     if (

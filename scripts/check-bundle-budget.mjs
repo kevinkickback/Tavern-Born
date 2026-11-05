@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Life Domain source certificates: measured 6,464,790 B renderer and 1,225,124 B initial.
+  // Circle of the Land: measured 6,475,266 B renderer and 1,235,248 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6314 * KIB,
-  initialRendererScript: 1197 * KIB,
+  rendererCode: 6324 * KIB,
+  initialRendererScript: 1207 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
