@@ -47,7 +47,11 @@ export function startingEquipmentTextFragments(
   return visit(ownerEntries)
 }
 
-function branchText(text: string, option: string): string | undefined {
+export function startingEquipmentBranchText(
+  text: string,
+  option: string,
+  requireMarker = false,
+): string | undefined {
   const markers = splitInlineTagSegments(text)
     .filter((segment) => !segment.tag)
     .flatMap((segment) =>
@@ -57,7 +61,7 @@ function branchText(text: string, option: string): string | undefined {
         end: segment.start + (match.index ?? 0) + match[0].length,
       })),
     )
-  if (!markers.length) return text
+  if (!markers.length) return requireMarker ? undefined : text
   const selected = markers.flatMap((marker, index) =>
     marker.key === option.toLowerCase() ? [text.slice(marker.end, markers[index + 1]?.start)] : [],
   )
@@ -180,18 +184,25 @@ export function startingGroupRule(
   group: StartingItemReference,
   memberUids: readonly string[],
   address?: StartingEquipmentSlotAddress,
+  fixed?: { display: string; member: StartingItemReference },
 ): GroupRule {
   if (!address || !Number.isSafeInteger(address.entry) || address.entry < 0) return unsupported()
   const rules: GroupRule[] = []
   for (const fragment of fragments) {
-    const text = branchText(fragment, address.option)
+    const text = startingEquipmentBranchText(fragment, address.option, !!fixed)
     if (text === undefined) continue
     const segments = splitInlineTagSegments(text)
     if (segments.some((segment) => segment.malformed)) return unsupported()
-    for (const segment of segments) {
+    for (const [index, segment] of segments.entries()) {
       if (segment.tag?.name !== 'item') continue
       const [name, source = 'PHB', display] = segment.tag.fields
       const ref = startingItemUid(`${name}|${source || 'PHB'}`)
+      if (
+        fixed &&
+        name?.trim().toLowerCase() === group.name.toLowerCase() &&
+        (!sameStartingReference(ref, group) || segments[index - 1]?.text.trim() !== ',')
+      )
+        return unsupported()
       if (!ref || !sameStartingReference(ref, group)) continue
       const qualifiers = leadingQualifiers(text.slice(segment.end))
       if (qualifiers.invalid || !accountedGroupTail(qualifiers.tail)) return unsupported()
@@ -199,8 +210,31 @@ export function startingGroupRule(
       const distinctQualifiers = new Map(qualifierRules.map((rule) => [ruleKey(rule), rule]))
       if (distinctQualifiers.size > 1) return unsupported()
       let rule = qualifierRules[0] ?? { relation: 'any' as const }
-      rule = corroborateDisplay(display, rule)
-      rule = corroborateDisplay(address.displayName, rule)
+      if (fixed) {
+        const exactDisplay = (value: string | undefined) =>
+          value?.trim().toLowerCase() === fixed.display.toLowerCase()
+        const before = segments.slice(0, index)
+        const after = segments.slice(index + 1)
+        if (
+          before.filter((part) => part.tag?.name === 'item').length !== address.entry ||
+          before.some((part, i) =>
+            part.tag ? part.tag.name !== 'item' : part.text.trim() !== (i === 0 ? '' : ','),
+          ) ||
+          after
+            .slice(0, -1)
+            .some((part) => (part.tag ? part.tag.name !== 'item' : part.text.trim() !== ',')) ||
+          !/^\s*,\s*\d+\s+gp\s*;\s*or\s*$/i.test(after[after.length - 1]?.text ?? '') ||
+          segment.tag.fields.length !== 3 ||
+          !exactDisplay(display) ||
+          qualifiers.values.length ||
+          (address.displayName !== undefined && !exactDisplay(address.displayName))
+        )
+          return unsupported()
+        rule = { relation: 'any', members: [fixed.member] }
+      } else {
+        rule = corroborateDisplay(display, rule)
+        rule = corroborateDisplay(address.displayName, rule)
+      }
       if (
         rule.members?.some(
           (member) =>
@@ -214,6 +248,7 @@ export function startingGroupRule(
       rules.push(rule)
     }
   }
+  if (fixed && rules.length !== 1) return unsupported()
   const distinct = new Map(rules.map((rule) => [ruleKey(rule), rule]))
   return distinct.size === 1 ? [...distinct.values()][0] : unsupported()
 }
@@ -227,7 +262,7 @@ export function startingFilterRule(
   if (!address || !Number.isSafeInteger(address.entry) || address.entry < 0) return unsupported()
   const rules: GroupRule[] = []
   for (const fragment of fragments) {
-    const text = branchText(fragment, address.option)
+    const text = startingEquipmentBranchText(fragment, address.option)
     if (text === undefined) continue
     const segments = splitInlineTagSegments(text)
     if (segments.some((segment) => segment.malformed)) return unsupported()

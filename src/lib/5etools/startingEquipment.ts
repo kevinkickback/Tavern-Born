@@ -4,6 +4,7 @@ import {
   currencyCopper,
   emptyStartingCurrency as emptyCurrency,
   type StartingEquipmentResolvedLot,
+  sameStartingReference,
   startingEquipmentLotKey,
   startingCurrencyFromCopper as toCurrencyFromCopper,
 } from '@/lib/character/startingEquipmentGrants'
@@ -14,7 +15,9 @@ import type {
   StartingEquipmentReference,
 } from '@/types/character'
 import {
+  getRevisedDruidPackageIssues,
   getStartingEquipmentCandidates,
+  resolveFixedStartingEquipmentMember,
   type StartingEquipmentPolicy,
   startingItemKey,
   startingItemUid,
@@ -52,6 +55,8 @@ export interface BackgroundStartingPackage {
   genericChoices?: GenericEquipmentChoice[]
   lots?: StartingEquipmentResolvedLot[]
   issues?: string[]
+  fixedIssues?: string[]
+  unavailablePackage?: true
 }
 
 const DEFAULT_ITEM_SOURCE = 'phb'
@@ -107,7 +112,8 @@ function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
 
 export function getClassDefaultEquipmentBlocks(startingEquipment: unknown): unknown[] {
   if (!startingEquipment || typeof startingEquipment !== 'object') return []
-  return (startingEquipment as { defaultData?: unknown[] }).defaultData ?? []
+  const { defaultData } = startingEquipment as { defaultData?: unknown }
+  return Array.isArray(defaultData) ? defaultData : []
 }
 
 export function getBackgroundEquipmentBlocks(startingEquipment: unknown): unknown[] {
@@ -290,8 +296,42 @@ function resolveEntries(
   const genericChoices: GenericEquipmentChoice[] = []
   const lots: StartingEquipmentResolvedLot[] = []
   const issues: string[] = []
+  const fixedIssues: string[] = []
+  const fixed =
+    context?.policy &&
+    resolveFixedStartingEquipmentMember(
+      context.policy,
+      context.blockIndex,
+      context.optionKey,
+      entries,
+    )
+  const appendFixed = () => {
+    if (!fixed || !context) return
+    const reference = { kind: 'item' as const, ...fixed.reference }
+    const item =
+      fixed.item &&
+      resolveFromItemRef(`${fixed.item.name}|${fixed.item.source}`, itemLookup, {
+        itemOverride: fixed.item,
+      })
+    const key = startingEquipmentLotKey(
+      context.blockIndex,
+      context.optionKey.toLowerCase(),
+      fixed.entry,
+      reference,
+    )
+    lots.push({ key, reference, item })
+    if (item) resolved.push(item)
+    if (fixed.diagnostic) {
+      issues.push(fixed.diagnostic)
+      fixedIssues.push(fixed.diagnostic)
+    }
+  }
 
   entries.forEach((entry, entryIndex) => {
+    if (fixed?.entry === entryIndex) {
+      appendFixed()
+      return
+    }
     if (typeof entry === 'object' && entry !== null) {
       if (typeof entry.value === 'number') {
         addCurrency(currency, toCurrencyFromCopper(entry.value))
@@ -306,6 +346,11 @@ function resolveEntries(
       : undefined
     const itemRef = typeof entry === 'string' ? entry : entry?.item
     const target = itemRef ? startingItemUid(itemRef) : undefined
+    const address = context && {
+      option: context.optionKey,
+      entry: entryIndex,
+      displayName: typeof entry === 'object' ? entry?.displayName : undefined,
+    }
     const rawItem =
       target &&
       (context?.policy
@@ -326,11 +371,7 @@ function resolveEntries(
             context.blockIndex,
             token,
             isGroup ? target : undefined,
-            {
-              option: context.optionKey,
-              entry: entryIndex,
-              displayName: typeof entry === 'object' ? entry.displayName : undefined,
-            },
+            address,
           )
         : { candidates: [], diagnostic: 'Starting item rules are unavailable.' }
       const selected = context?.genericSelections?.[genericChoiceKey] ?? []
@@ -417,6 +458,7 @@ function resolveEntries(
     genericChoices,
     lots,
     issues,
+    ...(fixedIssues.length ? { fixedIssues } : {}),
   }
 }
 
@@ -543,6 +585,7 @@ export function getSelectedEquipmentPackage(
     genericChoices: packages.flatMap((pkg) => pkg.genericChoices ?? []),
     lots: packages.flatMap((pkg) => pkg.lots ?? []),
     issues: packages.flatMap((pkg) => pkg.issues ?? []),
+    unavailablePackage: packages.some((pkg) => pkg.unavailablePackage) ? true : undefined,
   }
 }
 
@@ -560,6 +603,22 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
   return keys.sort()
 }
 
+function unavailableDruidPackage(
+  diagnostic: string,
+  policy?: StartingEquipmentPolicy,
+): BackgroundStartingPackage {
+  const saved = policy?.character.startingEquipmentGrants?.class
+  const grant = saved && sameStartingReference(saved.owner, policy?.owner) ? saved : undefined
+  return {
+    items: [],
+    currency: grant?.declaredCurrency ?? emptyCurrency(),
+    lots: grant?.items.map(({ key, reference }) => ({ key, reference })) ?? [],
+    issues: [diagnostic],
+    fixedIssues: [diagnostic],
+    unavailablePackage: true,
+  }
+}
+
 /**
  * Convert per-block choice indices to a resolved equipment package.
  * blockChoices[i] is the selected lowercase key for block i (defaults to first choice key or 'a').
@@ -571,6 +630,14 @@ export function resolveEquipmentWithBlockChoices(
   genericSelections: Readonly<StartingEquipmentItemChoices> = {},
   policy?: StartingEquipmentPolicy,
 ): BackgroundStartingPackage {
+  const issuesByPackage = policy && getRevisedDruidPackageIssues(policy, blocks)
+  const choice = blockChoices[0]?.toLowerCase() ?? 'a'
+  const pending =
+    issuesByPackage &&
+    (choice === 'a' || choice === 'b'
+      ? issuesByPackage[choice]
+      : 'Restore the selected Druid starting equipment rules.')
+  if (pending) return unavailableDruidPackage(pending, policy)
   const allItems: EquipmentLike[] = []
   const currency = emptyCurrency()
   const genericChoices: GenericEquipmentChoice[] = []
@@ -630,13 +697,16 @@ function resolveBlocksToStructure(
   itemLookup: Map<string, Item5e>,
   genericSelections: Readonly<StartingEquipmentItemChoices> = {},
   policy?: StartingEquipmentPolicy,
+  firstBlockIssues?: Readonly<Record<string, string | undefined>>,
 ): ResolvedEquipmentBlock[] {
-  return blocks.flatMap((rawBlock, index) => {
-    const block = normalizeChoiceBlock(rawBlock)
+  const presented = blocks.length || !firstBlockIssues ? blocks : [{}]
+  return presented.flatMap((rawBlock, index) => {
+    const packageIssues = index === 0 ? firstBlockIssues : undefined
+    const block = normalizeChoiceBlock(rawBlock) ?? (packageIssues ? {} : null)
     if (!block) return []
 
     const rawKeys = Object.keys(block)
-    const choiceKeys = getBlockChoiceKeys(block)
+    const choiceKeys = packageIssues ? ['a', 'b'] : getBlockChoiceKeys(block)
     const isFixed = choiceKeys.length === 0
     const displayText = displayTexts[index] ?? null
 
@@ -651,6 +721,11 @@ function resolveBlocksToStructure(
       })
     } else {
       for (const key of choiceKeys) {
+        const issue = packageIssues?.[key]
+        if (issue) {
+          options[key] = unavailableDruidPackage(issue)
+          continue
+        }
         const actualKey = rawKeys.find((k) => k.toLowerCase() === key) ?? key
         const fixed = resolveEntries(block._ ?? [], itemLookup, {
           blockIndex: index,
@@ -672,6 +747,7 @@ function resolveBlocksToStructure(
           genericChoices: [...(fixed.genericChoices ?? []), ...(selected.genericChoices ?? [])],
           lots: [...(fixed.lots ?? []), ...(selected.lots ?? [])],
           issues: [...(fixed.issues ?? []), ...(selected.issues ?? [])],
+          fixedIssues: [...(fixed.fixedIssues ?? []), ...(selected.fixedIssues ?? [])],
         }
       }
     }
@@ -702,7 +778,15 @@ export function resolveClassEquipmentBlocks(
     return null
   })
 
-  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup, genericSelections, policy)
+  const issues = policy && getRevisedDruidPackageIssues(policy, defaultData)
+  return resolveBlocksToStructure(
+    issues?.a && issues.b ? defaultData.slice(0, 1) : defaultData,
+    displayTexts,
+    itemLookup,
+    genericSelections,
+    policy,
+    issues,
+  )
 }
 
 export function resolveBackgroundEquipmentBlocks(

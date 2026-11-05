@@ -41,7 +41,7 @@ export function BuildClassEquipmentSection({
 }: BuildClassEquipmentSectionProps) {
   const itemLookup = useItemLookup()
   const character = useCharacterStore((state) => state.activeCharacter)
-  const policy = useStartingEquipmentPolicy('class', viewingClassData)
+  const policy = useStartingEquipmentPolicy('class', viewingClassData ?? character?.initialClass)
   const equipmentBlocks = useMemo(
     () =>
       resolveClassEquipmentBlocks(
