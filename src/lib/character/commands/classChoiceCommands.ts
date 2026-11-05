@@ -1,3 +1,8 @@
+import {
+  BLESSED_STRIKES_ID,
+  getSavedBlessedStrikes,
+  isBlessedStrikesOption,
+} from '@/lib/5etools/blessedStrikesSource'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
@@ -114,6 +119,28 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
+  if (choice.id === BLESSED_STRIKES_ID) {
+    const owner = findOwner(character, choice)
+    const catalogs = authority?.catalogs
+    const cls = authority && findClassReference(choice.owner, authority.classes)
+    const current =
+      cls &&
+      owner &&
+      catalogs &&
+      getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, owner),
+        createOptionalClassFeatureActivity(character, catalogs),
+        catalogs,
+      ).find((row) => row.id === choice.id)
+    if (
+      !current ||
+      JSON.stringify(current) !== JSON.stringify(choice) ||
+      selected.some((option) => !isBlessedStrikesOption(option))
+    )
+      throw new RangeError('Blessed Strikes source rules changed. Review the current choices.')
+    return current
+  }
   const legacyFamily = getLegacySubclassFamily(
     choice.owner,
     choice.owner.subclassName && choice.owner.subclassSource
@@ -429,10 +456,12 @@ export function retainSavedFeatureOptionsCommand(
   const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
   const registeredCompanion = isRegisteredCompanionSelection(selection)
   const registeredOrder = getSavedDivineOrder(character)?.selection === selection
+  const registeredBlessedStrikes =
+    getSavedBlessedStrikes(character.classChoiceSelections ?? []) === selection
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
-    ((registeredPool || registeredCompanion || registeredOrder) &&
+    ((registeredPool || registeredCompanion || registeredOrder || registeredBlessedStrikes) &&
       expectedSelectionHandle === undefined) ||
     (registeredCompanion &&
       character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
@@ -444,6 +473,7 @@ export function retainSavedFeatureOptionsCommand(
     !registeredPool &&
     !registeredCompanion &&
     !registeredOrder &&
+    !registeredBlessedStrikes &&
     !isValidStormAuraSelection(selection) &&
     !isValidClassProficiencySelection(selection) &&
     !isValidPsionicSelection(selection) &&
@@ -658,7 +688,9 @@ export function applyClassChoiceSelectionCommand(
       return { classChoiceSelections: character.classChoiceSelections }
   }
   if (
-    (decodeFavoredEnemyChoiceId(choice.id) || decodeLegacySubclassChoice(choice.id)) &&
+    (choice.id === BLESSED_STRIKES_ID ||
+      decodeFavoredEnemyChoiceId(choice.id) ||
+      decodeLegacySubclassChoice(choice.id)) &&
     expectedSelectionHandle !== undefined
   ) {
     const latest = character.classChoiceSelections?.find((s) => s.choiceId === choice.id)
@@ -958,6 +990,7 @@ export function reconcileClassChoiceSelectionGrants(
     .map((selection) => {
       if (
         selection.kind === 'psionic' ||
+        selection.choiceId === BLESSED_STRIKES_ID ||
         (catalogs &&
           selection.kind === 'optional-feature' &&
           getFighterStylePair(selection.choiceId))

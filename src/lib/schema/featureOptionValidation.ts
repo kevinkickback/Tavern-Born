@@ -1,3 +1,4 @@
+import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
 import {
   decodeFeatureOptionReference,
   getFeatureOptionChoiceId,
@@ -13,7 +14,12 @@ export function getInvalidFeatureOptionSelectionPaths(
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
   const invalidGroups = getInvalidFeatureLiteralSelectionIds(character.classChoiceSelections ?? [])
+  const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
+    if (selection.choiceId === BLESSED_STRIKES_ID && selection !== blessedStrikes) {
+      paths.push(['classChoiceSelections', index])
+      continue
+    }
     if (
       selection.favoredEnemy !== undefined ||
       isFeatureLiteralChoiceId(selection.choiceId) ||

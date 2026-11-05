@@ -273,8 +273,8 @@ See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for t
 
 ## Cache compatibility
 
-The current parsed cache schema is **64**, owned by [dataCache](../src/lib/storage/dataCache.ts);
-use that constant when changing code. Old increment numbers are not the current version.
+The current parsed cache schema version is defined in [dataCache](../src/lib/storage/dataCache.ts).
+Use that constant when changing code.
 
 Starting-item Basic classification records each parsed item's own input collection. Actual `baseitem`
 rows are Basic; ordinary items/groups and unknown array-only inputs are Other. Copy resolution restores

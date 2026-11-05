@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
+import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import {
   canonicalProficiencyName,
@@ -39,6 +40,7 @@ import {
 import {
   type FeatureOptionSelectionState,
   getFeatureOptionSelectionStates,
+  hasBlessedStrikesRecovery,
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import {
@@ -226,7 +228,8 @@ export function useClassChoiceController({
         state.psionic ||
         state.legacySubclass ||
         state.companion ||
-        state.divineOrder
+        state.divineOrder ||
+        state.blessedStrikes
       )
         return (
           !!state.owner &&
@@ -424,7 +427,8 @@ export function useClassChoiceController({
             activeSaved.psionic ||
             activeSaved.legacySubclass ||
             activeSaved.companion ||
-            activeSaved.divineOrder
+            activeSaved.divineOrder ||
+            activeSaved.blessedStrikes
             ? request?.savedHandle
             : undefined,
         )
@@ -486,10 +490,12 @@ export function useClassChoiceController({
           current,
           confirmedSelections.map((option) => option.reference),
           undefined,
-          decodeLegacySubclassChoice(current.id)
-            ? (request?.savedHandle ??
+          current.id === BLESSED_STRIKES_ID
+            ? request?.savedHandle
+            : decodeLegacySubclassChoice(current.id)
+              ? (request?.savedHandle ??
                 (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
-            : undefined,
+              : undefined,
         )
       }
     } catch (error) {
@@ -579,7 +585,8 @@ export function useClassChoiceController({
               !hasFavoredEnemyRecovery(diagnostic, featureOptionStates) &&
               !hasNaturalExplorerRecovery(diagnostic, featureOptionStates) &&
               !hasClassProficiencyRecovery(diagnostic, featureOptionStates) &&
-              !hasRevisedHunterRecovery(diagnostic, featureOptionStates),
+              !hasRevisedHunterRecovery(diagnostic, featureOptionStates) &&
+              !hasBlessedStrikesRecovery(diagnostic, featureOptionStates),
           )
         : [],
     selectionByChoiceId,
@@ -675,6 +682,7 @@ export function useClassChoiceController({
                 saved && getOptionalClassPoolSelectionSection(saved)
                   ? getOptionalPoolSelectionHandle(saved)
                   : choice.kind === 'creature' ||
+                      choice.id === BLESSED_STRIKES_ID ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
                       decodeLegacySubclassChoice(choice.id)
                     ? saved
@@ -698,7 +706,8 @@ export function useClassChoiceController({
                 state.psionic ||
                 state.legacySubclass ||
                 state.companion ||
-                state.divineOrder
+                state.divineOrder ||
+                state.blessedStrikes
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

@@ -29,6 +29,7 @@ import {
 } from '@/lib/character/favoredEnemySelections'
 import {
   getFeatureOptionSelectionStates,
+  hasBlessedStrikesRecovery,
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
@@ -126,7 +127,8 @@ export function validateClassChoices(
         row.optionalPool ||
         row.psionic ||
         row.legacySubclass ||
-        row.companion) &&
+        row.companion ||
+        row.blessedStrikes) &&
       row.owner &&
       row.recovery,
   )) {
@@ -379,6 +381,7 @@ export function validateClassChoices(
         hasNaturalExplorerRecovery(diagnostic, featureOptionStates) ||
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
         hasRevisedHunterRecovery(diagnostic, featureOptionStates) ||
+        hasBlessedStrikesRecovery(diagnostic, featureOptionStates) ||
         (diagnostic.featureName === 'Deft Explorer' &&
           featureOptionStates.some(
             (state) =>
@@ -424,7 +427,8 @@ export function validateClassChoices(
           state.literalGroup ||
           state.proficiency ||
           state.optionalPool ||
-          state.companion) &&
+          state.companion ||
+          state.blessedStrikes) &&
         state.recovery
       )
         continue

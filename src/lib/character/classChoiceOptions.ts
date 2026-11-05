@@ -1,3 +1,8 @@
+import {
+  BLESSED_STRIKES_ID,
+  getCurrentBlessedStrikes,
+  isBlessedStrikesOption,
+} from '@/lib/5etools/blessedStrikesSource'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   normalizeFavoredEnemyChoices,
@@ -612,6 +617,21 @@ export function resolveClassChoiceOptions(
   classLevel = 20,
   character?: Character,
 ): ClassChoiceOptionView[] {
+  if (choice.id === BLESSED_STRIKES_ID) {
+    const rules = getCurrentBlessedStrikes(catalogs)
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((reference) => [
+          getClassChoiceOptionKey(reference),
+          reference,
+        ]),
+      ).values(),
+    ].map((reference) => {
+      if (!rules || !isBlessedStrikesOption(reference) || classLevel < choice.level)
+        return { reference, availability: 'retained', entries: [] }
+      return resolveExplicitOption(reference, catalogs)
+    })
+  }
   if (decodeLegacySubclassChoice(choice.id))
     return resolveLegacySubclassOptions(choice, catalogs, saved, classLevel, character)
   if (choice.kind === 'psionic' || choice.id.startsWith('psionic-choice:'))
@@ -1188,6 +1208,7 @@ export function getClassChoiceCandidates(
     'classFeature',
   )
   const ordinary = getAllCharacterClassChoices(classData, subclass).filter((choice) => {
+    if (choice.id === BLESSED_STRIKES_ID) return !!getCurrentBlessedStrikes(catalogs)
     if (
       legacyFamily &&
       choice.owner.type === 'subclass' &&
@@ -1527,7 +1548,7 @@ export function getClassChoiceDiagnosticCandidates(
   subclass: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[1],
   catalogs?: Parameters<typeof getClassChoiceDiagnosticCandidateSide>[3],
 ) {
-  const rows = [
+  const rows: import('@/types/classRules').ClassChoiceDiagnostic[] = [
     ...getClassChoiceDiagnosticCandidateSide(classData, subclass, false, catalogs),
     ...getClassChoiceDiagnosticCandidateSide(classData, subclass, true, catalogs),
     ...getRevisedHunterSetup(
@@ -1540,6 +1561,24 @@ export function getClassChoiceDiagnosticCandidates(
         ),
     ).diagnostics,
   ]
+  if (
+    catalogs &&
+    normalized(classData.name) === 'cleric' &&
+    normalized(classData.source) === 'xphb'
+  ) {
+    const blessed = getCurrentBlessedStrikes(catalogs)
+    if (!blessed || !blessed.upgradeAvailable)
+      rows.push({
+        code: 'unverified-required-choice',
+        className: 'Cleric',
+        classSource: 'XPHB',
+        level: blessed ? 14 : 7,
+        featureName: blessed ? 'Improved Blessed Strikes' : 'Blessed Strikes',
+        message: blessed
+          ? 'Restore the exact Improved Blessed Strikes declaration to use the earned upgrade.'
+          : 'Restore the exact revised Cleric source to choose a Blessed Strikes option.',
+      })
+  }
   return [...new Map(rows.map((row) => [JSON.stringify(row), row])).values()]
 }
 

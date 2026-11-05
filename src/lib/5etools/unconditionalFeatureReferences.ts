@@ -1,4 +1,5 @@
 import type { ClassFeature, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
+import { BLESSED_STRIKES_TARGET } from './blessedStrikesSource'
 import {
   decodeClassFeatureReference,
   decodeSubclassFeatureReference,
@@ -47,6 +48,8 @@ export function collectUnconditionalFeatureReferences(
     result.push({ reference, kind: targetKind, target, level })
     const feature = reference.feature
     if (!feature || identity(feature, targetKind) !== target) return
+    // Its exact children are selectable even though the source uses a plain entries group.
+    if (target === BLESSED_STRIKES_TARGET) return
     const previous = bestLevel.get(feature)
     if (previous !== undefined && previous <= level) return
     bestLevel.set(feature, level)

@@ -1,3 +1,10 @@
+import {
+  BLESSED_STRIKES_TARGET,
+  getCurrentBlessedStrikes,
+  getSavedBlessedStrikes,
+  IMPROVED_BLESSED_STRIKES_TARGET,
+  isBlessedStrikesOptionTarget,
+} from '@/lib/5etools/blessedStrikesSource'
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
@@ -177,6 +184,8 @@ function buildOptionalClassFeatureActivity(
     variant = false,
   ): boolean => {
     if (!earned(owner, level) || suppressed(owner, target, facet)) return false
+    // The selected branch appears through the class-choice route, never as a passive grant.
+    if (isBlessedStrikesOptionTarget(target)) return false
     const relation = states.find(
       ({ root }) =>
         equal(root.owner, owner) && (root.target === target || root.children.includes(target)),
@@ -213,6 +222,12 @@ function buildOptionalClassFeatureActivity(
       )
     return earned(owner, row.level) && !row.featureVariant
   }
+  const clericOwner: OptionalClassFeatureOwner = ['class', 'cleric', 'xphb']
+  const blessedStrikes =
+    earned(clericOwner, 7) && (!allowed || allowed.has('xphb'))
+      ? getCurrentBlessedStrikes(catalogs)
+      : undefined
+  const blessedSelection = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   const diagnostic = (row: ClassChoiceDiagnostic): boolean => {
     const owner = optionalClassOwner({
       name: row.className,
@@ -237,6 +252,13 @@ function buildOptionalClassFeatureActivity(
     return earned(owner, row.level ?? 1) && !row.featureVariant
   }
   const entries = (owner: OptionalClassFeatureOwner, target: string, values: unknown[]) => {
+    if (equal(owner, clericOwner)) {
+      if (target === BLESSED_STRIKES_TARGET) return blessedStrikes ? [blessedStrikes.rootIntro] : []
+      if (target === IMPROVED_BLESSED_STRIKES_TARGET)
+        return blessedSelection && !blessedSelection.inactive && earned(owner, 14)
+          ? (blessedStrikes?.improvementFor(blessedSelection.selected[0]) ?? [])
+          : []
+    }
     const hunter = revisedHunterRules.find((row) => row.target === target)
     if (hunter && equal(owner, ['subclass', 'ranger', 'xphb', 'hunter', 'xphb'])) {
       const selections = character.classChoiceSelections?.filter(

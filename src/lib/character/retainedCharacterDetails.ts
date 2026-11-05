@@ -1,3 +1,4 @@
+import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
@@ -157,6 +158,7 @@ export function buildRetainedCharacterDetails(
       choiceDetailsById.set(state.selection.choiceId, details)
     }
     for (const choice of character.classChoiceSelections ?? []) {
+      if (choice.choiceId === BLESSED_STRIKES_ID) continue
       if (data !== primary && isValidClassProficiencySelection(choice)) {
         const relation = decodeClassProficiencyChoiceId(choice.choiceId)!
         const dormant = createOptionalClassFeatureActivity(character, primaryCatalogs).dormant(
@@ -242,6 +244,18 @@ export function buildRetainedCharacterDetails(
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
   for (const selection of character.classChoiceSelections ?? []) {
+    if (selection.choiceId === BLESSED_STRIKES_ID) {
+      const retained = choiceDetailsById.get(selection.choiceId)
+      choiceDetailsById.set(
+        selection.choiceId,
+        selection.selected.map((option, index) =>
+          routes.featureIds.has(getClassChoiceFeatureId(selection, option))
+            ? { availability: 'available', entries: [] }
+            : (retained?.[index] ?? { availability: 'missing', entries: [] }),
+        ),
+      )
+      continue
+    }
     const fighterStyle = getFighterStylePair(selection.choiceId)
     if (!fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
     const details = choiceDetailsById.get(selection.choiceId)

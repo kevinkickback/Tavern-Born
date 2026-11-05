@@ -17,6 +17,14 @@ adds the current Wisdom modifier (minimum +1) to Intelligence checks for
 Arcana and Religion. Choice removal or unavailable authority removes only
 that provider's effects. Existing independent providers survive.
 
+Revised Cleric Blessed Strikes is one required Class choice at level 7.
+The exact XPHB declaration uses qualified feature references with a
+choose-one clause in prose. The chosen branch is active only while its
+source is available, and Improved Blessed Strikes adds only the matching
+branch at the verified level-14 gain. Character details and PDF include
+the rules for player adjudication. Classic subclass features retain their
+own authority.
+
 Mystic talent, discipline and order-bonus selections use the same Class-choice ownership and
 current-benefit projection. Their distinct catalog, saved relation and setup limits are described
 in [psionic setup](psionic-selection.md).
