@@ -322,7 +322,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureSource.ts",
-      "sha256": "e24dfc1d5a2bd87c6ea4ce47b9b0308cba212b62f8b3499360cf1dcc4ba52809"
+      "sha256": "be2b0e98eebdaf400bda85da5547adf42c00413366978a52021836304b567e06"
     },
     {
       "file": "src/lib/5etools/optionalClassSectionRules.generated.json",
