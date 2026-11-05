@@ -217,6 +217,14 @@ export const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owne
 const focusEntry = 3
 const restoreFocus = 'Restore the exact Wooden Staff starting focus rules.'
 const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
+
+function groupMemberReference(value: unknown): StartingItemReference | undefined {
+  if (typeof value === 'string') return startingItemUid(value)
+  const row = entryRecord(value)
+  if (typeof row?.name !== 'string' || typeof row.source !== 'string' || !row.source.trim())
+    return undefined
+  return startingItemUid(`${row.name}|${row.source}`)
+}
 const memberEntry = (value: unknown) =>
   sameStartingReference(entryReference(value), quarterstaffFocus.member)
 
@@ -321,7 +329,10 @@ export function getRevisedDruidPackageIssues(
       shared !== undefined &&
       (!Array.isArray(shared) ||
         !shared.every(validEquipmentEntry) ||
-        (canonicalIntent && shared.some(memberEntry)))
+        (canonicalIntent &&
+          shared.some(
+            (row) => memberEntry(row) || sameStartingReference(entryReference(row), druidicFocus),
+          )))
     )
   })
   if (conflictingShared) return { a: restoreFocus, b: restoreFocus }
@@ -383,9 +394,10 @@ export function resolveFixedStartingEquipmentMember(
   )
     return unavailable
 
-  const memberUids = group.items.filter((uid): uid is string => typeof uid === 'string')
+  const members = group.items.map(groupMemberReference)
   if (
-    memberUids.filter((uid) => sameStartingReference(startingItemUid(uid), reference)).length !== 1
+    members.some((member) => !member) ||
+    members.filter((member) => sameStartingReference(member, reference)).length !== 1
   )
     return unavailable
   return { reference, entry, item }

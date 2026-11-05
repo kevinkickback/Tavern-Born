@@ -817,7 +817,32 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
   const exactMember = raw.find((row) => row.name === staff.name && row.source === staff.source)
   if (!exactMember) throw new Error('Missing Wooden Staff rules')
   const withdrawn = raw.filter((row) => row.name !== 'Druidic Focus' || row.source !== 'XPHB')
-  for (const rules of [withdrawn, [...raw, exactMember]]) {
+  const focusGroup = raw.find((row) => row.name === 'Druidic Focus' && row.source === 'XPHB')
+  if (!focusGroup || !Array.isArray(focusGroup.items))
+    throw new Error('Missing Druidic Focus group')
+  const originalMembers = focusGroup.items
+  const wrapped = { name: 'Wooden Staff', source: 'XPHB' }
+  const withMembers = (members: unknown[]) =>
+    raw.map((row) => (row === focusGroup ? { ...focusGroup, items: members } : row))
+  for (const rules of [
+    withdrawn,
+    [...raw, exactMember],
+    ...[null, '|XPHB', 'Wooden Staff|XPHB|conflict', wrapped].map((entry) =>
+      withMembers([...originalMembers, entry]),
+    ),
+  ]) {
+    const fresh = apply(
+      empty,
+      applyClassSelectionCommand(empty, empty.provenance, cls, undefined, itemLookup, {
+        startingEquipmentPolicy: createStartingEquipmentPolicy(
+          empty,
+          { ...cls, kind: 'class' },
+          cls.startingEquipment,
+          rules,
+        ),
+      }),
+    )
+    expect(fresh.equipment.some((row) => row.name === 'Wooden Staff')).toBe(false)
     const pending = choose(initial, 'a', rules)
     expect(pending.equipment.find((row) => row.id === staff.id)).toEqual(staff)
     expect(
@@ -825,6 +850,25 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
     ).toEqual(lot)
     expect(choose(pending, 'a').equipment.find((row) => row.id === staff.id)).toEqual(staff)
   }
+  const wrappedMember = withMembers(
+    originalMembers.map((entry) =>
+      typeof entry === 'string' && entry.toLowerCase() === 'wooden staff|xphb' ? wrapped : entry,
+    ),
+  )
+  const wrappedFresh = apply(
+    empty,
+    applyClassSelectionCommand(
+      empty,
+      empty.provenance,
+      cls,
+      undefined,
+      buildItemLookup(wrappedMember),
+    ),
+  )
+  expect(wrappedFresh.equipment.find((row) => row.name === 'Wooden Staff')).toMatchObject({
+    source: 'XPHB',
+    quantity: 1,
+  })
   const declared = cls.startingEquipment as {
     defaultData: Array<{ A: unknown[]; B: unknown[] }>
     entries: string[]
@@ -867,8 +911,10 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
   )
 
   const onB = choose(initial, 'b')
-  for (const placement of ['package', 'shared', 'shared-block'] as const) {
-    const extraStaff = { item: 'Wooden Staff|XPHB' }
+  for (const placement of ['package', 'shared', 'shared-block', 'shared-group'] as const) {
+    const extraStaff = {
+      item: placement === 'shared-group' ? 'Druidic Focus|XPHB' : 'Wooden Staff|XPHB',
+    }
     const duplicate = {
       ...cls,
       startingEquipment: {
@@ -912,6 +958,25 @@ test('retains the fixed revised Druid focus lot through missing or ambiguous sou
       expect(apply(initial, switchToB()).equipment).toEqual(onB.equipment)
     }
   }
+
+  const independentGroup = {
+    ...declared,
+    defaultData: [{ ...originalBlock, _: [{ item: 'Druidic Focus|PHB' }] }],
+  }
+  const independentPolicy = createStartingEquipmentPolicy(
+    empty,
+    { ...cls, kind: 'class' },
+    independentGroup,
+    raw,
+  )
+  const independentOptions = resolveClassEquipmentBlocks(
+    independentGroup,
+    itemLookup,
+    {},
+    independentPolicy,
+  )[0].options
+  expect(independentOptions.a.unavailablePackage).toBeUndefined()
+  expect(independentOptions.b.unavailablePackage).toBeUndefined()
 
   for (const missing of [lostSlot, lostPackage]) {
     const policy = createStartingEquipmentPolicy(

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised Druid starting focus: measured 6,489,284 B renderer and 1,248,183 B initial.
+  // Revised Druid starting focus: measured 6,489,496 B renderer and 1,248,395 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6338 * KIB,
-  initialRendererScript: 1219 * KIB,
+  initialRendererScript: 1220 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

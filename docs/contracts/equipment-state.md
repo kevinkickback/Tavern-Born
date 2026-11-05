@@ -32,7 +32,9 @@ can corroborate exact source references. The revised Druid's Package A specifies
 form of Druidic Focus. The SRD Druidic Focuses table identifies Wooden Staff, so the exact live
 Druid XPHB package declaration and group member authorize one fixed Wooden Staff XPHB lot.
 When the exact group stays at its authored address but the corroborating text or item rules are
-unavailable, the focus lot stays pending and retains its existing grant. Missing or disputed package
+unavailable or its member list contains invalid references, the focus lot stays pending and retains
+its existing grant. Either member reference format can identify the staff, and the group must list
+it exactly once. Missing or disputed package
 structure leaves the selected package pending and preserves its saved grants. A conflict in the
 shared entries suspends both options. A conflict confined to Package A leaves a valid B usable.
 An independently declared exact Wooden Staff uses the ordinary item rule at its own address.
