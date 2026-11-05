@@ -35,12 +35,13 @@ export function useStartingEquipmentAuthority() {
       owner: StartingOwner,
     ): StartingEquipmentPolicy => {
       const collection = kind === 'class' ? filtered.classes : filtered.backgrounds
-      const currentOwner = collection.find((row) =>
+      const owners = collection.filter((row) =>
         sameStartingReference(
           row.source ? { name: row.name, source: row.source } : undefined,
           owner.source ? { name: owner.name, source: owner.source } : undefined,
         ),
       )
+      const currentOwner = owners[0]
       return createStartingEquipmentPolicy(
         calculation
           ? character === activeCharacter
@@ -55,6 +56,8 @@ export function useStartingEquipmentAuthority() {
           name: owner.name,
           source: owner.source ?? '',
           kind,
+          sourceIdentityConflict:
+            owners.length > 1 || currentOwner?.sourceIdentityConflict === true,
           entries: Array.isArray(currentOwner?.entries) ? currentOwner.entries : undefined,
         },
         currentOwner?.startingEquipment,

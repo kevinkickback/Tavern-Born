@@ -10,6 +10,7 @@ import { filterCharacterItems } from './playerItemAvailability'
 import { buildSuppressedKeys } from './reprints'
 import {
   type StartingEquipmentSlotAddress,
+  startingEquipmentBranchText,
   startingEquipmentTextFragments,
   startingFilterRule,
   startingGroupRule,
@@ -22,8 +23,12 @@ export interface StartingEquipmentPolicy {
   raw: ReadonlyMap<string, Item5e>
   available: ReadonlyMap<string, Item5e>
   itemTypes: Readonly<Record<string, string>>
-  character: Pick<Character, 'proficiencies' | 'provenance'>
-  owner: StartingItemReference & { kind: 'class' | 'background'; entries?: unknown[] }
+  character: Pick<Character, 'proficiencies' | 'provenance' | 'startingEquipmentGrants'>
+  owner: StartingItemReference & {
+    kind: 'class' | 'background'
+    entries?: unknown[]
+    sourceIdentityConflict?: boolean
+  }
   ownerAvailable: boolean
   startingEquipment: unknown
 }
@@ -190,6 +195,212 @@ function proficient(policy: StartingEquipmentPolicy, item: Item5e, text: string)
           ),
       ),
   )
+}
+
+const druidicFocus = { name: 'Druidic Focus', source: 'XPHB' }
+const quarterstaffFocus = {
+  display: 'Druidic Focus (Quarterstaff)',
+  member: { name: 'Wooden Staff', source: 'XPHB' },
+}
+
+const entryRecord = (value: unknown) =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+
+const itemReference = (value: unknown) =>
+  typeof value === 'string' ? startingItemUid(value) : undefined
+
+export const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owner']) =>
+  owner.kind === 'class' && sameStartingReference(owner, { name: 'Druid', source: 'XPHB' })
+
+const focusEntry = 3
+const restoreFocus = 'Restore the exact Wooden Staff starting focus rules.'
+const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
+
+function groupMemberReference(value: unknown): StartingItemReference | undefined {
+  if (typeof value === 'string') return startingItemUid(value)
+  const row = entryRecord(value)
+  if (typeof row?.name !== 'string' || typeof row.source !== 'string' || !row.source.trim())
+    return undefined
+  return startingItemUid(`${row.name}|${row.source}`)
+}
+const memberEntry = (value: unknown) =>
+  sameStartingReference(entryReference(value), quarterstaffFocus.member)
+
+function declaresQuarterstaffFocus(policy: StartingEquipmentPolicy): boolean {
+  const fragments = startingEquipmentTextFragments(
+    'class',
+    policy.startingEquipment,
+    policy.owner.entries,
+    0,
+  )
+  return (
+    fragments.length === 1 &&
+    !startingGroupRule(
+      fragments,
+      druidicFocus,
+      [`${quarterstaffFocus.member.name}|${quarterstaffFocus.member.source}`],
+      { option: 'a', entry: focusEntry },
+      quarterstaffFocus,
+    ).diagnostic
+  )
+}
+
+function validEquipmentEntry(value: unknown): boolean {
+  if (typeof value === 'string') return !!itemReference(value)
+  const row = entryRecord(value)
+  if (!row) return false
+  const named = ['item', 'equipmentType', 'special'].filter((key) => row[key] !== undefined)
+  const coins = ['value', 'containsValue'].filter((key) => row[key] !== undefined)
+  return (
+    (named.length > 0 || coins.length > 0) &&
+    named.length <= 1 &&
+    named.every((key) => typeof row[key] === 'string' && row[key].trim()) &&
+    (row.item === undefined || !!itemReference(row.item)) &&
+    coins.every(
+      (key) => typeof row[key] === 'number' && Number.isSafeInteger(row[key]) && row[key] >= 0,
+    ) &&
+    (row.quantity === undefined ||
+      (typeof row.quantity === 'number' &&
+        Number.isSafeInteger(row.quantity) &&
+        row.quantity > 0)) &&
+    (row.displayName === undefined || typeof row.displayName === 'string')
+  )
+}
+
+function isCanonicalFocusEntry(value: unknown): boolean {
+  const row = entryRecord(value)
+  return (
+    !!row &&
+    Object.keys(row).every((key) => ['item', 'quantity', 'displayName'].includes(key)) &&
+    (row.quantity === undefined || row.quantity === 1) &&
+    (row.displayName === undefined ||
+      (typeof row.displayName === 'string' &&
+        row.displayName.trim().toLowerCase() === quarterstaffFocus.display.toLowerCase())) &&
+    sameStartingReference(itemReference(row.item), druidicFocus)
+  )
+}
+
+function currentPackage(block: Record<string, unknown>, option: string): unknown[] | undefined {
+  const keys = Object.keys(block).filter((key) => key.toLowerCase() === option)
+  const entries = keys.length === 1 ? block[keys[0]] : undefined
+  return Array.isArray(entries) && entries.length && entries.every(validEquipmentEntry)
+    ? entries
+    : undefined
+}
+
+/** Suspend incomplete or conflicting declarations before generic package fallback or lot issuance. */
+export function getRevisedDruidPackageIssues(
+  policy: StartingEquipmentPolicy,
+  blocks: readonly unknown[],
+): Record<string, string | undefined> | undefined {
+  if (!isRevisedDruidStartingOwner(policy.owner)) return undefined
+  if (!policy.ownerAvailable || policy.owner.sourceIdentityConflict) {
+    const issue = 'Restore the exact Druid source rules.'
+    return { a: issue, b: issue }
+  }
+  const data = entryRecord(policy.startingEquipment)?.defaultData
+  if (!Array.isArray(data) || (data !== blocks && JSON.stringify(data) !== JSON.stringify(blocks)))
+    return { a: restoreFocus, b: restoreFocus }
+  const current = entryRecord(data[0])
+  if (!current) return { a: restoreFocus, b: restoreFocus }
+  const a = currentPackage(current, 'a')
+  const b = currentPackage(current, 'b')
+  const groupClaim = (row: unknown) =>
+    normalizeKey(entryReference(row)?.name ?? '') === 'druidic focus'
+  const groups = a?.filter(groupClaim)
+  const rawClaim = Object.entries(current).some(
+    ([key, entries]) =>
+      key.toLowerCase() === 'a' && Array.isArray(entries) && entries.some(groupClaim),
+  )
+  const proseClaim = startingEquipmentTextFragments(
+    'class',
+    policy.startingEquipment,
+    policy.owner.entries,
+    0,
+  ).some((fragment) =>
+    /\bdruidic focus\b/i.test(startingEquipmentBranchText(fragment, 'a') ?? fragment),
+  )
+  const canonicalIntent = rawClaim || proseClaim
+  const conflictingShared = data.some((rawBlock) => {
+    const shared = entryRecord(rawBlock)?._
+    return (
+      shared !== undefined &&
+      (!Array.isArray(shared) ||
+        !shared.every(validEquipmentEntry) ||
+        (canonicalIntent &&
+          shared.some(
+            (row) => memberEntry(row) || sameStartingReference(entryReference(row), druidicFocus),
+          )))
+    )
+  })
+  if (conflictingShared) return { a: restoreFocus, b: restoreFocus }
+  const memberCount = a?.filter(memberEntry).length
+  const validA = canonicalIntent
+    ? isCanonicalFocusEntry(a?.[focusEntry]) && groups?.length === 1 && !memberCount
+    : memberCount === 1
+  return {
+    a: validA ? undefined : restoreFocus,
+    b: b ? undefined : 'Restore the exact Druid Package B rules.',
+  }
+}
+
+/** SRD 5.2.1 pp. 41 and 97 bind this exact package qualifier to the Wooden Staff focus. */
+export function resolveFixedStartingEquipmentMember(
+  policy: StartingEquipmentPolicy,
+  block: number,
+  option: string,
+  entries: readonly unknown[],
+):
+  | {
+      reference: StartingItemReference
+      entry: number
+      item?: Item5e
+      diagnostic?: string
+    }
+  | undefined {
+  if (!isRevisedDruidStartingOwner(policy.owner) || block !== 0 || option.toLowerCase() !== 'a')
+    return undefined
+
+  const entry = focusEntry
+  const reference = quarterstaffFocus.member
+  if (!isCanonicalFocusEntry(entries[entry])) return undefined
+  const unavailable = { reference, entry, diagnostic: restoreFocus }
+  if (!policy.ownerAvailable || !declaresQuarterstaffFocus(policy)) return unavailable
+
+  const group = policy.raw.get(startingItemKey(druidicFocus))
+  const item = policy.raw.get(startingItemKey(reference))
+  const isDruidicFocus = (row: Item5e | undefined) =>
+    !!row &&
+    !row.sourceIdentityConflict &&
+    typeof row.type === 'string' &&
+    row.type.toLowerCase() === 'scf|xphb' &&
+    row.scfType === 'druid'
+  if (
+    !isDruidicFocus(group) ||
+    !Array.isArray(group?.items) ||
+    !item ||
+    !isDruidicFocus(item) ||
+    !isSelectableEquipmentItem(item) ||
+    !Array.isArray(item.group) ||
+    !item.group.some(
+      (name) => typeof name === 'string' && name.trim().toLowerCase() === 'druidic focus',
+    ) ||
+    !item.dmg1 ||
+    !item.dmg2 ||
+    !item.dmgType ||
+    item.weaponCategory !== 'simple'
+  )
+    return unavailable
+
+  const members = group.items.map(groupMemberReference)
+  if (
+    members.some((member) => !member) ||
+    members.filter((member) => sameStartingReference(member, reference)).length !== 1
+  )
+    return unavailable
+  return { reference, entry, item }
 }
 
 export interface StartingEquipmentCandidates {

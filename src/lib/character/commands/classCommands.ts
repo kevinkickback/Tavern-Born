@@ -80,6 +80,7 @@ import { projectProficiencyCommandResult } from './proficiencyProjection'
 export interface ClassSelectionEntity {
   name: string
   source: string
+  sourceIdentityConflict?: boolean
   proficiency?: string[]
   startingEquipment?: unknown
   startingProficiencies?: {
@@ -229,10 +230,28 @@ function replaceClassEquipmentGrants(
   return nextLedger
 }
 
+function withCurrentStartingGrants(
+  policy: StartingEquipmentPolicy,
+  character: Character,
+  cls: Pick<ClassSelectionEntity, 'sourceIdentityConflict'>,
+) {
+  return {
+    ...policy,
+    owner: {
+      ...policy.owner,
+      sourceIdentityConflict: policy.owner.sourceIdentityConflict || cls.sourceIdentityConflict,
+    },
+    character: { ...policy.character, startingEquipmentGrants: character.startingEquipmentGrants },
+  }
+}
+
 export function applyClassEquipmentChoiceCommand(
   character: Character,
   ledger: ProvenanceLedger,
-  cls: Pick<ClassSelectionEntity, 'name' | 'source' | 'startingEquipment'>,
+  cls: Pick<
+    ClassSelectionEntity,
+    'name' | 'source' | 'startingEquipment' | 'sourceIdentityConflict'
+  >,
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
@@ -249,7 +268,8 @@ export function applyClassEquipmentChoiceCommand(
   const classChoiceKey = getClassChoiceKey(owner.name, owner.source)
   const itemSelections =
     genericSelections ?? character.classEquipmentItemChoices?.[classChoiceKey] ?? {}
-  const choices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
+  const previousChoices = character.classEquipmentChoices?.[classChoiceKey] ?? []
+  const choices = [...previousChoices]
   while (choices.length <= blockIndex) choices.push('a')
   choices[blockIndex] = choice.toLowerCase()
 
@@ -268,7 +288,11 @@ export function applyClassEquipmentChoiceCommand(
     createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
       ...itemLookup.values(),
     ])
-  if (!policy.ownerAvailable || !sameStartingReference(policy.owner, owner))
+  if (
+    !policy.ownerAvailable ||
+    policy.owner.kind !== 'class' ||
+    !sameStartingReference(policy.owner, owner)
+  )
     throw new RangeError('Restore the current initial Class rules first.')
   if (JSON.stringify(policy.startingEquipment) !== JSON.stringify(cls.startingEquipment))
     throw new RangeError('Starting equipment rules changed. Review the current Class.')
@@ -277,8 +301,13 @@ export function applyClassEquipmentChoiceCommand(
     itemLookup,
     choices,
     itemSelections,
-    policy,
+    withCurrentStartingGrants(policy, character, cls),
   )
+  if (
+    resolved.unavailablePackage &&
+    choices[blockIndex] !== (previousChoices[blockIndex]?.toLowerCase() ?? 'a')
+  )
+    throw new RangeError('Restore the exact starting equipment rules before switching packages.')
   assertStartingEquipmentSelections(
     resolved,
     itemSelections,
@@ -960,6 +989,7 @@ export function applyClassSelectionCommand(
   if (
     options?.startingEquipmentPolicy &&
     (!options.startingEquipmentPolicy.ownerAvailable ||
+      options.startingEquipmentPolicy.owner.kind !== 'class' ||
       !sameStartingReference(options.startingEquipmentPolicy.owner, cls) ||
       JSON.stringify(options.startingEquipmentPolicy.startingEquipment) !==
         JSON.stringify(cls.startingEquipment))
@@ -979,7 +1009,7 @@ export function applyClassSelectionCommand(
     cls,
     subclass,
     itemLookup,
-    equipmentPolicy,
+    withCurrentStartingGrants(equipmentPolicy, character, cls),
   )
   const identityCharacter = {
     ...character,

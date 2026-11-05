@@ -28,9 +28,16 @@ Group qualifiers apply to their own source clause. Exact member alternatives nar
 group (for example, Spellfire Initiate's Crystal/Wand choice); a neighboring gaming proficiency
 requirement does not restrict that focus. Legacy coordinated tool alternatives share only their
 own proficiency clause. Unknown, conflicting or unbound qualifiers stay unsupported. Display names
-can corroborate exact source references but cannot invent a printing or alias. The current Druid
-XPHB “Quarterstaff” focus qualifier has no proven match within its declared Druidic Focus group;
-that package slot remains pending rather than substituting Wooden Staff or offering every member.
+can corroborate exact source references. The revised Druid's Package A specifies a Quarterstaff
+form of Druidic Focus. The SRD Druidic Focuses table identifies Wooden Staff, so the exact live
+Druid XPHB package declaration and group member authorize one fixed Wooden Staff XPHB lot.
+When the exact group stays at its authored address but the corroborating text or item rules are
+unavailable or its member list contains invalid references, the focus lot stays pending and retains
+its existing grant. Either member reference format can identify the staff, and the group must list
+it exactly once. Missing or disputed package
+structure leaves the selected package pending and preserves its saved grants. A conflict in the
+shared entries suspends both options. A conflict confined to Package A leaves a valid B usable.
+An independently declared exact Wooden Staff uses the ordinary item rule at its own address.
 
 `startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
 address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and

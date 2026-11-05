@@ -1,8 +1,17 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test, vi } from 'vitest'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItems } from '@/lib/5etools/parsers/basic'
-import { buildItemLookup, resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import {
+  buildItemLookup,
+  getSelectedEquipmentPackage,
+  resolveClassEquipmentBlocks,
+} from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { duplicateCharacter, prepareCharacterImport } from '@/lib/character/characterTransfer'
 import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
 import {
@@ -22,6 +31,7 @@ import {
   reconcileStartingEquipmentGrant,
   setStartingCurrencyCommand,
 } from '@/lib/character/startingEquipmentGrants'
+import { validateStartingEquipment } from '@/lib/readiness/startingEquipmentReadiness'
 import { validateCharacterData } from '@/store/characterStore'
 import type { Background5e, Class5e, Item5e } from '@/types/5etools'
 import type { Character, Currency } from '@/types/character'
@@ -751,3 +761,435 @@ test.skipIf(
     expect(c.equipment.some((item) => item.id === id)).toBe(false)
   },
 )
+
+test('retains the fixed revised Druid focus lot through missing or ambiguous source rules', () => {
+  const root = 'resources/srd/core/data'
+  const read = (file: string) => JSON.parse(readFileSync(`${root}/${file}`, 'utf8'))
+  const cls = (parseClassDocument(read('class/class-druid.json')).classes as Class5e[]).find(
+    (row) => row.name === 'Druid' && row.source === 'XPHB',
+  )
+  if (!cls) throw new Error('Missing bundled revised Druid')
+  const raw = [
+    ...parseItems(read('items.json')),
+    ...parseItems(read('items-base.json')),
+  ] as Item5e[]
+  const itemLookup = buildItemLookup(raw)
+  const empty = makeCharacterFixture({
+    originSystem: '2024',
+    allowedSources: ['XPHB'],
+    classProgression: [],
+    initialClass: undefined,
+    equipment: [],
+    currency: gp(5),
+  })
+  const initial = apply(
+    empty,
+    applyClassSelectionCommand(empty, empty.provenance, cls, undefined, itemLookup),
+  )
+  const staff = initial.equipment.find((row) => row.name === 'Wooden Staff')
+  if (!staff) throw new Error('Missing granted Wooden Staff')
+  expect(staff).toMatchObject({ source: 'XPHB', quantity: 1, type: 'SCF|XPHB', dmg1: '1d6' })
+  const lot = initial.startingEquipmentGrants?.class?.items.find(
+    (row) => row.equipmentId === staff.id,
+  )
+  expect(lot).toMatchObject({ key: '[0,"a",3,"item","wooden staff","xphb"]', remainingQuantity: 1 })
+  const choose = (character: Character, branch: 'a' | 'b', items: readonly Item5e[] = raw) => {
+    const policy = createStartingEquipmentPolicy(
+      character,
+      { ...cls, kind: 'class' },
+      cls.startingEquipment,
+      items,
+    )
+    return apply(
+      character,
+      applyClassEquipmentChoiceCommand(
+        character,
+        character.provenance,
+        cls,
+        0,
+        branch,
+        itemLookup,
+        undefined,
+        policy,
+      ),
+    )
+  }
+  const exactMember = raw.find((row) => row.name === staff.name && row.source === staff.source)
+  if (!exactMember) throw new Error('Missing Wooden Staff rules')
+  const withdrawn = raw.filter((row) => row.name !== 'Druidic Focus' || row.source !== 'XPHB')
+  const focusGroup = raw.find((row) => row.name === 'Druidic Focus' && row.source === 'XPHB')
+  if (!focusGroup || !Array.isArray(focusGroup.items))
+    throw new Error('Missing Druidic Focus group')
+  const originalMembers = focusGroup.items
+  const wrapped = { name: 'Wooden Staff', source: 'XPHB' }
+  const withMembers = (members: unknown[]) =>
+    raw.map((row) => (row === focusGroup ? { ...focusGroup, items: members } : row))
+  for (const rules of [
+    withdrawn,
+    [...raw, exactMember],
+    ...[null, '|XPHB', 'Wooden Staff|XPHB|conflict', wrapped].map((entry) =>
+      withMembers([...originalMembers, entry]),
+    ),
+  ]) {
+    const fresh = apply(
+      empty,
+      applyClassSelectionCommand(empty, empty.provenance, cls, undefined, itemLookup, {
+        startingEquipmentPolicy: createStartingEquipmentPolicy(
+          empty,
+          { ...cls, kind: 'class' },
+          cls.startingEquipment,
+          rules,
+        ),
+      }),
+    )
+    expect(fresh.equipment.some((row) => row.name === 'Wooden Staff')).toBe(false)
+    const pending = choose(initial, 'a', rules)
+    expect(pending.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+    expect(
+      pending.startingEquipmentGrants?.class?.items.find((row) => row.equipmentId === staff.id),
+    ).toEqual(lot)
+    expect(choose(pending, 'a').equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  }
+  const wrappedMember = withMembers(
+    originalMembers.map((entry) =>
+      typeof entry === 'string' && entry.toLowerCase() === 'wooden staff|xphb' ? wrapped : entry,
+    ),
+  )
+  const wrappedFresh = apply(
+    empty,
+    applyClassSelectionCommand(
+      empty,
+      empty.provenance,
+      cls,
+      undefined,
+      buildItemLookup(wrappedMember),
+    ),
+  )
+  expect(wrappedFresh.equipment.find((row) => row.name === 'Wooden Staff')).toMatchObject({
+    source: 'XPHB',
+    quantity: 1,
+  })
+  const declared = cls.startingEquipment as {
+    defaultData: Array<{ A: unknown[]; B: unknown[] }>
+    entries: string[]
+  }
+  const [originalBlock] = declared.defaultData
+  const lostSlot = {
+    ...cls,
+    startingEquipment: {
+      ...declared,
+      defaultData: [{ ...originalBlock, A: originalBlock.A.filter((_, index) => index !== 3) }],
+    },
+  }
+  const lostPackage = { ...cls, startingEquipment: undefined }
+  const [ambiguousOwner] = composeGameDataLayers([
+    { ...createEmptyGameData(), classes: [cls, lostPackage] },
+  ]).classes
+  expect(ambiguousOwner).toMatchObject({ sourceIdentityConflict: true })
+  expect(ambiguousOwner.startingEquipment).toBeUndefined()
+  const partial = apply(
+    empty,
+    applyClassSelectionCommand(empty, empty.provenance, cls, undefined, buildItemLookup(withdrawn)),
+  )
+  expect(partial.equipment).not.toHaveLength(0)
+  expect(partial.currency).toEqual(gp(14))
+  const conflicted = apply(
+    partial,
+    applyClassSelectionCommand(partial, partial.provenance, ambiguousOwner, undefined, itemLookup),
+  )
+  expect(conflicted.equipment).toEqual(partial.equipment)
+  expect(conflicted.currency).toEqual(partial.currency)
+  expect(conflicted.startingEquipmentGrants).toEqual(partial.startingEquipmentGrants)
+  const lookups = { classesByKey: buildClassLookup([ambiguousOwner]), itemLookup }
+  const calculation = createCharacterCalculationContext(conflicted, lookups, lookups)
+  expect(validateStartingEquipment(conflicted, calculation)).toContainEqual(
+    expect.objectContaining({
+      id: 'starting-equipment:class',
+      severity: 'blocking',
+      explanation: 'Restore the exact Druid source rules.',
+    }),
+  )
+
+  const onB = choose(initial, 'b')
+  for (const placement of ['package', 'shared', 'shared-block', 'shared-group'] as const) {
+    const extraStaff = {
+      item: placement === 'shared-group' ? 'Druidic Focus|XPHB' : 'Wooden Staff|XPHB',
+    }
+    const duplicate = {
+      ...cls,
+      startingEquipment: {
+        ...declared,
+        defaultData:
+          placement === 'shared-block'
+            ? [originalBlock, { _: [extraStaff] }]
+            : [
+                placement === 'package'
+                  ? { ...originalBlock, A: [...originalBlock.A, extraStaff] }
+                  : { ...originalBlock, _: [extraStaff] },
+              ],
+      },
+    }
+    const select = (character: Character) =>
+      apply(
+        character,
+        applyClassSelectionCommand(
+          character,
+          character.provenance,
+          duplicate,
+          undefined,
+          itemLookup,
+        ),
+      )
+    expect(select(empty).equipment).toEqual(empty.equipment)
+    const retained = select(initial)
+    expect(retained.equipment).toEqual(initial.equipment)
+    expect(retained.currency).toEqual(initial.currency)
+    expect(retained.startingEquipmentGrants).toEqual(initial.startingEquipmentGrants)
+    const existingB = select(onB)
+    expect(existingB.equipment).toEqual(onB.equipment)
+    expect(existingB.currency).toEqual(gp(55))
+    const switchToB = () =>
+      applyClassEquipmentChoiceCommand(initial, initial.provenance, duplicate, 0, 'b', itemLookup)
+    if (placement !== 'package') {
+      expect(switchToB).toThrow(
+        'Restore the exact starting equipment rules before switching packages.',
+      )
+    } else {
+      expect(apply(initial, switchToB()).equipment).toEqual(onB.equipment)
+    }
+  }
+
+  const independentGroup = {
+    ...declared,
+    defaultData: [{ ...originalBlock, _: [{ item: 'Druidic Focus|PHB' }] }],
+  }
+  const independentPolicy = createStartingEquipmentPolicy(
+    empty,
+    { ...cls, kind: 'class' },
+    independentGroup,
+    raw,
+  )
+  const independentOptions = resolveClassEquipmentBlocks(
+    independentGroup,
+    itemLookup,
+    {},
+    independentPolicy,
+  )[0].options
+  expect(independentOptions.a.unavailablePackage).toBeUndefined()
+  expect(independentOptions.b.unavailablePackage).toBeUndefined()
+
+  for (const missing of [lostSlot, lostPackage]) {
+    const policy = createStartingEquipmentPolicy(
+      initial,
+      { ...missing, kind: 'class' },
+      missing.startingEquipment,
+      raw,
+    )
+    const pkg = resolveClassEquipmentBlocks(missing.startingEquipment, itemLookup, {}, policy)[0]
+      .options.a
+    expect(pkg.issues).toContain('Restore the exact Wooden Staff starting focus rules.')
+    expect(pkg.items.some((row) => row.name === 'Wooden Staff')).toBe(false)
+    const pending = apply(
+      initial,
+      applyClassSelectionCommand(initial, initial.provenance, missing, undefined, itemLookup),
+    )
+    expect(pending.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  }
+  for (const insertion of ['except ', '{@item Druidic Focus|PHB}, ']) {
+    const conflict = {
+      ...declared,
+      entries: declared.entries.map((line) =>
+        line.replace('{@item Druidic Focus|XPHB|', `${insertion}{@item Druidic Focus|XPHB|`),
+      ),
+    }
+    const policy = createStartingEquipmentPolicy(empty, { ...cls, kind: 'class' }, conflict, raw)
+    const pkg = resolveClassEquipmentBlocks(conflict, itemLookup, {}, policy)[0].options.a
+    expect(pkg.issues).toContain('Restore the exact Wooden Staff starting focus rules.')
+    expect(pkg.items.some((row) => row.name === 'Wooden Staff')).toBe(false)
+  }
+  const bothMissing = {
+    ...lostSlot,
+    startingEquipment: { ...lostSlot.startingEquipment, entries: [] },
+  }
+  const stalePolicy = createStartingEquipmentPolicy(
+    empty,
+    { ...bothMissing, kind: 'class' },
+    bothMissing.startingEquipment,
+    raw,
+  )
+  const reissued = apply(
+    initial,
+    applyClassEquipmentChoiceCommand(
+      initial,
+      initial.provenance,
+      bothMissing,
+      0,
+      'a',
+      itemLookup,
+      undefined,
+      stalePolicy,
+    ),
+  )
+  expect(reissued.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  const noA = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, A: [] }] },
+  }
+  const noB = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ A: originalBlock.A }] },
+  }
+  const consumedPack = initial.equipment.find((row) => row.name === "Explorer's Pack")
+  if (!consumedPack) throw new Error('Missing canonical Explorer’s Pack')
+  const afterConsumption = apply(
+    initial,
+    updateEquipmentQuantityCommand(initial, initial.provenance, consumedPack.id, 0),
+  )
+  const malformedB = [[], [null], [{}], [{ value: '5000' }], [{ item: 5 }]].map((B) => ({
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, B }] },
+  }))
+  const disputedFocus = [{ quantity: 2 }, { displayName: 'Different Focus' }, { value: 2000 }].map(
+    (changes) => ({
+      ...cls,
+      startingEquipment: {
+        ...declared,
+        defaultData: [
+          {
+            ...originalBlock,
+            A: originalBlock.A.map((entry, index) =>
+              index === 3
+                ? { ...(entry as { item: string }), ...changes }
+                : index === 6
+                  ? { value: 3000 }
+                  : entry,
+            ),
+          },
+        ],
+      },
+    }),
+  )
+  const unavailablePackages = [
+    ...[bothMissing, lostSlot, noA, ...disputedFocus].map((owner) => ({
+      owner,
+      saved: afterConsumption,
+    })),
+    ...[lostPackage, noB, ...malformedB].map((owner) => ({ owner, saved: onB })),
+  ]
+  for (const { owner: unavailable, saved } of unavailablePackages) {
+    const reopened = apply(
+      saved,
+      applyClassSelectionCommand(saved, saved.provenance, unavailable, undefined, itemLookup),
+    )
+    expect(reopened.startingEquipmentGrants).toEqual(saved.startingEquipmentGrants)
+    expect(reopened.equipment).toEqual(saved.equipment)
+    expect(reopened.currency).toEqual(saved.currency)
+    const current = { classesByKey: buildClassLookup([unavailable]), itemLookup }
+    expect(
+      validateStartingEquipment(
+        reopened,
+        createCharacterCalculationContext(reopened, current, current),
+      ),
+    ).toContainEqual(
+      expect.objectContaining({ id: 'starting-equipment:class', severity: 'blocking' }),
+    )
+    const policy = createStartingEquipmentPolicy(
+      saved,
+      { ...unavailable, kind: 'class' },
+      unavailable.startingEquipment,
+      raw,
+    )
+    const options = resolveClassEquipmentBlocks(
+      unavailable.startingEquipment,
+      itemLookup,
+      {},
+      policy,
+    )
+    const selected = getSelectedEquipmentPackage(
+      options,
+      saved.classEquipmentChoices?.['Druid|XPHB'] ?? [],
+    )
+    expect(selected).toMatchObject({ currency: gp(0), unavailablePackage: true })
+    expect(needsStartingEquipmentApplication(saved, 'class', selected)).toBe(false)
+  }
+  for (const missing of [lostPackage, bothMissing, lostSlot, noA]) {
+    const fresh = apply(
+      empty,
+      applyClassSelectionCommand(empty, empty.provenance, missing, undefined, itemLookup),
+    )
+    expect(fresh.equipment).toEqual([])
+    expect(fresh.currency).toEqual(empty.currency)
+  }
+  const duplicateLookup = {
+    classesByKey: buildClassLookup([cls, lostPackage]),
+    classChoiceClasses: [cls, lostPackage],
+    itemLookup,
+  }
+  expect(
+    validateStartingEquipment(
+      initial,
+      createCharacterCalculationContext(initial, duplicateLookup, duplicateLookup),
+    ),
+  ).toContainEqual(
+    expect.objectContaining({
+      id: 'starting-equipment:class',
+      explanation: 'Restore the exact Druid source rules.',
+    }),
+  )
+  const direct = {
+    ...cls,
+    startingEquipment: {
+      entries: [],
+      defaultData: [{ A: [{ item: 'Wooden Staff|XPHB' }, { value: 1300 }], B: originalBlock.B }],
+    },
+  }
+  const directCharacter = apply(
+    initial,
+    applyClassSelectionCommand(initial, initial.provenance, direct, undefined, itemLookup),
+  )
+  expect(directCharacter.currency).toEqual(gp(18))
+  expect(directCharacter.startingEquipmentGrants?.class?.items).toMatchObject([
+    { key: '[0,"a",0,"item","wooden staff","xphb"]', remainingQuantity: 1 },
+  ])
+  const disputedB = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, B: [{ value: 9900 }] }] },
+  }
+  const [conflictingB] = composeGameDataLayers([
+    { ...createEmptyGameData(), classes: [cls, disputedB] },
+  ]).classes
+  const preservedB = apply(
+    onB,
+    applyClassSelectionCommand(onB, onB.provenance, ambiguousOwner, undefined, itemLookup),
+  )
+  expect(preservedB.startingEquipmentGrants).toEqual(onB.startingEquipmentGrants)
+  expect(preservedB.currency).toEqual(gp(55))
+  const staleB = createStartingEquipmentPolicy(
+    initial,
+    { ...disputedB, kind: 'class' },
+    disputedB.startingEquipment,
+    raw,
+  )
+  expect(() =>
+    applyClassEquipmentChoiceCommand(
+      initial,
+      initial.provenance,
+      conflictingB,
+      0,
+      'b',
+      itemLookup,
+      undefined,
+      staleB,
+    ),
+  ).toThrow('Restore the exact starting equipment rules before switching packages.')
+  expect(() =>
+    applyClassEquipmentChoiceCommand(onB, onB.provenance, noA, 0, 'a', itemLookup),
+  ).toThrow('Restore the exact starting equipment rules before switching packages.')
+  const consumed = apply(
+    initial,
+    updateEquipmentQuantityCommand(initial, initial.provenance, staff.id, 0),
+  )
+  expect(choose(consumed, 'a').equipment.some((row) => row.id === staff.id)).toBe(false)
+  expect(choose(initial, 'b').equipment.some((row) => row.id === staff.id)).toBe(false)
+  expect(choose(initial, 'b').currency).toEqual(gp(55))
+})
