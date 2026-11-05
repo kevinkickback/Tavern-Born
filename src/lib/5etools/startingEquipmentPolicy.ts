@@ -1,6 +1,9 @@
 import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import { matchesClassChoiceFilter } from '@/lib/character/classChoiceFilters'
-import { sameStartingReference } from '@/lib/character/startingEquipmentGrants'
+import {
+  sameStartingReference,
+  startingEquipmentLotKey,
+} from '@/lib/character/startingEquipmentGrants'
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import type { Item5e } from '@/types/5etools'
@@ -22,8 +25,12 @@ export interface StartingEquipmentPolicy {
   raw: ReadonlyMap<string, Item5e>
   available: ReadonlyMap<string, Item5e>
   itemTypes: Readonly<Record<string, string>>
-  character: Pick<Character, 'proficiencies' | 'provenance'>
-  owner: StartingItemReference & { kind: 'class' | 'background'; entries?: unknown[] }
+  character: Pick<Character, 'proficiencies' | 'provenance' | 'startingEquipmentGrants'>
+  owner: StartingItemReference & {
+    kind: 'class' | 'background'
+    entries?: unknown[]
+    sourceIdentityConflict?: boolean
+  }
   ownerAvailable: boolean
   startingEquipment: unknown
 }
@@ -190,6 +197,151 @@ function proficient(policy: StartingEquipmentPolicy, item: Item5e, text: string)
           ),
       ),
   )
+}
+
+const druidicFocus = { name: 'Druidic Focus', source: 'XPHB' }
+const quarterstaffFocus = {
+  display: 'Druidic Focus (Quarterstaff)',
+  member: { name: 'Wooden Staff', source: 'XPHB' },
+}
+
+const entryRecord = (value: unknown) =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+
+const itemReference = (value: unknown) =>
+  typeof value === 'string' ? startingItemUid(value) : undefined
+
+/** SRD 5.2.1 pp. 41 and 97 bind this exact package qualifier to the Wooden Staff focus. */
+export function resolveFixedStartingEquipmentMember(
+  policy: StartingEquipmentPolicy,
+  block: number,
+  option: string,
+  entries: readonly unknown[],
+):
+  | {
+      reference: StartingItemReference
+      entry: number
+      replacesEntry: boolean
+      item?: Item5e
+      diagnostic?: string
+    }
+  | undefined {
+  if (
+    policy.owner.kind !== 'class' ||
+    !sameStartingReference(policy.owner, { name: 'Druid', source: 'XPHB' }) ||
+    block !== 0 ||
+    option.toLowerCase() !== 'a'
+  )
+    return undefined
+
+  const entry = 3
+  const reference = quarterstaffFocus.member
+  const groupEntry = (value: unknown) =>
+    sameStartingReference(itemReference(entryRecord(value)?.item ?? value), druidicFocus)
+  const currentEntry = entries[entry]
+  const declaresGroup = groupEntry(currentEntry)
+  const directMember = sameStartingReference(
+    itemReference(entryRecord(currentEntry)?.item ?? currentEntry),
+    reference,
+  )
+  const replacesEntry = declaresGroup || directMember
+  const fragments = startingEquipmentTextFragments(
+    'class',
+    policy.startingEquipment,
+    policy.owner.entries,
+    block,
+  )
+  const declaredInText =
+    fragments.length === 1 &&
+    !startingGroupRule(
+      fragments,
+      druidicFocus,
+      [`${reference.name}|${reference.source}`],
+      { option, entry },
+      quarterstaffFocus,
+    ).diagnostic
+  const prior = policy.character.startingEquipmentGrants?.class
+  const key = startingEquipmentLotKey(block, 'a', entry, { kind: 'item', ...reference })
+  const retained =
+    prior &&
+    sameStartingReference(prior.owner, policy.owner) &&
+    prior.items.some(
+      (lot) =>
+        lot.key === key &&
+        lot.reference.kind === 'item' &&
+        sameStartingReference(lot.reference, reference),
+    )
+  if (!declaresGroup && !declaredInText && (directMember || !retained)) return undefined
+
+  const unavailable = {
+    reference,
+    entry,
+    replacesEntry,
+    diagnostic: 'Restore the exact Wooden Staff starting focus rules.',
+  }
+  const packageData = entryRecord(policy.startingEquipment)?.defaultData
+  const currentBlock = Array.isArray(packageData) && entryRecord(packageData[block])
+  const packageKeys = currentBlock
+    ? Object.keys(currentBlock).filter((key) => key.toLowerCase() === 'a')
+    : []
+  const packageA =
+    currentBlock && packageKeys.length === 1 ? currentBlock[packageKeys[0]] : undefined
+  const entryMatches = (value: unknown) => {
+    const row = entryRecord(value)
+    return (
+      row &&
+      Object.keys(row).every((key) => ['item', 'quantity', 'displayName'].includes(key)) &&
+      (row.quantity === undefined || row.quantity === 1) &&
+      (row.displayName === undefined ||
+        (typeof row.displayName === 'string' &&
+          row.displayName.trim().toLowerCase() === quarterstaffFocus.display.toLowerCase())) &&
+      sameStartingReference(itemReference(row.item), druidicFocus)
+    )
+  }
+  if (
+    !policy.ownerAvailable ||
+    policy.owner.sourceIdentityConflict ||
+    !Array.isArray(packageA) ||
+    !entryMatches(entries[entry]) ||
+    !entryMatches(packageA[entry]) ||
+    packageA.filter(groupEntry).length !== 1 ||
+    !declaredInText
+  )
+    return unavailable
+
+  const group = policy.raw.get(startingItemKey(druidicFocus))
+  const item = policy.raw.get(startingItemKey(reference))
+  const isDruidicFocus = (row: Item5e | undefined) =>
+    !!row &&
+    !row.sourceIdentityConflict &&
+    typeof row.type === 'string' &&
+    row.type.toLowerCase() === 'scf|xphb' &&
+    row.scfType === 'druid'
+  if (
+    !isDruidicFocus(group) ||
+    !Array.isArray(group?.items) ||
+    !item ||
+    !isDruidicFocus(item) ||
+    !isSelectableEquipmentItem(item) ||
+    !Array.isArray(item.group) ||
+    !item.group.some(
+      (name) => typeof name === 'string' && name.trim().toLowerCase() === 'druidic focus',
+    ) ||
+    !item.dmg1 ||
+    !item.dmg2 ||
+    !item.dmgType ||
+    item.weaponCategory !== 'simple'
+  )
+    return unavailable
+
+  const memberUids = group.items.filter((uid): uid is string => typeof uid === 'string')
+  if (
+    memberUids.filter((uid) => sameStartingReference(startingItemUid(uid), reference)).length !== 1
+  )
+    return unavailable
+  return { reference, entry, replacesEntry, item }
 }
 
 export interface StartingEquipmentCandidates {

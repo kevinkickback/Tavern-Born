@@ -302,11 +302,11 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "3d2ac705bcc31c84796d147b6d7739c4173e80054cc61fee88289bd697f3bf34"
+      "sha256": "65253006d8d10828ce8fd66896ca504fa23350d59562761ea5fd823c8917f434"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
-      "sha256": "ea0822ef77edd6dbd61fcecfbac7e3c25399123f8db992bde47b68abfbfbb0af"
+      "sha256": "069a48d64d3e1b79ba01dba8d4e611a9b1c23abbaf54e0102598e5c99477d5d1"
     },
     {
       "file": "src/lib/5etools/startingEquipmentIdentity.ts",
@@ -314,7 +314,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipmentPolicy.ts",
-      "sha256": "1343ecf527b56272c7a66c24c2c80d597543eb9a231d283e35899176b6546ab4"
+      "sha256": "a1da5c988b35b04bb4be138897d318b66a7f17a3a49470f1be69a7d9cd15bdec"
     },
     {
       "file": "src/lib/5etools/startingItemCategory.ts",

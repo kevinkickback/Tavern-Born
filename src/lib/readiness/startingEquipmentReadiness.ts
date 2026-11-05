@@ -68,6 +68,7 @@ export function validateStartingEquipment(
       {
         ...reference,
         kind: role,
+        sourceIdentityConflict: owner.sourceIdentityConflict === true,
         entries: Array.isArray(owner.entries) ? owner.entries : undefined,
       },
       owner.startingEquipment,

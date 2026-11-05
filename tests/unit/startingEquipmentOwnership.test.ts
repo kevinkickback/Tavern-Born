@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test, vi } from 'vitest'
 import { parseItems } from '@/lib/5etools/parsers/basic'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildItemLookup, resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { duplicateCharacter, prepareCharacterImport } from '@/lib/character/characterTransfer'
@@ -751,3 +752,149 @@ test.skipIf(
     expect(c.equipment.some((item) => item.id === id)).toBe(false)
   },
 )
+
+test('retains the fixed revised Druid focus lot through missing or ambiguous source rules', () => {
+  const root = 'resources/srd/core/data'
+  const read = (file: string) => JSON.parse(readFileSync(`${root}/${file}`, 'utf8'))
+  const cls = (parseClassDocument(read('class/class-druid.json')).classes as Class5e[]).find(
+    (row) => row.name === 'Druid' && row.source === 'XPHB',
+  )
+  if (!cls) throw new Error('Missing bundled revised Druid')
+  const raw = [
+    ...parseItems(read('items.json')),
+    ...parseItems(read('items-base.json')),
+  ] as Item5e[]
+  const itemLookup = buildItemLookup(raw)
+  const empty = makeCharacterFixture({
+    originSystem: '2024',
+    allowedSources: ['XPHB'],
+    classProgression: [],
+    initialClass: undefined,
+    equipment: [],
+    currency: gp(5),
+  })
+  const initial = apply(
+    empty,
+    applyClassSelectionCommand(empty, empty.provenance, cls, undefined, itemLookup),
+  )
+  const staff = initial.equipment.find((row) => row.name === 'Wooden Staff')
+  if (!staff) throw new Error('Missing granted Wooden Staff')
+  expect(staff).toMatchObject({ source: 'XPHB', quantity: 1, type: 'SCF|XPHB', dmg1: '1d6' })
+  const lot = initial.startingEquipmentGrants?.class?.items.find(
+    (row) => row.equipmentId === staff.id,
+  )
+  expect(lot).toMatchObject({ key: '[0,"a",3,"item","wooden staff","xphb"]', remainingQuantity: 1 })
+  const choose = (character: Character, branch: 'a' | 'b', items: readonly Item5e[] = raw) => {
+    const policy = createStartingEquipmentPolicy(
+      character,
+      { ...cls, kind: 'class' },
+      cls.startingEquipment,
+      items,
+    )
+    return apply(
+      character,
+      applyClassEquipmentChoiceCommand(
+        character,
+        character.provenance,
+        cls,
+        0,
+        branch,
+        itemLookup,
+        undefined,
+        policy,
+      ),
+    )
+  }
+  const exactMember = raw.find((row) => row.name === staff.name && row.source === staff.source)
+  if (!exactMember) throw new Error('Missing Wooden Staff rules')
+  const withdrawn = raw.filter((row) => row.name !== 'Druidic Focus' || row.source !== 'XPHB')
+  for (const rules of [withdrawn, [...raw, exactMember]]) {
+    const pending = choose(initial, 'a', rules)
+    expect(pending.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+    expect(
+      pending.startingEquipmentGrants?.class?.items.find((row) => row.equipmentId === staff.id),
+    ).toEqual(lot)
+    expect(choose(pending, 'a').equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  }
+  const declared = cls.startingEquipment as {
+    defaultData: Array<{ A: unknown[]; B: unknown[] }>
+    entries: string[]
+  }
+  const [originalBlock] = declared.defaultData
+  const lostSlot = {
+    ...cls,
+    startingEquipment: {
+      ...declared,
+      defaultData: [{ ...originalBlock, A: originalBlock.A.filter((_, index) => index !== 3) }],
+    },
+  }
+  const lostPackage = { ...cls, startingEquipment: undefined }
+  for (const missing of [lostSlot, lostPackage]) {
+    const policy = createStartingEquipmentPolicy(
+      initial,
+      { ...missing, kind: 'class' },
+      missing.startingEquipment,
+      raw,
+    )
+    const pkg = resolveClassEquipmentBlocks(missing.startingEquipment, itemLookup, {}, policy)[0]
+      .options.a
+    expect(pkg.issues).toContain('Restore the exact Wooden Staff starting focus rules.')
+    expect(pkg.items.some((row) => row.name === 'Wooden Staff')).toBe(false)
+    const pending = apply(
+      initial,
+      applyClassSelectionCommand(initial, initial.provenance, missing, undefined, itemLookup),
+    )
+    expect(pending.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  }
+  for (const insertion of ['except ', '{@item Druidic Focus|PHB}, ']) {
+    const conflict = {
+      ...declared,
+      entries: declared.entries.map((line) =>
+        line.replace('{@item Druidic Focus|XPHB|', `${insertion}{@item Druidic Focus|XPHB|`),
+      ),
+    }
+    const policy = createStartingEquipmentPolicy(empty, { ...cls, kind: 'class' }, conflict, raw)
+    const pkg = resolveClassEquipmentBlocks(conflict, itemLookup, {}, policy)[0].options.a
+    expect(pkg.issues).toContain('Restore the exact Wooden Staff starting focus rules.')
+    expect(pkg.items.some((row) => row.name === 'Wooden Staff')).toBe(false)
+  }
+  const bothMissing = {
+    ...lostSlot,
+    startingEquipment: { ...lostSlot.startingEquipment, entries: [] },
+  }
+  const stalePolicy = createStartingEquipmentPolicy(
+    empty,
+    { ...bothMissing, kind: 'class' },
+    bothMissing.startingEquipment,
+    raw,
+  )
+  const reissued = apply(
+    initial,
+    applyClassEquipmentChoiceCommand(
+      initial,
+      initial.provenance,
+      bothMissing,
+      0,
+      'a',
+      itemLookup,
+      undefined,
+      stalePolicy,
+    ),
+  )
+  expect(reissued.equipment.find((row) => row.id === staff.id)).toEqual(staff)
+  const noA = {
+    ...cls,
+    startingEquipment: { ...declared, defaultData: [{ ...originalBlock, A: [] }] },
+  }
+  const onB = choose(initial, 'b')
+  expect(() =>
+    applyClassEquipmentChoiceCommand(onB, onB.provenance, noA, 0, 'a', itemLookup),
+  ).toThrow('Restore the exact starting equipment rules before switching packages.')
+  const consumed = apply(
+    initial,
+    updateEquipmentQuantityCommand(initial, initial.provenance, staff.id, 0),
+  )
+  expect(choose(consumed, 'a').equipment.some((row) => row.id === staff.id)).toBe(false)
+  expect(choose(initial, 'b').equipment.some((row) => row.id === staff.id)).toBe(false)
+  expect(choose(initial, 'b').currency).toEqual(gp(55))
+})

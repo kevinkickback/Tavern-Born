@@ -57,21 +57,27 @@ export function buildInitialCharacter(
   const equipmentPolicy = (owner: Class5e | Background5e, kind: 'class' | 'background') => {
     const authority = spellLookups?.startingEquipment
     if (!authority) return undefined
+    const owners = (kind === 'class' ? authority.classes : authority.backgrounds).filter((row) =>
+      sameStartingReference(row, owner),
+    )
+    const current = kind === 'class' ? owners[0] : owner
     return createStartingEquipmentPolicy(
       character,
       {
         name: owner.name,
         source: owner.source,
         kind,
-        entries: Array.isArray(owner.entries) ? owner.entries : undefined,
+        sourceIdentityConflict:
+          owners.length > 1 ||
+          owner.sourceIdentityConflict === true ||
+          owners[0]?.sourceIdentityConflict === true,
+        entries: Array.isArray(current?.entries) ? current.entries : undefined,
       },
-      owner.startingEquipment,
+      current?.startingEquipment,
       authority.rawItems,
       authority.availableItems,
       authority.itemTypes,
-      (kind === 'class' ? authority.classes : authority.backgrounds).some((row) =>
-        sameStartingReference(row, owner),
-      ),
+      owners.length > 0,
     )
   }
   const raceResolution = selections.race

@@ -231,14 +231,20 @@ test.runIf(available)(
       {},
       true,
     )
-    const unresolved = resolveClassEquipmentBlocks(
+    const packageA = resolveClassEquipmentBlocks(
       druid.startingEquipment,
       lookup,
       {},
       druidPolicy,
-    )[0].options.a.genericChoices!.find((slot) => slot.token === 'Druidic Focus')!
-    expect(unresolved.candidates).toEqual([])
-    expect(unresolved.diagnostic).toBeTruthy()
+    )[0].options.a
+    expect(packageA.genericChoices).toEqual([])
+    expect(packageA.issues).toEqual([])
+    expect(packageA.lots).toContainEqual(
+      expect.objectContaining({
+        reference: { kind: 'item', name: 'Wooden Staff', source: 'XPHB' },
+        item: expect.objectContaining({ name: 'Wooden Staff', source: 'XPHB', quantity: 1 }),
+      }),
+    )
   },
 )
 

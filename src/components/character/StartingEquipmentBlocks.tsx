@@ -35,6 +35,11 @@ export function StartingEquipmentBlocks({
     const currency = formatEquipmentOptionEntries({ ...pkg, items: [], genericChoices: [] })
     return (
       <div className="space-y-2.5">
+        {pkg.fixedIssues?.map((issue) => (
+          <p key={issue} className="text-xs text-muted-foreground">
+            {issue}
+          </p>
+        ))}
         {pkg.genericChoices?.map((choice) => (
           <GenericEquipmentSelect
             key={choice.key}

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Elemental Fury: measured 6,483,144 B renderer and 1,242,288 B initial.
+  // Revised Druid starting focus: measured 6,487,771 B renderer and 1,246,860 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6332 * KIB,
-  initialRendererScript: 1214 * KIB,
+  rendererCode: 6336 * KIB,
+  initialRendererScript: 1218 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -229,6 +229,13 @@ function replaceClassEquipmentGrants(
   return nextLedger
 }
 
+function withCurrentStartingGrants(policy: StartingEquipmentPolicy, character: Character) {
+  return {
+    ...policy,
+    character: { ...policy.character, startingEquipmentGrants: character.startingEquipmentGrants },
+  }
+}
+
 export function applyClassEquipmentChoiceCommand(
   character: Character,
   ledger: ProvenanceLedger,
@@ -249,7 +256,8 @@ export function applyClassEquipmentChoiceCommand(
   const classChoiceKey = getClassChoiceKey(owner.name, owner.source)
   const itemSelections =
     genericSelections ?? character.classEquipmentItemChoices?.[classChoiceKey] ?? {}
-  const choices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
+  const previousChoices = character.classEquipmentChoices?.[classChoiceKey] ?? []
+  const choices = [...previousChoices]
   while (choices.length <= blockIndex) choices.push('a')
   choices[blockIndex] = choice.toLowerCase()
 
@@ -277,8 +285,10 @@ export function applyClassEquipmentChoiceCommand(
     itemLookup,
     choices,
     itemSelections,
-    policy,
+    withCurrentStartingGrants(policy, character),
   )
+  if (resolved.unavailablePackage && previousChoices[blockIndex]?.toLowerCase() === 'b')
+    throw new RangeError('Restore the exact starting equipment rules before switching packages.')
   assertStartingEquipmentSelections(
     resolved,
     itemSelections,
@@ -979,7 +989,7 @@ export function applyClassSelectionCommand(
     cls,
     subclass,
     itemLookup,
-    equipmentPolicy,
+    withCurrentStartingGrants(equipmentPolicy, character),
   )
   const identityCharacter = {
     ...character,
