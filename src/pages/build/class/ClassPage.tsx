@@ -32,6 +32,7 @@ import {
   effectiveDeclaredEntries,
   resolveActiveClassChoiceDetail,
 } from '@/lib/character/classFeatureActivityView'
+import { EPIC_BOON_LEVEL } from '@/lib/character/epicBoonSlots'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -302,6 +303,9 @@ export function BuildClassPage() {
   const {
     characterSnapshot,
     featPickerSnapshot,
+    epicBoonSlot,
+    editEpicBoonOptions,
+    epicBoonAsiPicker,
     revisedFeatSlot,
     totalAsi: totalASIAcrossClasses,
     usedAsi: usedASI,
@@ -428,7 +432,10 @@ export function BuildClassPage() {
   const { subclassLevel, subclassFeatureName } = useMemo(() => {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
-  const asiLevels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
+  const asiLevels = useMemo(() => {
+    const levels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
+    return epicBoonSlot && !levels.includes(EPIC_BOON_LEVEL) ? [...levels, EPIC_BOON_LEVEL] : levels
+  }, [viewingClassData, epicBoonSlot])
   const levelsToShow = useMemo(
     () =>
       buildLevelsToShow({
@@ -570,11 +577,15 @@ export function BuildClassPage() {
               spellByReference={spellByReference}
               appliedAsiChoicesForClass={appliedAsiChoicesForClass}
               classAsiFeats={classAsiFeats}
+              epicBoonSlot={epicBoonSlot}
+              onEditEpicBoonOptions={editEpicBoonOptions}
               asiModeByLevel={asiModeByLevel}
               usedASI={usedASI}
               totalASIAcrossClasses={totalASIAcrossClasses}
               classChoices={classChoiceController.choices}
-              classChoiceRecoveries={classChoiceController.recoveries}
+              classChoiceRecoveries={classChoiceController.recoveries.filter(
+                (state) => state.selection.choiceId !== epicBoonSlot?.choiceId,
+              )}
               onRecoverClassChoice={classChoiceController.openRecovery}
               classChoiceDiagnostics={classChoiceController.diagnostics}
               selectedClassChoiceViewsById={classChoiceController.selectedViewsByChoiceId}
@@ -645,6 +656,7 @@ export function BuildClassPage() {
         characterSnapshot={featPickerSnapshot}
         requireFeatPrerequisites={revisedFeatSlot}
         asiPickerLevel={asiPickerLevel}
+        epicBoonAsiPicker={epicBoonAsiPicker}
         onAsiPickerLevelChange={setAsiPickerLevel}
         appliedAsiChoicesForClass={appliedAsiChoicesForClass}
         onAsiApply={handleAsiApply}

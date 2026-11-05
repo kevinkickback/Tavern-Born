@@ -7,6 +7,7 @@ import type {
 import { normalizeClassChoices } from './classChoiceNormalization'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
+import { EPIC_BOON_LEVEL, isEpicBoonFeatureReference } from './epicBoonAdvancement'
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
 const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -283,7 +284,10 @@ function parseTableResources(
 }
 
 export function normalizeClassRules(
-  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups' | 'optionalfeatureProgression'>,
+  classData: Pick<
+    Class5e,
+    'name' | 'source' | 'sourceIdentityConflict' | 'classTableGroups' | 'optionalfeatureProgression'
+  >,
   refs: readonly ClassFeatureReference[],
 ): NormalizedClassRules {
   const resources = parseTableResources(classData, refs)
@@ -293,7 +297,11 @@ export function normalizeClassRules(
   }
 
   const asiLevels = refs
-    .filter((ref) => ASI_FEATURE.test(ref.name))
+    .filter((ref) =>
+      classData.source.trim().toLowerCase() === 'xphb' && isEpicBoonFeatureReference(ref)
+        ? getClassFeatureReferenceLevel(ref) === EPIC_BOON_LEVEL
+        : ASI_FEATURE.test(ref.name),
+    )
     .map(getClassFeatureReferenceLevel)
     .filter((level): level is number => typeof level === 'number')
     .filter((level, index, levels) => levels.indexOf(level) === index)

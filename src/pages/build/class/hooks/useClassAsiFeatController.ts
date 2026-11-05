@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { deriveFeatOptionSteps, hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
-import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import {
+  createCharacterCalculationContext,
+  getIntrinsicAbilityScores,
+} from '@/lib/calculations/characterCalculationContext'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getFeatOptionOwnerKey } from '@/lib/character/commands/featCommandIdentity'
@@ -14,6 +17,14 @@ import {
   type FeatOptionTarget,
   replaceFeatSelectionsCommand,
 } from '@/lib/character/commands/featCommands'
+import {
+  countReservedEpicBoonFeatSlots,
+  EPIC_BOON_LEVEL,
+  type EpicBoonSlot,
+  isEpicBoonAsiFeat,
+  replaceEpicBoonSelection,
+  withoutEpicBoonSelection,
+} from '@/lib/character/epicBoonSlots'
 import { getFeatSetupOwners } from '@/lib/character/featSetupOwners'
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -25,8 +36,17 @@ import {
 } from '@/pages/build/class/model/asi'
 import { countTotalAsiAcrossClasses } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
+
+function epicBoonEditContext(character: Character, slot: EpicBoonSlot) {
+  return { character, choiceId: slot.choiceId, data: useGameDataStore.getState().gameData }
+}
+
+type EpicBoonEditContext = ReturnType<typeof epicBoonEditContext>
+type PendingFeat = Feat5e &
+  FeatOptionTarget & { initialOptions?: FeatOptionSelections; epicBoon?: EpicBoonEditContext }
 
 interface ClassAsiFeatControllerParams {
   character: Character | null
@@ -47,12 +67,36 @@ export function useClassAsiFeatController({
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const { replaceFeatSelections, editFeatWithOptions } = useFeatProvenanceMutations()
   const [featPickerOpen, setFeatPickerOpen] = useState(false)
-  const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
-  const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null)
+  const [featPickerLevel, setFeatLevel] = useState<number | null>(null)
+  const [asiPickerLevel, setAsiLevel] = useState<number | null>(null)
   const [asiModeByLevel, setAsiModeByLevel] = useState<Record<string, 'asi' | 'feat'>>({})
-  const [optionsPendingFeat, setPendingFeat] = useState<
-    (Feat5e & FeatOptionTarget & { initialOptions?: FeatOptionSelections }) | null
-  >(null)
+  const [optionsPendingFeat, setPendingFeat] = useState<PendingFeat | null>(null)
+  const featPickerOrigin = useRef<EpicBoonEditContext | null>(null)
+  const asiPickerOrigin = useRef<EpicBoonEditContext | null>(null)
+  const viewed = { name: viewingClass, source: viewingClassSource }
+  const epicBoonSlot = calculationContext?.classChoices.epicBoonSlots.find((slot) =>
+    findClassReference(viewed, [slot.owner]),
+  )
+  const isEpicBoonEditCurrent = (edit: EpicBoonEditContext | null | undefined) =>
+    !!edit &&
+    edit.character === character &&
+    edit.character === useCharacterStore.getState().activeCharacter &&
+    edit.choiceId === epicBoonSlot?.choiceId &&
+    edit.data === useGameDataStore.getState().gameData
+  const setFeatPickerLevel = (level: number | null) => {
+    featPickerOrigin.current =
+      level === EPIC_BOON_LEVEL && epicBoonSlot && character
+        ? epicBoonEditContext(character, epicBoonSlot)
+        : null
+    setFeatLevel(level)
+  }
+  const setAsiPickerLevel = (level: number | null) => {
+    asiPickerOrigin.current =
+      level === EPIC_BOON_LEVEL && epicBoonSlot && character
+        ? epicBoonEditContext(character, epicBoonSlot)
+        : null
+    setAsiLevel(level)
+  }
   const currentOptions = (target: FeatOptionTarget) => {
     const current = useCharacterStore.getState().activeCharacter
     return current
@@ -63,8 +107,27 @@ export function useClassAsiFeatController({
         )?.options
       : undefined
   }
-  const setOptionsPendingFeat = (target: (Feat5e & FeatOptionTarget) | null) =>
+  const setOptionsPendingFeat = (target: PendingFeat | null) =>
     setPendingFeat(target ? { ...target, initialOptions: currentOptions(target) } : null)
+  const editEpicBoonOptions = () => {
+    const selected = epicBoonSlot?.feat
+    if (
+      !character ||
+      !epicBoonSlot ||
+      !selected ||
+      useCharacterStore.getState().activeCharacter !== character
+    )
+      return
+    const feat = feats.find((row) => getFeatSelectionKey(row) === getFeatSelectionKey(selected))
+    if (!feat || !hasFeatOptions(feat)) return
+    setOptionsPendingFeat({
+      ...feat,
+      ...(epicBoonSlot.legacy
+        ? { classFeatChoiceId: epicBoonSlot.choiceId }
+        : { selectionKind: 'ordinary' }),
+      epicBoon: epicBoonEditContext(character, epicBoonSlot),
+    })
+  }
   const classProgression = getCharacterClassEntries(character)
   const effectiveFeats = character?.feats ?? []
 
@@ -115,8 +178,42 @@ export function useClassAsiFeatController({
     viewedClass?.edition === 'one' ||
     viewingClassSource?.toUpperCase() === 'XPHB' ||
     (!viewedClass && character?.originSystem === '2024')
+  const epicFeatPicker = featPickerLevel === EPIC_BOON_LEVEL ? epicBoonSlot : undefined
+  const epicAsiPicker = asiPickerLevel === EPIC_BOON_LEVEL ? epicBoonSlot : undefined
+  const epicPicker = epicFeatPicker ?? epicAsiPicker
+  const withoutEpicPick = useMemo(
+    () =>
+      epicPicker && character ? withoutEpicBoonSelection(character, epicPicker.owner) : character,
+    [epicPicker, character],
+  )
+  const epicReplacementContext = useMemo(
+    () =>
+      withoutEpicPick && withoutEpicPick !== character && calculationContext
+        ? createCharacterCalculationContext(
+            withoutEpicPick,
+            calculationContext.lookups.primary,
+            calculationContext.lookups.raw,
+          )
+        : calculationContext,
+    [withoutEpicPick, character, calculationContext],
+  )
+  const epicBoonAsiBefore = useMemo(
+    () =>
+      epicAsiPicker && epicReplacementContext
+        ? getIntrinsicAbilityScores(epicReplacementContext.abilityScores)
+        : undefined,
+    [epicAsiPicker, epicReplacementContext],
+  )
   const slot = useMemo(() => {
     const catalogs = calculationContext?.classChoices.catalogs
+    if (epicPicker)
+      return epicPicker.current && withoutEpicPick && catalogs
+        ? getRevisedClassFeatSlot(
+            withoutEpicPick,
+            { ...epicPicker.owner, level: EPIC_BOON_LEVEL },
+            catalogs,
+          )
+        : undefined
     if (
       !revisedFeatSlot ||
       !character ||
@@ -140,6 +237,8 @@ export function useClassAsiFeatController({
     featPickerLevel,
     calculationContext,
     appliedAsiChoicesForClass,
+    epicPicker,
+    withoutEpicPick,
   ])
   const featPickerSnapshot = useMemo(() => {
     if (!slot || !character || !viewingClass || !calculationContext) return characterSnapshot
@@ -153,16 +252,18 @@ export function useClassAsiFeatController({
         ),
     )
     const remaining =
-      otherFeats.length === character.feats.length
-        ? calculationContext
-        : createCharacterCalculationContext(
-            applyCharacterCommandResult(
-              character,
-              replaceFeatSelectionsCommand(character, character.provenance, otherFeats),
-            ),
-            calculationContext.lookups.primary,
-            calculationContext.lookups.raw,
-          )
+      epicReplacementContext && epicPicker
+        ? epicReplacementContext
+        : otherFeats.length === character.feats.length
+          ? calculationContext
+          : createCharacterCalculationContext(
+              applyCharacterCommandResult(
+                character,
+                replaceFeatSelectionsCommand(character, character.provenance, otherFeats),
+              ),
+              calculationContext.lookups.primary,
+              calculationContext.lookups.raw,
+            )
     return {
       ...characterSnapshot,
       ...slot,
@@ -188,6 +289,8 @@ export function useClassAsiFeatController({
     featPickerLevel,
     calculationContext,
     characterSnapshot,
+    epicPicker,
+    epicReplacementContext,
   ])
   const featModalFeats = useMemo(() => {
     const counts = new Map<string, number>()
@@ -198,7 +301,9 @@ export function useClassAsiFeatController({
       }
     const owned = new Set(
       slot && character
-        ? getFeatSetupOwners(character, []).map((owner) => getFeatSelectionKey(owner.target))
+        ? getFeatSetupOwners(epicFeatPicker ? (withoutEpicPick ?? character) : character, []).map(
+            (owner) => getFeatSelectionKey(owner.target),
+          )
         : [],
     )
     const current = new Set(
@@ -212,6 +317,7 @@ export function useClassAsiFeatController({
         !!feat.source?.trim() &&
         feat.sourceIdentityConflict !== true &&
         counts.get(key) === 1 &&
+        (!epicFeatPicker || !isEpicBoonAsiFeat(feat)) &&
         (current.has(key) ||
           !owned.has(key) ||
           (feat.repeatable === true &&
@@ -220,6 +326,10 @@ export function useClassAsiFeatController({
           (slot.openFeatCategories && (feat.category === 'O' || feat.category === 'EB')))
       )
     })
+    if (epicFeatPicker) {
+      const ordinaryElsewhere = new Set(withoutEpicPick?.feats.map(getFeatSelectionKey))
+      return available.filter((feat) => !ordinaryElsewhere.has(getFeatSelectionKey(feat)))
+    }
     const merged = buildFeatModalFeats({
       availableFeats: available,
       selectedFeats: effectiveFeats,
@@ -251,15 +361,82 @@ export function useClassAsiFeatController({
     character,
     classAsiFeats,
     slot,
+    epicFeatPicker,
+    withoutEpicPick,
   ])
-  const featPickerInitialSelectedIds = useMemo(
-    () =>
-      classAsiFeats.filter((feat) => feat.classLevel === featPickerLevel).map(getFeatSelectionKey),
-    [classAsiFeats, featPickerLevel],
-  )
+  const featPickerInitialSelectedIds = useMemo(() => {
+    if (epicFeatPicker) return epicFeatPicker.feat ? [getFeatSelectionKey(epicFeatPicker.feat)] : []
+    return classAsiFeats
+      .filter((feat) => feat.classLevel === featPickerLevel)
+      .map(getFeatSelectionKey)
+  }, [classAsiFeats, featPickerLevel, epicFeatPicker])
+
+  const updateEpicBoon = (
+    slot: EpicBoonSlot,
+    replacement: Parameters<typeof replaceEpicBoonSelection>[2],
+  ) => {
+    if (!character || useCharacterStore.getState().activeCharacter !== character) return false
+    const catalogs = calculationContext?.classChoices.catalogs
+    const next = replaceEpicBoonSelection(
+      character,
+      slot,
+      replacement,
+      catalogs ? { catalogs, feats, prerequisites: featPickerSnapshot } : undefined,
+    )
+    if (next === character) return false
+    const patch: Partial<Character> = {}
+    if (next.feats !== character.feats) patch.feats = next.feats
+    if (next.classFeatChoices !== character.classFeatChoices)
+      patch.classFeatChoices = next.classFeatChoices
+    if (next.classChoiceSelections !== character.classChoiceSelections)
+      patch.classChoiceSelections = next.classChoiceSelections
+    if (next.asiChoices !== character.asiChoices) patch.asiChoices = next.asiChoices
+    if (next.spells !== character.spells) patch.spells = next.spells
+    if (next.proficiencies !== character.proficiencies) patch.proficiencies = next.proficiencies
+    if (next.provenance !== character.provenance) patch.provenance = next.provenance
+    updateCharacter(character.id, patch)
+    return true
+  }
 
   const confirmFeat = (selectedFeats: Feat5e[]) => {
     if (!character || !viewingClass || !viewingClassSource || featPickerLevel == null) return
+    if (epicFeatPicker || featPickerOrigin.current) {
+      if (
+        !epicFeatPicker ||
+        !isEpicBoonEditCurrent(featPickerOrigin.current) ||
+        selectedFeats.length > 1
+      ) {
+        toast.info('This Epic Boon slot changed. Reopen it to see the current choices.')
+        return
+      }
+      const selected = selectedFeats[0]
+      const key = selected && getFeatSelectionKey(selected)
+      if (key && featPickerInitialSelectedIds.includes(key)) {
+        setFeatPickerOpen(false)
+        setFeatPickerLevel(null)
+        return
+      }
+      const live = key && featModalFeats.find((feat) => getFeatSelectionKey(feat) === key)
+      if (
+        !live ||
+        !checkAllPrerequisites(live, featPickerSnapshot).met ||
+        !updateEpicBoon(epicFeatPicker, { feat: live })
+      ) {
+        toast.info('Choose a currently eligible feat for this Epic Boon slot.')
+        return
+      }
+      const active = useCharacterStore.getState().activeCharacter
+      if (active && active !== character && hasFeatOptions(live)) {
+        setOptionsPendingFeat({
+          ...live,
+          selectionKind: 'ordinary',
+          epicBoon: epicBoonEditContext(active, epicFeatPicker),
+        })
+      }
+      setFeatPickerOpen(false)
+      setFeatPickerLevel(null)
+      return
+    }
     if (revisedFeatSlot) {
       if (useCharacterStore.getState().activeCharacter !== character || selectedFeats.length > 1)
         return
@@ -299,6 +476,10 @@ export function useClassAsiFeatController({
   }
   const clearFeatSelection = (level: number) => {
     if (!viewingClass) return
+    if (level === EPIC_BOON_LEVEL && epicBoonSlot) {
+      updateEpicBoon(epicBoonSlot, null)
+      return
+    }
     replaceFeatSelections(
       effectiveFeats.filter(
         (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, level),
@@ -307,6 +488,23 @@ export function useClassAsiFeatController({
   }
   const applyAsi = (level: number, abilityChanges: Record<string, 1 | 2>) => {
     if (!character || !viewingClass || !viewingClassSource) return
+    if (epicAsiPicker || asiPickerOrigin.current) {
+      const feat = feats.find(isEpicBoonAsiFeat)
+      if (
+        !epicAsiPicker?.allowsAsi ||
+        !isEpicBoonEditCurrent(asiPickerOrigin.current) ||
+        !slot ||
+        !epicBoonAsiBefore ||
+        !feat ||
+        !checkAllPrerequisites(feat, featPickerSnapshot).met ||
+        !updateEpicBoon(epicAsiPicker, { abilityChanges, before: epicBoonAsiBefore })
+      ) {
+        toast.info('Review the Ability Score Improvement prerequisites and score limits.')
+        return
+      }
+      setAsiPickerLevel(null)
+      return
+    }
     updateCharacter(character.id, {
       asiChoices: applyClassAsiChoice({
         currentAsiChoices: character.asiChoices ?? [],
@@ -320,6 +518,10 @@ export function useClassAsiFeatController({
   }
   const resetAsi = (level: number) => {
     if (!character || !viewingClass || !viewingClassSource) return
+    if (level === EPIC_BOON_LEVEL && epicBoonSlot) {
+      updateEpicBoon(epicBoonSlot, null)
+      return
+    }
     const asiChoices = resetClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
@@ -344,9 +546,17 @@ export function useClassAsiFeatController({
   return {
     characterSnapshot,
     featPickerSnapshot,
+    epicBoonSlot,
+    editEpicBoonOptions,
+    epicBoonAsiPicker:
+      epicAsiPicker && epicBoonAsiBefore
+        ? { before: epicBoonAsiBefore, existing: epicAsiPicker.asi?.abilityChanges }
+        : undefined,
     revisedFeatSlot,
     totalAsi,
-    usedAsi: character?.feats?.length ?? 0,
+    usedAsi:
+      (calculationContext?.character.feats.length ?? character?.feats.length ?? 0) +
+      countReservedEpicBoonFeatSlots(calculationContext?.classChoices.epicBoonSlots),
     effectiveFeats,
     appliedAsiChoicesForClass,
     classAsiFeats,
@@ -368,11 +578,15 @@ export function useClassAsiFeatController({
     setAsiMode,
     clearAsiMode,
     commitFeatWithOptions: (
-      feat: Feat5e & FeatOptionTarget & { initialOptions?: FeatOptionSelections },
+      feat: PendingFeat,
       selections: FeatOptionSelections,
       allSpells: Spell5e[],
     ) => {
       if (
+        (feat.epicBoon &&
+          (!isEpicBoonEditCurrent(feat.epicBoon) ||
+            !epicBoonSlot?.feat ||
+            getFeatSelectionKey(epicBoonSlot.feat) !== getFeatSelectionKey(feat))) ||
         JSON.stringify(currentOptions(feat) ?? {}) !== JSON.stringify(feat.initialOptions ?? {})
       ) {
         toast.info('This feat changed while setup was open. Reopen it to use the current choices.')

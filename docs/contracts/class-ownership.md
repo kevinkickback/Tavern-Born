@@ -36,6 +36,20 @@ saved details, legacy feature effects and revised feat effects use the effective
 Revised configured feat options, including spells, follow their exact slot owner. Mixed-edition
 style equivalence and styles from other classes use their existing rules.
 
+### Revised Epic Boon advancement
+
+The verified XPHB level-19 declaration grants one advancement. The configured
+Epic Boon filter and the bundled prose use the same Class slot. The current
+declaration and shared feat prerequisites govern the pick. The exact Ability
+Score Improvement feat uses the capped ability increase picker in that slot.
+The cap is applied to intrinsic scores before temporary effects.
+
+A matching saved Epic Boon selection and its feat record count as one choice.
+The Builder can configure it in place or replace it through the same slot.
+Missing authority and conflicting selections preserve the saved records for
+recovery and suspend their effects. Replacing, clearing, or losing the slot
+retracts its own effects while preserving other sources.
+
 ### Revised Hunter choices
 
 The XPHB Hunter chooses one initial option for Hunter's Prey at level 3 and one for

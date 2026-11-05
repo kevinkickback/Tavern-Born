@@ -22,7 +22,9 @@ import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdent
 import {
   getFeatOptionOwnerKey,
   getFeatSelectionKey,
+  isFeatOptionTargetActive,
 } from '@/lib/character/commands/featCommandIdentity'
+import { countReservedEpicBoonFeatSlots, projectEpicBoonSlots } from '@/lib/character/epicBoonSlots'
 import { getFeatSetupFocusKey, getFeatSetupOwners } from '@/lib/character/featSetupOwners'
 import { getFeatSetupStatus, isFeatSetupComplete } from '@/lib/character/featSetupProgress'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -77,6 +79,18 @@ export function useFeatsPageController() {
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
+  const epicBoonSlots = calculationContext?.classChoices.epicBoonSlots
+  const visibleCharacter = useMemo(
+    () => (character && epicBoonSlots ? projectEpicBoonSlots(character, epicBoonSlots) : character),
+    [character, epicBoonSlots],
+  )
+  const canEditOptionTarget = useCallback(
+    (target: FeatOptionTarget) =>
+      !!visibleCharacter &&
+      useCharacterStore.getState().activeCharacter === character &&
+      isFeatOptionTargetActive(visibleCharacter, target),
+    [character, visibleCharacter],
+  )
   const { feats, spells } = useFilteredGameData()
   const rawFeatLookup = useFeatLookup()
   const rawFeats = useMemo(() => Object.values(rawFeatLookup), [rawFeatLookup])
@@ -160,15 +174,15 @@ export function useFeatsPageController() {
   const currentOptions = useCallback(
     (target: FeatOptionsTarget) => {
       const current = useCharacterStore.getState().activeCharacter
-      return current
-        ? getFeatSetupOwners(current, feats as Feat5e[]).find(
+      return current === character && visibleCharacter
+        ? getFeatSetupOwners(visibleCharacter, feats as Feat5e[]).find(
             (owner) =>
               getFeatSelectionKey(owner.target) === getFeatSelectionKey(target) &&
               getFeatOptionOwnerKey(owner.target) === getFeatOptionOwnerKey(target),
           )?.options
         : undefined
     },
-    [feats],
+    [character, visibleCharacter, feats],
   )
   const [featEditCandidate, setFeatEditCandidate] = useState<{
     feat5e: FeatOptionsTarget
@@ -220,17 +234,18 @@ export function useFeatsPageController() {
 
   const classProgression = useMemo(() => getCharacterClassEntries(character), [character])
   const totalFeatSlots = useMemo(
-    () => countTotalFeatSlots({ classProgression, character, classLookup }),
-    [classProgression, character, classLookup],
+    () => countTotalFeatSlots({ classProgression, character: visibleCharacter, classLookup }),
+    [classProgression, visibleCharacter, classLookup],
   )
-  const usedASI = character?.feats?.length ?? 0
+  const usedASI =
+    (visibleCharacter?.feats?.length ?? 0) + countReservedEpicBoonFeatSlots(epicBoonSlots)
   const remainingASI = totalFeatSlots - usedASI
   const classProgressionFeats = useMemo(
     () =>
-      (character?.classFeatChoices ?? []).flatMap((choice) =>
+      (visibleCharacter?.classFeatChoices ?? []).flatMap((choice) =>
         choice.feats.map((feat) => ({ choice, feat })),
       ),
-    [character?.classFeatChoices],
+    [visibleCharacter?.classFeatChoices],
   )
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
     () =>
@@ -320,14 +335,14 @@ export function useFeatsPageController() {
   )
 
   const hasCharacterSection =
-    (character?.feats?.length ?? 0) > 0 ||
+    (visibleCharacter?.feats?.length ?? 0) > 0 ||
     classProgressionFeats.length > 0 ||
     racialFixedFeats.length > 0 ||
     resolvedRacialChoices.length > 0 ||
     originFixedFeats.length > 0 ||
     resolvedOriginChoices.length > 0
   const characterFeatCount =
-    (character?.feats?.length ?? 0) +
+    (visibleCharacter?.feats?.length ?? 0) +
     classProgressionFeats.length +
     racialFixedFeats.length +
     resolvedRacialChoices.reduce((sum, choice) => sum + choice.selected.length, 0) +
@@ -399,7 +414,7 @@ export function useFeatsPageController() {
   const openClassSpellSetup = useCallback(
     (name: string, source: string, choiceId?: string) => {
       if (!choiceId || !getClassFeatureSpellSemantics('feat', name, source)) return false
-      const owner = character?.classFeatChoices?.find((row) => row.id === choiceId)
+      const owner = visibleCharacter?.classFeatChoices?.find((row) => row.id === choiceId)
       const feat = owner?.feats.find(
         (row) => getFeatSelectionKey(row) === getFeatSelectionKey({ name, source }),
       )
@@ -409,7 +424,7 @@ export function useFeatsPageController() {
         )
       return true
     },
-    [character, navigate],
+    [visibleCharacter, navigate],
   )
   const handleCompleteSetup = useCallback(
     (
@@ -447,9 +462,10 @@ export function useFeatsPageController() {
             ? undefined
             : selectionKind,
       }
-      setFeatOptionsTarget({ ...target, initialOptions: currentOptions(target) })
+      if (canEditOptionTarget(target))
+        setFeatOptionsTarget({ ...target, initialOptions: currentOptions(target) })
     },
-    [feats, rawFeatLookup, currentOptions, openClassSpellSetup],
+    [feats, rawFeatLookup, currentOptions, openClassSpellSetup, canEditOptionTarget],
   )
   const handleCompleteBonusSetup = useCallback(
     (name: string, source: string) =>
@@ -460,8 +476,9 @@ export function useFeatsPageController() {
     (selections: FeatOptionSelections) => {
       if (!featOptionsTarget) return
       if (
+        !canEditOptionTarget(featOptionsTarget) ||
         JSON.stringify(currentOptions(featOptionsTarget) ?? {}) !==
-        JSON.stringify(featOptionsTarget.initialOptions ?? {})
+          JSON.stringify(featOptionsTarget.initialOptions ?? {})
       ) {
         toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
         setFeatOptionsTarget(null)
@@ -475,13 +492,21 @@ export function useFeatsPageController() {
       )
       setFeatOptionsTarget(null)
     },
-    [featOptionsTarget, currentOptions, editFeatWithOptions, rawSpells, spells],
+    [
+      featOptionsTarget,
+      currentOptions,
+      editFeatWithOptions,
+      rawSpells,
+      spells,
+      canEditOptionTarget,
+    ],
   )
   const handleFeatOptionsClear = useCallback(() => {
-    if (!featOptionsTarget || !featOptionsTarget.initialOptions) return
+    if (!featOptionsTarget?.initialOptions) return
     if (
+      !canEditOptionTarget(featOptionsTarget) ||
       JSON.stringify(currentOptions(featOptionsTarget) ?? {}) !==
-      JSON.stringify(featOptionsTarget.initialOptions)
+        JSON.stringify(featOptionsTarget.initialOptions)
     ) {
       toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
       setFeatOptionsTarget(null)
@@ -489,7 +514,7 @@ export function useFeatsPageController() {
     }
     clearFeatWithOptions(featOptionsTarget, featOptionsTarget.initialOptions)
     setFeatOptionsTarget(null)
-  }, [featOptionsTarget, currentOptions, clearFeatWithOptions])
+  }, [featOptionsTarget, currentOptions, clearFeatWithOptions, canEditOptionTarget])
   const handleEditSetup = useCallback(
     (
       featName: string,
@@ -516,7 +541,7 @@ export function useFeatsPageController() {
         fixedGrant || grantVariant !== undefined
           ? character?.fixedFeatOptions?.[getFixedFeatOptionKey(featName, featSource, grantVariant)]
           : undefined
-      const existing = (character?.feats ?? []).find(
+      const existing = (visibleCharacter?.feats ?? []).find(
         (feat) =>
           getFeatSelectionKey(feat) === getFeatSelectionKey({ name: featName, source: featSource }),
       )
@@ -530,7 +555,7 @@ export function useFeatsPageController() {
             )?.options
         : undefined
       const classOptions = classFeatChoiceId
-        ? character?.classFeatChoices
+        ? visibleCharacter?.classFeatChoices
             ?.find((choice) => choice.id === classFeatChoiceId)
             ?.feats.find(
               (feat) =>
@@ -566,10 +591,10 @@ export function useFeatsPageController() {
     [
       feats,
       rawFeatLookup,
-      character?.feats,
+      visibleCharacter?.feats,
       character?.fixedFeatOptions,
       character?.provenance?.choices,
-      character?.classFeatChoices,
+      visibleCharacter?.classFeatChoices,
       openClassSpellSetup,
     ],
   )
@@ -604,8 +629,9 @@ export function useFeatsPageController() {
     (selections: FeatOptionSelections) => {
       if (!featEditTarget) return
       if (
+        !canEditOptionTarget(featEditTarget.feat5e) ||
         JSON.stringify(currentOptions(featEditTarget.feat5e) ?? {}) !==
-        JSON.stringify(featEditTarget.priorOptions)
+          JSON.stringify(featEditTarget.priorOptions)
       ) {
         toast.info('This feat changed while setup was open. Reopen it to use the current choices.')
         setFeatEditTarget(null)
@@ -619,19 +645,19 @@ export function useFeatsPageController() {
       )
       setFeatEditTarget(null)
     },
-    [featEditTarget, currentOptions, editFeatWithOptions, rawSpells, spells],
+    [featEditTarget, currentOptions, editFeatWithOptions, rawSpells, spells, canEditOptionTarget],
   )
 
   const handleEditClear = useCallback(() => {
-    if (!featEditTarget) return
+    if (!featEditTarget || !canEditOptionTarget(featEditTarget.feat5e)) return
     clearFeatWithOptions(featEditTarget.feat5e, featEditTarget.priorOptions)
     setFeatEditTarget(null)
-  }, [featEditTarget, clearFeatWithOptions])
+  }, [featEditTarget, clearFeatWithOptions, canEditOptionTarget])
 
   const pendingOptionFeatIds = useMemo(
     () =>
       new Set(
-        (character?.feats ?? [])
+        (visibleCharacter?.feats ?? [])
           .filter((feat) => {
             if (isSetupComplete(feat, feat.options)) return false
             const data = (feats as Feat5e[]).find(
@@ -641,7 +667,7 @@ export function useFeatsPageController() {
           })
           .map(getFeatSelectionKey),
       ),
-    [character?.feats, feats, isSetupComplete],
+    [visibleCharacter?.feats, feats, isSetupComplete],
   )
   const pendingOptionBonusFeatIds = useMemo(
     () =>
@@ -668,7 +694,7 @@ export function useFeatsPageController() {
     0,
   )
   const configuredOptionFeatCount =
-    (character?.feats ?? []).filter((feat) => feat.options).length +
+    (visibleCharacter?.feats ?? []).filter((feat) => feat.options).length +
     (character?.specialFeats ?? []).filter((feat) => feat.options).length +
     classProgressionFeats.filter(({ feat }) => feat.options).length +
     configuredChoiceOptionCount
@@ -726,7 +752,7 @@ export function useFeatsPageController() {
     bonusInitialSelectedIds,
     bonusModalFeats,
     bonusModalOpen,
-    character,
+    character: visibleCharacter,
     characterFeatCount,
     characterSnapshot,
     classProgressionFeats,

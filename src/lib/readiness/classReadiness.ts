@@ -20,6 +20,7 @@ import {
 import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import { EPIC_BOON_LEVEL } from '@/lib/character/epicBoonSlots'
 import {
   hasFavoredEnemyRecovery,
   isFavoredEnemySetupComplete,
@@ -159,6 +160,31 @@ export function validateClassChoices(
   )
 
   for (const entry of entries) {
+    const epicBoon = calculation.classChoices.epicBoonSlots.find((slot) =>
+      findClassReference(slot.owner, [entry]),
+    )
+    if (epicBoon && epicBoon.state !== 'selected') {
+      const conflict = epicBoon.state === 'conflict'
+      const unavailable = epicBoon.state === 'unavailable'
+      issues.push(
+        readinessIssue(
+          classAsiReadinessId(readinessClassKey(entry), EPIC_BOON_LEVEL),
+          'blocking',
+          'class',
+          conflict
+            ? 'Resolve Epic Boon choices'
+            : unavailable
+              ? 'Restore or remove Epic Boon'
+              : 'Choose an Epic Boon or feat',
+          conflict
+            ? 'More than one saved choice claims this advancement. Choose one feat or clear the saved choices.'
+            : unavailable
+              ? 'The advancement or saved selection cannot be verified. Restore its source or clear the saved choice.'
+              : `${entry.name} has one advancement choice at class level ${EPIC_BOON_LEVEL}.`,
+          classChoiceTarget(entry, EPIC_BOON_LEVEL),
+        ),
+      )
+    }
     const classData = findClassReference(entry, calculation.classes)
     if (!classData) continue
     const subclassInfo = getSubclassSelectionInfo(classData)
@@ -208,6 +234,7 @@ export function validateClassChoices(
     }
 
     for (const original of getCharacterClassChoices(classData, subclassData, activity, catalogs)) {
+      if (original.id === epicBoon?.choiceId) continue
       const choice = resolveHistoricalProficiencyChoice(character, original)
       if (
         choice.level <= entry.levels &&
@@ -419,7 +446,7 @@ export function validateClassChoices(
     }
 
     for (const level of classData.normalizedRules?.asiLevels ?? []) {
-      if (level > entry.levels) continue
+      if (level > entry.levels || (level === EPIC_BOON_LEVEL && epicBoon)) continue
       const hasAbilityIncrease = (character.asiChoices ?? []).some((choice) =>
         isOwnedByClass(choice, entry, level),
       )

@@ -13,6 +13,7 @@ import {
   auditDirectFixedClassDeclarations,
   auditFixedClassFeatures,
 } from '@/lib/5etools/directFixedProficiencySource'
+import { isEpicBoonAdvancement } from '@/lib/5etools/epicBoonAdvancement'
 import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
 import {
@@ -32,7 +33,7 @@ import {
   materializeSubclassCopies,
   materializeSubclassFeatureCopies,
 } from '@/lib/5etools/subclassSourcePreparation'
-import type { ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
+import type { ClassFeature, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
 function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, ParsedObject> {
@@ -42,8 +43,15 @@ function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, Parse
     const feature = asObject(record)
     const key = getClassFeatureIdentity(feature)
     if (!key) continue
-    if (!index.has(key)) {
+    const previous = index.get(key)
+    if (!previous) {
       index.set(key, feature)
+    } else if (
+      isEpicBoonAdvancement(previous as ClassFeature) ||
+      isEpicBoonAdvancement(feature as ClassFeature)
+    ) {
+      // Preserve ambiguity before the reference index selects a producer.
+      index.set(key, { ...previous, sourceIdentityConflict: true })
     }
   }
 

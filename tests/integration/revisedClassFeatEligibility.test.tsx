@@ -1,14 +1,18 @@
 import { readFileSync } from 'node:fs'
-import { act, cleanup, renderHook } from '@testing-library/react'
-import { afterEach, expect, test } from 'vitest'
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, expect, test, vi } from 'vitest'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseFeats } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { replaceFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { applyFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
+import { BuildClassPage } from '@/pages/build/class/ClassPage'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -20,7 +24,7 @@ import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterSt
 import { makeClassCastingData } from '../fixtures/classCastingFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-const read = (file: string) => JSON.parse(readFileSync('resources/srd/core/data/' + file, 'utf8'))
+const read = (file: string) => JSON.parse(readFileSync(`resources/srd/core/data/${file}`, 'utf8'))
 const feats = (parseFeats(read('feats.json')) as Feat5e[]).filter((feat) => feat.source === 'XPHB')
 const alert = feats.find((feat) => feat.name === 'Alert')!
 const combat = feats.find((feat) => feat.name === 'Boon of Combat Prowess')!
@@ -30,24 +34,20 @@ const initiate = feats.find((feat) => feat.name === 'Magic Initiate')!
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   resetCharacterStore()
   useGameDataStore.setState({ gameData: null })
 })
 
-function openClassFeatPicker(
-  character: Character,
-  name: string,
-  level: number,
-  linkedFeat = false,
-) {
+function loadClassFeatCatalog(character: Character, linkedFeat = false) {
   const declarations = character.classProgression.map((entry) => {
     const file = `class/class-${entry.name.toLowerCase()}.json`
     const parsed = read(file)
     const document = linkedFeat
       ? JSON.parse(
           JSON.stringify(parsed).replace(
-            /another feat of/g,
-            'another {@5etools feat|feats.html} of',
+            'You gain an Epic Boon feat (see \\"Feats\\") or another feat',
+            'You gain an {@filter Epic Boon feat|feats|category=EB} or another {@5etools feat|feats.html}',
           ),
         )
       : parsed
@@ -61,6 +61,16 @@ function openClassFeatPicker(
   const classLookup = buildClassLookup(classes)
   useGameDataStore.setState({ gameData: data })
   setActiveCharacter(character)
+  return classLookup
+}
+
+function openClassFeatPicker(
+  character: Character,
+  name: string,
+  level: number,
+  linkedFeat = false,
+) {
+  const classLookup = loadClassFeatCatalog(character, linkedFeat)
   const { result, unmount } = renderHook(() =>
     useClassAsiFeatController({
       character: useCharacterStore((state) => state.activeCharacter),
@@ -79,6 +89,111 @@ function reopen() {
     JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
   )
 }
+
+test.each([
+  ['Ranger', true],
+  ['Rogue', false],
+] as const)('Builder %s uses one Epic Boon row for feats, ASI and recovery', async (name, tagged) => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800)
+  const initial = makeCharacterFixture({
+    originSystem: '2024',
+    classProgression: [{ name, source: 'XPHB', levels: 19 }],
+  })
+  loadClassFeatCatalog(
+    {
+      ...initial,
+      abilityScores: { ...initial.abilityScores, strength: 19 },
+    },
+    tagged,
+  )
+  render(
+    <MemoryRouter>
+      <BuildClassPage />
+    </MemoryRouter>,
+  )
+  const level = await screen.findByRole('button', { name: /^Level 19,/ })
+  expect(level.getAttribute('aria-label')).toMatch(/1 pending choice$/)
+  fireEvent.click(level)
+  const row = () => within(screen.getByRole('group', { name: 'Epic Boon' }))
+  const dialog = () => within(screen.getByRole('dialog'))
+  const search = (name: string) =>
+    fireEvent.change(dialog().getByPlaceholderText('Search available options'), {
+      target: { value: name },
+    })
+
+  fireEvent.click(row().getByRole('button', { name: 'Choose Feat' }))
+  await screen.findByRole('dialog')
+  search('Ability Score Improvement')
+  expect(dialog().queryByText('Ability Score Improvement', { selector: 'span' })).toBeNull()
+  search(combat.name)
+  fireEvent.click(await dialog().findByText(combat.name, { selector: 'span' }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Confirm' }))
+  fireEvent.click(await dialog().findByRole('button', { name: 'Wisdom' }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Finish' }))
+  expect(reopen().feats).toEqual([
+    expect.objectContaining({
+      name: combat.name,
+      options: { abilityScore: 'wis' },
+      classLevel: 19,
+    }),
+  ])
+  expect(reopen().classChoiceSelections ?? []).toEqual([])
+  expect(level.getAttribute('aria-label')).toMatch(/All choices made$/)
+
+  fireEvent.click(row().getByRole('button', { name: 'Ability Score Improvement' }))
+  expect((await dialog().findByRole('button', { name: /^STR / })).hasAttribute('disabled')).toBe(
+    true,
+  )
+  fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
+  expect(reopen().feats[0].name).toBe(combat.name)
+
+  fireEvent.click(row().getByRole('button', { name: 'Replace with Feat' }))
+  search(alert.name)
+  fireEvent.click(await dialog().findByText(alert.name, { selector: 'span' }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Confirm' }))
+  expect(reopen().feats.map((feat) => feat.name)).toEqual([alert.name])
+
+  fireEvent.click(row().getByRole('button', { name: 'Ability Score Improvement' }))
+  fireEvent.click(await dialog().findByRole('button', { name: /^\+1 \/ \+1/ }))
+  fireEvent.click(dialog().getByRole('button', { name: /^STR / }))
+  fireEvent.click(dialog().getByRole('button', { name: /^WIS / }))
+  fireEvent.click(dialog().getByRole('button', { name: 'Apply' }))
+  expect(reopen().feats).toEqual([])
+  expect(reopen().asiChoices).toEqual([
+    expect.objectContaining({ level: 19, abilityChanges: { strength: 1, wisdom: 1 } }),
+  ])
+
+  act(() => {
+    const data = useGameDataStore.getState().gameData!
+    useGameDataStore.setState({ gameData: { ...data, classes: [], classFeatures: [] } })
+  })
+  expect(row().getByText(/This Epic Boon is unavailable/)).toBeDefined()
+  expect(row().queryByRole('button', { name: 'Ability Score Improvement' })).toBeNull()
+  fireEvent.click(row().getByRole('button', { name: 'Clear Epic Boon' }))
+  expect(reopen().asiChoices).toEqual([])
+})
+
+test('Epic Boon picker rejects stale actors and an ordinary feat owned elsewhere', () => {
+  const initial = makeCharacterFixture({
+    originSystem: '2024',
+    classProgression: [{ name: 'Rogue', source: 'XPHB', levels: 19 }],
+  })
+  const character = applyCharacterCommandResult(
+    initial,
+    replaceFeatSelectionsCommand(initial, initial.provenance, [alert]),
+  )
+  const { result } = openClassFeatPicker(character, 'Rogue', 19)
+  expect(result.current.featModalFeats).not.toContain(alert)
+  act(() => result.current.confirmFeat([alert]))
+  expect(reopen().feats).toEqual(character.feats)
+
+  const next = { ...character, id: 'other-character' }
+  act(() => setActiveCharacter(next))
+  act(() => result.current.confirmFeat([combat]))
+  expect(reopen().id).toBe(next.id)
+  expect(reopen().feats).toEqual(next.feats)
+})
 
 test.each([
   'Fighter',

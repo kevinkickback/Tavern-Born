@@ -8,7 +8,7 @@ import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
 import { ManagedClassSpellsDialog } from '@/pages/build/class/components/ManagedClassSpellsDialog'
 import type { Class5e, Feat5e, Subclass5e } from '@/types/5etools'
-import type { AsiChoice, Character, CharacterClassEntry } from '@/types/character'
+import type { AbilityScores, AsiChoice, Character, CharacterClassEntry } from '@/types/character'
 
 interface BuildClassModalsProps {
   character: Character
@@ -30,6 +30,7 @@ interface BuildClassModalsProps {
   onSubclassConfirm: (subclass: Subclass5e) => void
   characterSnapshot: PrereqCharacterSnapshot
   asiPickerLevel: number | null
+  epicBoonAsiPicker?: { before: AbilityScores; existing?: Record<string, 1 | 2> }
   onAsiPickerLevelChange: (level: number | null) => void
   appliedAsiChoicesForClass: AsiChoice[]
   onAsiApply: (level: number, changes: Record<string, 1 | 2>) => void
@@ -89,9 +90,13 @@ export function BuildClassModals(props: BuildClassModalsProps) {
           open
           level={props.asiPickerLevel}
           abilityScores={totalAbilityScores}
+          abilityScoresBeforeChoice={props.epicBoonAsiPicker?.before}
           existingChanges={
-            props.appliedAsiChoicesForClass.find((choice) => choice.level === props.asiPickerLevel)
-              ?.abilityChanges
+            props.epicBoonAsiPicker
+              ? props.epicBoonAsiPicker.existing
+              : props.appliedAsiChoicesForClass.find(
+                  (choice) => choice.level === props.asiPickerLevel,
+                )?.abilityChanges
           }
           onApply={(changes) => {
             if (props.asiPickerLevel !== null) props.onAsiApply(props.asiPickerLevel, changes)

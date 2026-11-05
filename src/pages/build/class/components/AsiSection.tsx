@@ -2,7 +2,10 @@ import { Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { formatAbilityBonus } from '@/lib/calculations/abilityScoreDisplay'
+import type { EpicBoonSlot } from '@/lib/character/epicBoonSlots'
+import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Feat } from '@/types/character'
@@ -16,6 +19,8 @@ interface BuildClassAsiSectionProps {
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   appliedAsiChoicesForClass: AsiChoice[]
   featForLevel?: Feat
+  epicBoon?: EpicBoonSlot
+  onEditEpicBoonOptions?: () => void
   asiModeByLevel: Record<string, 'asi' | 'feat'>
   usedASI: number
   totalASIAcrossClasses: number
@@ -38,7 +43,9 @@ export function BuildClassAsiSection({
   viewingSubclassData,
   featuresByLevel,
   appliedAsiChoicesForClass,
-  featForLevel,
+  featForLevel: ordinaryFeat,
+  epicBoon,
+  onEditEpicBoonOptions,
   asiModeByLevel,
   usedASI,
   totalASIAcrossClasses,
@@ -54,50 +61,110 @@ export function BuildClassAsiSection({
   highlighted = false,
 }: BuildClassAsiSectionProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(highlighted)
-  const existingAsi = appliedAsiChoicesForClass.find((ac) => ac.level === level)
+    useRouteFocusTarget<HTMLFieldSetElement>(highlighted)
+  const existingAsi = epicBoon
+    ? epicBoon.asi
+    : appliedAsiChoicesForClass.find((ac) => ac.level === level)
+  const featForLevel = epicBoon ? epicBoon.feat : ordinaryFeat
+  const epicFeat =
+    epicBoon &&
+    featForLevel &&
+    feats.find((feat) => getFeatSelectionKey(feat) === getFeatSelectionKey(featForLevel))
   const levelKey = `${level}|${viewingClass}|${viewingClassSource ?? ''}`
   const mode = existingAsi ? 'asi' : featForLevel ? 'feat' : (asiModeByLevel[levelKey] ?? 'feat')
   const isApplied = !!existingAsi || !!featForLevel
+  const needsRecovery = epicBoon?.state === 'unavailable' || epicBoon?.state === 'conflict'
+  const increases =
+    existingAsi &&
+    Object.entries(existingAsi.abilityChanges)
+      .map(([ability, bonus]) => formatAbilityBonus(ability, bonus))
+      .join(', ')
+  const epicSummary =
+    epicBoon?.state === 'conflict'
+      ? 'Multiple saved choices claim this Epic Boon. Choose one replacement or clear the slot.'
+      : epicBoon?.state === 'unavailable'
+        ? epicBoon.hasClaims
+          ? 'This Epic Boon is unavailable. Restore its source or clear the saved choice.'
+          : 'Restore the source to choose an Epic Boon for this level.'
+        : existingAsi
+          ? `Ability Score Improvement · ${increases}`
+          : (featForLevel?.name ?? 'Choose an Epic Boon or another feat you qualify for.')
 
   return (
-    <div
+    <fieldset
       ref={routeFocusRef}
+      aria-label={epicBoon ? 'Epic Boon' : 'Ability Score Improvement'}
       className={cn(
-        'rounded-lg border overflow-hidden',
+        'min-w-0 rounded-lg border overflow-hidden',
         isApplied
           ? 'border-success/30 bg-success/5'
-          : mode === 'asi'
+          : mode === 'asi' || needsRecovery
             ? 'border-warning/30 bg-warning/5'
             : 'border-info/30 bg-info/5',
         routeFocusHighlighted && 'animate-route-focus',
       )}
     >
-      <div className="flex items-center justify-between px-3 py-2.5">
+      <div
+        className={cn(
+          'flex items-center justify-between px-3 py-2.5',
+          epicBoon && 'flex-wrap gap-2',
+        )}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <Star className="h-4 w-4 text-info flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
-              Ability Score Improvement
+              {epicBoon ? 'Epic Boon' : 'Ability Score Improvement'}
               {isApplied && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
             </div>
             <div className="text-xs text-muted-foreground">
-              {isApplied
-                ? existingAsi
-                  ? Object.entries(existingAsi.abilityChanges)
-                      .map(([ability, bonus]) => formatAbilityBonus(ability, bonus))
-                      .join(', ')
-                  : featForLevel?.name
-                : mode === 'asi'
-                  ? 'Select ability scores to increase'
-                  : usedASI > 0
-                    ? `${usedASI} of ${totalASIAcrossClasses} feat slot${totalASIAcrossClasses !== 1 ? 's' : ''} used`
-                    : 'Choose an ability score increase or take a feat'}
+              {epicBoon
+                ? epicSummary
+                : isApplied
+                  ? existingAsi
+                    ? increases
+                    : featForLevel?.name
+                  : mode === 'asi'
+                    ? 'Select ability scores to increase'
+                    : usedASI > 0
+                      ? `${usedASI} of ${totalASIAcrossClasses} feat slot${totalASIAcrossClasses !== 1 ? 's' : ''} used`
+                      : 'Choose an ability score increase or take a feat'}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          {isApplied ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {epicBoon ? (
+            <>
+              {epicFeat && hasFeatOptions(epicFeat) && (
+                <Button variant="outline" size="sm" onClick={onEditEpicBoonOptions}>
+                  Edit Feat Options
+                </Button>
+              )}
+              {epicBoon.current && (
+                <Button
+                  variant={isApplied ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={() => onOpenFeatPicker(level)}
+                >
+                  {isApplied || needsRecovery ? 'Replace with Feat' : 'Choose Feat'}
+                </Button>
+              )}
+              {epicBoon.allowsAsi && (
+                <Button variant="outline" size="sm" onClick={() => onOpenAsiPicker(level)}>
+                  {existingAsi ? 'Edit Ability Score Improvement' : 'Ability Score Improvement'}
+                </Button>
+              )}
+              {epicBoon.hasClaims && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onClearFeatSelectionsForAsi(level)}
+                >
+                  Clear Epic Boon
+                </Button>
+              )}
+            </>
+          ) : isApplied ? (
             <Button
               variant="outline"
               size="sm"
@@ -127,7 +194,7 @@ export function BuildClassAsiSection({
         </div>
       </div>
 
-      {!isApplied && (
+      {!epicBoon && !isApplied && (
         <div className="px-3 pb-2.5 pt-1 flex items-center gap-4 border-t border-info/20">
           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
             <input
@@ -157,7 +224,8 @@ export function BuildClassAsiSection({
         </div>
       )}
 
-      {existingAsi &&
+      {!epicBoon &&
+        existingAsi &&
         (() => {
           const asiFeature = (featuresByLevel.get(level) ?? []).find(
             (f) => f.name === 'Ability Score Improvement',
@@ -204,9 +272,11 @@ export function BuildClassAsiSection({
       {!existingAsi && featForLevel && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
           {(() => {
-            const featData = feats.find(
-              (feat) => feat.name === featForLevel.name && feat.source === featForLevel.source,
-            )
+            const featData =
+              epicFeat ??
+              feats.find(
+                (feat) => feat.name === featForLevel.name && feat.source === featForLevel.source,
+              )
             return (
               <button
                 key={featForLevel.id}
@@ -237,6 +307,6 @@ export function BuildClassAsiSection({
           })()}
         </div>
       )}
-    </div>
+    </fieldset>
   )
 }

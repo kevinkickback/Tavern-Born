@@ -27,6 +27,12 @@ import {
   getSubclassFeatureReferenceLevel,
 } from './classFeatureIdentity'
 import { normalizeClassProficiencyChoices } from './classProficiencyChoices'
+import {
+  EPIC_BOON_LEVEL,
+  getEpicBoonAdvancementReference,
+  isEpicBoonAdvancement,
+  isEpicBoonFeatureReference,
+} from './epicBoonAdvancement'
 import { normalizeFavoredEnemyChoices } from './favoredEnemyChoices'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
 import { getFeatureVariantMetadata } from './featureVariantMetadata'
@@ -944,10 +950,22 @@ function collectSubclassChoiceFeatureRefs(
 
 /** Normalizes class-owned choice requirements with data-shape rules shared by every class. */
 export function normalizeClassChoices(
-  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups' | 'optionalfeatureProgression'>,
+  classData: Pick<
+    Class5e,
+    'name' | 'source' | 'sourceIdentityConflict' | 'classTableGroups' | 'optionalfeatureProgression'
+  >,
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const owner = classChoiceOwner(classData)
+  const misplacedBoons =
+    classData.source.trim().toLowerCase() === 'xphb'
+      ? refs.filter(
+          (ref) =>
+            isEpicBoonFeatureReference(ref) &&
+            getClassFeatureReferenceLevel(ref) !== EPIC_BOON_LEVEL,
+        )
+      : []
+  if (misplacedBoons.length) refs = refs.filter((ref) => !misplacedBoons.includes(ref))
   const psionic = normalizePsionicChoices({ ...classData, classFeatureRefs: [...refs] }, undefined)
   const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
   const tables = normalizeFeatureTableChoices(owner, declarations)
@@ -977,7 +995,14 @@ export function normalizeClassChoices(
     ...enemy.choices,
     ...canny.choices,
   ]
-  const singleFilters = normalizeSingleFilterChoices(refs, accumulated, owner)
+  const epicBoon = getEpicBoonAdvancementReference(refs, classData)
+  const singleFilters = normalizeSingleFilterChoices(
+    epicBoon?.feature && isEpicBoonAdvancement(epicBoon.feature)
+      ? refs.filter((ref) => ref !== epicBoon)
+      : refs,
+    accumulated,
+    owner,
+  )
   const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
   )
@@ -987,6 +1012,15 @@ export function normalizeClassChoices(
       ...psionic.diagnostics,
       ...direct.diagnostics,
       ...singleFilters.diagnostics,
+      ...misplacedBoons.map((ref) =>
+        choiceDiagnostic(
+          owner,
+          ref,
+          getClassFeatureReferenceLevel(ref) ?? EPIC_BOON_LEVEL,
+          'unverified-required-choice',
+          'This revised Epic Boon declaration must match its level-19 advancement.',
+        ),
+      ),
       ...normalizeRequiredSetupDiagnostics(owner, declarations).filter(
         (diagnostic) =>
           diagnostic.featureName !== 'Natural Explorer' &&
