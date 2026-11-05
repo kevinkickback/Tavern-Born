@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import * as identity from '@/lib/5etools/classFeatureIdentity'
 import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
@@ -25,8 +26,19 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
     ...fixedSources,
     class: fixedSources.class.filter((row) => row.name !== 'Rogue'),
   }
-  expect(deriveFixedProficiencyRules([sources, rogueLanguageSources], api)).toEqual({
-    features: FIXED_PROFICIENCY_RULES.filter((row) => row.kind !== 'fixed-training'),
+  const bundledDruid = JSON.parse(
+    readFileSync('resources/srd/core/data/class/class-druid.json', 'utf8'),
+  )
+  expect(deriveFixedProficiencyRules([sources, bundledDruid, rogueLanguageSources], api)).toEqual({
+    features: FIXED_PROFICIENCY_RULES.filter((row) => row.kind !== 'fixed-training').map((row) =>
+      row.className === 'Druid'
+        ? {
+            ...row,
+            metadataDigest: row.bundledMetadataDigest,
+            fields: row.fields.filter((field) => !['page', 'basicRules2024'].includes(field)),
+          }
+        : row,
+    ),
     directClasses: DIRECT_FIXED_CLASS_CERTIFICATES,
   })
 })

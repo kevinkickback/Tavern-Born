@@ -1,10 +1,15 @@
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { getConcreteToolProficiencyName } from '@/lib/5etools/concreteToolProficiencies'
-import { CONCRETE_TOOL_PROFICIENCY_NAMES } from '@/lib/5etools/fixedProficiencyRules'
+import { decodeFixedProficiencyId } from '@/lib/5etools/fixedProficiencyIdentity'
+import {
+  CONCRETE_TOOL_PROFICIENCY_NAMES,
+  fixedProficiencyRule,
+} from '@/lib/5etools/fixedProficiencyRules'
 import { addGrant, emptyProvenance } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { SourceTag } from '@/lib/provenance/types'
 import { isFixedProficiencyTag } from '@/lib/schema/fixedProficiencyValidation'
+import type { Language5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import {
@@ -19,6 +24,37 @@ export const FIXED_PROFICIENCY_FOUNDATION_DOMAINS = [
   'expertise',
   'languages',
 ] as const
+
+function findExactLanguage(
+  languages: readonly Language5e[] | undefined,
+  name: string,
+  source: string,
+) {
+  const matches = languages?.filter(
+    (row) =>
+      canonicalProficiencyName(row.name) === name &&
+      canonicalProficiencyName(row.source ?? '') === canonicalProficiencyName(source),
+  )
+  return matches?.length === 1 && !matches[0].sourceIdentityConflict ? matches[0] : undefined
+}
+
+/** For fixed language grants, keep detail text tied to its active printing. */
+export function getFixedLanguageDetails(
+  languages: readonly Language5e[],
+  name: string,
+  tags: readonly SourceTag[],
+): Language5e | null | undefined {
+  const sources = new Set(
+    tags.flatMap((tag) => {
+      const relation = tag.grantVariant && decodeFixedProficiencyId(tag.grantVariant)
+      const rule = relation ? fixedProficiencyRule(relation.target) : undefined
+      return rule?.languageSource && rule.languages?.includes(name) ? [rule.languageSource] : []
+    }),
+  )
+  if (!sources.size) return undefined
+  if (sources.size > 1) return null
+  return findExactLanguage(languages, name, [...sources][0]) ?? null
+}
 
 /** Remove attributed stale values once, retaining every independent owner. */
 export function stripFixedProficiencyGrants(
@@ -106,6 +142,12 @@ export function grantFixedProficiencies(
           ]
     for (const { domain, names } of grants) {
       for (const name of names) {
+        if (
+          domain === 'languages' &&
+          owner.rule.languageSource &&
+          !findExactLanguage(catalogs?.languages, name, owner.rule.languageSource)
+        )
+          continue
         ledger = addGrant(ledger, domain, name, tag)
         if (!proficiencies[domain].some((value) => canonicalProficiencyName(value) === name))
           proficiencies[domain] = [...proficiencies[domain], name]

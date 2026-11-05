@@ -101,7 +101,7 @@ describe('writeGameDataCache', () => {
     }) as GameData['spells']
     const before = computeGameDataFingerprint(data)
     const entry = await writeGameDataCache(data, config)
-    expect(entry.cacheSchemaVersion).toBe(68)
+    expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
     idbGetMock.mockResolvedValue(JSON.parse(JSON.stringify(entry)))
     const cached = (await readGameDataCache())!
     expect(filterSpellRouteSources(cached.data.spells[0], ['PHB', 'TCE']).classSpellRoutes).toEqual(
@@ -113,7 +113,10 @@ describe('writeGameDataCache', () => {
       origin: 'cache-fixture',
     }) as GameData['spells']
     expect(computeGameDataFingerprint(data)).not.toBe(before)
-    idbGetMock.mockResolvedValue({ ...entry, cacheSchemaVersion: 67 })
+    idbGetMock.mockResolvedValue({
+      ...entry,
+      cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION - 1,
+    })
     await expect(readGameDataCache()).resolves.toBeNull()
   })
 

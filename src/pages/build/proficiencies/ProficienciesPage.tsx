@@ -21,6 +21,7 @@ import {
   applySkillProficiencyActionCommand,
   removeSavedSkillProficiencyCommand,
 } from '@/lib/character/commands/skillProficiencyCommands'
+import { getFixedLanguageDetails } from '@/lib/character/fixedProficiencyOwnership'
 import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
 import { getSkillProficiencyChoices } from '@/lib/character/skillProficiencyChoices'
 import {
@@ -193,21 +194,15 @@ export function BuildProficienciesPage() {
 
   const handleFocusChange = useCallback(
     (focus: ProfFocus) => {
-      if (focus.type === 'item') {
-        const cat = focus.category.toLowerCase()
-        if (cat === 'languages') {
-          const languageData = languagesByName.get(focus.name.toLowerCase()) ?? null
-          setFocused({ ...focus, languageData })
-        } else {
-          const itemData = itemsByName.get(focus.name.toLowerCase()) ?? null
-          setFocused({ ...focus, itemData })
-        }
+      if (focus.type === 'item' && focus.category.toLowerCase() !== 'languages') {
+        const itemData = itemsByName.get(focus.name.toLowerCase()) ?? null
+        setFocused({ ...focus, itemData })
       } else {
         setFocused(focus)
       }
       setCompactPane('right')
     },
-    [itemsByName, languagesByName],
+    [itemsByName],
   )
 
   const activeFocused = useMemo(() => {
@@ -240,10 +235,24 @@ export function BuildProficienciesPage() {
       const expertise =
         category === 'tools' &&
         character.proficiencies.expertise.some((value) => normalizeKey(value) === norm)
-      return { ...focused, isProficient, expertise }
+      const languageData =
+        category === 'languages'
+          ? getFixedLanguageDetails(languages, norm, ledger.proficiencies.languages[norm] ?? [])
+          : undefined
+      return {
+        ...focused,
+        isProficient,
+        expertise,
+        ...(category === 'languages' && {
+          languageData:
+            languageData === undefined
+              ? (languagesByName.get(name.toLowerCase()) ?? null)
+              : languageData,
+        }),
+      }
     }
     return focused
-  }, [focused, skills, savingThrows, character, ledger])
+  }, [focused, skills, savingThrows, character, ledger, languages, languagesByName])
 
   const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 

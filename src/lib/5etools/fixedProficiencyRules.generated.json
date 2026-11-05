@@ -1,6 +1,58 @@
 {
   "features": [
     {
+      "target": "class-feature|druidic|druid|phb|1|phb",
+      "name": "Druidic",
+      "className": "Druid",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "languages": ["druidic"],
+      "languageSource": "PHB",
+      "bundledMetadataDigest": "b578f296a990e46677b848615a8c80ea16b36fc3ebdb8b024b68d4f9f0f98606",
+      "digest": "3374fce3dcfe619c51882c2007a27502470acb8d16cf730e4e42d1b25a2bd7d0",
+      "metadataDigest": "30c6064337d190d1472c73f2f9db9b99711fee00b14c451b4204db4d8e6d6eca",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ]
+    },
+    {
+      "target": "class-feature|druidic|druid|xphb|1|xphb",
+      "name": "Druidic",
+      "className": "Druid",
+      "classSource": "XPHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "languages": ["druidic"],
+      "languageSource": "XPHB",
+      "alwaysPreparedSpell": "Speak with Animals|XPHB",
+      "bundledMetadataDigest": "033e52f9591fd7025a044bc4a931d82f1904cf6a38b795cd2afbb99ed5071384",
+      "digest": "6688987980edfddf45272fde1e9731523b2de18075928d97af873d4413abf9a3",
+      "metadataDigest": "1e9e6a1fe4cb2e6505f5ef6b65b83af7f790bce323606b503ecafb5ddedc809a",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52"
+      ]
+    },
+    {
       "target": "class-feature|thieves' cant|rogue|phb|1|phb",
       "name": "Thieves' Cant",
       "className": "Rogue",
@@ -163,6 +215,22 @@
       "rawDeclaration": "Tool Expertise|Artificer|TCE|6",
       "declarationDigest": "3c2e060f54429be7fd80b689b5ef6f4caebf01a2a8cc779cdeb1f6fbfba94273",
       "ordinal": 8
+    },
+    {
+      "owner": ["druid", "phb"],
+      "target": "class-feature|druidic|druid|phb|1|phb",
+      "level": 1,
+      "rawDeclaration": "Druidic|Druid||1",
+      "declarationDigest": "de85eec7946fa1a517116cbb0e21b01253c773b675c640ee61ece4390254e48d",
+      "ordinal": 0
+    },
+    {
+      "owner": ["druid", "xphb"],
+      "target": "class-feature|druidic|druid|xphb|1|xphb",
+      "level": 1,
+      "rawDeclaration": "Druidic|Druid|XPHB|1",
+      "declarationDigest": "d110c608d13d6776924cb8056a1b9b1bca1daae9ff10a6c391cbf38e9a644bf1",
+      "ordinal": 0
     },
     {
       "owner": ["rogue", "phb"],

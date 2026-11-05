@@ -339,11 +339,11 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "385197f98269c7630ed9a85dcde71aa518b90149bd25a3615fcd101eb171916a"
+      "sha256": "a04d97b30c2bffc50f927e6995371a062da95dc84521692a7b6a1bc90a54f571"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "3b20886d92845bc7541aaed33c7fb2e0cf8b3f4e0ef8631b2532e229e277ea3c"
+      "sha256": "c21eb8f2a6d1e2bb8e648682edb17a170eb28fb8d39ec6e0d89c9696cc39700a"
     },
     {
       "file": "src/lib/5etools/fixedProficiencySource.ts",
