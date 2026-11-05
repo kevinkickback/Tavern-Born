@@ -21,7 +21,9 @@ source-loss/restoration behavior. Export never mutates saved spell state or inde
 
 The export page supplies the raw class-feature and optional-feature lookup catalogs through named
 data hooks, including lookup changes in the projection dependencies. Saved feature action text and
-timing follow the same unique-match and ambiguity policy as Actions. Feat and creature export
+timing follow the same unique-match and ambiguity policy as Actions. The classic Druid's current
+level-20 Archdruid rule replaces its finite Wild Shape counter with an unlimited-uses line in the
+feature summary. That usage limit appears in both description modes. Feat and creature export
 lookups continue to use the character's filtered catalog.
 
 ## Templates and page assembly

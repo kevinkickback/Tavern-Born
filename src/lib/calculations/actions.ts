@@ -1,3 +1,7 @@
+import {
+  CLASSIC_WILD_SHAPE_TARGET,
+  getClassicArchdruidWildShapeRule,
+} from '@/lib/5etools/archdruidSource'
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   decodeClassFeatureReference,
@@ -315,6 +319,13 @@ function deriveClassFeatureActions(
   context: RulesTextActionContext,
 ): CharacterAction[] {
   const actions = new Map<string, CharacterAction>()
+  const progression = getCharacterClassEntries(character)
+  const classes = context.availableClasses ?? context.classes
+  const unlimitedWildShape = getClassicArchdruidWildShapeRule(
+    progression,
+    classes,
+    context.classChoiceFeatureCatalogs,
+  )
   const activity = createOptionalClassFeatureActivity(character, context.classChoiceFeatureCatalogs)
   const routes = getEffectiveClassChoiceFeatureRoutes(
     character,
@@ -328,7 +339,18 @@ function deriveClassFeatureActions(
     source: CharacterAction['source'],
     entries = feature.entries ?? [],
   ) => {
-    const description = renderEntriesToText(entries)
+    let description = renderEntriesToText(entries)
+    if (target === CLASSIC_WILD_SHAPE_TARGET && unlimitedWildShape) {
+      const projected = description.replace(
+        /You can use this feature twice\. You regain expended uses when you finish a short or long rest\./i,
+        unlimitedWildShape,
+      )
+      // Keep unfamiliar source wording while making its current limit explicit.
+      description =
+        projected === description
+          ? `Archdruid overrides the base use limit and recovery below. ${unlimitedWildShape}\n\n${description}`
+          : projected
+    }
     const kind = inferRulesTextActionKind(description)
     if (!kind) return
     const id = getFeatureActionGroupId(owner, target, feature.entries ?? [])
@@ -394,8 +416,8 @@ function deriveClassFeatureActions(
       effectiveDeclaredEntries(currentFeature.entries ?? [], activity, actualOwner, identity),
     )
   }
-  for (const entry of getCharacterClassEntries(character)) {
-    const classData = findClassReference(entry, context.availableClasses ?? context.classes)
+  for (const entry of progression) {
+    const classData = findClassReference(entry, classes)
     if (!classData) continue
     const owner = getFeatureOwnerKey(classData.name, classData.source)
     for (const reference of classData.classFeatureRefs ?? []) {

@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Elemental Fury: measured 6,483,144 B renderer and 1,242,288 B initial.
+  // Classic Archdruid: measured 6,486,100 B renderer and 1,242,803 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6332 * KIB,
+  rendererCode: 6335 * KIB,
   initialRendererScript: 1214 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

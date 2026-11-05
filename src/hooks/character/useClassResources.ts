@@ -2,6 +2,11 @@ import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
+import {
+  CLASSIC_WILD_SHAPE_RESOURCE_ID,
+  getClassicArchdruidWildShapeRule,
+  isClassicDruid,
+} from '@/lib/5etools/archdruidSource'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import {
   formatClassResourceRecovery,
@@ -27,6 +32,7 @@ export interface ComputedClassResource {
 
 export function useClassResources(): {
   resources: ComputedClassResource[]
+  unlimitedWildShape: boolean
   updateCurrent: (id: string, value: number) => void
   resetResource: (id: string) => void
   resetAll: () => void
@@ -37,6 +43,12 @@ export function useClassResources(): {
   const { classes } = useFilteredGameData()
   const rawClassLookup = useClassLookup()
   const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
+
+  const unlimitedWildShape = !!getClassicArchdruidWildShapeRule(
+    character ? getCharacterClassEntries(character) : [],
+    classes,
+    calculationContext?.lookups.primary.classChoiceFeatureCatalogs,
+  )
 
   const resources = useMemo((): ComputedClassResource[] => {
     if (!character) return []
@@ -51,7 +63,14 @@ export function useClassResources(): {
         { classesByKey: filteredClassLookup },
         { classesByKey: rawClassLookup },
       )
-      const defs = getClassResourceDefs(classData, entry.levels ?? 1)
+      const defs = getClassResourceDefs(classData, entry.levels ?? 1).filter(
+        (def) =>
+          !(
+            unlimitedWildShape &&
+            isClassicDruid(entry) &&
+            def.id === CLASSIC_WILD_SHAPE_RESOURCE_ID
+          ),
+      )
       const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
       return defs.map((def) => {
         const max = getEffectiveClassResourceMaximum(
@@ -74,7 +93,7 @@ export function useClassResources(): {
         }
       })
     })
-  }, [character, calculationContext, filteredClassLookup, rawClassLookup])
+  }, [character, calculationContext, filteredClassLookup, rawClassLookup, unlimitedWildShape])
 
   const updateCurrent = useCallback(
     (id: string, value: number) => {
@@ -103,12 +122,12 @@ export function useClassResources(): {
 
   const resetAll = useCallback(() => {
     if (!character) return
-    const next: Record<string, number> = {}
+    const next = { ...character.classResources }
     for (const res of resources) {
       next[res.id] = res.max
     }
     updateCharacter(character.id, { classResources: next })
   }, [character, resources, updateCharacter])
 
-  return { resources, updateCurrent, resetResource, resetAll }
+  return { resources, unlimitedWildShape, updateCurrent, resetResource, resetAll }
 }
