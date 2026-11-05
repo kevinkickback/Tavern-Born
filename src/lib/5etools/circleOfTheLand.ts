@@ -78,7 +78,7 @@ export function isValidLandSelection(selection: CharacterClassChoiceSelection) {
     norm(selection.subclassSource) === norm(rule.source) &&
     selection.classLevel === rule.level &&
     selection.selected.length === 1 &&
-    option.entityType === 'featureOption' &&
+    option?.entityType === 'featureOption' &&
     option.slotLevel === rule.level &&
     norm(option.source) === norm(rule.source) &&
     target?.format === 'source-group' &&
