@@ -223,7 +223,7 @@ export function CharacterOverview({
   const navigate = useNavigate()
   const { skills, passivePerception } = useSkills()
   const { savingThrows } = useSavingThrows()
-  const { resources } = useClassResources()
+  const { resources, unlimitedWildShape } = useClassResources()
   const spellcasting = useSpellSlots()
   const spellLookup = useSpellLookup()
   const itemLookup = useItemLookup()
@@ -841,8 +841,13 @@ export function CharacterOverview({
                   </p>
                 </div>
               )}
-              {resources.length > 0 && (
+              {(resources.length > 0 || unlimitedWildShape) && (
                 <ul className="space-y-2">
+                  {unlimitedWildShape && (
+                    <DetailEntry name="Wild Shape" source="Druid">
+                      <p>Unlimited uses · Archdruid</p>
+                    </DetailEntry>
+                  )}
                   {resources.map((resource) => (
                     <DetailEntry
                       key={resource.id}

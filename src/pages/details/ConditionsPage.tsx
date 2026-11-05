@@ -190,7 +190,8 @@ export function ConditionsPage() {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { hitDicePools = [] } = useHitPoints()
   const ritualCasting = useRitualCasting()
-  const { resources, updateCurrent, resetResource, resetAll } = useClassResources()
+  const { resources, unlimitedWildShape, updateCurrent, resetResource, resetAll } =
+    useClassResources()
   const conditionRecords = useConditions()
   const recursiveLookup = useRecursiveLookup()
   const rulebookSource = getImplicitSource(character?.originSystem ?? '2014')
@@ -740,7 +741,15 @@ export function ConditionsPage() {
               }
             >
               <div className="p-4">
-                {resources.length === 0 ? (
+                {unlimitedWildShape && (
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold">Wild Shape</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Archdruid · Unlimited uses
+                    </p>
+                  </div>
+                )}
+                {resources.length === 0 && !unlimitedWildShape ? (
                   <div className="flex min-h-40 flex-col items-center justify-center text-center">
                     <Flame className="mb-3 size-8 text-muted-foreground/60" weight="duotone" />
                     <p className="text-sm font-medium">No limited class resources yet</p>

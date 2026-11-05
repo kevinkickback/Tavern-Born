@@ -1,3 +1,8 @@
+import {
+  CLASSIC_WILD_SHAPE_RESOURCE_ID,
+  getClassicArchdruidWildShapeRule,
+  isClassicDruid,
+} from '@/lib/5etools/archdruidSource'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import {
   formatClassResourceRecovery,
@@ -172,6 +177,7 @@ export interface CharacterSheetViewModel {
   remainingHitDice: number
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
+  classResourceSummary?: string
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
@@ -384,8 +390,10 @@ function withFeatureOptionSummaries(
   notes: readonly ProficiencyCheckNoteRow[] = [],
   optionalFeatures: NonNullable<CharacterSheetViewModel['optionalClassFeatureSummaries']> = [],
   castingSummaries: readonly string[] = [],
+  resourceSummary?: string,
 ): string {
   return [
+    resourceSummary,
     summary,
     ...optionalFeatures.map((row) => (descriptions ? row.text : row.compactText)),
     ...(selections ?? []).map((selection) =>
@@ -410,6 +418,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       vm.proficiencyCheckNotes,
       vm.optionalClassFeatureSummaries,
       vm.managedSpellCastingSummaries,
+      vm.classResourceSummary,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(vm.character, false),
@@ -418,6 +427,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
       vm.proficiencyCheckNotes,
       vm.optionalClassFeatureSummaries,
       vm.managedSpellCastingSummaries,
+      vm.classResourceSummary,
     ),
     featsSummary: vm.feats.map((feat) => feat.name).join('\n'),
     feats: vm.feats.map((feat) => ({ ...feat, description: '' })),
@@ -687,13 +697,22 @@ function buildClassResourceRows(
   effectiveAbilityScores: AbilityScores,
   effects: readonly CharacterEffect[],
   effectContext: EffectResolutionContext,
+  unlimitedWildShape: boolean,
 ): CharacterSheetClassResourceRow[] {
   const stored = character.classResources ?? {}
   const charismaModifier = getAbilityModifier(effectiveAbilityScores.charisma)
   return getCharacterClassEntries(character).flatMap((entry) => {
     const classData = resolveClassReference(entry, rawLookups)
     const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
-    return getClassResourceDefs(classData, entry.levels).map((definition) => {
+    const defs = getClassResourceDefs(classData, entry.levels).filter(
+      (definition) =>
+        !(
+          unlimitedWildShape &&
+          isClassicDruid(entry) &&
+          definition.id === CLASSIC_WILD_SHAPE_RESOURCE_ID
+        ),
+    )
+    return defs.map((definition) => {
       const max = getEffectiveClassResourceMaximum(
         definition,
         levelIndex,
@@ -754,6 +773,14 @@ export function createCharacterSheetViewModel(
     rawLookups,
   )
   const character = calculationContext.character
+  const unlimitedWildShape = getClassicArchdruidWildShapeRule(
+    getCharacterClassEntries(character),
+    calculationContext.classChoices.classes,
+    primaryLookups.classChoiceFeatureCatalogs,
+  )
+  const classResourceSummary = unlimitedWildShape
+    ? 'Wild Shape (Archdruid): Unlimited uses.'
+    : undefined
   const feats = getSelectedFeats(character).map((feat) => ({
     ...feat,
     description:
@@ -933,12 +960,14 @@ export function createCharacterSheetViewModel(
     walkingSpeed: getWalkingSpeed(calculationContext.movement),
     remainingHitDice: Math.max(0, level - getHitDiceUsedTotal(character.hitDiceUsed)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
+    classResourceSummary,
     classResourceRows: buildClassResourceRows(
       character,
       rawLookups,
       effectiveAbilityScores,
       calculationContext.effects.declarations,
       calculationContext.effects.resolutionContext,
+      !!unlimitedWildShape,
     ),
     weaponRows: buildWeaponRows(actions),
     actions,
@@ -986,6 +1015,7 @@ export function createCharacterSheetViewModel(
       proficiencyCheckNotes,
       optionalClassFeatureSummaries,
       managedSpellCastingSummaries,
+      classResourceSummary,
     ),
     featuresSummary: withFeatureOptionSummaries(
       buildFeaturesSummary(character),
@@ -994,6 +1024,7 @@ export function createCharacterSheetViewModel(
       proficiencyCheckNotes,
       optionalClassFeatureSummaries,
       managedSpellCastingSummaries,
+      classResourceSummary,
     ),
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
