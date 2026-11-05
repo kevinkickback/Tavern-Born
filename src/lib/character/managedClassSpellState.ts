@@ -17,9 +17,13 @@ export function removeManagedClassSpellMaterialization(
   character: Character,
   removed: readonly ManagedClassSpellChoice[],
 ): Character {
-  const ids = new Set(removed.map((choice) => managedClassSpellId(choice.slot)))
+  const materialized = removed.filter((choice) => choice.slot[1] !== 'class-spellbook-specialty')
+  if (!materialized.length) return character
+  const ids = new Set(materialized.map((choice) => managedClassSpellId(choice.slot)))
   const spellProfiles = character.spells.spellProfiles.map((profile) => {
-    const targets = removed.filter((choice) => isManagedClassSpellProfile(choice.slot, profile))
+    const targets = materialized.filter((choice) =>
+      isManagedClassSpellProfile(choice.slot, profile),
+    )
     if (!targets.length) return profile
     const keep = (reference: string) =>
       isIndependentFixedClassSpell(profile, reference) ||

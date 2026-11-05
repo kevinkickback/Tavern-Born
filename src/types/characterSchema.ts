@@ -75,6 +75,7 @@ const managedClassSpellChoiceSchema = z
         'class-cantrip',
         'class-known',
         'class-spellbook',
+        'class-spellbook-specialty',
         'class-arcanum',
         'feature-cantrip',
       ]),

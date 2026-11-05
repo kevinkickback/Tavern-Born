@@ -3,14 +3,8 @@ import { Button } from '@/components/ui/button'
 import { resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
 import type { Spell5e } from '@/types/5etools'
+import { countSpellGainChoices, type SpellGain } from '../model/levelsUtils'
 import type { SelectedFeatureState } from './DetailsPanel'
-
-interface SpellGain {
-  cantrips: number
-  spells: number
-  maxSpellLevel: number
-  canSwap: boolean
-}
 
 interface BuildClassSpellSectionProps {
   level: number
@@ -37,7 +31,7 @@ export function BuildClassSpellSection({
   onExpandDetails,
   getOrdinalForm,
 }: BuildClassSpellSectionProps) {
-  const hasNewSelections = spellGain.cantrips > 0 || spellGain.spells > 0
+  const hasNewSelections = countSpellGainChoices(spellGain) > 0
 
   return (
     <div className="rounded-lg border border-accent-secondary/30 bg-accent-secondary/5 overflow-hidden">
@@ -58,6 +52,8 @@ export function BuildClassSpellSection({
                       `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
                     spellGain.spells > 0 &&
                       `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
+                    spellGain.spellbookSpecialty &&
+                      `${spellGain.spellbookSpecialty.name} (${spellGain.spellbookSpecialty.count} choices)`,
                   ]
                     .filter(Boolean)
                     .join(' · ')
@@ -80,7 +76,7 @@ export function BuildClassSpellSection({
       </div>
       {chosenNames.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-accent-secondary/20 pt-2">
-          {chosenNames.map((name) => {
+          {[...new Set(chosenNames)].map((name) => {
             const spell = resolveSpellReferenceFromMap(name, spellByReference)
             return (
               <button

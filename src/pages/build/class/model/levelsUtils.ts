@@ -1,11 +1,15 @@
 import type { ClassFeatureDisplay } from '../components/DetailsPanel'
 
-interface SpellGain {
+export interface SpellGain {
   cantrips: number
   spells: number
   maxSpellLevel: number
   canSwap: boolean
+  spellbookSpecialty?: { name: string; count: number }
 }
+
+export const countSpellGainChoices = (gain: SpellGain) =>
+  gain.cantrips + gain.spells + (gain.spellbookSpecialty?.count ?? 0)
 
 interface ComputeLevelDisplayDataParams {
   level: number
@@ -35,7 +39,7 @@ export function computeLevelDisplayData({
   const isASILevel = asiLevels.includes(level)
   const earnedSpells = spellChoicesByLevel.get(level)
   const spellGain =
-    earnedSpells && earnedSpells.cantrips + earnedSpells.spells > 0 ? earnedSpells : undefined
+    earnedSpells && countSpellGainChoices(earnedSpells) > 0 ? earnedSpells : undefined
 
   const passiveFeatures = (featuresByLevel.get(level) ?? []).filter((feature) => {
     if (isSubclassLevel && subclassFeatureName && feature.name === subclassFeatureName) {

@@ -57,6 +57,31 @@ describe('spell profile display model', () => {
     })
   })
 
+  test('counts only ordinary preparations in a Wizard spellbook', () => {
+    const profile = { id: 'class:Wizard|PHB', type: 'class', label: 'Wizard' }
+    const [model] = buildSpellProfileDisplayModels({
+      spellProfiles: [profile],
+      detailsByProfileId: new Map([
+        [profile.id, { profileId: profile.id, isPreparedCaster: true, preparedSpellLimit: 2 }],
+      ]),
+      groupedItems: new Map([
+        [
+          profile.id,
+          [
+            item({ name: 'Shield|PHB', prepared: true }),
+            item({ name: 'Fireball|PHB', prepared: true, alwaysPrepared: true, level: 3 }),
+          ],
+        ],
+      ]),
+    })
+    expect(model.preparedCount).toBe(1)
+    expect(model.preparedTotal).toBe(2)
+    expect(model.items.find((row) => row.name === 'Fireball|PHB')).toMatchObject({
+      prepared: true,
+      alwaysPrepared: true,
+    })
+  })
+
   test('builds preparation summaries for a true prepared caster', () => {
     const profile = {
       id: 'class:Cleric|PHB',

@@ -101,6 +101,28 @@ without expending a spell slot. Uses are not tracked. Independent casting paths 
 This supports initial selection/correction; spent-use/reset accounting and level-up replacement events
 remain separate. New source producers and unknown prose meanings still require reviewed certification.
 
+## Wizard spellbook specialties
+
+Spell Mastery and Signature Spells reuse the managed Class editor and revision allocator. A
+specialty saves an exact reference to a currently learned spell in the same Wizard spellbook.
+It supplies no learned membership or saved spell grant. The picker previews draft book edits
+and Finish validates the complete proposed book against the latest catalog. Losing a learned
+spell or the exact current feature suspends the specialty while keeping its selection. Removing
+the class or earned level retires its slots, including empty ones.
+
+Spell Mastery uses one level-1 and one level-2 spell. Classic requires current Wizard-list
+eligibility and ordinary preparation before the free base-level cast. Revised requires a
+one-action casting time and prepares the choices automatically. Signature Spells use two
+distinct level-3 spells, with current Wizard-list eligibility for classic. Both printings prepare
+these automatically and allow each base-level cast without a slot once per short or long rest.
+
+Automatic specialty preparation is derived for Spells, Actions and PDF and uses no ordinary
+preparation capacity. An independent preparation request stays saved and is reevaluated when
+the specialty suspends or clears. A classic Spell Mastery note alone supplies no preparation.
+The narrow feature authority validates the current linked prose-only declarations, while
+spellbook membership, spell levels and casting times come from the active data. Rest simulation,
+spent-use accounting and rules for replacing spells during play are outside this setup.
+
 ## Circle of the Land
 
 The Class page saves one terrain for the exact Circle of the Land subclass on its

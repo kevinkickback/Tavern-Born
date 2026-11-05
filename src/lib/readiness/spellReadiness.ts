@@ -7,7 +7,10 @@ import {
 } from '@/lib/calculations/spellIdentity'
 import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles.casting'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
-import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import {
+  getManagedClassSpellFeatureLabel,
+  managedClassSpellId,
+} from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
@@ -151,7 +154,7 @@ export function validateSpells(
             ? 'cantrip'
             : slots[0][1] === 'class-arcanum'
               ? 'Mystic Arcanum'
-              : 'spell'
+              : (getManagedClassSpellFeatureLabel(slots[0]) ?? 'spell')
       issues.push(
         readinessIssue(
           `spells:managed:${managedClassSpellId(slots[0])}`,

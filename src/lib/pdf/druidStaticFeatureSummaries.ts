@@ -1,7 +1,4 @@
-import {
-  CLASSIC_WILD_SHAPE_RESOURCE_ID,
-  getCurrentDirectClassFeature,
-} from '@/lib/5etools/archdruidSource'
+import { CLASSIC_WILD_SHAPE_RESOURCE_ID } from '@/lib/5etools/archdruidSource'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -9,6 +6,7 @@ import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Class5e } from '@/types/5etools'

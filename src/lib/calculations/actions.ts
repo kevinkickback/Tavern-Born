@@ -73,7 +73,7 @@ import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
-import { getManagedSpellCastingNotes } from './managedSpellCasting'
+import { getManagedSpellCastingNotes, hasActiveMysticArcanum } from './managedSpellCasting'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -222,8 +222,7 @@ export function deriveSpellActions(
         !!profile.alwaysPrepared ||
           !requiresPreparation ||
           preparedKeys.has(spellKey(reference)) ||
-          getManagedSpellCastingNotes(options.managedClassSpellStatuses ?? [], reference, profile)
-            .length > 0,
+          hasActiveMysticArcanum(options.managedClassSpellStatuses ?? [], reference, profile),
       )
     }
     for (const reference of profile.preparedSpells) addSpell(reference, true)
