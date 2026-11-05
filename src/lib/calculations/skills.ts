@@ -197,7 +197,7 @@ export function deriveAllSkills(
     const modifier = Math.trunc(
       resolveNumericEffect(
         abilityCheckModifier,
-        { kind: 'skill-modifier', skill: name },
+        { kind: 'skill-modifier', skill: name, ability },
         effects,
         effectContext,
       ).value,

@@ -3,6 +3,7 @@ import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { DIVINE_ORDER_ID, divineOrderKey } from '@/lib/5etools/divineOrderIdentity'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -19,6 +20,7 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
+import { getCurrentDivineOrder } from '@/lib/character/divineOrder'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { EPIC_BOON_LEVEL } from '@/lib/character/epicBoonSlots'
 import {
@@ -233,8 +235,28 @@ export function validateClassChoices(
       )
     }
 
+    const divineOrderNeedsRecovery =
+      divineOrderKey(entry.name) === 'cleric' &&
+      divineOrderKey(entry.source) === 'xphb' &&
+      character.classChoiceSelections?.some(
+        (row) => row.choiceId === DIVINE_ORDER_ID && row.selected.length > 0,
+      ) &&
+      !getCurrentDivineOrder(character, calculation.classChoices.catalogs)
+    if (divineOrderNeedsRecovery)
+      issues.push(
+        readinessIssue(
+          classChoiceReadinessId(DIVINE_ORDER_ID),
+          'blocking',
+          'class',
+          'Review Divine Order',
+          'Restore the exact Divine Order and selected option sources or change the selection.',
+          classChoiceTarget(entry, 1, DIVINE_ORDER_ID),
+        ),
+      )
+
     for (const original of getCharacterClassChoices(classData, subclassData, activity, catalogs)) {
       if (original.id === epicBoon?.choiceId) continue
+      if (original.id === DIVINE_ORDER_ID && divineOrderNeedsRecovery) continue
       const choice = resolveHistoricalProficiencyChoice(character, original)
       if (
         choice.level <= entry.levels &&

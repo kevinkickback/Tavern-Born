@@ -1,4 +1,9 @@
 import {
+  DIVINE_ORDER_OPTIONS,
+  getDivineOrderOption,
+  getSavedDivineOrder,
+} from '@/lib/5etools/divineOrderIdentity'
+import {
   decodeSelectedFeatureSpellAddress,
   selectedFeatureSpellAddress,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -27,6 +32,19 @@ export function getSelectedFeatureSpellProducer(
   selection: CharacterClassChoiceSelection,
   option: CharacterClassChoiceOption,
 ) {
+  if (option.entityType === 'classFeature') {
+    if (selection.selected[0] !== option || getDivineOrderOption(selection) !== 'thaumaturge')
+      return undefined
+    return selectedFeatureSpellAddress([
+      selection.choiceId,
+      'classFeature',
+      'thaumaturge',
+      'xphb',
+      DIVINE_ORDER_OPTIONS.thaumaturge,
+      0,
+      0,
+    ])
+  }
   if (
     !['optionalFeature', 'feat'].includes(option.entityType) ||
     !option.source?.trim() ||
@@ -51,6 +69,8 @@ export function hasSavedSelectedFeatureSpellOwner(
 ) {
   const address = decodeSelectedFeatureSpellAddress(slot[2])
   if (!address) return false
+  if (address[1] === 'classFeature' && getSavedDivineOrder(character)?.branch !== 'thaumaturge')
+    return false
   const matches = (character.classChoiceSelections ?? []).filter(
     (selection) =>
       JSON.stringify(selectedFeatureSpellOwner(selection)) === JSON.stringify(slot[0]) &&

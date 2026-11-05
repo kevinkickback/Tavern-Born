@@ -45,7 +45,6 @@ import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
-import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands/equipmentCommands'
 import {
   buildItemDetailFields,
   getDamageSummary,
@@ -105,6 +104,7 @@ export function EquipmentPage() {
     removeItem,
     updateItem,
     toggleEquip,
+    setRestrictionsIgnored,
     toggleAttune,
     updateCurrency,
   } = useEquipment()
@@ -122,21 +122,13 @@ export function EquipmentPage() {
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useItemLookup()
   const { items, itemsBase } = useFilteredGameData()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const recursiveLookup = useRecursiveLookup()
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
-  const toggleIgnoreRestrictions = () => {
-    if (!character) return
-    const nextIgnoreEquipRestrictions = !ignoreEquipRestrictions
-    updateCharacter(
-      character.id,
-      setEquipmentRestrictionsIgnoredCommand(character, nextIgnoreEquipRestrictions),
-    )
-  }
+  const toggleIgnoreRestrictions = () => setRestrictionsIgnored(!ignoreEquipRestrictions)
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const equipmentItems = useMemo(
     () =>

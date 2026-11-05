@@ -184,7 +184,14 @@ export function RulesPage() {
       return
     }
     if (key === 'ignoreEquipRestrictions') {
-      updateCharacter(character.id, setEquipmentRestrictionsIgnoredCommand(character, checked))
+      updateCharacter(
+        character.id,
+        setEquipmentRestrictionsIgnoredCommand(
+          character,
+          checked,
+          calculation?.character.proficiencies.armor,
+        ),
+      )
       return
     }
     updateRules({ [key]: checked })

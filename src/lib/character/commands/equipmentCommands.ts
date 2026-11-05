@@ -23,16 +23,15 @@ export type ManualProficiencyDomain =
 export function setEquipmentRestrictionsIgnoredCommand(
   character: Character,
   ignored: boolean,
+  armorTraining = character.proficiencies.armor,
 ): Partial<Character> {
   return {
     variantRules: { ...character.variantRules, ignoreEquipRestrictions: ignored },
     ...(ignored
       ? {}
       : {
-          equipment: enforceArmorEquipmentRestrictions(
-            character.equipment,
-            character.proficiencies.armor,
-          ).equipment,
+          equipment: enforceArmorEquipmentRestrictions(character.equipment, armorTraining)
+            .equipment,
         }),
   }
 }

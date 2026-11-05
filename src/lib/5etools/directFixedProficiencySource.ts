@@ -5,7 +5,7 @@ import {
   DIRECT_FIXED_CLASS_CERTIFICATES,
   type DirectFixedClassCertificate,
   FIXED_PROFICIENCY_RULES,
-  type FixedProficiencyRule,
+  type GeneratedFixedProficiencyRule,
 } from './fixedProficiencyRules'
 import {
   subclassProficiencyDigest,
@@ -18,7 +18,7 @@ interface FixedProficiencySourceAudit {
   origin: string
   verified: boolean
 }
-export const directFeatures: ReadonlyMap<string, FixedProficiencyRule> = new Map(
+export const directFeatures: ReadonlyMap<string, GeneratedFixedProficiencyRule> = new Map(
   FIXED_PROFICIENCY_RULES.filter((rule) => rule.target.startsWith('class-feature|')).map((rule) => [
     rule.target,
     rule,
@@ -59,7 +59,7 @@ function isStamped(value: unknown, certificate: unknown): value is FixedProficie
 }
 function matchesFeature(
   feature: ClassFeature | Record<string, unknown>,
-  rule: FixedProficiencyRule,
+  rule: GeneratedFixedProficiencyRule,
 ) {
   const { fixedProficiencySourceAudit: _audit, ...source } = feature
   const metadata = subclassProficiencyDigest(subclassProficiencyMetadata(source))
@@ -131,7 +131,7 @@ export function auditDirectFixedClassDeclarations(
   })
 }
 
-function currentFeature(rule: FixedProficiencyRule, candidates: readonly ClassFeature[]) {
+function currentFeature(rule: GeneratedFixedProficiencyRule, candidates: readonly ClassFeature[]) {
   if (
     !candidates.length ||
     candidates.some(
@@ -155,7 +155,7 @@ export function getCurrentDirectFixedClassRules(
     classFeatures: readonly ClassFeature[]
     classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
   },
-): FixedProficiencyRule[] {
+): GeneratedFixedProficiencyRule[] {
   const certificate = directOwners.get(ownerKey(classData))
   if (
     !certificate ||
