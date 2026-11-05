@@ -9,6 +9,16 @@ import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
+  ELEMENTAL_FURY_ID,
+  ELEMENTAL_FURY_LEVEL,
+  ELEMENTAL_FURY_TARGET,
+  getCurrentElementalFury,
+  getSavedElementalFury,
+  IMPROVED_ELEMENTAL_FURY_LEVEL,
+  IMPROVED_ELEMENTAL_FURY_TARGET,
+  isElementalFuryOptionTarget,
+} from '@/lib/5etools/elementalFurySource'
+import {
   decodeFavoredEnemyChoiceId,
   FAVORED_ENEMY_GRANTS,
 } from '@/lib/5etools/favoredEnemyIdentity'
@@ -185,7 +195,7 @@ function buildOptionalClassFeatureActivity(
   ): boolean => {
     if (!earned(owner, level) || suppressed(owner, target, facet)) return false
     // The selected branch appears through the class-choice route, never as a passive grant.
-    if (isBlessedStrikesOptionTarget(target)) return false
+    if (isBlessedStrikesOptionTarget(target) || isElementalFuryOptionTarget(target)) return false
     const relation = states.find(
       ({ root }) =>
         equal(root.owner, owner) && (root.target === target || root.children.includes(target)),
@@ -206,7 +216,12 @@ function buildOptionalClassFeatureActivity(
       : !facets.length || facets.some((value) => !suppressed(owner, target, value))
   }
   const choice = (row: NormalizedCharacterChoice): boolean => {
-    if (getRevisedHunterRule(row.id) && allowed && !allowed.has('xphb')) return false
+    if (
+      (row.id === ELEMENTAL_FURY_ID || getRevisedHunterRule(row.id)) &&
+      allowed &&
+      !allowed.has('xphb')
+    )
+      return false
     const owner = optionalClassOwner(row.owner)
     const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (proficiency) return declared(owner, proficiency.target, row.level)
@@ -228,6 +243,12 @@ function buildOptionalClassFeatureActivity(
       ? getCurrentBlessedStrikes(catalogs)
       : undefined
   const blessedSelection = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
+  const druidOwner: OptionalClassFeatureOwner = ['class', 'druid', 'xphb']
+  const fury =
+    earned(druidOwner, ELEMENTAL_FURY_LEVEL) && (!allowed || allowed.has('xphb'))
+      ? getCurrentElementalFury(catalogs)
+      : undefined
+  const furySelection = getSavedElementalFury(character.classChoiceSelections ?? [])
   const diagnostic = (row: ClassChoiceDiagnostic): boolean => {
     const owner = optionalClassOwner({
       name: row.className,
@@ -258,6 +279,15 @@ function buildOptionalClassFeatureActivity(
         return blessedSelection && !blessedSelection.inactive && earned(owner, 14)
           ? (blessedStrikes?.improvementFor(blessedSelection.selected[0]) ?? [])
           : []
+    }
+    if (equal(owner, druidOwner)) {
+      if (target === ELEMENTAL_FURY_TARGET) return fury ? [fury.rootIntro] : []
+      if (target === IMPROVED_ELEMENTAL_FURY_TARGET) {
+        const selected = furySelection && !furySelection.inactive && furySelection.selected[0]
+        return selected && earned(owner, IMPROVED_ELEMENTAL_FURY_LEVEL) && fury?.option(selected)
+          ? fury.improvementFor(selected)
+          : []
+      }
     }
     const hunter = revisedHunterRules.find((row) => row.target === target)
     if (hunter && equal(owner, ['subclass', 'ranger', 'xphb', 'hunter', 'xphb'])) {

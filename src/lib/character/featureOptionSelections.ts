@@ -1,4 +1,4 @@
-import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
+import { getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
 import {
   getLandChoiceRule,
   getLandWardResistance,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { CLASS_ORDERS, getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getSavedElementalFury } from '@/lib/5etools/elementalFurySource'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import {
   ELEMENTAL_AFFINITY_REF,
@@ -84,15 +85,15 @@ export interface FeatureOptionSelectionState {
   legacySubclass?: boolean
   companion?: boolean
   classOrder?: boolean
-  blessedStrikes?: boolean
+  projectedBranch?: boolean
 }
 
-function getBlessedStrikesRecovery(
+function getProjectedBranchRecovery(
   character: Character,
   classes: readonly Class5e[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
+  selection: CharacterClassChoiceSelection | undefined,
 ): FeatureOptionSelectionState[] {
-  const selection = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   if (!selection || selection.inactive) return []
   const owner = findClassReference(
     { name: selection.className, source: selection.classSource },
@@ -107,7 +108,7 @@ function getBlessedStrikesRecovery(
       getSelectedSubclassData(classData, owner),
       createOptionalClassFeatureActivity(character, catalogs),
       catalogs,
-    ).find((row) => row.id === BLESSED_STRIKES_ID)
+    ).find((row) => row.id === selection.choiceId)
   const options = choice
     ? resolveClassChoiceOptions(choice, literalCatalogs(catalogs), selection.selected, owner.levels)
     : []
@@ -128,11 +129,11 @@ function getBlessedStrikesRecovery(
       choice,
       options,
       recovery: true,
-      blessedStrikes: true,
+      projectedBranch: true,
       details: [
         {
           name: selected.name,
-          entries: ['Restore the exact Blessed Strikes source or remove the saved choice.'],
+          entries: [`Restore the exact ${selection.label} source or remove the saved choice.`],
           available: false,
         },
       ],
@@ -140,17 +141,17 @@ function getBlessedStrikesRecovery(
   ]
 }
 
-export function hasBlessedStrikesRecovery(
+export function hasProjectedBranchRecovery(
   diagnostic: ClassChoiceDiagnostic,
   states: readonly FeatureOptionSelectionState[],
 ): boolean {
   return (
-    diagnostic.featureName === 'Blessed Strikes' &&
     !diagnostic.subclassName &&
     states.some(
       (state) =>
-        state.blessedStrikes &&
+        state.projectedBranch &&
         state.recovery &&
+        state.selection.label === diagnostic.featureName &&
         getFeatureOwnerKey(state.selection.className, state.selection.classSource) ===
           getFeatureOwnerKey(diagnostic.className, diagnostic.classSource) &&
         state.selection.classLevel === diagnostic.level,
@@ -418,7 +419,18 @@ export function getFeatureOptionSelectionStates(
   return [
     ...literal,
     ...orderRecovery,
-    ...getBlessedStrikesRecovery(character, classes, catalogs),
+    ...getProjectedBranchRecovery(
+      character,
+      classes,
+      catalogs,
+      getSavedBlessedStrikes(character.classChoiceSelections ?? []),
+    ),
+    ...getProjectedBranchRecovery(
+      character,
+      classes,
+      catalogs,
+      getSavedElementalFury(character.classChoiceSelections ?? []),
+    ),
     ...getLegacySubclassSelectionStates(character, classes, catalogs),
     ...getPsionicRecoveryStates(character, classes, catalogs),
     ...getStormAuraSelectionStates(character, classes, catalogs),

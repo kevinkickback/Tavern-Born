@@ -138,7 +138,7 @@ export function BuildClassChoicesSection({
                 </Badge>
               </div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {diagnostic.requiredChoice
+                {diagnostic.requiredChoice || diagnostic.code === 'unverified-required-choice'
                   ? diagnostic.message
                   : 'This choice is present in the source data, but Tavern Born could not safely determine its options or count. No rule was guessed.'}
               </p>

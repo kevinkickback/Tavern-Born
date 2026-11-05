@@ -7,6 +7,13 @@ import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormal
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { getClassOrderById, getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import {
+  ELEMENTAL_FURY_ID,
+  getCurrentElementalFury,
+  getSavedElementalFury,
+  IMPROVED_ELEMENTAL_FURY_LEVEL,
+  IMPROVED_ELEMENTAL_FURY_NAME,
+} from '@/lib/5etools/elementalFurySource'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -86,6 +93,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
   }> = []
   const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
+  const elementalFury = getSavedElementalFury(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
     const order = getClassOrderById(selection.choiceId)
     if (
@@ -96,6 +104,11 @@ function buildEffectiveClassChoiceFeatureRoutes(
     if (
       selection.choiceId === BLESSED_STRIKES_ID &&
       (selection !== blessedStrikes || selection.inactive)
+    )
+      continue
+    if (
+      selection.choiceId === ELEMENTAL_FURY_ID &&
+      (selection !== elementalFury || selection.inactive)
     )
       continue
     if (invalidPsionics.has(selection.choiceId)) continue
@@ -182,10 +195,13 @@ function buildEffectiveClassChoiceFeatureRoutes(
         const view = options.find(
           (row) => getClassChoiceOptionKey(row.reference) === getClassChoiceOptionKey(option),
         )!
+        const isFury = choice.id === ELEMENTAL_FURY_ID
         const improved =
-          choice.id === BLESSED_STRIKES_ID && owner.levels >= 14
-            ? (getCurrentBlessedStrikes(catalogs)?.improvementFor(option) ?? [])
-            : []
+          isFury && owner.levels >= IMPROVED_ELEMENTAL_FURY_LEVEL
+            ? (getCurrentElementalFury(catalogs)?.improvementFor(option) ?? [])
+            : choice.id === BLESSED_STRIKES_ID && owner.levels >= 14
+              ? (getCurrentBlessedStrikes(catalogs)?.improvementFor(option) ?? [])
+              : []
         contributions.push({
           id: getClassChoiceFeatureId(selection, option),
           feature: getClassChoiceGrantedFeature(selection, option),
@@ -193,7 +209,11 @@ function buildEffectiveClassChoiceFeatureRoutes(
           entries: improved.length
             ? [
                 ...view.entries,
-                { type: 'entries', name: 'Improved Blessed Strikes', entries: improved },
+                {
+                  type: 'entries',
+                  name: isFury ? IMPROVED_ELEMENTAL_FURY_NAME : 'Improved Blessed Strikes',
+                  entries: improved,
+                },
               ]
             : view.entries,
           choiceId: selection.choiceId,
@@ -309,7 +329,9 @@ export function projectEffectiveClassChoiceFeatures(
     .map((row) => {
       const current = routes.contributions.find(
         (candidate) =>
-          (candidate.psionic || candidate.choiceId === BLESSED_STRIKES_ID) &&
+          (candidate.psionic ||
+            candidate.choiceId === BLESSED_STRIKES_ID ||
+            candidate.choiceId === ELEMENTAL_FURY_ID) &&
           candidate.id === row.id,
       )
       if (!current) return row
@@ -320,7 +342,7 @@ export function projectEffectiveClassChoiceFeatures(
   for (const row of routes.contributions)
     if (!existingIds.has(row.id)) {
       features.push(
-        row.psionic || row.choiceId === BLESSED_STRIKES_ID
+        row.psionic || row.choiceId === BLESSED_STRIKES_ID || row.choiceId === ELEMENTAL_FURY_ID
           ? { ...row.feature, description: renderEntriesToText(row.entries) }
           : row.feature,
       )

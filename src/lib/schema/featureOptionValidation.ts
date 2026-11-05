@@ -1,5 +1,6 @@
 import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
 import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
+import { ELEMENTAL_FURY_ID, getSavedElementalFury } from '@/lib/5etools/elementalFurySource'
 import {
   decodeFeatureOptionReference,
   getFeatureOptionChoiceId,
@@ -18,8 +19,12 @@ export function getInvalidFeatureOptionSelectionPaths(
   const paths: Array<Array<string | number>> = []
   const invalidGroups = getInvalidFeatureLiteralSelectionIds(character.classChoiceSelections ?? [])
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
+  const elementalFury = getSavedElementalFury(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
-    if (selection.choiceId === BLESSED_STRIKES_ID && selection !== blessedStrikes) {
+    if (
+      (selection.choiceId === BLESSED_STRIKES_ID && selection !== blessedStrikes) ||
+      (selection.choiceId === ELEMENTAL_FURY_ID && selection !== elementalFury)
+    ) {
       paths.push(['classChoiceSelections', index])
       continue
     }

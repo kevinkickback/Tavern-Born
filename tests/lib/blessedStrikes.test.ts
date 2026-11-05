@@ -162,7 +162,7 @@ function verifyChoice(path: string) {
   ).toBe(false)
   expect(
     getFeatureOptionSelectionStates(divine, catalogs.classes ?? [], unavailable),
-  ).toContainEqual(expect.objectContaining({ recovery: true, blessedStrikes: true }))
+  ).toContainEqual(expect.objectContaining({ recovery: true, projectedBranch: true }))
   expect(
     projectEffectiveClassChoiceFeatures(divine, catalogs).features.some(
       (row) => row.name === 'Divine Strike',

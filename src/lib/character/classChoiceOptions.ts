@@ -7,6 +7,12 @@ import { getClassOrderBranch, getClassOrderById } from '@/lib/5etools/classOrder
 import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
+  ELEMENTAL_FURY_ID,
+  ELEMENTAL_FURY_LEVEL,
+  ELEMENTAL_FURY_NAME,
+  getCurrentElementalFury,
+} from '@/lib/5etools/elementalFurySource'
+import {
   normalizeFavoredEnemyChoices,
   resolveFavoredEnemyOption,
 } from '@/lib/5etools/favoredEnemyChoices'
@@ -648,6 +654,21 @@ export function resolveClassChoiceOptions(
         : { reference, availability: 'retained', entries: [] }
     })
   }
+  if (choice.id === ELEMENTAL_FURY_ID) {
+    const rules = getCurrentElementalFury(catalogs)
+    const retained = new Set(saved.map(getClassChoiceOptionKey))
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((row) => [getClassChoiceOptionKey(row), row]),
+      ).values(),
+    ].flatMap((reference): ClassChoiceOptionView[] => {
+      const feature = classLevel >= choice.level && rules?.option(reference)
+      if (feature) return [{ ...toView('classFeature', feature, catalogs, 'eligible'), reference }]
+      return retained.has(getClassChoiceOptionKey(reference))
+        ? [{ reference, availability: 'retained', entries: [] }]
+        : []
+    })
+  }
   if (choice.id === BLESSED_STRIKES_ID) {
     const rules = getCurrentBlessedStrikes(catalogs)
     return [
@@ -1265,6 +1286,8 @@ export function getClassChoiceCandidates(
   )
   const ordinary = getAllCharacterClassChoices(classData, subclass).filter((choice) => {
     if (choice.id === BLESSED_STRIKES_ID) return !!getCurrentBlessedStrikes(catalogs)
+    if (choice.id === ELEMENTAL_FURY_ID)
+      return !!getCurrentElementalFury(catalogs)?.hasAvailableOption
     if (
       legacyFamily &&
       choice.owner.type === 'subclass' &&
@@ -1658,6 +1681,21 @@ export function getClassChoiceDiagnosticCandidates(
           ? 'Restore the exact Improved Blessed Strikes declaration to use the earned upgrade.'
           : 'Restore the exact revised Cleric source to choose a Blessed Strikes option.',
       })
+  }
+  if (
+    catalogs &&
+    normalized(classData.name) === 'druid' &&
+    normalized(classData.source) === 'xphb' &&
+    !getCurrentElementalFury(catalogs)?.hasAvailableOption
+  ) {
+    rows.push({
+      code: 'unverified-required-choice',
+      className: 'Druid',
+      classSource: 'XPHB',
+      level: ELEMENTAL_FURY_LEVEL,
+      featureName: ELEMENTAL_FURY_NAME,
+      message: 'Restore the exact Elemental Fury source to make this required choice.',
+    })
   }
   return [...new Map(rows.map((row) => [JSON.stringify(row), row])).values()]
 }
