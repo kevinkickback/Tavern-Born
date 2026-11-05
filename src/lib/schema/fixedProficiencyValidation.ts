@@ -1,14 +1,13 @@
+import { getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
-import { getSavedDivineOrder } from '@/lib/5etools/divineOrderIdentity'
 import {
   decodeFixedProficiencyId,
+  getTrainingClassOrder,
   isFixedProficiencyId,
-  isProtectorProficiencyRelation,
 } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
   CONCRETE_TOOL_PROFICIENCY_NAMES,
   fixedProficiencyRule,
-  PROTECTOR_TRAINING,
 } from '@/lib/5etools/fixedProficiencyRules'
 import type { SourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
@@ -21,7 +20,7 @@ export function getInvalidFixedProficiencyPaths(
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
   const pairs = new Map<string, { name: string; id: string }>()
-  const protectorIds = new Set<string>()
+  const trainingRules = new Map<string, NonNullable<ReturnType<typeof fixedProficiencyRule>>>()
   const hasValue = (
     domain: 'skills' | 'expertise' | 'tools' | 'languages' | 'armor' | 'weapons',
     name: string,
@@ -34,7 +33,8 @@ export function getInvalidFixedProficiencyPaths(
           relation = decodeFixedProficiencyId(id)
         const rule = relation && fixedProficiencyRule(relation.target)
         const tool = rule?.kind === 'proficient-tools'
-        if (relation && isProtectorProficiencyRelation(relation)) protectorIds.add(id)
+        const order = relation && getTrainingClassOrder(relation)
+        if (order && rule) trainingRules.set(id, rule)
         const legal =
           relation &&
           rule &&
@@ -52,8 +52,7 @@ export function getInvalidFixedProficiencyPaths(
                 : (domain === 'skills' || domain === 'expertise') &&
                   rule.skills?.includes(name) &&
                   hasValue(domain, name)) &&
-          (!isProtectorProficiencyRelation(relation) ||
-            getSavedDivineOrder(character)?.branch === 'protector') &&
+          (!order || getSavedClassOrder(character, order)?.branch === 'training') &&
           canonicalProficiencyName(name) === name &&
           tag.sourceType === (relation.owner.length === 4 ? 'subclass' : 'class') &&
           canonicalProficiencyName(tag.sourceName) ===
@@ -83,9 +82,9 @@ export function getInvalidFixedProficiencyPaths(
     )
       paths.push(['provenance', 'proficiencies', 'expertise', name])
   }
-  for (const id of protectorIds)
+  for (const [id, rule] of trainingRules)
     for (const domain of ['armor', 'weapons'] as const)
-      for (const name of PROTECTOR_TRAINING.training?.[domain] ?? [])
+      for (const name of rule.training?.[domain] ?? [])
         if (
           !(character.provenance?.proficiencies[domain]?.[name] ?? []).some(
             (tag) => tag.grantVariant === id,

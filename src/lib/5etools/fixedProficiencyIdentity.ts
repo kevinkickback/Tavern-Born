@@ -1,4 +1,4 @@
-import { DIVINE_ORDER_OPTIONS } from './divineOrderIdentity'
+import { CLASS_ORDERS } from './classOrderIdentity'
 import { DIRECT_FIXED_CLASS_CERTIFICATES, fixedProficiencyRule } from './fixedProficiencyRules'
 import { getSubclassProficiencyRootCertificate } from './subclassProficiencyRegistry'
 
@@ -13,16 +13,10 @@ export const isFixedProficiencyId = (id: string) => id.startsWith(PREFIX)
 export const getFixedProficiencyId = ({ owner, target, level }: FixedProficiencyRelation) =>
   PREFIX + encodeURIComponent(JSON.stringify([owner, target, level]))
 
-export const isProtectorProficiencyRelation = ({
-  owner,
-  target,
-  level,
-}: FixedProficiencyRelation) =>
-  owner.length === 2 &&
-  owner[0] === 'cleric' &&
-  owner[1] === 'xphb' &&
-  target === DIVINE_ORDER_OPTIONS.protector &&
-  level === 1
+export const getTrainingClassOrder = ({ owner, target, level }: FixedProficiencyRelation) =>
+  owner.length === 2 && owner[1] === 'xphb' && level === 1
+    ? CLASS_ORDERS.find((order) => order.owner === owner[0] && order.training.target === target)
+    : undefined
 
 export const isDirectFixedProficiencyRelation = ({
   owner,
@@ -60,7 +54,7 @@ export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation |
     const relation = { owner: owner as FixedProficiencyOwner, target, level }
     const qualified =
       owner.length === 2
-        ? isDirectFixedProficiencyRelation(relation) || isProtectorProficiencyRelation(relation)
+        ? isDirectFixedProficiencyRelation(relation) || getTrainingClassOrder(relation)
         : getSubclassProficiencyRootCertificate(owner)?.paths.some(
             (path) => path.target === target && path.level === level,
           )

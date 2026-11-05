@@ -1,6 +1,6 @@
+import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
-import { DIVINE_ORDER_OPTIONS } from '@/lib/5etools/divineOrderIdentity'
 import {
   type FixedProficiencyRelation,
   getFixedProficiencyId,
@@ -8,7 +8,6 @@ import {
 import {
   type FixedProficiencyRule,
   fixedProficiencyRule,
-  PROTECTOR_TRAINING,
 } from '@/lib/5etools/fixedProficiencyRules'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
@@ -18,7 +17,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
-import { getCurrentDivineOrder } from './divineOrder'
+import { getCurrentClassOrder } from './classOrder'
 
 export interface CurrentFixedProficiency extends FixedProficiencyRelation {
   id: string
@@ -96,14 +95,17 @@ export function getCurrentFixedProficiencies(
       if (rule) push({ owner, target: path.target, level: path.level }, rule, sub.name, sub.source)
     }
   }
-  if (getCurrentDivineOrder(character, catalogs)?.branch === 'protector') {
-    const target = DIVINE_ORDER_OPTIONS.protector
-    const relation: FixedProficiencyRelation = { owner: ['cleric', 'xphb'], target, level: 1 }
+  for (const order of CLASS_ORDERS) {
+    if (getCurrentClassOrder(character, order, catalogs)?.branch !== 'training') continue
+    const target = order.training.target
+    const rule = fixedProficiencyRule(target)
+    if (!rule) continue
+    const relation: FixedProficiencyRelation = { owner: [order.owner, 'xphb'], target, level: 1 }
     result.push({
       ...relation,
       id: getFixedProficiencyId(relation),
-      rule: PROTECTOR_TRAINING,
-      sourceName: 'Cleric',
+      rule,
+      sourceName: order.className,
       sourceRef: 'XPHB',
     })
   }

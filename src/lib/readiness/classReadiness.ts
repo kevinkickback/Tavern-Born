@@ -1,9 +1,10 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { CLASS_ORDERS, PRIMAL_ORDER } from '@/lib/5etools/classOrderIdentity'
+import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
-import { DIVINE_ORDER_ID, divineOrderKey } from '@/lib/5etools/divineOrderIdentity'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -18,9 +19,9 @@ import {
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { getCurrentClassOrder } from '@/lib/character/classOrder'
 import { hasClassProficiencyRecovery } from '@/lib/character/classProficiencySelections'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
-import { getCurrentDivineOrder } from '@/lib/character/divineOrder'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { EPIC_BOON_LEVEL } from '@/lib/character/epicBoonSlots'
 import {
@@ -237,28 +238,41 @@ export function validateClassChoices(
       )
     }
 
-    const divineOrderNeedsRecovery =
-      divineOrderKey(entry.name) === 'cleric' &&
-      divineOrderKey(entry.source) === 'xphb' &&
+    const order = CLASS_ORDERS.find(
+      (rule) =>
+        entry.name.trim().toLowerCase() === rule.owner &&
+        entry.source.trim().toLowerCase() === 'xphb',
+    )
+    const choices = getCharacterClassChoices(classData, subclassData, activity, catalogs)
+    const orderNeedsRecovery =
+      order &&
       character.classChoiceSelections?.some(
-        (row) => row.choiceId === DIVINE_ORDER_ID && row.selected.length > 0,
+        (row) => row.choiceId === order.id && row.selected.length > 0,
       ) &&
-      !getCurrentDivineOrder(character, calculation.classChoices.catalogs)
-    if (divineOrderNeedsRecovery)
+      !getCurrentClassOrder(character, order, calculation.classChoices.catalogs)
+    const orderRulesUnavailable =
+      order === PRIMAL_ORDER &&
+      !!calculation.classChoices.catalogs &&
+      (!choices.some((choice) => choice.id === order.id) ||
+        (!getCurrentClassOrderOption(calculation.classChoices.catalogs, order, 'training') &&
+          !getCurrentClassOrderOption(calculation.classChoices.catalogs, order, 'caster')))
+    if (order && (orderNeedsRecovery || orderRulesUnavailable))
       issues.push(
         readinessIssue(
-          classChoiceReadinessId(DIVINE_ORDER_ID),
+          classChoiceReadinessId(order.id),
           'blocking',
           'class',
-          'Review Divine Order',
-          'Restore the exact Divine Order and selected option sources or change the selection.',
-          classChoiceTarget(entry, 1, DIVINE_ORDER_ID),
+          `Review ${order.name}`,
+          orderNeedsRecovery
+            ? `Restore the exact ${order.name} and selected option sources or change the selection.`
+            : `Restore the exact ${order.name} source to make this required choice.`,
+          classChoiceTarget(entry, 1, order.id),
         ),
       )
 
-    for (const original of getCharacterClassChoices(classData, subclassData, activity, catalogs)) {
+    for (const original of choices) {
       if (original.id === epicBoon?.choiceId) continue
-      if (original.id === DIVINE_ORDER_ID && divineOrderNeedsRecovery) continue
+      if ((orderNeedsRecovery || orderRulesUnavailable) && original.id === order?.id) continue
       const choice = resolveHistoricalProficiencyChoice(character, original)
       if (
         choice.level <= entry.levels &&

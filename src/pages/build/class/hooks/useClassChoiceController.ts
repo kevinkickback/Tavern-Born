@@ -5,6 +5,7 @@ import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameDa
 import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
 import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getClassOrderById } from '@/lib/5etools/classOrderIdentity'
 import {
   canonicalProficiencyName,
   getProficiencyOption,
@@ -238,7 +239,7 @@ export function useClassChoiceController({
         state.psionic ||
         state.legacySubclass ||
         state.companion ||
-        state.divineOrder ||
+        state.classOrder ||
         state.blessedStrikes
       )
         return (
@@ -440,7 +441,7 @@ export function useClassChoiceController({
             activeSaved.psionic ||
             activeSaved.legacySubclass ||
             activeSaved.companion ||
-            activeSaved.divineOrder ||
+            activeSaved.classOrder ||
             activeSaved.blessedStrikes ||
             getLandChoiceRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
@@ -504,7 +505,7 @@ export function useClassChoiceController({
           current,
           confirmedSelections.map((option) => option.reference),
           undefined,
-          current.id === BLESSED_STRIKES_ID
+          current.id === BLESSED_STRIKES_ID || getClassOrderById(current.id)
             ? request?.savedHandle
             : getLandChoiceRule(current.id)
               ? (request?.savedHandle ?? queue?.landHandles.get(current.id))
@@ -707,6 +708,7 @@ export function useClassChoiceController({
                   ? getOptionalPoolSelectionHandle(saved)
                   : choice.kind === 'creature' ||
                       choice.id === BLESSED_STRIKES_ID ||
+                      getClassOrderById(choice.id) ||
                       getLandChoiceRule(choice.id) ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
                       decodeLegacySubclassChoice(choice.id)
@@ -731,7 +733,7 @@ export function useClassChoiceController({
                 state.psionic ||
                 state.legacySubclass ||
                 state.companion ||
-                state.divineOrder ||
+                state.classOrder ||
                 state.blessedStrikes ||
                 getLandChoiceRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)

@@ -3,6 +3,8 @@ import {
   getCurrentBlessedStrikes,
   isBlessedStrikesOption,
 } from '@/lib/5etools/blessedStrikesSource'
+import { getClassOrderBranch, getClassOrderById } from '@/lib/5etools/classOrderIdentity'
+import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   normalizeFavoredEnemyChoices,
@@ -628,6 +630,24 @@ export function resolveClassChoiceOptions(
   classLevel = 20,
   character?: Character,
 ): ClassChoiceOptionView[] {
+  const order = getClassOrderById(choice.id)
+  if (order?.owner === 'druid') {
+    return [
+      ...new Map(
+        [...choice.options, ...saved].map((reference) => [
+          getClassChoiceOptionKey(reference),
+          reference,
+        ]),
+      ).values(),
+    ].map((reference) => {
+      const branch = getClassOrderBranch(reference, order)
+      const feature =
+        branch && classLevel >= choice.level && getCurrentClassOrderOption(catalogs, order, branch)
+      return feature
+        ? { ...resolveExplicitOption(reference, catalogs), entries: feature.entries ?? [] }
+        : { reference, availability: 'retained', entries: [] }
+    })
+  }
   if (choice.id === BLESSED_STRIKES_ID) {
     const rules = getCurrentBlessedStrikes(catalogs)
     return [

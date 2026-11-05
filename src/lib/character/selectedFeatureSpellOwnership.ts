@@ -1,8 +1,8 @@
 import {
-  DIVINE_ORDER_OPTIONS,
-  getDivineOrderOption,
-  getSavedDivineOrder,
-} from '@/lib/5etools/divineOrderIdentity'
+  getClassOrderById,
+  getClassOrderOption,
+  getSavedClassOrder,
+} from '@/lib/5etools/classOrderIdentity'
 import {
   decodeSelectedFeatureSpellAddress,
   LAND_BONUS_SPELL_ADDRESS,
@@ -35,14 +35,19 @@ export function getSelectedFeatureSpellProducer(
   option: CharacterClassChoiceOption,
 ) {
   if (option.entityType === 'classFeature') {
-    if (selection.selected[0] !== option || getDivineOrderOption(selection) !== 'thaumaturge')
+    const order = getClassOrderById(selection.choiceId)
+    if (
+      !order ||
+      selection.selected[0] !== option ||
+      getClassOrderOption(selection, order) !== 'caster'
+    )
       return undefined
     return selectedFeatureSpellAddress([
       selection.choiceId,
       'classFeature',
-      'thaumaturge',
+      norm(order.caster.name),
       'xphb',
-      DIVINE_ORDER_OPTIONS.thaumaturge,
+      order.caster.target,
       0,
       0,
     ])
@@ -83,8 +88,10 @@ export function hasSavedSelectedFeatureSpellOwner(
   const address = decodeSelectedFeatureSpellAddress(slot[2])
   if (!address) return false
   if (slot[2] === LAND_BONUS_SPELL_ADDRESS) return hasClassicLandOwner(character)
-  if (address[1] === 'classFeature' && getSavedDivineOrder(character)?.branch !== 'thaumaturge')
-    return false
+  if (address[1] === 'classFeature') {
+    const order = getClassOrderById(address[0])
+    if (!order || getSavedClassOrder(character, order)?.branch !== 'caster') return false
+  }
   const matches = (character.classChoiceSelections ?? []).filter(
     (selection) =>
       JSON.stringify(selectedFeatureSpellOwner(selection)) === JSON.stringify(slot[0]) &&

@@ -1,6 +1,7 @@
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
-import { DIVINE_ORDER_ID, DIVINE_ORDER_OPTIONS } from './divineOrderIdentity'
+import { getClassOrderById } from './classOrderIdentity'
 
 export type SelectedFeatureSpellAddress = [
   choiceId: string,
@@ -43,6 +44,7 @@ export function decodeSelectedFeatureSpellAddress(
   if (!value.startsWith(prefix)) return undefined
   try {
     const parts = JSON.parse(value.slice(prefix.length))
+    const order = Array.isArray(parts) ? getClassOrderById(parts[0]) : undefined
     if (
       !Array.isArray(parts) ||
       parts.length !== 7 ||
@@ -52,10 +54,10 @@ export function decodeSelectedFeatureSpellAddress(
       !normalized(parts[2]) ||
       !normalized(parts[3]) ||
       (parts[1] === 'classFeature'
-        ? parts[0] !== DIVINE_ORDER_ID ||
-          parts[2] !== 'thaumaturge' ||
+        ? !order ||
+          parts[2] !== norm(order.caster.name) ||
           parts[3] !== 'xphb' ||
-          parts[4] !== DIVINE_ORDER_OPTIONS.thaumaturge
+          parts[4] !== order.caster.target
         : parts[1] === 'subclassFeature'
           ? value !== LAND_BONUS_SPELL_ADDRESS
           : parts[4] !== null) ||
@@ -83,7 +85,7 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
     !!address &&
     (address[1] !== 'classFeature' ||
       (owner[0] === 'class' &&
-        owner[1] === 'cleric' &&
+        owner[1] === getClassOrderById(address[0])?.owner &&
         owner[2] === 'xphb' &&
         level === 1 &&
         ordinal === 0)) &&
