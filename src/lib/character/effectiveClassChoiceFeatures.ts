@@ -1,3 +1,8 @@
+import {
+  BLESSED_STRIKES_ID,
+  getCurrentBlessedStrikes,
+  getSavedBlessedStrikes,
+} from '@/lib/5etools/blessedStrikesSource'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -79,7 +84,13 @@ function buildEffectiveClassChoiceFeatureRoutes(
     classSource: string
   }> = []
   const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
+  const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
+    if (
+      selection.choiceId === BLESSED_STRIKES_ID &&
+      (selection !== blessedStrikes || selection.inactive)
+    )
+      continue
     if (invalidPsionics.has(selection.choiceId)) continue
     if (
       getFighterStylePair(selection.choiceId) &&
@@ -164,11 +175,20 @@ function buildEffectiveClassChoiceFeatureRoutes(
         const view = options.find(
           (row) => getClassChoiceOptionKey(row.reference) === getClassChoiceOptionKey(option),
         )!
+        const improved =
+          choice.id === BLESSED_STRIKES_ID && owner.levels >= 14
+            ? (getCurrentBlessedStrikes(catalogs)?.improvementFor(option) ?? [])
+            : []
         contributions.push({
           id: getClassChoiceFeatureId(selection, option),
           feature: getClassChoiceGrantedFeature(selection, option),
           psionic: option.entityType === 'psionic',
-          entries: view.entries,
+          entries: improved.length
+            ? [
+                ...view.entries,
+                { type: 'entries', name: 'Improved Blessed Strikes', entries: improved },
+              ]
+            : view.entries,
           choiceId: selection.choiceId,
           name: option.name,
           guarded: !!getOptionalClassPoolSection(choice),
@@ -281,7 +301,9 @@ export function projectEffectiveClassChoiceFeatures(
     .filter((row) => !row.id.startsWith('class-choice:') || routes.featureIds.has(row.id))
     .map((row) => {
       const current = routes.contributions.find(
-        (candidate) => candidate.psionic && candidate.id === row.id,
+        (candidate) =>
+          (candidate.psionic || candidate.choiceId === BLESSED_STRIKES_ID) &&
+          candidate.id === row.id,
       )
       if (!current) return row
       const description = renderEntriesToText(current.entries)
@@ -291,7 +313,7 @@ export function projectEffectiveClassChoiceFeatures(
   for (const row of routes.contributions)
     if (!existingIds.has(row.id)) {
       features.push(
-        row.psionic
+        row.psionic || row.choiceId === BLESSED_STRIKES_ID
           ? { ...row.feature, description: renderEntriesToText(row.entries) }
           : row.feature,
       )

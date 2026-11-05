@@ -1,3 +1,4 @@
+import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   decodeSubclassFeatureReference,
@@ -76,6 +77,60 @@ export interface FeatureOptionSelectionState {
   legacySubclass?: boolean
   companion?: boolean
   divineOrder?: boolean
+  blessedStrikes?: boolean
+}
+
+function getBlessedStrikesRecovery(
+  character: Character,
+  classes: readonly Class5e[],
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+): FeatureOptionSelectionState[] {
+  const selection = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
+  if (!selection || selection.inactive) return []
+  const owner = findClassReference(
+    { name: selection.className, source: selection.classSource },
+    character.classProgression,
+  )
+  if (!owner || owner.levels < selection.classLevel) return []
+  const classData = findClassReference(owner, classes)
+  const choice =
+    classData &&
+    getCharacterClassChoices(
+      classData,
+      getSelectedSubclassData(classData, owner),
+      createOptionalClassFeatureActivity(character, catalogs),
+      catalogs,
+    ).find((row) => row.id === BLESSED_STRIKES_ID)
+  const options = choice
+    ? resolveClassChoiceOptions(choice, literalCatalogs(catalogs), selection.selected, owner.levels)
+    : []
+  const [selected] = selection.selected
+  if (
+    options.some(
+      (row) =>
+        isClassChoiceOptionEligible(row) &&
+        getClassChoiceOptionKey(row.reference) === getClassChoiceOptionKey(selected),
+    )
+  )
+    return []
+  return [
+    {
+      selection,
+      owner,
+      classData,
+      choice,
+      options,
+      recovery: true,
+      blessedStrikes: true,
+      details: [
+        {
+          name: selected.name,
+          entries: ['Restore the exact Blessed Strikes source or remove the saved choice.'],
+          available: false,
+        },
+      ],
+    },
+  ]
 }
 
 export function hasRevisedHunterRecovery(
@@ -322,6 +377,7 @@ export function getFeatureOptionSelectionStates(
   return [
     ...literal,
     ...orderRecovery,
+    ...getBlessedStrikesRecovery(character, classes, catalogs),
     ...getLegacySubclassSelectionStates(character, classes, catalogs),
     ...getPsionicRecoveryStates(character, classes, catalogs),
     ...getStormAuraSelectionStates(character, classes, catalogs),

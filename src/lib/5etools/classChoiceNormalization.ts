@@ -13,6 +13,7 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
+import { BLESSED_STRIKES_TARGET, getBlessedStrikesOptionBlock } from './blessedStrikesSource'
 import { type ParsedFilterTag, parseFilterTags } from './choiceFilterTags'
 import {
   getNormalizedClassChoiceId as buildChoiceId,
@@ -545,7 +546,12 @@ function normalizeFeatureOptionChoices(
     const feature = ref.feature
     if (!level || !feature) continue
     const blocks: Record<string, unknown>[] = []
-    collectOptionBlocks(feature.entries ?? [], blocks)
+    if (owner.type === 'class' && getClassFeatureIdentity(ref) === BLESSED_STRIKES_TARGET) {
+      const verified = getBlessedStrikesOptionBlock(feature)
+      if (verified) blocks.push(verified)
+    } else {
+      collectOptionBlocks(feature.entries ?? [], blocks)
+    }
 
     blocks.forEach((block, blockIndex) => {
       const options = Array.isArray(block.entries)
