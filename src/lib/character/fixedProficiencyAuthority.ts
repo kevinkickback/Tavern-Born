@@ -1,4 +1,3 @@
-import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
@@ -10,15 +9,10 @@ import {
   type FixedProficiencyRule,
   fixedProficiencyRule,
 } from '@/lib/5etools/fixedProficiencyRules'
-import {
-  decodeOptionalDeclaration,
-  exactOptionalDeclarationReference,
-  optionalDeclarationObject,
-} from '@/lib/5etools/optionalClassDeclarationStructure'
+import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
-import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -34,71 +28,6 @@ export interface CurrentFixedProficiency extends FixedProficiencyRelation {
   sourceRef: string
 }
 
-function readGainDeclaration(cls: Class5e, ref: Record<string, unknown>, uid: unknown) {
-  if (
-    typeof uid !== 'string' ||
-    ref.sourceIdentityConflict ||
-    ref.isClassFeatureVariant ||
-    !exactOptionalDeclarationReference(ref, uid, 'classFeature')
-  )
-    return undefined
-  const declaration = decodeOptionalDeclaration(uid, 'classFeature')
-  if (!declaration) return undefined
-  return declaration.target ===
-    getClassFeatureIdentity({
-      ...declaration.decoded,
-      className: cls.name,
-      classSource: cls.source,
-      source: cls.source,
-    })
-    ? declaration
-    : undefined
-}
-
-function matchesNativeSubclassGain(cls: Class5e, target: string, level: number): boolean {
-  if (
-    cls.sourceIdentityConflict ||
-    '_copy' in cls ||
-    !Array.isArray(cls.classFeatures) ||
-    !Array.isArray(cls.classFeatureRefs)
-  )
-    return false
-  const rawGains = cls.classFeatures
-    .map(optionalDeclarationObject)
-    .filter((ref) => ref.gainSubclassFeature === true)
-  const raw = rawGains[0]
-  const declarations = rawGains.map((ref) => readGainDeclaration(cls, ref, ref.classFeature))
-  if (
-    !raw ||
-    declarations[0]?.target !== target ||
-    declarations.some((ref) => !ref) ||
-    Object.keys(raw).some(
-      (key) =>
-        ![
-          'classFeature',
-          'gainSubclassFeature',
-          'name',
-          'source',
-          'className',
-          'classSource',
-          'level',
-        ].includes(key),
-    ) ||
-    declarations.filter((ref) => ref?.decoded.level === level).length !== 1
-  )
-    return false
-
-  const gains = cls.classFeatureRefs.filter((ref) => ref.gainSubclassFeature === true)
-  const gain = gains[0]
-  const refs = gains.map((ref) => readGainDeclaration(cls, optionalDeclarationObject(ref), ref.ref))
-  return (
-    refs[0]?.target === target &&
-    !refs.some((ref) => !ref) &&
-    refs.filter((ref) => ref?.decoded.level === level).length === 1 &&
-    (!gain.feature ||
-      (!gain.feature.sourceIdentityConflict && getClassFeatureIdentity(gain.feature) === target))
-  )
-}
 /** Establish the unique selected current owner before invoking any supplied-root source audit. */
 export function getCurrentFixedProficiencies(
   character: Character,

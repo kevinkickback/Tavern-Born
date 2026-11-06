@@ -9,6 +9,7 @@ import {
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getCurrentNativeSorcerer,
+  getDragonCompanion,
   getInnateSorcery,
   getInnateSorceryUpgrades,
 } from '@/lib/5etools/sorcererSource'
@@ -82,7 +83,10 @@ function wildShapeSummary(
   return { text: text ? `${wildShape.name}: ${text}` : wildShape.name, compactText: wildShape.name }
 }
 
-function featureSummary(feature: ClassFeature | undefined, entries = feature?.entries) {
+function featureSummary(
+  feature: Pick<ClassFeature, 'name' | 'entries'> | undefined,
+  entries = feature?.entries,
+) {
   const text = renderEntriesToText(entries)
   return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
 }
@@ -117,8 +121,9 @@ export function getClassStaticFeatureSummaries(
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
     if (entry === sorcerer?.owner) {
+      const companion = featureSummary(getDragonCompanion(sorcerer))
       const innate = getInnateSorcery(sorcerer)
-      if (!innate) return []
+      if (!innate) return companion
       const activation = renderEntriesToText(innate.entries?.slice(0, -1))
       return [
         {
@@ -134,6 +139,7 @@ export function getClassStaticFeatureSummaries(
               }))
             : [],
         ),
+        ...companion,
       ]
     }
     const name = entry.name.trim().toLowerCase()

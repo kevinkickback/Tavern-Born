@@ -179,6 +179,7 @@ function currentAffinity(catalogs: AffinityCatalog | undefined) {
   if (
     norm(subclass.className) !== 'sorcerer' ||
     norm(subclass.classSource) !== 'xphb' ||
+    typeof subclass.shortName !== 'string' ||
     norm(subclass.shortName) !== 'draconic' ||
     !Array.isArray(subclass.subclassFeatures) ||
     !Array.isArray(subclass.subclassFeatureRefs)

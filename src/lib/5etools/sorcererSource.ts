@@ -1,4 +1,7 @@
-import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { parseTableResources } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
@@ -7,7 +10,15 @@ import {
   getFeatureSourceDigest,
   hasFeatureSourceShape,
 } from '@/lib/5etools/featureSourceAudit'
-import type { Class5e, ClassFeature } from '@/types/5etools'
+import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import {
+  decodeOptionalDeclaration,
+  exactOptionalDeclarationReference,
+  optionalDeclarationObject as record,
+} from '@/lib/5etools/optionalClassDeclarationStructure'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef, ClassResourceRecovery } from '@/types/classRules'
 
@@ -30,7 +41,7 @@ export function isNativeSorcerer(entry: CharacterClassEntry) {
 
 export function getCurrentNativeSorcerer(
   character: Character,
-  catalogs: (ClassFeatureSourceCatalog & { classes?: readonly Class5e[] }) | undefined,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
   if (!catalogs) return undefined
   const source: NativeSorcererSource = character.originSystem === '2014' ? 'phb' : 'xphb'
@@ -111,6 +122,84 @@ export function getInnateSorceryUpgrades(current: CurrentSorcerer) {
       'c1145af65d66ec22da2973b53250962b267e668c3c62dda9b2e6f105eba24992',
     ),
   ]
+}
+
+const draconic = { name: 'Draconic Sorcery', source: 'XPHB' }
+const companionTarget = 'subclass-feature|dragon companion|sorcerer|xphb|draconic|xphb|18|xphb'
+const companionFields = new Set([...rulesFields, 'subclassShortName', 'subclassSource'])
+
+const isCompanionUid = (uid: unknown) =>
+  typeof uid === 'string' &&
+  decodeOptionalDeclaration(uid, 'subclassFeature')?.target === companionTarget
+
+function verifiesDragonCompanion(feature: SubclassFeature | undefined) {
+  return (
+    !!feature &&
+    getSubclassFeatureIdentity(feature) === companionTarget &&
+    hasFeatureSourceShape(feature, companionFields) &&
+    Array.isArray(feature.entries) &&
+    getFeatureSourceDigest(feature.entries, false) ===
+      '441b128a48c0f3554896610b3d56e645c21a4cd27631df6c8553f72ed0d27ab6'
+  )
+}
+
+export function getDragonCompanion(current: CurrentSorcerer): SubclassFeature | undefined {
+  const { owner, cls, source, catalogs } = current
+  if (
+    source !== 'xphb' ||
+    owner.levels < 18 ||
+    !findClassReference({ name: owner.subclass, source: owner.subclassSource }, [draconic]) ||
+    !matchesNativeSubclassGain(cls, 'class-feature|sorcerer subclass|sorcerer|xphb|3|xphb', 3) ||
+    !matchesNativeSubclassGain(
+      cls,
+      'class-feature|subclass feature|sorcerer|xphb|18|xphb',
+      18,
+      'at-level',
+    )
+  )
+    return undefined
+  const subclasses = cls.subclasses?.filter((row) => findClassReference(draconic, [row]))
+  const subclass = subclasses?.[0]
+  if (
+    subclasses?.length !== 1 ||
+    !subclass ||
+    subclass.sourceIdentityConflict ||
+    '_copy' in subclass ||
+    typeof subclass.shortName !== 'string' ||
+    subclass.shortName.trim().toLowerCase() !== 'draconic' ||
+    !Array.isArray(subclass.subclassFeatures) ||
+    !Array.isArray(subclass.subclassFeatureRefs) ||
+    !findClassReference(cls, [{ name: subclass.className, source: subclass.classSource }])
+  )
+    return undefined
+  const declarations = subclass.subclassFeatures.filter((row) =>
+    isCompanionUid(typeof row === 'string' ? row : record(row).subclassFeature),
+  )
+  const refs = subclass.subclassFeatureRefs.filter(
+    (row) => isCompanionUid(row.ref) || getSubclassFeatureIdentity(row) === companionTarget,
+  )
+  const ref = refs[0]
+  if (
+    declarations.length !== 1 ||
+    typeof declarations[0] !== 'string' ||
+    refs.length !== 1 ||
+    !ref ||
+    ref.sourceIdentityConflict ||
+    record(ref).isClassFeatureVariant ||
+    !isCompanionUid(ref.ref) ||
+    !exactOptionalDeclarationReference(record(ref), ref.ref, 'subclassFeature') ||
+    !verifiesDragonCompanion(ref.feature)
+  )
+    return undefined
+  const ownerKey = getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source)
+  const candidates = catalogs.subclassTargets
+    ? catalogs.subclassTargets.candidatesByOwner.get(ownerKey)?.get(companionTarget)
+    : catalogs.subclassFeatureCandidates
+      ? catalogs.subclassFeatureCandidates.get(companionTarget)
+      : catalogs.subclassFeatures.filter(
+          (row) => getSubclassFeatureIdentity(row) === companionTarget,
+        )
+  return candidates?.length && candidates.every(verifiesDragonCompanion) ? ref.feature : undefined
 }
 
 export function getCurrentMetamagicChoiceId(current: CurrentSorcerer) {
