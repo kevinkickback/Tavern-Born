@@ -29,7 +29,7 @@ import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etool
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
   auditSubclassProficiencyFeatures,
-  auditSubclassProficiencyPackage,
+  auditSubclassProficiencyPackages,
   auditSubclassProficiencyRoots,
 } from '@/lib/5etools/subclassProficiencySource'
 import {
@@ -491,12 +491,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   const classRecords = asArray(obj.class).map(asObject)
   const subclassRecords = asArray(obj.subclass).map(asObject)
   const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
-  const packageAudit = auditSubclassProficiencyPackage(
-    classRecords,
-    subclassRecords,
-    records,
-    origin,
-  )
+  const packages = auditSubclassProficiencyPackages(classRecords, subclassRecords, records, origin)
   const materializedSubclasses = materializeSubclassCopies(subclassRecords)
   const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
@@ -525,7 +520,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     subclassRecords,
     materializedSubclasses,
     origin,
-    packageAudit,
+    packages,
   )
   if (!records.length)
     return {
@@ -547,7 +542,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
       records,
       auditNativeSubclassCopies(records, auditFeatureOptionSources(materialized)),
       origin,
-      packageAudit,
+      packages,
     ),
   }
 }

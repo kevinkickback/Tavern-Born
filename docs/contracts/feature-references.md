@@ -485,6 +485,13 @@ The revised printing also requires one other language from the referenced standa
 That choice uses the shared class proficiency workflow and requires the same current class and
 feature proof as the fixed grant. Independent language grants retain their own ownership.
 
+Classic Draconic Bloodline grants Draconic at Sorcerer level 1 through the exact PHB Dragon
+Ancestor feature. The grant requires the native Sorcerous Origin gain, its declared intro and nested
+feature, and the current Draconic PHB language. Bundled and configured data use their own
+source proofs. The bundled proof serves the fixed language independently of the ancestry table
+and conditional Charisma-check note. Removing the subclass or source retracts its ownership
+while retaining any independent Draconic grant.
+
 ### Conditional proficiency checks
 
 Fire Rune, legacy Dragon Ancestor and Natural Explorer contribute qualified, player-applied check

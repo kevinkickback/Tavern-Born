@@ -83,12 +83,13 @@ const isStamped = (
 }
 
 /** Recognize complete raw packages before enrichment or layer composition can fill missing links. */
-export function auditSubclassProficiencyPackage(
+export function auditSubclassProficiencyPackages(
   classes: readonly Record<string, unknown>[],
   rawRoots: readonly Record<string, unknown>[],
   rawFeatures: readonly Record<string, unknown>[],
   origin: string,
-): RawPackage | undefined {
+): RawPackage[] {
+  const packages: RawPackage[] = []
   for (const source of SUBCLASS_PROFICIENCY_PACKAGES) {
     const members: Record<string, unknown>[] = []
     const verify = (rows: Record<string, unknown>[], digest: string) => {
@@ -124,9 +125,9 @@ export function auditSubclassProficiencyPackage(
     )
       continue
     const key = subclassProficiencyDigest([origin, members])
-    if (key) return { source, key }
+    if (key) packages.push({ source, key })
   }
-  return undefined
+  return packages
 }
 
 /** Audit all raw occurrences, even roots whose mutated declaration removed every supported leaf. */
@@ -134,7 +135,7 @@ export function auditSubclassProficiencyRoots(
   raw: Record<string, unknown>[],
   materialized: Record<string, unknown>[],
   origin: string,
-  packageAudit?: RawPackage,
+  packages: readonly RawPackage[],
 ) {
   const byOwner = new Map<string, Record<string, unknown>[]>()
   const byCopy = new Map<string, Record<string, unknown>[]>()
@@ -146,9 +147,13 @@ export function auditSubclassProficiencyRoots(
   })
   return materialized.map((row, index) => {
     const owner = JSON.stringify(getSubclassProficiencyOwner(row))
+    const matching = packages.filter(({ source }) =>
+      source.roots.some((root) => JSON.stringify(root.owner) === owner),
+    )
+    const packageAudit = matching.length === 1 ? matching[0] : undefined
     const packaged = packageAudit?.source.roots.find((root) => JSON.stringify(root.owner) === owner)
     const ordinary = roots.get(owner)
-    const certificate = ordinary ?? packaged ?? packagedRoots.get(owner)
+    const certificate = packaged ?? ordinary ?? packagedRoots.get(owner)
     if (!certificate) return row
     const producers = byOwner.get(JSON.stringify(certificate.owner)) ?? []
     const valid =
@@ -183,7 +188,7 @@ export function auditSubclassProficiencyFeatures(
   raw: Record<string, unknown>[],
   materialized: Record<string, unknown>[],
   origin: string,
-  packageAudit?: RawPackage,
+  packages: readonly RawPackage[],
 ) {
   const byTarget = new Map<string, Record<string, unknown>[]>()
   raw.forEach((row) => {
@@ -192,9 +197,13 @@ export function auditSubclassProficiencyFeatures(
   })
   return materialized.map((row, index) => {
     const target = getSubclassFeatureIdentity(row) ?? ''
+    const matching = packages.filter(({ source }) =>
+      source.features.some((feature) => feature.target === target),
+    )
+    const packageAudit = matching.length === 1 ? matching[0] : undefined
     const packaged = packageAudit?.source.features.find((feature) => feature.target === target)
     const ordinary = features.get(target)
-    const certificate = ordinary ?? packaged ?? packagedFeatures.get(target)
+    const certificate = packaged ?? ordinary ?? packagedFeatures.get(target)
     if (!certificate) return row
     const producers = byTarget.get(target) ?? []
     const valid =
@@ -293,6 +302,7 @@ export function getCurrentSubclassProficiencyCertificate(
   classData: Pick<Class5e, 'name' | 'source' | 'sourceIdentityConflict'>,
   subclass: Subclass5e,
   candidates: ReadonlyMap<string, readonly SubclassFeature[]>,
+  includeFixedOnly = false,
 ): SubclassProficiencyRootCertificate | undefined {
   const owner = JSON.stringify(getSubclassProficiencyOwner(subclass))
   const packageKey = subclass.subclassProficiencySourceAudit?.package
@@ -309,6 +319,7 @@ export function getCurrentSubclassProficiencyCertificate(
     packageSource?.roots.find((root) => JSON.stringify(root.owner) === owner) ?? roots.get(owner)
   if (
     !certificate ||
+    (packageSource?.fixedOnly && !includeFixedOnly) ||
     certificate.owner[0] !== classData.name.trim().toLowerCase() ||
     certificate.owner[1] !== classData.source.trim().toLowerCase() ||
     (packageSource && classData.sourceIdentityConflict) ||

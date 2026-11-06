@@ -35,6 +35,7 @@ export interface SubclassProficiencyRootCertificate {
 export interface SubclassProficiencyPackage {
   features: SubclassProficiencyFeatureCertificate[]
   roots: SubclassProficiencyRootCertificate[]
+  fixedOnly?: true
 }
 export interface SubclassProficiencyCheckpoint extends SubclassProficiencyPackage {
   packages?: SubclassProficiencyPackage[]

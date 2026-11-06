@@ -17,6 +17,7 @@ export interface FixedProficiencyRule {
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string
+  subclassGain?: { owner: readonly string[]; target: string }
   fallback?: { name: string; count: number; skillPool: readonly string[] }
 }
 export interface GeneratedFixedProficiencyRule extends FixedProficiencyRule {
@@ -56,4 +57,15 @@ for (const order of CLASS_ORDERS) {
     training: { armor: [armor], weapons: ['martial'] },
   })
 }
-export const fixedProficiencyRule = (target: string) => rules.get(target)
+export function fixedProficiencyRule(target: string, owner?: readonly string[]) {
+  const rule = rules.get(target)
+  const requiredOwner = rule?.subclassGain?.owner
+  if (
+    owner &&
+    requiredOwner &&
+    (owner.length !== requiredOwner.length ||
+      requiredOwner.some((part, index) => owner[index] !== part))
+  )
+    return undefined
+  return rule
+}

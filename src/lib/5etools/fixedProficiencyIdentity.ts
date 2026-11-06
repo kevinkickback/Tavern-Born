@@ -49,7 +49,7 @@ export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation |
       !Number.isInteger(level)
     )
       return undefined
-    const rule = fixedProficiencyRule(target)
+    const rule = fixedProficiencyRule(target, owner)
     if (!rule || level < rule.level || level > 20) return undefined
     const relation = { owner: owner as FixedProficiencyOwner, target, level }
     const qualified =

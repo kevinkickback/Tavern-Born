@@ -1230,6 +1230,106 @@
           ]
         }
       ]
+    },
+    {
+      "features": [
+        {
+          "target": "subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb",
+          "rawDigest": "a984ef0236f2c62c5abb54bab32f41072c0477490042052f603348a8c0f677e6",
+          "metadataDigest": "9eb19cd40f7a5c4d31868fb38e9af4ddad890860573cf5e728eccbb4d20407a9",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "dbfc20007026c570e4740fb8a5fcba790b25753b0f5c19ae7fb219bd74e61934"
+            },
+            {
+              "digest": "d266021360c3c3e2dc8080a4de241bfd05265f86bc081230d4cbdab51c2d5664",
+              "reference": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb"
+            },
+            {
+              "digest": "1aef7ce8cdfa4d09a8788a1eb3895b838006d80e71bc779ba08e92a02a046b05",
+              "reference": "subclass-feature|draconic resilience|sorcerer|phb|draconic|phb|1|phb"
+            }
+          ],
+          "copies": []
+        },
+        {
+          "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+          "rawDigest": "12d71ce63084fb3a004bc82b0ed67a254e3f29d66e8551165cc0db489b6200e9",
+          "metadataDigest": "deb051c35205fdd15ad1d3a7a0e937d4deff0cfd9bbe0eea79fa21bcd3d8b76a",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "header",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "c489967504c449fe0fbc8a65e0cf1fbe487d91681dd2a73ab34f570c491c9ab3"
+            },
+            {
+              "digest": "acd007fd3650f8c30f6ea31e258207af176d43e118c5ce40944e683da0372cac"
+            },
+            {
+              "digest": "5d0858832228d1c6db4ee4e01c1edf85c995a3d286c040766473f119ad6d45c2"
+            }
+          ],
+          "copies": []
+        }
+      ],
+      "roots": [
+        {
+          "owner": ["sorcerer", "phb", "draconic bloodline", "phb"],
+          "shortName": "Draconic",
+          "rawDigest": "d7c3619438545320f7d82ddd2495759b1b65721f0d15e963cf7b78e5b21af22a",
+          "metadataDigest": "01f1ab6db8c7b84aed4784b024518fbe487d94ea3ee05820d1d6979ae3994e2c",
+          "fields": [
+            "className",
+            "classSource",
+            "edition",
+            "name",
+            "shortName",
+            "source",
+            "srd",
+            "subclassFeatures"
+          ],
+          "copies": [],
+          "declarations": [
+            "Draconic Bloodline|Sorcerer||Draconic||1",
+            "Elemental Affinity|Sorcerer||Draconic||6",
+            "Dragon Wings|Sorcerer||Draconic||14",
+            "Draconic Presence|Sorcerer||Draconic||18"
+          ],
+          "intro": "Draconic Bloodline|Sorcerer||Draconic||1",
+          "paths": [
+            {
+              "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+              "refs": [
+                "Draconic Bloodline|Sorcerer||Draconic||1",
+                "Dragon Ancestor|Sorcerer||Draconic||1"
+              ],
+              "level": 1
+            }
+          ]
+        }
+      ],
+      "fixedOnly": true
     }
   ]
 }

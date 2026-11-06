@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Draconic Resilience: 6,518,539 B renderer, 1,270,091 B initial.
+  // Dragon Ancestor language: 6,522,575 B renderer, 1,274,127 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6366 * KIB,
-  initialRendererScript: 1241 * KIB,
+  rendererCode: 6370 * KIB,
+  initialRendererScript: 1245 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

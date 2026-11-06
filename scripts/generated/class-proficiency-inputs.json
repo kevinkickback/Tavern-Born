@@ -91,6 +91,14 @@
     "file": "resources/srd/core/data/class/class-cleric.json",
     "sha256": "0109e94731de36c37234b59b598b05e92fb8f1ff192e933af0c5de950fb3d1fe"
   },
+  "bundledDragonAncestorInput": {
+    "file": "resources/srd/core/data/class/class-sorcerer.json",
+    "sha256": "c144b35830ac7d6ea6cafa34c7278dea1ed4f53cbc45dea24b612de814f0865b"
+  },
+  "dragonAncestorLanguageSource": {
+    "file": "scripts/lib/dragon-ancestor-language-source.mjs",
+    "sha256": "3a0e57d4a41a9b648577176d9cb6da14ac43811bb1eb8778c64ca5f871b8112f"
+  },
   "lifeDomainProficiencyDependencies": [
     {
       "file": "scripts/lib/life-domain-proficiency-source.mjs",
@@ -104,7 +112,7 @@
   "toolClassificationDependencies": [
     {
       "file": "src/lib/calculations/itemClassification.ts",
-      "sha256": "0462f54a6a6fa4c81d5c8182b272faf3d34057c543278beb5a796b148f8f16e1"
+      "sha256": "9b5f873202d7aa4cff15c217c4c6d145037f7e04a057283ec9920c611f53b755"
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
