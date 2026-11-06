@@ -193,6 +193,16 @@ export function getDragonWings(current: CurrentSorcerer) {
   )
 }
 
+export function getDraconicPresence(current: CurrentSorcerer) {
+  if (current.source !== 'phb') return undefined
+  return getDraconicSubclassFeature(
+    current,
+    NATIVE_DRACONIC_SUBCLASSES.phb.presence,
+    18,
+    '384239c279901d8c6fb6874b2b98ff28bf72dc1fd8a7f3a3a697b2a071ea0e9f',
+  )
+}
+
 export function getCurrentMetamagicChoiceId(current: CurrentSorcerer) {
   const level = current.source === 'phb' ? 3 : 2
   return current.owner.levels >= level &&
