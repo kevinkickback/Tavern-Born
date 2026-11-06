@@ -1,7 +1,4 @@
-import {
-  getClassFeatureIdentity,
-  getClassFeatureReferenceLevel,
-} from '@/lib/5etools/classFeatureIdentity'
+import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
@@ -37,13 +34,25 @@ export interface CurrentFixedProficiency extends FixedProficiencyRelation {
   sourceRef: string
 }
 
-function matchesGainDeclaration(ref: Record<string, unknown>, uid: unknown, target: string) {
-  return (
-    typeof uid === 'string' &&
-    !ref.sourceIdentityConflict &&
-    decodeOptionalDeclaration(uid, 'classFeature')?.target === target &&
-    exactOptionalDeclarationReference(ref, uid, 'classFeature')
+function readGainDeclaration(cls: Class5e, ref: Record<string, unknown>, uid: unknown) {
+  if (
+    typeof uid !== 'string' ||
+    ref.sourceIdentityConflict ||
+    ref.isClassFeatureVariant ||
+    !exactOptionalDeclarationReference(ref, uid, 'classFeature')
   )
+    return undefined
+  const declaration = decodeOptionalDeclaration(uid, 'classFeature')
+  if (!declaration) return undefined
+  return declaration.target ===
+    getClassFeatureIdentity({
+      ...declaration.decoded,
+      className: cls.name,
+      classSource: cls.source,
+      source: cls.source,
+    })
+    ? declaration
+    : undefined
 }
 
 function matchesNativeSubclassGain(cls: Class5e, target: string, level: number): boolean {
@@ -58,9 +67,11 @@ function matchesNativeSubclassGain(cls: Class5e, target: string, level: number):
     .map(optionalDeclarationObject)
     .filter((ref) => ref.gainSubclassFeature === true)
   const raw = rawGains[0]
+  const declarations = rawGains.map((ref) => readGainDeclaration(cls, ref, ref.classFeature))
   if (
     !raw ||
-    !matchesGainDeclaration(raw, raw.classFeature, target) ||
+    declarations[0]?.target !== target ||
+    declarations.some((ref) => !ref) ||
     Object.keys(raw).some(
       (key) =>
         ![
@@ -73,22 +84,19 @@ function matchesNativeSubclassGain(cls: Class5e, target: string, level: number):
           'level',
         ].includes(key),
     ) ||
-    rawGains.filter(
-      (ref) =>
-        typeof ref.classFeature === 'string' &&
-        getClassFeatureReferenceLevel({ ref: ref.classFeature }) === level,
-    ).length !== 1
+    declarations.filter((ref) => ref?.decoded.level === level).length !== 1
   )
     return false
 
   const gains = cls.classFeatureRefs.filter((ref) => ref.gainSubclassFeature === true)
   const gain = gains[0]
+  const refs = gains.map((ref) => readGainDeclaration(cls, optionalDeclarationObject(ref), ref.ref))
   return (
-    !!gain &&
-    matchesGainDeclaration(optionalDeclarationObject(gain), gain.ref, target) &&
+    refs[0]?.target === target &&
+    !refs.some((ref) => !ref) &&
+    refs.filter((ref) => ref?.decoded.level === level).length === 1 &&
     (!gain.feature ||
-      (!gain.feature.sourceIdentityConflict && getClassFeatureIdentity(gain.feature) === target)) &&
-    gains.filter((ref) => getClassFeatureReferenceLevel(ref) === level).length === 1
+      (!gain.feature.sourceIdentityConflict && getClassFeatureIdentity(gain.feature) === target))
   )
 }
 /** Establish the unique selected current owner before invoking any supplied-root source audit. */

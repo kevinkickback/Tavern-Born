@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
+import { decodeClassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
@@ -246,7 +247,7 @@ test('bundled language proof requires the owning raw path even across layers', a
     ),
   })
   expect(dragonLanguage(project(saved, malformedGains))).toEqual([])
-  const withClassGains = (uids: string[], metadata: Record<string, unknown> = {}) =>
+  const withClassGains = (uids: unknown[], metadata: Record<string, unknown> = {}) =>
     layer({
       ...source,
       class: source.class.map((row: { source: string; classFeatures: unknown[] }) =>
@@ -270,6 +271,10 @@ test('bundled language proof requires the owning raw path even across layers', a
     ['Spellcasting|Sorcerer||1'],
     ['Sorcerous Origin|Sorcerer|XPHB|1'],
     [nativeGain, nativeGain],
+    [nativeGain, 1],
+    [nativeGain, 'Sorcerous Origin feature|Sorcerer||invalid'],
+    [nativeGain, 'Sorcerous Origin feature|Sorcerer||6|PHB|extra'],
+    [nativeGain, 'Sorcerous Origin feature|Wizard||6'],
   ]) {
     expect(dragonLanguage(project(saved, withClassGains(invalid)))).toEqual([])
   }
@@ -298,4 +303,32 @@ test('bundled language proof requires the owning raw path even across layers', a
       ),
     ),
   ).toEqual(['draconic'])
+  // The structured gain remains authoritative when only its display text is absent.
+  const noGainBody = layer({
+    ...source,
+    classFeature: source.classFeature.filter(
+      (row: ClassFeature) =>
+        !(row.name === 'Sorcerous Origin' && row.source === 'PHB' && row.level === 1),
+    ),
+  })
+  expect(dragonLanguage(project(saved, noGainBody))).toEqual(['draconic'])
+  const invalidParsedGain = {
+    ...base,
+    classes: base.classes.map((row) =>
+      row.name === 'Sorcerer' && row.source === 'PHB'
+        ? {
+            ...row,
+            classFeatureRefs: [
+              ...(row.classFeatureRefs ?? []),
+              {
+                ...decodeClassFeatureReference('Sorcerous Origin feature|Sorcerer||6'),
+                level: 14,
+                gainSubclassFeature: true,
+              },
+            ],
+          }
+        : row,
+    ),
+  }
+  expect(dragonLanguage(project(saved, invalidParsedGain))).toEqual([])
 })
