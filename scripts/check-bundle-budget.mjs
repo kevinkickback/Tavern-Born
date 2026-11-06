@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured after adding fixed Warlock Invocation spells at 6,536,419 B renderer and 1,280,303 B initial.
+  // Measured after adding fixed Warlock Invocation spells at 6,536,369 B renderer and 1,280,253 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6384 * KIB,
   initialRendererScript: 1251 * KIB,

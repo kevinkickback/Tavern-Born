@@ -5,6 +5,7 @@ import { afterAll, beforeAll, expect, test, vi } from 'vitest'
 import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
 import { loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseSpellRouteSource } from '@/lib/5etools/spellRouteSources'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import {
@@ -350,6 +351,23 @@ test('duplicate Invocation pools and invalid winning spell packages fail closed'
   const spellsByKey = buildSpellLookup([malformed, ...fixture.data.spells])
   expect(
     fixture.calc(actor, { ...fixture.lookups, spellsByKey }).atWillInvocationSpellStatuses,
+  ).toMatchObject([{ spell: undefined }])
+  const badRoute = {
+    ...genuine,
+    classes: { ...genuine.classes, fromClassList: [{ name: '', source: 'XPHB' }] },
+  }
+  delete badRoute.classSpellRouteSource
+  const diagnosed = parseSpellRouteSource(badRoute, 'test-spell-document', 'mage-armor')
+  expect(diagnosed.classSpellRouteDiagnostics).toContainEqual(
+    expect.objectContaining({ code: 'invalid-owner' }),
+  )
+  const diagnosedLookup = buildSpellLookup([
+    diagnosed,
+    ...fixture.data.spells.filter((row) => row !== genuine),
+  ])
+  expect(
+    fixture.calc(actor, { ...fixture.lookups, spellsByKey: diagnosedLookup })
+      .atWillInvocationSpellStatuses,
   ).toMatchObject([{ spell: undefined }])
   expect(fixture.calc(actor).atWillInvocationSpellStatuses[0]?.spell?.name).toBe('Mage Armor')
 })

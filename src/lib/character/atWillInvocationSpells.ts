@@ -69,9 +69,7 @@ export function getAtWillInvocationSpellStatuses(
         permitted(allowed, spell.source) &&
         getSpellReferenceKey(spell.name, spell.source) ===
           getSpellReferenceKey(contract.grant.spellName) &&
-        !spell.classSpellRouteDiagnostics?.some(
-          (row) => row.code === 'invalid-package' || row.code === 'ambiguous-target',
-        )
+        (spell.classSpellRouteDiagnostics?.length ?? 0) === 0
           ? spell
           : undefined
       return [
