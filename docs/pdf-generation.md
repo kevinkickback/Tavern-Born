@@ -115,6 +115,12 @@ matching current derived note from the unsupported-mechanic warning. A shortened
 Notes, stale terrain text or unrelated conditional effect cannot supply this proof; ordinary omission
 and truncation warnings remain.
 
+Sorcerer sheets use the same current resource counts as the manual Class Resources controls.
+The 2014 custom form keeps the counters in its limited-feature table and prints the full recovery
+rules in Class Features. The other forms include both in their feature fields. Full descriptions
+print the current selected Metamagic option's rules in its existing feature row. Names-only
+exports keep the option names and the resource counts and recovery.
+
 ## Spells and companions
 
 Both 2014 layouts use the shared spell asset per casting source, including subclasses and each

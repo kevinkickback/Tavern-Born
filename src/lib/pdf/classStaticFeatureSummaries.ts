@@ -7,11 +7,16 @@ import {
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
+import {
+  getCurrentNativeSorcerer,
+  getInnateSorcery,
+  getInnateSorceryUpgrades,
+} from '@/lib/5etools/sorcererSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Class5e, ClassFeature } from '@/types/5etools'
-import type { Character, Feature } from '@/types/character'
+import type { Character, CharacterClassEntry, Feature } from '@/types/character'
 
 export interface ClassStaticFeatureSummary {
   text: string
@@ -82,6 +87,25 @@ function featureSummary(feature: ClassFeature | undefined, entries = feature?.en
   return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
 }
 
+function savedClassLabel(character: Character, entry: CharacterClassEntry, feature: ClassFeature) {
+  const source = entry.source.trim().toLowerCase()
+  const tags = character.provenance?.features[feature.name.trim().toLowerCase()]
+  const tag = tags?.[0]
+  if (
+    tags?.length !== 1 ||
+    tag?.sourceType !== 'class' ||
+    tag.grantType !== 'fixed' ||
+    tag.grantVariant ||
+    (tag.grantSource && tag.grantSource.trim().toLowerCase() !== source) ||
+    !findClassReference(entry, [{ name: tag.sourceName, source: tag.sourceRef }])
+  )
+    return undefined
+  const labels = character.features.filter(
+    (row) => row.level === feature.level && findClassReference(feature, [row]),
+  )
+  return labels.length === 1 && !labels[0].description?.trim() ? labels[0] : undefined
+}
+
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
 export function getClassStaticFeatureSummaries(
   character: Character,
@@ -90,7 +114,28 @@ export function getClassStaticFeatureSummaries(
 ): ClassStaticFeatureSummary[] {
   if (!catalogs) return []
   const progression = getCharacterClassEntries(character)
+  const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
+    if (entry === sorcerer?.owner) {
+      const innate = getInnateSorcery(sorcerer)
+      if (!innate) return []
+      const activation = renderEntriesToText(innate.entries?.slice(0, -1))
+      return [
+        {
+          text: `${innate.name} activation: ${activation}`,
+          compactText: '',
+          replaces: savedClassLabel(character, entry, innate),
+        },
+        ...getInnateSorceryUpgrades(sorcerer).flatMap((feature) =>
+          feature
+            ? featureSummary(feature).map((summary) => ({
+                ...summary,
+                replaces: savedClassLabel(character, entry, feature),
+              }))
+            : [],
+        ),
+      ]
+    }
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
     if (
@@ -112,24 +157,8 @@ export function getClassStaticFeatureSummaries(
       if (!feature) return []
       const [summary] = featureSummary(feature)
       if (!summary) return []
-      // A saved class label can coexist with the derived rules in an imported character.
-      const tags = character.provenance?.features['arcane recovery']
-      const tag = tags?.[0]
-      if (
-        tags?.length !== 1 ||
-        tag?.sourceType !== 'class' ||
-        tag.grantType !== 'fixed' ||
-        tag.grantVariant ||
-        (tag.grantSource && tag.grantSource.trim().toLowerCase() !== source) ||
-        !findClassReference(entry, [{ name: tag.sourceName, source: tag.sourceRef }])
-      ) {
-        return [summary]
-      }
-      const labels = character.features.filter(
-        (row) => row.level === 1 && findClassReference(feature, [row]),
-      )
-      const label = labels.length === 1 ? labels[0] : undefined
-      return [{ ...summary, replaces: label?.description?.trim() ? undefined : label }]
+      const replaces = savedClassLabel(character, entry, feature)
+      return [replaces ? { ...summary, replaces } : summary]
     }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
     const subclasses = cls.subclasses?.filter((subclass) =>

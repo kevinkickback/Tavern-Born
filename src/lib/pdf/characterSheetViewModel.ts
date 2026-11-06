@@ -1,13 +1,4 @@
-import {
-  CLASSIC_WILD_SHAPE_RESOURCE_ID,
-  getClassicArchdruidWildShapeRule,
-  isClassicDruid,
-} from '@/lib/5etools/archdruidSource'
-import { getClassResourceDefs } from '@/lib/5etools/classData'
-import {
-  formatClassResourceRecovery,
-  getClassResourceRecoveryAtLevel,
-} from '@/lib/5etools/classRuleNormalization'
+import { getClassicArchdruidWildShapeRule } from '@/lib/5etools/archdruidSource'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   type EntityLookupSet,
@@ -22,10 +13,10 @@ import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
+import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { getEffectiveDefensiveTraits } from '@/lib/calculations/defensiveTraits'
 import type { EffectResolutionContext } from '@/lib/calculations/effects'
-import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
 import {
   getManagedSpellCastingNotes,
@@ -96,6 +87,7 @@ import {
   type ClassStaticFeatureSummary,
   getClassStaticFeatureSummaries,
 } from './classStaticFeatureSummaries'
+import { getMetamagicDescriptions } from './sorcererSheetRules'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
@@ -147,10 +139,12 @@ interface CharacterSheetSpellRow {
 }
 
 interface CharacterSheetClassResourceRow {
+  id: string
   label: string
   max: number
   used: number
   recovery: string
+  restType: 'short' | 'long'
 }
 
 interface CharacterSheetHitDieRow {
@@ -186,6 +180,7 @@ export interface CharacterSheetViewModel {
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
   classResourceSummary?: string
+  metamagicDescriptions?: ReadonlyMap<string, string>
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
@@ -362,6 +357,7 @@ function buildFeatureSummaries(
     CharacterSheetViewModel,
     | 'character'
     | 'classResourceSummary'
+    | 'metamagicDescriptions'
     | 'declaredClassFeatureSummaries'
     | 'optionalClassFeatureSummaries'
     | 'featureOptionSummaries'
@@ -400,7 +396,9 @@ function buildFeatureSummaries(
       ...declared.map(format),
       rows
         .map((row) => {
-          const body = descriptions ? row.description?.trim() : ''
+          const body = descriptions
+            ? (vm.metamagicDescriptions?.get(row.id) ?? row.description)?.trim()
+            : ''
           return body ? `${row.name}: ${body}` : row.name
         })
         .join('\n\n'),
@@ -679,47 +677,6 @@ function buildHitDiceRows(
   })
 }
 
-function buildClassResourceRows(
-  character: Character,
-  rawLookups: CharacterSheetLookupSet,
-  effectiveAbilityScores: AbilityScores,
-  effects: readonly CharacterEffect[],
-  effectContext: EffectResolutionContext,
-  unlimitedWildShape: boolean,
-): CharacterSheetClassResourceRow[] {
-  const stored = character.classResources ?? {}
-  const charismaModifier = getAbilityModifier(effectiveAbilityScores.charisma)
-  return getCharacterClassEntries(character).flatMap((entry) => {
-    const classData = resolveClassReference(entry, rawLookups)
-    const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
-    const defs = getClassResourceDefs(classData, entry.levels).filter(
-      (definition) =>
-        !(
-          unlimitedWildShape &&
-          isClassicDruid(entry) &&
-          definition.id === CLASSIC_WILD_SHAPE_RESOURCE_ID
-        ),
-    )
-    return defs.map((definition) => {
-      const max = getEffectiveClassResourceMaximum(
-        definition,
-        levelIndex,
-        charismaModifier,
-        effects,
-        effectContext,
-      )
-      const current = Math.max(0, Math.min(max, stored[definition.id] ?? max))
-      const recovery = getClassResourceRecoveryAtLevel(definition, levelIndex)
-      return {
-        label: definition.label,
-        max,
-        used: Math.max(0, max - current),
-        recovery: formatClassResourceRecovery(recovery),
-      }
-    })
-  })
-}
-
 function buildDefensiveTraits(
   effects: readonly CharacterEffect[],
   effectContext: EffectResolutionContext,
@@ -921,6 +878,11 @@ export function createCharacterSheetViewModel(
   const featureSummaryModel = {
     character,
     classResourceSummary,
+    metamagicDescriptions: getMetamagicDescriptions(
+      character,
+      primaryLookups.classChoiceFeatureCatalogs,
+      calculationContext.classChoices.prerequisites,
+    ),
     featureOptionSummaries,
     optionalClassFeatureSummaries,
     declaredClassFeatureSummaries,
@@ -960,14 +922,24 @@ export function createCharacterSheetViewModel(
     walkingSpeed: getWalkingSpeed(calculationContext.movement),
     remainingHitDice: Math.max(0, level - getHitDiceUsedTotal(character.hitDiceUsed)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
-    classResourceRows: buildClassResourceRows(
+    classResourceRows: getCharacterClassResources(
       character,
-      rawLookups,
-      effectiveAbilityScores,
-      calculationContext.effects.declarations,
-      calculationContext.effects.resolutionContext,
-      !!unlimitedWildShape,
-    ),
+      (entry) => resolveClassReference(entry, rawLookups),
+      {
+        catalogs: primaryLookups.classChoiceFeatureCatalogs,
+        charismaModifier: calculationContext.abilityScores.modifiers.charisma,
+        effects: calculationContext.effects.declarations,
+        effectContext: calculationContext.effects.resolutionContext,
+        unlimitedWildShape: !!unlimitedWildShape,
+      },
+    ).map(({ id, label, max, current, recoveryText, restType }) => ({
+      id,
+      label,
+      max,
+      used: max - current,
+      recovery: recoveryText,
+      restType,
+    })),
     weaponRows: buildWeaponRows(actions),
     actions,
     spellRows: buildSpellRows(

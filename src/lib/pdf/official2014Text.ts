@@ -1,4 +1,5 @@
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
+import { withSorcererResourceText } from './sorcererSheetRules'
 
 /** Limits for the printed 2014 official form's free-text sections. */
 export const OFFICIAL_2014_SECTION_LIMITS = {
@@ -55,7 +56,10 @@ export function getOfficial2014SectionText(
 ): Record<Official2014SectionName, string> {
   return {
     Equipment: viewModel.equipmentSummary,
-    'Features and Traits': viewModel.featuresSummary,
+    'Features and Traits': withSorcererResourceText(
+      viewModel.classResourceRows,
+      viewModel.featuresSummary,
+    ),
     // Keep player-selected feats visible when ancestry prose exceeds this fixed box.
     'Feat+Traits': [viewModel.featsSummary, viewModel.racialTraitsSummary]
       .filter(Boolean)
