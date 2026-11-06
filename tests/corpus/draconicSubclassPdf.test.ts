@@ -12,7 +12,11 @@ import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import { applyLevelDown, applyLevelUp } from '@/lib/character/commands/classCommands'
+import {
+  applyLevelDown,
+  applyLevelUp,
+  selectSubclass,
+} from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
@@ -263,8 +267,11 @@ test('a malformed parsed subclass short name leaves the sheet exportable', async
   expect(sheet.classFeaturesSummary2014).toContain('Innate Sorcery')
 })
 
-const wingPrintings = [
+const draconicActionPrintings = [
   {
+    name: 'Dragon Wings',
+    level: 14,
+    kind: 'bonus-action',
     source: 'PHB',
     originSystem: '2014',
     subclass: 'Draconic Bloodline',
@@ -279,6 +286,9 @@ const wingPrintings = [
     ],
   },
   {
+    name: 'Dragon Wings',
+    level: 14,
+    kind: 'bonus-action',
     source: 'XPHB',
     originSystem: '2024',
     subclass: 'Draconic Sorcery',
@@ -292,10 +302,28 @@ const wingPrintings = [
       /finish a Long Rest unless you spend 3 Sorcery Points \(no action required\)/i,
     ],
   },
+  {
+    name: 'Draconic Presence',
+    level: 18,
+    kind: 'action',
+    source: 'PHB',
+    originSystem: '2014',
+    subclass: 'Draconic Bloodline',
+    first: 'class-feature|sorcerous origin|sorcerer|phb|1|phb',
+    gain: 'class-feature|sorcerous origin feature|sorcerer|phb|18|phb',
+    leaf: 'subclass-feature|draconic presence|sorcerer|phb|draconic|phb|18|phb',
+    layouts: ['2014-official', '2014-custom'],
+    rules: [
+      /immune to your aura for 24 hours/i,
+      /as an action.*spend 5 sorcery points.*aura of awe or fear.*60 feet/i,
+      /for 1 minute or until you lose your concentration/i,
+      /hostile creature that starts its turn.*Wisdom saving throw.*charmed.*frightened/i,
+    ],
+  },
 ] as const
 
 const nativeSourcePrintings = [
-  ...wingPrintings.map((printing) => ({ ...printing, name: 'Dragon Wings', level: 14 })),
+  ...draconicActionPrintings,
   {
     source: 'XPHB',
     originSystem: '2024',
@@ -465,7 +493,7 @@ test.each(
   ]) {
     expect(view.classFeaturesSummary2014).not.toContain(name)
   }
-  if (name === 'Dragon Wings') {
+  if (name !== 'Dragon Companion') {
     const copiedAction = sheet(copied).actions.find((action) => action.name === name)
     for (const rule of rules) expect(copiedAction?.description).toMatch(rule)
   }
@@ -473,13 +501,16 @@ test.each(
 
 test.each(
   stacks,
-)('earned Dragon Wings print with their native rules and existing action notes (%s)', async (stack) => {
+)('earned Draconic actions print with their native rules and existing action notes (%s)', async (stack) => {
   const bundled = await loadLayer('bundled')
   const data = composeGameDataLayers(
     stack === 'composed' ? [bundled, await loadLayer('local')] : [bundled],
   )
   const raw = lookups(data)
   for (const {
+    name,
+    level,
+    kind,
     source,
     originSystem,
     subclass,
@@ -488,7 +519,7 @@ test.each(
     leaf,
     layouts,
     rules,
-  } of wingPrintings) {
+  } of draconicActionPrintings) {
     const filtered = (...keys: string[]) => {
       const filter = { sources: [source], suppressedKeys: new Set(keys) }
       return lookups({
@@ -501,10 +532,10 @@ test.each(
     const sheet = (actor: Character, primary = current) =>
       createCharacterSheetViewModel(actor, raw, primary)
     const calc = (actor: Character) => createCharacterCalculationContext(actor, current, raw)
-    const owner = { name: 'Sorcerer', source, subclass, subclassSource: source, levels: 13 }
+    const owner = { name: 'Sorcerer', source, subclass, subclassSource: source, levels: level - 1 }
     const before = reopen(
       createEmptyCharacter({
-        name: `${subclass} Dragon Wings verification`,
+        name: `${subclass} ${name} verification`,
         originSystem,
         allowedSources: [source],
         classProgression: [owner],
@@ -516,11 +547,11 @@ test.each(
         applyLevelUp(
           actor,
           actor.provenance,
-          [{ ...owner, levels: 14 }],
+          [{ ...owner, levels: level }],
           {
             className: owner.name,
             classSource: source,
-            classLevel: 14,
+            classLevel: level,
             hitDie: 6,
             dieResult: 4,
             method: 'average',
@@ -545,33 +576,35 @@ test.each(
       sheet({
         ...earned,
         classProgression: [
-          { ...owner, levels: 14, subclassSource: source === 'PHB' ? 'XPHB' : 'PHB' },
+          { ...owner, levels: level, subclassSource: source === 'PHB' ? 'XPHB' : 'PHB' },
         ],
       }),
     ]) {
-      expect(variant.classFeaturesSummary2014).not.toContain('Dragon Wings')
+      expect(variant.classFeaturesSummary2014).not.toContain(name)
     }
     const manualFeature = sheet({
       ...earned,
       features: [
         {
           id: 'manual-feature',
-          name: 'Dragon Wings',
+          name,
           source: 'Manual',
-          description: 'Personal wing pattern.',
+          description: 'Personal class feature note.',
         },
       ],
     })
-    expect(manualFeature.classFeaturesSummary2014).toContain('Dragon Wings: Personal wing pattern.')
+    expect(manualFeature.classFeaturesSummary2014).toContain(
+      `${name}: Personal class feature note.`,
+    )
     for (const rule of rules) expect(manualFeature.classFeaturesSummary2014).toMatch(rule)
-    const native = view.actions.find((action) => action.name === 'Dragon Wings')
-    expect(native).toMatchObject({ kind: 'bonus-action', source: { kind: 'subclass', source } })
+    const native = view.actions.find((action) => action.name === name)
+    expect(native).toMatchObject({ kind, source: { kind: 'subclass', source } })
     const action: CharacterAction = {
-      id: 'manual-wings',
-      name: 'Dragon Wings',
-      kind: 'bonus-action',
-      description: 'Independent glider note.',
-      source: { kind: 'manual', name: 'Dragon Wings' },
+      id: 'manual-draconic-action',
+      name,
+      kind,
+      description: 'Independent class action note.',
+      source: { kind: 'manual', name },
       active: true,
     }
     const read = async (
@@ -597,8 +630,12 @@ test.each(
       const full = await read(layout, view, { text: { overflow: 'notes' } })
       for (const rule of rules) expect(full.full).toMatch(rule)
       const names = await read(layout, view, { text: { descriptions: 'names', overflow: 'notes' } })
-      expect(names.full).toContain('Dragon Wings')
+      expect(names.full).toContain(name)
       for (const rule of rules) expect(names.full).not.toMatch(rule)
+      if (layout === '2014-official' && name === 'Draconic Presence') {
+        const defaultSheet = await read(layout)
+        for (const rule of rules) expect(defaultSheet.core).toMatch(rule)
+      }
       if (layout !== '2014-custom') {
         const crowded = [
           'Long field journal. '.repeat(340),
@@ -615,17 +652,17 @@ test.each(
       }
       const manual = sheet({ ...earned, manualActions: [action] })
       const defaults = await read(layout, manual)
-      expect(defaults.notes).toContain('Independent glider note')
-      expect(defaults.core).toContain('Dragon Wings')
-      const deselected = { 'bonus-action': [action.id] }
+      expect(defaults.notes).toContain('Independent class action note')
+      expect(defaults.core).toContain(name)
+      const deselected = { [kind]: [action.id] }
       const actionOverflow = await read(layout, manual, {
         content: deselected,
         text: { overflow: 'notes' },
       })
-      expect(actionOverflow.notes).toContain('Independent glider note')
+      expect(actionOverflow.notes).toContain('Independent class action note')
       for (const output of [full, defaults, actionOverflow]) {
         for (const rule of rules) expect(output.notes).toMatch(rule)
-        expect(output.full.match(/flying speed equal to your current speed/gi)).toHaveLength(1)
+        expect(output.full.match(new RegExp(rules[0], 'gi'))).toHaveLength(1)
       }
       const withoutActionNotes = await read(layout, manual, {
         content: deselected,
@@ -634,13 +671,35 @@ test.each(
       for (const rule of rules) expect(withoutActionNotes.core).toMatch(rule)
       const ellipsis = await read(layout, manual, { content: deselected })
       for (const rule of rules) expect(ellipsis.core).toMatch(rule)
-      if (!native) throw new Error('Missing the earned native bonus action')
+      if (!native) throw new Error('Missing the earned native action')
       const sameId = await read(
         layout,
         sheet({ ...earned, manualActions: [{ ...action, id: native.id }] }),
       )
-      expect(sameId.notes).toContain('Independent glider note')
+      expect(sameId.notes).toContain('Independent class action note')
       for (const rule of rules) expect(sameId.core).toMatch(rule)
     }
+  }
+  if (stack === 'composed') {
+    const revised = reopen(
+      createEmptyCharacter({
+        name: 'Configured Draconic subclass verification',
+        originSystem: '2024',
+        allowedSources: ['XPHB', 'PHB'],
+        classProgression: [{ name: 'Sorcerer', source: 'XPHB', levels: 18 }],
+      }),
+    )
+    const copiedOwner = reopen(
+      revised,
+      selectSubclass(revised, revised.provenance, 'Draconic Bloodline', 'PHB', undefined, {
+        classChoiceFeatureCatalogs: raw.classChoiceFeatureCatalogs,
+      }),
+    )
+    const copiedView = createCharacterSheetViewModel(copiedOwner, raw, raw)
+    expect(copiedView.classFeaturesSummary2014).not.toContain('Draconic Presence')
+    expect(copiedView.actions.find((action) => action.name === 'Draconic Presence')).toMatchObject({
+      kind: 'action',
+      source: { kind: 'subclass', source: 'PHB' },
+    })
   }
 }, 120_000)

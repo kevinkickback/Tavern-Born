@@ -54,6 +54,12 @@ export type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf
 // punctuation/qualifiers; reports still bind the exact original current note text.
 const comparableNoteText = (text: string) => text.replace(/\s+/gu, ' ').trim()
 
+const customActionDetails = [
+  ['action', 'Action'],
+  ['bonus-action', 'Bonus Action'],
+  ['reaction', 'Reaction'],
+] as const
+
 export function buildCharacterSheetFieldMap(
   viewModel: CharacterSheetViewModel,
   templateId: CharacterSheetTemplateId = getDefaultCharacterSheetTemplateId(),
@@ -94,13 +100,15 @@ export async function generateFilledCharacterSheetPdf(
     options.pages?.notes !== false &&
     options.text?.descriptions !== 'names'
   ) {
-    // Selected bonus actions have their own Notes even in ellipsis mode.
-    // With continuation, unselected bonus actions also carry their rules in Notes.
+    // Selected actions have their own Notes even in ellipsis mode.
+    // With continuation, unselected actions also carry their rules in Notes.
     const printedActions = continueInNotes ? original.actions : viewModel.actions
     const ids = printedActions
       .filter(
         (action) =>
-          action.kind === 'bonus-action' && action.source.kind === 'subclass' && action.description,
+          action.source.kind === 'subclass' &&
+          action.description &&
+          customActionDetails.some(([kind]) => action.kind === kind),
       )
       .map((action) => action.id)
     viewModel = withFeatureLabelsForActionNotes(viewModel, new Set(ids))
@@ -116,11 +124,7 @@ export async function generateFilledCharacterSheetPdf(
     viewModel.magicItems.forEach((item, index) => {
       fullMap.textFields[`Extra.Magic Item Description ${index + 1}`] = item.description ?? ''
     })
-    for (const [kind, label] of [
-      ['action', 'Action'],
-      ['bonus-action', 'Bonus Action'],
-      ['reaction', 'Reaction'],
-    ] as const) {
+    for (const [kind, label] of customActionDetails) {
       const details = viewModel.actions
         .filter((action) => action.kind === kind && action.active)
         .map((action) => ({ name: action.name, text: formatActionEntry(action, true) }))

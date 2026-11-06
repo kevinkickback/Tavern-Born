@@ -123,8 +123,9 @@ exports keep the option names and the resource counts and recovery.
 Revised Draconic Sorcery prints the earned Dragon Companion rules in Class Features.
 The separate Summon Dragon spell row continues to show its prepared status.
 Native Draconic Sorcerers print the earned level-14 Dragon Wings rules for their edition.
-The 2014 custom form keeps the feature label in Class Features when the same rules print in
-action Notes. Names-only exports keep the feature label.
+Classic Draconic Bloodline also prints the earned level-18 Draconic Presence rules.
+The 2014 custom form keeps the feature labels in Class Features when their rules print in
+action Notes. Names-only exports keep the feature labels.
 
 ## Spells and companions
 

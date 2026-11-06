@@ -9,6 +9,7 @@ import {
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getCurrentNativeSorcerer,
+  getDraconicPresence,
   getDragonCompanion,
   getDragonWings,
   getInnateSorcery,
@@ -124,23 +125,25 @@ export function getClassStaticFeatureSummaries(
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
     if (entry === sorcerer?.owner) {
-      const wings = getDragonWings(sorcerer)
-      const wingsSummaries = wings
-        ? featureSummary(wings.feature).map((summary) => ({
+      const actionSummaries = [getDragonWings(sorcerer), getDraconicPresence(sorcerer)].flatMap(
+        (rule) => {
+          if (!rule) return []
+          return featureSummary(rule.feature).map((summary) => ({
             ...summary,
             actionId: getFeatureActionGroupId(
-              wings.ownerKey,
-              wings.target,
-              wings.feature.entries ?? [],
+              rule.ownerKey,
+              rule.target,
+              rule.feature.entries ?? [],
             ),
           }))
-        : []
+        },
+      )
       const companion = featureSummary(getDragonCompanion(sorcerer))
       const innate = getInnateSorcery(sorcerer)
-      if (!innate) return [...wingsSummaries, ...companion]
+      if (!innate) return [...actionSummaries, ...companion]
       const activation = renderEntriesToText(innate.entries?.slice(0, -1))
       return [
-        ...wingsSummaries,
+        ...actionSummaries,
         {
           text: `${innate.name} activation: ${activation}`,
           compactText: '',
