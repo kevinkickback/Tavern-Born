@@ -64,7 +64,6 @@ import {
   getOptionalClassFixedSpellGrants,
   getOptionalClassFixedSpellNamesAtGain,
 } from './optionalClassFixedSpells'
-import { getRevisedRangerFixedSpell } from './revisedRangerFixedSpell'
 import { getSelectedFeatureCantripPool } from './selectedFeatureSpells'
 
 export interface ManagedClassSpellStatus {
@@ -556,23 +555,23 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
-  const preparedGrants = getDirectClassPreparedSpellGrants(character, classes, context?.catalogs)
-  const rangerGrant = getRevisedRangerFixedSpell(character, context?.catalogs)
-  if (rangerGrant) preparedGrants.push(rangerGrant)
   const grants = [
     ...getOptionalClassFixedSpellGrants(character, context?.catalogs).map((grant) => ({
       grant,
-      prepared: false,
+      spellLevel: undefined,
     })),
-    ...preparedGrants.map((grant) => ({ grant, prepared: true })),
+    ...getDirectClassPreparedSpellGrants(character, classes, context?.catalogs).map(
+      ({ spellLevel, ...grant }) => ({ grant, spellLevel }),
+    ),
   ]
-  for (const { grant, prepared } of grants) {
+  for (const { grant, spellLevel } of grants) {
+    const prepared = spellLevel !== undefined
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
       !spell ||
       !permitted(allowed, spell.source) ||
       (prepared &&
-        (spell.level !== 1 ||
+        (spell.level !== spellLevel ||
           (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1))
         ? 'Restore the exact spell printing from the enabled content.'
         : undefined
