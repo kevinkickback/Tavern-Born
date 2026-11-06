@@ -183,7 +183,7 @@ test.each(stackCases)('$edition verifies current rule eligibility ($pack)', ({ p
   expect(summaries(data, edition, 20).map((row) => row.compactText)).toContain(labels[3])
 })
 
-test('raw Fiend copies, duplicates and unattested inline Blessing do not supply native rules', async () => {
+async function rawRevisedFiendFixture() {
   const raw = JSON.parse(await readFile('resources/srd/core/data/class/class-warlock.json', 'utf8'))
   const exact = (row: SubclassFeature, name: string) =>
     row.name === name &&
@@ -203,15 +203,23 @@ test('raw Fiend copies, duplicates and unattested inline Blessing do not supply 
       classCastingSources: parsed.classCastingSources,
     })
   }
-  const names = (layer: GameData) =>
-    summaries(composeGameDataLayers([bundled, layer]), editions[1], 20).map(
-      (row) => row.compactText,
-    )
-  expect(names(testLayer([...rows, { ...hurl }]))).not.toContain(labels[3])
+  return { rows, hurl, blessing, intro, testLayer }
+}
+
+const revisedNames = (layer: GameData, base = bundled) =>
+  summaries(composeGameDataLayers([base, layer]), editions[1], 20).map((row) => row.compactText)
+
+test('raw duplicate Fiend features cannot supply native rules', async () => {
+  const { rows, hurl, testLayer } = await rawRevisedFiendFixture()
+  expect(revisedNames(testLayer([...rows, { ...hurl }]))).not.toContain(labels[3])
+})
+
+test('raw copied Fiend features cannot supply native rules', async () => {
+  const { rows, hurl, testLayer } = await rawRevisedFiendFixture()
   const { entries: _, ...withoutBody } = hurl
   const template = { ...hurl, name: 'Unreferenced Hurl Template' }
   expect(
-    names(
+    revisedNames(
       testLayer([
         ...rows.map((row) =>
           row === hurl
@@ -233,6 +241,10 @@ test('raw Fiend copies, duplicates and unattested inline Blessing do not supply 
       ]),
     ),
   ).not.toContain(labels[3])
+})
+
+test('raw unattested inline Blessing cannot supply native rules', async () => {
+  const { rows, intro, blessing, testLayer } = await rawRevisedFiendFixture()
   const fakeIntro = {
     ...intro,
     entries: intro.entries?.map((value) => {
@@ -241,14 +253,23 @@ test('raw Fiend copies, duplicates and unattested inline Blessing do not supply 
     }),
   }
   expect(
-    names(
+    revisedNames(
       testLayer(
         rows.filter((row) => row !== blessing).map((row) => (row === intro ? fakeIntro : row)),
       ),
     ),
   ).not.toContain(labels[0])
+})
+
+test('an unattached Fiend feature falls back through its exact current owner', async () => {
+  const { rows, hurl, testLayer } = await rawRevisedFiendFixture()
   const withoutHurl = testLayer(rows.filter((row) => row !== hurl))
-  expect(names(withoutHurl)).toContain(labels[3])
+  expect(revisedNames(withoutHurl)).toContain(labels[3])
+})
+
+test('an unattached Fiend feature cannot fall back through a foreign owner', async () => {
+  const { rows, hurl, testLayer } = await rawRevisedFiendFixture()
+  const withoutHurl = testLayer(rows.filter((row) => row !== hurl))
   const foreignOwner = {
     ...bundled,
     classes: bundled.classes.map((cls) =>
@@ -262,35 +283,42 @@ test('raw Fiend copies, duplicates and unattested inline Blessing do not supply 
         : cls,
     ),
   }
-  expect(
-    summaries(composeGameDataLayers([foreignOwner, withoutHurl]), editions[1], 20).map(
-      (row) => row.compactText,
-    ),
-  ).not.toContain(labels[3])
-  for (const source of [undefined, '']) {
-    const data = composeGameDataLayers([
-      bundled,
-      testLayer(rows.map((row) => (row === hurl || row === blessing ? { ...row, source } : row))),
-    ])
-    const saved = actor(editions[1], 20)
-    const label = {
-      id: 'existing-fiend-label',
-      name: hurl.name,
-      source: 'XPHB',
-      level: 14,
-      description: '',
-    }
-    saved.features.push(label)
-    saved.provenance.features[hurl.name.toLowerCase()] = [
-      { ...makeSourceTag('subclass', 'Fiend Patron', 'fixed', 'XPHB'), grantSource: 'XPHB' },
-    ]
-    const rules = getClassStaticFeatureSummaries(
-      saved,
-      buildClassChoiceFeatureCatalogs(current(data, 'XPHB')),
-      false,
-    )
-    expect(rules.map((row) => row.compactText)).toContain(labels[0])
-    expect(rules.find((row) => row.compactText === labels[3])?.replaces).toBe(label)
+  expect(revisedNames(withoutHurl, foreignOwner)).not.toContain(labels[3])
+})
+
+test.each([
+  { source: undefined, label: 'omitted' },
+  { source: '', label: 'blank' },
+])('a $label Fiend feature printing uses its exact owner for rule and saved-label matching', async ({
+  source,
+}) => {
+  const { rows, hurl, blessing, testLayer } = await rawRevisedFiendFixture()
+  const data = composeGameDataLayers([
+    bundled,
+    testLayer(rows.map((row) => (row === hurl || row === blessing ? { ...row, source } : row))),
+  ])
+  const saved = actor(editions[1], 20)
+  const label = {
+    id: 'existing-fiend-label',
+    name: hurl.name,
+    source: 'XPHB',
+    level: 14,
+    description: '',
   }
-  expect(names(testLayer(rows))).toEqual(expect.arrayContaining(labels))
+  saved.features.push(label)
+  saved.provenance.features[hurl.name.toLowerCase()] = [
+    { ...makeSourceTag('subclass', 'Fiend Patron', 'fixed', 'XPHB'), grantSource: 'XPHB' },
+  ]
+  const rules = getClassStaticFeatureSummaries(
+    saved,
+    buildClassChoiceFeatureCatalogs(current(data, 'XPHB')),
+    false,
+  )
+  expect(rules.map((row) => row.compactText)).toContain(labels[0])
+  expect(rules.find((row) => row.compactText === labels[3])?.replaces).toBe(label)
+})
+
+test('the unmodified raw layer supplies the native Fiend rules', async () => {
+  const { rows, testLayer } = await rawRevisedFiendFixture()
+  expect(revisedNames(testLayer(rows))).toEqual(expect.arrayContaining(labels))
 })
