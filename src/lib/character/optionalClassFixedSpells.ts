@@ -16,6 +16,7 @@ export interface ClassFixedSpellStatus extends ClassFixedSpellGrant {
   prepared: boolean
   active: boolean
   reason?: string
+  castingNote?: string
 }
 
 /**

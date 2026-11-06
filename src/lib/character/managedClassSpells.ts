@@ -41,6 +41,7 @@ import {
 } from '@/lib/calculations/spellIdentity'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
+import { renderEntriesToText } from '@/lib/entryText'
 import { addSpellGrant } from '@/lib/provenance/ledger'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -51,7 +52,10 @@ import type { ManagedClassSpellChoice, ManagedClassSpellSlot } from '@/types/cla
 import { scopeClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import { projectDailyClassSpellIntent } from './dailyClassSpells'
-import { getDirectClassPreparedSpellGrants } from './directClassPreparedSpells'
+import {
+  CONTACT_PATRON_TARGET,
+  getDirectClassPreparedSpellGrants,
+} from './directClassPreparedSpells'
 import {
   getManagedClassSpellOwnerEntry,
   isManagedClassSpellProfile,
@@ -211,6 +215,40 @@ function targetError(
     return 'This spell is outside the schools available for this choice.'
 }
 
+function isAvailableDirectPreparedSpell(spell: Spell5e, spellLevel: number, target: string) {
+  if (
+    spell.level !== spellLevel ||
+    (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1
+  )
+    return false
+  if (target !== CONTACT_PATRON_TARGET) return true
+  const [checked] = auditSpellRouteMultiplicity([spell])
+  return (
+    checked.classSpellRouteDiagnostics?.length === 0 &&
+    checked.classSpellRouteSource?.input.targetOccurrences.length === 1
+  )
+}
+
+function isDirectPreparationAtGain(
+  grants: ReturnType<typeof getDirectClassPreparedSpellGrants>,
+  slot: ManagedClassSpellSlot,
+  spell: Spell5e,
+) {
+  const [owner, domain, , gain] = slot
+  return (
+    domain === 'class-known' &&
+    grants.some(
+      (grant) =>
+        !grant.sourceReason &&
+        grant.owner[1] === owner[1] &&
+        grant.owner[2] === owner[2] &&
+        grant.level <= gain &&
+        getSpellReferenceKey(grant.reference) === getSpellReferenceKey(spell.name, spell.source) &&
+        isAvailableDirectPreparedSpell(spell, grant.spellLevel, grant.target),
+    )
+  )
+}
+
 type LearnedSpell = { choice: ManagedClassSpellChoice; spell: Spell5e }
 
 function getSpellbookSpecialtyPool(
@@ -332,7 +370,8 @@ export function getManagedClassSpellPool(
   const context = sourceContext?.catalogs
     ? { ...sourceContext, catalogs: { ...sourceContext.catalogs } }
     : sourceContext
-  const state = resolveSlot(character, slot, context)
+  const classes = currentClasses(character, context)
+  const state = resolveSlot(character, slot, context, classes)
   if (typeof state === 'string')
     return {
       spells: [] as Spell5e[],
@@ -346,6 +385,10 @@ export function getManagedClassSpellPool(
   const allowed = sources(character)
   const targets = new Map<string, Spell5e | undefined>()
   const optionalFixed = getOptionalClassFixedSpellNamesAtGain(character, slot, context?.catalogs)
+  const directPrepared =
+    slot[1] === 'class-known'
+      ? getDirectClassPreparedSpellGrants(character, classes, context?.catalogs)
+      : []
   for (const spell of Object.values(context?.spellsByKey ?? {})) {
     const key = getSpellReferenceKey(spell.name, spell.source)
     targets.set(key, targets.has(key) ? undefined : spell)
@@ -354,6 +397,7 @@ export function getManagedClassSpellPool(
     spell &&
     permitted(allowed, spell.source) &&
     !targetError(spell, slot, state) &&
+    !isDirectPreparationAtGain(directPrepared, slot, spell) &&
     !optionalFixed.has(getSpellNameKey(spell.name))
       ? [spell]
       : [],
@@ -400,6 +444,7 @@ export function projectManagedClassSpellState(
   const stripped = stripManagedClassSpellState(character)
   const allowed = sources(character)
   const classes = currentClasses(character, context)
+  const directPrepared = getDirectClassPreparedSpellGrants(character, classes, context?.catalogs)
   const classMap = new Map(classes.map((row) => [toClassProfileId(row.name, row.source), row]))
   const targets = new Map<string, Spell5e | undefined>()
   for (const spell of Object.values(context?.spellsByKey ?? {})) {
@@ -471,12 +516,12 @@ export function projectManagedClassSpellState(
       deny('Restore the exact selected spell printing.')
       continue
     }
-    const constraint = targetError(
-      spell,
-      choice.slot,
-      state,
-      !newManagedSpellIds?.has(managedClassSpellId(choice.slot)),
-    )
+    const saved = !newManagedSpellIds?.has(managedClassSpellId(choice.slot))
+    const constraint =
+      targetError(spell, choice.slot, state, saved) ??
+      (!saved && isDirectPreparationAtGain(directPrepared, choice.slot, spell)
+        ? 'Choose another spell; this class already grants that spell at this level.'
+        : undefined)
     if (constraint) {
       deny(constraint)
       continue
@@ -559,27 +604,35 @@ export function projectManagedClassSpellState(
     ...getOptionalClassFixedSpellGrants(character, context?.catalogs).map((grant) => ({
       grant,
       spellLevel: undefined,
+      castingEntries: undefined,
+      sourceReason: undefined,
     })),
-    ...getDirectClassPreparedSpellGrants(character, classes, context?.catalogs).map(
-      ({ spellLevel, ...grant }) => ({ grant, spellLevel }),
-    ),
+    ...directPrepared.map(({ spellLevel, castingEntries, sourceReason, ...grant }) => ({
+      grant,
+      spellLevel,
+      castingEntries,
+      sourceReason,
+    })),
   ]
-  for (const { grant, spellLevel } of grants) {
+  for (const { grant, spellLevel, castingEntries, sourceReason } of grants) {
     const prepared = spellLevel !== undefined
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
-      !spell ||
+      sourceReason ??
+      (!spell ||
       !permitted(allowed, spell.source) ||
-      (prepared &&
-        (spell.level !== spellLevel ||
-          (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1))
+      (prepared && !isAvailableDirectPreparedSpell(spell, spellLevel, grant.target))
         ? 'Restore the exact spell printing from the enabled content.'
-        : undefined
+        : undefined)
     fixedClassSpellStatuses.push({
       ...grant,
       prepared,
       active: !reason,
       ...(reason ? { reason } : {}),
+      ...(!reason &&
+        castingEntries && {
+          castingNote: `${grant.featureName}: ${renderEntriesToText(castingEntries)}`,
+        }),
     })
     if (reason) continue
     const entry = character.classProgression.find(

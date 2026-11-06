@@ -19,8 +19,10 @@ import type { EffectResolutionContext } from '@/lib/calculations/effects'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
 import {
+  getFixedClassSpellCastingNotes,
   getManagedSpellCastingNotes,
   hasActiveMysticArcanum,
+  isFixedClassSpellProfile,
 } from '@/lib/calculations/managedSpellCasting'
 import {
   type EffectiveMovement,
@@ -63,6 +65,7 @@ import {
   createOptionalClassFeatureActivity,
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
+import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
@@ -580,11 +583,16 @@ function buildSpellRows(
   spellsByKey: Readonly<Record<string, Spell5e>>,
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
   statuses: readonly ManagedClassSpellStatus[],
+  fixedStatuses: readonly ClassFixedSpellStatus[],
   invocationSpells: readonly AtWillInvocationSpellStatus[],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
   const cantrips = new Set<string>()
   const leveled = new Set<string>()
+  const fixedCasting = fixedStatuses.filter(
+    (status) =>
+      status.castingNote && profiles.some((profile) => isFixedClassSpellProfile(status, profile)),
+  )
   for (const profile of profiles) {
     const ownerCantrips = new Set(
       profile.cantrips.map((reference) => getSpellReferenceKey(reference)),
@@ -640,6 +648,7 @@ function buildSpellRows(
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
       const castingNote = [
         ...getManagedSpellCastingNotes(statuses, reference),
+        ...getFixedClassSpellCastingNotes(fixedCasting, reference),
         ...invocations.map(({ featureName, rules }) => `${featureName}: ${rules}`),
       ].join(' ')
       return {
@@ -849,6 +858,7 @@ export function createCharacterSheetViewModel(
     spellsByKey: rawLookups.spellsByKey,
     effectiveSpellProfiles: character.spells.spellProfiles,
     managedClassSpellStatuses: calculationContext.managedClassSpellStatuses,
+    fixedClassSpellStatuses: calculationContext.fixedClassSpellStatuses,
     classChoicePrerequisites: calculationContext.classChoices.prerequisites,
     race: raceResolution.mergedRace,
     raceResolution,
@@ -895,12 +905,18 @@ export function createCharacterSheetViewModel(
   const invocationSpells = calculationContext.atWillInvocationSpellStatuses.filter(
     (row) => row.spell,
   )
+  const fixedSpells = calculationContext.fixedClassSpellStatuses
   const managedSpellCastingSummaries = [
     ...calculationContext.managedClassSpellStatuses.flatMap((status) =>
       status.active && status.castingNote
         ? [`${status.choice.target.name} (${status.choice.target.source}): ${status.castingNote}`]
         : [],
     ),
+    ...fixedSpells.flatMap(({ active, castingNote, reference }) => {
+      if (!active || !castingNote) return []
+      const [name, source] = reference.split('|')
+      return [`${name} (${source}) — ${castingNote}`]
+    }),
     ...invocationSpells.map(({ featureName, reference, rules }) => {
       const [name, source] = reference.split('|')
       return `${name} (${source}) — ${featureName}: ${rules}`
@@ -979,6 +995,7 @@ export function createCharacterSheetViewModel(
       rawLookups.spellsByKey ?? {},
       spellcastingDetails,
       calculationContext.managedClassSpellStatuses,
+      fixedSpells,
       invocationSpells,
     ),
     spellcastingPages: spellcastingSources.map((detail, index) => ({
@@ -998,6 +1015,7 @@ export function createCharacterSheetViewModel(
               isManagedClassSpellProfile(status.choice.slot, profile),
           ),
         ),
+        fixedSpells,
         invocationSpells.filter((row) => row.profileId === detail.profileId),
       ),
     })),

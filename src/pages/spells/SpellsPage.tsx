@@ -21,7 +21,10 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemTextContext } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
-import { getManagedSpellCastingNotes } from '@/lib/calculations/managedSpellCasting'
+import {
+  getFixedClassSpellCastingNotes,
+  getManagedSpellCastingNotes,
+} from '@/lib/calculations/managedSpellCasting'
 import { getNativeRacialSpellOwners } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
@@ -300,11 +303,18 @@ export function SpellsPage() {
       }
 
       for (const name of profile.spellsKnown) {
-        const castingNote = getManagedSpellCastingNotes(
-          calculationContext?.managedClassSpellStatuses ?? [],
-          name,
-          profile,
-        ).join(' ')
+        const castingNote = [
+          ...getManagedSpellCastingNotes(
+            calculationContext?.managedClassSpellStatuses ?? [],
+            name,
+            profile,
+          ),
+          ...getFixedClassSpellCastingNotes(
+            calculationContext?.fixedClassSpellStatuses ?? [],
+            name,
+            profile,
+          ),
+        ].join(' ')
         const spell = resolveSpellReferenceFromMap(name, spellByName)
         const spellKey = spellIdentity(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
