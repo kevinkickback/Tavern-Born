@@ -324,6 +324,31 @@ test('rejects an invalid spell package even when it hides a duplicate of the exa
   expect(contactStatus(reopen(nine))?.active).toBe(true)
 })
 
+test('rejects a Contact Patron schedule with an extra prepared gain', () => {
+  const nine = levelNine(actor(8))
+  const extended = lookups({
+    ...data,
+    classes: data.classes.map((row) =>
+      isWarlock(row)
+        ? {
+            ...row,
+            additionalSpells: [
+              {
+                prepared: { '9': ['contact other plane|xphb'], '10': ['dream|xphb'] },
+              },
+            ],
+          }
+        : row,
+    ),
+  })
+  expect(contactStatus(nine, extended)).toMatchObject({
+    active: false,
+    reason: 'Restore the exact Contact Patron feature and its class spell schedule.',
+  })
+  expect(profile(calculate(nine, extended).character)?.spellsKnown).not.toContain(reference)
+  expect(contactStatus(reopen(nine))?.active).toBe(true)
+})
+
 test('projects the rule into creator spell notes, Actions and compact PDF summaries', () => {
   const nine = levelNine(actor(8))
   const current = calculate(nine)

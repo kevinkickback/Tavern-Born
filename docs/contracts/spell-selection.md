@@ -211,7 +211,7 @@ allowance and other acquisition/rest events remains separate work.
 ## Revised Warlock Contact Patron
 
 Revised Warlock's Contact Patron grants Contact Other Plane from the current
-level-9 class schedule and exact Contact Patron declaration. The grant is always
+single-entry level-9 class schedule and exact Contact Patron declaration. The grant is always
 prepared outside the ordinary spell choices. New ordinary picks cannot take
 the same printing while that grant is available at their gain. An established
 ordinary choice retains its separate ownership and edit lifetime. The spell

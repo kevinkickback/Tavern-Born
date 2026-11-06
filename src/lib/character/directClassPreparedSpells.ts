@@ -92,18 +92,18 @@ function getRangerGrant(
 }
 
 function matchesPreparedSchedule(
-  schedule: AdditionalSpellBlock['prepared'],
+  schedule: NonNullable<AdditionalSpellBlock['prepared']>,
   level: number,
   reference: string,
 ) {
-  const token = schedule?.[String(level)]
+  const token = schedule[String(level)]
   return (
     Array.isArray(token) &&
     token.length === 1 &&
     typeof token[0] === 'string' &&
     /^[^|#{}]+\|[^|#{}]+$/.test(token[0]) &&
     getSpellReferenceKey(token[0]) === getSpellReferenceKey(reference) &&
-    Object.keys(schedule ?? {}).filter((key) => Number(key) === level).length === 1
+    Object.keys(schedule).filter((key) => Number(key) === level).length === 1
   )
 }
 
@@ -129,6 +129,8 @@ function getContactPatronGrant(
     !Array.isArray(cls.classFeatures) ||
     !Array.isArray(cls.classFeatureRefs) ||
     catalogs.ambiguousClassFeatureTargets?.has(CONTACT_PATRON_TARGET) ||
+    !schedule ||
+    Object.keys(schedule).length !== 1 ||
     !matchesPreparedSchedule(schedule, grant.level, grant.reference)
   )
     return unavailable

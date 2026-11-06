@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured after adding Contact Patron at 6,543,689 B renderer and 1,282,960 B initial.
+  // Measured after adding Contact Patron at 6,543,714 B renderer and 1,282,985 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
   rendererCode: 6391 * KIB,
   initialRendererScript: 1253 * KIB,
