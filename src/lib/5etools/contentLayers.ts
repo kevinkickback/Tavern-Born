@@ -31,11 +31,8 @@ import {
   setLoadedRaceData,
 } from './dataLoader'
 import { isNativeResilienceIntro } from './draconicResilience'
-import {
-  findNativeDraconicSubclass,
-  getDirectDraconicFeatureReference,
-  getNativeDraconicFeatureOwner,
-} from './draconicSubclassFeatureSource'
+import { getNativeDraconicFeatureOwner } from './draconicSubclassFeatureSource'
+import { getNativeFiendFeatureOwner } from './fiendSubclassFeatureSource'
 import { mergeFixedShieldBases } from './fixedBonusShields'
 import {
   auditFixedLayerMultiplicity,
@@ -55,6 +52,11 @@ import {
 } from './itemTypeEntries'
 import { buildGameDataLookups } from './lookups'
 import { appendMagicVariantReferences, mergeMagicVariants } from './magicVariants'
+import {
+  findNativeSubclass,
+  getDirectSubclassFeatureReference,
+  type NativeSubclassOwner,
+} from './nativeSubclassFeatureSource'
 import { mergeOptionalClassFeatureSources } from './optionalClassFeatureSource'
 import { mergeOptionalClassSections } from './optionalClassSectionSource'
 import { buildSourcesList } from './parsers/basic'
@@ -178,19 +180,19 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
-function findLayerNativeDraconicFeature(
+function findLayerNativeSubclassFeature(
   layers: readonly GameData[],
-  owner: NonNullable<ReturnType<typeof getNativeDraconicFeatureOwner>>,
+  owner: NativeSubclassOwner,
   target: string,
 ) {
-  const parent = { name: 'Sorcerer', source: owner.source }
+  const parent = { name: owner.className, source: owner.source }
   for (let index = layers.length - 1; index >= 0; index--) {
     const classes = layers[index].classes.filter((cls) => findClassReference(parent, [cls]))
     if (!classes.length) continue
     const cls = classes[0]
     if (classes.length !== 1 || cls.sourceIdentityConflict || '_copy' in cls) return undefined
-    const subclass = findNativeDraconicSubclass(cls, owner)
-    const ref = subclass && getDirectDraconicFeatureReference(subclass, target)
+    const subclass = findNativeSubclass(cls, owner)
+    const ref = subclass && getDirectSubclassFeatureReference(subclass, target)
     if (!ref) return undefined
     if (ref.feature) return ref.feature
   }
@@ -217,22 +219,28 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
         if (reference.sourceIdentityConflict === true) return reference
         const identity = getSubclassFeatureIdentity(reference)
-        // Native Draconic benefits require their own layer's attached declaration.
+        // A native intro and its nested declaration stay together.
         if (
           (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass)) ||
           isNativeResilienceIntro(classData, subclass, identity)
         )
           return reference
-        const owner = getNativeDraconicFeatureOwner(identity)
-        const nativeDraconicOwner =
-          identity &&
+        const owner =
+          getNativeDraconicFeatureOwner(identity) ?? getNativeFiendFeatureOwner(identity)
+        const nativeOwner =
           owner &&
-          findClassReference({ name: 'Sorcerer', source: owner.source }, [classData]) &&
+          findClassReference({ name: owner.className, source: owner.source }, [classData]) &&
           findClassReference(owner, [subclass])
+            ? owner
+            : undefined
+        if (nativeOwner && 'intro' in nativeOwner && nativeOwner.intro === identity)
+          return reference
         // Keep an attached native producer. An unattached declaration can look only under its owner.
-        const feature = nativeDraconicOwner
-          ? (reference.feature ?? findLayerNativeDraconicFeature(layers, owner, identity))
-          : identity && subclassFeatures.get(identity)
+        const feature =
+          identity &&
+          (nativeOwner
+            ? (reference.feature ?? findLayerNativeSubclassFeature(layers, nativeOwner, identity))
+            : subclassFeatures.get(identity))
         if (!feature || reference.feature === feature) return reference
         subclassChanged = true
         return { ...reference, feature }
