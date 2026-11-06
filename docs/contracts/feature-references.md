@@ -69,6 +69,12 @@ level feature is excluded from nested expansion. Different gains and printings r
 and the authoritative features retain their mechanical choices and Actions.
 Changes to target identity/intro projections require a parsed-cache rebuild.
 
+Native Fiend sheet rules resolve within the exact classic or revised subclass owner.
+An unattached direct reference can recover its exact same-owner body from a lower
+layer. Dark One's Blessing requires the exact nested declaration in the current
+intro, with its leaf resolved from the same layer. Raw inline attachments and
+copied or ambiguous native leaves cannot authorize these sheet rules.
+
 ## Internal subclass-feature copies
 
 Class documents materialize internal subclass-feature copies through the shared data-only copy

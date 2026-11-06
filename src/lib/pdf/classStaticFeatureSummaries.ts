@@ -19,8 +19,9 @@ import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Class5e, ClassFeature } from '@/types/5etools'
+import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry, Feature } from '@/types/character'
+import { getWarlockStaticFeatures } from './warlockStaticFeatures'
 
 export interface ClassStaticFeatureSummary {
   text: string
@@ -95,21 +96,30 @@ function featureSummary(
   return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
 }
 
-function savedClassLabel(character: Character, entry: CharacterClassEntry, feature: ClassFeature) {
-  const source = entry.source.trim().toLowerCase()
+function savedClassLabel(
+  character: Character,
+  entry: CharacterClassEntry,
+  feature: ClassFeature | SubclassFeature,
+) {
+  const subclass = 'subclassShortName' in feature
+  const owner = subclass ? { name: entry.subclass, source: entry.subclassSource } : entry
+  const featureSource = subclass ? feature.source?.trim() || entry.subclassSource : feature.source
+  const source = (subclass ? featureSource : entry.source)?.trim().toLowerCase()
   const tags = character.provenance?.features[feature.name.trim().toLowerCase()]
   const tag = tags?.[0]
   if (
     tags?.length !== 1 ||
-    tag?.sourceType !== 'class' ||
+    tag?.sourceType !== (subclass ? 'subclass' : 'class') ||
     tag.grantType !== 'fixed' ||
     tag.grantVariant ||
     (tag.grantSource && tag.grantSource.trim().toLowerCase() !== source) ||
-    !findClassReference(entry, [{ name: tag.sourceName, source: tag.sourceRef }])
+    !findClassReference(owner, [{ name: tag.sourceName, source: tag.sourceRef }])
   )
     return undefined
   const labels = character.features.filter(
-    (row) => row.level === feature.level && findClassReference(feature, [row]),
+    (row) =>
+      row.level === feature.level &&
+      findClassReference({ name: feature.name, source: featureSource }, [row]),
   )
   return labels.length === 1 && !labels[0].description?.trim() ? labels[0] : undefined
 }
@@ -163,7 +173,7 @@ export function getClassStaticFeatureSummaries(
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
     if (
-      (name !== 'druid' && name !== 'wizard') ||
+      (name !== 'druid' && name !== 'wizard' && name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
@@ -171,6 +181,14 @@ export function getClassStaticFeatureSummaries(
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'warlock') {
+      return getWarlockStaticFeatures(cls, entry, catalogs).flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
     if (name === 'wizard') {
       if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
       const feature = getCurrentDirectClassFeature(

@@ -18,6 +18,7 @@ import { getNativeDraconicFeatureOwner } from '@/lib/5etools/draconicSubclassFea
 import { isEpicBoonAdvancement } from '@/lib/5etools/epicBoonAdvancement'
 import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
+import { getNativeFiendFeatureOwner } from '@/lib/5etools/fiendSubclassFeatureSource'
 import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
@@ -411,7 +412,11 @@ function resolveInlineSubclassFeatureRef(
     subclassFeatureRecords,
   )
   if (!feature) {
-    if ('feature' in entry && isNativeResilienceTarget(getSubclassFeatureIdentity(parsedRef))) {
+    const target = getSubclassFeatureIdentity(parsedRef)
+    if (
+      'feature' in entry &&
+      (isNativeResilienceTarget(target) || getNativeFiendFeatureOwner(target))
+    ) {
       // Raw inline data cannot stand in for a missing native source record.
       const { feature: _attachment, ...declaration } = entry
       return declaration
@@ -482,7 +487,8 @@ function auditNativeSubclassCopies(
         (target) =>
           target === REVISED_AFFINITY_TARGET ||
           isNativeResilienceTarget(target) ||
-          getNativeDraconicFeatureOwner(target),
+          getNativeDraconicFeatureOwner(target) ||
+          getNativeFiendFeatureOwner(target),
       ),
   )
   if (!copied.size) return materialized
