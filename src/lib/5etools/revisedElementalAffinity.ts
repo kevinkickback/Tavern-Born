@@ -167,20 +167,6 @@ function verifiesBody(
   )
 }
 
-/** Copy materialization removes the raw directive. Preserve it as uncertainty for this direct grant. */
-export function auditRevisedAffinityCopies(
-  raw: readonly Record<string, unknown>[],
-  materialized: Record<string, unknown>[],
-) {
-  if (!raw.some((row) => '_copy' in row && getSubclassFeatureIdentity(row) === target))
-    return materialized
-  return materialized.map((row) =>
-    getSubclassFeatureIdentity(row) === target
-      ? { ...row, featureOptionSourceConflict: true }
-      : row,
-  )
-}
-
 function currentAffinity(catalogs: AffinityCatalog | undefined) {
   const classes = catalogs?.classes?.filter(isRevisedSorcerer)
   if (classes?.length !== 1 || classes[0].sourceIdentityConflict || '_copy' in classes[0])

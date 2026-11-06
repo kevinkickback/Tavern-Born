@@ -13,6 +13,7 @@ import {
   auditDirectFixedClassDeclarations,
   auditFixedClassFeatures,
 } from '@/lib/5etools/directFixedProficiencySource'
+import { isNativeResilienceTarget } from '@/lib/5etools/draconicResilience'
 import { isEpicBoonAdvancement } from '@/lib/5etools/epicBoonAdvancement'
 import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
@@ -23,7 +24,7 @@ import {
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
-import { auditRevisedAffinityCopies } from '@/lib/5etools/revisedElementalAffinity'
+import { REVISED_AFFINITY_TARGET } from '@/lib/5etools/revisedElementalAffinity'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
@@ -138,15 +139,15 @@ function parseSubclassFeatureReference(
     ...parsedRef,
     ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
     source:
-      typeof feature.source === 'string' && feature.source.length > 0
+      typeof feature.source === 'string' && feature.source.trim().length > 0
         ? feature.source
         : parsedRef.source,
     classSource:
-      typeof feature.classSource === 'string' && feature.classSource.length > 0
+      typeof feature.classSource === 'string' && feature.classSource.trim().length > 0
         ? feature.classSource
         : parsedRef.classSource,
     subclassSource:
-      typeof feature.subclassSource === 'string' && feature.subclassSource.length > 0
+      typeof feature.subclassSource === 'string' && feature.subclassSource.trim().length > 0
         ? feature.subclassSource
         : parsedRef.subclassSource,
     level: typeof feature.level === 'number' ? feature.level : parsedRef.level,
@@ -408,7 +409,14 @@ function resolveInlineSubclassFeatureRef(
     parsedRef,
     subclassFeatureRecords,
   )
-  if (!feature) return entry
+  if (!feature) {
+    if ('feature' in entry && isNativeResilienceTarget(getSubclassFeatureIdentity(parsedRef))) {
+      // Raw inline data cannot stand in for a missing native source record.
+      const { feature: _attachment, ...declaration } = entry
+      return declaration
+    }
+    return entry
+  }
   return {
     ...entry,
     ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
@@ -454,6 +462,25 @@ function parsePreparedClassFeatures(data: unknown): unknown[] {
       entries: enrichEntriesSubclassRefs(f.entries, subclassFeatureRecords),
     }
   })
+}
+
+/** These native grants require direct bodies. Copy materialization removes the directive. */
+function auditNativeSubclassCopies(
+  raw: readonly ParsedObject[],
+  materialized: ParsedObject[],
+): ParsedObject[] {
+  const copied = new Set(
+    raw
+      .filter((row) => '_copy' in row)
+      .map(getSubclassFeatureIdentity)
+      .filter((target) => target === REVISED_AFFINITY_TARGET || isNativeResilienceTarget(target)),
+  )
+  if (!copied.size) return materialized
+  return materialized.map((row) =>
+    copied.has(getSubclassFeatureIdentity(row))
+      ? { ...row, featureOptionSourceConflict: true }
+      : row,
+  )
 }
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
@@ -518,7 +545,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     classCastingSources,
     subclassFeature: auditSubclassProficiencyFeatures(
       records,
-      auditRevisedAffinityCopies(records, auditFeatureOptionSources(materialized)),
+      auditNativeSubclassCopies(records, auditFeatureOptionSources(materialized)),
       origin,
       packageAudit,
     ),
