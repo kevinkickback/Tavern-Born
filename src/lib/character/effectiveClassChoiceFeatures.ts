@@ -30,6 +30,8 @@ import type {
   Feature,
   SpellProfile,
 } from '@/types/character'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
+import { getCurrentAtWillInvocation, isNativeInvocationPool } from './atWillInvocationRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import {
   getClassChoiceFeatureId,
@@ -59,23 +61,22 @@ function buildEffectiveClassChoiceFeatureRoutes(
   prerequisites?: ClassChoicePrerequisiteContext,
 ) {
   const activity = createOptionalClassFeatureActivity(character, catalogs)
-  const choices = new Map(
-    character.classProgression
-      .flatMap((owner) => {
-        const cls = findClassReference(owner, catalogs?.classes ?? [])
-        return cls
-          ? getClassChoiceCandidates(cls, getSelectedSubclassData(cls, owner), catalogs)
-          : []
-      })
-      .filter(activity.choice)
-      .map((row) => [row.id, row]),
-  )
+  const choiceCandidates = character.classProgression
+    .flatMap((owner) => {
+      const cls = findClassReference(owner, catalogs?.classes ?? [])
+      return cls ? getClassChoiceCandidates(cls, getSelectedSubclassData(cls, owner), catalogs) : []
+    })
+    .filter(activity.choice)
+  const choices = new Map(choiceCandidates.map((row) => [row.id, row]))
   const featureIds = new Set<string>(),
     choiceIds = new Set<string>()
   const masteredWeapons = new Map<string, Set<string>>()
   const seenMastery = new Set<string>()
   const featureNamesByChoice = new Map<string, Set<string>>()
   const selectedOptions: Array<{
+    atWillInvocation?: ReturnType<typeof getCurrentAtWillInvocation>
+    ambiguousInvocationPool?: boolean
+    choice: NormalizedCharacterChoice
     selection: CharacterClassChoiceSelection
     option: CharacterClassChoiceOption
   }> = []
@@ -171,6 +172,9 @@ function buildEffectiveClassChoiceFeatureRoutes(
         .filter((row) => row.availability === 'eligible')
         .map((row) => getClassChoiceOptionKey(row.reference)),
     )
+    const nativeInvocationPool = isNativeInvocationPool(choice)
+    const ambiguousInvocationPool =
+      nativeInvocationPool && choiceCandidates.filter((row) => row.id === choice.id).length > 1
     for (const option of selection.selected) {
       if (
         option.slotLevel < choice.level ||
@@ -186,7 +190,12 @@ function buildEffectiveClassChoiceFeatureRoutes(
         masteredWeapons.set(choice.id, keys)
         continue
       }
-      selectedOptions.push({ selection, option })
+      const atWillInvocation = nativeInvocationPool
+        ? getCurrentAtWillInvocation(selection, option, catalogs)
+        : undefined
+      // Replacements can fill an earlier slot while requiring the current class level.
+      if (atWillInvocation && owner.levels < atWillInvocation.minimumLevel) continue
+      selectedOptions.push({ atWillInvocation, ambiguousInvocationPool, choice, selection, option })
       if (
         ['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
           option.entityType,

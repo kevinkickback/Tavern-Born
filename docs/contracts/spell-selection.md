@@ -208,6 +208,22 @@ This is initial setup/correction, not a gameplay replacement-event ledger. Reope
 gaining another class level grants no swap event. Enforcing the one-replacement-per-class-level
 allowance and other acquisition/rest events remains separate work.
 
+## Fixed Warlock Invocation spells
+
+The exact PHB and XPHB Armor of Shadows, Mask of Many Faces and Misty Visions
+selections grant a read-only spell reference through their current Eldritch
+Invocations pool. The shared additional-spell parser resolves the explicit
+printing, with PHB as the default for an omitted printing. The source text
+supplies each edition's casting restrictions. The current class level still
+has to meet the Invocation prerequisite when a replacement fills an earlier
+selection slot.
+
+Spells and the PDF display the source-owned casting rule separately from
+ordinary spell ownership. A missing exact spell suspends the reference and
+prompts source recovery. Clearing or losing the Invocation preserves other
+owners of the same spell. The projection uses no ordinary spell quota, adds
+no Pact slots and cannot satisfy a spell prerequisite.
+
 ## Existing daily preparation
 
 The finite daily owners retain exact `preparedSpells` intent in their parent profiles. Effective
