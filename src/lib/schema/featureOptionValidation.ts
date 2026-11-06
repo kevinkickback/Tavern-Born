@@ -17,7 +17,10 @@ export function getInvalidFeatureOptionSelectionPaths(
     Partial<Pick<Character, 'classProgression'>>,
 ): Array<Array<string | number>> {
   const paths: Array<Array<string | number>> = []
-  const invalidGroups = getInvalidFeatureLiteralSelectionIds(character.classChoiceSelections ?? [])
+  const invalidGroups = getInvalidFeatureLiteralSelectionIds(
+    character.classChoiceSelections ?? [],
+    character.classProgression,
+  )
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   const elementalFury = getSavedElementalFury(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
@@ -42,6 +45,10 @@ export function getInvalidFeatureOptionSelectionPaths(
         continue
       }
     }
+    if (invalidGroups.has(selection.choiceId)) {
+      paths.push(['classChoiceSelections', index])
+      continue
+    }
     if (
       selection.favoredEnemy !== undefined ||
       isFeatureLiteralChoiceId(selection.choiceId) ||
@@ -49,7 +56,6 @@ export function getInvalidFeatureOptionSelectionPaths(
         (option) => decodeFeatureOptionReference(option)?.format === 'source-group',
       )
     ) {
-      if (invalidGroups.has(selection.choiceId)) paths.push(['classChoiceSelections', index])
       continue
     }
     const literal = selection.kind === 'feature-option'

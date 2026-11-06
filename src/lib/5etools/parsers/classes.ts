@@ -23,6 +23,7 @@ import {
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
+import { auditRevisedAffinityCopies } from '@/lib/5etools/revisedElementalAffinity'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
@@ -517,7 +518,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     classCastingSources,
     subclassFeature: auditSubclassProficiencyFeatures(
       records,
-      auditFeatureOptionSources(materialized),
+      auditRevisedAffinityCopies(records, auditFeatureOptionSources(materialized)),
       origin,
       packageAudit,
     ),

@@ -38,6 +38,11 @@ import {
 import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import {
+  isRevisedAffinityOption,
+  isRevisedAffinitySourceEnabled,
+  REVISED_AFFINITY_ID,
+} from '@/lib/5etools/revisedElementalAffinity'
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
@@ -436,7 +441,9 @@ function currentLiteralChoice(
     return choice
   }
   const classData = authority && findClassReference(choice.owner, authority.classes)
-  const subclassLiteral = getRevisedHunterRule(choice.id) || getLandChoiceRule(choice.id)
+  const affinity = choice.id === REVISED_AFFINITY_ID
+  const subclassLiteral =
+    affinity || getRevisedHunterRule(choice.id) || getLandChoiceRule(choice.id)
   const owner = subclassLiteral && findOwner(character, choice)
   if (getLandChoiceRule(choice.id) && !selected.length) return choice
   const current =
@@ -447,7 +454,7 @@ function currentLiteralChoice(
       createOptionalClassFeatureActivity(character, authority?.catalogs),
       authority?.catalogs,
     ).find((candidate) => candidate.id === choice.id)
-  if (!current || !authority?.catalogs)
+  if (!current || !authority?.catalogs || (affinity && !isRevisedAffinitySourceEnabled(character)))
     throw new RangeError(
       'Current source rules cannot verify this feature choice. Restore the source or review the saved choice.',
     )
@@ -507,7 +514,11 @@ export function retainSavedFeatureOptionsCommand(
   if (getOptionalClassPoolSelectionSection(selection) && !registeredPool)
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
-    ((registeredPool || registeredCompanion || registeredOrder || registeredBranch) &&
+    ((registeredPool ||
+      registeredCompanion ||
+      registeredOrder ||
+      registeredBranch ||
+      choiceId === REVISED_AFFINITY_ID) &&
       expectedSelectionHandle === undefined) ||
     (registeredCompanion &&
       character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
@@ -698,6 +709,8 @@ export function applyClassChoiceSelectionCommand(
 ): Pick<Character, 'classChoiceSelections'> {
   if (isRetiredEpicBoonChoice(choice, authority?.catalogs))
     throw new RangeError('Choose or remove this feat through the Epic Boon advancement slot.')
+  if (choice.id !== REVISED_AFFINITY_ID && selected.some(isRevisedAffinityOption))
+    throw new RangeError('Choose a damage type through the exact Elemental Affinity feature.')
   if (
     !getRevisedHunterRule(choice.id) &&
     selected.some((option) => {
@@ -744,6 +757,7 @@ export function applyClassChoiceSelectionCommand(
   if (
     (choice.id === BLESSED_STRIKES_ID ||
       choice.id === ELEMENTAL_FURY_ID ||
+      choice.id === REVISED_AFFINITY_ID ||
       getClassOrderById(choice.id) ||
       getLandChoiceRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
@@ -814,15 +828,17 @@ export function applyClassChoiceSelectionCommand(
       ...(character.classChoiceSelections ?? []).filter((row) => row.choiceId !== choice.id),
       proposed,
     ]
-    if (getInvalidFeatureLiteralSelectionIds(next).has(choice.id))
+    if (getInvalidFeatureLiteralSelectionIds(next, character.classProgression).has(choice.id))
       throw new RangeError(
         decodeFavoredEnemyChoiceId(choice.id)
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
           : getLandChoiceRule(choice.id)
             ? 'Choose one current terrain for the exact Circle of the Land.'
-            : getRevisedHunterRule(choice.id)
-              ? 'Choose one current option for the exact Hunter feature.'
-              : 'Choose a different favored terrain for each earned Natural Explorer choice.',
+            : choice.id === REVISED_AFFINITY_ID
+              ? 'Choose one current damage type for Elemental Affinity.'
+              : getRevisedHunterRule(choice.id)
+                ? 'Choose one current option for the exact Hunter feature.'
+                : 'Choose a different favored terrain for each earned Natural Explorer choice.',
       )
   }
   if (

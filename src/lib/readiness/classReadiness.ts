@@ -7,6 +7,10 @@ import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyId
 import { findClassReference } from '@/lib/5etools/classReference'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
+import {
+  REVISED_AFFINITY_ID,
+  revisedAffinityDiagnostic,
+} from '@/lib/5etools/revisedElementalAffinity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
@@ -124,6 +128,7 @@ export function validateClassChoices(
     (row) =>
       (row.storm ||
         row.literalGroup ||
+        row.selection.choiceId === REVISED_AFFINITY_ID ||
         row.proficiency ||
         row.optionalPool ||
         row.psionic ||
@@ -396,6 +401,10 @@ export function validateClassChoices(
         hasClassProficiencyRecovery(diagnostic, featureOptionStates) ||
         hasRevisedHunterRecovery(diagnostic, featureOptionStates) ||
         hasProjectedBranchRecovery(diagnostic, featureOptionStates) ||
+        (diagnostic === revisedAffinityDiagnostic &&
+          featureOptionStates.some(
+            (state) => state.selection.choiceId === REVISED_AFFINITY_ID && state.recovery,
+          )) ||
         (diagnostic.featureName === 'Deft Explorer' &&
           featureOptionStates.some(
             (state) =>
@@ -439,6 +448,7 @@ export function validateClassChoices(
       if (
         (state.storm ||
           state.literalGroup ||
+          state.selection.choiceId === REVISED_AFFINITY_ID ||
           state.proficiency ||
           state.optionalPool ||
           state.companion ||

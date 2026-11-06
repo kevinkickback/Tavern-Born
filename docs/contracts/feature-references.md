@@ -114,6 +114,17 @@ retract only this owner's intent and preserve independently owned benefits.
 Strict admission validates saved tuple/category/owner/slot relations without a catalog; current rules
 still govern entitlement. Natural Explorer uses the separate literal-group boundary below.
 
+Revised Draconic Sorcery's level-6 Elemental Affinity uses the source-group form. The saved choice
+binds the native XPHB Sorcerer and subclass to the exact Elemental Affinity UID, the
+`elemental-affinity-damage-type` group and one of the five authored damage types at slot 6.
+The saved owner must match a single earned class entry with the native subclass selected.
+The current direct declaration and filtered feature must agree with the verified source text.
+The native feature uses the body authored directly in its owning class layer.
+Source withdrawal suspends the selected resistance and printable rule while preserving the choice
+for recovery. Clearing the choice, replacing the subclass or dropping below level 6 removes the
+allocation. The selected type supplies one owned resistance and a printable note about adding the
+Charisma modifier to one damage roll of a qualifying spell.
+
 ## Required setup diagnostics
 
 Normalization reports a bounded set of source-audited mandatory setup gaps: unavailable or
