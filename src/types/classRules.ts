@@ -130,6 +130,8 @@ type ClassResourceRecoveryAmount = number | 'all'
 export interface ClassResourceRecovery {
   shortRest?: ClassResourceRecoveryAmount
   longRest?: ClassResourceRecoveryAmount
+  unit?: 'points'
+  shortRestOncePerLongRest?: true
 }
 
 export interface ClassResourceDef {

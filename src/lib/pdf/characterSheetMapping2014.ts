@@ -8,6 +8,7 @@ import {
   usesCustomOrganization,
 } from '@/lib/pdf/characterSheetViewModel'
 import { getCompanionSheetValues, renderCompanionEntries } from '@/lib/pdf/companionSheet'
+import { isSorcererResource, withSorcererResourceText } from '@/lib/pdf/sorcererSheetRules'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 import type { CharacterAction } from '@/types/actions'
 
@@ -250,7 +251,11 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Bond: character.details.bonds || '',
     Flaw: character.details.flaws || '',
     Background_History: viewModel.historyAndPersonalitySummary,
-    'Class Features': viewModel.classFeaturesSummary2014,
+    'Class Features': withSorcererResourceText(
+      viewModel.classResourceRows.slice(0, CAPACITY.classResources),
+      viewModel.classFeaturesSummary2014,
+      false,
+    ),
     'Racial Traits': racialTraits,
     'Background Feature': viewModel.backgroundFeature.name,
     'Background Feature Description': viewModel.backgroundFeature.description,
@@ -435,7 +440,13 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     const row = viewModel.classResourceRows[index]
     textFields[`Limited Feature ${index + 1}`] = row?.label ?? ''
     textFields[`Limited Feature Max Usages ${index + 1}`] = row ? String(row.max) : ''
-    textFields[`Limited Feature Recovery ${index + 1}`] = row?.recovery ?? ''
+    // The recovery dropdown is only 24 points wide. Full Sorcerer rules print in Class Features.
+    textFields[`Limited Feature Recovery ${index + 1}`] =
+      row && isSorcererResource(row)
+        ? row.restType === 'short'
+          ? 'S/L'
+          : 'LR'
+        : (row?.recovery ?? '')
     textFields[`Limited Feature Used ${index + 1}`] = row ? String(row.used) : ''
   }
 

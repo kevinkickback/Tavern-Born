@@ -5,6 +5,7 @@ import {
   type CharacterSheetViewModel,
   formatViewModelModifier,
 } from '@/lib/pdf/characterSheetViewModel'
+import { withSorcererResourceText } from '@/lib/pdf/sorcererSheetRules'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 
 const CAPACITY = CHARACTER_SHEET_CAPACITIES['2024']
@@ -122,7 +123,7 @@ export function mapCharacterSheet2024(
       : `Additional movement: ${viewModel.additionalMovementSummary}`
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
-    viewModel.classFeaturesSummary2014,
+    withSorcererResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
   )
   const primarySpellcasting = viewModel.spellcastingSources[0]
   const spellRows = get2024SpellRows(viewModel)

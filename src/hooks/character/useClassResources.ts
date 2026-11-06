@@ -2,36 +2,15 @@ import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
-import {
-  CLASSIC_WILD_SHAPE_RESOURCE_ID,
-  getClassicArchdruidWildShapeRule,
-  isClassicDruid,
-} from '@/lib/5etools/archdruidSource'
-import { getClassResourceDefs } from '@/lib/5etools/classData'
-import {
-  formatClassResourceRecovery,
-  getClassResourceRecoveryAtLevel,
-} from '@/lib/5etools/classRuleNormalization'
+import { getClassicArchdruidWildShapeRule } from '@/lib/5etools/archdruidSource'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
-import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
+import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { ClassResourceRecovery } from '@/types/classRules'
-
-export interface ComputedClassResource {
-  id: string
-  label: string
-  current: number
-  max: number
-  restType: 'short' | 'long'
-  recovery: ClassResourceRecovery
-  recoveryText: string
-  className: string
-}
 
 export function useClassResources(): {
-  resources: ComputedClassResource[]
+  resources: ReturnType<typeof getCharacterClassResources>
   unlimitedWildShape: boolean
   updateCurrent: (id: string, value: number) => void
   resetResource: (id: string) => void
@@ -50,49 +29,24 @@ export function useClassResources(): {
     calculationContext?.lookups.primary.classChoiceFeatureCatalogs,
   )
 
-  const resources = useMemo((): ComputedClassResource[] => {
+  const resources = useMemo(() => {
     if (!character) return []
-    const stored = character.classResources ?? {}
-    const progression = getCharacterClassEntries(character)
-    const chaScore = calculationContext?.abilityScores.total.charisma ?? 10
-    const chaMod = Math.floor((chaScore - 10) / 2)
-
-    return progression.flatMap((entry) => {
-      const classData = resolveClassReference(
-        entry,
-        { classesByKey: filteredClassLookup },
-        { classesByKey: rawClassLookup },
-      )
-      const defs = getClassResourceDefs(classData, entry.levels ?? 1).filter(
-        (def) =>
-          !(
-            unlimitedWildShape &&
-            isClassicDruid(entry) &&
-            def.id === CLASSIC_WILD_SHAPE_RESOURCE_ID
-          ),
-      )
-      const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
-      return defs.map((def) => {
-        const max = getEffectiveClassResourceMaximum(
-          def,
-          levelIdx,
-          chaMod,
-          calculationContext?.effects.declarations,
-          calculationContext?.effects.resolutionContext,
-        )
-        const recovery = getClassResourceRecoveryAtLevel(def, levelIdx)
-        return {
-          id: def.id,
-          label: def.label,
-          current: Math.max(0, Math.min(max, stored[def.id] ?? max)),
-          max,
-          restType: recovery.shortRest !== undefined ? 'short' : 'long',
-          recovery,
-          recoveryText: formatClassResourceRecovery(recovery),
-          className: entry.name,
-        }
-      })
-    })
+    return getCharacterClassResources(
+      character,
+      (entry) =>
+        resolveClassReference(
+          entry,
+          { classesByKey: filteredClassLookup },
+          { classesByKey: rawClassLookup },
+        ),
+      {
+        catalogs: calculationContext?.lookups.primary.classChoiceFeatureCatalogs,
+        charismaModifier: calculationContext?.abilityScores.modifiers.charisma ?? 0,
+        effects: calculationContext?.effects.declarations,
+        effectContext: calculationContext?.effects.resolutionContext,
+        unlimitedWildShape,
+      },
+    )
   }, [character, calculationContext, filteredClassLookup, rawClassLookup, unlimitedWildShape])
 
   const updateCurrent = useCallback(

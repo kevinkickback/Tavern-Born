@@ -223,6 +223,14 @@ export function getClassResourceRecoveryAtLevel(
 export function formatClassResourceRecovery(recovery: ClassResourceRecovery): string {
   const shortAmount = recovery.shortRest
   const longAmount = recovery.longRest
+  if (recovery.unit === 'points' && longAmount === 'all') {
+    if (recovery.shortRestOncePerLongRest) {
+      return `Restores up to ${shortAmount} points on a short rest (once per long rest). Restores all points on a long rest`
+    }
+    return shortAmount === undefined
+      ? 'Restores all points on a long rest'
+      : `Restores ${shortAmount} points on a short rest and all points on a long rest`
+  }
   if (shortAmount === 'all' && longAmount === 'all') {
     return 'Restores all uses on a short or long rest'
   }
@@ -248,7 +256,7 @@ function normalizeId(className: string, label: string): string {
     .replace(/[^a-z0-9-]/g, '')}`
 }
 
-function parseTableResources(
+export function parseTableResources(
   classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
   refs: readonly ClassFeatureReference[],
 ): ClassResourceDef[] {
