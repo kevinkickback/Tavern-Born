@@ -49,6 +49,7 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
+import type { AtWillInvocationSpellStatus } from '@/lib/character/atWillInvocationSpells'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
@@ -579,6 +580,7 @@ function buildSpellRows(
   spellsByKey: Readonly<Record<string, Spell5e>>,
   castingDetails: CharacterSheetViewModel['spellcastingDetails'],
   statuses: readonly ManagedClassSpellStatus[],
+  invocationSpells: readonly AtWillInvocationSpellStatus[],
 ): CharacterSheetSpellRow[] {
   const prepared = new Set<string>()
   const cantrips = new Set<string>()
@@ -621,6 +623,7 @@ function buildSpellRows(
     ...(profile.fixedSpells ?? []),
     ...(profile.alwaysPreparedSpells ?? []),
   ])
+  references.push(...invocationSpells.map((row) => row.reference))
   const uniqueReferences = [
     ...new Map(
       references.map((reference) => [getSpellReferenceKey(reference), reference]),
@@ -628,14 +631,22 @@ function buildSpellRows(
   ]
   return uniqueReferences
     .map((reference) => {
-      const spell = resolveSpellReference(reference, spellsByKey)
+      const key = getSpellReferenceKey(reference)
+      const invocations = invocationSpells.filter(
+        (row) => getSpellReferenceKey(row.reference) === key,
+      )
+      const spell = invocations[0]?.spell ?? resolveSpellReference(reference, spellsByKey)
       const separator = reference.lastIndexOf('|')
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
-      const castingNote = getManagedSpellCastingNotes(statuses, reference).join(' ')
+      const castingNote = [
+        ...getManagedSpellCastingNotes(statuses, reference),
+        ...invocations.map(({ featureName, rules }) => `${featureName}: ${rules}`),
+      ].join(' ')
       return {
-        id: getSpellReferenceKey(reference),
+        id: key,
         name: spell?.name ?? fallbackName,
-        prepared: prepared.has(getSpellReferenceKey(reference)),
+        // PDF readiness includes slot-free casting, as with Mystic Arcanum.
+        prepared: prepared.has(key) || invocations.length > 0,
         level: spell
           ? spell.level === 0
             ? 'C'
@@ -881,12 +892,20 @@ export function createCharacterSheetViewModel(
     primaryLookups.classChoiceFeatureCatalogs,
     !!unlimitedWildShape,
   )
-  const managedSpellCastingSummaries = calculationContext.managedClassSpellStatuses.flatMap(
-    (status) =>
+  const invocationSpells = calculationContext.atWillInvocationSpellStatuses.filter(
+    (row) => row.spell,
+  )
+  const managedSpellCastingSummaries = [
+    ...calculationContext.managedClassSpellStatuses.flatMap((status) =>
       status.active && status.castingNote
         ? [`${status.choice.target.name} (${status.choice.target.source}): ${status.castingNote}`]
         : [],
-  )
+    ),
+    ...invocationSpells.map(({ featureName, reference, rules }) => {
+      const [name, source] = reference.split('|')
+      return `${name} (${source}) — ${featureName}: ${rules}`
+    }),
+  ]
 
   const featureSummaryModel = {
     character,
@@ -960,6 +979,7 @@ export function createCharacterSheetViewModel(
       rawLookups.spellsByKey ?? {},
       spellcastingDetails,
       calculationContext.managedClassSpellStatuses,
+      invocationSpells,
     ),
     spellcastingPages: spellcastingSources.map((detail, index) => ({
       detail,
@@ -978,6 +998,7 @@ export function createCharacterSheetViewModel(
               isManagedClassSpellProfile(status.choice.slot, profile),
           ),
         ),
+        invocationSpells.filter((row) => row.profileId === detail.profileId),
       ),
     })),
     spellSlots: calculationContext.classCasting.slots,

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Dragon Wings sheet rules and source validation: 6,531,091 B renderer, 1,276,245 B initial.
+  // Measured after adding fixed Warlock Invocation spells at 6,536,369 B renderer and 1,280,253 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6379 * KIB,
-  initialRendererScript: 1247 * KIB,
+  rendererCode: 6384 * KIB,
+  initialRendererScript: 1251 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -10,6 +10,10 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import {
+  type AtWillInvocationSpellStatus,
+  getAtWillInvocationSpellStatuses,
+} from '@/lib/character/atWillInvocationSpells'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCurrentClassOrder } from '@/lib/character/classOrder'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
@@ -131,6 +135,7 @@ export interface CharacterCalculationContext {
   managedClassSpellStatuses: readonly ManagedClassSpellStatus[]
   dailyClassSpellStatuses: readonly DailyClassSpellStatus[]
   fixedClassSpellStatuses: readonly ClassFixedSpellStatus[]
+  atWillInvocationSpellStatuses: readonly AtWillInvocationSpellStatus[]
   classCasting: ReturnType<typeof deriveCurrentClassCasting>
   initiativeModifier: number
   senses: readonly EffectiveSense[]
@@ -525,11 +530,17 @@ export function createCharacterCalculationContext(
       independentSpellProfiles: managedSpells.independentSpellProfiles,
     },
   }
-  character = projectEffectiveClassChoiceFeatures(
-    applySpellbookSpecialtyPreparation(managedSpells.character, managedSpells.statuses),
+  const currentSpells = applySpellbookSpecialtyPreparation(
+    managedSpells.character,
+    managedSpells.statuses,
+  )
+  const atWillInvocationSpellStatuses = getAtWillInvocationSpellStatuses(
+    currentSpells,
     choiceCatalogs,
     prerequisites,
+    primaryLookups.spellsByKey,
   )
+  character = projectEffectiveClassChoiceFeatures(currentSpells, choiceCatalogs, prerequisites)
   // Skill modifiers and explanatory notes do not feed back into ability or prerequisite calculations.
   const orderSkillEffects = CLASS_ORDERS.flatMap((order): CharacterEffect[] => {
     const current = getCurrentClassOrder(character, order, choiceCatalogs)
@@ -573,6 +584,7 @@ export function createCharacterCalculationContext(
     managedClassSpellStatuses: managedSpells.statuses,
     dailyClassSpellStatuses: managedSpells.dailyStatuses,
     fixedClassSpellStatuses: managedSpells.fixedClassSpellStatuses,
+    atWillInvocationSpellStatuses,
     classCasting: deriveCurrentClassCasting(
       character,
       choiceCatalogs,

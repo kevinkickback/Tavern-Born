@@ -21,6 +21,7 @@ import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
+import { getAtWillInvocationContract, isNativeInvocationPool } from './atWillInvocationRules'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
@@ -76,6 +77,16 @@ export function getSelectedFeatureCantripSetups(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
       const feature = candidates.length === 1 ? candidates[0] : undefined
+      if (
+        getAtWillInvocationContract(selection, option, feature) &&
+        !active.some(
+          (row) =>
+            row.selection === selection &&
+            row.option === option &&
+            !isNativeInvocationPool(row.choice),
+        )
+      )
+        return []
       const semantics = getClassFeatureSpellSemantics(
         option.entityType,
         option.name,

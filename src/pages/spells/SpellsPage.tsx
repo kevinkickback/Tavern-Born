@@ -407,6 +407,10 @@ export function SpellsPage() {
       }),
     [spellProfiles, spellView],
   )
+  const invocationSpells =
+    calculationContext?.atWillInvocationSpellStatuses.filter(
+      (row) => row.spell && (spellView === 'all' || spellView === row.profileId),
+    ) ?? []
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
     return buildSpellSelectionSourceMap({
@@ -721,6 +725,25 @@ export function SpellsPage() {
                       onSetAbility={setRacialCastingAbility}
                     />
                   ) : null}
+                  {invocationSpells.length > 0 && (
+                    <section aria-label="Invocation spells" className="rounded-lg border p-4">
+                      <h2 className="text-sm font-semibold">Invocation spells</h2>
+                      <ul className="mt-2 space-y-2">
+                        {invocationSpells.map(({ id, reference, featureName, rules, spell }) => (
+                          <li key={id}>
+                            <SpellNameTooltip
+                              name={reference}
+                              spell={spell}
+                              recursiveLookup={recursiveLookup}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {featureName} · {rules}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
                   <SpellProfileManager
                     spellProfiles={visibleSpellProfiles}
                     focusProfileId={focusedProfile?.id}

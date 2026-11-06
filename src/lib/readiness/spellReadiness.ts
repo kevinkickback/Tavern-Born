@@ -131,6 +131,18 @@ export function validateSpells(
       ),
     )
   }
+  for (const grant of calculation.atWillInvocationSpellStatuses) {
+    if (grant.spell) continue
+    issues.push(
+      readinessIssue(
+        `spells:invocation-fixed:${grant.id}`,
+        'blocking',
+        'sources',
+        `Restore ${grant.featureName} spell: ${grant.reference}`,
+        grant.reason ?? 'Restore the exact granted spell printing from enabled content.',
+      ),
+    )
+  }
   for (const entry of character.classProgression) {
     const groups = new Map<string, ReturnType<typeof getManagedClassSpellSlots>>()
     for (const slot of getManagedClassSpellSlots(
