@@ -14,6 +14,7 @@ import {
   auditFixedClassFeatures,
 } from '@/lib/5etools/directFixedProficiencySource'
 import { isNativeResilienceTarget } from '@/lib/5etools/draconicResilience'
+import { getNativeWingsSubclass } from '@/lib/5etools/draconicSubclassFeatureSource'
 import { isEpicBoonAdvancement } from '@/lib/5etools/epicBoonAdvancement'
 import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
@@ -473,7 +474,12 @@ function auditNativeSubclassCopies(
     raw
       .filter((row) => '_copy' in row)
       .map(getSubclassFeatureIdentity)
-      .filter((target) => target === REVISED_AFFINITY_TARGET || isNativeResilienceTarget(target)),
+      .filter(
+        (target) =>
+          target === REVISED_AFFINITY_TARGET ||
+          isNativeResilienceTarget(target) ||
+          getNativeWingsSubclass(target),
+      ),
   )
   if (!copied.size) return materialized
   return materialized.map((row) =>

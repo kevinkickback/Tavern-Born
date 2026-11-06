@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Dragon Companion sheet rules: 6,529,488 B renderer, 1,274,779 B initial.
+  // Dragon Wings sheet rules and source validation: 6,531,091 B renderer, 1,276,245 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6377 * KIB,
-  initialRendererScript: 1245 * KIB,
+  rendererCode: 6379 * KIB,
+  initialRendererScript: 1247 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
