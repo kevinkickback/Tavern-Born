@@ -5,7 +5,7 @@ import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProfic
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import { decodeOptionalDeclaration } from '@/lib/5etools/optionalClassDeclarationStructure'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
+import { normalizeOwnerIdentity as norm, stripItemTag } from '@/lib/provenance/normalization'
 import type { Class5e } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
@@ -49,7 +49,7 @@ const paladinSpells = [
 
 type ClassPreparedSpellGrant = ClassFixedSpellGrant & {
   spellLevel: number
-  castingEntries?: readonly string[]
+  castingNote?: string
   sourceReason?: string
 }
 
@@ -158,7 +158,12 @@ function getContactPatronGrant(
     getSpellReferenceKey(reference) === getSpellReferenceKey(grant.reference) &&
     casting &&
     typeof recovery === 'string'
-    ? { ...grant, featureName: feature.name, reference, castingEntries: [casting, recovery] }
+    ? {
+        ...grant,
+        featureName: feature.name,
+        reference,
+        castingNote: `${feature.name}: ${casting} ${stripItemTag(recovery)}`,
+      }
     : unavailable
 }
 

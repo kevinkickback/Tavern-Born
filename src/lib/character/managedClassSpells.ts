@@ -41,7 +41,6 @@ import {
 } from '@/lib/calculations/spellIdentity'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
-import { renderEntriesToText } from '@/lib/entryText'
 import { addSpellGrant } from '@/lib/provenance/ledger'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -604,17 +603,17 @@ export function projectManagedClassSpellState(
     ...getOptionalClassFixedSpellGrants(character, context?.catalogs).map((grant) => ({
       grant,
       spellLevel: undefined,
-      castingEntries: undefined,
+      castingNote: undefined,
       sourceReason: undefined,
     })),
-    ...directPrepared.map(({ spellLevel, castingEntries, sourceReason, ...grant }) => ({
+    ...directPrepared.map(({ spellLevel, castingNote, sourceReason, ...grant }) => ({
       grant,
       spellLevel,
-      castingEntries,
+      castingNote,
       sourceReason,
     })),
   ]
-  for (const { grant, spellLevel, castingEntries, sourceReason } of grants) {
+  for (const { grant, spellLevel, castingNote, sourceReason } of grants) {
     const prepared = spellLevel !== undefined
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
@@ -629,10 +628,7 @@ export function projectManagedClassSpellState(
       prepared,
       active: !reason,
       ...(reason ? { reason } : {}),
-      ...(!reason &&
-        castingEntries && {
-          castingNote: `${grant.featureName}: ${renderEntriesToText(castingEntries)}`,
-        }),
+      ...(!reason && castingNote && { castingNote }),
     })
     if (reason) continue
     const entry = character.classProgression.find(
