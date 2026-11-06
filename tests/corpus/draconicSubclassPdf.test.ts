@@ -294,7 +294,28 @@ const wingPrintings = [
   },
 ] as const
 
-test('native Draconic features use their own direct producers across parsed layers', async () => {
+const nativeSourcePrintings = [
+  ...wingPrintings.map((printing) => ({ ...printing, name: 'Dragon Wings', level: 14 })),
+  {
+    source: 'XPHB',
+    originSystem: '2024',
+    subclass: 'Draconic Sorcery',
+    name: 'Dragon Companion',
+    level: 18,
+    rules,
+  },
+] as const
+
+test.each(
+  nativeSourcePrintings,
+)('$name ($source) uses its own direct producer across parsed layers', async ({
+  source,
+  originSystem,
+  subclass,
+  name,
+  level,
+  rules,
+}) => {
   const path = 'class/class-sorcerer.json'
   const raw: { class: Class5e[]; subclass: Subclass5e[]; subclassFeature: SubclassFeature[] } =
     JSON.parse(await readFile(`resources/srd/core/data/${path}`, 'utf8'))
@@ -306,160 +327,147 @@ test('native Draconic features use their own direct producers across parsed laye
     })
   }
   const direct = parse(raw, 'direct')
-  const cases = [
-    ...wingPrintings.map((printing) => ({ ...printing, name: 'Dragon Wings', level: 14 })),
+  const cls = raw.class.find((row) => row.name === 'Sorcerer' && row.source === source)
+  const owner = raw.subclass.find((row) => row.name === subclass && row.classSource === source)
+  const feature = raw.subclassFeature.find(
+    (row) => row.name === name && row.classSource === source && row.source === source,
+  )
+  const uid = owner?.subclassFeatures?.find(
+    (row) => typeof row === 'string' && row.startsWith(`${name}|`),
+  )
+  if (!cls || !owner || !feature || typeof uid !== 'string')
+    throw new Error(`Missing native ${name}`)
+  const replace = (row?: SubclassFeature) => ({
+    ...raw,
+    subclassFeature: raw.subclassFeature.flatMap((entry) =>
+      entry !== feature ? [entry] : row ? [row] : [],
+    ),
+  })
+  const missing = parse(replace(), 'missing-body')
+  const changed = parse(replace({ ...feature, entries: ['Replacement rules.'] }), 'changed')
+  const { entries: _entries, ...identity } = feature
+  const copyParent = { ...feature, name: 'Alternate Copy Parent' }
+  const copyFrom = { ...identity, name: copyParent.name }
+  const parseCopy = (copy: SubclassFeature, layer: string) =>
+    parse({ ...raw, subclassFeature: [...replace().subclassFeature, copyParent, copy] }, layer)
+  const copied = parseCopy({ ...identity, _copy: copyFrom } as SubclassFeature, 'copied')
+  const { classSource: _classSource, ...withoutClassSource } = identity
+  const inherited = parseCopy(
+    { ...withoutClassSource, _copy: copyFrom } as SubclassFeature,
+    'copy-with-inherited-class-source',
+  )
+  const renamed = parseCopy(
     {
-      source: 'XPHB',
-      originSystem: '2024',
-      subclass: 'Draconic Sorcery',
-      name: 'Dragon Companion',
-      level: 18,
-      rules,
-    },
-  ] as const
-  for (const { source, originSystem, subclass, name, level, rules } of cases) {
-    const cls = raw.class.find((row) => row.name === 'Sorcerer' && row.source === source)
-    const owner = raw.subclass.find((row) => row.name === subclass && row.classSource === source)
-    const feature = raw.subclassFeature.find(
-      (row) => row.name === name && row.classSource === source && row.source === source,
-    )
-    const uid = owner?.subclassFeatures?.find(
-      (row) => typeof row === 'string' && row.startsWith(`${name}|`),
-    )
-    if (!cls || !owner || !feature || typeof uid !== 'string')
-      throw new Error(`Missing native ${name}`)
-    const replace = (row?: SubclassFeature) => ({
+      ...identity,
+      name: 'Alternate Copy Destination',
+      _copy: { ...copyFrom, _mod: { _: { mode: 'setProp', prop: 'name', value: name } } },
+    } as SubclassFeature,
+    'copy-with-renamed-target',
+  )
+  const duplicate = parse(
+    {
       ...raw,
-      subclassFeature: raw.subclassFeature.flatMap((entry) =>
-        entry !== feature ? [entry] : row ? [row] : [],
+      subclass: raw.subclass.map((row) =>
+        row === owner
+          ? {
+              ...row,
+              subclassFeatures: [
+                ...(row.subclassFeatures ?? []),
+                { subclassFeature: uid },
+              ] as Subclass5e['subclassFeatures'],
+            }
+          : row,
       ),
-    })
-    const missing = parse(replace(), 'missing-body')
-    const changed = parse(replace({ ...feature, entries: ['Replacement rules.'] }), 'changed')
-    const { entries: _entries, ...identity } = feature
-    const copyParent = { ...feature, name: 'Alternate Copy Parent' }
-    const copyFrom = { ...identity, name: copyParent.name }
-    const parseCopy = (copy: SubclassFeature, layer: string) =>
-      parse({ ...raw, subclassFeature: [...replace().subclassFeature, copyParent, copy] }, layer)
-    const copied = parseCopy({ ...identity, _copy: copyFrom } as SubclassFeature, 'copied')
-    const { classSource: _classSource, ...withoutClassSource } = identity
-    const inherited = parseCopy(
-      { ...withoutClassSource, _copy: copyFrom } as SubclassFeature,
-      'copy-with-inherited-class-source',
-    )
-    const renamed = parseCopy(
+    },
+    'duplicate-declaration',
+  )
+  const foreignDocument = {
+    ...raw,
+    class: [{ ...cls, name: 'Foreign Class', source: 'TCE' }],
+    subclass: [
       {
-        ...identity,
-        name: 'Alternate Copy Destination',
-        _copy: { ...copyFrom, _mod: { _: { mode: 'setProp', prop: 'name', value: name } } },
-      } as SubclassFeature,
-      'copy-with-renamed-target',
-    )
-    const duplicate = parse(
-      {
-        ...raw,
-        subclass: raw.subclass.map((row) =>
-          row === owner
-            ? {
-                ...row,
-                subclassFeatures: [
-                  ...(row.subclassFeatures ?? []),
-                  { subclassFeature: uid },
-                ] as Subclass5e['subclassFeatures'],
-              }
-            : row,
-        ),
+        ...owner,
+        name: 'Foreign Subclass',
+        source: 'TCE',
+        className: 'Foreign Class',
+        classSource: 'TCE',
+        subclassFeatures: [uid],
       },
-      'duplicate-declaration',
-    )
-    const foreignDocument = {
+    ],
+    subclassFeature: [feature],
+  }
+  const foreign = parse(foreignDocument, 'foreign')
+  const foreignChanged = parse(
+    {
+      ...foreignDocument,
+      subclassFeature: [{ ...feature, entries: ['Foreign replacement rules.'] }],
+    },
+    'foreign-changed',
+  )
+  const withdrawn = parse(
+    {
       ...raw,
-      class: [{ ...cls, name: 'Foreign Class', source: 'TCE' }],
-      subclass: [
-        {
-          ...owner,
-          name: 'Foreign Subclass',
-          source: 'TCE',
-          className: 'Foreign Class',
-          classSource: 'TCE',
-          subclassFeatures: [uid],
-        },
+      subclass: raw.subclass.map((row) =>
+        row === owner
+          ? {
+              ...row,
+              subclassFeatures: row.subclassFeatures?.filter(
+                (entry): entry is string => typeof entry === 'string' && entry !== uid,
+              ),
+            }
+          : row,
+      ),
+    },
+    'withdrawn-declaration',
+  )
+  const actor = reopen(
+    createEmptyCharacter({
+      name: 'Existing Draconic Sorcerer',
+      originSystem,
+      allowedSources: [source, 'TCE'],
+      classProgression: [
+        { name: cls.name, source, subclass, subclassSource: source, levels: level },
       ],
-      subclassFeature: [feature],
-    }
-    const foreign = parse(foreignDocument, 'foreign')
-    const foreignChanged = parse(
-      {
-        ...foreignDocument,
-        subclassFeature: [{ ...feature, entries: ['Foreign replacement rules.'] }],
-      },
-      'foreign-changed',
-    )
-    const withdrawn = parse(
-      {
-        ...raw,
-        subclass: raw.subclass.map((row) =>
-          row === owner
-            ? {
-                ...row,
-                subclassFeatures: row.subclassFeatures?.filter(
-                  (entry): entry is string => typeof entry === 'string' && entry !== uid,
-                ),
-              }
-            : row,
-        ),
-      },
-      'withdrawn-declaration',
-    )
-    const actor = reopen(
-      createEmptyCharacter({
-        name: 'Existing Draconic Sorcerer',
-        originSystem,
-        allowedSources: [source, 'TCE'],
-        classProgression: [
-          { name: cls.name, source, subclass, subclassSource: source, levels: level },
-        ],
-      }),
-    )
-    const sheet = (...layers: GameData[]) => {
-      const data = composeGameDataLayers(layers)
-      const filter = { sources: [source, 'TCE'] }
-      const filtered = lookups({
-        ...data,
-        classes: DataFilter.filterClasses(data.classes, filter),
-        classFeatures: DataFilter.filterClassFeatures(data.classFeatures, filter),
-      })
-      return createCharacterSheetViewModel(actor, lookups(data), filtered)
-    }
-    for (const view of [
-      sheet(direct),
-      sheet(direct, missing),
-      sheet(direct, foreignChanged),
-      sheet(direct, missing, foreignChanged),
-      sheet(copied, direct),
-      sheet(renamed, direct),
-      sheet(direct, withdrawn, direct),
-    ]) {
-      for (const rule of rules) expect(view.classFeaturesSummary2014).toMatch(rule)
-    }
-    for (const view of [
-      sheet(copied),
-      sheet(inherited),
-      sheet(renamed),
-      sheet(direct, copied, missing),
-      sheet(direct, inherited, missing),
-      sheet(direct, renamed, missing),
-      sheet(direct, duplicate, missing),
-      sheet(direct, withdrawn, missing),
-      sheet(direct, changed, foreign),
-      sheet(missing, foreign),
-    ]) {
-      expect(view.classFeaturesSummary2014).not.toContain(name)
-    }
-    if (name === 'Dragon Wings') {
-      const copiedAction = sheet(copied).actions.find((action) => action.name === name)
-      for (const rule of rules) expect(copiedAction?.description).toMatch(rule)
-    }
+    }),
+  )
+  const sheet = (...layers: GameData[]) => {
+    const data = composeGameDataLayers(layers)
+    const filter = { sources: [source, 'TCE'] }
+    const filtered = lookups({
+      ...data,
+      classes: DataFilter.filterClasses(data.classes, filter),
+      classFeatures: DataFilter.filterClassFeatures(data.classFeatures, filter),
+    })
+    return createCharacterSheetViewModel(actor, lookups(data), filtered)
+  }
+  for (const view of [
+    sheet(direct),
+    sheet(direct, missing),
+    sheet(direct, foreignChanged),
+    sheet(direct, missing, foreignChanged),
+    sheet(copied, direct),
+    sheet(renamed, direct),
+    sheet(direct, withdrawn, direct),
+  ]) {
+    for (const rule of rules) expect(view.classFeaturesSummary2014).toMatch(rule)
+  }
+  for (const view of [
+    sheet(copied),
+    sheet(inherited),
+    sheet(renamed),
+    sheet(direct, copied, missing),
+    sheet(direct, inherited, missing),
+    sheet(direct, renamed, missing),
+    sheet(direct, duplicate, missing),
+    sheet(direct, withdrawn, missing),
+    sheet(direct, changed, foreign),
+    sheet(missing, foreign),
+  ]) {
+    expect(view.classFeaturesSummary2014).not.toContain(name)
+  }
+  if (name === 'Dragon Wings') {
+    const copiedAction = sheet(copied).actions.find((action) => action.name === name)
+    for (const rule of rules) expect(copiedAction?.description).toMatch(rule)
   }
 })
 
