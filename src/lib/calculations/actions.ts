@@ -47,6 +47,7 @@ import {
   getActiveOptionalClassFeatureDeclarations,
 } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
+import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -73,7 +74,11 @@ import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getFeatureActionGroupId } from './featureActionGroups'
 import { getItemTypeCodes } from './itemClassification'
-import { getManagedSpellCastingNotes, hasActiveMysticArcanum } from './managedSpellCasting'
+import {
+  getFixedClassSpellCastingNotes,
+  getManagedSpellCastingNotes,
+  hasActiveMysticArcanum,
+} from './managedSpellCasting'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -108,6 +113,7 @@ export interface WeaponActionProjectionContext {
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   effectiveSpellProfiles?: readonly SpellProfile[]
   managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
+  fixedClassSpellStatuses?: readonly ClassFixedSpellStatus[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
   raceResolution?: ResolvedRaceReference
@@ -173,7 +179,12 @@ export function deriveSpellActions(
   spellsByKey: Readonly<Record<string, Spell5e>>,
   options: Pick<
     CharacterActionProjectionContext,
-    'classes' | 'race' | 'raceResolution' | 'effectiveSpellProfiles' | 'managedClassSpellStatuses'
+    | 'classes'
+    | 'race'
+    | 'raceResolution'
+    | 'effectiveSpellProfiles'
+    | 'managedClassSpellStatuses'
+    | 'fixedClassSpellStatuses'
   > = {},
 ): CharacterAction[] {
   const classesById = new Map<string, Class5e>()
@@ -238,6 +249,7 @@ export function deriveSpellActions(
         kind: spellActionKind(spell.time[0]?.unit),
         description: [
           ...getManagedSpellCastingNotes(options.managedClassSpellStatuses ?? [], reference),
+          ...getFixedClassSpellCastingNotes(options.fixedClassSpellStatuses ?? [], reference),
           renderEntriesToText([...(spell.entries ?? []), ...(spell.entriesHigherLevel ?? [])]),
         ]
           .filter(Boolean)

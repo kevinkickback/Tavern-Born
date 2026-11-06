@@ -1,5 +1,7 @@
 import { isManagedClassSpellProfile } from '@/lib/character/managedClassSpellIdentity'
 import type { ManagedClassSpellStatus } from '@/lib/character/managedClassSpells'
+import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { SpellProfile } from '@/types/character'
 import { getSpellReferenceKey } from './spellIdentity'
 
@@ -38,4 +40,28 @@ export function getManagedSpellCastingNotes(
       ),
     ),
   ]
+}
+
+export function isFixedClassSpellProfile(status: ClassFixedSpellStatus, profile: SpellProfile) {
+  return (
+    profile.type === 'class' &&
+    normalizeOwnerIdentity(profile.className) === status.owner[1] &&
+    normalizeOwnerIdentity(profile.classSource) === status.owner[2]
+  )
+}
+
+export function getFixedClassSpellCastingNotes(
+  statuses: readonly ClassFixedSpellStatus[],
+  reference: string,
+  profile?: SpellProfile,
+): string[] {
+  const key = getSpellReferenceKey(reference)
+  return statuses.flatMap((status) =>
+    status.active &&
+    status.castingNote &&
+    (!profile || isFixedClassSpellProfile(status, profile)) &&
+    getSpellReferenceKey(status.reference) === key
+      ? [status.castingNote]
+      : [],
+  )
 }

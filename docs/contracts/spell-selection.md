@@ -208,6 +208,17 @@ This is initial setup/correction, not a gameplay replacement-event ledger. Reope
 gaining another class level grants no swap event. Enforcing the one-replacement-per-class-level
 allowance and other acquisition/rest events remains separate work.
 
+## Revised Warlock Contact Patron
+
+Revised Warlock's Contact Patron grants Contact Other Plane from the current
+single-entry level-9 class schedule and exact Contact Patron declaration. The grant is always
+prepared outside the ordinary spell choices. New ordinary picks cannot take
+the same printing while that grant is available at their gain. An established
+ordinary choice retains its separate ownership and edit lifetime. The spell
+list, Actions and PDF show the patron-only casting and Long Rest condition from
+the certified feature prose, which has no structured casting condition.
+Missing or conflicting feature, schedule, or spell data prompts source recovery.
+
 ## Fixed Warlock Invocation spells
 
 The exact PHB and XPHB Armor of Shadows, Mask of Many Faces and Misty Visions

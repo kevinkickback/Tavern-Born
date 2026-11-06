@@ -26,6 +26,7 @@ export function useCharacterActions(character: Character | null | undefined) {
       spellsByKey: lookups?.spellsByKey,
       effectiveSpellProfiles: calculation.character.spells.spellProfiles,
       managedClassSpellStatuses: calculation.managedClassSpellStatuses,
+      fixedClassSpellStatuses: calculation.fixedClassSpellStatuses,
       classChoicePrerequisites: calculation.classChoices.prerequisites,
       race: calculation.raceResolution.mergedRace,
       raceResolution: calculation.raceResolution,

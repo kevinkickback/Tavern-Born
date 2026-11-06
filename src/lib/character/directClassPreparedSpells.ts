@@ -5,7 +5,7 @@ import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProfic
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import { decodeOptionalDeclaration } from '@/lib/5etools/optionalClassDeclarationStructure'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
-import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
+import { normalizeOwnerIdentity as norm, stripItemTag } from '@/lib/provenance/normalization'
 import type { Class5e } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
@@ -14,9 +14,11 @@ import type { ClassFixedSpellGrant } from './optionalClassFixedSpells'
 
 const paladin = { name: 'paladin', source: 'xphb' }
 const ranger = { name: 'ranger', source: 'xphb' }
+const warlock = { name: 'warlock', source: 'xphb' }
+export const CONTACT_PATRON_TARGET = 'class-feature|contact patron|warlock|xphb|9|xphb'
 const favoredEnemy = 'class-feature|favored enemy|ranger|xphb|1|xphb'
 const huntersMark = "hunter's mark|xphb"
-const paladinFeatureFields = new Set([
+const preparedFeatureFields = new Set([
   'name',
   'source',
   'className',
@@ -45,7 +47,11 @@ const paladinSpells = [
   ],
 ] as const
 
-type ClassPreparedSpellGrant = ClassFixedSpellGrant & { spellLevel: number }
+type ClassPreparedSpellGrant = ClassFixedSpellGrant & {
+  spellLevel: number
+  castingNote?: string
+  sourceReason?: string
+}
 
 function getRangerGrant(
   cls: Class5e,
@@ -85,6 +91,82 @@ function getRangerGrant(
     }
 }
 
+function matchesPreparedSchedule(
+  schedule: NonNullable<AdditionalSpellBlock['prepared']>,
+  level: number,
+  reference: string,
+) {
+  const token = schedule[String(level)]
+  return (
+    Array.isArray(token) &&
+    token.length === 1 &&
+    typeof token[0] === 'string' &&
+    /^[^|#{}]+\|[^|#{}]+$/.test(token[0]) &&
+    getSpellReferenceKey(token[0]) === getSpellReferenceKey(reference) &&
+    Object.keys(schedule).filter((key) => Number(key) === level).length === 1
+  )
+}
+
+function getContactPatronGrant(
+  cls: Class5e,
+  catalogs: ClassChoiceFeatureCatalogs,
+  schedule: AdditionalSpellBlock['prepared'],
+): ClassPreparedSpellGrant {
+  const grant: ClassPreparedSpellGrant = {
+    owner: ['class', warlock.name, warlock.source],
+    target: CONTACT_PATRON_TARGET,
+    featureName: 'Contact Patron',
+    level: 9,
+    reference: 'Contact Other Plane|XPHB',
+    spellLevel: 5,
+  }
+  const unavailable = {
+    ...grant,
+    sourceReason: 'Restore the exact Contact Patron feature and its class spell schedule.',
+  }
+  if (
+    '_copy' in cls ||
+    !Array.isArray(cls.classFeatures) ||
+    !Array.isArray(cls.classFeatureRefs) ||
+    catalogs.ambiguousClassFeatureTargets?.has(CONTACT_PATRON_TARGET) ||
+    !schedule ||
+    Object.keys(schedule).length !== 1 ||
+    !matchesPreparedSchedule(schedule, grant.level, grant.reference)
+  )
+    return unavailable
+  const feature = getCurrentDirectClassFeature(
+    cls,
+    catalogs,
+    CONTACT_PATRON_TARGET,
+    (row) =>
+      norm(row.classSource) === warlock.source &&
+      norm(row.source) === warlock.source &&
+      hasFeatureSourceShape(row, preparedFeatureFields) &&
+      Array.isArray(row.entries) &&
+      getFeatureSourceDigest(row.entries, false) ===
+        '19a5a473be57a9c39ffc09954797030d2bff39b7b5629ef34db45897b782f29a',
+  )
+  const [preparation, recovery] = feature?.entries ?? []
+  const [, reference, casting] =
+    typeof preparation === 'string'
+      ? (preparation.match(
+          /\{@spell ([^|#{}]+\|[^|#{}]+)\} spell prepared\. (With this feature, .+)$/,
+        ) ?? [])
+      : []
+  return feature &&
+    reference &&
+    getSpellReferenceKey(reference) === getSpellReferenceKey(grant.reference) &&
+    casting &&
+    typeof recovery === 'string'
+    ? {
+        ...grant,
+        featureName: feature.name,
+        reference,
+        castingNote: `${feature.name}: ${casting} ${stripItemTag(recovery)}`,
+      }
+    : unavailable
+}
+
 /** A current certified feature must corroborate its own gain in the class spell schedule. */
 export function getDirectClassPreparedSpellGrants(
   character: Character,
@@ -96,21 +178,23 @@ export function getDirectClassPreparedSpellGrants(
     const cls = findClassReference(entry, classes)
     if (
       !cls ||
-      !Array.isArray(cls.classFeatures) ||
-      !Array.isArray(cls.classFeatureRefs) ||
       character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1
     )
       return []
     const blocks = cls.additionalSpells as AdditionalSpellBlock[] | undefined
     const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
-    const schedule = block?.prepared
-    if (
-      !block ||
-      Object.keys(block).length !== 1 ||
-      !schedule ||
-      typeof schedule !== 'object' ||
-      Array.isArray(schedule)
-    )
+    const prepared = block?.prepared
+    const schedule =
+      block &&
+      Object.keys(block).length === 1 &&
+      prepared &&
+      typeof prepared === 'object' &&
+      !Array.isArray(prepared)
+        ? prepared
+        : undefined
+    if (findClassReference(warlock, [cls]))
+      return entry.levels >= 9 ? [getContactPatronGrant(cls, catalogs, schedule)] : []
+    if (!schedule || !Array.isArray(cls.classFeatures) || !Array.isArray(cls.classFeatureRefs))
       return []
 
     let grants: ClassPreparedSpellGrant[]
@@ -130,7 +214,7 @@ export function getDirectClassPreparedSpellGrants(
           (row) =>
             norm(row.classSource) === paladin.source &&
             norm(row.source) === paladin.source &&
-            hasFeatureSourceShape(row, paladinFeatureFields) &&
+            hasFeatureSourceShape(row, preparedFeatureFields) &&
             Array.isArray(row.entries) &&
             getFeatureSourceDigest(row.entries, false) === digest,
         )
@@ -164,16 +248,8 @@ export function getDirectClassPreparedSpellGrants(
     }
 
     // Other scheduled gains require their own corroborating feature.
-    return grants.filter(({ level, reference }) => {
-      const token = schedule[String(level)]
-      return (
-        Object.keys(schedule).filter((key) => Number(key) === level).length === 1 &&
-        Array.isArray(token) &&
-        token.length === 1 &&
-        typeof token[0] === 'string' &&
-        /^[^|#{}]+\|[^|#{}]+$/.test(token[0]) &&
-        getSpellReferenceKey(token[0]) === getSpellReferenceKey(reference)
-      )
-    })
+    return grants.filter(({ level, reference }) =>
+      matchesPreparedSchedule(schedule, level, reference),
+    )
   })
 }
