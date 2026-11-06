@@ -120,6 +120,8 @@ The 2014 custom form keeps the counters in its limited-feature table and prints 
 rules in Class Features. The other forms include both in their feature fields. Full descriptions
 print the current selected Metamagic option's rules in its existing feature row. Names-only
 exports keep the option names and the resource counts and recovery.
+Revised Draconic Sorcery prints the earned Dragon Companion rules in Class Features.
+The separate Summon Dragon spell row continues to show its prepared status.
 
 ## Spells and companions
 
