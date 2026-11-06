@@ -176,7 +176,7 @@ export function getDragonCompanion(current: CurrentSorcerer) {
   if (current.source !== 'xphb') return undefined
   return getDraconicSubclassFeature(
     current,
-    'subclass-feature|dragon companion|sorcerer|xphb|draconic|xphb|18|xphb',
+    NATIVE_DRACONIC_SUBCLASSES.xphb.companion,
     18,
     '441b128a48c0f3554896610b3d56e645c21a4cd27631df6c8553f72ed0d27ab6',
   )?.feature
