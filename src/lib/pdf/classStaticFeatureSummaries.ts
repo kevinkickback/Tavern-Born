@@ -10,9 +10,11 @@ import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSo
 import {
   getCurrentNativeSorcerer,
   getDragonCompanion,
+  getDragonWings,
   getInnateSorcery,
   getInnateSorceryUpgrades,
 } from '@/lib/5etools/sorcererSource'
+import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -23,6 +25,7 @@ export interface ClassStaticFeatureSummary {
   text: string
   compactText: string
   replaces?: Feature
+  actionId?: string
 }
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
@@ -121,11 +124,23 @@ export function getClassStaticFeatureSummaries(
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
     if (entry === sorcerer?.owner) {
+      const wings = getDragonWings(sorcerer)
+      const wingsSummaries = wings
+        ? featureSummary(wings.feature).map((summary) => ({
+            ...summary,
+            actionId: getFeatureActionGroupId(
+              wings.ownerKey,
+              wings.target,
+              wings.feature.entries ?? [],
+            ),
+          }))
+        : []
       const companion = featureSummary(getDragonCompanion(sorcerer))
       const innate = getInnateSorcery(sorcerer)
-      if (!innate) return companion
+      if (!innate) return [...wingsSummaries, ...companion]
       const activation = renderEntriesToText(innate.entries?.slice(0, -1))
       return [
+        ...wingsSummaries,
         {
           text: `${innate.name} activation: ${activation}`,
           compactText: '',

@@ -19,6 +19,7 @@ import type {
 import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { findClassReference } from './classReference'
 import { normalizeClassRules } from './classRuleNormalization'
 import { auditConditionalOptionalLayerMultiplicity } from './conditionalProficiencySource'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
@@ -30,6 +31,11 @@ import {
   setLoadedRaceData,
 } from './dataLoader'
 import { isNativeResilienceIntro } from './draconicResilience'
+import {
+  findNativeDraconicSubclass,
+  getDirectDraconicFeatureReference,
+  getNativeWingsSubclass,
+} from './draconicSubclassFeatureSource'
 import { mergeFixedShieldBases } from './fixedBonusShields'
 import {
   auditFixedLayerMultiplicity,
@@ -172,6 +178,23 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
+function findLayerDragonWings(
+  layers: readonly GameData[],
+  owner: NonNullable<ReturnType<typeof getNativeWingsSubclass>>,
+) {
+  const parent = { name: 'Sorcerer', source: owner.source }
+  for (let index = layers.length - 1; index >= 0; index--) {
+    const classes = layers[index].classes.filter((cls) => findClassReference(parent, [cls]))
+    if (!classes.length) continue
+    const cls = classes[0]
+    if (classes.length !== 1 || cls.sourceIdentityConflict || '_copy' in cls) return undefined
+    const subclass = findNativeDraconicSubclass(cls, owner)
+    const ref = subclass && getDirectDraconicFeatureReference(subclass, owner.wings)
+    if (!ref) return undefined
+    if (ref.feature) return ref.feature
+  }
+}
+
 function resolveComposedFeatureReferences(gameData: GameData, layers: readonly GameData[]): void {
   const features = new Map(
     gameData.classFeatures.map((feature) => [classFeatureIdentity(feature), feature]),
@@ -199,7 +222,15 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
           isNativeResilienceIntro(classData, subclass, identity)
         )
           return reference
-        const feature = identity ? subclassFeatures.get(identity) : undefined
+        const wings = getNativeWingsSubclass(identity)
+        const nativeWingsOwner =
+          wings &&
+          findClassReference({ name: 'Sorcerer', source: wings.source }, [classData]) &&
+          findClassReference(wings, [subclass])
+        // Keep an attached native producer. An unattached declaration can look only under its owner.
+        const feature = nativeWingsOwner
+          ? (reference.feature ?? findLayerDragonWings(layers, wings))
+          : identity && subclassFeatures.get(identity)
         if (!feature || reference.feature === feature) return reference
         subclassChanged = true
         return { ...reference, feature }

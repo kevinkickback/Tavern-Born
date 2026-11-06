@@ -16,6 +16,7 @@ import {
 } from '@/lib/pdf/characterSheetTemplates'
 import {
   type CharacterSheetViewModel,
+  withFeatureLabelsForActionNotes,
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
 import { fillCharacterSheetDocument } from '@/lib/pdf/pdfFormAdapter'
@@ -88,6 +89,22 @@ export async function generateFilledCharacterSheetPdf(
   )
   const original = viewModel
   viewModel = selection.viewModel
+  if (
+    template.id === '2014-custom' &&
+    options.pages?.notes !== false &&
+    options.text?.descriptions !== 'names'
+  ) {
+    // Selected bonus actions have their own Notes even in ellipsis mode.
+    // With continuation, unselected bonus actions also carry their rules in Notes.
+    const printedActions = continueInNotes ? original.actions : viewModel.actions
+    const ids = printedActions
+      .filter(
+        (action) =>
+          action.kind === 'bonus-action' && action.source.kind === 'subclass' && action.description,
+      )
+      .map((action) => action.id)
+    viewModel = withFeatureLabelsForActionNotes(viewModel, new Set(ids))
+  }
   const fullMap = buildCharacterSheetFieldMap(viewModel, templateId)
   const actionDetails: SheetOverflowSection[] = []
   if (template.id === '2014-official')

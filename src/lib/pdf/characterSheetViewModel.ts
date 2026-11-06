@@ -365,6 +365,7 @@ function buildFeatureSummaries(
     | 'managedSpellCastingSummaries'
   >,
   descriptions = true,
+  actionsInNotes?: ReadonlySet<string>,
 ) {
   const declared = vm.declaredClassFeatureSummaries ?? []
   const saved = vm.character.features.filter(
@@ -393,7 +394,9 @@ function buildFeatureSummaries(
   const render = (rows: typeof saved) =>
     [
       vm.classResourceSummary,
-      ...declared.map(format),
+      ...declared.map((row) =>
+        row.actionId && actionsInNotes?.has(row.actionId) ? row.compactText : format(row),
+      ),
       rows
         .map((row) => {
           const body = descriptions
@@ -407,6 +410,16 @@ function buildFeatureSummaries(
       .filter(Boolean)
       .join('\n\n')
   return { classFeaturesSummary2014: render(classRows), featuresSummary: render(saved) }
+}
+
+/** Keep the feature label when its exact rules already appear in action Notes. */
+export function withFeatureLabelsForActionNotes(
+  vm: CharacterSheetViewModel,
+  actionIds: ReadonlySet<string>,
+): CharacterSheetViewModel {
+  if (!vm.declaredClassFeatureSummaries?.some((row) => row.actionId && actionIds.has(row.actionId)))
+    return vm
+  return { ...vm, ...buildFeatureSummaries(vm, true, actionIds) }
 }
 
 /** Print-only projection: preserve names and combat numbers without changing source rules. */
