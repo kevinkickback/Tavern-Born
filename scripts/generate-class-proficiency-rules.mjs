@@ -13,6 +13,7 @@ import {
   deriveConditionalProficiencyRules,
   validateConditionalSubclassProgression,
 } from './lib/conditional-proficiency-source.mjs'
+import { deriveDragonAncestorLanguage } from './lib/dragon-ancestor-language-source.mjs'
 import {
   deriveConcreteToolNames,
   deriveFixedProficiencyRules,
@@ -39,6 +40,8 @@ const index = read('class/index.json')
 const documents = [...new Set(Object.values(index))].sort().map((file) => read(`class/${file}`))
 const bundledClericPath = 'resources/srd/core/data/class/class-cleric.json'
 const bundledClericBytes = fs.readFileSync(bundledClericPath)
+const bundledSorcererPath = 'resources/srd/core/data/class/class-sorcerer.json'
+const bundledSorcererBytes = fs.readFileSync(bundledSorcererPath)
 const features = documents.flatMap((document) => document.classFeature ?? [])
 const itemDocuments = [read('items.json'), read('items-base.json')]
 const optionalRecords = read('optionalfeatures.json').optionalfeature
@@ -206,8 +209,19 @@ try {
     JSON.parse(bundledClericBytes),
     subclassCertificateApi,
   )
-  subclassCertificates.packages = life.packages
-  fixed.features.push(life.rule)
+  const dragonAncestor = deriveDragonAncestorLanguage(
+    documents.find((document) =>
+      document.class?.some((row) => row.name === 'Sorcerer' && row.source === 'PHB'),
+    ),
+    JSON.parse(bundledSorcererBytes),
+    {
+      ...subclassCertificateApi,
+      classIdentity: getClassFeatureIdentity,
+      decodeClass: decodeClassFeatureReference,
+    },
+  )
+  subclassCertificates.packages = [...life.packages, dragonAncestor.package]
+  fixed.features.push(life.rule, dragonAncestor.rule)
   fixed.features.sort((left, right) => left.target.localeCompare(right.target))
   const provenance = {
     purpose:
@@ -216,6 +230,11 @@ try {
       '5etools b9061583536101068b3a59d27e886d1fa664e366 UID/copy handling; rendering Expertise prerequisites supplies no character choice model.',
     inputs,
     bundledLifeDomainInput: { file: bundledClericPath, sha256: sha(bundledClericBytes) },
+    bundledDragonAncestorInput: { file: bundledSorcererPath, sha256: sha(bundledSorcererBytes) },
+    dragonAncestorLanguageSource: {
+      file: 'scripts/lib/dragon-ancestor-language-source.mjs',
+      sha256: sha(fs.readFileSync('scripts/lib/dragon-ancestor-language-source.mjs')),
+    },
     lifeDomainProficiencyDependencies: [
       'scripts/lib/life-domain-proficiency-source.mjs',
       'scripts/lib/subclass-proficiency-source.mjs',

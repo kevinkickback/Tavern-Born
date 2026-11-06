@@ -6,9 +6,13 @@ import {
   DIRECT_FIXED_CLASS_CERTIFICATES,
   FIXED_PROFICIENCY_RULES,
 } from '@/lib/5etools/fixedProficiencyRules'
+import { getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import * as certificates from '@/lib/5etools/subclassProficiencyCertificates'
+import { SUBCLASS_PROFICIENCY_PACKAGES } from '@/lib/5etools/subclassProficiencyRegistry'
 import * as preparation from '@/lib/5etools/subclassSourcePreparation'
+import { deriveDragonAncestorLanguage } from '../../scripts/lib/dragon-ancestor-language-source.mjs'
 import { deriveFixedProficiencyRules } from '../../scripts/lib/fixed-proficiency-source.mjs'
+import { conditionalSources } from '../fixtures/conditionalProficiencyFixtures'
 import { fixedSources } from '../fixtures/fixedProficiencyFixtures'
 import rogueLanguageSources from '../fixtures/rogueLanguageSources.json'
 
@@ -29,7 +33,23 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
   const bundledDruid = JSON.parse(
     readFileSync('resources/srd/core/data/class/class-druid.json', 'utf8'),
   )
-  expect(deriveFixedProficiencyRules([sources, bundledDruid, rogueLanguageSources], api)).toEqual({
+  const bundledSorcerer = JSON.parse(
+    readFileSync('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
+  )
+  const dragon = deriveDragonAncestorLanguage(conditionalSources, bundledSorcerer, {
+    ...api,
+    materializeRoots: preparation.materializeSubclassCopies,
+    identity: identity.getSubclassFeatureIdentity,
+    decode: identity.decodeSubclassFeatureReference,
+    copyKey: certificates.getSubclassCopyLookupKey,
+    paths: certificates.collectSubclassProficiencyPaths,
+    owner: certificates.getSubclassProficiencyOwner,
+    intro: getSubclassIntroReference,
+  })
+  const derived = deriveFixedProficiencyRules([sources, bundledDruid, rogueLanguageSources], api)
+  derived.features.push(dragon.rule)
+  derived.features.sort((left, right) => left.target.localeCompare(right.target))
+  expect(derived).toEqual({
     features: FIXED_PROFICIENCY_RULES.filter((row) => row.kind !== 'fixed-training').map((row) =>
       row.className === 'Druid'
         ? {
@@ -41,6 +61,7 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
     ),
     directClasses: DIRECT_FIXED_CLASS_CERTIFICATES,
   })
+  expect(dragon.package).toEqual(SUBCLASS_PROFICIENCY_PACKAGES.find((source) => source.fixedOnly))
 })
 test.each([
   'page',

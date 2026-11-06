@@ -152,6 +152,35 @@
       ]
     },
     {
+      "target": "subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb",
+      "name": "Dragon Ancestor",
+      "className": "Sorcerer",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "subclassGain": {
+        "owner": ["sorcerer", "phb", "draconic bloodline", "phb"],
+        "target": "class-feature|sorcerous origin|sorcerer|phb|1|phb"
+      },
+      "languages": ["draconic"],
+      "languageSource": "PHB",
+      "digest": "69ae3018c949acd1e36ff56a6d89109b7512393f95356804e28ec35f5b4241a6",
+      "metadataDigest": "479c9bea237f63d3a5f972a0e93d61c66f721b3f41e41665c2873f35d2adb356",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
       "name": "Royal Envoy",
       "className": "Fighter",
