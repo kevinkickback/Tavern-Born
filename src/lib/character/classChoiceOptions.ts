@@ -108,6 +108,14 @@ import {
 import { getNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
 import {
+  getRevisedAffinitySetup,
+  isRevisedAffinityOwner,
+  REVISED_AFFINITY_GROUP,
+  REVISED_AFFINITY_ID,
+  resolveRevisedAffinityOption,
+  revisedAffinityDiagnostic,
+} from '@/lib/5etools/revisedElementalAffinity'
+import {
   getRevisedHunterSetup,
   resolveRevisedHunterOption,
 } from '@/lib/5etools/revisedHunterChoices'
@@ -515,6 +523,8 @@ export function resolveFeatureOptionEntity(
   cache?: Map<string, FeatureTableDefinition | undefined>,
 ): FeatureTableOption | SourceGroupOption | undefined {
   const target = decodeFeatureOptionReference(option)
+  if (target?.format === 'source-group' && target.group === REVISED_AFFINITY_GROUP)
+    return resolveRevisedAffinityOption(option, catalogs)
   if (target?.format === 'source-group' && target.group === LAND_GROUP)
     return resolveLandTerrainOption(option, catalogs.classes)
   if (target?.format === 'source-group')
@@ -600,11 +610,13 @@ function resolveExplicitOption(
           'group' in match
             ? match.group === REVISED_HUNTER_GROUP
               ? 'Hunter option'
-              : match.group === LAND_GROUP
-                ? 'Circle terrain'
-                : isFavoredEnemyOption(option)
-                  ? 'Favored enemy'
-                  : 'Favored terrain'
+              : match.group === REVISED_AFFINITY_GROUP
+                ? 'Damage type'
+                : match.group === LAND_GROUP
+                  ? 'Circle terrain'
+                  : isFavoredEnemyOption(option)
+                    ? 'Favored enemy'
+                    : 'Favored terrain'
             : 'Dragon ancestry',
         ],
       },
@@ -741,6 +753,7 @@ export function resolveClassChoiceOptions(
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
     !getLandChoiceRule(choice.id) &&
+    choice.id !== REVISED_AFFINITY_ID &&
     (!literal ||
       !(enemy
         ? getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET) &&
@@ -1358,9 +1371,10 @@ export function getClassChoiceCandidates(
         ),
     ).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
-    ...[getCurrentLandTerrainSetup(classData, subclass, catalogs)].filter(
-      (row) => row !== undefined,
-    ),
+    ...[
+      getCurrentLandTerrainSetup(classData, subclass, catalogs),
+      getRevisedAffinitySetup(classData, subclass, catalogs),
+    ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
 
@@ -1664,6 +1678,15 @@ export function getClassChoiceDiagnosticCandidates(
       message: 'The exact Circle of the Land terrain rules are unavailable or unsupported.',
     })
   }
+  if (
+    isRevisedAffinityOwner(classData, subclass) &&
+    !getRevisedAffinitySetup(
+      classData,
+      subclass,
+      catalogs?.subclassFeatures ? (catalogs as ClassChoiceFeatureCatalogs) : undefined,
+    )
+  )
+    rows.push(revisedAffinityDiagnostic)
   if (
     catalogs &&
     normalized(classData.name) === 'cleric' &&

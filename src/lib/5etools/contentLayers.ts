@@ -59,6 +59,7 @@ import {
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
 import { auditPsionicMultiplicity, getPsionicKey } from './psionics'
+import { isRevisedAffinityOwner, REVISED_AFFINITY_TARGET } from './revisedElementalAffinity'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
 import { getSubclassIntroEntries } from './subclassContent'
@@ -191,6 +192,9 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
         if (reference.sourceIdentityConflict === true) return reference
         const identity = getSubclassFeatureIdentity(reference)
+        // The native direct grant requires its own layer's attached rule body.
+        if (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass))
+          return reference
         const feature = identity ? subclassFeatures.get(identity) : undefined
         if (!feature || reference.feature === feature) return reference
         subclassChanged = true

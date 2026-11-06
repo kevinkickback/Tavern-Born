@@ -7,6 +7,7 @@ import {
   resolveFeatReference,
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
+import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCurrentClassOrder } from '@/lib/character/classOrder'
@@ -465,6 +466,7 @@ export function createCharacterCalculationContext(
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
     ...deriveRacialDefenseEffects(character.racialDefenses),
     ...deriveStructuredFeatEffects(resolvedFeats),
+    ...deriveRevisedAffinityEffects(character, choiceCatalogs),
     ...deriveStormAuraEffects(
       getStormAuraSelectionStates(character, choiceClasses, choiceCatalogs),
     ),

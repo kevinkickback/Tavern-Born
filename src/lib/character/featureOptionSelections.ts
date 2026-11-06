@@ -19,6 +19,11 @@ import {
   featureOptionRulesSignature,
 } from '@/lib/5etools/featureTableOptions'
 import {
+  getSavedAffinityDamageType,
+  isRevisedAffinitySourceEnabled,
+  REVISED_AFFINITY_ID,
+} from '@/lib/5etools/revisedElementalAffinity'
+import {
   getRevisedHunterRule,
   isValidRevisedHunterSelection,
   revisedHunterOwner,
@@ -246,12 +251,14 @@ export function getFeatureOptionSelectionStates(
         selection.kind === 'feature-option' &&
         !selection.inactive &&
         (!isFeatureLiteralChoiceId(selection.choiceId) ||
+          selection.choiceId === REVISED_AFFINITY_ID ||
           !!getRevisedHunterRule(selection.choiceId) ||
           !!getLandChoiceRule(selection.choiceId)),
     )
     .map((selection) => {
       const hunter = getRevisedHunterRule(selection.choiceId)
       const land = getLandChoiceRule(selection.choiceId)
+      const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
         character.classProgression,
@@ -287,6 +294,9 @@ export function getFeatureOptionSelectionStates(
                 candidate.level <= owner.levels &&
                 (!hunter || isValidRevisedHunterSelection(selection)) &&
                 (!land || isValidLandSelection(selection)) &&
+                (!revisedAffinity ||
+                  (getSavedAffinityDamageType(selection, character.classProgression) &&
+                    isRevisedAffinitySourceEnabled(character))) &&
                 selection.selected.every(
                   (row) => row.slotLevel >= candidate.level && row.slotLevel <= owner.levels,
                 ),
@@ -310,13 +320,13 @@ export function getFeatureOptionSelectionStates(
         !options.some(
           (option) =>
             isClassChoiceOptionEligible(option) &&
-            ((!hunter && !land) ||
+            ((!hunter && !land && !revisedAffinity) ||
               selection.selected.some(
                 (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
               )),
         )
       const affinity =
-        !hunter && !land && !recovery && owner && subclass
+        !hunter && !land && !revisedAffinity && !recovery && owner && subclass
           ? affinityRules(owner, subclass, catalogs)
           : undefined
       const landWard =
@@ -335,7 +345,7 @@ export function getFeatureOptionSelectionStates(
           !recovery &&
           !!option &&
           isClassChoiceOptionEligible(option) &&
-          !!(hunter || land ? option.sourceGroup : option.featureOption)
+          !!(hunter || land || revisedAffinity ? option.sourceGroup : option.featureOption)
         const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
@@ -344,7 +354,9 @@ export function getFeatureOptionSelectionStates(
                 ? 'Restore the exact Circle of the Land source or remove the saved terrain.'
                 : hunter
                   ? 'Restore the exact Hunter feature source or remove the saved choice.'
-                  : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
+                  : revisedAffinity
+                    ? 'Restore the exact Elemental Affinity source or remove the saved choice.'
+                    : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]
         if (available && wardText) entries.push(wardText)
         if (available && affinity) {
@@ -461,6 +473,8 @@ export function summarizeFeatureOptionSelection(
     .join(', ')
   const title = `${state.selection.label}${state.literalGroup ? ` (level ${state.literalGroup.gain})` : ''}: ${selected}`
   if (!descriptions) {
+    if (state.selection.choiceId === REVISED_AFFINITY_ID && state.details[0]?.available)
+      return `${title} · ${renderEntriesToText(state.details[0].entries)}`
     return (
       title +
       (state.landWard ? ` · ${state.landWard}` : '') +
