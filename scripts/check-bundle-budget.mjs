@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Revised Elemental Affinity: 6,514,983 B renderer, 1,266,535 B initial.
+  // Draconic Resilience: 6,518,539 B renderer, 1,270,091 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6363 * KIB,
-  initialRendererScript: 1237 * KIB,
+  rendererCode: 6366 * KIB,
+  initialRendererScript: 1241 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

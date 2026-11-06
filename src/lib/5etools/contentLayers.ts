@@ -29,6 +29,7 @@ import {
   loadDataFromSource,
   setLoadedRaceData,
 } from './dataLoader'
+import { isNativeResilienceIntro } from './draconicResilience'
 import { mergeFixedShieldBases } from './fixedBonusShields'
 import {
   auditFixedLayerMultiplicity,
@@ -192,8 +193,11 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
         if (reference.sourceIdentityConflict === true) return reference
         const identity = getSubclassFeatureIdentity(reference)
-        // The native direct grant requires its own layer's attached rule body.
-        if (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass))
+        // Native Draconic benefits require their own layer's attached declaration.
+        if (
+          (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass)) ||
+          isNativeResilienceIntro(classData, subclass, identity)
+        )
           return reference
         const feature = identity ? subclassFeatures.get(identity) : undefined
         if (!feature || reference.feature === feature) return reference

@@ -111,6 +111,16 @@ allocated scores directly when validating allocation; ordinary UI/export code ma
 HP and AC management display calculation traces but do not own class or equipment mutations.
 Carrying capacity, prerequisites, Review, actions, and PDFs consume the same effective values.
 
+Draconic Resilience requires the current native subclass's gain level, selected intro, and exact
+nested feature. Class layering retains the intro from the layer that supplied the selected subclass.
+The 2014 Draconic Bloodline gains the effect at Sorcerer level 1 and the 2024 Draconic Sorcery
+gains it at Sorcerer level 3. Both add the current Sorcerer level to maximum HP once earned.
+Without body armor, their alternate AC bases are 13 + Dexterity modifier and 10 + Dexterity
+modifier + Charisma modifier, respectively. The equipped shield contributes once. The calculation
+chooses the highest eligible base before applying adjustments and exact overrides. The effects
+derive from current data, so source withdrawal or a level or subclass change can remove them while
+saved HP and AC settings remain independent.
+
 ## Domain command contract
 
 Pure commands under `src/lib/character/commands/` return the complete transition. When grants are

@@ -1,4 +1,5 @@
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
+import { getEarnedDraconicResilience } from '@/lib/5etools/draconicResilience'
 import {
   type EntityLookupSet,
   type ResolvedRaceReference,
@@ -72,6 +73,7 @@ import {
 import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
+import { getArmorEquipmentSlots } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
 import { refreshNativeRacialSpellState } from './nativeRacialSpells'
 import {
@@ -543,6 +545,7 @@ export function createCharacterCalculationContext(
   })
   const sourceEffects = [
     ...baseSourceEffects,
+    ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
@@ -599,4 +602,38 @@ export function createCharacterCalculationContext(
       resolutionContext: effectResolutionContext,
     },
   }
+}
+
+function deriveDraconicResilienceEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  { dexterity, charisma }: AbilityScores,
+): CharacterEffect[] {
+  const resilience = getEarnedDraconicResilience(character, catalogs)
+  if (!resilience) return []
+  const { name, source, target, levels, revised } = resilience
+  const origin = { kind: 'subclass' as const, name, source, entityId: target }
+  const effects: CharacterEffect[] = [
+    {
+      id: `${target}:hp`,
+      label: name,
+      source: origin,
+      target: { kind: 'hit-point-maximum' },
+      operation: { kind: 'add', value: levels },
+    },
+  ]
+  const { bodyArmor, shield } = getArmorEquipmentSlots(character.equipment ?? [])
+  if (!bodyArmor) {
+    effects.push({
+      id: `${target}:ac`,
+      label: name,
+      source: origin,
+      target: { kind: 'armor-class' },
+      operation: {
+        kind: 'base',
+        value: dexterity + (revised ? 10 + charisma : 13) + (shield ? (shield.ac ?? 2) : 0),
+      },
+    })
+  }
+  return effects
 }
