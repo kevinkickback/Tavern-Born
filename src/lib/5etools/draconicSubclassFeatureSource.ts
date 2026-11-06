@@ -17,13 +17,14 @@ export const NATIVE_DRACONIC_SUBCLASSES = {
     name: 'Draconic Sorcery',
     source: 'xphb',
     wings: 'subclass-feature|dragon wings|sorcerer|xphb|draconic|xphb|14|xphb',
+    companion: 'subclass-feature|dragon companion|sorcerer|xphb|draconic|xphb|18|xphb',
   },
 } as const
 
-export function getNativeWingsSubclass(target: string | undefined) {
+export function getNativeDraconicFeatureOwner(target: string | undefined) {
   const { phb, xphb } = NATIVE_DRACONIC_SUBCLASSES
   if (target === phb.wings) return phb
-  if (target === xphb.wings) return xphb
+  if (target === xphb.wings || target === xphb.companion) return xphb
 }
 
 export function findNativeDraconicSubclass(
