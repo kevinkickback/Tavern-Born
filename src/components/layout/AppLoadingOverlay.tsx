@@ -1,5 +1,6 @@
 import { CheckCircle2 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
 
@@ -11,8 +12,15 @@ export function AppLoadingOverlay() {
   const gameData = useGameDataStore((s) => s.gameData)
   const loadProgress = useGameDataStore((s) => s.loadProgress)
   const error = useGameDataStore((s) => s.error)
+  const remoteStartup = useGameDataStore((s) => s.remoteStartup)
+  const retryRemote = useGameDataStore((s) => s.checkRemoteStartup)
+  const loadBundled = useGameDataStore((s) => s.useBundledForSession)
+  const reconfigure = useGameDataStore((s) => s.reconfigureRemoteStartup)
+  const canUseBundled =
+    !gameData && (remoteStartup === 'checking' || remoteStartup === 'unavailable')
 
   const shouldStayVisible =
+    remoteStartup === 'unavailable' ||
     !hasHydrated ||
     isLoading ||
     isBackgroundRefreshing ||
@@ -27,6 +35,10 @@ export function AppLoadingOverlay() {
     // This is a one-shot startup gate. Later user-initiated refreshes remain
     // modeless and report progress through Settings and the app status bar.
     if (phase === 'hidden') return
+    if (remoteStartup === 'setup') {
+      setPhase('hidden')
+      return
+    }
 
     if (shouldStayVisible) {
       // A refresh can begin immediately after cached data is restored. Keep the
@@ -49,9 +61,9 @@ export function AppLoadingOverlay() {
       const timer = setTimeout(() => setPhase('hidden'), 500)
       return () => clearTimeout(timer)
     }
-  }, [shouldStayVisible, phase])
+  }, [shouldStayVisible, phase, remoteStartup])
 
-  const isBlocking = phase !== 'hidden'
+  const isBlocking = phase !== 'hidden' && remoteStartup !== 'setup'
   useEffect(() => {
     const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
     if (!appContent) return
@@ -71,7 +83,7 @@ export function AppLoadingOverlay() {
     }
   }, [isBlocking])
 
-  if (phase === 'hidden') return null
+  if (!isBlocking) return null
 
   const isReady = !shouldStayVisible && (phase === 'ready' || phase === 'fading')
   const isFading = !shouldStayVisible && phase === 'fading'
@@ -83,7 +95,18 @@ export function AppLoadingOverlay() {
 
   let statusLine: string
   if (isReady) {
-    statusLine = 'App is ready'
+    statusLine =
+      remoteStartup === 'cached'
+        ? 'Online content is unavailable. Using saved game data.'
+        : remoteStartup === 'srd'
+          ? 'Using Included SRD for this session.'
+          : remoteStartup === 'loaded'
+            ? 'Online game data is ready.'
+            : 'App is ready'
+  } else if (remoteStartup === 'unavailable') {
+    statusLine = 'Online game data is unavailable.'
+  } else if (remoteStartup === 'loading-srd') {
+    statusLine = 'Loading the Included SRD…'
   } else if (!hasHydrated) {
     statusLine = 'Warming up the dice...'
   } else if (isBackgroundRefreshing) {
@@ -113,7 +136,7 @@ export function AppLoadingOverlay() {
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={statusId}
-      aria-busy={!isReady}
+      aria-busy={!isReady && remoteStartup !== 'unavailable'}
       tabIndex={-1}
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}
     >
@@ -158,6 +181,21 @@ export function AppLoadingOverlay() {
         </div>
       </div>
       {error && <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>}
+      {canUseBundled && (
+        <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
+          {remoteStartup === 'unavailable' && (
+            <Button variant="outline" onClick={() => void retryRemote()}>
+              Retry
+            </Button>
+          )}
+          <Button onClick={() => void loadBundled()}>Use Included SRD for this session</Button>
+          {remoteStartup === 'unavailable' && (
+            <Button variant="ghost" onClick={reconfigure}>
+              Change source
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

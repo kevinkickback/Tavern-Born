@@ -1,4 +1,5 @@
 import { del, get, set } from 'idb-keyval'
+import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
@@ -136,11 +137,15 @@ export async function writeGameDataCache(
     fingerprint?: string | null
     lastDataChangedAt?: string | null
     layerMetadata?: GameDataLayerCacheMetadataByRole
+    signal?: AbortSignal
+    beforeWrite?: () => void
   },
 ): Promise<GameDataCacheEntry> {
+  options?.signal?.throwIfAborted()
   const now = new Date().toISOString()
   const contentFingerprint = computeGameDataFingerprint(data)
-  const previous = await readGameDataCache()
+  const existing = readGameDataCache()
+  const previous = await (options?.signal ? settleOnAbort(existing, options.signal) : existing)
   const sameSource = previous !== null && isCacheForSource(previous, identity)
   const previousFingerprint = sameSource
     ? (previous.contentFingerprint ?? computeGameDataFingerprint(previous.data))
@@ -169,6 +174,9 @@ export async function writeGameDataCache(
     sourceSnapshot: createSourceSnapshot(identity, options?.layerMetadata),
   }
 
+  // A timed-out or superseded startup must fail before starting the atomic write.
+  options?.signal?.throwIfAborted()
+  options?.beforeWrite?.()
   await set(CACHE_KEY, entry)
   return entry
 }

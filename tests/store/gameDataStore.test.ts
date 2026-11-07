@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 const {
@@ -6,6 +6,7 @@ const {
   loadGameDataSourceStackMock,
   writeGameDataCacheMock,
   clearGameDataCacheMock,
+  readGameDataCacheMock,
 } = vi.hoisted(() => ({
   loadDataFromSourceMock: vi.fn(),
   loadGameDataSourceStackMock: vi.fn(),
@@ -14,6 +15,7 @@ const {
     contentFingerprint: 'abc123ef',
   })),
   clearGameDataCacheMock: vi.fn(async () => undefined),
+  readGameDataCacheMock: vi.fn(),
 }))
 const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
   resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
@@ -36,13 +38,25 @@ vi.mock('@/lib/5etools/bundledSource', () => ({
 vi.mock('@/lib/storage/dataCache', () => ({
   writeGameDataCache: writeGameDataCacheMock,
   clearGameDataCache: clearGameDataCacheMock,
+  readGameDataCache: readGameDataCacheMock,
+  isCacheForSource: (cache: { sourceSnapshot: { path: string } }, config: DataSourceConfig) =>
+    cache.sourceSnapshot.path === config.path,
+  isCacheStale: () => false,
   computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
 import { expandItemEntries } from '@/lib/5etools/itemEntries'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { useGameDataStore } from '@/store/gameDataStore'
+import { REMOTE_STARTUP_TIMEOUT_MS, useGameDataStore } from '@/store/gameDataStore'
 import { firePotion } from '../fixtures/itemEntryFixtures'
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  const promise = new Promise<T>((settle) => {
+    resolve = settle
+  })
+  return { promise, resolve }
+}
 
 function makeGameDataFixture(): GameData {
   return {
@@ -82,6 +96,7 @@ describe('gameDataStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resolveDefaultBundledSourceMock.mockResolvedValue(null)
+    readGameDataCacheMock.mockResolvedValue(null)
     useGameDataStore.setState({
       gameData: null,
       dataSourceConfig: null,
@@ -94,8 +109,137 @@ describe('gameDataStore', () => {
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
+      remoteStartup: null,
+      sessionBundledSource: null,
       hasHydrated: false,
     })
+  })
+
+  afterEach(() => vi.useRealTimers())
+
+  const remote: DataSourceConfig = {
+    type: 'remote',
+    path: 'https://example.test/data',
+    isValid: true,
+  }
+  const bundled: DataSourceConfig = {
+    type: 'bundled',
+    path: 'srd/core',
+    packId: 'core',
+    packVersion: '1.0.0',
+    isValid: true,
+  }
+  const nonempty = (name: string) => ({
+    ...makeGameDataFixture(),
+    races: [{ name, source: 'PHB' }] as GameData['races'],
+  })
+
+  test('a stalled remote startup settles at one deadline and keeps matching saved data', async () => {
+    vi.useFakeTimers()
+    const cached = nonempty('Saved race')
+    const late = deferred<GameData>()
+    readGameDataCacheMock.mockResolvedValue({
+      data: cached,
+      sourceSnapshot: { path: remote.path },
+      cachedAt: '2026-01-01T00:00:00.000Z',
+    })
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    loadDataFromSourceMock.mockReturnValue(late.promise)
+    const { backgroundRefresh } = await useGameDataStore
+      .getState()
+      .loadFromCache({ forceCheck: true })
+    expect(useGameDataStore.getState().remoteStartup).toBe('checking')
+    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    expect(await backgroundRefresh).toBe(false)
+    expect(useGameDataStore.getState()).toMatchObject({
+      remoteStartup: 'cached',
+      cacheStatus: 'remote-cache',
+      isBackgroundRefreshing: false,
+      error: null,
+    })
+    late.resolve(nonempty('Late race'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test('the deadline expires before a remote cache write queued behind another operation', async () => {
+    vi.useFakeTimers()
+    const writer = deferred<{
+      lastDataChangedAt: string
+      contentFingerprint: string
+    }>()
+    writeGameDataCacheMock.mockReturnValueOnce(writer.promise)
+    loadDataFromSourceMock.mockResolvedValueOnce(nonempty('Earlier load'))
+    const previous = useGameDataStore.getState().loadGameData(config)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1)
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    loadDataFromSourceMock.mockResolvedValueOnce(nonempty('Remote candidate'))
+    const remoteResult = useGameDataStore.getState().checkRemoteStartup()
+    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    expect(await remoteResult).toBe(false)
+    expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
+    writer.resolve({ lastDataChangedAt: '2026-01-01T00:00:00.000Z', contentFingerprint: 'old' })
+    await previous
+    await vi.advanceTimersByTimeAsync(0)
+    expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1)
+    expect(useGameDataStore.getState().gameData).toBeNull()
+  })
+
+  test('cold failure leaves Retry and keeps a session fallback out of the remote cache', async () => {
+    const included = nonempty('Included race')
+    const remoteData = nonempty('Remote race')
+    useGameDataStore.setState({
+      dataSourceConfig: remote,
+      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+      lastContentFingerprint: 'abc123ef',
+    })
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
+    loadGameDataSourceStackMock.mockRejectedValueOnce(new Error('Offline'))
+    const { backgroundRefresh } = await useGameDataStore
+      .getState()
+      .loadFromCache({ forceCheck: true })
+    expect(await backgroundRefresh).toBe(false)
+    expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
+    loadGameDataSourceStackMock.mockRejectedValueOnce(new Error('Still offline'))
+    await useGameDataStore.getState().checkRemoteStartup()
+    expect(loadGameDataSourceStackMock).toHaveBeenCalledTimes(2)
+    expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
+    loadDataFromSourceMock.mockResolvedValueOnce(included)
+    expect(await useGameDataStore.getState().useBundledForSession()).toBe(true)
+    expect(useGameDataStore.getState()).toMatchObject({
+      remoteStartup: 'srd',
+      cacheStatus: 'session-srd',
+      dataSourceConfig: remote,
+      lastContentFingerprint: 'abc123ef',
+      sessionBundledSource: bundled,
+    })
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+    loadGameDataSourceStackMock.mockResolvedValueOnce(remoteData)
+    expect(await useGameDataStore.getState().loadGameData(remote, true)).toBe(false)
+    expect(useGameDataStore.getState()).toMatchObject({
+      gameData: remoteData,
+      sessionBundledSource: null,
+      cacheStatus: 'fetched',
+    })
+  })
+
+  test('choosing the Included SRD cancels an in-flight remote startup before it can publish', async () => {
+    const included = nonempty('Included race')
+    const late = deferred<GameData>()
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
+    loadGameDataSourceStackMock.mockReturnValueOnce(late.promise)
+    loadDataFromSourceMock.mockResolvedValueOnce(included)
+    const { backgroundRefresh } = await useGameDataStore.getState().loadFromCache()
+    await vi.waitFor(() => expect(loadGameDataSourceStackMock).toHaveBeenCalledTimes(1))
+    expect(await useGameDataStore.getState().useBundledForSession()).toBe(true)
+    expect(await backgroundRefresh).toBe(false)
+    late.resolve(nonempty('Late race'))
+    await Promise.resolve()
+    expect(useGameDataStore.getState().gameData?.races).toEqual(included.races)
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
   test('a supplied empty lookup map remains authoritative and retains indexed data identity', () => {
@@ -193,6 +337,7 @@ describe('gameDataStore', () => {
       })
 
     const firstLoad = useGameDataStore.getState().loadGameData(config)
+    await vi.waitFor(() => expect(firstProgress).toBeTypeOf('function'))
     const secondLoad = useGameDataStore.getState().loadGameData({ ...config, path: '/new-data' })
     await vi.waitFor(() => {
       expect(firstProgress).toBeTypeOf('function')

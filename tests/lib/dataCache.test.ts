@@ -64,6 +64,27 @@ describe('writeGameDataCache', () => {
 
   afterEach(() => vi.useRealTimers())
 
+  test('aborting the pre-write cache read releases the writer without committing', async () => {
+    let finishRead: (value: unknown) => void = () => {}
+    const pendingRead = new Promise((resolve) => {
+      finishRead = resolve
+    })
+    idbGetMock.mockReturnValueOnce(pendingRead)
+    const attempt = new AbortController()
+    const beforeWrite = vi.fn()
+    const writing = writeGameDataCache(makeGameData(), config, {
+      signal: attempt.signal,
+      beforeWrite,
+    })
+    attempt.abort(new Error('Startup deadline'))
+    await expect(writing).rejects.toThrow('Startup deadline')
+    expect(beforeWrite).not.toHaveBeenCalled()
+    expect(idbSetMock).not.toHaveBeenCalled()
+    finishRead(null)
+    await writeGameDataCache(makeGameData('next'), config)
+    expect(idbSetMock).toHaveBeenCalledTimes(1)
+  })
+
   test('retains named target ambiguity through cache and permits an exact unique winning overlay', async () => {
     const weapon = { name: 'Example weapon', source: 'TEST', type: 'M' }
     const option = { name: 'Example option', source: 'TEST', featureType: ['TEST'] }

@@ -65,6 +65,7 @@ export function DataSourceConfigurator({
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
+  const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
   const loadGameData = useGameDataStore((state) => state.loadGameData)
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
@@ -378,8 +379,11 @@ export function DataSourceConfigurator({
             <div className="relative space-y-3 rounded-md border border-border bg-workspace-pane p-4">
               <Badge variant="default" className="absolute right-3 top-3 gap-1">
                 <CheckCircle className="size-3.5" />
-                Active
+                {usingSessionSrd ? 'Configured' : 'Active'}
               </Badge>
+              {usingSessionSrd && (
+                <p className="text-sm text-warning">Using Included SRD for this session.</p>
+              )}
               <div className="flex items-center gap-2">
                 {dataSourceConfig.type === 'bundled' ? (
                   <Database className="size-[1.125rem] text-muted-foreground" />
