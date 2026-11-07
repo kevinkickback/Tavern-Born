@@ -368,6 +368,7 @@ export function getFeatureOptionSelectionStates(
       const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
       const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
       const barbarianPathChoice = !!getBarbarianPathChoice(selection.choiceId)
+      const usesSourceGroup = !!(hunter || configuration || revisedAffinity || barbarianPathChoice)
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
         character.classProgression,
@@ -430,19 +431,13 @@ export function getFeatureOptionSelectionStates(
         !options.some(
           (option) =>
             isClassChoiceOptionEligible(option) &&
-            ((!hunter && !configuration && !revisedAffinity && !barbarianPathChoice) ||
+            (!usesSourceGroup ||
               selection.selected.some(
                 (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
               )),
         )
       const affinity =
-        !hunter &&
-        !configuration &&
-        !revisedAffinity &&
-        !barbarianPathChoice &&
-        !recovery &&
-        owner &&
-        subclass
+        !usesSourceGroup && !recovery && owner && subclass
           ? affinityRules(owner, subclass, catalogs)
           : undefined
       const landWard =
@@ -461,7 +456,7 @@ export function getFeatureOptionSelectionStates(
           !recovery &&
           !!option &&
           isClassChoiceOptionEligible(option) &&
-          !!(hunter || configuration || revisedAffinity ? option.sourceGroup : option.featureOption)
+          !!(usesSourceGroup ? option.sourceGroup : option.featureOption)
         const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
@@ -472,7 +467,7 @@ export function getFeatureOptionSelectionStates(
                   ? 'Restore the exact Hunter feature source or remove the saved choice.'
                   : revisedAffinity
                     ? 'Restore the exact Elemental Affinity source or remove the saved choice.'
-                    : configuration
+                    : configuration || barbarianPathChoice
                       ? 'Restore the exact subclass feature source or remove the saved choice.'
                       : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]

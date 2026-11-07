@@ -2,7 +2,10 @@ import {
   type AdditionalSpellChoiceDescriptor,
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
-import { getCurrentGiantPower } from '@/lib/5etools/barbarianGiantPower'
+import {
+  getCurrentGiantPower,
+  hasIncludedSrdGiantSpellProof,
+} from '@/lib/5etools/barbarianGiantPower'
 import { getCurrentBardPrimalLore } from '@/lib/5etools/bardCollegeFeatures'
 import { getClassicLandBonusCantrip } from '@/lib/5etools/circleOfTheLand'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
@@ -418,7 +421,8 @@ export function getSelectedFeatureCantripPool(
             giantPower &&
             (spell.classSpellRouteSource?.input.targetOccurrences.length !== 1 ||
               (giantReprints &&
-                giantReprints.get(getSpellReferenceKey(spell.name, spell.source)) !== 0))
+                giantReprints.get(getSpellReferenceKey(spell.name, spell.source)) !== 0 &&
+                !hasIncludedSrdGiantSpellProof(spell.name, context?.oathSpellSourceByKey)))
           )
             return false
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from 'vitest'
+import { hasIncludedSrdGiantSpellProof } from '@/lib/5etools/barbarianGiantPower'
 import { getSavedBarbarianPathOption } from '@/lib/5etools/barbarianPathChoiceIdentity'
 import { getBarbarianRitualGrants } from '@/lib/5etools/barbarianRitualSpells'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
@@ -11,7 +12,8 @@ import { REVISED_PRIMAL_KNOWLEDGE_TARGET } from '@/lib/5etools/classProficiencyR
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
-import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { giantPowerSpellSlots } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -24,11 +26,13 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { isValidClassProficiencySelection } from '@/lib/schema/classProficiencyValidation'
+import type { Spell5e } from '@/types/5etools'
 import type { Character, Equipment } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -37,6 +41,32 @@ const catalogsToTest = [['bundled', 'resources/srd/core/data']] as Array<
   ['bundled' | 'local', string]
 >
 if (existsSync('data/class/class-barbarian.json')) catalogsToTest.push(['local', 'data'])
+
+test('Included SRD proves both Giant Power cantrips without accepting changed classic records', async () => {
+  const spells = await Promise.all(
+    ['phb', 'xphb'].map(
+      async (source) =>
+        parseSpells(
+          JSON.parse(
+            await readFile(`resources/srd/core/data/spells/spells-${source}.json`, 'utf8'),
+          ),
+        ) as Spell5e[],
+    ),
+  )
+  const byKey = buildSpellLookup(spells.flat())
+  for (const name of ['Druidcraft', 'Thaumaturgy']) {
+    const classicKey = `${name}|PHB`
+    const classic = byKey[classicKey]
+    expect(hasIncludedSrdGiantSpellProof(name, byKey)).toBe(true)
+    for (const changed of [
+      { ...classic, reprintedAs: ['Other Spell|XPHB'] },
+      { ...classic, entries: ['Changed spell rules.'] },
+    ])
+      expect(hasIncludedSrdGiantSpellProof(name, { ...byKey, [classicKey]: changed })).toBe(false)
+  }
+  const duplicate = buildSpellLookup([...spells.flat(), structuredClone(byKey['Druidcraft|PHB'])])
+  expect(hasIncludedSrdGiantSpellProof('Druidcraft', duplicate)).toBe(false)
+})
 
 test.each(catalogsToTest)(
   'Barbarian setup follows both base class tables and revised Primal Knowledge (%s)',
@@ -191,6 +221,9 @@ test.each(catalogsToTest)(
             ),
           )
           expect(getSavedBarbarianPathOption(reopened.classChoiceSelections?.[0])).toBe('Radiant')
+          expect(
+            getFeatureOptionSelectionStates(reopened, current.classes, catalogs),
+          ).toMatchObject([{ recovery: false, details: [{ name: 'Radiant', available: true }] }])
         }
         const ritualist = (level: number) => ({
           ...actor(level),

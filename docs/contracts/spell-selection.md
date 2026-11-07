@@ -382,3 +382,5 @@ Guardian can cast Augury or Clairvoyance at level 10 without a spell slot or Mat
 The spells share one use per Short or Long Rest. Giant Power offers one level-3 cantrip,
 Druidcraft or Thaumaturgy, using Wisdom. These features keep their own cast or choice ownership
 and leave the class spell-slot progression empty.
+Revised Giant Power requires a unique revised cantrip and either its declared same-rank reprint
+or the exact classic Included SRD record. This supports partial Additional Content sources.

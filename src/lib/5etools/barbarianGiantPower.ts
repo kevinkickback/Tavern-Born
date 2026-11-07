@@ -1,5 +1,5 @@
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
-import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
+import type { Class5e, Spell5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
@@ -16,6 +16,36 @@ export const isGiantPowerSourceFeature = (target?: string) =>
   target === introTarget || target === GIANT_POWER_TARGET
 
 const giantPath = { name: 'Path of the Giant', shortName: 'Giant', source: 'BGG' }
+const includedSrdGiantSpells = new Map([
+  ['druidcraft', '36c624dc226e2091417341b2f7106880fca4ad176b789efa1bc038cc5310f81e'],
+  ['thaumaturgy', 'ea96e00f8aa18a2302179559a2e34d2f4705706ca439e2cb0bd43aefc2040ad3'],
+])
+const parsedSpellFields = new Set([
+  'classes',
+  'classSpellRoutes',
+  'classSpellRouteSource',
+  'classSpellRouteDiagnostics',
+])
+
+/** The Included SRD omits editorial reprint metadata. Require its exact classic record. */
+export function hasIncludedSrdGiantSpellProof(
+  name: string,
+  spells: Readonly<Record<string, Spell5e>> | undefined,
+) {
+  const key = norm(name)
+  const digest = includedSrdGiantSpells.get(key)
+  if (!digest) return false
+  const classics = Object.values(spells ?? {}).filter(
+    (spell) => norm(spell.name) === key && norm(spell.source) === 'phb',
+  )
+  const classic = classics[0]
+  if (classics.length !== 1 || classic.classSpellRouteSource?.input.targetOccurrences.length !== 1)
+    return false
+  const original = Object.fromEntries(
+    Object.entries(classic).filter(([key]) => !parsedSpellFields.has(key)),
+  )
+  return getFeatureSourceDigest([original], false) === digest
+}
 export const ancestralPath = {
   name: 'Path of the Ancestral Guardian',
   shortName: 'Ancestral Guardian',
