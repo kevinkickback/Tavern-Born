@@ -2,6 +2,11 @@ import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import {
+  divineSoul,
+  getCurrentDivineMagic,
+  getLegacySorcererSpec,
+} from '@/lib/5etools/legacySorcererSubclassRules'
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
@@ -175,8 +180,12 @@ export function hasCurrentClassSpellListRoute(
     !hasWarlockPatronSpellConfiguration(entry) &&
     permitted(allowed, entry.subclassSource ?? '') &&
     exactSubclassPath(spell, entry, currentSubclasses[0], options.requestedTarget)
-  )
-    return true
+  ) {
+    if (getLegacySorcererSpec(entry) !== divineSoul) return true
+    const parent = currentParent?.[0]
+    const magic = parent && getCurrentDivineMagic(parent, currentSubclasses[0])
+    if (magic && entry.levels >= magic.rules.level) return true
+  }
   const resolution = context.currentRaceResolution
   if (
     !resolution?.parentRace ||

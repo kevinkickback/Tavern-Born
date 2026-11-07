@@ -24,6 +24,7 @@ import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import {
   getFixedClassSpellCastingNotes,
   getManagedSpellCastingNotes,
+  isFixedClassSpellProfile,
 } from '@/lib/calculations/managedSpellCasting'
 import { getNativeRacialSpellOwners } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
@@ -334,6 +335,28 @@ export function SpellsPage() {
           castingNote,
           prepared,
           isFixed: isFixedProfileSpell(profile, ledger, name),
+        })
+      }
+
+      for (const cast of calculationContext?.fixedClassSpellStatuses ?? []) {
+        if (
+          !cast.active ||
+          !cast.castOnly ||
+          !isFixedClassSpellProfile(cast, profile) ||
+          profile.spellsKnown.some((name) => spellIdentity(name) === spellIdentity(cast.reference))
+        )
+          continue
+        const spell = resolveSpellReferenceFromMap(cast.reference, spellByName)
+        if (!spell) continue
+        items.push({
+          profileId: profile.id,
+          profileLabel: getSpellProfileDisplayLabel(profile),
+          name: cast.reference,
+          level: spell.level,
+          kind: 'spell',
+          prepared: false,
+          isFixed: true,
+          castingNote: cast.castingNote,
         })
       }
     }

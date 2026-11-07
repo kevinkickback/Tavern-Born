@@ -47,7 +47,7 @@ export function getFixedLanguageDetails(
   const sources = new Set(
     tags.flatMap((tag) => {
       const relation = tag.grantVariant && decodeFixedProficiencyId(tag.grantVariant)
-      const rule = relation ? fixedProficiencyRule(relation.target) : undefined
+      const rule = relation ? fixedProficiencyRule(relation.target, relation.owner) : undefined
       return rule?.languageSource && rule.languages?.includes(name) ? [rule.languageSource] : []
     }),
   )

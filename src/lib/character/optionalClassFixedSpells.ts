@@ -15,6 +15,7 @@ export interface ClassFixedSpellGrant {
 export interface ClassFixedSpellStatus extends ClassFixedSpellGrant {
   prepared: boolean
   active: boolean
+  castOnly?: { castingTime?: string; ignoresMaterial?: true }
   reason?: string
   castingNote?: string
 }

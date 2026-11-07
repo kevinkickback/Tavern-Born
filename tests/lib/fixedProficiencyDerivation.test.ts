@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import * as identity from '@/lib/5etools/classFeatureIdentity'
 import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
@@ -25,6 +25,8 @@ const api = {
   digest: certificates.subclassProficiencyDigest,
   metadata: certificates.subclassProficiencyMetadata,
 }
+const windSpeakerTarget = 'subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge'
+const configuredSorcerer = 'data/class/class-sorcerer.json'
 test('complete actual fixed producers reproduce the descriptors and direct declarations', () => {
   const sources = {
     ...fixedSources,
@@ -46,11 +48,24 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
     owner: certificates.getSubclassProficiencyOwner,
     intro: getSubclassIntroReference,
   })
-  const derived = deriveFixedProficiencyRules([sources, bundledDruid, rogueLanguageSources], api)
+  const configured = existsSync(configuredSorcerer)
+  const windSpeaker = configured
+    ? JSON.parse(readFileSync(configuredSorcerer, 'utf8')).subclassFeature.filter(
+        (row: Record<string, unknown>) =>
+          identity.getSubclassFeatureIdentity(row) === windSpeakerTarget,
+      )
+    : []
+  if (configured) expect(windSpeaker).toHaveLength(1)
+  const derived = deriveFixedProficiencyRules(
+    [sources, bundledDruid, rogueLanguageSources, { subclassFeature: windSpeaker }],
+    api,
+  )
   derived.features.push(dragon.rule)
   derived.features.sort((left, right) => left.target.localeCompare(right.target))
   expect(derived).toEqual({
-    features: FIXED_PROFICIENCY_RULES.filter((row) => row.kind !== 'fixed-training').map((row) =>
+    features: FIXED_PROFICIENCY_RULES.filter(
+      (row) => row.kind !== 'fixed-training' && (configured || row.target !== windSpeakerTarget),
+    ).map((row) =>
       row.className === 'Druid'
         ? {
             ...row,

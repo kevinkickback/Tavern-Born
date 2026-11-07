@@ -460,7 +460,7 @@ export function getFeatureOptionSelectionStates(
                   : revisedAffinity
                     ? 'Restore the exact Elemental Affinity source or remove the saved choice.'
                     : configuration
-                      ? 'Restore the exact patron feature source or remove the saved choice.'
+                      ? 'Restore the exact subclass feature source or remove the saved choice.'
                       : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]
         if (available && wardText) entries.push(wardText)

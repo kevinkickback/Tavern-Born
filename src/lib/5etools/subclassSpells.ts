@@ -1,13 +1,23 @@
 import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
-import type { Class5e, SubclassAdditionalSpells } from '@/types/5etools'
+import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
-import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import { getClassFeatureReferenceLevel, getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
+import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   hasRevisedInheritedCircleSpells,
   isRevisedInheritedCircleOwner,
 } from './legacyDruidSubclassSpells'
+import {
+  divineSoul,
+  getCurrentDivineMagic,
+  getCurrentLunarSorcery,
+  getLegacySorcererSpec,
+} from './legacySorcererSubclassRules'
+import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
+import { matchesNativeSubclassGain } from './nativeSubclassGain'
 import {
   ELDRITCH_HEX_REFERENCE,
   getNativeEldritchHexOwner,
@@ -26,7 +36,9 @@ export interface SubclassSpellGrant {
   isCantrip: boolean
   expandedRank?: number
   expectedSpellLevel?: number
-  mode: 'prepared' | 'known' | 'expanded' | 'innate'
+  feature?: { name: string; target: string; castingNote?: string }
+  castOnly?: { castingTime?: string; ignoresMaterial?: true }
+  mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
 }
 
 export function hasCurrentSubclassSpellGrant(
@@ -53,8 +65,11 @@ export function getEarnedSubclassSpellGrants(
   if (!entry.subclass) return []
   const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
   const revisedCircle = isRevisedInheritedCircleOwner(entry)
+  const legacySorcerer = getLegacySorcererSpec(entry)
   const unavailable =
-    land || revisedCircle || hasWarlockPatronSpellConfiguration(entry) ? [] : undefined
+    land || revisedCircle || legacySorcerer || hasWarlockPatronSpellConfiguration(entry)
+      ? []
+      : undefined
   const norm = normalizeOwnerIdentity
   if (
     !classData ||
@@ -79,6 +94,23 @@ export function getEarnedSubclassSpellGrants(
   )
   if (subclasses.length !== 1) return unavailable
   if (!land) {
+    if (legacySorcerer === divineSoul) {
+      const magic = getCurrentDivineMagic(classData, subclasses[0])
+      const spell = getChosenDivineSoulSpell(magic, entry.source, landContext?.selections)
+      return spell && magic && classLevel >= magic.rules.level
+        ? [
+            {
+              spellName: formatSpellReference(spell, entry.source),
+              level: magic.rules.level,
+              isCantrip: false,
+              expectedSpellLevel: 1,
+              mode: 'known',
+              feature: { name: 'Divine Magic', target: 'divine-soul-affinity' },
+            },
+          ]
+        : []
+    }
+    if (legacySorcerer) return getLunarSubclassSpells(classData, subclasses[0], classLevel)
     const suite = getChosenWarlockSpellBlock(classData, subclasses[0], landContext?.selections)
     if (suite) {
       const { block, level } = suite
@@ -101,9 +133,12 @@ export function getEarnedSubclassSpellGrants(
             ...grant,
             spellName: formatSpellReference(grant.spellName, 'XPHB'),
             expectedSpellLevel: grant.isCantrip ? 0 : Math.ceil(grant.level / 2),
+            feature: { name: 'Circle Spells', target: 'inherited-circle-spells' },
           }))
         : []
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    const shadowCast = getShadowSorceryCast(classData, subclasses[0], classLevel)
+    if (shadowCast) grants.push(shadowCast)
     if (getNativeEldritchHexOwner(entry)) {
       // Eldritch Hex has its own source proof. Expanded list access remains independent.
       const hex = getSpellReferenceKey(ELDRITCH_HEX_REFERENCE)
@@ -137,6 +172,116 @@ export function getEarnedSubclassSpellGrants(
     seen.add(key)
     return [{ ...grant, spellName, isCantrip: spells ? spells.get(key) === 0 : grant.isCantrip }]
   })
+}
+
+function getShadowSorceryCast(
+  cls: Class5e,
+  subclass: Subclass5e,
+  classLevel: number,
+): SubclassSpellGrant | undefined {
+  const norm = normalizeOwnerIdentity
+  if (
+    classLevel < 6 ||
+    norm(cls.name) !== 'sorcerer' ||
+    norm(cls.source) !== 'xphb' ||
+    cls.sourceIdentityConflict ||
+    cls._copy ||
+    norm(subclass.name) !== 'shadow sorcery' ||
+    norm(subclass.source) !== 'rhw' ||
+    norm(subclass.shortName) !== 'shadow' ||
+    subclass.sourceIdentityConflict ||
+    subclass._copy ||
+    !matchesNativeSubclassGain(cls, 'class-feature|sorcerer subclass|sorcerer|xphb|3|xphb', 3) ||
+    !matchesNativeSubclassGain(
+      cls,
+      'class-feature|subclass feature|sorcerer|xphb|6|xphb',
+      6,
+      'at-level',
+    )
+  )
+    return undefined
+  const target = 'subclass-feature|beasts of ill omen|sorcerer|xphb|shadow|rhw|6|rhw'
+  const rule = getDirectSubclassFeatureReference(subclass, target)?.feature
+  const blocks = subclass.additionalSpells
+  const block = blocks?.length === 1 ? blocks[0] : undefined
+  if (
+    !rule ||
+    getSubclassFeatureIdentity(rule) !== target ||
+    rule.sourceIdentityConflict ||
+    rule.featureOptionSourceConflict ||
+    rule.isClassFeatureVariant ||
+    getFeatureSourceDigest(rule.entries ?? []) !==
+      '0a1153c7de9b9c7ac0ec8b62436d34570498fc75da94c688a20fb62fce1e8821' ||
+    !block ||
+    !('resourceName' in block) ||
+    block.resourceName !== 'Sorcery Point' ||
+    getFeatureSourceDigest([block.innate?.['6']]) !==
+      getFeatureSourceDigest([{ resource: { '3': ['summon beast|xphb'] } }])
+  )
+    return undefined
+  return {
+    spellName: 'Summon Beast|XPHB',
+    level: 6,
+    isCantrip: false,
+    expectedSpellLevel: 2,
+    mode: 'cast-only',
+    castOnly: { castingTime: 'Bonus Action', ignoresMaterial: true },
+    feature: {
+      name: rule.name,
+      target,
+      castingNote:
+        'Beasts of Ill Omen: Spend 3 Sorcery Points to cast as a Bonus Action without a spell slot, preparation, or Material components. You can waive Concentration for a 1-minute casting that ends early if you cast the spell again.',
+    },
+  }
+}
+
+function getLunarSubclassSpells(
+  cls: Class5e,
+  subclass: Subclass5e,
+  classLevel: number,
+): SubclassSpellGrant[] {
+  const lunar = getCurrentLunarSorcery(cls, subclass)
+  if (!lunar || classLevel < lunar.level) return []
+  const firstRank = lunar.schedule?.[0]?.known?.['1'] ?? []
+  const phases = ['Full Moon', 'New Moon', 'Crescent Moon']
+  const waxing = lunar.waxing && classLevel >= 6
+  const grants = parseSubclassSpells(lunar.schedule, classLevel).map((grant) => {
+    const spellName = formatSpellReference(grant.spellName, cls.source)
+    const phase =
+      phases[
+        firstRank.findIndex(
+          (spell) => getSpellReferenceKey(spell, cls.source) === getSpellReferenceKey(spellName),
+        )
+      ]
+    return {
+      ...grant,
+      spellName,
+      level: Math.max(lunar.level, grant.level),
+      expectedSpellLevel: Math.ceil(grant.level / 2),
+      feature: {
+        name: 'Lunar Embodiment',
+        target: 'lunar-embodiment',
+        ...(phase && {
+          castingNote: waxing
+            ? `Waxing and Waning: One slot-free cast per Long Rest while in the ${phase} phase.`
+            : `Lunar Embodiment: Cast without a spell slot in the ${phase} phase. One use per Long Rest across all phases.`,
+        }),
+      },
+    }
+  })
+  return lunar.moonFire
+    ? [
+        ...grants,
+        {
+          spellName: formatSpellReference('Sacred Flame', cls.source),
+          level: lunar.level,
+          isCantrip: true,
+          expectedSpellLevel: 0,
+          mode: 'known',
+          feature: { name: 'Moon Fire', target: 'moon-fire' },
+        },
+      ]
+    : grants
 }
 
 function pushSpellList(

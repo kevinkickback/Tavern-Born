@@ -96,6 +96,29 @@ export function deriveFixedProficiencyRules(documents, api) {
   }
   for (const document of documents) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
+      if (
+        feature.name === 'Wind Speaker' &&
+        feature.className === 'Sorcerer' &&
+        feature.classSource === 'PHB' &&
+        feature.subclassShortName === 'Storm' &&
+        feature.subclassSource === 'XGE' &&
+        feature.source === 'XGE'
+      ) {
+        validateFeature(feature, SUBCLASS_FIELDS)
+        if (
+          feature.level !== 1 ||
+          api.entriesDigest(feature.entries, false) !==
+            '14469546d676a5cb2672d938a273a9f6125e1ad47482b9f11297082bbd57bd0f'
+        )
+          fail('Unsupported Wind Speaker grant clause')
+        push(
+          feature,
+          'fixed-languages',
+          { languages: ['primordial'], languageSource: 'PHB', useClassLanguagePrinting: true },
+          api.subclassIdentity,
+        )
+        continue
+      }
       if (!['Survivalist', 'Royal Envoy'].includes(feature.name)) continue
       validateFeature(feature, SUBCLASS_FIELDS)
       if (feature.name === 'Survivalist') {

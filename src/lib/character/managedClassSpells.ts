@@ -19,6 +19,7 @@ import {
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
+import { getLegacySorcererSpec } from '@/lib/5etools/legacySorcererSubclassRules'
 import {
   ELDRITCH_HEX_TARGET,
   getCurrentStepsOfTheFey,
@@ -208,6 +209,7 @@ function targetError(
     !(
       saved &&
       (isVestigePatron(state.entry) ||
+        getLegacySorcererSpec(state.entry) ||
         isCircleOfTheLand(
           state.entry.name,
           state.entry.source,
@@ -218,6 +220,7 @@ function targetError(
     state.fixedAtGain.some(
       (grant) =>
         grant.mode !== 'expanded' &&
+        grant.mode !== 'cast-only' &&
         getSpellNameKey(grant.spellName) === getSpellNameKey(spell.name),
     )
   )
@@ -616,13 +619,16 @@ export function projectManagedClassSpellState(
     })
     for (const grant of grants ?? []) {
       if (grant.mode === 'expanded') continue
-      const inheritedCircle = grant.expectedSpellLevel !== undefined
+      const castOnly = grant.mode === 'cast-only'
       const active = hasCurrentSubclassSpellGrant(
         grant,
         namedPreparation ? visibleSpellLevels : availableSpellReferences,
         visibleSpellLevels,
       )
-      if ((namedPreparation || inheritedCircle) && !active)
+      if (
+        (!active && (namedPreparation || grant.feature)) ||
+        (active && grant.feature?.castingNote)
+      )
         fixedClassSpellStatuses.push({
           owner: [
             'subclass',
@@ -631,22 +637,18 @@ export function projectManagedClassSpellState(
             norm(entry.subclass),
             norm(entry.subclassSource),
           ],
-          target: inheritedCircle
-            ? 'inherited-circle-spells'
-            : land
-              ? 'circle-of-the-land-terrain'
-              : 'vestige-patron-domain',
-          featureName: inheritedCircle
-            ? 'Circle Spells'
-            : land
-              ? 'Circle of the Land'
-              : 'Vestige Spells',
+          target:
+            grant.feature?.target ??
+            (land ? 'circle-of-the-land-terrain' : 'vestige-patron-domain'),
+          featureName: grant.feature?.name ?? (land ? 'Circle of the Land' : 'Vestige Spells'),
           level: grant.level,
           reference: grant.spellName,
           prepared: grant.mode === 'prepared' || grant.mode === 'innate',
           active,
+          ...(castOnly && { castOnly: grant.castOnly }),
+          ...(active && grant.feature?.castingNote && { castingNote: grant.feature.castingNote }),
         })
-      if (!active) continue
+      if (!active || castOnly) continue
       if (celestialCantrips && grant.mode === 'known' && grant.isCantrip) {
         const spellKey = getSpellReferenceKey(grant.spellName)
         const spell = targets.get(spellKey)
