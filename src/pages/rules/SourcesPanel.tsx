@@ -58,7 +58,9 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
-  const isBundledSrd = useGameDataStore((s) => s.dataSourceConfig?.type === 'bundled')
+  const isSessionSrd = useGameDataStore((s) => Boolean(s.sessionBundledSource))
+  const isBundledSource = useGameDataStore((s) => s.dataSourceConfig?.type === 'bundled')
+  const isBundledSrd = isSessionSrd || isBundledSource
   const { ref: sourceControlsRef, highlighted: sourceControlsHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(isSourceReadinessFocus(readinessFocus))
 
@@ -90,7 +92,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   }, [allowedSources, character, sources])
 
   useEffect(() => {
-    if (!character) return
+    if (!character || isSessionSrd) return
     if (
       configuredSources.length === allowedSources.length &&
       configuredSources.every((source, index) => source === allowedSources[index])
@@ -98,7 +100,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
       return
     }
     updateCharacter(character.id, { allowedSources })
-  }, [allowedSources, character, configuredSources, updateCharacter])
+  }, [allowedSources, character, configuredSources, isSessionSrd, updateCharacter])
 
   const sourcesByGroup = useMemo(
     () =>

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with spell picker feedback at 6,584,816 B renderer and 1,308,753 B initial.
+  // Measured with spell picker feedback at 6,591,017 B renderer and 1,314,701 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6431 * KIB,
-  initialRendererScript: 1279 * KIB,
+  rendererCode: 6437 * KIB,
+  initialRendererScript: 1284 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

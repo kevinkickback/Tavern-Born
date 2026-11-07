@@ -135,7 +135,9 @@ vi.mock('@/components/character/wizard/steps', () => ({
     </>
   ),
   RulesStep: () => null,
-  ContentStep: () => null,
+  ContentStep: ({ isBundledSrd }: { isBundledSrd: boolean }) => (
+    <p>{isBundledSrd ? 'Included SRD is active' : 'Additional sources are active'}</p>
+  ),
   RaceStep: () => null,
   ClassStep: () => null,
   BackgroundStep: () => null,
@@ -152,7 +154,7 @@ beforeEach(() => {
     isActiveCharacterDirty: false,
     addCharacter,
   })
-  useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
+  useGameDataStore.setState({ gameData: null, dataSourceConfig: null, sessionBundledSource: null })
 })
 afterEach(() => {
   cleanup()
@@ -177,6 +179,26 @@ function wizardBackdrop() {
   if (!backdrop) throw new Error('Wizard backdrop is missing')
   return backdrop
 }
+
+test('the content step uses the active session SRD while keeping the saved remote source', async () => {
+  const remote = { type: 'remote', path: 'https://example.test/data', isValid: true } as const
+  useGameDataStore.setState({
+    dataSourceConfig: remote,
+    sessionBundledSource: {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'core',
+      packVersion: '1.0.0',
+      isValid: true,
+    },
+  })
+  render(<WizardHarness />)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  expect(screen.getByText('Included SRD is active')).toBeTruthy()
+  expect(useGameDataStore.getState().dataSourceConfig).toBe(remote)
+})
 
 test('outside mouse and touch clicks preserve the current wizard step and entered input', async () => {
   const user = userEvent.setup()

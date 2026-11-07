@@ -262,7 +262,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     (state) => state.dismissUnsupportedCharacters,
   )
   const gameData = useGameDataStore((state) => state.gameData)
-  const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
+  const isBundledSrd = useGameDataStore(
+    (state) => (state.sessionBundledSource ?? state.dataSourceConfig)?.type === 'bundled',
+  )
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
