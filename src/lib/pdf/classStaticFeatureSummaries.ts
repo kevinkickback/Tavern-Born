@@ -299,7 +299,7 @@ function getClericStaticSummaries(
     'channel divinity',
     'divine intervention',
     ...(classic
-      ? ['divine intervention improvement', 'channel divinity: turn undead']
+      ? ['divine intervention improvement']
       : ['greater divine intervention', 'sear undead', 'improved blessed strikes']),
   ]
   const exact = (ref: (typeof direct)[number] | undefined) => {
@@ -310,11 +310,15 @@ function getClericStaticSummaries(
   }
   const base = baseRules.flatMap((name) => {
     const matches = direct.filter((ref) => norm(ref.name) === name)
+    if (name === 'channel divinity') {
+      // Classic later uses share the label. The first declaration owns the full rule and its options.
+      const [first, next] = matches.sort((a, b) => (a.level ?? Infinity) - (b.level ?? Infinity))
+      const feature = first?.level !== next?.level ? exact(first) : undefined
+      return feature ? [feature, ...getClericChannelDivinityOptions(feature, catalogs, source)] : []
+    }
     const feature = matches.length === 1 ? exact(matches[0]) : undefined
     if (!feature) return []
-    return !classic && name === 'channel divinity'
-      ? [feature, ...getRevisedClericChannelDivinityOptions(feature, catalogs)]
-      : [feature]
+    return [feature]
   })
   if (classic) {
     const earned = direct
@@ -344,16 +348,22 @@ function getClericStaticSummaries(
   })
 }
 
-function getRevisedClericChannelDivinityOptions(
+function getClericChannelDivinityOptions(
   feature: ClassFeature,
   catalogs: ClassChoiceFeatureCatalogs,
+  source: 'phb' | 'xphb',
 ) {
+  const names =
+    source === 'phb' ? ['channel divinity: turn undead'] : ['divine spark', 'turn undead']
+  const allowed = new Set(
+    names.map((name) => `class-feature|${name}|cleric|${source}|${feature.level}|${source}`),
+  )
   const targets: string[] = []
   scanOptionalDeclarationReferences(feature.entries, (uid, kind, row) => {
     const target = decodeOptionalDeclaration(uid, kind)?.target
     if (
-      (target === `class-feature|divine spark|cleric|xphb|${feature.level}|xphb` ||
-        target === `class-feature|turn undead|cleric|xphb|${feature.level}|xphb`) &&
+      target &&
+      allowed.has(target) &&
       exactOptionalDeclarationReference(row, uid, 'classFeature')
     )
       targets.push(target)

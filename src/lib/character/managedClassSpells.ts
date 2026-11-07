@@ -28,8 +28,8 @@ import {
   getClassCastingLevelAccess,
 } from '@/lib/5etools/classCastingSource'
 import {
+  getClericArcanaSpellChoices,
   getClericArcanaSpellRule,
-  getClericArcanaSpellSlots,
 } from '@/lib/5etools/clericArcanaSpells'
 import { hasClassicLightBonusCantrip } from '@/lib/5etools/clericDomainCantripSources'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
@@ -196,14 +196,14 @@ function resolveSlot(
   if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
     return `Restore the current ${savantGain.rule.name} feature and its spellbook schedule.`
   const arcanaRank = arcana?.rank
+  const arcanaChoice =
+    arcana &&
+    getClericArcanaSpellChoices(entry, classData).find(
+      (candidate) => managedClassSpellId(candidate.slot) === managedClassSpellId(slot),
+    )
   if (
     arcana &&
-    (!classData ||
-      !arcanaRank ||
-      authority.maxSpellLevel < arcanaRank ||
-      !getClericArcanaSpellSlots(entry, classData).some(
-        (candidate) => managedClassSpellId(candidate) === managedClassSpellId(slot),
-      ))
+    (!classData || !arcanaRank || authority.maxSpellLevel < arcanaRank || !arcanaChoice)
   )
     return `Restore the current ${arcana.name} feature and its spell schedule.`
   if (
@@ -254,7 +254,7 @@ function resolveSlot(
     secrets,
     classData,
     lore,
-    arcana,
+    arcana: arcana && arcanaChoice ? { ...arcana, classes: arcanaChoice.classes } : undefined,
     arcanaRank,
   }
 }

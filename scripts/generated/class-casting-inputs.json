@@ -291,7 +291,7 @@
     },
     {
       "file": "src/lib/5etools/clericArcanaSpells.ts",
-      "sha256": "5fdc09164799dce1ca620e91aac70a087cd88d437b5f31182dac35eb226b66a6"
+      "sha256": "8c64df0699c37132fcfb6b592657bd02d7b21df07f31c675a8811b10608bb1be"
     },
     {
       "file": "src/lib/5etools/clericDomainCantripSources.ts",

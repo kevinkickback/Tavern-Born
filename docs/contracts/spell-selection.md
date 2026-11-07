@@ -391,7 +391,7 @@ or the exact classic Included SRD record. This supports partial Additional Conte
 ## Cleric domain spells
 
 Revised domains that inherit an authored classic spell table prepare both opening rows at
-Cleric level 3, then the remaining rows at 5, 7 and 9. Require a declared same-rank reprint
+the declared subclass gain, then the remaining rows at their earned levels. Require a declared same-rank reprint
 or the exact classic Included SRD record and a unique revised spell in the current catalog.
 Native revised tables
 keep their own spell choices and ranks. Zeal's Fire Shield can create only a warm shield.
@@ -399,5 +399,8 @@ keep their own spell choices and ranks. Zeal's Fire Shield can create only a war
 Nature and Strength choose a Druid cantrip when the domain starts. Classic Death chooses a
 Necromancy cantrip. Both offered Arcana printings choose two Wizard cantrips at their first
 domain gain and one Wizard spell at each rank from 6 to 9 at Cleric level 17. These four spells
-are always prepared outside daily capacity. Classic Light's bonus cantrip respects independent
+are always prepared outside daily capacity. Mastery addresses retain the exact producer, rank,
+gain and ordinal. Counts and class filters stay live, so an edited filter preserves a saved choice
+while that spell remains eligible. A schedule with multiple descriptors at one rank is ambiguous
+because the source supplies no independent descriptor identities. Classic Light's bonus cantrip respects independent
 sources of Light. Revised Grave prepares Spare the Dying as a cantrip.

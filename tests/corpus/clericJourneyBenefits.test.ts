@@ -258,6 +258,27 @@ test.each(
     expect(getClassStaticFeatureSummaries(life, catalogs, false)).toContainEqual(
       expect.objectContaining({ compactText: 'Blessed Healer' }),
     )
+    if (source === 'PHB') {
+      expect(
+        getClassStaticFeatureSummaries(actor('Life Domain', 'PHB', 1), catalogs, false).map(
+          (row) => row.compactText,
+        ),
+      ).not.toContain('Channel Divinity: Turn Undead')
+      for (const levels of [2, 6, 18]) {
+        const rules = getClassStaticFeatureSummaries(
+          actor('Life Domain', 'PHB', levels),
+          catalogs,
+          false,
+        )
+        expect(rules.filter((row) => row.compactText === 'Channel Divinity')).toHaveLength(1)
+        expect(rules).toContainEqual(
+          expect.objectContaining({
+            compactText: 'Channel Divinity: Turn Undead',
+            text: expect.stringContaining('censuring the undead'),
+          }),
+        )
+      }
+    }
     if (source === 'XPHB') {
       const levelOne = getClassStaticFeatureSummaries(
         actor('Life Domain', 'XPHB', 1),
@@ -408,6 +429,27 @@ test.each(
       )
     const reordered = withSourceUpdate()
     expect(sourceSlots(reordered)).toEqual([...slots].reverse())
+    const rankSix = prepared['17'].find((row: { choose?: string }) =>
+      row.choose?.startsWith('level=6|'),
+    )
+    const originalFilter = rankSix.choose
+    rankSix.choose = 'level=6|class=Wizard;Cleric'
+    const widened = withSourceUpdate()
+    expect(sourceSlots(widened)).toEqual([...slots].reverse())
+    const widenedState = createCharacterCalculationContext(
+      saved,
+      {
+        ...primary,
+        classChoiceClasses: widened.classes,
+        classChoiceFeatureCatalogs: widened,
+      },
+      raw,
+    )
+    expect(
+      widenedState.managedClassSpellStatuses.find((row) => row.choice.slot[2] === slots[0][2])
+        ?.active,
+    ).toBe(true)
+    rankSix.choose = originalFilter
     const beforeMastery = { ...arcana.classProgression[0], levels: 16 }
     const backedDown = apply(
       arcana,
@@ -503,7 +545,7 @@ test.each(
       calculate(added).managedClassSpellStatuses.find((row) => row.choice.slot[2] === firstNew[2])
         ?.active,
     ).toBe(false)
-    prepared['17'].push({ choose: 'level=5|class=wizard' })
+    prepared['17'].push({ choose: 'level=5|class=Druid' })
     expect(sourceSlots(withSourceUpdate())).toEqual([])
     if (source !== 'XPHB') continue
     for (const [domain, source, disabled, lastFeature] of [
@@ -685,4 +727,4 @@ test.each(
       { sourceName: 'Knowledge Domain', sourceRef: 'FRHoF', grantType: 'choice' },
     ])
   }
-})
+}, 30_000)

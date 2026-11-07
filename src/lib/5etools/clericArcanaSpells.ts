@@ -49,9 +49,9 @@ export function getClericArcanaSpellRule(slot: ManagedClassSpellSlot) {
   const rule = getOwner(owner[2], owner[4])
   if (!rule) return undefined
   try {
-    const filter = JSON.parse(target.slice(prefix.length))
-    if (!Array.isArray(filter) || filter.length !== 3) return undefined
-    const [feature, rank, classes] = filter
+    const address = JSON.parse(target.slice(prefix.length))
+    if (!Array.isArray(address) || address.length !== 2) return undefined
+    const [feature, rank] = address
     if (
       feature !==
         `subclass-feature|${norm(rule.name)}|cleric|${rule.origin}|arcana|${rule.source}|${level}|${rule.source}` ||
@@ -61,20 +61,16 @@ export function getClericArcanaSpellRule(slot: ManagedClassSpellSlot) {
       !Number.isInteger(rank) ||
       rank < 1 ||
       rank > 9 ||
-      !Array.isArray(classes) ||
-      !classes.length ||
-      classes.some((row) => typeof row !== 'string' || !row || row !== norm(row)) ||
-      JSON.stringify(classes) !== JSON.stringify(filterKey(classes)) ||
-      target !== prefix + JSON.stringify(filter)
+      target !== prefix + JSON.stringify(address)
     )
       return undefined
-    return { ...rule, rank, classes: classes as string[] }
+    return { ...rule, rank }
   } catch {
     return undefined
   }
 }
 
-export function getClericArcanaSpellSlots(entry: CharacterClassEntry, cls: Class5e | undefined) {
+export function getClericArcanaSpellChoices(entry: CharacterClassEntry, cls: Class5e | undefined) {
   const rule = getOwner(norm(entry.source), norm(entry.subclassSource))
   if (
     !rule ||
@@ -115,8 +111,8 @@ export function getClericArcanaSpellSlots(entry: CharacterClassEntry, cls: Class
       norm(row.source) === rule.source,
   )
   const uid = refs?.length === 1 ? refs[0].ref : undefined
-  const declaration = uid && decodeOptionalDeclaration(uid, 'subclassFeature')
-  const level = declaration && declaration.decoded.level
+  const declaration = uid ? decodeOptionalDeclaration(uid, 'subclassFeature') : undefined
+  const level = declaration?.decoded.level
   if (!declaration || !level || level > entry.levels || !getCurrentNativeSubclassGain(cls, level))
     return []
   const producer = getDirectSubclassFeatureReference(domain, declaration.target)?.feature
@@ -141,21 +137,21 @@ export function getClericArcanaSpellSlots(entry: CharacterClassEntry, cls: Class
     )
       return []
     const choices = block.choices.filter((row) => row.source === 'prepared')
-    const addresses = new Set<string>()
-    const slots: ManagedClassSpellSlot[] = []
+    const ranks = new Set<number>()
+    const slots: { slot: ManagedClassSpellSlot; classes: string[] }[] = []
     for (const { count, filter, usage, level: gain } of choices) {
       if (
         gain !== level ||
         usage !== 'direct' ||
         !filter?.level ||
         !filter.classes.length ||
+        ranks.has(filter.level) ||
         slots.length + count > maximumChoices
       )
         return []
-      const target =
-        prefix + JSON.stringify([declaration.target, filter.level, filterKey(filter.classes)])
-      if (addresses.has(target)) return []
-      addresses.add(target)
+      const target = prefix + JSON.stringify([declaration.target, filter.level])
+      ranks.add(filter.level)
+      const classes = filterKey(filter.classes)
       for (let ordinal = 0; ordinal < count; ordinal++) {
         const slot: ManagedClassSpellSlot = [
           ['subclass', 'cleric', rule.printing, 'arcana domain', rule.source],
@@ -165,7 +161,7 @@ export function getClericArcanaSpellSlots(entry: CharacterClassEntry, cls: Class
           ordinal,
         ]
         if (!getClericArcanaSpellRule(slot)) return []
-        slots.push(slot)
+        slots.push({ slot, classes })
       }
     }
     return slots
@@ -173,3 +169,6 @@ export function getClericArcanaSpellSlots(entry: CharacterClassEntry, cls: Class
     return []
   }
 }
+
+export const getClericArcanaSpellSlots = (entry: CharacterClassEntry, cls: Class5e | undefined) =>
+  getClericArcanaSpellChoices(entry, cls).map((choice) => choice.slot)
