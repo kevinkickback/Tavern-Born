@@ -296,7 +296,7 @@ export function AppSidebar() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const opening = useCharacterContentOpening(() => navigate('/'))
-  const { requestOpen } = opening
+  const { requestOpen, rememberTrigger } = opening
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
 
@@ -316,6 +316,7 @@ export function AppSidebar() {
       navigate('/')
       return
     }
+    rememberTrigger()
     if (hasUnsavedChanges) {
       setPendingCharacterId(id)
       setConfirmSwitchOpen(true)

@@ -41,15 +41,10 @@ describe('RaceStep', () => {
     expect(getByRole('heading', { name: /Dragonborn\s*\(Draconblood: Brass\)/ })).toBeTruthy()
     expect(getByRole('button', { name: 'Draconblood: Brass · EGW' })).toBeTruthy()
     expect(
-      getAllByRole('button', { name: /^(Forest|Draconblood: Brass|Zinc) · / }).map(
+      getAllByRole('button', { name: /^(Forest|Draconblood: Brass|Zinc)/ }).map(
         (button) => button.textContent,
       ),
-    ).toEqual([
-      'Draconblood: Brass · DMG',
-      'Draconblood: Brass · EGW',
-      'Forest · PHB',
-      'Zinc · PHB',
-    ])
+    ).toEqual(['Draconblood: Brass · DMG', 'Draconblood: Brass · EGW', 'Forest', 'Zinc'])
     expect(onChange).not.toHaveBeenCalled()
     fireEvent.click(getByRole('button', { name: 'Draconblood: Brass · DMG' }))
     expect(onChange).toHaveBeenCalledWith({

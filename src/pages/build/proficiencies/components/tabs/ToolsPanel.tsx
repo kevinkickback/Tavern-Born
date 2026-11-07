@@ -63,23 +63,8 @@ export function ToolsPanel({
   onExpandDetails,
   onResolveChoiceSelection,
 }: ToolsPanelProps) {
-  const hasPendingChoices = ledger.choices.some(
-    (choice) => choice.domain === 'tools' && choice.selected.length < choice.chooseCount,
-  )
   return (
     <div className="space-y-4">
-      {toolChoiceSlots.length > 0 && (
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          {toolChoiceSlots.map((slot) => (
-            <li key={slot.id}>
-              {slot.sourceName}
-              {slot.source && ' (' + slot.source + ')'}: choose {slot.remaining}{' '}
-              {formatProfLabel(slot.label)}
-              {slot.options.length === 0 && ' · No eligible tools available'}
-            </li>
-          ))}
-        </ul>
-      )}
       <div className="flex items-center justify-end gap-2">
         <span className="text-xs text-muted-foreground">Sort:</span>
         <Select value={sort} onValueChange={(value) => onSortChange(value as ToolSort)}>
@@ -163,14 +148,19 @@ export function ToolsPanel({
                   })
                   onExpandDetails(true)
                 }
-
                 const choose = (id: string) =>
                   onResolveChoiceSelection('tools', toolName, !isChoiceSelected, id)
                 const action = isChoiceSelected ? 'Remove choice' : 'Choose'
+                const toolLabel = formatProfLabel(toolName)
                 const button = (
                   <button
                     key={toolName}
                     type="button"
+                    aria-label={
+                      rowState === 'unavailable'
+                        ? `View details for ${toolLabel}, proficiency unavailable`
+                        : undefined
+                    }
                     onClick={() => {
                       if (options.length === 1) choose(options[0].id)
                       if (!actionable) {
@@ -180,16 +170,16 @@ export function ToolsPanel({
                     }}
                     onMouseEnter={focusTool}
                     onFocus={focusTool}
-                    title={actionable ? action + ': ' + formatProfLabel(toolName) : undefined}
+                    title={actionable ? `${action}: ${toolLabel}` : undefined}
                     className={cn(
                       'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      actionable ? 'cursor-pointer' : 'cursor-default',
-                      proficiencyRowClass(rowState, hasPendingChoices),
+                      'cursor-pointer',
+                      proficiencyRowClass(rowState, true),
                     )}
                   >
                     <ProficiencyStateIcon state={rowState} actionable={actionable} />
                     <span className="truncate">
-                      {formatProfLabel(toolName)}
+                      {toolLabel}
                       {genericKind && isChoiceSelected && ' (choose a specific tool)'}
                     </span>
                     <span className="ml-auto flex shrink-0 items-center gap-2">
@@ -217,10 +207,10 @@ export function ToolsPanel({
                         return (
                           <DropdownMenuItem key={id} onSelect={() => choose(id)}>
                             {action}: {sourceName}
-                            {source && ' (' + source + ')'}
-                            {related.length > 1 && ' · ' + formatProfLabel(label)}
+                            {source && ` (${source})`}
+                            {related.length > 1 && ` · ${formatProfLabel(label)}`}
                             {relatedLabel.length > 1 &&
-                              ' ' + (relatedLabel.findIndex((option) => option.id === id) + 1)}
+                              ` ${relatedLabel.findIndex((option) => option.id === id) + 1}`}
                           </DropdownMenuItem>
                         )
                       })}

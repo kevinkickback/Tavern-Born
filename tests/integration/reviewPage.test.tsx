@@ -221,7 +221,7 @@ describe('BuildReviewPage', () => {
     expect(screen.queryByText('Calculated totals')).toBeNull()
     const blocked = screen.getByRole('button', { name: /Finish Test language choice/i })
     const suggestion = screen.getByRole('button', { name: /Add a portrait/i })
-    expect(within(blocked).getByText('Needs attention')).toBeTruthy()
+    expect(within(blocked).queryByText('Needs attention')).toBeNull()
     expect(within(suggestion).getByText('Suggestion')).toBeTruthy()
     expect(blocked.querySelectorAll('svg')).toHaveLength(1)
     expect(suggestion.querySelectorAll('svg')).toHaveLength(1)

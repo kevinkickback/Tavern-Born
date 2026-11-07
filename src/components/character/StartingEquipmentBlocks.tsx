@@ -99,7 +99,7 @@ export function StartingEquipmentBlocks({
           Apply current package
         </Button>
       )}
-      {decisions.map((block, index) => {
+      {decisions.map((block) => {
         if (block.isFixed)
           return (
             <fieldset
@@ -112,7 +112,7 @@ export function StartingEquipmentBlocks({
                   className="h-4 w-4 shrink-0 text-teal-600/80 dark:text-teal-400/70"
                   weight="duotone"
                 />
-                <span>Choice {index + 1}</span>
+                <span>Choice {block.index + 1}</span>
               </div>
               <div>{contents(block.index, '_', block.options._)}</div>
             </fieldset>
@@ -146,7 +146,7 @@ export function StartingEquipmentBlocks({
                     className="h-4 w-4 shrink-0 text-teal-600/80 dark:text-teal-400/70"
                     weight="duotone"
                   />
-                  <span>Choice {index + 1}</span>
+                  <span>Choice {block.index + 1}</span>
                 </div>
                 <TabsList
                   aria-label={`${label} choice ${block.index + 1}`}

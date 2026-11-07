@@ -348,7 +348,7 @@ export function BuildProficienciesTabsPanel({
         other: [],
       }
       for (const t of visibleToolCandidates) {
-        const kind = toolTypeMap.get(t.toLowerCase())
+        const kind = toolTypeMap.get(normalizeKey(t))
         const key = kind && kind in buckets ? kind : 'other'
         buckets[key].push(t)
       }

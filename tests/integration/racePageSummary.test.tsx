@@ -165,7 +165,7 @@ describe('Race page summary', () => {
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('combobox', { name: 'Subrace' }))
-    await user.click(screen.getByRole('option', { name: 'A · B|C' }))
+    await user.click(screen.getByRole('option', { name: 'A' }))
     const changed = characterPersistenceSchema.parse(
       JSON.parse(JSON.stringify(useCharacterStore.getState().activeCharacter)),
     )
@@ -250,7 +250,7 @@ describe('Race page summary', () => {
     if (variant === 'parsed-name-trim') {
       const user = userEvent.setup()
       await user.click(screen.getByRole('combobox', { name: 'Subrace' }))
-      await user.click(screen.getByRole('option', { name: 'Child|Exact · CASE' }))
+      await user.click(screen.getByRole('option', { name: 'Child|Exact' }))
     } else {
       expect(useCharacterStore.getState().activeCharacter).toBe(character)
       expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
@@ -476,17 +476,18 @@ describe('Race page summary', () => {
     expect.soft(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
     expect.soft(screen.queryByRole('link', { name: 'Choose bonuses' })).toBeNull()
     expect(screen.getByText('CON +1')).toBeTruthy()
+    expect(screen.getByText('Saved subrace source TEST')).toBeTruthy()
     if (missing === 'absent') {
       expect(screen.queryByRole('combobox', { name: 'Subrace' })).toBeNull()
     } else {
       const user = userEvent.setup()
       const selector = screen.getByRole('combobox', { name: 'Subrace' })
-      expect(selector.textContent).toBe('Child · TEST')
+      expect(selector.textContent).toBe(missing === 'sibling' ? 'Child' : 'Child · TEST')
       await user.click(selector)
       expect(screen.getAllByRole('option')).toHaveLength(1)
       expect(
         screen.getByRole('option', {
-          name: missing === 'sibling' ? 'Sibling · TEST' : 'Child · OTHER',
+          name: missing === 'sibling' ? 'Sibling' : 'Child · OTHER',
         }),
       ).toBeTruthy()
       await user.keyboard('{Escape}')
@@ -500,7 +501,7 @@ describe('Race page summary', () => {
     })
     expect(useCharacterStore.getState().activeCharacter).toBe(character)
     expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
-    expect(screen.getByRole('combobox', { name: 'Subrace' }).textContent).toBe('Child · TEST')
+    expect(screen.getByRole('combobox', { name: 'Subrace' }).textContent).toBe('Child')
     expect(screen.getByText('CON +1')).toBeTruthy()
   })
 

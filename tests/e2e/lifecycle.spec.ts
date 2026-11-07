@@ -130,8 +130,16 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await page.getByRole('heading', { name: fixture.name, exact: true }).click()
   await expect(missingRules).toContainText(fixture.name)
   await expect(missingRules.getByRole('list', { name: 'Unavailable saved rules' })).toBeVisible()
-  await missingRules.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await missingRules.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(page.getByRole('banner').getByText(fixture.name, { exact: true })).toHaveCount(0)
+  await page.getByRole('heading', { name: fixture.name, exact: true }).click()
+  await missingRules.getByRole('link', { name: 'Game Data settings' }).click()
+  await expect(page).toHaveURL(/\/settings\?section=data$/)
+  await expect(page.getByRole('tab', { name: 'Game Data', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await page.goBack()
   await selectCharacterFromHome(page, fixture.name)
   await page.getByRole('button', { name: 'Details' }).click()
   await page.getByRole('link', { name: 'Portrait' }).click()

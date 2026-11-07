@@ -314,14 +314,15 @@ export function BuildProficienciesPage() {
 
   const toolTypeMap = useMemo(() => {
     const map = new Map<string, string>()
-    for (const [kind, toolNames] of Object.entries(toolSubtypeOptionsByKind)) {
-      if (kind === 'tool') continue // 'tool' is a superset of all subtypes; skip to avoid overwriting specific-kind entries
-      for (const toolName of toolNames) {
-        map.set(toolName.toLowerCase(), kind)
+    for (const pools of [retainedToolSubtypeOptionsByKind, toolSubtypeOptionsByKind]) {
+      for (const toolName of pools.tool) map.set(normalizeKey(toolName), 'tool')
+      for (const [kind, toolNames] of Object.entries(pools)) {
+        if (kind === 'tool') continue
+        for (const toolName of toolNames) map.set(normalizeKey(toolName), kind)
       }
     }
     return map
-  }, [toolSubtypeOptionsByKind])
+  }, [retainedToolSubtypeOptionsByKind, toolSubtypeOptionsByKind])
 
   const toolChoiceSlots = useMemo(
     () =>

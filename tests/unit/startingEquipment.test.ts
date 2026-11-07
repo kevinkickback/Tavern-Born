@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import {
   buildItemLookup,
@@ -19,6 +20,20 @@ function makeItem(name: string, source = 'PHB', type = 'W'): Item5e {
 }
 
 const EMPTY_LOOKUP = new Map<string, Item5e>()
+
+test('keeps the two bundled classic Warlock simple-weapon choices distinct in diagnostics', () => {
+  const { class: classes } = JSON.parse(
+    readFileSync('resources/srd/core/data/class/class-warlock.json', 'utf8'),
+  ) as { class: { source: string; startingEquipment: unknown }[] }
+  const classic = classes.find(({ source }) => source === 'PHB')!
+  const blocks = getClassDefaultEquipmentBlocks(classic.startingEquipment)
+  const { issues } = resolveEquipmentWithBlockChoices(blocks, EMPTY_LOOKUP, ['b'])
+
+  expect(issues?.filter((issue) => issue.includes('for “Simple weapons”'))).toEqual([
+    'Choose exactly 1 item for “Simple weapons” (choice 1, package B, item 1).',
+    'Choose exactly 1 item for “Simple weapons” (choice 4, item 2).',
+  ])
+})
 
 // ---------------------------------------------------------------------------
 // buildItemLookup

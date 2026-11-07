@@ -4,7 +4,10 @@ import { Input } from '@/components/ui/input'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
-import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
+import {
+  getSubraceDisplayName,
+  isSubraceDisplayNameAmbiguous,
+} from '@/lib/calculations/raceDisplay'
 import {
   getDamageTraitDisplay,
   getLanguageDisplay,
@@ -267,6 +270,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                   </span>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {orderedSubraces.map((sr) => {
+                      const name = getSubraceDisplayName(selectedRace.name, sr.name)
                       const isActive =
                         sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? '')
                       return (
@@ -281,8 +285,14 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                               : 'bg-card border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
                           )}
                         >
-                          {getSubraceDisplayName(selectedRace.name, sr.name)}
-                          {sr.source && ` · ${sr.source}`}
+                          {name}
+                          {sr.source &&
+                            isSubraceDisplayNameAmbiguous(selectedRace.name, name, subraces) && (
+                              <>
+                                {' · '}
+                                <span className="text-[10px] opacity-75">{sr.source}</span>
+                              </>
+                            )}
                         </button>
                       )
                     })}

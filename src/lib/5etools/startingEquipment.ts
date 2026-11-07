@@ -74,6 +74,27 @@ export interface GenericEquipmentChoice {
   diagnostic?: string
 }
 
+// Presentation labels do not participate in eligibility or source matching.
+const equipmentChoiceLabels: Readonly<Record<string, string | null>> = {
+  __proto__: null,
+  weaponsimple: 'Simple weapons',
+  weaponsimplemelee: 'Simple melee weapons',
+  weaponmartial: 'Martial weapons',
+  weaponmartialmelee: 'Martial melee weapons',
+  instrumentmusical: 'Musical instruments',
+  toolartisan: 'Artisan’s tools',
+  setgaming: 'Gaming sets',
+  focusspellcastingarcane: 'Arcane focus',
+  focusspellcastingholy: 'Holy symbol',
+  focusspellcastingdruidic: 'Druidic focus',
+}
+
+export function formatEquipmentChoiceLabel(token: string): string {
+  const label =
+    equipmentChoiceLabels[token.toLowerCase()] ?? token.replace(/([a-z])([A-Z])/g, '$1 $2')
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
 function normalizeName(value: string): string {
   return value.trim().toLowerCase()
 }
@@ -375,13 +396,18 @@ function resolveEntries(
           )
         : { candidates: [], diagnostic: 'Starting item rules are unavailable.' }
       const selected = context?.genericSelections?.[genericChoiceKey] ?? []
+      const choiceToken = token ?? rawItem?.name ?? target?.name ?? 'Item group'
+      const choiceLabel = formatEquipmentChoiceLabel(choiceToken)
+      const packageLabel =
+        context.optionKey === '_' ? '' : `, package ${context.optionKey.toUpperCase()}`
+      const choiceDescription = `“${choiceLabel}” (choice ${context.blockIndex + 1}${packageLabel}, item ${entryIndex + 1})`
       if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-        issues.push(`Invalid quantity for ${genericChoiceKey}.`)
+        issues.push(`The starting quantity for ${choiceDescription} is invalid.`)
         return
       }
       genericChoices.push({
         key: genericChoiceKey,
-        token: token ?? rawItem?.name ?? target?.name ?? 'Item group',
+        token: choiceToken,
         quantity,
         candidates: pool.candidates.map((item) => ({ name: item.name, source: item.source })),
         diagnostic: pool.diagnostic,
@@ -389,7 +415,7 @@ function resolveEntries(
       if (pool.diagnostic) issues.push(pool.diagnostic)
       if (selected.length !== quantity)
         issues.push(
-          `Choose exactly ${quantity} item${quantity === 1 ? '' : 's'} for ${genericChoiceKey}.`,
+          `Choose exactly ${quantity} item${quantity === 1 ? '' : 's'} for ${choiceDescription}.`,
         )
       const counted = new Map<
         string,
@@ -400,7 +426,7 @@ function resolveEntries(
           (item) => startingItemKey(item) === startingItemKey(ref),
         )
         if (!candidate)
-          issues.push(`The selected item for ${genericChoiceKey} is unavailable or ineligible.`)
+          issues.push(`A selected item for ${choiceDescription} is unavailable or ineligible.`)
         const reference: StartingEquipmentReference = {
           kind: 'item',
           name: candidate?.name ?? ref.name,
