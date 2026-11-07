@@ -49,6 +49,373 @@
       "copies": []
     },
     {
+      "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+      "rawDigest": "085a8fa92b66b35ab72f62b5158170e537a3ebc23558ca6b5ead9c05ac8b2766",
+      "metadataDigest": "607d8ba9cfe609b61d9006a3871a43f08e49797b3f47095913658f7b4d6f94e5",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "9d52343bde0d675d8d598d268c762fe560a104b5fe4c400593e5d660008eae2f"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
+      "rawDigest": "0cbaf1c85911e944024384f380c4530a48928f416db4523b4ff4f887ca43ec39",
+      "metadataDigest": "62c077ee00dcd945babaaa8a2aac134d1875d5a17cd44e9bd35a0e89fc586f27",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "a55eb0284d5d0dfa48fabb802a55416dafd257920d64e15123487926f74e208b"
+        },
+        {
+          "digest": "622cc5b98a2e5a89d459a7e4ec4c780a1243bd37e132cc63834d411b7ad9efbc"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb",
+      "rawDigest": "52c5484fee175b0118ddd8c8bfcf48dc9622467e78eca77e2b41a455acbd30d5",
+      "metadataDigest": "f368d8dcef7f7d2eb1a58806e02e92dfa69def7103bb0926d91c7a59a95e7723",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "ad073a13ddb561483fbabe6593a8575963658bb0fef6545e50618b69b5dbce90"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb",
+      "rawDigest": "c83e8e7466f7c564d982b3f618dc39ef75a054240e787861898223d42a97eee9",
+      "metadataDigest": "bf055aa1a1280304b4a01f85572d5bba302a3741689debc6ba13bc4d0bf764e4",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "123c96dc263a9746a220624ca5bc345ea63c98a7563b8128f57aaf383172b84d"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw",
+      "rawDigest": "84a9e899f69155898066d4ef8859e6bbca3676d4c4a3d9eca835bc4d1c62b50b",
+      "metadataDigest": "4831b3bf86da5ca1d1634cd80bc5df7b61e5195cba4606ea52acb8da0b5bd100",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "15e97b4cca346d265e39d5f370b413ece05f7991339d0c71914e5a7eaf96ed0e"
+        },
+        {
+          "digest": "c486554b32360642e335895d33ee8b675f4fea406a2af1362aa066146e9f4c4b"
+        },
+        {
+          "digest": "8fca3f61358bb7e8e42832056ca252c818a38c7c98421d47ee2d1fcfe8cbb123"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of lore|bard|phb|lore|phb|3|phb",
+      "rawDigest": "2972b4b6c297f7e64ff4d3121f5bd32cff609d7e17bee8430564aa39c68434f4",
+      "metadataDigest": "9901b8d031b8e495d7254591c72736c258465017c2a45b3d2559da6ef6e2f419",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "84dcd5b85acb0e5451287cd05ddd05baaff1a764113b43a3ccffc3d2373ce960"
+        },
+        {
+          "digest": "7cdc2f1c77551071a60aea0ec353e5f1dfc08d4e9bb4adc58a659a0bacd98909"
+        },
+        {
+          "digest": "466c3ffc9084b6010f522d6b8060173bdd8f8a1821b0c5c36b1a657cd1319bfb"
+        },
+        {
+          "digest": "d91e2f479a2fb9f8fce35c0dace07d174af191325bbc32b00589f57b6bea4f27",
+          "reference": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb"
+        },
+        {
+          "digest": "0e6975bdd8e42a84fe6c79e70dcb5eb305a2dc9970ce01f554a73450012cbb1a",
+          "reference": "subclass-feature|cutting words|bard|phb|lore|phb|3|phb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb",
+      "rawDigest": "b5a879ae1a7d081b6cf9b0a28581dc88f1310b3cf67b263fc27d8e19e6a1874d",
+      "metadataDigest": "ec54c16a392eea19c7e2ed65c9ab5f3a692886c621939f35d78f1541dd7acc4a",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "1fc4f635848641f066eec175235e1fbd9f0d3102515e73d4df3b2bee6be462f8"
+        },
+        {
+          "digest": "58221e9e016a64984ec2e68469b2f8a200fb714e125839c264207a12641e2b22"
+        },
+        {
+          "digest": "d9ed0447f28acea81f2bf56d94eb50ab8cdffff28cb7b0aef6bffb2abac7ad38",
+          "reference": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb"
+        },
+        {
+          "digest": "f793c0b20ff280837d8595e080cb766054c33929d662ff7fb60be32cf619a0c3",
+          "reference": "subclass-feature|cutting words|bard|xphb|lore|xphb|3|xphb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of spirits|bard|xphb|spirits|rhw|3|rhw",
+      "rawDigest": "75b8bc34572108584708f10e6e2eb947942f228b164999e2c5583c3c62decc8d",
+      "metadataDigest": "b40edb7da25dcc5111ec1431a06b0438d82e3dbb10e89ecce89b9617954c4c2e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "c862ca179d2bdc0a0ebb0e43fba5901220be8521ff2568399e0a038778b0c3d8"
+        },
+        {
+          "digest": "26a046ac7613ab5042ce32a9de2da83764d4bd130a6ffb79d3838c95dc22e761"
+        },
+        {
+          "digest": "4c480be18b07a937d486cca51df96bc31c851882aa3f68c2cd25e1409ec49057",
+          "reference": "subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw"
+        },
+        {
+          "digest": "9da059e02e2bdbd32d3d75fbba4a61f8cceff66a7ef2dc7c85c0dd5658138b00",
+          "reference": "subclass-feature|spirits from beyond|bard|xphb|spirits|rhw|3|rhw"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of swords|bard|phb|swords|xge|3|xge",
+      "rawDigest": "2a8b5754678c983c82cca4d100682f1d99054a543e05f075b4a8a09e0f0f400d",
+      "metadataDigest": "f977a52fc7c68e413266e2b8620c85a447daeaf3787e9cb50ee85d38128aa961",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "937b58447b676f0bcb0dceddcd2f1d766e278dc9eb60f8cb5aa82ab3ebdbd0c6"
+        },
+        {
+          "digest": "00eb4de329892ce8b530b40986306f98df9ba579488540d60dd5aef90222102d"
+        },
+        {
+          "digest": "9f7153459c628429bd65d0600d965c9104e2b4829e8615943e4b1590857f2b00"
+        },
+        {
+          "digest": "b82e2c20d96e14d28bcbf59e627d856b63f232cb62d2b3f86aec4ea433d99180",
+          "reference": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge"
+        },
+        {
+          "digest": "821031478660d1734d6970f6d2338362da8aa78cc1619aaec5df361856dab633",
+          "reference": "subclass-feature|fighting style|bard|phb|swords|xge|3|xge"
+        },
+        {
+          "digest": "bc1a2ff559d6567a52bc601f1a4e3a505f9c7ac46ba2c74e407c582b24497624",
+          "reference": "subclass-feature|blade flourish|bard|phb|swords|xge|3|xge"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of the moon|bard|xphb|moon|frhof|3|frhof",
+      "rawDigest": "8a51f062ab4c0447b8eab11812a383a380be567f9f3c42f4af85862dce2f7b10",
+      "metadataDigest": "5574413a2f0dc0b4e278c72fb97f896f1821ca811f7d77e67a1823e9be2d7049",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "47b63de97a64a97a7c011ca97b50afabc3196460db6e8c54acc452fb32658c39"
+        },
+        {
+          "digest": "f89354d95b8679ddf0bf47597aee142c9f6959cdf7d35f2352ce0afa5a2844bb"
+        },
+        {
+          "digest": "d793816496acf8a5cdaf0464009685378a8a04bb56befe36c200c9fa54319415",
+          "reference": "subclass-feature|moon's inspiration|bard|xphb|moon|frhof|3|frhof"
+        },
+        {
+          "digest": "89d59b14cf41a148ff5efb4ec1fc52ac784fd1a1bc77df24a8be58244fbf83ef",
+          "reference": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of valor|bard|phb|valor|phb|3|phb",
+      "rawDigest": "11dcc3d0cf1c42ff2e0258d775f89dff5b126ad2879fff4add089d56a00b63a3",
+      "metadataDigest": "82472dbcc8b4e503fb32dd49cf96c0cf1e5e128ec8de7b4158c2fb2766220f52",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "d8a0abf203b1d698af140dc245be95ffc542d169f90d063947828244aa6f7f1c"
+        },
+        {
+          "digest": "6d28a3e3a7ca1acb8ae10855c17a92cef666096bf1edbc6df908078f6674d4b2",
+          "reference": "subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb"
+        },
+        {
+          "digest": "83e069def6ba0ef7d7d3eee743191fca35803182e8f2b39578ee95425ebbf7d9",
+          "reference": "subclass-feature|combat inspiration|bard|phb|valor|phb|3|phb"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|college of valor|bard|xphb|valor|xphb|3|xphb",
+      "rawDigest": "b1dcb4c2ef13ca50eac97f05bab38f1f4010a2c8c680af27b3dbbf3fe12e488b",
+      "metadataDigest": "61036fd55e33aa915404edbf860f3d2a1714e015a62ab7f22b4539429c2c1426",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "eb95dd62d324740cd13519e7c4ccb4cb47a36dab8685d783f8e6b5f0625f48c3"
+        },
+        {
+          "digest": "39a30807b939a3ad8339e071749382009404d71864891642fe8cabc134ab09c7"
+        },
+        {
+          "digest": "ea78a20976a494fb8494e2b6c5cc77c1357bd62a7dfd83388c259438d51a5b46",
+          "reference": "subclass-feature|combat inspiration|bard|xphb|valor|xphb|3|xphb"
+        },
+        {
+          "digest": "e4f5087755eaa0e3c36849455cb69130c2574be4f1de4d475fe978b6c9113d8f",
+          "reference": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb"
+        }
+      ],
+      "copies": []
+    },
+    {
       "target": "subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb",
       "rawDigest": "27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe",
       "metadataDigest": "2242821534576c6a4aca9a85cd103dc873c137a2c59bbd2df1306e4b72948cc7",
@@ -410,6 +777,32 @@
       ]
     },
     {
+      "target": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb",
+      "rawDigest": "0e0e0a1c03af97fc02b3c234cba7656fd9a11f447e246d891638543ea834973d",
+      "metadataDigest": "bac61bb45786ba1421fffa3f579e374ceaf93cabd4750ec888a9b97a73ca850e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "9d9b73b00f80dcccebc8713d7ef7cdf82b128341462151eb42f8787e4ec45f45"
+        },
+        {
+          "digest": "2bd9a88f2c7b1ac5a920f5209cae54b1d943332312078e0ada4d7f3c6f1fb557"
+        }
+      ],
+      "copies": []
+    },
+    {
       "target": "subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof",
       "rawDigest": "e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223",
       "metadataDigest": "7a2b89311b5e76debc8f8836525154f56c8d4f14bc3e6f6908a94c74bd372687",
@@ -448,6 +841,31 @@
         {
           "digest": "8ca134657501f4b68f6f566714b49673f06b8d0fac99f35a966637ff60f2c971",
           "reference": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
+      "rawDigest": "5ae6e3c180b432b38fd5dad7bc5d593fb2802aae383e6e0fa2a79c463516ae52",
+      "metadataDigest": "2b7585b9c1e7d323b7d50fd9ec0a19b4ff754d6cbc49f668a827d75b328f74a6",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "bbbbe85044b50414ef8de8799313282ae33c66cd7d5b430a41330b9d792d5296"
+        },
+        {
+          "digest": "29572f32a171f0ddda22febc02e43b6b71f34543574ae8409a465dddff317e58"
         }
       ],
       "copies": []
@@ -738,6 +1156,364 @@
     }
   ],
   "roots": [
+    {
+      "owner": ["bard", "phb", "college of lore", "phb"],
+      "shortName": "Lore",
+      "rawDigest": "de4377ab926377dff938383fad05101f28f785ae8d930a982c2427a677dda7f5",
+      "metadataDigest": "93b6e150a1387b58602603cd91b9e36d0cb3beb262d5c4a270db988b9268cca7",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "srd",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Lore|Bard||Lore||3",
+        "Additional Magical Secrets|Bard||Lore||6",
+        "Peerless Skill|Bard||Lore||14"
+      ],
+      "intro": "College of Lore|Bard||Lore||3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+          "refs": ["College of Lore|Bard||Lore||3", "Bonus Proficiencies|Bard||Lore||3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "phb", "college of swords", "xge"],
+      "shortName": "Swords",
+      "rawDigest": "f920f9b45e102c021d88cd46042303cb997b27429fa031610070cd0a327c6a65",
+      "metadataDigest": "565141e995d67c71bf92d0ac88fc746ae10156f89345421fb97a4d687b1697c3",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Swords|Bard||Swords|XGE|3",
+        "Extra Attack|Bard||Swords|XGE|6",
+        "Master's Flourish|Bard||Swords|XGE|14"
+      ],
+      "intro": "College of Swords|Bard||Swords|XGE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
+          "refs": [
+            "College of Swords|Bard||Swords|XGE|3",
+            "Bonus Proficiencies|Bard||Swords|XGE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "phb", "college of valor", "phb"],
+      "shortName": "Valor",
+      "rawDigest": "46f79844b37efbd330f8bcdbf5cb9a24b8a19beb62ae8ef8d8ad32b3fa3f980a",
+      "metadataDigest": "3b5a8a56bf26d9d17895b2a512d25d3acb781fea7e2b2a60dd0a093ce9fd354a",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Valor|Bard||Valor||3",
+        "Extra Attack|Bard||Valor||6",
+        "Battle Magic|Bard||Valor||14"
+      ],
+      "intro": "College of Valor|Bard||Valor||3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb",
+          "refs": ["College of Valor|Bard||Valor||3", "Bonus Proficiencies|Bard||Valor||3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of lore", "phb"],
+      "shortName": "Lore",
+      "rawDigest": "3993b83e2e38798153462492df3f06bb8007b24a3fac66b0d92a94c93840ccdb",
+      "metadataDigest": "f0d744f54c321999ddb7ed2e20eaa8df9915c6dee415598e08d4a2016787a94d",
+      "fields": [
+        "_copy",
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "srd",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "College of Lore|PHB|Lore|Bard|PHB",
+          "digest": "de4377ab926377dff938383fad05101f28f785ae8d930a982c2427a677dda7f5"
+        }
+      ],
+      "declarations": [
+        "College of Lore|Bard||Lore||3",
+        "Additional Magical Secrets|Bard||Lore||6",
+        "Peerless Skill|Bard||Lore||14"
+      ],
+      "intro": "College of Lore|Bard||Lore||3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+          "refs": ["College of Lore|Bard||Lore||3", "Bonus Proficiencies|Bard||Lore||3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of lore", "xphb"],
+      "shortName": "Lore",
+      "rawDigest": "d6a563f480831c833018a70e1eb1289f13d5e1884b27d1330b37373ab0531a83",
+      "metadataDigest": "9352b2ff610487906dab958c81b4f17fb593b5e1f6019505dd500345979a342e",
+      "fields": [
+        "additionalSpells",
+        "basicRules2024",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "srd52",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Lore|Bard|XPHB|Lore|XPHB|3",
+        "Magical Discoveries|Bard|XPHB|Lore|XPHB|6",
+        "Peerless Skill|Bard|XPHB|Lore|XPHB|14"
+      ],
+      "intro": "College of Lore|Bard|XPHB|Lore|XPHB|3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb",
+          "refs": [
+            "College of Lore|Bard|XPHB|Lore|XPHB|3",
+            "Bonus Proficiencies|Bard|XPHB|Lore|XPHB|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of spirits", "rhw"],
+      "shortName": "Spirits",
+      "rawDigest": "c8101c5dbde1da418bc217d87ff9edb82a006588f511ec88bf9ac65d392a4a7c",
+      "metadataDigest": "3a3c9d5e30b9a74a6d70a043a1da9e2d298fe5633eabaad69f55e450c987aaf4",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Spirits|Bard|XPHB|Spirits|RHW|3|RHW",
+        "Empowered Channeling|Bard|XPHB|Spirits|RHW|6|RHW",
+        "Mystical Connection|Bard|XPHB|Spirits|RHW|14|RHW"
+      ],
+      "intro": "College of Spirits|Bard|XPHB|Spirits|RHW|3|RHW",
+      "paths": [
+        {
+          "target": "subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw",
+          "refs": [
+            "College of Spirits|Bard|XPHB|Spirits|RHW|3|RHW",
+            "Channeler|Bard|XPHB|Spirits|RHW|3|RHW"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of swords", "xge"],
+      "shortName": "Swords",
+      "rawDigest": "2903aaedaf5c59c023f823b9805b7a5e088bcc12b23f08be1c1749fa10a24d11",
+      "metadataDigest": "24338202b17b9600eda1ee386692a48ccc0915efe4481847a65f6663f8fc4c14",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "fluff",
+        "hasFluffImages",
+        "name",
+        "optionalfeatureProgression",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "College of Swords|XGE|Swords|Bard|PHB",
+          "digest": "f920f9b45e102c021d88cd46042303cb997b27429fa031610070cd0a327c6a65"
+        }
+      ],
+      "declarations": [
+        "College of Swords|Bard||Swords|XGE|3",
+        "Extra Attack|Bard||Swords|XGE|6",
+        "Master's Flourish|Bard||Swords|XGE|14"
+      ],
+      "intro": "College of Swords|Bard||Swords|XGE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
+          "refs": [
+            "College of Swords|Bard||Swords|XGE|3",
+            "Bonus Proficiencies|Bard||Swords|XGE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of the moon", "frhof"],
+      "shortName": "Moon",
+      "rawDigest": "8e98ea2f1f51997fa22c7fb4693dc0e1f0535df86ea4f6af050c71da258a6025",
+      "metadataDigest": "f365b489048f8c48ba5a838c2d0ad66236393b1b34a35e91982e064be3cf66a8",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of the Moon|Bard|XPHB|Moon|FRHoF|3|FRHoF",
+        "Blessing of Moonlight|Bard|XPHB|Moon|FRHoF|6|FRHoF",
+        "Eventide's Splendor|Bard|XPHB|Moon|FRHoF|14|FRHoF"
+      ],
+      "intro": "College of the Moon|Bard|XPHB|Moon|FRHoF|3|FRHoF",
+      "paths": [
+        {
+          "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
+          "refs": [
+            "College of the Moon|Bard|XPHB|Moon|FRHoF|3|FRHoF",
+            "Primal Lore|Bard|XPHB|Moon|FRHoF|3|FRHoF"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of valor", "phb"],
+      "shortName": "Valor",
+      "rawDigest": "300eb181e1443fc062f4f3cc02e9f89114a983427c467fc54f44335fb1562436",
+      "metadataDigest": "0ecc8adccee088702613bbd9f389fa36ced65e5a98a681ea5b27b1b0074d8de6",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "name",
+        "page",
+        "reprintedAs",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "College of Valor|PHB|Valor|Bard|PHB",
+          "digest": "46f79844b37efbd330f8bcdbf5cb9a24b8a19beb62ae8ef8d8ad32b3fa3f980a"
+        }
+      ],
+      "declarations": [
+        "College of Valor|Bard||Valor||3",
+        "Extra Attack|Bard||Valor||6",
+        "Battle Magic|Bard||Valor||14"
+      ],
+      "intro": "College of Valor|Bard||Valor||3",
+      "paths": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb",
+          "refs": ["College of Valor|Bard||Valor||3", "Bonus Proficiencies|Bard||Valor||3"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["bard", "xphb", "college of valor", "xphb"],
+      "shortName": "Valor",
+      "rawDigest": "1267372af9e552906b5e6d3fbc28351c1d35ca7e64e0d3f4709c269cc724aaef",
+      "metadataDigest": "b71d2b26f7fe4e315547f959c2171ab43b0aa8ed7f5bf5f6ad12da7f22cccc12",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "College of Valor|Bard|XPHB|Valor|XPHB|3",
+        "Extra Attack|Bard|XPHB|Valor|XPHB|6",
+        "Battle Magic|Bard|XPHB|Valor|XPHB|14"
+      ],
+      "intro": "College of Valor|Bard|XPHB|Valor|XPHB|3",
+      "paths": [
+        {
+          "target": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb",
+          "refs": [
+            "College of Valor|Bard|XPHB|Valor|XPHB|3",
+            "Martial Training|Bard|XPHB|Valor|XPHB|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
     {
       "owner": ["cleric", "phb", "knowledge domain (psa)", "psa"],
       "shortName": "Knowledge (PSA)",
@@ -1701,6 +2477,198 @@
         }
       ],
       "fixedOnly": true
+    },
+    {
+      "features": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+          "rawDigest": "c9281c5d9c4341fa619a0973938730c063fcc26d38d49b8d8be8af7676c09ae3",
+          "metadataDigest": "8cdda17e55feb081d53ac425843dd2607cee4227c046db3a4a03d7f42b9be674",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "header",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "9d52343bde0d675d8d598d268c762fe560a104b5fe4c400593e5d660008eae2f"
+            }
+          ],
+          "copies": []
+        },
+        {
+          "target": "subclass-feature|college of lore|bard|phb|lore|phb|3|phb",
+          "rawDigest": "ffce4fb6144432c01f226c46739fe5eda0e386e22825734b8531574451fbc061",
+          "metadataDigest": "32d14b11e6bc572a41bd84da30b46b5b652f962c786d95f13b9d5fad934c83d5",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "level",
+            "name",
+            "source",
+            "srd",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "84dcd5b85acb0e5451287cd05ddd05baaff1a764113b43a3ccffc3d2373ce960"
+            },
+            {
+              "digest": "7cdc2f1c77551071a60aea0ec353e5f1dfc08d4e9bb4adc58a659a0bacd98909"
+            },
+            {
+              "digest": "466c3ffc9084b6010f522d6b8060173bdd8f8a1821b0c5c36b1a657cd1319bfb"
+            },
+            {
+              "digest": "d91e2f479a2fb9f8fce35c0dace07d174af191325bbc32b00589f57b6bea4f27",
+              "reference": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb"
+            },
+            {
+              "digest": "0e6975bdd8e42a84fe6c79e70dcb5eb305a2dc9970ce01f554a73450012cbb1a",
+              "reference": "subclass-feature|cutting words|bard|phb|lore|phb|3|phb"
+            }
+          ],
+          "copies": []
+        }
+      ],
+      "roots": [
+        {
+          "owner": ["bard", "phb", "college of lore", "phb"],
+          "shortName": "Lore",
+          "rawDigest": "2da027ea94b518c8b912ebf17ca0ebcb68f586e2ed85014b7c2f4ece789a08c8",
+          "metadataDigest": "50648e30710b68d737a03f32e61d1bee512ea7bcad81d190c07de43c9f54fbb2",
+          "fields": [
+            "additionalSpells",
+            "className",
+            "classSource",
+            "edition",
+            "name",
+            "shortName",
+            "source",
+            "srd",
+            "subclassFeatures"
+          ],
+          "copies": [],
+          "declarations": [
+            "College of Lore|Bard||Lore||3",
+            "Additional Magical Secrets|Bard||Lore||6",
+            "Peerless Skill|Bard||Lore||14"
+          ],
+          "intro": "College of Lore|Bard||Lore||3",
+          "paths": [
+            {
+              "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+              "refs": ["College of Lore|Bard||Lore||3", "Bonus Proficiencies|Bard||Lore||3"],
+              "level": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "features": [
+        {
+          "target": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb",
+          "rawDigest": "e3aa7a9d68ecd841e5052b56b0db2fc96a1a01a65725f3e188753476867fadd2",
+          "metadataDigest": "f8041c1a9b0d8891bedf8273608fca457fa72b5954bcc53685991fc917a1ada2",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "header",
+            "level",
+            "name",
+            "source",
+            "srd52",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "123c96dc263a9746a220624ca5bc345ea63c98a7563b8128f57aaf383172b84d"
+            }
+          ],
+          "copies": []
+        },
+        {
+          "target": "subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb",
+          "rawDigest": "2284d5c00e32d249582b232fd801ac7b7509f145d4c64448740456c94cbb7e4c",
+          "metadataDigest": "eaaf28c9f435d01e20332eaa51ba67e4f904c4d8b6b662b86b88ae7c22af8ce6",
+          "fields": [
+            "className",
+            "classSource",
+            "entries",
+            "level",
+            "name",
+            "source",
+            "srd52",
+            "subclassShortName",
+            "subclassSource"
+          ],
+          "entries": [
+            {
+              "digest": "1fc4f635848641f066eec175235e1fbd9f0d3102515e73d4df3b2bee6be462f8"
+            },
+            {
+              "digest": "58221e9e016a64984ec2e68469b2f8a200fb714e125839c264207a12641e2b22"
+            },
+            {
+              "digest": "d9ed0447f28acea81f2bf56d94eb50ab8cdffff28cb7b0aef6bffb2abac7ad38",
+              "reference": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb"
+            },
+            {
+              "digest": "f793c0b20ff280837d8595e080cb766054c33929d662ff7fb60be32cf619a0c3",
+              "reference": "subclass-feature|cutting words|bard|xphb|lore|xphb|3|xphb"
+            }
+          ],
+          "copies": []
+        }
+      ],
+      "roots": [
+        {
+          "owner": ["bard", "xphb", "college of lore", "xphb"],
+          "shortName": "Lore",
+          "rawDigest": "fbdf1dd0d3f169f1c7ff64a854da75ee0e928e12f8e05125df9d3fe7734d2641",
+          "metadataDigest": "0bd773216411105618191076677c83a60da71200dce246baabfefd9087c18cbf",
+          "fields": [
+            "additionalSpells",
+            "className",
+            "classSource",
+            "edition",
+            "name",
+            "shortName",
+            "source",
+            "srd52",
+            "subclassFeatures"
+          ],
+          "copies": [],
+          "declarations": [
+            "College of Lore|Bard|XPHB|Lore|XPHB|3",
+            "Magical Discoveries|Bard|XPHB|Lore|XPHB|6",
+            "Peerless Skill|Bard|XPHB|Lore|XPHB|14"
+          ],
+          "intro": "College of Lore|Bard|XPHB|Lore|XPHB|3",
+          "paths": [
+            {
+              "target": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb",
+              "refs": [
+                "College of Lore|Bard|XPHB|Lore|XPHB|3",
+                "Bonus Proficiencies|Bard|XPHB|Lore|XPHB|3"
+              ],
+              "level": 3
+            }
+          ]
+        }
+      ]
     }
   ]
 }

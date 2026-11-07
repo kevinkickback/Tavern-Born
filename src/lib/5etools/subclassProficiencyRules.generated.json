@@ -87,8 +87,69 @@
     ]
   },
   {
+    "target": "subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb",
+    "digest": "9d52343bde0d675d8d598d268c762fe560a104b5fe4c400593e5d660008eae2f",
+    "optional": false,
+    "subclassGainTarget": "class-feature|bard college|bard|phb|3|phb",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 3,
+        "skillPool": null,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb",
+    "digest": "123c96dc263a9746a220624ca5bc345ea63c98a7563b8128f57aaf383172b84d",
+    "optional": false,
+    "subclassGainTarget": "class-feature|bard subclass|bard|xphb|3|xphb",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 3,
+        "skillPool": null,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
     "digest": "ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac",
+    "optional": false,
+    "subclassGainTarget": "class-feature|wizard subclass|wizard|xphb|3|xphb",
     "fields": [
       "className",
       "classSource",
@@ -102,8 +163,6 @@
       "subclassShortName",
       "subclassSource"
     ],
-    "optional": false,
-    "subclassGainTarget": "class-feature|wizard subclass|wizard|xphb|3|xphb",
     "skillModifier": {
       "label": "Enchanting Conversationalist",
       "ability": "intelligence",
@@ -120,6 +179,8 @@
   {
     "target": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof",
     "digest": "3b2c4cd56abd82ef10c08572babe419fc460a4b4c8a8133883c9ee62825845d2",
+    "optional": false,
+    "subclassGainTarget": "class-feature|paladin subclass|paladin|xphb|3|xphb",
     "fields": [
       "className",
       "classSource",
@@ -133,13 +194,37 @@
       "subclassShortName",
       "subclassSource"
     ],
-    "optional": false,
-    "subclassGainTarget": "class-feature|paladin subclass|paladin|xphb|3|xphb",
     "domains": [
       {
         "domain": "skills",
         "count": 1,
         "skillPool": ["acrobatics", "intimidation", "performance", "persuasion"]
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
+    "digest": "3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32",
+    "optional": false,
+    "subclassGainTarget": "class-feature|bard subclass|bard|xphb|3|xphb",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["animal handling", "insight", "medicine", "nature", "perception", "survival"]
       }
     ]
   },

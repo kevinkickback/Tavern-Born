@@ -287,6 +287,19 @@ export function SpellsPage() {
           ? (reference: string) => getSpellReferenceKey(reference)
           : getSpellNameKey
       const alwaysPreparedSet = new Set(profile.alwaysPreparedSpells?.map(spellIdentity))
+      const spellCastingNote = (reference: string) =>
+        [
+          ...getManagedSpellCastingNotes(
+            calculationContext?.managedClassSpellStatuses ?? [],
+            reference,
+            profile,
+          ),
+          ...getFixedClassSpellCastingNotes(
+            calculationContext?.fixedClassSpellStatuses ?? [],
+            reference,
+            profile,
+          ),
+        ].join(' ')
 
       for (const name of profile.cantrips) {
         const spell = resolveSpellReferenceFromMap(name, spellByName)
@@ -303,24 +316,13 @@ export function SpellsPage() {
           name,
           level: spell?.level ?? 0,
           kind: 'cantrip',
+          castingNote: spellCastingNote(name),
           prepared: alwaysPrepared,
           isFixed: isFixedProfileSpell(profile, ledger, name),
         })
       }
 
       for (const name of profile.spellsKnown) {
-        const castingNote = [
-          ...getManagedSpellCastingNotes(
-            calculationContext?.managedClassSpellStatuses ?? [],
-            name,
-            profile,
-          ),
-          ...getFixedClassSpellCastingNotes(
-            calculationContext?.fixedClassSpellStatuses ?? [],
-            name,
-            profile,
-          ),
-        ].join(' ')
         const spell = resolveSpellReferenceFromMap(name, spellByName)
         const spellKey = spellIdentity(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
@@ -337,7 +339,7 @@ export function SpellsPage() {
           name,
           level: spell?.level ?? 1,
           kind: 'spell',
-          castingNote,
+          castingNote: spellCastingNote(name),
           prepared,
           isFixed: isFixedProfileSpell(profile, ledger, name),
         })

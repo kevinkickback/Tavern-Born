@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Paladin oath rules at 6,650,072 B renderer and 1,371,090 B initial.
+  // Measured with Bard college rules at 6,691,309 B renderer and 1,411,152 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6495 * KIB,
-  initialRendererScript: 1339 * KIB,
+  rendererCode: 6535 * KIB,
+  initialRendererScript: 1379 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

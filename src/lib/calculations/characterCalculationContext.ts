@@ -1,5 +1,8 @@
+import { hasCurrentBardDanceDefense } from '@/lib/5etools/bardCollegeFeatures'
+import { getCurrentBardJackOfAllTrades } from '@/lib/5etools/bardSpellSources'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import { findClassReference } from '@/lib/5etools/classReference'
 import { getEarnedDraconicResilience } from '@/lib/5etools/draconicResilience'
 import {
   type EntityLookupSet,
@@ -21,7 +24,10 @@ import {
   getEffectiveOwnerProficiencyChoices,
   getOwnedSubclassSkillModifiers,
 } from '@/lib/character/classProficiencyAuthority'
-import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import {
+  getStartingSkillChoiceLedger,
+  refreshClassProficiencyState,
+} from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
@@ -57,6 +63,7 @@ import {
 } from '@/lib/character/stormAuraSelections'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getSelectedRaceAbilityChoices, isSelectedRaceOwner } from '@/lib/provenance/raceOwnership'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
@@ -81,7 +88,7 @@ import {
 } from './characterEffects'
 import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
-import { getAbilityModifier } from './gameRules'
+import { getAbilityModifier, getProficiencyBonus } from './gameRules'
 import { getArmorEquipmentSlots } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
 import { refreshNativeRacialSpellState } from './nativeRacialSpells'
@@ -89,6 +96,7 @@ import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
 } from './originSystem'
+import { ALL_SKILLS } from './skills'
 
 type CoreRulesMetadata = (typeof CORE_RULES_METADATA)[keyof typeof CORE_RULES_METADATA] & {
   originSystem: Character['originSystem']
@@ -444,15 +452,20 @@ export function createCharacterCalculationContext(
       }
     }
   }
-  character = refreshClassProficiencyState(
+  const proficiencyClasses =
+    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {})
+  const startingSkillLedger = getStartingSkillChoiceLedger(
     character,
-    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {}),
-    {
-      ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
-      featExpertiseFeats:
-        primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
-    },
+    character.provenance,
+    proficiencyClasses,
   )
+  if (startingSkillLedger !== character.provenance)
+    character = { ...character, provenance: startingSkillLedger }
+  character = refreshClassProficiencyState(character, proficiencyClasses, {
+    ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
+    featExpertiseFeats:
+      primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
+  })
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },
     primaryLookups,
@@ -567,6 +580,8 @@ export function createCharacterCalculationContext(
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers),
     ...deriveGeniesSplendorEffects(character, choiceCatalogs, abilityScores.modifiers),
+    ...deriveBardDanceEffects(character, choiceCatalogs, abilityScores.modifiers),
+    ...deriveBardJackOfAllTradesEffects(character, choiceCatalogs),
     ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
@@ -691,14 +706,72 @@ function deriveGeniesSplendorEffects(
   return effect ? [effect] : []
 }
 
+function deriveBardJackOfAllTradesEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+): CharacterEffect[] {
+  if (!catalogs) return []
+  const bards = character.classProgression.filter(
+    (row) => normalizeOwnerIdentity(row.name) === 'bard',
+  )
+  if (bards.length !== 1 || bards[0].levels < 2) return []
+  const classes = catalogs.classes?.filter((row) => findClassReference(bards[0], [row]))
+  if (classes?.length !== 1) return []
+  const feature = getCurrentBardJackOfAllTrades(classes[0], catalogs)
+  if (!feature) return []
+  const proficient = new Set(character.proficiencies.skills.map(normalizeOwnerIdentity))
+  const value = Math.floor(getProficiencyBonus(getTotalCharacterLevel(character)) / 2)
+  return ALL_SKILLS.filter((skill) => !proficient.has(skill)).map((skill) => ({
+    id: `bard:${feature.source}:jack-of-all-trades:${skill}`,
+    label: feature.name,
+    source: { kind: 'class', name: feature.name, source: feature.source },
+    target: { kind: 'skill-modifier', skill },
+    operation: { kind: 'add', value },
+  }))
+}
+
+function deriveBardDanceEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  { dexterity, charisma }: AbilityScores,
+): CharacterEffect[] {
+  const printing = { name: 'Bard', source: 'XPHB' }
+  const owners = character.classProgression.filter((row) => findClassReference(printing, [row]))
+  const classes = catalogs?.classes?.filter((row) => findClassReference(printing, [row]))
+  const owner = owners[0]
+  if (
+    owners.length !== 1 ||
+    owner.levels < 3 ||
+    normalizeOwnerIdentity(owner.subclass) !== 'college of dance' ||
+    normalizeOwnerIdentity(owner.subclassSource) !== 'xphb' ||
+    classes?.length !== 1
+  )
+    return []
+  const cls = classes[0]
+  const colleges = cls.subclasses?.filter((row) =>
+    findClassReference({ name: owner.subclass, source: owner.subclassSource }, [row]),
+  )
+  if (colleges?.length !== 1 || !hasCurrentBardDanceDefense(cls, colleges[0])) return []
+  const target = 'subclass-feature|unarmored defense|bard|xphb|dance|xphb|3|xphb'
+  const effect = unarmoredBaseEffect(
+    character.equipment,
+    target,
+    { kind: 'subclass', name: 'Dazzling Footwork', source: 'XPHB', entityId: target },
+    10 + dexterity + charisma,
+    false,
+  )
+  return effect ? [effect] : []
+}
+
 function unarmoredBaseEffect(
   equipment: readonly Equipment[] | undefined,
   target: string,
   origin: CharacterEffect['source'],
   base: number,
+  allowsShield = true,
 ): CharacterEffect | undefined {
   const { bodyArmor, shield } = getArmorEquipmentSlots(equipment ?? [])
-  if (bodyArmor) return undefined
+  if (bodyArmor || (!allowsShield && shield)) return undefined
   return {
     id: `${target}:ac`,
     label: origin.name,

@@ -34,7 +34,7 @@ export function getInvalidFixedProficiencyPaths(
         const rule = relation && fixedProficiencyRule(relation.target)
         const tool = rule?.kind === 'proficient-tools'
         const order = relation && getTrainingClassOrder(relation)
-        if (order && rule) trainingRules.set(id, rule)
+        if (rule?.kind === 'fixed-training') trainingRules.set(id, rule)
         const legal =
           relation &&
           rule &&
@@ -46,7 +46,7 @@ export function getInvalidFixedProficiencyPaths(
             : rule.kind === 'fixed-languages'
               ? domain === 'languages' && rule.languages?.includes(name) && hasValue(domain, name)
               : rule.kind === 'fixed-training'
-                ? (domain === 'armor' || domain === 'weapons') &&
+                ? (domain === 'armor' || domain === 'weapons' || domain === 'tools') &&
                   rule.training?.[domain]?.includes(name) &&
                   hasValue(domain, name)
                 : (domain === 'skills' || domain === 'expertise') &&
@@ -82,6 +82,7 @@ export function getInvalidFixedProficiencyPaths(
     )
       paths.push(['provenance', 'proficiencies', 'expertise', name])
   }
+  // Armor and weapon members are materialized together. Tool members depend on the live catalog.
   for (const [id, rule] of trainingRules)
     for (const domain of ['armor', 'weapons'] as const)
       for (const name of rule.training?.[domain] ?? [])

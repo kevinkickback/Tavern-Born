@@ -1,5 +1,6 @@
 import {
   currentClasses,
+  hasBardMagicalSecretsRoute,
   hasCurrentClassSpellListRoute,
   type ManagedClassSpellContext,
   permitted,
@@ -8,6 +9,12 @@ import {
 
 export type { ManagedClassSpellContext } from './classSpellAuthority'
 
+import {
+  getBardLoreSpellRule,
+  getCurrentBardMagicalSecrets,
+  hasCurrentBardLoreSpellSource,
+  isClassicMagicalSecretsSlot,
+} from '@/lib/5etools/bardSpellSources'
 import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import {
   getClassSpellProfilePolicy,
@@ -109,9 +116,10 @@ function resolveSlot(
   if (slot[1] === 'feature-cantrip' || slot[1] === 'class-spellbook-specialty')
     return 'Use this selected feature’s spell choices.'
   const savantGain = getSavantSpellbookGain(slot)
+  const lore = getBardLoreSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
   const rule =
-    savantGain && entry
+    (savantGain || lore) && entry
       ? getClassSpellProfilePolicy({ name: entry.name, source: entry.source, levels: entry.levels })
           .rule
       : getManagedClassSpellRule(slot)?.rule
@@ -165,6 +173,29 @@ function resolveSlot(
   const savant = savantGain && classData && getCurrentSavantSpellbookGrant(slot, classData, catalog)
   if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
     return `Restore the current ${savantGain.rule.name} feature and its spellbook schedule.`
+  if (
+    lore &&
+    (!classData ||
+      authority.maxSpellLevel !== 3 ||
+      !hasCurrentBardLoreSpellSource(classData, lore, catalog.subclassFeatureCandidates))
+  )
+    return `Restore the current ${lore.name} feature and spell schedule.`
+  const classicSecrets = isClassicMagicalSecretsSlot(slot)
+  const secretPrinting = classicSecrets
+    ? 'phb'
+    : owner[0] === 'class' &&
+        owner[1] === 'bard' &&
+        owner[2] === 'xphb' &&
+        slot[1] === 'class-known' &&
+        slot[3] >= 10
+      ? 'xphb'
+      : undefined
+  const secrets =
+    secretPrinting && getCurrentBardMagicalSecrets(classes, catalog, secretPrinting, slot[3])
+      ? secretPrinting
+      : undefined
+  if (classicSecrets && !secrets)
+    return 'Restore the current Magical Secrets feature and its spell schedule.'
   const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
     character,
@@ -179,7 +210,38 @@ function resolveSlot(
     slot[1] === 'class-known' &&
     slot[4] === 0 &&
     authority.rule.unrestrictedGains?.includes(slot[3]) === true
-  return { entry, authority, fixedAtGain, expandedAtGain, privileged, savant, allowed, classData }
+  return {
+    entry,
+    authority,
+    fixedAtGain,
+    expandedAtGain,
+    privileged,
+    savant,
+    allowed,
+    secrets,
+    classData,
+    lore,
+  }
+}
+
+function hasDefaultManagedSpellRoute(
+  character: Character,
+  spell: Spell5e,
+  slot: ManagedClassSpellSlot,
+  state: Exclude<ReturnType<typeof resolveSlot>, string>,
+  context: ManagedClassSpellContext | undefined,
+) {
+  if (state.savant) return true
+  if (state.lore) return hasBardMagicalSecretsRoute(character, spell, state.lore.source)
+  if (state.secrets === 'phb') return hasBardMagicalSecretsRoute(character, spell, state.secrets)
+  return (
+    hasCurrentClassSpellListRoute(character, state.entry, spell, context ?? {}, {
+      owner: slot[0],
+      requestedTarget: slot[2],
+      expandedAtGain: state.expandedAtGain,
+    }) ||
+    (state.secrets === 'xphb' && hasBardMagicalSecretsRoute(character, spell, state.secrets))
+  )
 }
 
 function targetError(
@@ -203,7 +265,8 @@ function targetError(
       ? spell.level !== 0
       : slot[1] === 'class-arcanum'
         ? spell.level !== state.authority.maxSpellLevel
-        : spell.level < 1 || spell.level > state.authority.maxSpellLevel
+        : spell.level < (state.lore || state.secrets === 'phb' ? 0 : 1) ||
+          spell.level > state.authority.maxSpellLevel
   )
     return 'This spell is outside the level available for this choice.'
   const savant = state.savant
@@ -446,15 +509,7 @@ export function getManagedClassSpellPool(
     spells,
     defaultReferences: new Set(
       spells
-        .filter(
-          (spell) =>
-            !!state.savant ||
-            hasCurrentClassSpellListRoute(character, state.entry, spell, context ?? {}, {
-              owner: slot[0],
-              requestedTarget: slot[2],
-              expandedAtGain: state.expandedAtGain,
-            }),
-        )
+        .filter((spell) => hasDefaultManagedSpellRoute(character, spell, slot, state, context))
         .map((spell) => getSpellReferenceKey(spell.name, spell.source)),
     ),
     maxSpellLevel: state.authority.maxSpellLevel,
@@ -464,7 +519,9 @@ export function getManagedClassSpellPool(
         ? [0]
         : slot[1] === 'class-arcanum'
           ? [state.authority.maxSpellLevel]
-          : Array.from({ length: state.authority.maxSpellLevel }, (_, index) => index + 1),
+          : state.lore || state.secrets === 'phb'
+            ? Array.from({ length: state.authority.maxSpellLevel + 1 }, (_, level) => level)
+            : Array.from({ length: state.authority.maxSpellLevel }, (_, index) => index + 1),
     reason: undefined,
     schools: state.savant ? [state.savant.school] : state.authority.rule.schools,
     privileged: state.privileged,
@@ -550,7 +607,6 @@ export function projectManagedClassSpellState(
       continue
     }
     const { entry, authority } = state
-    const owner = choice.slot[0]
     const spell = targets.get(getSpellReferenceKey(choice.target.name, choice.target.source))
     if (
       !spell ||
@@ -572,13 +628,8 @@ export function projectManagedClassSpellState(
       continue
     }
     if (
-      !state.savant &&
-      choice.policy !== 'ignore-class-list' &&
-      !hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, {
-        owner,
-        requestedTarget: choice.slot[2],
-        expandedAtGain: state.expandedAtGain,
-      })
+      (state.lore || choice.policy !== 'ignore-class-list') &&
+      !hasDefaultManagedSpellRoute(character, spell, choice.slot, state, context)
     ) {
       deny('Restore this spell list or its optional feature selection.')
       continue
@@ -767,17 +818,25 @@ export function projectManagedClassSpellState(
       ]),
     })
   }
-  for (const { choice, entry, authority } of active) {
+  for (const { choice, spell, entry, authority } of active) {
     const reference = formatSpellReference(choice.target.name, choice.target.source)
-    const field = choice.slot[1] === 'class-cantrip' ? 'cantrips' : 'spellsKnown'
-    profiles = profiles.map((profile) =>
-      profile.id === toClassProfileId(entry.name, entry.source) &&
-      !profile[field].some(
-        (target) => getSpellReferenceKey(target) === getSpellReferenceKey(reference),
-      )
-        ? { ...profile, [field]: [...profile[field], reference] }
-        : profile,
-    )
+    const field = spell.level === 0 ? 'cantrips' : 'spellsKnown'
+    const lore = getBardLoreSpellRule(choice.slot)
+    const automatic = lore?.source === 'xphb' && spell.level > 0
+    const add = (refs: string[] = []) =>
+      refs.some((row) => getSpellReferenceKey(row) === getSpellReferenceKey(reference))
+        ? refs
+        : [...refs, reference]
+    profiles = profiles.map((profile) => {
+      if (profile.id !== toClassProfileId(entry.name, entry.source)) return profile
+      const spells = add(profile[field])
+      if (!automatic && spells === profile[field]) return profile
+      return {
+        ...profile,
+        [field]: spells,
+        ...(automatic && { alwaysPreparedSpells: add(profile.alwaysPreparedSpells) }),
+      }
+    })
     provenance = addSpellGrant(
       provenance,
       reference,

@@ -27,6 +27,7 @@ const api = {
 }
 const windSpeakerTarget = 'subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge'
 const configuredSorcerer = 'data/class/class-sorcerer.json'
+const configuredBard = 'data/class/class-bard.json'
 test('complete actual fixed producers reproduce the descriptors and direct declarations', () => {
   const sources = {
     ...fixedSources,
@@ -56,15 +57,18 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
       )
     : []
   if (configured) expect(windSpeaker).toHaveLength(1)
+  const bard = existsSync(configuredBard) ? [JSON.parse(readFileSync(configuredBard, 'utf8'))] : []
   const derived = deriveFixedProficiencyRules(
-    [sources, bundledDruid, rogueLanguageSources, { subclassFeature: windSpeaker }],
+    [sources, bundledDruid, rogueLanguageSources, { subclassFeature: windSpeaker }, ...bard],
     api,
   )
   derived.features.push(dragon.rule)
   derived.features.sort((left, right) => left.target.localeCompare(right.target))
   expect(derived).toEqual({
-    features: FIXED_PROFICIENCY_RULES.filter(
-      (row) => row.kind !== 'fixed-training' && (configured || row.target !== windSpeakerTarget),
+    features: FIXED_PROFICIENCY_RULES.filter((row) =>
+      row.className === 'Bard'
+        ? bard.length === 1
+        : row.kind !== 'fixed-training' && (configured || row.target !== windSpeakerTarget),
     ).map((row) =>
       row.className === 'Druid'
         ? {

@@ -358,3 +358,18 @@ the explicit independent score/profile context. Missing qualification context re
 prerequisites, readiness, Review and both PDF editions consume that same effective union. PDF receives
 current filtered authority as a required argument separately from retained text lookups; an unavailable ordinary class spell
 does not become an active export row. Generic Bonus and native APIs cannot create numeric class rows.
+
+## Bard Magical Secrets and college spell choices
+
+Classic Magical Secrets uses two ordinary Bard known slots at levels 10, 14 and 18. Those slots
+accept a cantrip or an eligible spell of an earned rank from a current class list. Revised Magical
+Secrets expands eligible levelled spells for ordinary gains at level 10 and later to the current
+Cleric, Druid and Wizard lists. Earlier slots retain their own eligibility. Ordinary Bard slots
+in both editions retain the explicit `ignore-class-list` house rule independently of their default
+lists. The dedicated Lore slots require the published lists.
+
+Both Lore printings grant two additional mixed-rank spell choices at level 6 outside the ordinary
+Bard quota. Revised Lore also keeps its chosen levelled spells prepared. Moon chooses one extra
+Druid cantrip at level 3 and always prepares Moonbeam at level 6. Spirits' Guidance, revised
+Spirit Guardians and Glamour's casting and preparation retain their separate authored benefits.
+Revised Words of Creation prepares both Power Words at level 20 and displays its casting change.

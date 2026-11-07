@@ -1,3 +1,5 @@
+import { isDirectBardCollegeFeature } from '@/lib/5etools/bardCollegeFeatures'
+import { isDirectBardLoreSpellSource } from '@/lib/5etools/bardSpellSources'
 import { auditClassCastingSources } from '@/lib/5etools/classCastingSource'
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import {
@@ -495,6 +497,8 @@ function auditNativeSubclassCopies(
       .filter(
         (target) =>
           target === REVISED_AFFINITY_TARGET ||
+          isDirectBardCollegeFeature(target) ||
+          isDirectBardLoreSpellSource(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
           isDirectWizardTraditionSpellSource(target) ||

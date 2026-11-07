@@ -1,3 +1,4 @@
+import { getBardLoreSpellRule, isClassicMagicalSecretsSlot } from '@/lib/5etools/bardSpellSources'
 import {
   getClassSpellProfilePolicy,
   isManagedClassSpellSlot,
@@ -54,7 +55,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||
       (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
-      (getSavantSpellbookGain(choice.slot) &&
+      ((getSavantSpellbookGain(choice.slot) || getBardLoreSpellRule(choice.slot)) &&
         (choice.policy !== 'default' ||
           (getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)?.levels ?? 0) <
             choice.slot[3])) ||
@@ -128,7 +129,10 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
           (choice) =>
             getSpellReferenceKey(choice.target.name, choice.target.source) === key &&
             (field === 'cantrips'
-              ? choice.slot[1] === 'class-cantrip' || choice.slot[1] === 'feature-cantrip'
+              ? choice.slot[1] === 'class-cantrip' ||
+                choice.slot[1] === 'feature-cantrip' ||
+                isClassicMagicalSecretsSlot(choice.slot) ||
+                !!getBardLoreSpellRule(choice.slot)
               : field === 'spellsKnown'
                 ? choice.slot[1] === 'class-known' ||
                   choice.slot[1] === 'class-spellbook' ||
@@ -164,10 +168,12 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         ? profiles.filter((profile) => isManagedClassSpellProfile(choice.slot, profile))
         : []
       const target = choice && getSpellReferenceKey(choice.target.name, choice.target.source)
-      const field =
-        choice?.slot[1] === 'class-cantrip' || choice?.slot[1] === 'feature-cantrip'
-          ? 'cantrips'
-          : 'spellsKnown'
+      const fields =
+        choice && (isClassicMagicalSecretsSlot(choice.slot) || getBardLoreSpellRule(choice.slot))
+          ? (['cantrips', 'spellsKnown'] as const)
+          : choice?.slot[1] === 'class-cantrip' || choice?.slot[1] === 'feature-cantrip'
+            ? (['cantrips'] as const)
+            : (['spellsKnown'] as const)
       if (
         !choice ||
         choice.slot[1] === 'class-spellbook-specialty' ||
@@ -176,8 +182,9 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         !matchesManagedClassSpellTag(choice, name, tag) ||
         tags.filter((other) => other.grantVariant === tag.grantVariant).length !== 1 ||
         matchingProfiles.length !== 1 ||
-        matchingProfiles[0][field].filter((reference) => getSpellReferenceKey(reference) === target)
-          .length !== 1
+        fields
+          .flatMap((field) => matchingProfiles[0][field])
+          .filter((reference) => getSpellReferenceKey(reference) === target).length !== 1
       )
         invalid.push(path)
     })

@@ -208,6 +208,28 @@ export function hasCurrentClassSpellListRoute(
   )
 }
 
+/** Magical Secrets uses current published class membership of the exact spell printing. */
+export function hasBardMagicalSecretsRoute(
+  character: Character,
+  spell: Spell5e,
+  source: 'phb' | 'xphb',
+) {
+  const allowed = sources(character)
+  const checked = auditSpellRouteMultiplicity([spell])[0]
+  return (
+    checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+    checked.classSpellRoutes?.some(
+      (route) =>
+        (source === 'phb' ||
+          (route[4] === 'xphb' && ['cleric', 'druid', 'wizard'].includes(route[3]))) &&
+        matchesJoinedSpellClassFilter(route, [route[3]]) &&
+        permitted(allowed, route[2]) &&
+        permitted(allowed, route[4]) &&
+        (route[6] === null || permitted(allowed, route[6])),
+    ) === true
+  )
+}
+
 export function currentClasses(character: Character, context?: ManagedClassSpellContext) {
   const allowed = sources(character)
   const catalog = context?.catalogs?.classes ?? []

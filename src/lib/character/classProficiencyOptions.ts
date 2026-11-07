@@ -120,8 +120,8 @@ export function resolveClassProficiencyOptions(
       if (!name || views.has(name)) continue
       if (
         relation.domain === 'skills' &&
-        (!domain?.skillPool?.includes(name) ||
-          (optionalClassProficiencyRule(relation.target)
+        ((domain?.skillPool !== null && !domain?.skillPool?.includes(name)) ||
+          (optionalClassProficiencyRule(relation.target) || domain?.excludeExisting
             ? proficient.has(name) && !selected.has(name)
             : !!rule?.proficiencyAtGain &&
               !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)

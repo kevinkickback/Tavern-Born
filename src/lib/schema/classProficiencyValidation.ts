@@ -43,7 +43,8 @@ export function isValidClassProficiencySelection(
   return (
     !!relation &&
     !!domain &&
-    (fixedProficiencyRule(relation.target)?.kind !== 'fixed-languages' ||
+    (relation.domain !== 'languages' ||
+      fixedProficiencyRule(relation.target)?.kind !== 'fixed-languages' ||
       isDirectFixedProficiencyRelation(relation)) &&
     (!optional ||
       (JSON.stringify(relation.owner) === JSON.stringify(optional.owner.slice(1)) &&

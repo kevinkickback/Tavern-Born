@@ -1,3 +1,4 @@
+import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
@@ -162,7 +163,7 @@ export function buildSpellProfileDisplayModels({
     const currentSpells = classSelections
       ? classSelections.filter(
           ({ choice }) =>
-            choice.slot[1] === 'class-known' ||
+            (choice.slot[1] === 'class-known' && !getBardLoreSpellRule(choice.slot)) ||
             (choice.slot[1] === 'class-spellbook' && !getSavantSpellbookGain(choice.slot)),
         ).length
       : countUniqueSpellNames(

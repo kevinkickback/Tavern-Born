@@ -23,6 +23,7 @@ export const FIXED_PROFICIENCY_FOUNDATION_DOMAINS = [
   'skills',
   'expertise',
   'languages',
+  'tools',
 ] as const
 
 function findExactLanguage(
@@ -126,7 +127,7 @@ export function grantFixedProficiencies(
     }
     const grants =
       owner.rule.kind === 'fixed-training'
-        ? (['armor', 'weapons'] as const).map((domain) => ({
+        ? (['armor', 'weapons', 'tools'] as const).map((domain) => ({
             domain,
             names: owner.rule.training?.[domain] ?? [],
           }))
@@ -142,6 +143,7 @@ export function grantFixedProficiencies(
           ]
     for (const { domain, names } of grants) {
       for (const name of names) {
+        if (domain === 'tools' && !tools.has(name)) continue
         if (
           domain === 'languages' &&
           owner.rule.languageSource &&

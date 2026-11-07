@@ -1,5 +1,6 @@
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
+import { BARD_PRIMAL_LORE_TARGET } from './bardCollegeFeatures'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
 import { getClassOrderById } from './classOrderIdentity'
 import { wizardIllusionCantrips } from './wizardTraditionSpellSources'
@@ -38,6 +39,23 @@ export const LAND_BONUS_SPELL_SLOT: ManagedClassSpellSlot = [
   0,
 ]
 
+const BARD_PRIMAL_LORE_SPELL_ADDRESS = selectedFeatureSpellAddress([
+  BARD_PRIMAL_LORE_TARGET,
+  'subclassFeature',
+  'primal lore',
+  'frhof',
+  BARD_PRIMAL_LORE_TARGET,
+  0,
+  0,
+])
+export const BARD_PRIMAL_LORE_SPELL_SLOT: ManagedClassSpellSlot = [
+  ['subclass', 'bard', 'xphb', 'college of the moon', 'frhof'],
+  'feature-cantrip',
+  BARD_PRIMAL_LORE_SPELL_ADDRESS,
+  3,
+  0,
+]
+
 export const wizardIllusionCantripSlots = wizardIllusionCantrips.map((rule) => ({
   rule,
   slot: [
@@ -56,7 +74,8 @@ export const wizardIllusionCantripSlots = wizardIllusionCantrips.map((rule) => (
     0,
   ] satisfies ManagedClassSpellSlot,
 }))
-const declaredSubclassSlots = [
+export const declaredSubclassSlots = [
+  BARD_PRIMAL_LORE_SPELL_SLOT,
   LAND_BONUS_SPELL_SLOT,
   ...wizardIllusionCantripSlots.map(({ slot }) => slot),
 ]
