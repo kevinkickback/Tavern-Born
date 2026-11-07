@@ -28,6 +28,7 @@ export interface ClassStaticFeatureSummary {
   compactText: string
   replaces?: Feature
   actionId?: string
+  actionNotesSource?: 'class'
 }
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
