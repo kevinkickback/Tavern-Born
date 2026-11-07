@@ -8,15 +8,19 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
-import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { buildGameDataLookups, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
 import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelectionGrants,
 } from '@/lib/character/commands/classChoiceCommands'
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   createCharacterSheetViewModel,
@@ -121,7 +125,13 @@ function chooseBlade(saved: Character, data: GameData, selected = true) {
   )
 }
 
-function chooseWarlockOption(saved: Character, data: GameData, label: string, option?: string) {
+function chooseWarlockOption(
+  saved: Character,
+  data: GameData,
+  label: string,
+  option?: string | readonly string[],
+  spellContext?: ManagedClassSpellContext,
+) {
   const [owner] = saved.classProgression
   const cls = data.classes.find((row) => row.name === owner.name && row.source === owner.source)
   if (!cls) throw new Error('Missing exact Warlock')
@@ -138,8 +148,12 @@ function chooseWarlockOption(saved: Character, data: GameData, label: string, op
     saved,
     saved.provenance,
     choice,
-    option ? [{ entityType: 'optionalFeature', name: option, source: cls.source }] : [],
-    { classes: data.classes, catalogs },
+    (typeof option === 'string' ? [option] : (option ?? [])).map((name) => ({
+      entityType: 'optionalFeature',
+      name,
+      source: cls.source,
+    })),
+    { classes: data.classes, catalogs, spellContext },
   )
   return characterPersistenceSchema.parse(
     JSON.parse(
@@ -246,6 +260,175 @@ function expectNoBladeRule(vm: ReturnType<typeof createCharacterSheetViewModel>)
   expect(vm.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName)).toBe(false)
   expect(vm.actions.some((row) => row.name === bladeName)).toBe(false)
 }
+
+const classicInvocations = [
+  ['Agonizing Blast', 'add your Charisma modifier'],
+  ["Devil's Sight", 'to a distance of 120 feet'],
+  ['Eldritch Spear', 'range is 300 feet'],
+  ['Repelling Blast', 'up to 10 feet away from you'],
+] as const
+
+test('classic Invocation bodies print from exact choices after a strict reopen', () => {
+  const data = current(dataFor('bundled'), 'PHB')
+  const lookup = lookups(data)
+  const saved = actor(editions[0], 7)
+  const slot = getManagedClassSpellSlots(saved.classProgression[0]).find(
+    (row) => row[1] === 'class-cantrip',
+  )
+  if (!slot) throw new Error('Missing earned Warlock cantrip slot')
+  const calc = (character: Character) =>
+    createCharacterCalculationContext(character, lookup, lookup).classChoices.spellContext
+  const learned = setManagedClassSpellChoiceCommand(
+    saved,
+    saved.provenance,
+    {
+      slot,
+      target: { name: 'Eldritch Blast', source: 'PHB' },
+      expected: null,
+      expectedEmptyRevision: saved.managedClassSpellRevision ?? 0,
+      policy: 'default',
+    },
+    calc(saved),
+  )
+  const withCantrip = characterPersistenceSchema.parse({
+    ...saved,
+    ...learned.characterPatch,
+    provenance: learned.provenanceUpdate,
+  })
+  const chosen = chooseWarlockOption(
+    withCantrip,
+    data,
+    'Eldritch Invocations',
+    classicInvocations.map(([name]) => name),
+    calc(withCantrip),
+  )
+  const restored = characterPersistenceSchema.parse({
+    ...chosen,
+    features: [
+      {
+        id: 'manual-devils-sight',
+        name: "Devil's Sight",
+        source: 'PHB',
+        description: 'An independent manual note.',
+      },
+    ],
+  })
+  const vm = createCharacterSheetViewModel(restored, lookup, lookup)
+  const compact = withoutSheetDescriptions(vm)
+  for (const [name, clause] of classicInvocations) {
+    expect(vm.classFeaturesSummary2014).toContain(clause)
+    expect(compact.classFeaturesSummary2014).toContain(name)
+    expect(compact.classFeaturesSummary2014).not.toContain(clause)
+    expect(vm.actions.some((row) => row.name === name)).toBe(false)
+  }
+  expect(vm.classFeaturesSummary2014).toContain('An independent manual note.')
+})
+
+test('classic sheet keeps source-conflicted Invocation text out of managed rows', () => {
+  const raw = dataFor('bundled')
+  const data = current(raw, 'PHB')
+  const name = "Devil's Sight"
+  const chosen = chooseWarlockOption(actor(editions[0], 2), data, 'Eldritch Invocations', name)
+  const leaf = data.optionalfeatures.find(
+    (row): row is Record<string, unknown> =>
+      !!row &&
+      typeof row === 'object' &&
+      'name' in row &&
+      row.name === name &&
+      'source' in row &&
+      row.source === 'PHB',
+  )
+  if (!leaf) throw new Error('Missing exact classic rule')
+  const saved = characterPersistenceSchema.parse({
+    ...chosen,
+    features: chosen.features.map((row) =>
+      row.name === name ? { ...row, description: 'A stale managed description.' } : row,
+    ),
+  })
+  const absent = data.optionalfeatures.filter((row) => row !== leaf)
+  const altered = { ...leaf, entries: ['An unverified replacement rule.'] }
+  const summary = (optionalfeatures: GameData['optionalfeatures']) =>
+    createCharacterSheetViewModel(saved, lookups(raw), lookups({ ...data, optionalfeatures }))
+      .classFeaturesSummary2014
+  for (const options of [absent, [...absent, altered], [...data.optionalfeatures, altered]]) {
+    const text = summary(options)
+    expect(text).not.toContain('to a distance of 120 feet')
+    expect(text).not.toContain('A stale managed description.')
+    expect(text).not.toContain('An unverified replacement rule.')
+  }
+  expect(summary(data.optionalfeatures)).toContain('to a distance of 120 feet')
+})
+
+test('classic passive Invocations cannot borrow action prose through another saved row', () => {
+  const raw = dataFor('bundled')
+  const data = current(raw, 'PHB')
+  const name = "Devil's Sight"
+  const saved = chooseBlade(
+    chooseWarlockOption(actor(editions[0], 3), data, 'Eldritch Invocations', name),
+    data,
+  )
+  const invocations = saved.classChoiceSelections?.find(
+    (row) => row.label === 'Eldritch Invocations',
+  )
+  const selected = invocations?.selected[0]
+  if (!invocations || !selected) throw new Error('Missing the native Invocation row')
+
+  const normalizedOwner = characterPersistenceSchema.parse({
+    ...saved,
+    classChoiceSelections: saved.classChoiceSelections?.map((row) =>
+      row === invocations ? { ...row, subclassSource: ' ' } : row,
+    ),
+  })
+  const wrongPool = characterPersistenceSchema.parse({
+    ...saved,
+    classChoiceSelections: saved.classChoiceSelections?.map((row) =>
+      row.label === 'Pact Boon' ? { ...row, selected: [{ ...selected, slotLevel: 3 }] } : row,
+    ),
+  })
+  const duplicate = characterPersistenceSchema.parse({
+    ...saved,
+    classChoiceSelections: [
+      ...(saved.classChoiceSelections ?? []),
+      { ...invocations, subclassSource: 'XPHB' },
+    ],
+  })
+  const rawLookups = lookups(raw)
+  const staleRaw = {
+    ...rawLookups,
+    optionalFeaturesByKey: {
+      ...rawLookups.optionalFeaturesByKey,
+      [getEntityLookupKey(name, 'PHB')]: {
+        name,
+        source: 'PHB',
+        entries: ['As a bonus action, you launch a beam.'],
+      },
+    },
+  }
+  const primary = lookups(data)
+  for (const character of [saved, normalizedOwner, wrongPool, duplicate]) {
+    const vm = createCharacterSheetViewModel(character, staleRaw, primary)
+    expect(vm.actions.some((row) => row.name === name)).toBe(false)
+    expect(vm.classFeaturesSummary2014.includes('to a distance of 120 feet')).toBe(
+      character !== duplicate,
+    )
+  }
+  const feature = saved.features.find((row) => row.name === name)
+  if (!feature) throw new Error('Missing exact managed feature')
+  const manual = {
+    id: `feature:${feature.id}`,
+    name,
+    kind: 'bonus-action' as const,
+    active: true,
+    source: { kind: 'manual' as const, name },
+    description: 'An independently entered action.',
+  }
+  const withManual = createCharacterSheetViewModel(
+    characterPersistenceSchema.parse({ ...normalizedOwner, manualActions: [manual] }),
+    staleRaw,
+    primary,
+  )
+  expect(withManual.actions.filter((row) => row.name === name)).toEqual([manual])
+})
 
 test('classic Thirsting Blade requires the exact Pact after a strict reopen', () => {
   const { data, selected, view } = bladeSheetFixture('bundled', editions[0])

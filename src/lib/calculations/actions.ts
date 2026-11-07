@@ -49,7 +49,10 @@ import {
 } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
-import { isBladeDependentInvocation } from '@/lib/character/warlockBladeChoices'
+import {
+  getClassicPassiveInvocationName,
+  isBladeDependentInvocation,
+} from '@/lib/character/warlockInvocationSource'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -527,8 +530,19 @@ function deriveClassFeatureActions(
         )
         if (action) actions.set(action.id, action)
       } else if (option.entityType === 'optionalFeature') {
-        const label = getInvocationCantripLabel(option)
+        if (getClassicPassiveInvocationName(selection, option)) continue
         const featureId = getClassChoiceFeatureId(selection, option)
+        // A shared feature ID may be active through another choice or saved row.
+        if (
+          !routes.selectedOptions.some(
+            (row) => row.selection === selection && row.option === option,
+          ) ||
+          !routes.contributions.some(
+            (row) => row.choiceId === selection.choiceId && row.id === featureId,
+          )
+        )
+          continue
+        const label = getInvocationCantripLabel(option)
         const feature = context.optionalFeaturesByKey?.[
           getEntityLookupKey(option.name, option.source)
         ] as OptionalFeatureLike | undefined

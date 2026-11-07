@@ -53,7 +53,7 @@ import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
-import { isBladeDependentInvocation } from './warlockBladeChoices'
+import { isBladeDependentInvocation } from './warlockInvocationSource'
 
 export interface RetainedChoiceDetails {
   availability: 'available' | 'source-unavailable' | 'missing' | 'inactive'

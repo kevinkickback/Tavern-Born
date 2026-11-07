@@ -174,13 +174,13 @@ import {
   createOptionalClassFeatureActivity,
   type OptionalClassFeatureActivity,
 } from './optionalClassFeatureActivity'
+import { hasEarnedRevisedInvocationSlots } from './warlockInvocationChoices'
 import {
   getBladeInvocationSource,
   getCurrentBladeInvocationRule,
   getCurrentPactBladeState,
   isBladeDependentInvocation,
-} from './warlockBladeChoices'
-import { hasEarnedRevisedInvocationSlots } from './warlockInvocationChoices'
+} from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference

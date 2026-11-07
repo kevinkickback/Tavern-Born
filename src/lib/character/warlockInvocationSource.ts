@@ -9,7 +9,7 @@ import {
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceCatalogOptionKey } from './classChoiceIdentity'
@@ -19,7 +19,7 @@ import {
 } from './warlockInvocationChoices'
 
 export const CLASSIC_PACT_BOON_POOL = 'class:warlock|phb|choice:pact-boon|3'
-const CLASSIC_INVOCATION_POOL = 'class:warlock|phb|choice:eldritch-invocations|2'
+export const CLASSIC_INVOCATION_POOL = 'class:warlock|phb|choice:eldritch-invocations|2'
 export const PACT_BLADE_NAME = 'Pact of the Blade'
 const bladeKey = norm(PACT_BLADE_NAME)
 type NativeSource = 'phb' | 'xphb'
@@ -44,6 +44,32 @@ const bladeFields = new Set([
   'entries',
 ])
 const invocationFields = new Set([...bladeFields, 'prerequisite', 'basicRules', 'basicRules2024'])
+const classicPassiveInvocationNames = [
+  'agonizing blast',
+  "devil's sight",
+  'eldritch spear',
+  'repelling blast',
+] as const
+
+export function getClassicPassiveInvocationName(
+  selection: CharacterClassChoiceSelection,
+  option: NormalizedChoiceOptionReference,
+) {
+  if (
+    selection.choiceId !== CLASSIC_INVOCATION_POOL ||
+    selection.kind !== 'optional-feature' ||
+    selection.classLevel !== 2 ||
+    norm(selection.className) !== 'warlock' ||
+    norm(selection.classSource) !== 'phb' ||
+    norm(selection.subclassName) ||
+    norm(selection.subclassSource) ||
+    option.entityType !== 'optionalFeature' ||
+    norm(option.source) !== 'phb'
+  )
+    return undefined
+  const name = norm(option.name)
+  return classicPassiveInvocationNames.find((candidate) => candidate === name)
+}
 
 // The classic pact token and revised optional-feature UID encode the same relationship
 // through different source declarations. Keep their three supported targets exact.
@@ -325,4 +351,24 @@ export function getCurrentBladeInvocationRule(
   )
     return undefined
   return { source, owner, level, entries }
+}
+
+export function getCurrentClassicInvocationOwner(
+  character: Character,
+  choice: NormalizedCharacterChoice,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  const current = getCurrentWarlock(character, catalogs, 'phb')
+  return current && isCurrentClassicInvocationPool(current.cls, choice, catalogs)
+    ? current.owner
+    : undefined
+}
+
+export function getCurrentClassicInvocationLeaf(
+  catalogs: ClassChoiceFeatureCatalogs,
+  option: NormalizedChoiceOptionReference,
+) {
+  return isExactNativeOption(option, 'phb')
+    ? getCurrentOptionalLeaf(catalogs, option, 'EI', invocationFields)
+    : undefined
 }
