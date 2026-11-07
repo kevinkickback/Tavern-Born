@@ -608,7 +608,6 @@ export function applyClassProgressionUpdate(
     classChoiceSelections,
     spellLookups?.classChoiceFeatureCatalogs,
     spellLookups?.spellContext,
-    { preserveUnavailable: true },
   )
   provenanceUpdate = classChoiceGrants.provenanceUpdate
   const asiChoices = (character.asiChoices ?? []).filter((choice) => {

@@ -7,6 +7,8 @@ import { getLandChoiceRule, LAND_GROUP } from '@/lib/5etools/circleOfTheLand'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import {
   getClassChoiceSlotLevels,
+  getProgressiveChoiceGainCount,
+  getProgressiveChoiceReviewLevel,
   getRequiredChoiceSelectionCount,
 } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, resolveClassProgressionRules } from '@/lib/5etools/classData'
@@ -43,6 +45,7 @@ import {
   isKenseiChoiceId,
 } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
 import { resolvePsionic } from '@/lib/5etools/psionics'
@@ -58,6 +61,8 @@ import {
   isRevisedTargetedInvocation,
   REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
+import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   getClassChoiceCatalogOptionKey,
   getClassChoiceDeclaration,
@@ -87,7 +92,10 @@ import {
   getCompanionSelectionStates,
   isRegisteredCompanionSelection,
 } from '@/lib/character/companionSelections'
-import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
+import {
+  type ClassChoicePrerequisiteContext,
+  getEffectiveClassChoiceFeatureRoutes,
+} from '@/lib/character/effectiveClassChoiceFeatures'
 import { isRetiredEpicBoonChoice } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import { stripFixedProficiencyGrants } from '@/lib/character/fixedProficiencyOwnership'
@@ -105,6 +113,7 @@ import {
   getOptionalClassPoolSelectionSection,
 } from '@/lib/character/optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import {
   getOptionalPoolSelectionHandle,
   getRegisteredOptionalPoolSelection,
@@ -163,6 +172,7 @@ export interface ClassChoiceAuthority {
   catalogs?: ClassChoiceFeatureCatalogs
   feats?: readonly Feat5e[]
   spellContext?: ManagedClassSpellContext
+  prerequisites?: ClassChoicePrerequisiteContext
 }
 
 function currentLiteralChoice(
@@ -858,6 +868,128 @@ function verifyInvocationCantripEdit(
   return current[0]
 }
 
+function resolveProgressiveChoiceGainEdit(
+  character: Character,
+  requested: NormalizedCharacterChoice,
+  selected: readonly NormalizedChoiceOptionReference[],
+  level: number,
+  authority: ClassChoiceAuthority | undefined,
+  expectedSelectionHandle: string | undefined,
+) {
+  const catalogs = authority?.catalogs
+  const owners = character.classProgression.filter((entry) =>
+    findClassReference(requested.owner, [entry]),
+  )
+  const owner = owners.length === 1 ? owners[0] : undefined
+  const classes = authority?.classes.filter((entry) => findClassReference(requested.owner, [entry]))
+  const cls = classes?.length === 1 ? classes[0] : undefined
+  if (!catalogs || !owner || !cls || cls.sourceIdentityConflict || level > owner.levels)
+    throw new RangeError('This choice gain is unavailable. Review the current class rules.')
+
+  const subclasses =
+    cls.subclasses?.filter(
+      (row) => row.name === owner.subclass && row.source === owner.subclassSource,
+    ) ?? []
+  const subclass =
+    subclasses.length === 1 && !subclasses[0].sourceIdentityConflict ? subclasses[0] : undefined
+  const candidates = getCharacterClassChoices(
+    cls,
+    subclass,
+    createOptionalClassFeatureActivity(character, catalogs),
+    catalogs,
+  ).filter((candidate) => candidate.id === requested.id)
+  const choice = candidates.length === 1 ? candidates[0] : undefined
+  const capacity = choice && getProgressiveChoiceGainCount(choice, level)
+  if (
+    !choice ||
+    requested.kind !== choice.kind ||
+    requested.level !== choice.level ||
+    JSON.stringify(optionalClassOwner(requested.owner)) !==
+      JSON.stringify(optionalClassOwner(choice.owner)) ||
+    !capacity ||
+    selected.length > capacity
+  )
+    throw new RangeError('This choice gain does not have enough earned slots.')
+
+  const saved = (character.classChoiceSelections ?? []).filter((row) => row.choiceId === choice.id)
+  const previous = saved[0]
+  if (
+    saved.length > 1 ||
+    expectedSelectionHandle === undefined ||
+    (previous ? getOptionalPoolSelectionHandle(previous) : '') !== expectedSelectionHandle ||
+    (previous &&
+      (previous.kind !== choice.kind ||
+        previous.classLevel !== choice.level ||
+        !findClassReference({ name: previous.className, source: previous.classSource }, [owner]) ||
+        previous.subclassName !== choice.owner.subclassName ||
+        previous.subclassSource !== choice.owner.subclassSource))
+  )
+    throw new RangeError('The saved choices changed. Review them before confirming.')
+
+  const priorOptions = previous?.selected ?? []
+  const priorByKey = new Map(
+    priorOptions.map((option) => [getClassChoiceOptionKey(option), option]),
+  )
+  const availableSlots = getClassChoiceSlotLevels(choice).filter((slot) => slot <= owner.levels)
+  const hasInvalidAllocation = priorOptions.some((option) => {
+    const index = availableSlots.indexOf(option.slotLevel)
+    if (index < 0) return true
+    availableSlots.splice(index, 1)
+    return false
+  })
+  const eligible = new Map(
+    resolveClassChoiceOptions(
+      choice,
+      createClassChoiceCatalogs(catalogs),
+      priorOptions,
+      owner.levels,
+      character,
+    )
+      .filter(isClassChoiceOptionEligible)
+      .map((option) => [getClassChoiceOptionKey(option.reference), option]),
+  )
+  let prerequisiteSnapshot: ReturnType<typeof buildPrerequisiteSnapshot> | undefined
+  const updates = selected.map((option) => {
+    const key = getClassChoiceOptionKey(option)
+    const prior = priorByKey.get(key)
+    if (prior?.slotLevel === level) return prior
+    if (prior)
+      throw new RangeError('Remove a choice without an earned slot before picking it again.')
+    if (hasInvalidAllocation)
+      throw new RangeError('Remove choices in invalid or overfilled slots before making new picks.')
+    const current = eligible.get(key)
+    if (!current) throw new RangeError('Choose an option from the current source.')
+    if (current.prerequisite) {
+      prerequisiteSnapshot ??= buildPrerequisiteSnapshot({
+        character,
+        classLookup: buildClassLookup([...(authority?.classes ?? [])]),
+        classChoiceFeatureCatalogs: catalogs,
+        classChoicePrerequisites: authority?.prerequisites,
+        effectiveAbilityScores: authority?.prerequisites?.effectiveAbilityScores,
+        effectiveSpellProfiles: authority?.prerequisites?.effectiveSpellProfiles,
+      })
+      if (
+        !checkAllPrerequisites(current, prerequisiteSnapshot, {
+          className: owner.name,
+          classSource: owner.source,
+        }).met
+      )
+        throw new RangeError('Choose an option whose prerequisites are met.')
+    }
+    return { ...current.reference, slotLevel: level }
+  })
+  return {
+    choice,
+    options: [
+      ...priorOptions.filter(
+        (option) =>
+          getProgressiveChoiceReviewLevel(choice, option.slotLevel, owner.levels) !== level,
+      ),
+      ...updates,
+    ],
+  }
+}
+
 /** Persists a complete or partial source-qualified class choice without applying future effects. */
 export function applyClassChoiceSelectionCommand(
   character: Character,
@@ -866,7 +998,23 @@ export function applyClassChoiceSelectionCommand(
   authority?: ClassChoiceAuthority,
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
+  progressionGainLevel?: number,
 ): Pick<Character, 'classChoiceSelections'> {
+  const gain =
+    progressionGainLevel === undefined
+      ? undefined
+      : resolveProgressiveChoiceGainEdit(
+          character,
+          choice,
+          selected,
+          progressionGainLevel,
+          authority,
+          expectedSelectionHandle,
+        )
+  if (gain) {
+    choice = gain.choice
+    selected = gain.options
+  }
   if (choice.id !== REVISED_INVOCATION_POOL && selected.some((option) => option.invocationCantrip))
     throw new RangeError(
       'Choose a cantrip target through the exact revised Eldritch Invocations pool.',
@@ -977,12 +1125,13 @@ export function applyClassChoiceSelectionCommand(
   }
   const requiredCount = getRequiredChoiceSelectionCount(choice, classLevel)
   if (
+    !gain &&
     selected.length >
-    (decodeFavoredEnemyChoiceId(choice.id)
-      ? favoredEnemy?.mode === 'humanoid-races'
-        ? 2
-        : 1
-      : requiredCount)
+      (decodeFavoredEnemyChoiceId(choice.id)
+        ? favoredEnemy?.mode === 'humanoid-races'
+          ? 2
+          : 1
+        : requiredCount)
   ) {
     throw new RangeError(`${choice.label} allows ${requiredCount} selections at this class level.`)
   }
@@ -1099,17 +1248,19 @@ export function applyClassChoiceSelectionCommand(
   ) {
     return { classChoiceSelections: character.classChoiceSelections }
   }
-  let slotLevels = assignProgressionSlotLevels(
-    editsInvocationCantrips
-      ? getRevisedInvocationSlotPrior(existingSelection?.selected ?? [], selected)
-      : (existingSelection?.selected ?? []).map((option) => ({
-          key: getClassChoiceOptionKey(option),
-          slotLevel: option.slotLevel,
-        })),
-    selected.map(getClassChoiceOptionKey),
-    getClassChoiceSlotLevels(choice).slice(0, requiredCount),
-    choice.level,
-  )
+  let slotLevels = gain
+    ? []
+    : assignProgressionSlotLevels(
+        editsInvocationCantrips
+          ? getRevisedInvocationSlotPrior(existingSelection?.selected ?? [], selected)
+          : (existingSelection?.selected ?? []).map((option) => ({
+              key: getClassChoiceOptionKey(option),
+              slotLevel: option.slotLevel,
+            })),
+        selected.map(getClassChoiceOptionKey),
+        getClassChoiceSlotLevels(choice).slice(0, requiredCount),
+        choice.level,
+      )
   if (choice.kind === 'psionic') {
     const prior = existingSelection?.selected ?? []
     const available = getClassChoiceSlotLevels(choice).slice(0, requiredCount)
@@ -1150,12 +1301,14 @@ export function applyClassChoiceSelectionCommand(
     ...(existingSelection?.proficiencyAtGain
       ? { proficiencyAtGain: existingSelection.proficiencyAtGain }
       : {}),
-    selected: selected.map<CharacterClassChoiceOption>((option, index) => ({
-      ...option,
-      name: option.name.trim(),
-      ...(option.source?.trim() ? { source: option.source.trim() } : {}),
-      slotLevel: slotLevels[index] ?? choice.level,
-    })),
+    selected:
+      gain?.options ??
+      selected.map<CharacterClassChoiceOption>((option, index) => ({
+        ...option,
+        name: option.name.trim(),
+        ...(option.source?.trim() ? { source: option.source.trim() } : {}),
+        slotLevel: slotLevels[index] ?? choice.level,
+      })),
   }
   const retained = (character.classChoiceSelections ?? []).filter(
     (existing) => existing.choiceId !== choice.id,
@@ -1369,10 +1522,6 @@ export function reconcileClassChoiceSelectionGrants(
   selections: readonly CharacterClassChoiceSelection[],
   catalogs?: ClassChoiceFeatureCatalogs,
   spellContext?: ManagedClassSpellContext,
-  options?: {
-    preserveUnavailable?: boolean
-    changingClass?: Pick<CharacterClassEntry, 'name' | 'source'>
-  },
 ): Pick<CharacterCommandResult, 'provenanceUpdate'> & {
   features: Feature[]
   proficiencies: Character['proficiencies']
@@ -1389,20 +1538,15 @@ export function reconcileClassChoiceSelectionGrants(
   })
   const preservedFeatureIds = new Set<string>()
   const preservedGrants = new Map<string, Set<string>>()
-  if (options?.preserveUnavailable && catalogs) {
+  if (catalogs) {
+    let spellReferences: Set<string> | undefined
     for (const selection of selections) {
-      if (
-        options.changingClass &&
-        findClassReference(options.changingClass, [
-          { name: selection.className, source: selection.classSource },
-        ])
-      )
-        continue
       const previous = character.classChoiceSelections?.find(
         (row) => row.choiceId === selection.choiceId,
       )
       if (
         !previous ||
+        selection.inactive ||
         previous.inactive !== selection.inactive ||
         previous.className !== selection.className ||
         previous.classSource !== selection.classSource ||
@@ -1426,7 +1570,24 @@ export function reconcileClassChoiceSelectionGrants(
           )
         )
           continue
-        if (!missingOwner && !isSavedFeatureSourceMissing(selection, option, catalogs)) continue
+        const target = option.invocationCantrip
+        if (target && spellContext?.spellsByKey) {
+          spellReferences ??= new Set(
+            Object.values(spellContext.spellsByKey).map((spell) =>
+              getSpellReferenceKey(spell.name, spell.source),
+            ),
+          )
+        }
+        const missingTarget =
+          target &&
+          spellReferences &&
+          !spellReferences.has(getSpellReferenceKey(target.name, target.source))
+        if (
+          !missingOwner &&
+          !missingTarget &&
+          !isSavedFeatureSourceMissing(selection, option, catalogs)
+        )
+          continue
         preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
         const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
         names.add(normalizeKey(option.name))
@@ -1467,6 +1628,7 @@ export function reconcileClassChoiceSelectionGrants(
       if (
         selection.kind === 'psionic' ||
         selection.choiceId === BLESSED_STRIKES_ID ||
+        routes.progressiveChoiceIds.has(selection.choiceId) ||
         (catalogs &&
           selection.kind === 'optional-feature' &&
           getFighterStylePair(selection.choiceId))
@@ -1543,15 +1705,12 @@ function reconcileChoiceMutationGrants(
 ) {
   const choiceId = 'id' in choice ? choice.id : choice.choiceId
   if (choice.kind !== 'proficiency' && !isClassProficiencyChoiceId(choiceId)) {
-    const changingClass =
-      'owner' in choice ? choice.owner : { name: choice.className, source: choice.classSource }
     return reconcileClassChoiceSelectionGrants(
       character,
       ledger,
       selections,
       catalogs,
       spellContext,
-      { preserveUnavailable: true, changingClass },
     )
   }
   const state = reconcileClassProficiencyGrants(character, ledger, selections)
@@ -1571,6 +1730,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   authority?: ClassChoiceAuthority,
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
+  progressionGainLevel?: number,
 ): CharacterCommandResult {
   if (authority?.catalogs && !authority.catalogs.classes && getFighterStylePair(choice.id)) {
     authority = { ...authority, catalogs: { ...authority.catalogs, classes: authority.classes } }
@@ -1582,6 +1742,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     authority,
     favoredEnemy,
     expectedSelectionHandle,
+    progressionGainLevel,
   )
   if (
     (choice.kind === 'psionic' ||

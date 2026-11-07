@@ -20,6 +20,7 @@ import {
   applyClassChoiceSelectionWithGrantsCommand,
   retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
@@ -519,4 +520,43 @@ test('retains the target when the current pool disagrees with its source progres
     calculate(chosen, altered).character.features.some((row) => row.name === agonizing.name),
   ).toBe(false)
   expect(state(chosen)?.details[0].available).toBe(true)
+})
+
+test('unrelated progression preserves the stored invocation when its exact target is unavailable', () => {
+  const chosen = choose(learn(actor(), 0, eldritchBlast), [
+    { ...agonizing, invocationCantrip: eldritchBlast },
+  ])
+  const missing = currentLookups({
+    ...data,
+    spells: data.spells.filter(
+      (spell) => spell.name !== eldritchBlast.name || spell.source !== eldritchBlast.source,
+    ),
+  })
+  const context = calculate(chosen, missing)
+  const progressed = reopen(
+    chosen,
+    applyClassProgressionUpdate(
+      chosen,
+      chosen.provenance,
+      [...chosen.classProgression, { name: 'Fighter', source: 'XPHB', levels: 1 }],
+      undefined,
+      {
+        classChoiceFeatureCatalogs: missing.classChoiceFeatureCatalogs,
+        spellContext: context.classChoices.spellContext,
+      },
+    ),
+  )
+  expect(invocationRow(progressed)).toEqual(invocationRow(chosen))
+  expect(progressed.features.find((feature) => feature.name === agonizing.name)).toEqual(
+    chosen.features.find((feature) => feature.name === agonizing.name),
+  )
+  expect(progressed.provenance.features['agonizing blast']).toEqual(
+    chosen.provenance.features['agonizing blast'],
+  )
+  expect(
+    calculate(progressed, missing).character.features.some((row) => row.name === agonizing.name),
+  ).toBe(false)
+  expect(calculate(progressed).character.features.some((row) => row.name === agonizing.name)).toBe(
+    true,
+  )
 })

@@ -18,10 +18,17 @@ import {
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getProgressiveChoiceGainCount,
+  getProgressiveChoiceReviewLevel,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import { isRevisedDruidStartingOwner } from '@/lib/5etools/startingEquipmentPolicy'
 import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
-import { getClassChoiceFeatureTarget } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceFeatureTarget,
+  getClassChoiceOptionKey,
+} from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
   getClassChoiceCompletionCount,
@@ -45,7 +52,11 @@ import {
 } from '@/lib/navigation/readinessFocus'
 import { readinessClassKey } from '@/lib/readiness/readinessIssue'
 import { cn } from '@/lib/utils'
-import type { ClassDetailsSelection } from '@/pages/build/class/model/pageUtils'
+import {
+  type ClassDetailsSelection,
+  isDeclaredProgressiveChoiceAnchor,
+  isProgressiveChoiceFeature,
+} from '@/pages/build/class/model/pageUtils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
@@ -112,7 +123,7 @@ interface BuildClassLevelsPanelProps {
   onOpenSpellPicker: (level: number) => void
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
-  onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
+  onOpenClassChoice: (choice: NormalizedCharacterChoice, progressionGainLevel?: number) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onItemChoiceChange?: (
     blockIndex: number,
@@ -141,6 +152,11 @@ function featureOwnsChoice(
   if (feature.origin?.kind === 'declared') {
     if (JSON.stringify(feature.origin.owner) !== JSON.stringify(optionalClassOwner(choice.owner)))
       return false
+    if (
+      feature.origin.earnedLevel !== choice.level &&
+      getProgressiveChoiceGainCount(choice, feature.origin.earnedLevel)
+    )
+      return isProgressiveChoiceFeature(feature, choice)
     const target = getClassChoicePresentationTarget(choice)
     if (target && target !== feature.origin.target) return false
   }
@@ -487,8 +503,45 @@ export function BuildClassLevelsPanel({
                   featuresByLevel,
                 })
                 const levelClassChoices = classChoices.filter(
-                  (choice) => choice.level === lv && choice.id !== epicBoonSlot?.choiceId,
+                  (choice) =>
+                    (getProgressiveChoiceGainCount(choice, lv) ?? Number(choice.level === lv)) >
+                      0 && choice.id !== epicBoonSlot?.choiceId,
                 )
+                const levelSelectedViewsById = new Map(selectedClassChoiceViewsById)
+                for (const choice of levelClassChoices) {
+                  if (!getProgressiveChoiceGainCount(choice, lv)) continue
+                  const saved = character.classChoiceSelections?.find(
+                    (row) => row.choiceId === choice.id,
+                  )
+                  const slots = new Map(
+                    (saved?.selected ?? [])
+                      .filter(
+                        (option) =>
+                          getProgressiveChoiceReviewLevel(
+                            choice,
+                            option.slotLevel,
+                            viewingClassLevel,
+                          ) === lv,
+                      )
+                      .map((option) => [getClassChoiceOptionKey(option), option.slotLevel]),
+                  )
+                  levelSelectedViewsById.set(
+                    choice.id,
+                    (selectedClassChoiceViewsById.get(choice.id) ?? []).flatMap((view) => {
+                      const slot = slots.get(getClassChoiceOptionKey(view.reference))
+                      if (slot === undefined) return []
+                      return [slot === lv ? view : { ...view, availability: 'retained' as const }]
+                    }),
+                  )
+                }
+                const openLevelChoice = (choice: NormalizedCharacterChoice) =>
+                  getProgressiveChoiceGainCount(choice, lv)
+                    ? onOpenClassChoice(choice, lv)
+                    : onOpenClassChoice(choice)
+                const focusedLevelChoiceId =
+                  focusLevel !== undefined && focusLevel !== lv
+                    ? undefined
+                    : focusedNormalizedChoiceId
                 const levelDiagnostics = classChoiceDiagnostics.filter(
                   (diagnostic) => (diagnostic.level ?? 1) === lv,
                 )
@@ -515,12 +568,21 @@ export function BuildClassLevelsPanel({
                 const normalizedPendingCount =
                   levelDiagnostics.length +
                   levelClassChoices.reduce((sum, choice) => {
-                    const required = getRequiredChoiceSelectionCount(choice, viewingClassLevel)
+                    const required =
+                      getProgressiveChoiceGainCount(choice, lv) ??
+                      getRequiredChoiceSelectionCount(choice, viewingClassLevel)
                     const eligibleSelected = getClassChoiceCompletionCount(
                       choice,
-                      selectedClassChoiceViewsById.get(choice.id) ?? [],
+                      levelSelectedViewsById.get(choice.id) ?? [],
                     )
-                    return sum + Math.max(0, required - eligibleSelected)
+                    const views = levelSelectedViewsById.get(choice.id) ?? []
+                    return (
+                      sum +
+                      (getProgressiveChoiceGainCount(choice, lv) !== undefined &&
+                      views.length > required
+                        ? views.length - required
+                        : Math.max(0, required - eligibleSelected))
+                    )
                   }, 0)
                 const pendingChoiceCount =
                   (asiChoiceComplete ? 0 : 1) +
@@ -557,10 +619,28 @@ export function BuildClassLevelsPanel({
                 const ordinaryFeatures = passiveFeatures.filter(
                   (feature) => !belongsToOptionalClassFeatures(feature, optionalRows),
                 )
+                const featureOwnsLevelChoice = (
+                  feature: ClassFeatureDisplay,
+                  choice: NormalizedCharacterChoice,
+                  features: ClassFeatureDisplay[],
+                ) => {
+                  if (getProgressiveChoiceGainCount(choice, lv) === undefined)
+                    return featureOwnsChoice(feature, choice)
+                  const anchors = features.filter(
+                    (candidate) =>
+                      featureOwnsChoice(candidate, choice) &&
+                      isDeclaredProgressiveChoiceAnchor(
+                        candidate,
+                        viewingClassData,
+                        viewingSubclassData,
+                      ),
+                  )
+                  return anchors.length === 1 && anchors[0] === feature
+                }
                 const matchedChoiceIds = new Set(
                   ordinaryFeatures.flatMap((feature) =>
                     levelClassChoices
-                      .filter((choice) => featureOwnsChoice(feature, choice))
+                      .filter((choice) => featureOwnsLevelChoice(feature, choice, ordinaryFeatures))
                       .map((choice) => choice.id),
                   ),
                 )
@@ -605,7 +685,7 @@ export function BuildClassLevelsPanel({
                     renderFeature={(feature) => {
                       const featureChoices = choices.filter(
                         (choice) =>
-                          featureOwnsChoice(feature, choice) &&
+                          featureOwnsLevelChoice(feature, choice, features) &&
                           (!configurationIds.has(choice.id) || groupedChoiceIds.has(choice.id)),
                       )
                       if (featureChoices.length === 0) return undefined
@@ -617,13 +697,14 @@ export function BuildClassLevelsPanel({
                           choices={featureChoices}
                           diagnostics={featureDiagnostics}
                           classLevel={viewingClassLevel}
-                          selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                          progressionGainLevel={lv}
+                          selectedViewsByChoiceId={levelSelectedViewsById}
                           detailCollapsed={detailCollapsed}
-                          onChoose={onOpenClassChoice}
+                          onChoose={openLevelChoice}
                           onSelectFeature={onSelectFeature}
                           onExpandDetails={onExpandDetails}
                           feature={feature}
-                          focusedChoiceId={focusedNormalizedChoiceId}
+                          focusedChoiceId={focusedLevelChoiceId}
                           isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
                         />
                       )
@@ -631,7 +712,7 @@ export function BuildClassLevelsPanel({
                     renderAfterFeature={(feature) => {
                       const featureChoices = choices.filter(
                         (choice) =>
-                          featureOwnsChoice(feature, choice) &&
+                          featureOwnsLevelChoice(feature, choice, features) &&
                           (!configurationIds.has(choice.id) || groupedChoiceIds.has(choice.id)),
                       )
                       if (featureChoices.length > 0) return null
@@ -644,9 +725,10 @@ export function BuildClassLevelsPanel({
                           choices={[]}
                           diagnostics={featureDiagnostics}
                           classLevel={viewingClassLevel}
-                          selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                          progressionGainLevel={lv}
+                          selectedViewsByChoiceId={levelSelectedViewsById}
                           detailCollapsed={detailCollapsed}
-                          onChoose={onOpenClassChoice}
+                          onChoose={openLevelChoice}
                           onSelectFeature={onSelectFeature}
                           onExpandDetails={onExpandDetails}
                           feature={feature}
@@ -752,7 +834,9 @@ export function BuildClassLevelsPanel({
                               )
                               const unmatched = choices.filter(
                                 (choice) =>
-                                  !features.some((feature) => featureOwnsChoice(feature, choice)),
+                                  !features.some((feature) =>
+                                    featureOwnsLevelChoice(feature, choice, features),
+                                  ),
                               )
                               const unmatchedDiagnostics = diagnostics.filter(
                                 (diagnostic) =>
@@ -768,12 +852,13 @@ export function BuildClassLevelsPanel({
                                       choices={unmatched}
                                       diagnostics={unmatchedDiagnostics}
                                       classLevel={viewingClassLevel}
-                                      selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                                      progressionGainLevel={lv}
+                                      selectedViewsByChoiceId={levelSelectedViewsById}
                                       detailCollapsed={detailCollapsed}
-                                      onChoose={onOpenClassChoice}
+                                      onChoose={openLevelChoice}
                                       onSelectFeature={onSelectFeature}
                                       onExpandDetails={onExpandDetails}
-                                      focusedChoiceId={focusedNormalizedChoiceId}
+                                      focusedChoiceId={focusedLevelChoiceId}
                                       isDiagnosticFocused={unmatchedDiagnostics.some(
                                         isDiagnosticFocused,
                                       )}
@@ -871,12 +956,13 @@ export function BuildClassLevelsPanel({
                             choices={unmatchedChoices}
                             diagnostics={unmatchedDiagnostics}
                             classLevel={viewingClassLevel}
-                            selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                            progressionGainLevel={lv}
+                            selectedViewsByChoiceId={levelSelectedViewsById}
                             detailCollapsed={detailCollapsed}
-                            onChoose={onOpenClassChoice}
+                            onChoose={openLevelChoice}
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
-                            focusedChoiceId={focusedNormalizedChoiceId}
+                            focusedChoiceId={focusedLevelChoiceId}
                             isDiagnosticFocused={unmatchedDiagnostics.some(isDiagnosticFocused)}
                           />
                         )}

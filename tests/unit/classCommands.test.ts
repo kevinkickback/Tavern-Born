@@ -267,8 +267,6 @@ describe('Class Commands', () => {
       saved.provenance,
       saved.classChoiceSelections ?? [],
       catalogs,
-      undefined,
-      { preserveUnavailable: true },
     )
     expect(current.features).toEqual(saved.features)
     expect(current.provenanceUpdate.features).toEqual(saved.provenance.features)
@@ -280,8 +278,6 @@ describe('Class Commands', () => {
       saved.provenance,
       saved.classChoiceSelections ?? [],
       loadedClass,
-      undefined,
-      { preserveUnavailable: true },
     )
     expect(missingOption.features).toEqual(saved.features)
     expect(missingOption.provenanceUpdate.features).toEqual(saved.provenance.features)
