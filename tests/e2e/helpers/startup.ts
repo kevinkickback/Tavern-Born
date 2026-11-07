@@ -222,12 +222,27 @@ export async function ensureStartupPromptResolved(
   })
 }
 
-export async function selectCharacterFromHome(page: Page, name: string) {
-  const cardTitle = page.locator('h3').filter({ hasText: name }).first()
+export async function openCharacterFromHome(page: Page, name: string) {
+  const cardTitle = page.getByRole('heading', { level: 3, name, exact: true })
   await expect(cardTitle).toBeVisible()
   await cardTitle.click()
 
-  await expect(page.getByRole('banner').getByText(name, { exact: true })).toBeVisible()
+  const activeName = page.getByRole('banner').getByText(name, { exact: true })
+  const missingRules = page.getByRole('dialog', {
+    name: 'Additional content unavailable',
+    exact: true,
+  })
+  await expect(activeName.or(missingRules).first()).toBeVisible()
+  // Browser fixtures can intentionally omit rules outside the workflow being tested.
+  if (await missingRules.isVisible()) {
+    await expect(missingRules).toContainText(name)
+    await missingRules.getByRole('button', { name: 'Open with limited access' }).click()
+  }
+  await expect(activeName).toBeVisible()
+}
+
+export async function selectCharacterFromHome(page: Page, name: string) {
+  await openCharacterFromHome(page, name)
   await page.getByRole('button', { name: 'Builder' }).click()
   await expect(page.getByRole('complementary', { name: 'Builder navigation' })).toBeVisible()
 }

@@ -119,11 +119,19 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   const fileChooser = await fileChooserPromise
   await fileChooser.setFiles(fixturePath)
 
-  const importResults = page.getByRole('dialog', { name: 'Character import results' })
-  await expect(importResults).toContainText('1 imported · 0 failed')
-  await importResults.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByText('Character imported successfully', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Character import results' })).toHaveCount(0)
+  const missingRules = page.getByRole('dialog', {
+    name: 'Additional content unavailable',
+    exact: true,
+  })
+  await expect(missingRules).toHaveCount(0)
 
-  await expect(page.getByText(fixture.name).first()).toBeVisible()
+  await page.getByRole('heading', { name: fixture.name, exact: true }).click()
+  await expect(missingRules).toContainText(fixture.name)
+  await expect(missingRules.getByRole('list', { name: 'Unavailable saved rules' })).toBeVisible()
+  await missingRules.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page.getByRole('banner').getByText(fixture.name, { exact: true })).toHaveCount(0)
   await selectCharacterFromHome(page, fixture.name)
   await page.getByRole('button', { name: 'Details' }).click()
   await page.getByRole('link', { name: 'Portrait' }).click()
