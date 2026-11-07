@@ -32,7 +32,6 @@ import {
 } from './dataLoader'
 import { isNativeResilienceIntro } from './draconicResilience'
 import { getNativeDraconicFeatureOwner } from './draconicSubclassFeatureSource'
-import { getNativeFiendFeatureOwner } from './fiendSubclassFeatureSource'
 import { mergeFixedShieldBases } from './fixedBonusShields'
 import {
   auditFixedLayerMultiplicity,
@@ -79,6 +78,7 @@ import {
   preserveToolSourcePresentation,
   restoreToolSourceInput,
 } from './toolProficiencySource'
+import { getNativeWarlockPatronFeatureOwner } from './warlockPatronFeatureSource'
 
 type GameDataCollectionKey = Exclude<keyof GameData, 'lookups'>
 
@@ -226,7 +226,7 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
         )
           return reference
         const owner =
-          getNativeDraconicFeatureOwner(identity) ?? getNativeFiendFeatureOwner(identity)
+          getNativeDraconicFeatureOwner(identity) ?? getNativeWarlockPatronFeatureOwner(identity)
         const nativeOwner =
           owner &&
           findClassReference({ name: owner.className, source: owner.source }, [classData]) &&

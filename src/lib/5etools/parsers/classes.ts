@@ -18,7 +18,6 @@ import { getNativeDraconicFeatureOwner } from '@/lib/5etools/draconicSubclassFea
 import { isEpicBoonAdvancement } from '@/lib/5etools/epicBoonAdvancement'
 import { auditFavoredEnemySources } from '@/lib/5etools/favoredEnemySource'
 import { auditFeatureOptionSources } from '@/lib/5etools/featureTableOptions'
-import { getNativeFiendFeatureOwner } from '@/lib/5etools/fiendSubclassFeatureSource'
 import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
@@ -38,6 +37,7 @@ import {
   materializeSubclassCopies,
   materializeSubclassFeatureCopies,
 } from '@/lib/5etools/subclassSourcePreparation'
+import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronFeatureSource'
 import type { ClassFeature, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
@@ -415,7 +415,7 @@ function resolveInlineSubclassFeatureRef(
     const target = getSubclassFeatureIdentity(parsedRef)
     if (
       'feature' in entry &&
-      (isNativeResilienceTarget(target) || getNativeFiendFeatureOwner(target))
+      (isNativeResilienceTarget(target) || getNativeWarlockPatronFeatureOwner(target))
     ) {
       // Raw inline data cannot stand in for a missing native source record.
       const { feature: _attachment, ...declaration } = entry
@@ -488,7 +488,7 @@ function auditNativeSubclassCopies(
           target === REVISED_AFFINITY_TARGET ||
           isNativeResilienceTarget(target) ||
           getNativeDraconicFeatureOwner(target) ||
-          getNativeFiendFeatureOwner(target),
+          getNativeWarlockPatronFeatureOwner(target),
       ),
   )
   if (!copied.size) return materialized

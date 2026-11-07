@@ -287,6 +287,8 @@ raw/current marker ownership still protect restoration. Mechanical and nested co
 Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
 output or layer composition changes in a way that makes previous cached data unsafe. Character
 schema changes are a separate concern and follow [State Management](state-management.md).
+Native Warlock patron rule exports use the current owner-qualified feature records. Older parsed
+caches rebuild these attachments so unverified inline or copied bodies cannot supply the rules.
 The item-property display update invalidates older caches so property definitions collapsed by
 layer composition are rebuilt; the property hook can also rebuild missing lookup entries from the
 parsed definitions in a cached catalog.

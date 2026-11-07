@@ -128,6 +128,7 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   feats?: readonly Feat5e[]
   classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
   optionalFeaturesByKey?: Readonly<Record<string, unknown>>
+  allowDeclaredFeatureAction?: (target: string, id: string, owner: string) => boolean
 }
 
 /** Whether an action belongs in action/attack-oriented UI and fixed-sheet projections. */
@@ -277,6 +278,7 @@ type RulesTextActionContext = Pick<
   | 'feats'
   | 'classFeaturesByKey'
   | 'optionalFeaturesByKey'
+  | 'allowDeclaredFeatureAction'
 >
 
 function rulesTextAction(
@@ -370,6 +372,7 @@ function deriveClassFeatureActions(
     const kind = inferRulesTextActionKind(description)
     if (!kind) return
     const id = getFeatureActionGroupId(owner, target, feature.entries ?? [])
+    if (context.allowDeclaredFeatureAction?.(target, id, owner) === false) return
     if (!actions.has(id))
       actions.set(id, { id, name: feature.name, kind, description, source, active: true })
   }

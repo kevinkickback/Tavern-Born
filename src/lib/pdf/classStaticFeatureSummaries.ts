@@ -1,6 +1,7 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID } from '@/lib/5etools/archdruidSource'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
+import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   formatClassResourceRecovery,
@@ -15,10 +16,13 @@ import {
   getInnateSorcery,
   getInnateSorceryUpgrades,
 } from '@/lib/5etools/sorcererSource'
+import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronFeatureSource'
 import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry, Feature } from '@/types/character'
 import { getWarlockStaticFeatures } from './warlockStaticFeatures'
@@ -28,7 +32,7 @@ export interface ClassStaticFeatureSummary {
   compactText: string
   replaces?: Feature
   actionId?: string
-  actionNotesSource?: 'class'
+  actionNotesSource?: 'class' | 'subclass'
 }
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
@@ -183,12 +187,27 @@ export function getClassStaticFeatureSummaries(
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
     if (name === 'warlock') {
-      return getWarlockStaticFeatures(cls, entry, catalogs).flatMap((feature) =>
-        featureSummary(feature).map((summary) => ({
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      return getWarlockStaticFeatures(cls, entry, catalogs).flatMap((feature) => {
+        const target =
+          'subclassShortName' in feature ? getSubclassFeatureIdentity(feature) : undefined
+        const patron = getNativeWarlockPatronFeatureOwner(target)
+        const actionId =
+          target && patron && patron.shortName !== 'fiend'
+            ? getFeatureActionGroupId(
+                getFeatureOwnerKey(entry.name, entry.source, patron.name, patron.source),
+                target,
+                feature.entries ?? [],
+              )
+            : undefined
+        return featureSummary(feature).map((summary) => ({
           ...summary,
           replaces: savedClassLabel(character, entry, feature),
-        })),
-      )
+          ...(actionId && !character.manualActions?.some((action) => action.id === actionId)
+            ? { actionId, actionNotesSource: 'subclass' as const }
+            : {}),
+        }))
+      })
     }
     if (name === 'wizard') {
       if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
