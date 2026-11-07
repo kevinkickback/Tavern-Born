@@ -54,6 +54,7 @@ import { readinessClassKey } from '@/lib/readiness/readinessIssue'
 import { cn } from '@/lib/utils'
 import {
   type ClassDetailsSelection,
+  getClassChoiceGainCount,
   isDeclaredProgressiveChoiceAnchor,
   isProgressiveChoiceFeature,
 } from '@/pages/build/class/model/pageUtils'
@@ -504,12 +505,13 @@ export function BuildClassLevelsPanel({
                 })
                 const levelClassChoices = classChoices.filter(
                   (choice) =>
-                    (getProgressiveChoiceGainCount(choice, lv) ?? Number(choice.level === lv)) >
-                      0 && choice.id !== epicBoonSlot?.choiceId,
+                    choice.id !== epicBoonSlot?.choiceId &&
+                    (getClassChoiceGainCount(choice, lv) ?? choice.level === lv),
                 )
                 const levelSelectedViewsById = new Map(selectedClassChoiceViewsById)
                 for (const choice of levelClassChoices) {
-                  if (!getProgressiveChoiceGainCount(choice, lv)) continue
+                  const independentGain = getProgressiveChoiceGainCount(choice, lv)
+                  if (!independentGain && choice.level === lv) continue
                   const saved = character.classChoiceSelections?.find(
                     (row) => row.choiceId === choice.id,
                   )
@@ -517,11 +519,13 @@ export function BuildClassLevelsPanel({
                     (saved?.selected ?? [])
                       .filter(
                         (option) =>
-                          getProgressiveChoiceReviewLevel(
-                            choice,
-                            option.slotLevel,
-                            viewingClassLevel,
-                          ) === lv,
+                          (independentGain
+                            ? getProgressiveChoiceReviewLevel(
+                                choice,
+                                option.slotLevel,
+                                viewingClassLevel,
+                              )
+                            : option.slotLevel) === lv,
                       )
                       .map((option) => [getClassChoiceOptionKey(option), option.slotLevel]),
                   )
@@ -535,9 +539,10 @@ export function BuildClassLevelsPanel({
                   )
                 }
                 const openLevelChoice = (choice: NormalizedCharacterChoice) =>
-                  getProgressiveChoiceGainCount(choice, lv)
-                    ? onOpenClassChoice(choice, lv)
-                    : onOpenClassChoice(choice)
+                  onOpenClassChoice(
+                    choice,
+                    getProgressiveChoiceGainCount(choice, lv) ? lv : undefined,
+                  )
                 const focusedLevelChoiceId =
                   focusLevel !== undefined && focusLevel !== lv
                     ? undefined
@@ -569,7 +574,7 @@ export function BuildClassLevelsPanel({
                   levelDiagnostics.length +
                   levelClassChoices.reduce((sum, choice) => {
                     const required =
-                      getProgressiveChoiceGainCount(choice, lv) ??
+                      getClassChoiceGainCount(choice, lv) ??
                       getRequiredChoiceSelectionCount(choice, viewingClassLevel)
                     const eligibleSelected = getClassChoiceCompletionCount(
                       choice,
@@ -625,7 +630,7 @@ export function BuildClassLevelsPanel({
                   features: ClassFeatureDisplay[],
                 ) => {
                   if (getProgressiveChoiceGainCount(choice, lv) === undefined)
-                    return featureOwnsChoice(feature, choice)
+                    return choice.level === lv && featureOwnsChoice(feature, choice)
                   const anchors = features.filter(
                     (candidate) =>
                       featureOwnsChoice(candidate, choice) &&

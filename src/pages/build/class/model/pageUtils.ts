@@ -1,5 +1,12 @@
-import { getProgressiveChoiceGainCount } from '@/lib/5etools/classChoiceNormalization'
-import { getSubclassFeatureGroups, resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import {
+  getProgressiveChoiceGainCount,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
+import {
+  getSubclassFeatureGroups,
+  getSubclassSelectionInfo,
+  resolveSubclassFeatureRefs,
+} from '@/lib/5etools/classData'
 import {
   decodeClassFeatureReference,
   decodeSubclassFeatureReference,
@@ -70,6 +77,25 @@ export function resolveSubclassDetailsSelection(
 
 const normalized = (value: string | undefined) => value?.trim().toLowerCase()
 
+/** Slots displayed at this level, including gains that keep using a shared editor. */
+export function getClassChoiceGainCount(choice: NormalizedCharacterChoice, level: number) {
+  const independentGain = getProgressiveChoiceGainCount(choice, level)
+  if (independentGain !== undefined) return independentGain
+  if (level <= choice.level) return undefined
+  const { optionFilter: filter, source } = choice
+  const shared =
+    filter?.entityType === 'item'
+      ? source.kind === 'class-table' && filter.requiresMastery
+      : filter?.entityType === 'optionalFeature' &&
+        source.kind === 'optional-feature-progression' &&
+        filter.featureTypes?.join() === 'EI'
+  if (!shared) return undefined
+  const gain =
+    getRequiredChoiceSelectionCount(choice, level) -
+    getRequiredChoiceSelectionCount(choice, level - 1)
+  return gain > 0 ? gain : undefined
+}
+
 export function isProgressiveChoiceFeature(
   feature: ClassFeatureDisplay,
   choice: NormalizedCharacterChoice,
@@ -120,7 +146,21 @@ export function isDeclaredProgressiveChoiceAnchor(
   )
 }
 
-/** A verified named feature can anchor an earned choice. Otherwise its row stands on its own. */
+function isGenericSubclassGain(entries: readonly unknown[] = []) {
+  const [heading, text = heading] = entries
+  return (
+    (entries.length === 1 ||
+      (entries.length === 2 &&
+        typeof heading === 'string' &&
+        /^\{@i \d+\w+-level [\w ]+ feature\}$/i.test(heading.trim()))) &&
+    typeof text === 'string' &&
+    /^(?:At \d+\w{2} level, )?[Yy]ou gain (?:a|one|another) feature (?:from|granted (?:to you )?by) your (?:[A-Z]\w* )*(?:[A-Z]\w*|subclass|feature|choice)\.$/.test(
+      text.trim(),
+    )
+  )
+}
+
+/** Show the selected subclass's active, exact rules at their earned levels. */
 export function projectClassLevelFeatures(
   featuresByLevel: Map<number, ClassFeatureDisplay[]>,
   cls: Class5e | undefined,
@@ -133,16 +173,15 @@ export function projectClassLevelFeatures(
     !cls ||
     !subclass ||
     !sourceSubclass ||
+    cls.sourceIdentityConflict ||
     subclass.sourceIdentityConflict ||
+    sourceSubclass.sourceIdentityConflict ||
     !findClassReference({ name: subclass.className, source: subclass.classSource }, [cls])
   )
     return featuresByLevel
 
   const result = new Map(featuresByLevel)
-  const isSorcerer = !!findClassReference(cls, [
-    { name: 'Sorcerer', source: 'PHB' },
-    { name: 'Sorcerer', source: 'XPHB' },
-  ])
+  const { subclassLevel } = getSubclassSelectionInfo(cls)
   for (const { level, features } of getSubclassFeatureGroups(subclass)) {
     if (level > classLevel) continue
     const refs =
@@ -173,31 +212,29 @@ export function projectClassLevelFeatures(
         !!feature.entries?.length
       )
     })
+    const laterGain = level > (subclassLevel ?? Infinity)
+    const displayed = laterGain
+      ? exact
+      : exact.filter((feature) =>
+          choices.some(
+            (choice) =>
+              level > choice.level &&
+              getProgressiveChoiceGainCount(choice, level) &&
+              isProgressiveChoiceFeature(feature, choice),
+          ),
+        )
+    if (!displayed.length) continue
     const current = result.get(level) ?? []
-    if (isSorcerer && (level === 14 || level === 18) && exact.length) {
-      const complete = targets.length === refs.length && refs.length === exact.length
-      result.set(
-        level,
-        current.flatMap<ClassFeatureDisplay>((feature) =>
-          feature.origin?.kind === 'declared' &&
-          matchesNativeSubclassGain(cls, feature.origin.target, level, 'at-level')
-            ? complete
-              ? exact
-              : [feature, ...exact]
-            : [feature],
-        ),
-      )
-    } else {
-      const anchors = exact.filter((feature) =>
-        choices.some(
-          (choice) =>
-            level > choice.level &&
-            getProgressiveChoiceGainCount(choice, level) &&
-            isProgressiveChoiceFeature(feature, choice),
-        ),
-      )
-      if (anchors.length) result.set(level, [...current, ...anchors])
-    }
+    const classFeatures =
+      laterGain && refs.length === exact.length
+        ? current.filter(
+            (feature) =>
+              feature.origin?.kind !== 'declared' ||
+              !isGenericSubclassGain(feature.entries) ||
+              !matchesNativeSubclassGain(cls, feature.origin.target, level, 'at-level'),
+          )
+        : current
+    result.set(level, [...classFeatures, ...displayed])
   }
   return result
 }
@@ -209,7 +246,7 @@ interface CountAsiAndFeatSlotsParams {
 }
 
 interface BuildLevelsToShowParams {
-  allClassFeatures: Array<{ level?: number }>
+  featureLevels: Iterable<number>
   asiLevels: number[]
   subclassLevel: number | undefined
   viewingClassLevel: number
@@ -262,7 +299,7 @@ export function countTotalFeatSlots({
 }
 
 export function buildLevelsToShow({
-  allClassFeatures,
+  featureLevels,
   asiLevels,
   subclassLevel,
   viewingClassLevel,
@@ -271,11 +308,9 @@ export function buildLevelsToShow({
 }: BuildLevelsToShowParams): number[] {
   const levels = new Set<number>()
 
-  allClassFeatures.forEach((feature) => {
-    if (feature.level && feature.level <= viewingClassLevel) {
-      levels.add(feature.level)
-    }
-  })
+  for (const level of featureLevels) {
+    if (level > 0 && level <= viewingClassLevel) levels.add(level)
+  }
 
   asiLevels
     .filter((level) => level <= viewingClassLevel)

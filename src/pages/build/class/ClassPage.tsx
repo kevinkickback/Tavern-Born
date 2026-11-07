@@ -9,7 +9,7 @@ import { useClassChoiceFeatureCatalogs } from '@/hooks/character/useClassChoiceF
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useClassLookup, useSpellLookup } from '@/hooks/data/useGameData'
+import { useClasses, useClassLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import {
   getClassChoiceSlotLevels,
@@ -57,6 +57,7 @@ import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSub
 import {
   buildLevelsToShow,
   type ClassDetailsSelection,
+  getClassChoiceGainCount,
   projectClassLevelFeatures,
   resolveSubclassDetailsSelection,
 } from '@/pages/build/class/model/pageUtils'
@@ -92,6 +93,7 @@ export function BuildClassPage() {
     itemMasteries,
   } = useFilteredGameData()
   const featureCatalogs = useClassChoiceFeatureCatalogs()
+  const sourceClasses = useClasses()
   const classLookup = useClassLookup()
   const spellLookup = useSpellLookup()
   const { selectClass } = useUnifiedClassSelection()
@@ -453,47 +455,6 @@ export function BuildClassPage() {
     const levels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
     return epicBoonSlot && !levels.includes(EPIC_BOON_LEVEL) ? [...levels, EPIC_BOON_LEVEL] : levels
   }, [viewingClassData, epicBoonSlot])
-  const levelsToShow = useMemo(
-    () =>
-      buildLevelsToShow({
-        allClassFeatures,
-        asiLevels,
-        subclassLevel,
-        viewingClassLevel,
-        spellChoicesByLevel,
-        classChoiceLevels: [
-          ...classChoiceController.choices.flatMap((choice) =>
-            getProgressiveChoiceGainCount(choice, choice.level) !== undefined
-              ? getClassChoiceSlotLevels(choice)
-              : [choice.level],
-          ),
-          ...classChoiceController.diagnostics.map((diagnostic) => diagnostic.level ?? 1),
-          ...classChoiceController.recoveries.map((state) => state.selection.classLevel),
-          ...(character && activity && viewingClass
-            ? getVisibleOptionalClassFeatures({
-                character,
-                className: viewingClass,
-                classSource: viewingClassSource,
-                activity,
-              }).map((row) => row.root.level)
-            : []),
-        ],
-      }),
-    [
-      allClassFeatures,
-      asiLevels,
-      subclassLevel,
-      viewingClassLevel,
-      spellChoicesByLevel,
-      classChoiceController.choices,
-      classChoiceController.diagnostics,
-      classChoiceController.recoveries,
-      character,
-      activity,
-      viewingClass,
-      viewingClassSource,
-    ],
-  )
   const {
     pickerOpen: subclassPickerOpen,
     setPickerOpen: setSubclassPickerOpen,
@@ -516,13 +477,18 @@ export function BuildClassPage() {
   )
   const viewingSubclassDisplayData =
     matchingSubclasses?.length === 1 ? matchingSubclasses[0] : undefined
+  // The unfiltered declarations can prove whether a displayed gain is incomplete.
+  // Only the active, filtered feature bodies are used to render it.
+  const sourceSubclass =
+    viewingEntry &&
+    getSelectedSubclassData(findClassReference(viewingEntry, sourceClasses), viewingEntry)
   const featuresByLevel = useMemo(
     () =>
       projectClassLevelFeatures(
         getClassFeatureGroups(allClassFeatures),
         viewingClassDisplayData,
         viewingSubclassDisplayData,
-        viewingSubclassData,
+        sourceSubclass,
         classChoiceController.choices,
         viewingClassLevel,
       ),
@@ -530,9 +496,51 @@ export function BuildClassPage() {
       allClassFeatures,
       viewingClassDisplayData,
       viewingSubclassDisplayData,
-      viewingSubclassData,
+      sourceSubclass,
       classChoiceController.choices,
       viewingClassLevel,
+    ],
+  )
+  const levelsToShow = useMemo(
+    () =>
+      buildLevelsToShow({
+        featureLevels: featuresByLevel.keys(),
+        asiLevels,
+        subclassLevel,
+        viewingClassLevel,
+        spellChoicesByLevel,
+        classChoiceLevels: [
+          ...classChoiceController.choices.flatMap((choice) => [
+            choice.level,
+            ...getClassChoiceSlotLevels(choice).filter((level) =>
+              getClassChoiceGainCount(choice, level),
+            ),
+          ]),
+          ...classChoiceController.diagnostics.map((diagnostic) => diagnostic.level ?? 1),
+          ...classChoiceController.recoveries.map((state) => state.selection.classLevel),
+          ...(character && activity && viewingClass
+            ? getVisibleOptionalClassFeatures({
+                character,
+                className: viewingClass,
+                classSource: viewingClassSource,
+                activity,
+              }).map((row) => row.root.level)
+            : []),
+        ],
+      }),
+    [
+      featuresByLevel,
+      asiLevels,
+      subclassLevel,
+      viewingClassLevel,
+      spellChoicesByLevel,
+      classChoiceController.choices,
+      classChoiceController.diagnostics,
+      classChoiceController.recoveries,
+      character,
+      activity,
+      viewingClass,
+      viewingClassSource,
     ],
   )
   const allSpells = spells as Spell5e[]

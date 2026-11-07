@@ -18,6 +18,7 @@ import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionS
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import { cn } from '@/lib/utils'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
+import { getClassChoiceGainCount } from '../model/pageUtils'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 
@@ -97,7 +98,7 @@ export function BuildClassChoicesSection({
         const required =
           (progressionGainLevel === undefined
             ? undefined
-            : getProgressiveChoiceGainCount(choice, progressionGainLevel)) ??
+            : getClassChoiceGainCount(choice, progressionGainLevel)) ??
           getRequiredChoiceSelectionCount(choice, classLevel)
         const views = selectedViewsByChoiceId.get(choice.id) ?? []
         const selectedCount = getClassChoiceCompletionCount(choice, views)

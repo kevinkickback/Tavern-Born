@@ -248,7 +248,7 @@ test('@focused classic Battle Master chooses Maneuvers at the earned Fighter lev
   await expect(dialog).toBeHidden()
   const group = (await openLevel(page, 7)).getByRole('group', { name: 'Maneuvers', exact: true })
   await expect(group.getByText('2 / 2 chosen', { exact: true })).toBeVisible()
-  await group.getByRole('button', { name: /^Maneuvers/ }).click()
+  await group.getByRole('button', { name: 'Additional Maneuvers', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Additional Maneuvers', exact: true }),
   ).toBeVisible()
@@ -288,3 +288,108 @@ test('@focused classic Battle Master chooses Maneuvers at the earned Fighter lev
     ).toBeVisible()
   }
 })
+
+for (const edition of ['2014', '2024'] as const) {
+  test(`@focused ${edition} Warlock chooses and reopens additional Invocations at level 5`, async ({
+    page,
+  }) => {
+    const classic = edition === '2014'
+    const source = classic ? 'PHB' : 'XPHB'
+    const initial = classic
+      ? ['Armor of Shadows', 'Beast Speech']
+      : ['Armor of Shadows', 'Mask of Many Faces', 'Eldritch Mind']
+    const gained = classic ? ['Mask of Many Faces'] : ["Devil's Sight", 'Otherworldly Leap']
+    const subclass = classic ? 'The Fiend' : 'Fiend Patron'
+    const initialLevel = classic ? 2 : 1
+    const choiceId = `class:warlock|${source.toLowerCase()}|choice:eldritch-invocations|${initialLevel}`
+    const gameData = makeBundledClassCastingLayer('class/class-warlock.json')
+    gameData.optionalfeatures = parseOptionalFeatures(
+      JSON.parse(readFileSync('resources/srd/core/data/optionalfeatures.json', 'utf8')),
+    )
+    const actor = makeCharacterFixture({
+      name: `Fiend Warlock ${edition}`,
+      originSystem: edition,
+      allowedSources: [source],
+      classProgression: [{ name: 'Warlock', source, levels: 4, subclass, subclassSource: source }],
+      classChoiceSelections: [
+        {
+          choiceId,
+          label: 'Eldritch Invocations',
+          kind: 'optional-feature',
+          className: 'Warlock',
+          classSource: source,
+          classLevel: initialLevel,
+          selected: initial.map((name, index) => ({
+            entityType: 'optionalFeature',
+            name,
+            source,
+            slotLevel: index === 0 ? initialLevel : 2,
+          })),
+        },
+      ],
+    })
+
+    await page.goto('/')
+    await seedAppState(page, {
+      sourcePath: `e2e-warlock-gains-${edition}`,
+      gameData,
+      characters: [actor],
+    })
+    await page.reload()
+    await selectCharacterFromHome(page, actor.name)
+    await page.getByRole('link', { name: 'Class', exact: true }).click()
+    await levelUp(page, 5)
+    const group = (await openLevel(page, 5)).getByRole('group', {
+      name: 'Eldritch Invocations',
+      exact: true,
+    })
+    await expect(group.getByText(`0 / ${gained.length} chosen`, { exact: true })).toBeVisible()
+    await group.getByRole('button', { name: 'Choose', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Choose Eldritch Invocations' })
+    await expect(
+      dialog.getByText(`${initial.length}/${initial.length + gained.length} selections`, {
+        exact: true,
+      }),
+    ).toBeVisible()
+    const search = dialog.getByRole('textbox', { name: /search/i })
+    for (const name of gained) {
+      await search.fill(name)
+      await dialog
+        .locator('button[aria-pressed]')
+        .filter({ hasText: name })
+        .click({ position: { x: 8, y: 8 } })
+    }
+    await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await page.getByRole('button', { name: 'Save character', exact: true }).click()
+
+    const expected = [
+      ...initial.map((name, index) => `${index === 0 ? initialLevel : 2}|${name}`),
+      ...gained.map((name) => `5|${name}`),
+    ].sort()
+    await expect
+      .poll(async () => {
+        const row = (await readPersistedCharacters(page)).find(
+          (value) => (value as { id: string }).id === actor.id,
+        )
+        return characterPersistenceSchema
+          .parse(row)
+          .classChoiceSelections?.find((choice) => choice.choiceId === choiceId)
+          ?.selected.map((option) => `${option.slotLevel}|${option.name}`)
+          .sort()
+      })
+      .toEqual(expected)
+
+    await page.reload()
+    await selectCharacterFromHome(page, actor.name)
+    await page.getByRole('link', { name: 'Class', exact: true }).click()
+    const reopened = (await openLevel(page, 5)).getByRole('group', {
+      name: 'Eldritch Invocations',
+      exact: true,
+    })
+    await expect(
+      reopened.getByText(`${gained.length} / ${gained.length} chosen`, { exact: true }),
+    ).toBeVisible()
+    for (const name of gained) await expect(reopened.getByText(name, { exact: true })).toBeVisible()
+  })
+}

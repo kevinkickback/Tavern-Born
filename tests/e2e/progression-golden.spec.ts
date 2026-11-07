@@ -316,14 +316,16 @@ async function chooseBackgroundBonuses(page: Page) {
   await page.getByRole('option', { name: 'CON', exact: true }).click()
 }
 
-async function chooseWeaponMastery(page: Page, count = 3, previous = 0) {
+async function chooseWeaponMastery(page: Page, level = 1, count = 3, previous = 0) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  const trigger = page.getByRole('button', { name: /Level 1\b/ })
+  const levelName = new RegExp(`^Level ${level}\\b`)
+  const trigger = page.getByRole('button', { name: levelName })
   if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
-  await page
-    .getByRole('region', { name: /Level 1\b/ })
-    .getByRole('button', { name: /^(Choose|Edit)$/ })
-    .click()
+  const group = page
+    .getByRole('region', { name: levelName })
+    .getByRole('group', { name: 'Weapon Mastery', exact: true })
+  await expect(group.getByText(`0 / ${count - previous} chosen`, { exact: true })).toBeVisible()
+  await group.getByRole('button', { name: 'Choose', exact: true }).click()
   const modal = page.getByRole('dialog', { name: 'Choose weapons for Weapon Mastery' })
   for (const name of MASTERY_WEAPONS.slice(previous, count)) {
     await modal
@@ -332,7 +334,12 @@ async function chooseWeaponMastery(page: Page, count = 3, previous = 0) {
       .click()
   }
   await modal.getByRole('button', { name: 'Confirm' }).click()
-  await expect(page.getByText('Longsword', { exact: true })).toBeVisible()
+  await expect(
+    group.getByText(`${count - previous} / ${count - previous} chosen`, { exact: true }),
+  ).toBeVisible()
+  for (const name of MASTERY_WEAPONS.slice(previous, count)) {
+    await expect(group.getByText(name, { exact: true })).toBeVisible()
+  }
 }
 
 async function assertCurrentHpMatchesMaximum(page: Page, maximum: number) {
@@ -612,9 +619,9 @@ test('@golden 2024 Human Eldritch Knight progresses from creation through level 
       'XPHB',
       KNIGHT_SPELLS.find((row) => row.level === level),
     )
-    if (level === 4) await chooseWeaponMastery(page, 4, 3)
-    if (level === 10) await chooseWeaponMastery(page, 5, 4)
-    if (level === 16) await chooseWeaponMastery(page, 6, 5)
+    if (level === 4) await chooseWeaponMastery(page, level, 4, 3)
+    if (level === 10) await chooseWeaponMastery(page, level, 5, 4)
+    if (level === 16) await chooseWeaponMastery(page, level, 6, 5)
   })
   await resolveAbilityScoreImprovements(page, [4, 6, 8, 12, 14, 16, 19])
 

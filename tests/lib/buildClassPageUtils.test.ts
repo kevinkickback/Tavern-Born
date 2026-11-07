@@ -141,7 +141,7 @@ describe('buildClassPageUtils', () => {
 
   test('buildLevelsToShow merges feature, asi, subclass, spell, and progression trigger levels', () => {
     const levels = buildLevelsToShow({
-      allClassFeatures: [{ level: 1 }, { level: 3 }, { level: 9 }],
+      featureLevels: [1, 3, 9],
       asiLevels: [4, 8, 12],
       subclassLevel: 3,
       viewingClassLevel: 8,
