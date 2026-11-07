@@ -12,6 +12,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { ABILITY_NAMES } from '@/lib/calculations/abilityScores'
+import type { RaceDisplaySelection } from '@/lib/calculations/raceDisplay'
 import type { SkillExpertiseAction } from '@/lib/character/skillExpertiseChoices'
 import type { SkillProficiencyAction } from '@/lib/character/skillProficiencyChoices'
 import { normalizeKey } from '@/lib/provenance/normalization'
@@ -175,14 +176,12 @@ interface BuildProficienciesTabsPanelProps {
   availableLanguages: string[]
   currentProficiencies: CurrentProficiencies
   ledger: ProficiencyLedger
-  dropdownToolSlots: ToolChoiceSlot[]
-  artisanToolSlots: ToolChoiceSlot[]
+  toolChoiceSlots: ToolChoiceSlot[]
+  raceSelection?: RaceDisplaySelection
   /** Pre-computed list of tool names to render as selectable pills. */
   visibleToolCandidates: string[]
-  /** Map from normalised artisan tool name to the choiceId of the first slot that accepts it. */
-  artisanChoiceByNorm: Map<string, string>
   onFocusChange: (focus: ProfFocus) => void
-  onExpandDetails: () => void
+  onExpandDetails: (preview?: boolean) => void
   onResolveChoiceSelection: ResolveChoiceSelection
   expertiseActions: Record<string, SkillExpertiseAction[]>
   onExpertiseAction: (skill: string, actionId: string) => void
@@ -208,10 +207,9 @@ export function BuildProficienciesTabsPanel({
   availableLanguages,
   currentProficiencies,
   ledger,
-  dropdownToolSlots,
-  artisanToolSlots,
+  toolChoiceSlots,
+  raceSelection,
   visibleToolCandidates,
-  artisanChoiceByNorm,
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
@@ -473,6 +471,7 @@ export function BuildProficienciesTabsPanel({
 
         <TabsContent value="tools">
           <ToolsPanel
+            raceSelection={raceSelection}
             groups={toolGroups}
             visibleToolCandidates={visibleToolCandidates}
             currentTools={currentProficiencies.tools}
@@ -480,9 +479,7 @@ export function BuildProficienciesTabsPanel({
             ledger={ledger}
             sort={toolSort}
             onSortChange={setToolSort}
-            dropdownToolSlots={dropdownToolSlots}
-            artisanToolSlots={artisanToolSlots}
-            artisanChoiceByNorm={artisanChoiceByNorm}
+            toolChoiceSlots={toolChoiceSlots}
             onFocusChange={onFocusChange}
             onExpandDetails={onExpandDetails}
             onResolveChoiceSelection={onResolveChoiceSelection}

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import type { ChoiceRecord } from '@/lib/provenance/types'
+import { prepareToolProficiencySources } from '@/lib/5etools/toolProficiencySource'
+import { resolveConcreteToolChoiceCommand } from '@/lib/character/commands/featCommands'
+import { addGrant, applyRaceGrants, makeSourceTag } from '@/lib/provenance'
 import {
-  buildArtisanChoiceMap,
   buildChoiceCounts,
   buildOptionalToolNamesFromChoices,
   buildSkillDescriptions,
@@ -11,9 +12,13 @@ import {
   dedupeByNorm,
   formatWeaponCategoryLabel,
   getSelectedToolNames,
-  hasUnresolvedChoiceForKind,
   normalizeGenericToolKind,
 } from '@/pages/build/proficiencies/model/data'
+import type { Item5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+const audit = (items: Item5e[]) => prepareToolProficiencySources(items, items)
 
 describe('buildProficienciesData', () => {
   test('buildSkillDescriptions supports object and array input', () => {
@@ -79,23 +84,25 @@ describe('buildProficienciesData', () => {
 
   test('buildToolSubtypeOptionsByKind filters by allowed sources and deduplicates names', () => {
     const byKind = buildToolSubtypeOptionsByKind({
-      itemsBase: [
-        { name: 'Lute', type: 'INS|PHB', source: 'PHB' },
-        { name: 'Lyre', type: 'INS|PHB', source: 'XGE' },
-        { name: "Smith's Tools", type: 'AT|PHB', source: 'PHB' },
-        { name: 'Dice Set', type: 'GS|PHB', source: 'PHB' },
-      ],
+      itemsBase: audit([
+        { name: 'Lute', type: 'INS|PHB', rarity: 'none', source: 'PHB' },
+        { name: 'Lyre', type: 'INS|PHB', rarity: 'none', source: 'XGE' },
+        { name: "Smith's Tools", type: 'AT|PHB', rarity: 'none', source: 'PHB' },
+        { name: 'Dice Set', type: 'GS|PHB', rarity: 'none', source: 'PHB' },
+        { name: "Thieves' Tools", type: 'T', rarity: 'none', source: 'PHB' },
+      ]),
       allowedSources: ['PHB'],
     })
 
     expect(byKind['musical instrument']).toEqual(['Lute'])
     expect(byKind["artisan's tools"]).toEqual(["Smith's Tools"])
     expect(byKind['gaming set']).toEqual(['Dice Set'])
+    expect(byKind.tool).toContain("Thieves' Tools")
   })
 
   test('buildToolSubtypeOptionsByKind excludes wondrous instruments from musical instrument list', () => {
     const byKind = buildToolSubtypeOptionsByKind({
-      itemsBase: [{ name: 'Drum', type: 'INS', source: 'PHB' }],
+      itemsBase: audit([{ name: 'Drum', type: 'INS', rarity: 'none', source: 'PHB' }]),
       items: [
         { name: 'Instrument of Illusions', type: 'INS', source: 'XGE', wondrous: true },
         { name: 'Horn of Silent Alarm', type: 'INS|XPHB', source: 'XDMG', wondrous: true },
@@ -106,16 +113,16 @@ describe('buildProficienciesData', () => {
     expect(byKind['musical instrument']).toEqual(['Drum'])
   })
 
-  test('buildToolSubtypeOptionsByKind falls back to global items when allowed-source subset is empty', () => {
+  test('buildToolSubtypeOptionsByKind keeps explicit empty source scope empty', () => {
     const byKind = buildToolSubtypeOptionsByKind({
-      itemsBase: [{ name: 'Lute', type: 'INS|PHB', source: 'PHB' }],
-      items: [{ name: 'Dragonchess Set', type: 'GS|XDMG', source: 'XDMG' }],
+      itemsBase: [{ name: 'Lute', type: 'INS|PHB', rarity: 'none', source: 'PHB' }],
+      items: [{ name: 'Dragonchess Set', type: 'GS|XDMG', rarity: 'none', source: 'XDMG' }],
       allowedSources: ['XPHB'],
     })
 
-    expect(byKind['musical instrument']).toEqual(['Lute'])
-    expect(byKind['gaming set']).toEqual(['Dragonchess Set'])
-    expect(byKind.tool).toEqual(['Dragonchess Set', 'Lute'])
+    expect(byKind['musical instrument']).toEqual([])
+    expect(byKind['gaming set']).toEqual([])
+    expect(byKind.tool).toEqual([])
   })
 
   test('buildToolChoiceSlots expands remaining generic tool picks into slots', () => {
@@ -147,8 +154,8 @@ describe('buildProficienciesData', () => {
 
     expect(slots).toEqual([
       {
-        id: 'choice-1:0',
-        choiceId: 'choice-1',
+        id: 'choice-1',
+        remaining: 1,
         label: 'musical instrument',
         sourceName: 'Bard',
         options: ['Lyre'],
@@ -185,8 +192,8 @@ describe('buildProficienciesData', () => {
 
     expect(slots).toEqual([
       {
-        id: 'choice-2:0',
-        choiceId: 'choice-2',
+        id: 'choice-2',
+        remaining: 1,
         label: 'tool',
         sourceName: 'Noble',
         options: ['Dragonchess Set', 'Lute', "Smith's Tools"],
@@ -205,44 +212,11 @@ describe('dedupeByNorm', () => {
   })
 })
 
-describe('hasUnresolvedChoiceForKind', () => {
-  const choices: ChoiceRecord[] = [
-    {
-      id: 'c1',
-      domain: 'tools',
-      sourceTag: {
-        sourceType: 'class' as const,
-        sourceName: 'Bard',
-        grantType: 'choice' as const,
-        label: 'Bard',
-      },
-      chooseCount: 1,
-      optionPool: ['any musical instrument'],
-      selected: [],
-      status: 'pending' as const,
-    },
-  ]
-
-  test('returns true when an unfilled slot matches the kind', () => {
-    expect(hasUnresolvedChoiceForKind(choices, 'musical instrument')).toBe(true)
-  })
-
-  test('returns false when no slot matches', () => {
-    expect(hasUnresolvedChoiceForKind(choices, 'gaming set')).toBe(false)
-  })
-
-  test('returns false when the choice is fully resolved', () => {
-    const resolved = [{ ...choices[0], selected: ['Lute'] }]
-    expect(hasUnresolvedChoiceForKind(resolved, 'musical instrument')).toBe(false)
-  })
-})
-
 describe('buildVisibleToolCandidates', () => {
   test('removes abstract tool token and duplicates', () => {
     const result = buildVisibleToolCandidates({
       availableTools: ['Lute', "Thieves' Tools"],
       optionalToolNames: ['Lute', 'Lyre'],
-      artisanToolNames: [],
       currentTools: [],
       selectedToolNames: [],
     })
@@ -254,24 +228,22 @@ describe('buildVisibleToolCandidates', () => {
     expect(result.filter((n) => n === 'Lute')).toHaveLength(1)
   })
 
-  test('keeps canonical generic labels and filters verbose placeholders', () => {
+  test('keeps abstract categories out of the concrete rows', () => {
     const result = buildVisibleToolCandidates({
       availableTools: [],
       optionalToolNames: [],
-      artisanToolNames: [],
       currentTools: ['gaming set', 'one type of gaming set of your choice'],
       selectedToolNames: [],
     })
 
-    expect(result).toContain('gaming set')
+    expect(result).not.toContain('gaming set')
     expect(result.some((n) => n.toLowerCase().includes('one type'))).toBe(false)
   })
 
   test("filters out the artisan's tools category label", () => {
     const result = buildVisibleToolCandidates({
       availableTools: ["artisan's tools"],
-      optionalToolNames: [],
-      artisanToolNames: ["Smith's Tools", "Brewer's Supplies"],
+      optionalToolNames: ["Smith's Tools", "Brewer's Supplies"],
       currentTools: [],
       selectedToolNames: [],
     })
@@ -279,23 +251,6 @@ describe('buildVisibleToolCandidates', () => {
     expect(result).not.toContain("artisan's tools")
     expect(result).toContain("Smith's Tools")
     expect(result).toContain("Brewer's Supplies")
-  })
-})
-
-describe('buildArtisanChoiceMap', () => {
-  test('maps normalised tool names to choice IDs', () => {
-    const map = buildArtisanChoiceMap([
-      {
-        id: 'slot-1',
-        choiceId: 'choice-1',
-        label: "artisan's tools",
-        sourceName: 'Artificer',
-        options: ["Smith's Tools", "Brewer's Supplies"],
-      },
-    ])
-
-    expect(map.get("smith's tools")).toBe('choice-1')
-    expect(map.get("brewer's supplies")).toBe('choice-1')
   })
 })
 
@@ -393,4 +348,146 @@ describe('formatWeaponCategoryLabel', () => {
     expect(formatWeaponCategoryLabel('Simple Melee')).toBe('All Simple Melee Weapons')
     expect(formatWeaponCategoryLabel('MARTIAL')).toBe('All Martial Weapons')
   })
+})
+
+const toolPools = {
+  tool: ['Drum', 'Flute', 'Dice Set', "Thieves' Tools"],
+  'musical instrument': ['Drum', 'Flute'],
+  'gaming set': ['Dice Set'],
+  "artisan's tools": [],
+}
+
+test.each([
+  'ERLW',
+  'EFA',
+])('Warforged %s exact tool grant can be selected, reopened, and removed', (source) => {
+  const race = { name: 'Warforged', source, toolProficiencies: [{ any: 1 }] }
+  const original = makeCharacterFixture({ race: race.name, raceSource: source })
+  const character = {
+    ...original,
+    provenance: applyRaceGrants(race, undefined, original.provenance),
+  }
+  const requested = character.provenance.choices.find((row) => row.domain === 'tools')!
+  expect(requested).toMatchObject({
+    id: 'race:warforged:tools:generic:0',
+    chooseCount: 1,
+    optionPool: ['tool'],
+  })
+  const stale = {
+    ...requested,
+    sourceTag: { ...requested.sourceTag, sourceRef: source === 'ERLW' ? 'EFA' : 'ERLW' },
+  }
+  expect(
+    resolveConcreteToolChoiceCommand(character, stale, 'Drum', true, toolPools).provenanceUpdate,
+  ).toBe(character.provenance)
+  const tool = "Thieves' Tools"
+  const result = resolveConcreteToolChoiceCommand(character, requested, tool, true, toolPools)
+  const saved = characterPersistenceSchema.parse({
+    ...character,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  })
+  expect(saved.proficiencies.tools).toContain(tool)
+  expect(saved.provenance.proficiencies.tools["thieves' tools"]).toEqual([
+    expect.objectContaining({ sourceName: 'Warforged', sourceRef: source, grantType: 'choice' }),
+  ])
+  expect(
+    resolveConcreteToolChoiceCommand(saved, requested, 'Drum', true, toolPools).provenanceUpdate,
+  ).toBe(saved.provenance)
+  const independentlyGranted = {
+    ...saved,
+    provenance: addGrant(
+      saved.provenance,
+      'tools',
+      tool,
+      makeSourceTag('manual', 'User Choice', 'fixed'),
+    ),
+  }
+  const removed = resolveConcreteToolChoiceCommand(independentlyGranted, requested, tool, false)
+  expect(removed.characterPatch.proficiencies?.tools).toContain(tool)
+  expect(removed.provenanceUpdate.choices.find((row) => row.id === requested.id)?.selected).toEqual(
+    [],
+  )
+  expect(removed.provenanceUpdate.proficiencies.tools["thieves' tools"]).toEqual([
+    expect.objectContaining({ sourceType: 'manual' }),
+  ])
+})
+
+test('an explicit mixed tool pool spends each declared category only once', () => {
+  const original = makeCharacterFixture()
+  const choice = {
+    id: 'background:urban:tools:choose:0',
+    domain: 'tools' as const,
+    sourceTag: makeSourceTag('background', 'Urban Bounty Hunter', 'placeholder', 'SCAG'),
+    chooseCount: 2,
+    optionPool: ['gaming set', 'musical instrument', "Thieves' Tools"],
+    selected: ['Drum'],
+    status: 'partially-resolved' as const,
+  }
+  const character = { ...original, provenance: { ...original.provenance, choices: [choice] } }
+  expect(
+    resolveConcreteToolChoiceCommand(character, choice, 'Flute', true, toolPools).provenanceUpdate,
+  ).toBe(character.provenance)
+  expect(
+    resolveConcreteToolChoiceCommand(character, choice, 'Dice Set', true, toolPools)
+      .provenanceUpdate.choices[0]?.selected,
+  ).toEqual(['Drum', 'Dice Set'])
+})
+
+test('retained item classification can fill a branch without widening new options', () => {
+  const original = makeCharacterFixture()
+  const choice = {
+    id: 'background:urban:tools:choose:0',
+    domain: 'tools' as const,
+    sourceTag: makeSourceTag('background', 'Urban Bounty Hunter', 'placeholder', 'SCAG'),
+    chooseCount: 2,
+    optionPool: ['gaming set', 'musical instrument', "Thieves' Tools"],
+    selected: ['Bandore'],
+    status: 'partially-resolved' as const,
+  }
+  const character = { ...original, provenance: { ...original.provenance, choices: [choice] } }
+  const retained = {
+    ...toolPools,
+    tool: [...toolPools.tool, 'Bandore'],
+    'musical instrument': ['Bandore', ...toolPools['musical instrument']],
+  }
+  expect(
+    resolveConcreteToolChoiceCommand(
+      character,
+      choice,
+      'Flute',
+      true,
+      toolPools,
+      undefined,
+      retained,
+    ).provenanceUpdate,
+  ).toBe(character.provenance)
+  expect(
+    resolveConcreteToolChoiceCommand(
+      character,
+      choice,
+      'Dice Set',
+      true,
+      toolPools,
+      undefined,
+      retained,
+    ).provenanceUpdate.choices[0]?.selected,
+  ).toEqual(['Bandore', 'Dice Set'])
+})
+
+test('an unresolved explicit tool filter cannot grant an unrestricted pick', () => {
+  const original = makeCharacterFixture()
+  const choice = {
+    id: 'background:test:tools:choose:0',
+    domain: 'tools' as const,
+    sourceTag: makeSourceTag('background', 'Test', 'placeholder', 'TEST'),
+    chooseCount: 1,
+    optionPool: [],
+    selected: [],
+    status: 'pending' as const,
+  }
+  const character = { ...original, provenance: { ...original.provenance, choices: [choice] } }
+  expect(
+    resolveConcreteToolChoiceCommand(character, choice, 'Drum', true, toolPools).provenanceUpdate,
+  ).toBe(character.provenance)
 })

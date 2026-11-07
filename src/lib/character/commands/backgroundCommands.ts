@@ -26,8 +26,10 @@ import {
   addGrant,
   applyBackgroundGrants,
   diffProficiencyGrants,
+  iterateProficiencyBlocks,
   makeSourceTag,
   reconcileBackgroundChange,
+  toProficiencyBlocks,
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -94,9 +96,12 @@ export function applyBackgroundSelectionCommand(
   const languages = extractProficiencyBlockNames(normalizedBackground.languageProficiencies ?? [], {
     includeAnyStandard: false,
   })
-  const tools = extractProficiencyBlockNames(normalizedBackground.toolProficiencies ?? [], {
-    includeAnyStandard: false,
-  })
+  const tools = [
+    ...iterateProficiencyBlocks(
+      toProficiencyBlocks(normalizedBackground.toolProficiencies),
+      'tools',
+    ),
+  ].flatMap((entry) => (entry.kind === 'fixed' || entry.kind === 'numeric' ? [entry.key] : []))
   proficiencies = {
     ...proficiencies,
     skills: [...new Set([...proficiencies.skills, ...skills])],
