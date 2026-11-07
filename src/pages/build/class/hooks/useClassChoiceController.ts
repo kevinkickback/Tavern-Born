@@ -30,6 +30,7 @@ import {
   getCharacterClassChoices,
   getClassChoiceOptionKey,
   isClassChoiceOptionEligible,
+  isClassChoiceOptionEligibleInDraft,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -247,7 +248,7 @@ export function useClassChoiceController({
         state.companion ||
         state.classOrder ||
         state.projectedBranch ||
-        state.invocationCantrips ||
+        state.revisedInvocations ||
         state.selection.choiceId === REVISED_AFFINITY_ID
       )
         return (
@@ -398,7 +399,7 @@ export function useClassChoiceController({
   const resolvedActiveChoice = choices.find((choice) => choice.id === activeId)
   const activeRemovalOnly =
     (activeSaved?.recovery &&
-      !((activeSaved.enemy || activeSaved.invocationCantrips) && activeSaved.choice)) ??
+      !((activeSaved.enemy || activeSaved.revisedInvocations) && activeSaved.choice)) ??
     false
   const activeDisplayChoice =
     activeRemovalOnly && activeSaved
@@ -458,7 +459,7 @@ export function useClassChoiceController({
             activeSaved.companion ||
             activeSaved.classOrder ||
             activeSaved.projectedBranch ||
-            activeSaved.invocationCantrips ||
+            activeSaved.revisedInvocations ||
             activeSaved.selection.choiceId === REVISED_AFFINITY_ID ||
             getLandChoiceRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
@@ -484,11 +485,12 @@ export function useClassChoiceController({
       const previous = new Set(
         (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
       )
+      const draft = new Set(selected.map((view) => getClassChoiceOptionKey(view.reference)))
       if (
         selected.some((view) => {
           const key = getClassChoiceOptionKey(view.reference)
           const live = currentViews.get(key)
-          return !live || (!isClassChoiceOptionEligible(live) && !previous.has(key))
+          return !live || (!isClassChoiceOptionEligibleInDraft(live, draft) && !previous.has(key))
         })
       ) {
         toast.error('Source rules changed. Review the available choices before confirming.')
@@ -767,7 +769,7 @@ export function useClassChoiceController({
                 state.companion ||
                 state.classOrder ||
                 state.projectedBranch ||
-                state.invocationCantrips ||
+                state.revisedInvocations ||
                 state.selection.choiceId === REVISED_AFFINITY_ID ||
                 getLandChoiceRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)

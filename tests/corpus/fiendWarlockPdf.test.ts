@@ -12,7 +12,10 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
-import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import {
+  applyClassChoiceSelectionWithGrantsCommand,
+  reconcileClassChoiceSelectionGrants,
+} from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
@@ -109,24 +112,33 @@ const bladeClause = {
 }
 
 function chooseBlade(saved: Character, data: GameData, selected = true) {
+  const source = saved.classProgression[0].source
+  return chooseWarlockOption(
+    saved,
+    data,
+    source === 'PHB' ? 'Pact Boon' : 'Eldritch Invocations',
+    selected ? bladeName : undefined,
+  )
+}
+
+function chooseWarlockOption(saved: Character, data: GameData, label: string, option?: string) {
   const [owner] = saved.classProgression
   const cls = data.classes.find((row) => row.name === owner.name && row.source === owner.source)
   if (!cls) throw new Error('Missing exact Warlock')
   const catalogs = buildClassChoiceFeatureCatalogs(data)
   const activity = createOptionalClassFeatureActivity(saved, catalogs)
-  const label = cls.source === 'PHB' ? 'Pact Boon' : 'Eldritch Invocations'
   const choice = getCharacterClassChoices(
     cls,
     getSelectedSubclassData(cls, owner),
     activity,
     catalogs,
   ).find((row) => row.label === label)
-  if (!choice) throw new Error('Missing exact Pact choice')
+  if (!choice) throw new Error(`Missing exact Warlock choice: ${label}`)
   const result = applyClassChoiceSelectionWithGrantsCommand(
     saved,
     saved.provenance,
     choice,
-    selected ? [{ entityType: 'optionalFeature', name: bladeName, source: cls.source }] : [],
+    option ? [{ entityType: 'optionalFeature', name: option, source: cls.source }] : [],
     { classes: data.classes, catalogs },
   )
   return characterPersistenceSchema.parse(
@@ -234,6 +246,42 @@ function expectNoBladeRule(vm: ReturnType<typeof createCharacterSheetViewModel>)
   expect(vm.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName)).toBe(false)
   expect(vm.actions.some((row) => row.name === bladeName)).toBe(false)
 }
+
+test('classic Thirsting Blade requires the exact Pact after a strict reopen', () => {
+  const { data, selected, view } = bladeSheetFixture('bundled', editions[0])
+  const invocation = 'Thirsting Blade'
+  const eligible = chooseWarlockOption(selected, data, 'Eldritch Invocations', invocation)
+  const summary = (saved: Character) =>
+    view(saved).declaredClassFeatureSummaries?.find((row) => row.compactText === invocation)
+  expect(summary(eligible)?.text).toContain('twice, instead of once')
+  const unproved = reconcileClassChoiceSelectionGrants(
+    eligible,
+    eligible.provenance,
+    eligible.classChoiceSelections ?? [],
+  )
+  expect(unproved.features.some(({ name }) => name === invocation)).toBe(false)
+
+  const cleared = chooseBlade(eligible, data, false)
+  const manual = {
+    id: 'manual-pact-note',
+    name: 'Display note: Pact of the Blade is unavailable',
+    source: 'XPHB',
+    description: '',
+  }
+  const imported = characterPersistenceSchema.parse({
+    ...cleared,
+    features: [...cleared.features, manual],
+  })
+  expect(
+    imported.classChoiceSelections?.some((row) =>
+      row.selected.some(({ name }) => name === invocation),
+    ),
+  ).toBe(true)
+  expect(summary(imported)).toBeUndefined()
+  const restored = chooseBlade(imported, data)
+  expect(summary(restored)?.text).toContain('twice, instead of once')
+  expect(restored.features).toContainEqual(manual)
+})
 
 test.each(stackCases)('$edition withdraws and restores the selected Blade rule ($pack)', ({
   pack,

@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { beforeAll, expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
-import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { buildGameDataLookups, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -12,6 +12,8 @@ import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getCharacterClassChoices,
+  getClassChoiceOptionKey,
+  isClassChoiceOptionEligibleInDraft,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import {
@@ -47,6 +49,9 @@ const agonizing = {
 } as const
 const eldritchSpear = { ...agonizing, name: 'Eldritch Spear' }
 const repelling = { ...agonizing, name: 'Repelling Blast' }
+const pact = { ...agonizing, name: 'Pact of the Blade' }
+const thirsting = { ...agonizing, name: 'Thirsting Blade' }
+const lifedrinker = { ...agonizing, name: 'Lifedrinker' }
 let data: GameData
 let lookups: ReturnType<typeof currentLookups>
 
@@ -190,8 +195,150 @@ function state(saved: Character, current = lookups) {
     classChoices.classes,
     classChoices.catalogs,
     classChoices.prerequisites.knownWarlockCantrips,
-  ).find((row) => row.invocationCantrips)
+  ).find((row) => row.revisedInvocations)
 }
+
+test.each([
+  [4, 5, thirsting, 'Extra Attack'],
+  [8, 9, lifedrinker, 'Hit Point Dice'],
+] as const)('requires the exact Blade Pact and Warlock level %s to %s for %j', (before, level, option, phrase) => {
+  expect(() => choose(actor(before), [pact, option])).toThrow(/earned Blade Invocation/)
+  expect(() => choose(actor(level), [option])).toThrow(/current Pact of the Blade/)
+  const draft = actor(level)
+  const view = setup(draft).views.find(
+    (candidate) => getClassChoiceOptionKey(candidate.reference) === getClassChoiceOptionKey(option),
+  )
+  if (!view) throw new Error('Missing current native Blade Invocation')
+  expect(view.availability).toBe('retained')
+  expect(isClassChoiceOptionEligibleInDraft(view, new Set([getClassChoiceOptionKey(pact)]))).toBe(
+    true,
+  )
+  const selected = choose(draft, [pact, option])
+  expect(state(selected)?.recovery).toBe(false)
+  const staleRaw = {
+    ...lookups,
+    optionalFeaturesByKey: {
+      ...lookups.optionalFeaturesByKey,
+      [getEntityLookupKey(option.name, option.source)]: {
+        ...option,
+        entries: ['As a bonus action, you launch a beam.'],
+      },
+    },
+  }
+  const sheet = createCharacterSheetViewModel(selected, staleRaw, lookups)
+  expect(
+    sheet.declaredClassFeatureSummaries?.find((row) => row.compactText === option.name)?.text,
+  ).toContain(phrase)
+  expect(withoutSheetDescriptions(sheet).featuresSummary).toContain(option.name)
+  expect(withoutSheetDescriptions(sheet).featuresSummary).not.toContain(phrase)
+  expect(sheet.actions.some((row) => row.name === option.name)).toBe(false)
+})
+
+test('revised Pact removal protects active dependents and preserves dormant intent', () => {
+  const selected = choose(actor(5), [pact, thirsting])
+  const saved = invocationRow(selected)
+  if (!saved) throw new Error('Missing saved native Invocation pool')
+  expect(() => choose(selected, [thirsting])).toThrow(/Remove the dependent Invocations/)
+  expect(() =>
+    retainSavedFeatureOptionsCommand(
+      selected,
+      selected.provenance,
+      saved.choiceId,
+      [getClassChoiceOptionKey(thirsting)],
+      setup(selected).authority,
+      getOptionalPoolSelectionHandle(saved),
+    ),
+  ).toThrow(/Remove the dependent Invocations/)
+  expect(invocationRow(choose(selected, []))).toBeUndefined()
+  const dormant = reopen({
+    ...selected,
+    classChoiceSelections: [
+      { ...saved, selected: saved.selected.filter((option) => option.name === thirsting.name) },
+    ],
+  })
+  expect(state(dormant)?.revisedInvocations).toBe('blade-prerequisites')
+  expect(calculate(dormant).character.features.some((row) => row.name === thirsting.name)).toBe(
+    false,
+  )
+  expect(state(choose(dormant, [thirsting, pact]))?.recovery).toBe(false)
+})
+
+test('rejects new Blade invocation impostors and preserves older wrong-printing intent for removal', () => {
+  const saved = actor()
+  const wrongPrinting = { ...thirsting, source: 'PHB' }
+  for (const option of [
+    wrongPrinting,
+    { ...thirsting, source: undefined },
+    { ...thirsting, entityType: 'classFeature' as const },
+    { ...thirsting, ref: '' },
+  ]) {
+    expect(() => choose(saved, [pact, option])).toThrow(/exact native Blade Invocation/)
+  }
+  const active = choose(saved, [pact, thirsting])
+  expect(() => choose(active, [{ ...pact, ref: '' }, thirsting])).toThrow(
+    /exact native Blade Invocation/,
+  )
+  const older = reopen({
+    ...active,
+    classChoiceSelections: active.classChoiceSelections?.map((row) => ({
+      ...row,
+      selected: row.selected.map((option) =>
+        option.name === thirsting.name ? { ...option, ...wrongPrinting } : option,
+      ),
+    })),
+  })
+  expect(state(older)?.details.map((row) => row.available)).toEqual([true, false])
+  expect(invocationRow(choose(older, [pact, wrongPrinting]))?.selected[1].source).toBe('PHB')
+  expect(invocationRow(choose(older, [pact]))?.selected.map((row) => row.name)).toEqual([pact.name])
+})
+
+test('rejects stale Blade edits and recovers an older overbooked invocation row', () => {
+  const saved = choose(actor(), [pact, thirsting])
+  expect(() => choose(saved, [pact], '')).toThrow(/choices changed/)
+  const row = invocationRow(saved)
+  if (!row) throw new Error('Missing saved Blade invocations')
+  const duplicate = reopen({
+    ...saved,
+    classChoiceSelections: [{ ...row, selected: [...row.selected, row.selected[1]] }],
+  })
+  const badRow = invocationRow(duplicate)
+  if (!badRow) throw new Error('Missing older duplicate')
+  expect(state(duplicate)?.details.map(({ available }) => available)).toEqual([false, false, false])
+  expect(calculate(duplicate).character.features.some(({ name }) => name === thirsting.name)).toBe(
+    false,
+  )
+  const fixed = reopen(
+    duplicate,
+    retainSavedFeatureOptionsCommand(
+      duplicate,
+      duplicate.provenance,
+      REVISED_INVOCATION_POOL,
+      [getClassChoiceOptionKey(pact)],
+      setup(duplicate).authority,
+      getOptionalPoolSelectionHandle(badRow),
+    ),
+  )
+  expect(invocationRow(fixed)?.selected.map(({ name }) => name)).toEqual([pact.name])
+})
+
+test('an older Blade row for a different owner cannot authorize a new Warlock pick', () => {
+  const saved = choose(actor(), [pact, thirsting])
+  const row = invocationRow(saved)
+  if (!row) throw new Error('Missing saved Blade invocations')
+  const imported = reopen({
+    ...saved,
+    classChoiceSelections: [{ ...row, className: 'Wizard', selected: [row.selected[1]] }],
+  })
+  expect(() => choose(imported, [thirsting])).toThrow(/current Pact of the Blade/)
+})
+
+test('an empty source list still requires the matching ruleset for the native Blade', () => {
+  const saved = reopen({ ...actor(), allowedSources: [] })
+  expect(state(choose(saved, [pact, thirsting]))?.recovery).toBe(false)
+  expect(() => choose(reopen({ ...saved, originSystem: '2014' }), [pact, thirsting])).toThrow(
+    /current Pact of the Blade/,
+  )
+})
 
 test('offers only current known cantrips and permits distinct repeat targets', () => {
   const saved = learn(learn(learn(actor(), 0, eldritchBlast), 1, poisonSpray), 2, trueStrike)

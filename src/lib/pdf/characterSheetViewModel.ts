@@ -56,6 +56,7 @@ import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   getFeatureOptionSelectionStates,
   summarizeFeatureOptionSelectionGroups,
@@ -68,6 +69,7 @@ import {
 } from '@/lib/character/optionalClassFeatureActivity'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
+import { isBladeDependentInvocation } from '@/lib/character/warlockBladeChoices'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -885,7 +887,7 @@ export function createCharacterSheetViewModel(
     calculationContext.classChoices.prerequisites.knownWarlockCantrips,
   )
   const featureOptionSummaries = summarizeFeatureOptionSelectionGroups(
-    optionStates.filter((state) => !state.invocationCantrips),
+    optionStates.filter((state) => !state.revisedInvocations),
   )
   const proficiencyCheckNotes = getProficiencyCheckNoteRows(
     calculationContext.effects.sourceDeclarations,
@@ -907,6 +909,28 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
+  const bladeInvocationRoutes = character.classChoiceSelections?.some((row) =>
+    row.selected.some((option) => isBladeDependentInvocation(row.choiceId, option)),
+  )
+    ? getEffectiveClassChoiceFeatureRoutes(
+        character,
+        primaryLookups.classChoiceFeatureCatalogs,
+        calculationContext.classChoices.prerequisites,
+      )
+    : undefined
+  const bladeInvocationIds =
+    bladeInvocationRoutes &&
+    new Map(
+      bladeInvocationRoutes.selectedOptions.flatMap(({ selection, option }) =>
+        isBladeDependentInvocation(selection.choiceId, option)
+          ? [[getClassChoiceFeatureId(selection, option), selection.choiceId] as const]
+          : [],
+      ),
+    )
+  const bladeInvocations =
+    bladeInvocationRoutes?.contributions.filter(
+      ({ id, choiceId }) => bladeInvocationIds?.get(id) === choiceId,
+    ) ?? []
   const declaredClassFeatureSummaries = [
     ...getClassStaticFeatureSummaries(
       character,
@@ -926,8 +950,13 @@ export function createCharacterSheetViewModel(
           ]
         : [],
     ),
+    ...bladeInvocations.map(({ name, entries, id }) => ({
+      text: `${name}: ${renderEntriesToText(entries)}`,
+      compactText: name,
+      replaces: character.features.find((feature) => feature.id === id),
+    })),
     ...optionStates
-      .filter((state) => state.invocationCantrips)
+      .filter((state) => state.revisedInvocations)
       .flatMap((state) =>
         state.selection.selected.flatMap((option, index) => {
           const row = state.details[index]

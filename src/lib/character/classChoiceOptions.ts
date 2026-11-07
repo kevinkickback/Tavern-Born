@@ -174,6 +174,13 @@ import {
   createOptionalClassFeatureActivity,
   type OptionalClassFeatureActivity,
 } from './optionalClassFeatureActivity'
+import {
+  getBladeInvocationSource,
+  getCurrentBladeInvocationRule,
+  getCurrentPactBladeState,
+  isBladeDependentInvocation,
+} from './warlockBladeChoices'
+import { hasEarnedRevisedInvocationSlots } from './warlockInvocationChoices'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
@@ -189,6 +196,8 @@ export interface ClassChoiceOptionView {
   searchText?: string
   featureOption?: { damageType: string }
   sourceGroup?: { group: string }
+  bladePactDraftKey?: string
+  unavailableReason?: string
 }
 
 type ClassChoiceOptionPresentation =
@@ -209,6 +218,29 @@ type ClassChoiceOptionPresentation =
 
 export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): boolean {
   return option.availability === 'eligible'
+}
+
+export function isClassChoiceOptionEligibleInDraft(
+  option: ClassChoiceOptionView,
+  selectedIds: ReadonlySet<string>,
+) {
+  return option.bladePactDraftKey
+    ? selectedIds.has(option.bladePactDraftKey)
+    : isClassChoiceOptionEligible(option)
+}
+
+export function retainsBladeInvocationWithoutPact(
+  options: readonly ClassChoiceOptionView[],
+  previous: ReadonlySet<string>,
+  next: ReadonlySet<string>,
+) {
+  return options.some((option) => {
+    const pact = option.bladePactDraftKey
+    if (!pact || !isClassChoiceOptionEligible(option) || !previous.has(pact) || next.has(pact))
+      return false
+    const key = getClassChoiceOptionKey(option.reference)
+    return previous.has(key) && next.has(key)
+  })
 }
 
 export function getClassChoiceCompletionCount(
@@ -874,6 +906,17 @@ export function resolveClassChoiceOptions(
     knownWarlockCantrips?.length && isCurrentRevisedInvocationCantripPool(choice, catalogs)
       ? knownWarlockCantrips
       : []
+  const bladeSource = getBladeInvocationSource(choice.id)
+  const bladePact =
+    bladeSource && character && classLevel >= 5
+      ? getCurrentPactBladeState(character, catalogs, bladeSource)
+      : undefined
+  const bladeSlots =
+    bladeSource &&
+    (character?.classChoiceSelections?.filter((row) => row.choiceId === choice.id).length ?? 0) <=
+      1 &&
+    hasEarnedRevisedInvocationSlots(choice, saved, classLevel)
+  const bladeUnavailable = 'Restore the exact Invocation source and its earned Pact of the Blade.'
   const byKey = new Map(
     resolved
       .map((option) => {
@@ -898,6 +941,34 @@ export function resolveClassChoiceOptions(
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
       .flatMap((option) => {
+        if (isBladeDependentInvocation(choice.id, option.reference)) {
+          const rule =
+            character &&
+            getCurrentBladeInvocationRule(character, choice, option.reference, catalogs)
+          const earned = rule && bladeSlots && rule.owner.levels >= rule.level.level
+          const active = !!(earned && bladePact?.option)
+          return [
+            {
+              ...option,
+              availability: active ? ('eligible' as const) : ('retained' as const),
+              entries: rule?.entries ?? [],
+              prerequisite: rule ? [{ level: rule.level }] : undefined,
+              ...(earned &&
+                rule.source === 'xphb' &&
+                bladePact && {
+                  bladePactDraftKey: getClassChoiceOptionKey(bladePact.reference),
+                }),
+              ...(!active && {
+                unavailableReason:
+                  rule && rule.owner.levels < rule.level.level
+                    ? `Requires Warlock level ${rule.level.level}.`
+                    : earned && bladePact
+                      ? 'Requires your current Pact of the Blade.'
+                      : bladeUnavailable,
+              }),
+            },
+          ]
+        }
         if (choice.id !== REVISED_INVOCATION_POOL || !isRevisedTargetedInvocation(option.reference))
           return [option]
         if (!targetCantrips.length) return []
@@ -962,7 +1033,14 @@ export function resolveClassChoiceOptions(
         tableDefinitions,
       )
       const displayLabel = getInvocationCantripLabel(option)
-      byKey.set(key, displayLabel ? { ...view, reference: option, displayLabel } : view)
+      byKey.set(
+        key,
+        isBladeDependentInvocation(choice.id, option)
+          ? { ...view, entries: [], prerequisite: undefined, unavailableReason: bladeUnavailable }
+          : displayLabel
+            ? { ...view, reference: option, displayLabel }
+            : view,
+      )
     }
   }
   const styleOwner =

@@ -70,6 +70,7 @@ import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery
 import { getPsionicRecoveryStates } from './psionicSelections'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
+import { isBladeDependentInvocation } from './warlockBladeChoices'
 import {
   getSavedRevisedInvocationOwner,
   hasEarnedRevisedInvocationSlots,
@@ -100,10 +101,10 @@ export interface FeatureOptionSelectionState {
   companion?: boolean
   classOrder?: boolean
   projectedBranch?: boolean
-  invocationCantrips?: boolean
+  revisedInvocations?: 'cantrip-targets' | 'blade-prerequisites'
 }
 
-function getInvocationCantripState(
+function getRevisedInvocationState(
   character: Character,
   classes: readonly Class5e[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
@@ -113,7 +114,14 @@ function getInvocationCantripState(
   const selection = character.classChoiceSelections?.find(
     (row) => row.choiceId === REVISED_INVOCATION_POOL,
   )
-  if (!selection?.selected.some(isRevisedTargetedInvocation)) return undefined
+  if (
+    !selection?.selected.some(
+      (row) =>
+        isRevisedTargetedInvocation(row) ||
+        isBladeDependentInvocation(REVISED_INVOCATION_POOL, row),
+    )
+  )
+    return undefined
   const owner = getSavedRevisedInvocationOwner(character, selection)
   if (!owner) return undefined
   const matches = classes.filter((cls) => findClassReference(owner, [cls]))
@@ -157,11 +165,12 @@ function getInvocationCantripState(
       entries: available
         ? current.entries
         : [
-            row.invocationCantrip
-              ? 'Restore the current known Warlock cantrip or choose another eligible target.'
-              : isRevisedTargetedInvocation(row)
-                ? 'Choose an eligible known Warlock cantrip for this Invocation.'
-                : 'Restore the exact Invocation source or remove the saved choice.',
+            current?.unavailableReason ??
+              (row.invocationCantrip
+                ? 'Restore the current known Warlock cantrip or choose another eligible target.'
+                : isRevisedTargetedInvocation(row)
+                  ? 'Choose an eligible known Warlock cantrip for this Invocation.'
+                  : 'Restore the exact Invocation source or remove the saved choice.'),
           ],
     }
   })
@@ -173,7 +182,12 @@ function getInvocationCantripState(
     options,
     details,
     recovery: details.some((row) => !row.available),
-    invocationCantrips: true,
+    revisedInvocations: selection.selected.some(
+      (option, index) =>
+        !details[index].available && isBladeDependentInvocation(selection.choiceId, option),
+    )
+      ? 'blade-prerequisites'
+      : 'cantrip-targets',
   }
 }
 
@@ -513,7 +527,7 @@ export function getFeatureOptionSelectionStates(
         ]
       : []
   })
-  const invocationCantrips = getInvocationCantripState(
+  const revisedInvocations = getRevisedInvocationState(
     character,
     classes,
     catalogs,
@@ -541,7 +555,7 @@ export function getFeatureOptionSelectionStates(
     ...getFavoredEnemySelectionStates(character, classes, catalogs),
     ...getClassProficiencySelectionStates(character, classes, catalogs),
     ...getOptionalClassPoolSelectionStates(character, classes, catalogs),
-    ...(invocationCantrips ? [invocationCantrips] : []),
+    ...(revisedInvocations ? [revisedInvocations] : []),
   ]
 }
 
