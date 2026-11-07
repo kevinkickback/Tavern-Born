@@ -955,8 +955,7 @@ function resolveProgressiveChoiceGainEdit(
         classLookup: buildClassLookup([...(authority?.classes ?? [])]),
         classChoiceFeatureCatalogs: catalogs,
         classChoicePrerequisites: authority?.prerequisites,
-        effectiveAbilityScores:
-          authority?.prerequisites?.effectiveAbilityScores ?? character.abilityScores,
+        effectiveAbilityScores: authority?.prerequisites?.effectiveAbilityScores,
         effectiveSpellProfiles: authority?.prerequisites?.effectiveSpellProfiles,
       })
       if (
