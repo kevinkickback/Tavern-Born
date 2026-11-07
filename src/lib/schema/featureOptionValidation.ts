@@ -7,6 +7,11 @@ import {
   getFeatureOptionKey,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import {
+  isRevisedTargetedInvocation,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
+import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Character } from '@/types/character'
 import { getInvalidFeatureLiteralSelectionIds } from './featureLiteralValidation'
@@ -24,6 +29,26 @@ export function getInvalidFeatureOptionSelectionPaths(
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   const elementalFury = getSavedElementalFury(character.classChoiceSelections ?? [])
   for (const [index, selection] of (character.classChoiceSelections ?? []).entries()) {
+    const targeted = new Set<string>()
+    for (const [row, option] of selection.selected.entries()) {
+      const spell = option.invocationCantrip
+      if (!spell) continue
+      const key = JSON.stringify([norm(option.name), getSpellNameKey(spell.name)])
+      if (
+        selection.choiceId !== REVISED_INVOCATION_POOL ||
+        selection.kind !== 'optional-feature' ||
+        selection.classLevel !== 1 ||
+        norm(selection.className) !== 'warlock' ||
+        norm(selection.classSource) !== 'xphb' ||
+        selection.subclassName ||
+        selection.subclassSource ||
+        option.ref ||
+        !isRevisedTargetedInvocation(option) ||
+        targeted.has(key)
+      )
+        paths.push(['classChoiceSelections', index, 'selected', row, 'invocationCantrip'])
+      targeted.add(key)
+    }
     if (
       (selection.choiceId === BLESSED_STRIKES_ID && selection !== blessedStrikes) ||
       (selection.choiceId === ELEMENTAL_FURY_ID && selection !== elementalFury)

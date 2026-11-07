@@ -29,8 +29,13 @@ import {
   revisedHunterOwner,
 } from '@/lib/5etools/revisedHunterIdentity'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
+import {
+  isCurrentRevisedInvocationCantripPool,
+  isRevisedTargetedInvocation,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Class5e, ClassFeature, Subclass5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Spell5e, Subclass5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassChoiceSelection,
@@ -41,7 +46,7 @@ import type {
   ClassProficiencyDomain,
   NormalizedCharacterChoice,
 } from '@/types/classRules'
-import { getFeatureOwnerKey } from './classChoiceIdentity'
+import { getFeatureOwnerKey, getInvocationCantripLabel } from './classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
   type ClassChoiceOptionView,
@@ -65,6 +70,10 @@ import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery
 import { getPsionicRecoveryStates } from './psionicSelections'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
+import {
+  getSavedRevisedInvocationOwner,
+  hasEarnedRevisedInvocationSlots,
+} from './warlockInvocationChoices'
 
 const AFFINITY_TARGET = getSubclassFeatureIdentity(
   decodeSubclassFeatureReference(ELEMENTAL_AFFINITY_REF),
@@ -91,6 +100,81 @@ export interface FeatureOptionSelectionState {
   companion?: boolean
   classOrder?: boolean
   projectedBranch?: boolean
+  invocationCantrips?: boolean
+}
+
+function getInvocationCantripState(
+  character: Character,
+  classes: readonly Class5e[],
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  known: readonly Spell5e[] | undefined,
+): FeatureOptionSelectionState | undefined {
+  if (!known) return undefined
+  const selection = character.classChoiceSelections?.find(
+    (row) => row.choiceId === REVISED_INVOCATION_POOL,
+  )
+  if (!selection?.selected.some(isRevisedTargetedInvocation)) return undefined
+  const owner = getSavedRevisedInvocationOwner(character, selection)
+  if (!owner) return undefined
+  const matches = classes.filter((cls) => findClassReference(owner, [cls]))
+  const classData =
+    matches.length === 1 && !matches[0].sourceIdentityConflict && !('_copy' in matches[0])
+      ? matches[0]
+      : undefined
+  const choices =
+    classData && catalogs
+      ? getCharacterClassChoices(
+          classData,
+          getSelectedSubclassData(classData, owner),
+          createOptionalClassFeatureActivity(character, catalogs),
+          catalogs,
+        ).filter((row) => row.id === REVISED_INVOCATION_POOL)
+      : []
+  const choice =
+    choices.length === 1 &&
+    isCurrentRevisedInvocationCantripPool(choices[0], catalogs) &&
+    hasEarnedRevisedInvocationSlots(choices[0], selection.selected, owner.levels)
+      ? choices[0]
+      : undefined
+  const options = choice
+    ? resolveClassChoiceOptions(
+        choice,
+        literalCatalogs(catalogs),
+        selection.selected,
+        owner.levels,
+        character,
+        known,
+      )
+    : []
+  const views = new Map(options.map((row) => [getClassChoiceOptionKey(row.reference), row]))
+  const details = selection.selected.map((row) => {
+    const current = views.get(getClassChoiceOptionKey(row))
+    const available = !!current && isClassChoiceOptionEligible(current)
+    const name = getInvocationCantripLabel(row) ?? row.name
+    return {
+      name,
+      available,
+      entries: available
+        ? current.entries
+        : [
+            row.invocationCantrip
+              ? 'Restore the current known Warlock cantrip or choose another eligible target.'
+              : isRevisedTargetedInvocation(row)
+                ? 'Choose an eligible known Warlock cantrip for this Invocation.'
+                : 'Restore the exact Invocation source or remove the saved choice.',
+          ],
+    }
+  })
+  return {
+    selection,
+    owner,
+    classData,
+    choice,
+    options,
+    details,
+    recovery: details.some((row) => !row.available),
+    invocationCantrips: true,
+  }
 }
 
 function getProjectedBranchRecovery(
@@ -244,6 +328,7 @@ export function getFeatureOptionSelectionStates(
   character: Character,
   classes: readonly Class5e[],
   catalogs?: ClassChoiceFeatureCatalogs,
+  knownWarlockCantrips?: readonly Spell5e[],
 ): FeatureOptionSelectionState[] {
   const literal = (character.classChoiceSelections ?? [])
     .filter(
@@ -428,6 +513,12 @@ export function getFeatureOptionSelectionStates(
         ]
       : []
   })
+  const invocationCantrips = getInvocationCantripState(
+    character,
+    classes,
+    catalogs,
+    knownWarlockCantrips,
+  )
   return [
     ...literal,
     ...orderRecovery,
@@ -450,6 +541,7 @@ export function getFeatureOptionSelectionStates(
     ...getFavoredEnemySelectionStates(character, classes, catalogs),
     ...getClassProficiencySelectionStates(character, classes, catalogs),
     ...getOptionalClassPoolSelectionStates(character, classes, catalogs),
+    ...(invocationCantrips ? [invocationCantrips] : []),
   ]
 }
 

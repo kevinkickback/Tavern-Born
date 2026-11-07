@@ -125,6 +125,8 @@ function choiceIsMissing(
   index: GameDataAvailabilityIndex,
   subclassOwner?: string,
 ): boolean {
+  const target = choice.invocationCantrip
+  if (target && referenceIsMissing(target.name, target.source, index.spells)) return true
   if (choice.entityType === 'psionic')
     return !resolvePsionic(choice, index.featureOptions?.psionics)
   if (choice.entityType === 'proficiency') {

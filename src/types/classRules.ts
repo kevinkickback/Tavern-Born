@@ -1,4 +1,5 @@
 import type { Item5e, OptionalFeatureLike } from './5etools'
+import type { ManagedClassSpellChoice } from './classCasting'
 
 /** Character-choice-only targets; these never expand ordinary item or optional-feature catalogs. */
 export interface LegacySubclassChoiceCatalog {
@@ -39,6 +40,7 @@ export interface NormalizedChoiceOptionReference {
   source?: string
   /** Complete 5etools UID for class/subclass feature options, including gain and printing. */
   ref?: string
+  invocationCantrip?: ManagedClassSpellChoice['target']
   minimumClassLevel?: number
 }
 

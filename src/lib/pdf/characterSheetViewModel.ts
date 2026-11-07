@@ -52,6 +52,7 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import type { AtWillInvocationSpellStatus } from '@/lib/character/atWillInvocationSpells'
+import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
@@ -870,12 +871,14 @@ export function createCharacterSheetViewModel(
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
   })
 
+  const optionStates = getFeatureOptionSelectionStates(
+    character,
+    calculationContext.classChoices.classes,
+    primaryLookups.classChoiceFeatureCatalogs,
+    calculationContext.classChoices.prerequisites.knownWarlockCantrips,
+  )
   const featureOptionSummaries = summarizeFeatureOptionSelectionGroups(
-    getFeatureOptionSelectionStates(
-      character,
-      calculationContext.classChoices.classes,
-      primaryLookups.classChoiceFeatureCatalogs,
-    ),
+    optionStates.filter((state) => !state.invocationCantrips),
   )
   const proficiencyCheckNotes = getProficiencyCheckNoteRows(
     calculationContext.effects.sourceDeclarations,
@@ -897,11 +900,30 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
-  const declaredClassFeatureSummaries = getClassStaticFeatureSummaries(
-    character,
-    primaryLookups.classChoiceFeatureCatalogs,
-    !!unlimitedWildShape,
-  )
+  const declaredClassFeatureSummaries = [
+    ...getClassStaticFeatureSummaries(
+      character,
+      primaryLookups.classChoiceFeatureCatalogs,
+      !!unlimitedWildShape,
+    ),
+    ...optionStates
+      .filter((state) => state.invocationCantrips)
+      .flatMap((state) =>
+        state.selection.selected.flatMap((option, index) => {
+          const row = state.details[index]
+          if (!option.invocationCantrip || !row?.available) return []
+          const featureId = getClassChoiceFeatureId(state.selection, option)
+          return [
+            {
+              text: `${row.name}: ${renderEntriesToText(row.entries)}`,
+              compactText: row.name,
+              replaces: character.features.find((feature) => feature.id === featureId),
+              actionId: `feature:${featureId}`,
+            },
+          ]
+        }),
+      ),
+  ]
   const invocationSpells = calculationContext.atWillInvocationSpellStatuses.filter(
     (row) => row.spell,
   )

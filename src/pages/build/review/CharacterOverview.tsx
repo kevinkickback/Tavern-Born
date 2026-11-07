@@ -42,7 +42,10 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
-import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceOptionKey,
+  getInvocationCantripLabel,
+} from '@/lib/character/classChoiceIdentity'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import {
   createOptionalClassFeatureActivity,
@@ -611,8 +614,10 @@ export function CharacterOverview({
                                 <li key={getClassChoiceOptionKey(option)}>
                                   <div className="flex flex-wrap items-center gap-2 font-medium">
                                     <span>
-                                      {option.name}
-                                      {option.source ? ` (${option.source})` : ''}
+                                      {getInvocationCantripLabel(option) ??
+                                        (option.source
+                                          ? `${option.name} (${option.source})`
+                                          : option.name)}
                                     </span>
                                     {(!details || details.availability === 'missing') && (
                                       <Badge variant="outline">Unresolved source</Badge>

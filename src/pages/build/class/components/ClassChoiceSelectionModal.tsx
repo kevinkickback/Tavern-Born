@@ -21,6 +21,7 @@ import {
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
+import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -30,6 +31,7 @@ import {
   getClassChoiceOptionKey,
   isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
+import { getInvocationRepeatKey } from '@/lib/character/warlockInvocationChoices'
 import { cn } from '@/lib/utils'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { FavoredEnemySetup, type FavoredEnemySetupProps } from './FavoredEnemySetup'
@@ -55,6 +57,7 @@ function titleCase(value: string): string {
 }
 
 function getOptionLabel(option: ClassChoiceOptionView): string {
+  if (option.displayLabel) return option.displayLabel
   return option.reference.entityType === 'proficiency'
     ? titleCase(option.reference.name)
     : option.reference.name
@@ -340,6 +343,7 @@ export function ClassChoiceSelectionModal({
   enemySetup,
 }: ClassChoiceSelectionModalProps) {
   const [editingHistory, setEditingHistory] = useState(false)
+  const invocationCantrips = choice.id === REVISED_INVOCATION_POOL
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
     () =>
       removalOnly
@@ -349,10 +353,10 @@ export function ClassChoiceSelectionModal({
               key: 'all',
               label: 'selections',
               max: maximumSelections,
-              test: isClassChoiceOptionEligible,
+              test: invocationCantrips ? () => true : isClassChoiceOptionEligible,
             },
           ],
-    [maximumSelections, removalOnly],
+    [maximumSelections, removalOnly, invocationCantrips],
   )
   const { prerequisiteByOptionKey, hasUnmetPrerequisites } = useMemo(() => {
     const results = new Map<string, { met: boolean; reasons: string[] }>()
@@ -583,6 +587,18 @@ export function ClassChoiceSelectionModal({
       if (!isClassChoiceOptionEligible(option)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
+      if (invocationCantrips) {
+        const repeat = getInvocationRepeatKey(option.reference)
+        return (
+          selectedIds.size < maximumSelections &&
+          (!repeat ||
+            !allOptions.some(
+              (candidate) =>
+                selectedIds.has(getClassChoiceOptionKey(candidate.reference)) &&
+                getInvocationRepeatKey(candidate.reference) === repeat,
+            ))
+        )
+      }
       const eligibleSelectionCount = allOptions.filter(
         (candidate) =>
           isClassChoiceOptionEligible(candidate) &&
@@ -590,7 +606,13 @@ export function ClassChoiceSelectionModal({
       ).length
       return eligibleSelectionCount < maximumSelections
     },
-    [maximumSelections, prerequisiteByOptionKey, removalOnly, initialSelectedIds],
+    [
+      maximumSelections,
+      prerequisiteByOptionKey,
+      removalOnly,
+      initialSelectedIds,
+      invocationCantrips,
+    ],
   )
 
   if (enemySetup) return <FavoredEnemySetup {...enemySetup} onClose={onClose} />
@@ -683,6 +705,8 @@ export function ClassChoiceSelectionModal({
           </span>
         ) : removalOnly ? (
           'Keep or remove saved choices. Restore the source to choose a replacement.'
+        ) : invocationCantrips ? (
+          'Choose an eligible known Warlock cantrip for each targeted Invocation. Remove an existing choice to free its slot.'
         ) : choice.proficiencyDomain === 'expertise' &&
           classProficiencyRule(
             decodeClassProficiencyChoiceId(choice.id ?? '')?.target ?? '',

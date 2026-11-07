@@ -30,6 +30,7 @@ import {
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
@@ -560,15 +561,39 @@ export function projectManagedClassSpellState(
     ),
   }
   const fixedClassSpellStatuses: ClassFixedSpellStatus[] = []
+  const isRevisedWarlock = (entry: CharacterClassEntry) =>
+    norm(entry.name) === 'warlock' && norm(entry.source) === 'xphb'
+  const warlocks = character.classProgression.filter(isRevisedWarlock)
+  const warlock = warlocks.length === 1 ? warlocks[0] : undefined
+  const knownWarlockCantrips = new Map<string, Spell5e>()
+  for (const { choice, spell, entry } of active) {
+    if (
+      entry === warlock &&
+      choice.slot[1] === 'class-cantrip' &&
+      hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, { directOnly: true })
+    )
+      knownWarlockCantrips.set(getSpellReferenceKey(spell.name, spell.source), spell)
+  }
   for (const entry of character.classProgression) {
     if (!entry.subclass) continue
     const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
-    const grants = getEarnedSubclassSpellGrants(
-      classMap.get(toClassProfileId(entry.name, entry.source)),
-      entry,
-      entry.levels,
-      { selections: character.classChoiceSelections, spells: visibleSpellLevels },
-    )
+    const cls = classMap.get(toClassProfileId(entry.name, entry.source))
+    const celestialCantrips =
+      entry === warlock &&
+      cls &&
+      context?.catalogs &&
+      hasCurrentCelestialInvocationCantrips(
+        cls,
+        entry,
+        scopeClassChoiceFeatureCatalogs(
+          context.catalogs,
+          getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
+        ),
+      )
+    const grants = getEarnedSubclassSpellGrants(cls, entry, entry.levels, {
+      selections: character.classChoiceSelections,
+      spells: visibleSpellLevels,
+    })
     for (const grant of grants ?? []) {
       if (grant.mode === 'expanded') continue
       const spellKey = getSpellReferenceKey(grant.spellName)
@@ -592,6 +617,17 @@ export function projectManagedClassSpellState(
           active,
         })
       if (!active) continue
+      if (celestialCantrips && grant.mode === 'known' && grant.isCantrip) {
+        const spell = targets.get(spellKey)
+        if (spell?.level === 0) {
+          const [checked] = auditSpellRouteMultiplicity([spell])
+          if (
+            checked.classSpellRouteSource?.input?.targetOccurrences?.length === 1 &&
+            checked.classSpellRouteDiagnostics?.length === 0
+          )
+            knownWarlockCantrips.set(spellKey, checked)
+        }
+      }
       provenance = addSpellGrant(provenance, grant.spellName, {
         ...makeSourceTag('subclass', entry.subclass, 'fixed', entry.subclassSource),
         grantSource: parseSpellReference(grant.spellName).source,
@@ -843,6 +879,7 @@ export function projectManagedClassSpellState(
       spells: { ...daily.character.spells, spellProfiles: profiles },
     },
     independentSpellProfiles,
+    knownWarlockCantrips: [...knownWarlockCantrips.values()],
     statuses,
     dailyStatuses: daily.statuses,
     fixedClassSpellStatuses,
