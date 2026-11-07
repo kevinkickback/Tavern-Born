@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -60,6 +60,52 @@ describe('data source refresh feedback', () => {
       }),
     )
     expect(toast.info).not.toHaveBeenCalledWith('Data is already up to date')
+  })
+
+  test.each([
+    'updated',
+    'unchanged',
+    'failed',
+  ])('shows progress and restores the button when the check %s', async (outcome) => {
+    const user = userEvent.setup()
+    let finish: () => void = () => {}
+    const result = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const loadGameData = vi.fn(async () => {
+      useGameDataStore.setState({ isBackgroundRefreshing: true })
+      await result
+      useGameDataStore.setState({
+        isBackgroundRefreshing: false,
+        error: outcome === 'failed' ? 'Local directory is unavailable' : null,
+      })
+      return outcome === 'updated'
+    })
+    useGameDataStore.setState({ loadGameData })
+    render(<DataSourceConfigurator />)
+
+    await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
+    const checking = screen.getByRole('button', {
+      name: 'Checking for updates…',
+    }) as HTMLButtonElement
+    expect(checking.disabled).toBe(true)
+    expect(checking.querySelector('svg')?.getAttribute('class')).toContain(
+      'motion-safe:animate-spin',
+    )
+    await user.click(checking)
+    expect(loadGameData).toHaveBeenCalledTimes(1)
+    await act(finish)
+    expect(screen.getByRole('button', { name: 'Check for Updates' }).hasAttribute('disabled')).toBe(
+      false,
+    )
+    if (outcome === 'updated')
+      expect(toast.success).toHaveBeenCalledWith('Game data updated successfully!')
+    if (outcome === 'unchanged')
+      expect(toast.info).toHaveBeenCalledWith('Data is already up to date')
+    if (outcome === 'failed')
+      expect(toast.error).toHaveBeenCalledWith('Failed to check for updates', {
+        description: 'Local directory is unavailable',
+      })
   })
 
   test('shows external source details without exposing the internal base layer', () => {
