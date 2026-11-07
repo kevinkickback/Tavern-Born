@@ -95,7 +95,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const { setPortalHost } = useRulesPreview()
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
-  const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
+  const isBundledSrd = useGameDataStore(
+    (state) => (state.sessionBundledSource ?? state.dataSourceConfig)?.type === 'bundled',
+  )
   const gameData = useGameDataStore((state) => state.gameData)
   const [currentStep, setCurrentStep] = useState(1)
   const stepId = WIZARD_STEPS[currentStep - 1]?.id
