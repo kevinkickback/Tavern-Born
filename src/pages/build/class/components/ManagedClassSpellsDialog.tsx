@@ -1,3 +1,4 @@
+import { Check } from '@phosphor-icons/react'
 import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
@@ -34,6 +35,7 @@ import {
   type ManagedClassSpellStatus,
 } from '@/lib/character/managedClassSpells'
 import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
+import { cn } from '@/lib/utils'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassSpellSelectionPolicy, ManagedClassSpellChoice } from '@/types/classCasting'
 
@@ -220,8 +222,15 @@ export function ManagedClassSpellsDialog({
               const status = statuses.find(
                 (item) => managedClassSpellId(item.choice.slot) === managedClassSpellId(row.slot),
               )
-              const unchangedTarget =
-                row.target && targetKey(row.old?.target) === targetKey(row.target)
+              const unavailable =
+                status &&
+                !status.active &&
+                row.old &&
+                row.target &&
+                status.choice.revision === row.old.revision &&
+                targetKey(status.choice.target) === targetKey(row.target) &&
+                status.choice.policy === row.policy
+              const chosen = !!row.target && !unavailable
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const kind =
                 row.slot[1] === 'class-arcanum'
@@ -232,7 +241,7 @@ export function ManagedClassSpellsDialog({
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
-                  className="rounded-lg border p-3"
+                  className={cn('rounded-lg border p-3', chosen && 'border-success/60')}
                   aria-label={`${kind} ${row.slot[4] + 1}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -243,7 +252,13 @@ export function ManagedClassSpellsDialog({
                       <p className="font-medium">
                         {row.target ? `${row.target.name} (${row.target.source})` : 'Not chosen'}
                       </p>
-                      {unchangedTarget && status && !status.active && (
+                      {chosen && (
+                        <p className="flex items-center gap-1 text-xs font-medium text-success">
+                          <Check className="size-3" weight="bold" aria-hidden />
+                          Chosen
+                        </p>
+                      )}
+                      {unavailable && (
                         <p className="mt-1 text-xs text-muted-foreground">
                           {status.reason} The choice is saved until you change or clear it.
                         </p>
@@ -311,7 +326,6 @@ export function ManagedClassSpellsDialog({
           }
           allowedLevels={allowedLevels}
           initialFilters={{
-            level: allowedLevels,
             visibility: new Set(
               allowClassListBypass && selected.policy === 'ignore-class-list'
                 ? ['ignore-class-list']

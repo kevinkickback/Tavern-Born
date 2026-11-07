@@ -515,9 +515,6 @@ export function SpellsPage() {
       className: undefined,
       classSource: undefined,
       classListOverrides: allowedSpellReferences,
-      initialFilters: allowedLevels
-        ? { level: allowedLevels, school: new Set<string>(), type: new Set<string>() }
-        : undefined,
       categories: [
         {
           key: 'selection',
@@ -820,7 +817,6 @@ export function SpellsPage() {
         lockedNames={racialChoiceModalConfig?.lockedNames}
         categories={racialChoiceModalConfig?.categories}
         initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
-        initialFilters={racialChoiceModalConfig?.initialFilters}
         allowedLevels={racialChoiceModalConfig?.allowedLevels}
         className={racialChoiceModalConfig?.className}
         classSource={racialChoiceModalConfig?.classSource}

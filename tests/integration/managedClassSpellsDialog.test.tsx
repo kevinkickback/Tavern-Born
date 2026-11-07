@@ -317,6 +317,12 @@ describe('Class spell Finish and current-state adapter', () => {
     install(original)
     const before = JSON.stringify(original)
     render(<Flow />)
+    const row = () => within(screen.getByRole('group', { name: 'Cantrip 1' }))
+    expect(row().queryByText('Chosen')).toBeNull()
+    await choose(1, 'Light')
+    expect(row().getByText('Chosen')).toBeTruthy()
+    fireEvent.click(row().getByRole('button', { name: 'Clear' }))
+    expect(row().queryByText('Chosen')).toBeNull()
     await choose(1, 'Light')
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -338,11 +344,40 @@ describe('Class spell Finish and current-state adapter', () => {
     ])
     expect(characterPersistenceSchema.safeParse(saved).success).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    expect(row().getByText('Chosen')).toBeTruthy()
     expect(screen.getByText('Light (PHB)')).toBeTruthy()
     expect(screen.getByText('Message (PHB)')).toBeTruthy()
     const reopened = JSON.stringify(saved)
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(reopened)
+  })
+
+  test('shows a level 15 Sorcerer spell as chosen after picking, changing, and reopening', async () => {
+    const original = makeCharacterFixture({
+      originSystem: '2014',
+      allowedSources: ['PHB'],
+      classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 15 }],
+    })
+    const data = makeBundledClassCastingLayer('class/class-sorcerer.json')
+    data.spells = fixture.spells
+    data.lookups = buildGameDataLookups(data)
+    install(original)
+    useGameDataStore.setState({ gameData: data })
+    render(<Flow level={15} />)
+    const row = () => within(screen.getByRole('group', { name: 'Spell 1' }))
+    expect(row().queryByText('Chosen')).toBeNull()
+    await choose(1, 'Fireball', 'Spell')
+    expect(row().getByText('Chosen')).toBeTruthy()
+    fireEvent.click(row().getByRole('button', { name: 'Clear' }))
+    expect(row().queryByText('Chosen')).toBeNull()
+    await choose(1, 'Haste', 'Spell')
+    expect(row().getByText('Haste (PHB)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.managedClassSpellChoices?.[0]?.target).toEqual({ name: 'Haste', source: 'PHB' })
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    expect(row().getByText('Chosen')).toBeTruthy()
+    expect(row().getByText('Haste (PHB)')).toBeTruthy()
   })
 
   test('a stale opening cannot overwrite an intervening choice or a refreshed source catalog', async () => {
@@ -390,6 +425,52 @@ describe('Class spell Finish and current-state adapter', () => {
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(newer)
   })
 
+  test('a valid same-spell policy change replaces the old unavailable status', async () => {
+    const original = initial()
+    install(original)
+    const result = setManagedClassSpellChoiceCommand(
+      original,
+      original.provenance,
+      {
+        slot: [
+          ['class', 'bard', 'phb'],
+          'class-cantrip',
+          'class-feature|spellcasting|bard|phb|1|phb',
+          1,
+          0,
+        ],
+        expected: null,
+        expectedEmptyRevision: 0,
+        target: { name: 'Light', source: 'PHB' },
+        policy: 'default',
+      },
+      fixture.context,
+    )
+    install({ ...original, ...result.characterPatch, provenance: result.provenanceUpdate })
+    const revised = {
+      ...gameData,
+      spells: gameData.spells.map((spell) =>
+        spell.name === 'Light' && spell.source === 'PHB'
+          ? { ...spell, classes: {}, classSpellRouteSource: undefined, classSpellRoutes: [] }
+          : spell,
+      ),
+    }
+    revised.lookups = buildGameDataLookups(revised)
+    useGameDataStore.setState({ gameData: revised })
+    render(<Flow />)
+    const row = () => within(screen.getByRole('group', { name: 'Cantrip 1' }))
+    expect(await screen.findByText(/choice is saved/)).toBeTruthy()
+    fireEvent.click(row().getByRole('button', { name: 'Change' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Ignore class restrictions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(row().getByText('Chosen')).toBeTruthy())
+    expect(row().queryByText(/choice is saved/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(
+      useCharacterStore.getState().activeCharacter?.managedClassSpellChoices?.[0]?.policy,
+    ).toBe('ignore-class-list')
+  })
+
   test('unavailable saved choices can be cleared without sources while retaining the allocator', async () => {
     const original = initial()
     const result = setManagedClassSpellChoiceCommand(
@@ -414,6 +495,9 @@ describe('Class spell Finish and current-state adapter', () => {
     useGameDataStore.setState({ gameData: { ...gameData, spells: [] } })
     render(<Flow />)
     expect(await screen.findByText(/choice is saved/)).toBeTruthy()
+    expect(
+      within(screen.getByRole('group', { name: 'Cantrip 1' })).queryByText('Chosen'),
+    ).toBeNull()
     fireEvent.click(
       within(screen.getByRole('group', { name: 'Cantrip 1' })).getByRole('button', {
         name: 'Clear',
