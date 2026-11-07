@@ -48,12 +48,10 @@ export type ResolveChoiceSelection = (
 
 export interface ProficiencyPanelCallbacks {
   onFocusChange: (focus: ProfFocus) => void
-  onExpandDetails: () => void
+  onExpandDetails: (preview?: boolean) => void
   onResolveChoiceSelection: ResolveChoiceSelection
 }
 
 export interface ToolPanelChoices {
-  dropdownToolSlots: ToolChoiceSlot[]
-  artisanToolSlots: ToolChoiceSlot[]
-  artisanChoiceByNorm: Map<string, string>
+  toolChoiceSlots: ToolChoiceSlot[]
 }

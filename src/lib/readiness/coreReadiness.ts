@@ -15,6 +15,7 @@ import {
   featSetupReadinessId,
   provenanceChoiceReadinessId,
 } from '@/lib/navigation/readinessFocus'
+import { normalizeGenericToolChoice } from '@/lib/provenance/normalization'
 import type { Feat5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
@@ -178,7 +179,8 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
       (choice) =>
         choice.status !== 'resolved' ||
         choice.selected.length < choice.chooseCount ||
-        choice.selected.length > choice.chooseCount,
+        choice.selected.length > choice.chooseCount ||
+        (choice.domain === 'tools' && choice.selected.some(normalizeGenericToolChoice)),
     )
     .map((choice) =>
       readinessIssue(
@@ -190,7 +192,9 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
             ? getRacialSourceDisplayName(character, choice.sourceTag)
             : choice.sourceTag.label
         }`,
-        `${getRacialSourceDisplayName(character, choice.sourceTag)} offers ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} chosen.`,
+        choice.domain === 'tools' && choice.selected.some(normalizeGenericToolChoice)
+          ? 'Clear the saved tool category and choose a specific tool.'
+          : `${getRacialSourceDisplayName(character, choice.sourceTag)} offers ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} chosen.`,
         targetForChoice(choice),
       ),
     )

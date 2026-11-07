@@ -1,17 +1,25 @@
+import { getConcreteToolProficiencyName } from '@/lib/5etools/concreteToolProficiencies'
+import { getItemTypeCodes } from '@/lib/calculations/itemClassification'
 import {
   getRacialSourceDisplayName,
   type RaceDisplaySelection,
 } from '@/lib/calculations/raceDisplay'
-import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance/normalization'
+import {
+  canChooseConcreteTool,
+  getGenericToolKind,
+  getToolChoiceBranches,
+  type ToolGenericKind,
+} from '@/lib/character/toolProficiencyChoices'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ChoiceRecord } from '@/lib/provenance/types'
-
-type ToolGenericKind = 'musical instrument' | "artisan's tools" | 'gaming set' | 'tool'
+import type { Item5e } from '@/types/5etools'
 
 export type ToolChoiceSlot = {
   id: string
-  choiceId: string
   label: string
   sourceName: string
+  source?: string
+  remaining: number
   options: string[]
 }
 
@@ -21,27 +29,7 @@ interface BuildToolSubtypeParams {
   allowedSources?: string[]
 }
 
-export function normalizeGenericToolKind(value: string): ToolGenericKind | null {
-  const generic = normalizeGenericToolChoice(value)
-  if (generic) return generic as ToolGenericKind
-
-  const key = normalizeKey(value)
-  if (key === 'anytool' || key === 'tool') return 'tool'
-
-  return null
-}
-
-function getItemTypePrefix(type: unknown): string {
-  if (typeof type !== 'string') return ''
-  return type.split('|')[0] ?? ''
-}
-
-function addUniqueByNorm(list: string[], value: unknown): string[] {
-  if (typeof value !== 'string' || !value.trim()) return list
-  const exists = list.some((v) => normalizeKey(v) === normalizeKey(value))
-  if (exists) return list
-  return [...list, value]
-}
+export { getGenericToolKind as normalizeGenericToolKind }
 
 export function hasProfInArray(arr: string[], name: string): boolean {
   const toVariants = (value: string): string[] => {
@@ -99,7 +87,11 @@ export function buildChoiceCounts(
   for (const choice of choices) {
     if (!(choice.domain in counts)) continue
     const key = choice.domain as keyof typeof counts
-    counts[key] += Math.max(0, choice.chooseCount - choice.selected.length)
+    const selected =
+      choice.domain === 'tools'
+        ? choice.selected.filter((name) => !getGenericToolKind(name)).length
+        : choice.selected.length
+    counts[key] += Math.max(0, choice.chooseCount - selected)
   }
 
   return counts
@@ -124,89 +116,27 @@ export function buildToolSubtypeOptionsByKind({
   items,
   allowedSources,
 }: BuildToolSubtypeParams): Record<ToolGenericKind, string[]> {
-  const fromBase = itemsBase ?? []
-  const fromItems = items ?? []
-  const allItems = [...fromBase, ...fromItems]
-  const usableSources = allowedSources ?? []
-  const hasSourceFilter = usableSources.length > 0
-
-  const filterBySource = (sourceItems: unknown[]) =>
-    sourceItems.filter((item) => {
-      const typedItem = item as { source?: string }
-      if (!hasSourceFilter) return true
-      if (!typedItem?.source) return true
-      return usableSources.includes(typedItem.source)
-    })
-
-  const collectByType = (sourceItems: unknown[], typePrefix: string): string[] => {
-    const filtered = sourceItems.filter(
-      (item) => getItemTypePrefix((item as { type?: unknown })?.type) === typePrefix,
-    )
-
-    let out: string[] = []
-    for (const item of filtered) {
-      out = addUniqueByNorm(out, (item as { name?: unknown })?.name)
-    }
-
-    return out.sort((a, b) => a.localeCompare(b))
+  const pools: Record<ToolGenericKind, string[]> = {
+    'musical instrument': [],
+    "artisan's tools": [],
+    'gaming set': [],
+    tool: [],
   }
-
-  const scopedItems = filterBySource(allItems)
-
-  // Wondrous items (magical instruments like Horn of Silent Alarm, Instrument of Illusions,
-  // Rhythm-Maker's Drum) share the INS type code with mundane instruments but are not valid
-  // proficiency choices. Exclude them using the `wondrous` flag present on all magical items.
-  const mundaneItems = allItems.filter((item) => !(item as { wondrous?: unknown }).wondrous)
-  const scopedMundaneItems = filterBySource(mundaneItems)
-
-  const scopedInstruments = collectByType(scopedMundaneItems, 'INS')
-  const scopedArtisans = collectByType(scopedItems, 'AT')
-  const scopedGaming = collectByType(scopedItems, 'GS')
-
-  const allInstruments = collectByType(mundaneItems, 'INS')
-  const allArtisans = collectByType(allItems, 'AT')
-  const allGaming = collectByType(allItems, 'GS')
-
-  const fromScopedOrAll = (scoped: string[], all: string[]) => (scoped.length > 0 ? scoped : all)
-
-  const instruments = fromScopedOrAll(scopedInstruments, allInstruments)
-  const artisans = fromScopedOrAll(scopedArtisans, allArtisans)
-  const gaming = fromScopedOrAll(scopedGaming, allGaming)
-
-  const allTools = Array.from(new Set([...instruments, ...artisans, ...gaming])).sort((a, b) =>
-    a.localeCompare(b),
-  )
-
-  return {
-    'musical instrument': instruments,
-    "artisan's tools": artisans,
-    'gaming set': gaming,
-    tool: allTools,
+  for (const value of [...(itemsBase ?? []), ...(items ?? [])]) {
+    if (!value || typeof value !== 'object') continue
+    const item = value as Item5e
+    if (allowedSources && !allowedSources.includes(item.source)) continue
+    if (!getConcreteToolProficiencyName(item) || getGenericToolKind(item.name)) continue
+    pools.tool.push(item.name)
+    const codes = getItemTypeCodes(item.type)
+    if (codes.includes('INS')) pools['musical instrument'].push(item.name)
+    if (codes.includes('AT')) pools["artisan's tools"].push(item.name)
+    if (codes.includes('GS')) pools['gaming set'].push(item.name)
   }
-}
-
-/** Returns true when a tool choice slot should be rendered as individual selectable pills. */
-export function isArtisanToolSlot(slot: ToolChoiceSlot): boolean {
-  return slot.label === "artisan's tools"
-}
-
-/**
- * Collects flat, sorted artisan tool option names from artisan slots.
- * Deduplicates by normalized key.
- */
-export function buildArtisanToolNamesFromSlots(artisanSlots: ToolChoiceSlot[]): string[] {
-  const seen = new Set<string>()
-  const result: string[] = []
-  for (const slot of artisanSlots) {
-    for (const opt of slot.options) {
-      const norm = normalizeKey(opt)
-      if (!seen.has(norm)) {
-        seen.add(norm)
-        result.push(opt)
-      }
-    }
+  for (const key of Object.keys(pools) as ToolGenericKind[]) {
+    pools[key] = dedupeByNorm(pools[key]).sort((a, b) => a.localeCompare(b))
   }
-  return result.sort((a, b) => a.localeCompare(b))
+  return pools
 }
 
 /**
@@ -229,8 +159,8 @@ export function buildOptionalToolNamesFromChoices(
 
   for (const choice of choices) {
     if (choice.domain !== 'tools') continue
-    for (const token of choice.optionPool) {
-      const kind = normalizeGenericToolKind(token)
+    for (const token of getToolChoiceBranches(choice)) {
+      const kind = getGenericToolKind(token)
       if (kind) {
         for (const name of toolSubtypeOptionsByKind[kind] ?? []) {
           addName(name)
@@ -257,23 +187,9 @@ export function dedupeByNorm(items: string[]): string[] {
   return result
 }
 
-/**
- * Returns `true` when there is at least one unfilled tool choice whose option
- * pool contains the given generic kind.
- */
-export function hasUnresolvedChoiceForKind(choices: ChoiceRecord[], kind: string): boolean {
-  return choices.some(
-    (choice) =>
-      choice.domain === 'tools' &&
-      choice.selected.length < choice.chooseCount &&
-      choice.optionPool.some((poolEntry) => normalizeGenericToolKind(poolEntry) === kind),
-  )
-}
-
 interface BuildVisibleToolCandidatesParams {
   availableTools: string[]
   optionalToolNames: string[]
-  artisanToolNames: string[]
   currentTools: string[]
   selectedToolNames: string[]
 }
@@ -285,46 +201,21 @@ interface BuildVisibleToolCandidatesParams {
 export function buildVisibleToolCandidates({
   availableTools,
   optionalToolNames,
-  artisanToolNames,
   currentTools,
   selectedToolNames,
 }: BuildVisibleToolCandidatesParams): string[] {
   const toolCandidates = dedupeByNorm([
     ...availableTools,
     ...optionalToolNames,
-    ...artisanToolNames,
     ...currentTools,
     ...selectedToolNames,
   ]).sort((a, b) => a.localeCompare(b))
 
-  return toolCandidates.filter((toolName) => {
-    const genericKind = normalizeGenericToolKind(toolName)
-    if (!genericKind) return true
-    // Never render the abstract catch-all token as a pill.
-    if (genericKind === 'tool') return false
-    // Artisan's tools are expanded into individual named tool pills via the artisan slot
-    // mechanism — never show the category label itself as a pill.
-    if (genericKind === "artisan's tools") return false
-    // Keep only canonical generic labels (e.g. "gaming set"), not verbose placeholders.
-    return normalizeKey(toolName) === normalizeKey(genericKind)
+  const saved = new Set(selectedToolNames.map(normalizeKey))
+  return toolCandidates.filter((name) => {
+    const key = normalizeKey(name)
+    return saved.has(key) || (!getGenericToolKind(name) && !/^choose \d+$/.test(key))
   })
-}
-
-/**
- * Builds a Map from normalised artisan tool name to the choiceId of the first
- * artisan slot that accepts it.
- */
-export function buildArtisanChoiceMap(artisanSlots: ToolChoiceSlot[]): Map<string, string> {
-  const map = new Map<string, string>()
-  for (const slot of artisanSlots) {
-    for (const opt of slot.options) {
-      const norm = normalizeKey(opt)
-      if (!map.has(norm)) {
-        map.set(norm, slot.choiceId)
-      }
-    }
-  }
-  return map
 }
 
 /**
@@ -344,6 +235,7 @@ interface BuildToolChoiceSlotsParams {
   selection?: RaceDisplaySelection | null
   selectedTools: string[]
   toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>
+  retainedToolSubtypeOptionsByKind?: Record<ToolGenericKind, string[]>
 }
 
 export function buildToolChoiceSlots({
@@ -351,6 +243,7 @@ export function buildToolChoiceSlots({
   selection,
   selectedTools,
   toolSubtypeOptionsByKind,
+  retainedToolSubtypeOptionsByKind,
 }: BuildToolChoiceSlotsParams): ToolChoiceSlot[] {
   const selectedToolNorms = new Set(selectedTools.map((name) => normalizeKey(name)))
   const slots: ToolChoiceSlot[] = []
@@ -358,33 +251,29 @@ export function buildToolChoiceSlots({
   for (const choice of choices) {
     if (choice.domain !== 'tools') continue
 
-    const kinds = Array.from(
-      new Set(
-        choice.optionPool
-          .map((token) => normalizeGenericToolKind(token))
-          .filter((kind): kind is ToolGenericKind => Boolean(kind)),
+    const remaining = choice.chooseCount - choice.selected.length
+    if (remaining <= 0) continue
+    const label =
+      choice.optionPool.length === 1
+        ? (getGenericToolKind(choice.optionPool[0]) ?? 'tool proficiency')
+        : 'tool proficiency'
+    slots.push({
+      id: choice.id,
+      label,
+      sourceName: getRacialSourceDisplayName(selection, choice.sourceTag),
+      source: choice.sourceTag.sourceRef,
+      remaining,
+      options: toolSubtypeOptionsByKind.tool.filter(
+        (name) =>
+          !selectedToolNorms.has(normalizeKey(name)) &&
+          canChooseConcreteTool(
+            choice,
+            name,
+            toolSubtypeOptionsByKind,
+            retainedToolSubtypeOptionsByKind,
+          ),
       ),
-    )
-    if (kinds.length === 0) continue
-
-    const remaining = Math.max(0, choice.chooseCount - choice.selected.length)
-    if (remaining === 0) continue
-
-    const pool = Array.from(new Set(kinds.flatMap((kind) => toolSubtypeOptionsByKind[kind] ?? [])))
-      .filter((name) => !selectedToolNorms.has(normalizeKey(name)))
-      .sort((a, b) => a.localeCompare(b))
-
-    const label = kinds.length === 1 ? kinds[0] : 'tool proficiency'
-
-    for (let idx = 0; idx < remaining; idx++) {
-      slots.push({
-        id: `${choice.id}:${idx}`,
-        choiceId: choice.id,
-        label,
-        sourceName: getRacialSourceDisplayName(selection, choice.sourceTag),
-        options: pool,
-      })
-    }
+    })
   }
 
   return slots
