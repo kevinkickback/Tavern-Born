@@ -4,6 +4,7 @@ import type { Class5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import { ELDRITCH_HEX_REFERENCE, getNativeEldritchHexOwner } from './nativeWarlockPatronRules'
 import { parseSpellToken } from './spellTokens'
 
 export interface SubclassSpellGrant {
@@ -49,7 +50,15 @@ export function getEarnedSubclassSpellGrants(
       norm(row.classSource) === norm(entry.source),
   )
   if (subclasses.length !== 1) return unavailable
-  if (!land) return parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+  if (!land) {
+    const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    if (!getNativeEldritchHexOwner(entry)) return grants
+    // Eldritch Hex has its own source proof. Expanded list access remains independent.
+    const hex = getSpellReferenceKey(ELDRITCH_HEX_REFERENCE)
+    return grants.filter(
+      (grant) => grant.mode === 'expanded' || getSpellReferenceKey(grant.spellName) !== hex,
+    )
+  }
   const terrain = getChosenLandTerrain(classData, subclasses[0], landContext?.selections ?? [])
   if (!terrain) return []
   const grants = parseSubclassSpells([{ prepared: terrain.block.prepared }], classLevel)
