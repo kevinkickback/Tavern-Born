@@ -76,17 +76,27 @@ test.skipIf(!existsSync('data/class/class-druid.json')).each([
   {
     subclass: 'Circle of Spores',
     level3: ['blindness/deafness', 'gentle repose'],
+    laterSpells: {
+      5: ['animate dead', 'gaseous form'],
+      7: ['blight', 'confusion'],
+      9: ['cloudkill', 'contagion'],
+    },
     later: 'Fungal Infestation',
     cantrip: 'chill touch',
   },
   {
     subclass: 'Circle of Wildfire',
     level3: ['burning hands', 'cure wounds', 'flaming sphere', 'scorching ray'],
+    laterSpells: {
+      5: ['plant growth', 'revivify'],
+      7: ['aura of life', 'fire shield'],
+      9: ['flame strike', 'mass cure wounds'],
+    },
     later: 'Enhanced Bond',
   },
 ])(
   '$subclass keeps its earned spell schedule under the revised Druid',
-  async ({ subclass, level3, later, cantrip }) => {
+  async ({ subclass, level3, laterSpells, later, cantrip }) => {
     const data = await load('local', 'data')
     const current = lookups(data)
     const actor = (source: 'PHB' | 'XPHB', levels: number) =>
@@ -110,11 +120,21 @@ test.skipIf(!existsSync('data/class/class-druid.json')).each([
         ?.alwaysPreparedSpells?.map((ref) => ref.toLowerCase())
         .filter((ref) => ref !== spell.toLowerCase())
         .sort() ?? []
-    const expected = (source: string) => level3.map((name) => name + '|' + source).sort()
+    const expected = (source: string, names = level3) =>
+      names.map((name) => name + '|' + source).sort()
     expect(fixed(actor('PHB', 3))).toEqual(expected('phb'))
     expect(fixed(actor('XPHB', 2))).toEqual([])
     const earned = actor('XPHB', 3)
     expect(fixed(earned)).toEqual(expected('xphb'))
+    for (const source of ['PHB', 'XPHB'] as const) {
+      const earnedNames = [...level3]
+      for (const [level, spells] of Object.entries(laterSpells)) {
+        const gain = Number(level)
+        expect(fixed(actor(source, gain - 1))).toEqual(expected(source.toLowerCase(), earnedNames))
+        earnedNames.push(...spells)
+        expect(fixed(actor(source, gain))).toEqual(expected(source.toLowerCase(), earnedNames))
+      }
+    }
     const target = data.spells.find(
       (row) => row.name.toLowerCase() === level3[0] && row.source === 'XPHB',
     )
