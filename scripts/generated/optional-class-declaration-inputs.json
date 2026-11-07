@@ -118,7 +118,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "fb8177f55e4cfd8747e75ff3aa0a620752e1feeca3e13d4347e1ab7fdff8e73e"
+      "sha256": "b3bc8e1da66763ecc841441066cea31d2b33bd5173b16f7dd79bb2e004e291c2"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
@@ -158,11 +158,11 @@
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "004cf0ed9a888f5cd797d2b1b09d1979d0de2b3e4bf7f695d3c9e2c2a4213c87"
+      "sha256": "5087d1e697717d49200793ea39a59e53362a0c0328b49bf796533e645c930e9e"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "b68ffd2ae7815dccdaf238242c3f8a4bd6d3923e9630931f8b0e2c12de7a9b64"
+      "sha256": "4c28ea761558e8e7bc9768ad709c0c4113e7987158e5d8ac9666b1f05ce6c5d4"
     },
     {
       "file": "src/types/effects.ts",

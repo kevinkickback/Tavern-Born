@@ -1,10 +1,12 @@
 import {
+  allowsProficiencyDomain,
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import {
   CLASS_PROFICIENCY_RULES,
+  getClassProficiencyRuleDomain,
   REVISED_PRIMAL_KNOWLEDGE_TARGET,
 } from '@/lib/5etools/classProficiencyRules'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
@@ -29,13 +31,12 @@ export function isValidClassProficiencySelection(
   selection: CharacterClassChoiceSelection,
 ): boolean {
   const relation = decodeClassProficiencyChoiceId(selection.choiceId)
-  const domain =
-    relation &&
-    classProficiencyRule(relation.target)?.domains.find((row) => row.domain === relation.domain)
+  const rule = relation && classProficiencyRule(relation.target)
+  const domain = getClassProficiencyRuleDomain(rule, relation)
   const setup = selection.proficiencyAtGain
   const trigger =
     (relation?.domain === 'skills' || relation?.domain === 'savingThrows') &&
-    classProficiencyRule(relation.target)?.proficiencyAtGain
+    (domain?.trigger ?? rule?.proficiencyAtGain)
   const historical = !!trigger
   const optional = relation && optionalClassProficiencyRule(relation.target)
   const validSetup = historical
@@ -83,9 +84,12 @@ export function isValidClassProficiencySelection(
               rule.domains.some((row) => row.tools?.includes(target?.name ?? '')),
             )
       return (
-        target?.domain === relation.domain &&
+        !!target &&
+        allowsProficiencyDomain(relation.domain, target.domain) &&
+        (!relation.trigger || !rule?.domains.some((row) => row.trigger === target.name)) &&
         toolAllowed &&
-        (target.proficiencyType === 'tool' ||
+        (target.domain === 'languages' ||
+          target.proficiencyType === 'tool' ||
           !domain.skillPool ||
           domain.skillPool.includes(target.name)) &&
         (!domain.languagePool || domain.languagePool.includes(target.name)) &&
@@ -141,7 +145,7 @@ export function getInvalidClassProficiencySelectionIds(
   const occupied = new Map<string, string>()
   for (const selection of selections) {
     const relation = decodeClassProficiencyChoiceId(selection.choiceId)
-    if (!relation || !optionalClassProficiencyRule(relation.target)) continue
+    if (!relation || (!relation.trigger && !optionalClassProficiencyRule(relation.target))) continue
     for (const option of selection.selected) {
       const name = decodeProficiencyOption(option)?.name
       if (!name) continue
@@ -188,24 +192,22 @@ export function getInvalidClassProficiencyPaths(
         const relation = selection && decodeClassProficiencyChoiceId(selection.choiceId)
         const matches =
           selection &&
-          getOwnedClassProficiencyOptions(selection).some(
-            (option) => decodeProficiencyOption(option)?.name === name,
-          )
+          getOwnedClassProficiencyOptions(selection).some((option) => {
+            const target = decodeProficiencyOption(option)
+            return (
+              target?.name === name &&
+              (target.domain === domain ||
+                (domain === 'skills' &&
+                  target.domain === 'expertise' &&
+                  relation &&
+                  classProficiencyRule(relation.target)?.domains.some(
+                    (row) => row.domain === 'expertise' && row.coupled,
+                  )))
+            )
+          })
         if (
           !selection ||
           invalid.has(selection.choiceId) ||
-          !(
-            (domain === 'languages' &&
-              !!selection &&
-              !!decodeFavoredEnemyChoiceId(selection.choiceId) &&
-              isValidFavoredEnemySelection(selection)) ||
-            relation?.domain === domain ||
-            (domain === 'skills' &&
-              relation?.domain === 'expertise' &&
-              classProficiencyRule(relation.target)?.domains.some(
-                (row) => row.domain === 'expertise' && row.coupled,
-              ))
-          ) ||
           !matches ||
           tag.sourceType !== (selection.subclassName ? 'subclass' : 'class') ||
           tag.grantType !== 'choice' ||

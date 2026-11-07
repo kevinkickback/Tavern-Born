@@ -7,6 +7,8 @@ import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
+import type { FeatureCastOnlyRules } from '@/types/classCasting'
+import { isArcaneArcherCantripOwner } from './arcaneArcherCantripSource'
 import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
@@ -17,6 +19,10 @@ import {
 } from './clericDomainCantripSources'
 import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import {
+  getFighterBanneretRitualGrants,
+  getPsiWarriorTelekineticGrants,
+} from './fighterSubclassSpells'
 import {
   hasClassicZealSpellRestriction,
   hasRevisedInheritedDomainSpells,
@@ -63,7 +69,7 @@ export interface SubclassSpellGrant {
   expectedSpellLevel?: number
   requiresClassicReprint?: true
   feature?: { name: string; target: string; castingNote?: string }
-  castOnly?: { castingTime?: string; ignoresMaterial?: true }
+  castOnly?: FeatureCastOnlyRules
   mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
 }
 
@@ -77,11 +83,13 @@ export function hasCurrentSubclassSpellGrant(
   includedDomainReprints?: ReadonlyMap<string, number | undefined>,
 ) {
   const key = getSpellReferenceKey(grant.spellName)
+  const reprintRank = grant.expectedSpellLevel ?? spellLevels?.get(key)
   if (
     grant.requiresClassicReprint &&
-    oathReprints?.get(key) !== grant.expectedSpellLevel &&
-    (grant.feature?.target !== INHERITED_DOMAIN_SPELLS ||
-      includedDomainReprints?.get(key) !== grant.expectedSpellLevel)
+    (reprintRank === undefined ||
+      (oathReprints?.get(key) !== reprintRank &&
+        (grant.feature?.target !== INHERITED_DOMAIN_SPELLS ||
+          includedDomainReprints?.get(key) !== reprintRank)))
   )
     return false
   return grant.expectedSpellLevel === undefined
@@ -141,6 +149,15 @@ export function getEarnedSubclassSpellGrants(
   )
   if (subclasses.length !== 1) return unavailable
   if (!land) {
+    if (isArcaneArcherCantripOwner(entry)) return []
+    const fighter =
+      getFighterBanneretRitualGrants(classData, subclasses[0], classLevel) ??
+      getPsiWarriorTelekineticGrants(classData, subclasses[0], classLevel)
+    if (fighter)
+      return landContext?.character &&
+        !getSourceCompatibility(classData.source, landContext.character.originSystem).compatible
+        ? []
+        : fighter
     // The two native Giant Power blocks describe alternatives.
     if (
       norm(entry.name) === 'barbarian' &&

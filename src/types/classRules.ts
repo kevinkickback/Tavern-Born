@@ -33,6 +33,7 @@ export type ChoiceOptionEntityType =
   | 'proficiency'
 
 export type ClassProficiencyDomain = 'expertise' | 'languages' | 'tools' | 'skills' | 'savingThrows'
+export type ClassProficiencyChoiceDomain = ClassProficiencyDomain | 'skill-or-language'
 
 export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
@@ -73,7 +74,7 @@ export interface NormalizedCharacterChoice {
   label: string
   kind: NormalizedCharacterChoiceKind
   /** Named proficiency semantics; the granting feature remains a separate qualified target. */
-  proficiencyDomain?: ClassProficiencyDomain
+  proficiencyDomain?: ClassProficiencyChoiceDomain
   /** Populated only from current class proficiency source authority. */
   currentProficiencySkillPool?: readonly string[]
   owner: {
@@ -93,7 +94,7 @@ export interface NormalizedCharacterChoice {
   optionFilter?: NormalizedChoiceOptionFilter
   repeatable: boolean
   replacement: {
-    cadence: 'never' | 'class-level' | 'asi-level' | 'long-rest'
+    cadence: 'never' | 'class-level' | 'asi-level' | 'choice-gain' | 'long-rest'
     maximumPerEvent?: number | 'all'
   }
   featureVariant?: {
@@ -147,6 +148,7 @@ export interface ClassResourceDef {
   recovery?: ClassResourceRecovery
   recoveryByLevel?: readonly ClassResourceRecovery[]
   maxFormula?: ClassResourceMaxFormula
+  usageText?: string
 }
 
 export interface NormalizedClassRules {

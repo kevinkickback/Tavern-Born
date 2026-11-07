@@ -2,7 +2,10 @@ import {
   canonicalProficiencyName,
   decodeProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
-import { CLASS_PROFICIENCY_RULES } from '@/lib/5etools/classProficiencyRules'
+import {
+  CLASS_PROFICIENCY_RULES,
+  type QualifiedLanguageSources,
+} from '@/lib/5etools/classProficiencyRules'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import {
   type ClassifiableItem,
@@ -12,15 +15,33 @@ import {
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 
+function getQualifiedProficiencyLanguage(
+  name: string,
+  languages: ClassChoiceFeatureCatalogs['languages'],
+  sources: QualifiedLanguageSources,
+) {
+  for (const [allowedName, source] of sources) {
+    if (allowedName !== name) continue
+    const matches = languages?.filter(
+      (language) => canonicalProficiencyName(language.name) === name && language.source === source,
+    )
+    if (matches?.length === 1 && !matches[0].sourceIdentityConflict) return matches[0]
+  }
+  return undefined
+}
+
 export function hasProficiencyCatalogTarget(
   option: NormalizedChoiceOptionReference,
   catalogs:
     | Pick<ClassChoiceFeatureCatalogs, 'skills' | 'languages' | 'proficiencyTools'>
     | undefined,
+  languageSources?: QualifiedLanguageSources,
 ) {
   const target = decodeProficiencyOption(option)
   if (!target) return false
   if (target.domain === 'savingThrows') return toAbilityName(target.name) === target.name
+  if (target.domain === 'languages' && languageSources)
+    return !!getQualifiedProficiencyLanguage(target.name, catalogs?.languages, languageSources)
   if (target.proficiencyType === 'tool')
     return CLASS_PROFICIENCY_RULES.some((rule) =>
       rule.domains.some((domain) => domain.tools?.includes(target.name)),
@@ -48,9 +69,10 @@ export function hasProficiencyCatalogTarget(
 export function getProficiencyOptionEntries(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceFeatureCatalogs,
+  languageSources?: QualifiedLanguageSources,
 ): unknown[] | undefined {
   const target = decodeProficiencyOption(option)
-  if (!target || !hasProficiencyCatalogTarget(option, catalogs)) return undefined
+  if (!target || !hasProficiencyCatalogTarget(option, catalogs, languageSources)) return undefined
   if (target.domain === 'savingThrows')
     return ['Gain proficiency with the chosen ability’s saving throws.']
   const tool = target.proficiencyType === 'tool'
@@ -60,13 +82,17 @@ export function getProficiencyOptionEntries(
       : target.domain === 'tools'
         ? catalogs.proficiencyTools
         : catalogs.languages
-  const entry = (values ?? []).find(
-    (value) =>
-      value &&
-      typeof value === 'object' &&
-      'name' in value &&
-      typeof value.name === 'string' &&
-      canonicalProficiencyName(value.name) === target.name,
+  const entry = (
+    target.domain === 'languages' && languageSources
+      ? getQualifiedProficiencyLanguage(target.name, catalogs.languages, languageSources)
+      : (values ?? []).find(
+          (value) =>
+            value &&
+            typeof value === 'object' &&
+            'name' in value &&
+            typeof value.name === 'string' &&
+            canonicalProficiencyName(value.name) === target.name,
+        )
   ) as { entries?: unknown[]; type?: string } | undefined
   return [
     ...(tool

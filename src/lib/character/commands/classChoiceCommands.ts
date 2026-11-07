@@ -24,7 +24,6 @@ import {
 import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import {
   decodeClassProficiencyChoiceId,
-  decodeProficiencyOption,
   getProficiencyOption,
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
@@ -695,12 +694,7 @@ export function retainSavedFeatureOptionsCommand(
         : [],
   )
   const ownedProficiencies = isClassProficiencyChoiceId(selection.choiceId)
-    ? retainClassProficiencyGrants(
-        character,
-        ledger,
-        selection,
-        new Set(selected.flatMap((option) => decodeProficiencyOption(option)?.name ?? [])),
-      )
+    ? retainClassProficiencyGrants(character, ledger, selection, selected)
     : undefined
   const featureGrants = ownedProficiencies
     ? undefined

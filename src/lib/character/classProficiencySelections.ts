@@ -160,8 +160,18 @@ export function refreshClassProficiencyState(
   _classes: readonly Class5e[],
   catalogs?: ClassChoiceFeatureCatalogs,
 ): Character {
-  const result = projectOwnedProficiencies(character, catalogs).effective
-  return sameAppliedProficiencies(character, result) ? character : result
+  return resolveClassProficiencyState(character, catalogs).character
+}
+
+export function resolveClassProficiencyState(
+  character: Character,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  const { effective, fixed } = projectOwnedProficiencies(character, catalogs)
+  return {
+    character: sameAppliedProficiencies(character, effective) ? character : effective,
+    fixed,
+  }
 }
 
 export function hasClassProficiencyRecovery(

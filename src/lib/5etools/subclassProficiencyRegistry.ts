@@ -1,8 +1,8 @@
 import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { CONDITIONAL_PROFICIENCY_RULES } from './conditionalProficiencyRules'
 import type { SubclassProficiencyCheckpoint } from './subclassProficiencyCertificates'
-import generated from './subclassProficiencyCertificates.generated.json' with { type: 'json' }
-// The generator validates four-part owners. JSON imports infer arrays rather than tuples.
+import generated from './subclassProficiencyCertificates.generated'
+// The generator validates four-part owners. Inferred arrays do not preserve those tuples.
 export const SUBCLASS_PROFICIENCY_CHECKPOINT = generated as unknown as SubclassProficiencyCheckpoint
 export const SUBCLASS_PROFICIENCY_PACKAGES = SUBCLASS_PROFICIENCY_CHECKPOINT.packages ?? []
 export const SUBCLASS_PROFICIENCY_ROOTS = [

@@ -8,12 +8,16 @@ import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProfic
 import {
   type FixedProficiencyRelation,
   getFixedProficiencyId,
+  getFixedTrainingSkills,
 } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
   type FixedProficiencyRule,
   fixedProficiencyRule,
 } from '@/lib/5etools/fixedProficiencyRules'
-import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import {
+  getCurrentNativeSubclassGain,
+  matchesNativeSubclassGain,
+} from '@/lib/5etools/nativeSubclassGain'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
@@ -31,6 +35,7 @@ export interface CurrentFixedProficiency extends FixedProficiencyRelation {
   rule: FixedProficiencyRule
   sourceName: string
   sourceRef: string
+  trainingInactive?: true
 }
 
 /** Establish the unique selected current owner before invoking any supplied-root source audit. */
@@ -58,6 +63,7 @@ export function getCurrentFixedProficiencies(
       rule: FixedProficiencyRule,
       sourceName: string,
       sourceRef: string,
+      trainingInactive?: true,
     ) => {
       if (relation.level <= selected.levels)
         result.push({
@@ -66,6 +72,7 @@ export function getCurrentFixedProficiencies(
           rule,
           sourceName,
           sourceRef,
+          ...(trainingInactive && { trainingInactive }),
         })
     }
     for (const rule of getCurrentDirectFixedClassRules(cls, catalogs))
@@ -102,6 +109,13 @@ export function getCurrentFixedProficiencies(
     for (const path of certificate?.paths ?? []) {
       const rule = fixedProficiencyRule(path.target, owner)
       if (!rule) continue
+      if (rule.subclassGainPosition) {
+        const gain = getCurrentNativeSubclassGain(
+          cls,
+          rule.subclassGainPosition === 'at-level' ? path.level : undefined,
+        )
+        if (gain?.level !== path.level) continue
+      }
       if (
         rule.languageFallback &&
         (!getSourceCompatibility(cls.source, character.originSystem).compatible ||
@@ -145,9 +159,21 @@ export function getCurrentFixedProficiencies(
         const independentlyProficient =
           character.proficiencies.savingThrows.some((name) => toAbilityName(name) === save) &&
           (!tags.length || tags.some((tag) => tag.grantVariant !== getFixedProficiencyId(relation)))
-        if (setup?.alreadyProficient ?? independentlyProficient) continue
+        if (setup?.alreadyProficient ?? independentlyProficient) {
+          if (rule.skillCheckModifier) push(relation, rule, sub.name, sub.source, true)
+          continue
+        }
       }
-      push(relation, rule, sub.name, sub.source)
+      const effective = rule.startingSkillFallbacks
+        ? {
+            ...rule,
+            training: {
+              ...rule.training,
+              skills: getFixedTrainingSkills(rule, relation, character.classChoiceSelections),
+            },
+          }
+        : rule
+      push(relation, effective, sub.name, sub.source)
     }
   }
   for (const order of CLASS_ORDERS) {

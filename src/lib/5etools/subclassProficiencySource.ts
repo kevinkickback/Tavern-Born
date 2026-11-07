@@ -5,13 +5,17 @@ import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   collectSubclassProficiencyPaths,
   getSubclassCopyLookupKey,
+  getSubclassProficiencyEntries,
   getSubclassProficiencyOwner,
+  isArcaneArcherLoreProficiencyFeature,
   isExactSubclassProficiencyReference,
+  isKnightlyEnvoyProficiencyFeature,
   type SubclassProficiencyFeatureCertificate,
   type SubclassProficiencyPackage,
   type SubclassProficiencyRootCertificate,
   type SubclassProficiencySourceAudit,
   subclassProficiencyDigest,
+  subclassProficiencyFeatureDigest,
   subclassProficiencyMetadata,
   subclassProficiencyRootDigest,
 } from './subclassProficiencyCertificates'
@@ -170,7 +174,7 @@ export function auditSubclassProficiencyRoots(
           matches.length === 1 &&
           (byOwner.get(JSON.stringify(getSubclassProficiencyOwner(matches[0]))) ?? []).length ===
             1 &&
-          subclassProficiencyDigest(matches[0]) === copy.digest
+          subclassProficiencyRootDigest(matches[0]) === copy.digest
         )
       })
     return {
@@ -211,7 +215,7 @@ export function auditSubclassProficiencyFeatures(
     const valid =
       !!(ordinary || packaged) &&
       producers.length === 1 &&
-      subclassProficiencyDigest(raw[index]) === certificate.rawDigest &&
+      subclassProficiencyFeatureDigest(raw[index]) === certificate.rawDigest &&
       subclassProficiencyDigest(subclassProficiencyMetadata(row)) === certificate.metadataDigest &&
       certificate.copies.every((copy) => {
         const matches = byTarget.get(copy.target) ?? []
@@ -225,9 +229,16 @@ export function auditSubclassProficiencyFeatures(
         valid,
         packaged && packageAudit?.key,
       ),
-      // The Giant Power cantrip has its own live rules check. Preserve duplicate and copy conflicts.
+      // Independently checked spells should survive a changed proficiency clause.
       ...(!valid &&
-      !(target === GIANT_POWER_TARGET && ordinary && producers.length === 1) &&
+      !(
+        (target === GIANT_POWER_TARGET ||
+          isKnightlyEnvoyProficiencyFeature(row) ||
+          isArcaneArcherLoreProficiencyFeature(row)) &&
+        ordinary &&
+        producers.length === 1 &&
+        !raw[index]._copy
+      ) &&
       !isConditionalOnlySubclassProficiencyTarget(target)
         ? { featureOptionSourceConflict: true }
         : {}),
@@ -252,7 +263,7 @@ function currentFeatureMatches(
   )
     return false
   let cursor = 0
-  for (const entry of feature.entries) {
+  for (const entry of getSubclassProficiencyEntries(feature)) {
     const digest = getFeatureSourceDigest([entry])
     while (cursor < certificate.entries.length && certificate.entries[cursor].digest !== digest) {
       if (!certificate.entries[cursor].reference) return false

@@ -6,6 +6,7 @@ import {
 import {
   declaredSubclassSlots,
   decodeSelectedFeatureSpellAddress,
+  isArcaneArcherCantripSlot,
   isClericDomainCantripSlot,
   isDeclaredSubclassCantripSlot,
   selectedFeatureSpellAddress,
@@ -119,10 +120,10 @@ export function getSavedSelectedFeatureSpellProducers(character: Character) {
       }),
     ),
   )
-  const savedDomainCantrips = (character.managedClassSpellChoices ?? [])
+  const savedDeclaredCantrips = (character.managedClassSpellChoices ?? [])
     .map((row) => row.slot)
-    .filter(isClericDomainCantripSlot)
-  for (const slot of [...declaredSubclassSlots, ...savedDomainCantrips]) {
+    .filter((slot) => isClericDomainCantripSlot(slot) || isArcaneArcherCantripSlot(slot))
+  for (const slot of [...declaredSubclassSlots, ...savedDeclaredCantrips]) {
     if (!hasDeclaredSubclassOwner(character, slot)) continue
     const [owner, , producer, level] = slot
     producers.add(JSON.stringify([owner, producer, level]))

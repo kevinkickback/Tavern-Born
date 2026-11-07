@@ -248,15 +248,18 @@ export function retainEarnedManagedClassSpells(
     norm(entry.source) === rule.printing &&
     norm(entry.subclass) === rule.subclass &&
     norm(entry.subclassSource) === rule.source
-  const lostDomainProgress = clericDomainCantrips.some((rule) =>
-    character.classProgression.some(
-      (entry) =>
-        belongsTo(entry, rule) &&
-        !nextProgression.some((next) => belongsTo(next, rule) && next.levels >= entry.levels),
-    ),
+  const ownerKey = (entry: CharacterClassEntry) =>
+    JSON.stringify([entry.name, entry.source, entry.subclass, entry.subclassSource].map(norm))
+  const lostDynamicProgress = character.classProgression.some(
+    (entry) =>
+      (isArcaneArcherCantripOwner(entry) ||
+        clericDomainCantrips.some((rule) => belongsTo(entry, rule))) &&
+      !nextProgression.some(
+        (next) => ownerKey(next) === ownerKey(entry) && next.levels >= entry.levels,
+      ),
   )
   const lostSlot =
-    lostDomainProgress || [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
+    lostDynamicProgress || [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
   const removed = (character.managedClassSpellChoices ?? []).filter((choice) =>
     choice.slot[1] === 'feature-cantrip' || getClericArcanaSpellRule(choice.slot)
       ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
@@ -288,3 +291,5 @@ export function retainEarnedManagedClassSpells(
     ),
   }
 }
+
+import { isArcaneArcherCantripOwner } from '@/lib/5etools/arcaneArcherCantripSource'

@@ -60,21 +60,89 @@ export const getSubclassProficiencyOwner = getSubclassOwnerIdentity
 
 export const subclassProficiencyDigest = (value: unknown) => getFeatureSourceDigest([value], false)
 
-// The AU Cleric's skill and spell clauses are independent source declarations.
-function omitIndependentSpellSchedule(value: Record<string, unknown>) {
-  if (
-    value.name !== 'Arcana Domain' ||
-    value.shortName !== 'Arcana' ||
-    value.source !== 'AU' ||
-    value.className !== 'Cleric' ||
-    value.classSource !== 'XPHB'
+export function isKnightlyEnvoyProficiencyFeature(value: Record<string, unknown>) {
+  return (
+    value.name === 'Knightly Envoy' &&
+    value.className === 'Fighter' &&
+    value.classSource === 'XPHB' &&
+    value.subclassShortName === 'Banneret' &&
+    value.source === 'FRHoF' &&
+    value.subclassSource === 'FRHoF'
   )
-    return value
+}
+
+export function getSubclassProficiencyEntries(value: Record<string, unknown>): unknown[] {
+  const entries = Array.isArray(value.entries) ? value.entries : []
+  if (isKnightlyEnvoyProficiencyFeature(value))
+    return entries.filter((entry) => entry?.type !== 'entries' || entry.name !== 'Comprehension')
+  if (isArcaneArcherLoreProficiencyFeature(value))
+    return value.source === 'AU'
+      ? entries.filter((entry) => entry?.type !== 'entries' || entry.name !== 'Cantrip')
+      : entries.map((entry) =>
+          typeof entry === 'string'
+            ? entry.replace(/, and you choose to learn either [^.]+ cantrip\.$/, '.')
+            : entry,
+        )
+  return entries
+}
+
+export function isArcaneArcherLoreProficiencyFeature(value: Record<string, unknown>) {
+  return (
+    value.name === 'Arcane Archer Lore' &&
+    value.className === 'Fighter' &&
+    value.subclassShortName === 'Arcane Archer' &&
+    value.source === value.subclassSource &&
+    ((value.classSource === 'PHB' && value.source === 'XGE') ||
+      (value.classSource === 'XPHB' && value.source === 'AU'))
+  )
+}
+
+export function subclassProficiencyFeatureDigest(value: Record<string, unknown>) {
+  return subclassProficiencyDigest(
+    Array.isArray(value.entries)
+      ? { ...value, entries: getSubclassProficiencyEntries(value) }
+      : value,
+  )
+}
+
+// Independent spell and maneuver schedules do not authenticate proficiency clauses.
+function omitIndependentSchedule(value: Record<string, unknown>) {
+  if (
+    value.className === 'Fighter' &&
+    value.name === 'Arcane Archer' &&
+    value.shortName === 'Arcane Archer' &&
+    (value.source === 'XGE' || value.source === 'AU')
+  )
+    return Object.fromEntries(
+      Object.entries(value).filter(
+        ([key]) => key !== 'additionalSpells' && key !== 'optionalfeatureProgression',
+      ),
+    )
+  if (
+    value.name === 'Battle Master' &&
+    value.shortName === 'Battle Master' &&
+    (value.source === 'PHB' || value.source === 'XPHB') &&
+    value.className === 'Fighter'
+  )
+    return Object.fromEntries(
+      Object.entries(value).filter(([key]) => key !== 'optionalfeatureProgression'),
+    )
+  const arcana =
+    value.name === 'Arcana Domain' &&
+    value.shortName === 'Arcana' &&
+    value.source === 'AU' &&
+    value.className === 'Cleric'
+  const banneret =
+    value.name === 'Banneret' &&
+    value.shortName === 'Banneret' &&
+    value.source === 'FRHoF' &&
+    value.className === 'Fighter'
+  if (value.classSource !== 'XPHB' || (!arcana && !banneret)) return value
   return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'additionalSpells'))
 }
 
 export const subclassProficiencyRootDigest = (value: Record<string, unknown>) =>
-  subclassProficiencyDigest(omitIndependentSpellSchedule(value))
+  subclassProficiencyDigest(omitIndependentSchedule(value))
 
 export function subclassProficiencyMetadata(value: Record<string, unknown>, root = false) {
   const derived = new Set([
@@ -92,7 +160,7 @@ export function subclassProficiencyMetadata(value: Record<string, unknown>, root
       : []),
   ])
   return Object.fromEntries(
-    Object.entries(root ? omitIndependentSpellSchedule(value) : value).filter(
+    Object.entries(root ? omitIndependentSchedule(value) : value).filter(
       ([key]) => !derived.has(key),
     ),
   )

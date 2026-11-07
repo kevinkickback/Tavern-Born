@@ -3,6 +3,11 @@ import {
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
 import {
+  getArcaneArcherCantripChoice,
+  getIncludedArcaneArcherSpellReprints,
+  isArcaneArcherCantripOwner,
+} from '@/lib/5etools/arcaneArcherCantripSource'
+import {
   getCurrentGiantPower,
   hasIncludedSrdGiantSpellProof,
 } from '@/lib/5etools/barbarianGiantPower'
@@ -24,8 +29,10 @@ import { getCurrentNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
+  getArcaneArcherCantripSlot,
   getClericDomainCantripProducer,
   giantPowerSpellSlots,
+  isArcaneArcherCantripSlot,
   isGiantPowerSpellSlot,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
@@ -439,6 +446,53 @@ export function getSelectedFeatureCantripSetups(
       offered: true,
     })
   }
+  for (const entry of character.classProgression.filter(isArcaneArcherCantripOwner)) {
+    const printing = norm(entry.source)
+    const subclassSource = norm(entry.subclassSource)
+    if (
+      !getSourceCompatibility(printing, character.originSystem).compatible ||
+      !permitted(allowed, printing) ||
+      !permitted(allowed, subclassSource)
+    )
+      continue
+    const classes = catalogs?.classes?.filter(
+      (row) => norm(row.name) === 'fighter' && norm(row.source) === printing,
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const roots = cls?.subclasses?.filter(
+      (row) => norm(row.name) === 'arcane archer' && norm(row.source) === subclassSource,
+    )
+    const rule = cls && roots?.length === 1 && getArcaneArcherCantripChoice(cls, roots[0])
+    const slot =
+      rule && getArcaneArcherCantripSlot(printing, subclassSource, rule.level, rule.originLevel)
+    if (
+      !rule ||
+      !slot ||
+      rule.target !== decodeSelectedFeatureSpellAddress(slot[2])?.[0] ||
+      !hasSavedSelectedFeatureSpellOwner(character, slot)
+    )
+      continue
+    setups.push({
+      owner: slot[0],
+      producer: slot[2],
+      level: rule.level,
+      name: 'Arcane Archer Lore',
+      offered: true,
+      count: 1,
+      choice: {
+        id: slot[2],
+        level: 0,
+        count: 1,
+        isCantrip: true,
+        source: 'known',
+        usage: 'direct',
+        pool:
+          subclassSource === 'xge' && printing === 'xphb'
+            ? rule.references.map((reference) => formatSpellReference(reference, 'XPHB'))
+            : rule.references,
+      },
+    })
+  }
   return setups
 }
 
@@ -494,6 +548,14 @@ export function getSelectedFeatureCantripPool(
   const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
   const listOwner = slot[2] === BARD_PRIMAL_LORE_SPELL_SLOT[2] ? 'druid' : slot[0][1]
   const giantPower = isGiantPowerSpellSlot(slot)
+  const arcaneArcher = isArcaneArcherCantripSlot(slot)
+  const inheritedArcher = arcaneArcher && slot[0][2] === 'xphb' && slot[0][4] === 'xge'
+  const archerReprints = inheritedArcher
+    ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
+    : undefined
+  const archerIncludedReprints = inheritedArcher
+    ? getIncludedArcaneArcherSpellReprints(context?.oathSpellSourceByKey)
+    : undefined
   const giantReprints =
     giantPower && slot[0][2] === 'xphb'
       ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
@@ -503,6 +565,12 @@ export function getSelectedFeatureCantripPool(
       ? []
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
+          if (
+            arcaneArcher &&
+            (!getSourceCompatibility(spell.source, character.originSystem).compatible ||
+              spell.classSpellRouteSource?.input.targetOccurrences.length !== 1)
+          )
+            return false
           if (
             setup?.useDeclaredSpellLists &&
             !getSourceCompatibility(spell.source, character.originSystem).compatible
@@ -524,6 +592,10 @@ export function getSelectedFeatureCantripPool(
           )
             return false
           if (setup?.spellSchool && spell.school !== setup.spellSchool) return false
+          if (archerReprints && archerIncludedReprints) {
+            const key = getSpellReferenceKey(spell.name, spell.source)
+            if (archerReprints.get(key) !== 0 && archerIncludedReprints.get(key) !== 0) return false
+          }
           if (
             setup?.spellSchool &&
             (spell.classSpellRouteSource?.input.targetOccurrences.length ?? 0) > 1

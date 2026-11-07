@@ -155,7 +155,7 @@
     },
     {
       "file": "scripts/generate-class-casting-rules.mjs",
-      "sha256": "cde9bfa0bae005057bb3b83ec8721074349ddb4fe5000f9ac4ee98453297d6c3"
+      "sha256": "d4c1bf89283151959f771d9a53d84e754b593bbf63f52b6530acc35f9c0957be"
     },
     {
       "file": "scripts/lib/class-casting-semantics.json",
@@ -166,12 +166,20 @@
       "sha256": "4d86b4fbf4302d89795b9ea92b72c034f590b6dcb9557ae1044545a86444a94c"
     },
     {
+      "file": "scripts/lib/shared-registry-source.mjs",
+      "sha256": "48827b3bd67b85bcd1edf7ce6766d6d9eaf836daf82d5bf6d062611f1557a4d3"
+    },
+    {
       "file": "src/lib/5etools/additionalSpellIdentity.ts",
       "sha256": "5a87fe56db474ae571a0c2b13cd36922d497bb23877ede64071fb6622a578428"
     },
     {
       "file": "src/lib/5etools/additionalSpells.ts",
       "sha256": "bf40758b247a3593480ef1903bcbd9d34f00ce69dd0442074fc8585ebf8752ff"
+    },
+    {
+      "file": "src/lib/5etools/arcaneArcherCantripSource.ts",
+      "sha256": "f69385280c010b50dd6f335cc56152ef38de91ecd34d108af92777c9930b81d2"
     },
     {
       "file": "src/lib/5etools/backgroundRuleNormalization.ts",
@@ -243,7 +251,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "da33ab82e8d4d66484ca9a8754d548ebe159e0dcd4c66103fdee1ae332883b05"
+      "sha256": "cda8caeff17cb0ca02fa4d30d0e6c475093ba568aeccc48f52f03070b9da4582"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -267,7 +275,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyIdentity.ts",
-      "sha256": "88f042fc873e4bb94b92b1c5671b3b19971584f4ea0ed4f93ba236d4f15d0d09"
+      "sha256": "76b8d4519fa15ead5f8369aaceea05b996e34476af9e7d94d38cda518c96ec6a"
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.generated.json",
@@ -275,7 +283,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.ts",
-      "sha256": "aae0d79b45eb8f225102e8b3444c8ac55b424cb302c7b2aa797598901a2c07fc"
+      "sha256": "39aa5596cc05661ddb1368950e3c55f8dbc95dffb567444c91007d88ba615a87"
     },
     {
       "file": "src/lib/5etools/classReference.ts",
@@ -394,6 +402,10 @@
       "sha256": "51cf009d4041ab677de980d1353286309a9d86c17758495e5ce17c3ccd10e5bd"
     },
     {
+      "file": "src/lib/5etools/fighterSubclassSpells.ts",
+      "sha256": "b86b23225cfd77109fec90418d940271eb9114cbb2248799b8266677af6d54d7"
+    },
+    {
       "file": "src/lib/5etools/filteredFeatAlternative.ts",
       "sha256": "3a60bf58c3dce392548c58d2cf5d9957a5ad51a13d1c877da8edaa3d0f9077da"
     },
@@ -403,11 +415,11 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "f8581bf79ee036d1986c459906e4d25b2f21c676c6f5de1009cde9c2b90bcc26"
+      "sha256": "a8e84d103894720011938a3d2a7ed94f031f059ee4b7043abe141ddb4bdda350"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "eca8eeeb178423fd4e77ee946c39b0d5fc48b647f8f82c0a9b0363d35813f029"
+      "sha256": "5fcf683ae393fe1a767ad120ab5dc9a0a39df0eeef845bb5834f2bc8e7fc19b7"
     },
     {
       "file": "src/lib/5etools/fixedProficiencySource.ts",
@@ -415,7 +427,7 @@
     },
     {
       "file": "src/lib/5etools/includedSrdSpellProof.ts",
-      "sha256": "3bc48e0d73bad1db5299ff2ed8ec56d7105702f7a74b78c98191dd9494c36eed"
+      "sha256": "27f6e314fa32cb7fdfbb5466600a641ce4a92651cdc2ea6618b644fe1d02c3ea"
     },
     {
       "file": "src/lib/5etools/inlineTagSegments.ts",
@@ -431,7 +443,7 @@
     },
     {
       "file": "src/lib/5etools/legacyClericDomainSpells.ts",
-      "sha256": "c88f4b92bd9d8385f134136b6aadb31de2b3a85731c2d13591ca26d71c9b00a5"
+      "sha256": "e5449e3214460a75743f3b5013f5263c7cdbd3f143dc3782d550ae62eac2d431"
     },
     {
       "file": "src/lib/5etools/legacyDruidSubclassSpells.ts",
@@ -451,7 +463,7 @@
     },
     {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
-      "sha256": "6049efd7912f1c0df2d9b98b25551823841e3e5602b3cc3daa5240b438ee514f"
+      "sha256": "f1d8aee5f07c8a6ed1cb25b663681b724f99097fcd8f5675d672ddad8c46ddc7"
     },
     {
       "file": "src/lib/5etools/nativeSubclassGain.ts",
@@ -511,7 +523,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "6d59bc7d236715b620fec3a7229bb0f7e45b5b51094dc944b5650e8ab4df358b"
+      "sha256": "4bd37e7a1b0ebf5664611c4bc2b4fe479ef58ad4fd1640cb751deb50f836c5ca"
     },
     {
       "file": "src/lib/5etools/parsers/shared.ts",
@@ -567,7 +579,7 @@
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "5e4b3543aa7ba895da98b25090f0441c31916d8acba5018900a0b74613461dff"
+      "sha256": "890109ccead433e0ba21e0ece9f2a26a9b8ae68f6d41e1f31832206852041567"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -622,28 +634,28 @@
       "sha256": "1578cb9ab934befe7c57e1b65a3b1405cd8b9314feae19af7810c1b2bab8ccaa"
     },
     {
-      "file": "src/lib/5etools/subclassProficiencyCertificates.generated.json",
-      "sha256": "229ca225bd1a11273c0efaf599d7cd7a243d7a13ddef1703509eea6a09526237"
+      "file": "src/lib/5etools/subclassProficiencyCertificates.generated.ts",
+      "sha256": "9ec656b71a875e44d96b53562107ac5ea66f9072a233f9019386a401d37ea5ba"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "fb8177f55e4cfd8747e75ff3aa0a620752e1feeca3e13d4347e1ab7fdff8e73e"
+      "sha256": "b3bc8e1da66763ecc841441066cea31d2b33bd5173b16f7dd79bb2e004e291c2"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
-      "sha256": "9443a6ded9af437eafa3ad01d0184bab88b5d6dbc26b2807affb20f49bbdd92e"
+      "sha256": "cf95dc840972b1dcf4ad6cc6396ee6dce18bbc196c5c2d980c99af27b6e5f1fc"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRegistry.ts",
-      "sha256": "41a9a1a9337d64d2e69394612f195ecb1c37d492b886b869648fe220c18a6531"
+      "sha256": "746c13ff7121b24e62a7a70db97f0d07bb284a6012396a93df0ad4290e516bab"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
-      "sha256": "360568eac3ff1295e8734f5fbb510f3dba67d5595be8b7576a27c03e17ee4a53"
+      "sha256": "bfc98e8ab3fd569f0048ec2479dc6ca184a8131be623261fbfe918601a53d44f"
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
-      "sha256": "347a01e8dfadae9d37d29afe5e9c140bda40f125818003dcc95c3db989844bcf"
+      "sha256": "b3d360c50bddb39220c6587365e5d649a368a075fb20d26c7c4e226bd1a73b3d"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
@@ -651,7 +663,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "ea55a17dd9d703d7a4570dda557404e2bc7e7baee675ce60625a554013fac5e6"
+      "sha256": "46816be0a71d7c4c3833179c48ffc65ac4d2f386c8a012f87e35d2c5259896cd"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
@@ -791,11 +803,11 @@
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "004cf0ed9a888f5cd797d2b1b09d1979d0de2b3e4bf7f695d3c9e2c2a4213c87"
+      "sha256": "5087d1e697717d49200793ea39a59e53362a0c0328b49bf796533e645c930e9e"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "b68ffd2ae7815dccdaf238242c3f8a4bd6d3923e9630931f8b0e2c12de7a9b64"
+      "sha256": "4c28ea761558e8e7bc9768ad709c0c4113e7987158e5d8ac9666b1f05ce6c5d4"
     },
     {
       "file": "src/types/effects.ts",

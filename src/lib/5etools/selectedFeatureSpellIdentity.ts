@@ -1,5 +1,6 @@
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
+import { getArcaneArcherLoreIdentity } from './arcaneArcherCantripSource'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { BARD_PRIMAL_LORE_TARGET } from './bardCollegeFeatures'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
@@ -152,7 +153,52 @@ export const declaredSubclassSlots = [
   ...giantPowerSpellSlots,
   ...wizardIllusionCantripSlots.map(({ slot }) => slot),
 ]
+export function getArcaneArcherCantripSlot(
+  printing: string,
+  source: string,
+  level: number,
+  originLevel: number,
+) {
+  const lore = getArcaneArcherLoreIdentity(printing, source, originLevel)
+  if (
+    !lore ||
+    !Number.isInteger(level) ||
+    level < 1 ||
+    level > 20 ||
+    (lore.origin === printing && level !== originLevel)
+  )
+    return undefined
+  return [
+    [...lore.owner],
+    'feature-cantrip',
+    selectedFeatureSpellAddress([
+      lore.target,
+      'subclassFeature',
+      lore.name,
+      source,
+      lore.target,
+      0,
+      0,
+    ]),
+    level,
+    0,
+  ] satisfies ManagedClassSpellSlot
+}
+
+export function isArcaneArcherCantripSlot(slot: ManagedClassSpellSlot) {
+  const [owner, domain, target, level] = slot
+  if (owner[0] !== 'subclass' || owner[1] !== 'fighter' || domain !== 'feature-cantrip')
+    return false
+  const address = decodeSelectedFeatureSpellAddress(target)
+  const originLevel = Number(address?.[0].split('|')[6])
+  return (
+    JSON.stringify(slot) ===
+    JSON.stringify(getArcaneArcherCantripSlot(owner[2], owner[4], level, originLevel))
+  )
+}
+
 export const isDeclaredSubclassCantripSlot = (slot: ManagedClassSpellSlot) =>
+  isArcaneArcherCantripSlot(slot) ||
   isClericDomainCantripSlot(slot) ||
   declaredSubclassSlots.some((row) => JSON.stringify(slot) === JSON.stringify(row))
 
@@ -164,6 +210,14 @@ export function decodeSelectedFeatureSpellAddress(
   try {
     const parts = JSON.parse(value.slice(prefix.length))
     const order = Array.isArray(parts) ? getClassOrderById(parts[0]) : undefined
+    const archer =
+      Array.isArray(parts) &&
+      typeof parts[0] === 'string' &&
+      parts[2] === 'arcane archer lore' &&
+      ['phb', 'xphb'].some((printing) => {
+        const level = Number(parts[0].split('|')[6])
+        return getArcaneArcherCantripSlot(printing, parts[3], level, level)?.[2] === value
+      })
     if (
       !Array.isArray(parts) ||
       parts.length !== 7 ||
@@ -178,7 +232,8 @@ export function decodeSelectedFeatureSpellAddress(
           parts[3] !== 'xphb' ||
           parts[4] !== order.caster.target
         : parts[1] === 'subclassFeature'
-          ? !isClericDomainCantripAddress(value, parts[0]) &&
+          ? !archer &&
+            !isClericDomainCantripAddress(value, parts[0]) &&
             !declaredSubclassSlots.some((slot) => slot[2] === value)
           : parts[4] !== null) ||
       parts[5] !== 0 ||

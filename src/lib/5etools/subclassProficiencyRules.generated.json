@@ -62,6 +62,70 @@
     ]
   },
   {
+    "target": "subclass-feature|arcane archer lore|fighter|phb|arcane archer|xge|3|xge",
+    "digest": "81647085d4d9f2112fcddaf7f5099709a4538ae540371ff723488ce033666be4",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["arcana", "nature"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|arcane archer lore|fighter|xphb|arcane archer|au|3|au",
+    "digest": "6cbc4e7dc9b0c3e05a11655f61c66aa01f328739b44b1004cb125f70eaf10209",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "subclassGainPosition": "first",
+    "startingSkillPoolBase": [],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": null,
+        "excludeExisting": true,
+        "trigger": "arcana"
+      },
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": null,
+        "excludeExisting": true,
+        "trigger": "nature"
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
     "digest": "66be08e9a75ea40ebd01b11b0527f30ccb90edfa856a3098cf9d01cd104b169e",
     "fields": [
@@ -240,6 +304,90 @@
     ]
   },
   {
+    "target": "subclass-feature|bonus proficiency|fighter|phb|cavalier|xge|3|xge",
+    "digest": "bd6da4bb8ce703988da6c6038ea102a8dab5d9e75c4fbce1326acd93affe05e1",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skill-or-language",
+        "count": 1,
+        "skillPool": ["animal handling", "history", "insight", "performance", "persuasion"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|bonus proficiency|fighter|phb|samurai|xge|3|xge",
+    "digest": "04f1b8dba77fccf657eb2872019fb1c49c3c52396350de9db3cc98a950b043c5",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skill-or-language",
+        "count": 1,
+        "skillPool": ["history", "insight", "performance", "persuasion"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge",
+    "digest": "d0759e95ac0c9821915bae4040d7c6345aa9759f41a5c5f2d1748267a8fd799d",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "proficiencyAtGain": "wisdom",
+    "subclassGainPosition": "at-level",
+    "domains": [
+      {
+        "domain": "savingThrows",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
     "digest": "ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac",
     "optional": false,
@@ -353,6 +501,117 @@
     ]
   },
   {
+    "target": "subclass-feature|knightly envoy|fighter|xphb|banneret|frhof|3|frhof",
+    "digest": "68a6f6d2232710503c2d7e1a7d1d70990bebbf2c20cc37c31f908d6cd0ebda7e",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["insight", "intimidation", "persuasion", "performance"],
+        "excludeExisting": true
+      },
+      {
+        "domain": "languages",
+        "count": 1,
+        "languagePool": [
+          "abyssal",
+          "aglarondan",
+          "alzhedo",
+          "bothii",
+          "celestial",
+          "chessentan",
+          "chondathan",
+          "common",
+          "common sign language",
+          "damaran",
+          "deep speech",
+          "draconic",
+          "druidic",
+          "dwarvish",
+          "elvish",
+          "giant",
+          "gnomish",
+          "goblin",
+          "halfling",
+          "illuskan",
+          "infernal",
+          "lantanese",
+          "midani",
+          "mulhorandi",
+          "netherese",
+          "orc",
+          "primordial",
+          "rashemi",
+          "reghedjic",
+          "sespech",
+          "sylvan",
+          "thayan",
+          "thieves' cant",
+          "turmic",
+          "undercommon",
+          "untheric"
+        ],
+        "languageSources": [
+          ["abyssal", "XPHB"],
+          ["aglarondan", "FRHoF"],
+          ["alzhedo", "FRHoF"],
+          ["bothii", "FRHoF"],
+          ["celestial", "XPHB"],
+          ["chessentan", "FRHoF"],
+          ["chondathan", "FRHoF"],
+          ["common", "XPHB"],
+          ["common sign language", "XPHB"],
+          ["damaran", "FRHoF"],
+          ["deep speech", "XPHB"],
+          ["draconic", "XPHB"],
+          ["druidic", "XPHB"],
+          ["dwarvish", "XPHB"],
+          ["elvish", "XPHB"],
+          ["giant", "XPHB"],
+          ["gnomish", "XPHB"],
+          ["goblin", "XPHB"],
+          ["halfling", "XPHB"],
+          ["illuskan", "FRHoF"],
+          ["infernal", "XPHB"],
+          ["lantanese", "FRHoF"],
+          ["midani", "FRHoF"],
+          ["mulhorandi", "FRHoF"],
+          ["netherese", "FRHoF"],
+          ["orc", "XPHB"],
+          ["primordial", "XPHB"],
+          ["rashemi", "FRHoF"],
+          ["reghedjic", "FRHoF"],
+          ["sespech", "FRHoF"],
+          ["sylvan", "XPHB"],
+          ["thayan", "FRHoF"],
+          ["thieves' cant", "XPHB"],
+          ["turmic", "FRHoF"],
+          ["undercommon", "XPHB"],
+          ["untheric", "FRHoF"]
+        ],
+        "replacement": {
+          "cadence": "long-rest",
+          "maximumPerEvent": 1
+        }
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
     "digest": "3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32",
     "optional": false,
@@ -425,6 +684,105 @@
       "subclassSource"
     ],
     "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": null,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|student of war|fighter|phb|battle master|phb|3|phb",
+    "digest": "ec4cf6bc561065a72d583d9b1019ff2dc2793dd5aa45b8688cadda5a1e68d7c0",
+    "optional": false,
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "subclassGainPosition": "first",
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolPool": [
+          "alchemist's supplies",
+          "brewer's supplies",
+          "calligrapher's supplies",
+          "carpenter's tools",
+          "cartographer's tools",
+          "cobbler's tools",
+          "cook's utensils",
+          "glassblower's tools",
+          "jeweler's tools",
+          "leatherworker's tools",
+          "mason's tools",
+          "painter's supplies",
+          "potter's tools",
+          "smith's tools",
+          "tinker's tools",
+          "weaver's tools",
+          "woodcarver's tools"
+        ],
+        "toolCategory": "AT"
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|student of war|fighter|xphb|battle master|xphb|3|xphb",
+    "digest": "e13eb6af681bb178c6d5146574ee67adb6f8111990a15291c2eed739ef030569",
+    "optional": false,
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "startingSkillPoolBase": [],
+    "subclassGainPosition": "first",
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolPool": [
+          "alchemist's supplies",
+          "brewer's supplies",
+          "calligrapher's supplies",
+          "carpenter's tools",
+          "cartographer's tools",
+          "cobbler's tools",
+          "cook's utensils",
+          "glassblower's tools",
+          "jeweler's tools",
+          "leatherworker's tools",
+          "mason's tools",
+          "painter's supplies",
+          "potter's tools",
+          "smith's tools",
+          "tinker's tools",
+          "weaver's tools",
+          "woodcarver's tools"
+        ],
+        "toolCategory": "AT"
+      },
       {
         "domain": "skills",
         "count": 1,

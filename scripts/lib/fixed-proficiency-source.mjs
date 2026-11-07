@@ -25,11 +25,11 @@ function skillTags(text) {
     fail('Unsupported fixed skill tags')
   return names
 }
-function validateFeature(feature, fields) {
+function validateFeature(feature, fields, structured = false) {
   if (
     !only(feature, fields) ||
     !Array.isArray(feature.entries) ||
-    feature.entries.some((row) => typeof row !== 'string') ||
+    (!structured && feature.entries.some((row) => typeof row !== 'string')) ||
     !['name', 'source', 'className', 'classSource'].every(
       (key) => typeof feature[key] === 'string' && feature[key].trim(),
     ) ||
@@ -177,6 +177,88 @@ export function deriveFixedProficiencyRules(documents, api) {
   for (const document of documents) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
       const target = api.subclassIdentity(feature)
+      if (
+        feature.name === 'Arcane Archer Lore' &&
+        feature.className === 'Fighter' &&
+        feature.classSource === 'XPHB' &&
+        feature.subclassShortName === 'Arcane Archer' &&
+        feature.source === 'AU' &&
+        feature.subclassSource === 'AU'
+      ) {
+        validateFeature(feature, SUBCLASS_FIELDS, true)
+        const sections = feature.entries.filter((entry) => entry?.name === 'Skills')
+        const [section] = sections
+        const text =
+          sections.length === 1 &&
+          section.type === 'entries' &&
+          only(section, ['type', 'name', 'entries']) &&
+          section.entries?.length === 1 &&
+          typeof section.entries[0] === 'string'
+            ? section.entries[0]
+            : ''
+        const match =
+          /^You gain proficiency in the \{@skill ([^{}|]+)\|XPHB\} and \{@skill ([^{}|]+)\|XPHB\} skills\. If you already have one of these proficiencies, you instead gain proficiency in a different skill of your choice from the skills available to Fighters at level 1 \(or in two skills available to Fighters at level 1 if you have both\)\.$/.exec(
+            text,
+          )
+        if (feature._copy || !match || match[1] === match[2])
+          fail('Unsupported revised Arcane Archer Lore skill producer')
+        const skills = match.slice(1).map((skill) => skill.toLowerCase())
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: { skills },
+            startingSkillFallbacks: skills,
+            subclassGainPosition: 'first',
+          },
+          api.subclassIdentity,
+        )
+        continue
+      }
+      if (
+        feature.name === 'Elegant Courtier' &&
+        feature.className === 'Fighter' &&
+        feature.classSource === 'PHB' &&
+        feature.source === 'XGE' &&
+        feature.subclassShortName === 'Samurai' &&
+        feature.subclassSource === feature.source
+      ) {
+        validateFeature(feature, SUBCLASS_FIELDS)
+        const bonus =
+          /^Starting at (\d+)(?:st|nd|rd|th) level, your discipline and attention to detail allow you to excel in social situations\. Whenever you make a (Charisma) \(\{@skill ([^|{}]+)\}\) check, you gain a bonus to the check equal to your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier\.$/.exec(
+            feature.entries[0],
+          )
+        const save =
+          /^Your self-control also causes you to gain proficiency in (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throws\. If you already have this proficiency, you instead gain proficiency in (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) or (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throws \(your choice\)\.$/.exec(
+            feature.entries[1],
+          )
+        if (
+          feature._copy ||
+          feature.entries.length !== 2 ||
+          !bonus ||
+          Number(bonus[1]) !== feature.level ||
+          !save ||
+          new Set(save.slice(1)).size !== 3
+        )
+          fail('Unsupported Elegant Courtier proficiency producer')
+        const [fixed, ...alternatives] = save.slice(1).map((name) => name.toLowerCase())
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: { savingThrows: [fixed] },
+            subclassGainPosition: 'at-level',
+            fallback: { name: fixed, count: 1, savingThrowPool: alternatives },
+            skillCheckModifier: {
+              skill: bonus[3].toLowerCase(),
+              checkAbility: bonus[2].toLowerCase(),
+              bonusAbility: bonus[4].toLowerCase(),
+            },
+          },
+          api.subclassIdentity,
+        )
+        continue
+      }
       if (target === 'subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof') {
         validateFeature(feature, SUBCLASS_FIELDS)
         if (

@@ -6,6 +6,8 @@ import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
+import { getFighterSubclassResources } from '@/lib/5etools/fighterSubclassResources'
+import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
 import {
   getCurrentNativeWarlockPatronRules,
   getNativeHealingLightOwner,
@@ -19,11 +21,13 @@ import {
   isNativeSorcerer,
 } from '@/lib/5etools/sorcererSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { AbilityScores, Character, CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
 import type { CharacterEffect } from '@/types/effects'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { getProficiencyBonus } from './gameRules'
 
 const healingLight: ClassResourceDef = {
   id: HEALING_LIGHT_RESOURCE_ID,
@@ -88,6 +92,7 @@ export function getCharacterClassResources(
   options: {
     catalogs?: ClassChoiceFeatureCatalogs
     charismaModifier: number
+    abilityModifiers?: AbilityScores
     effects?: readonly CharacterEffect[]
     effectContext?: EffectResolutionContext
     unlimitedWildShape: boolean
@@ -97,6 +102,7 @@ export function getCharacterClassResources(
   const currentSorcerer = getCurrentNativeSorcerer(character, catalogs)
   const stored = character.classResources ?? {}
   const healingDiceLimit = Math.max(1, options.charismaModifier)
+  const proficiencyBonus = getProficiencyBonus(getTotalCharacterLevel(character))
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
@@ -118,6 +124,17 @@ export function getCharacterClassResources(
     )
       earned.push(healingLight)
     if (hasCurrentWarriorOfTheGods(current, entry)) earned.push(warriorOfTheGods)
+    const superiority = getFighterSuperiorityDice(character, entry, catalogs?.classes)
+    if (superiority) earned.push(superiority)
+    earned.push(
+      ...getFighterSubclassResources(
+        character,
+        entry,
+        catalogs?.classes,
+        options.abilityModifiers,
+        proficiencyBonus,
+      ),
+    )
     return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&
@@ -145,7 +162,7 @@ export function getCharacterClassResources(
           usageText:
             definition.id === HEALING_LIGHT_RESOURCE_ID
               ? `Up to ${healingDiceLimit} ${healingDiceLimit === 1 ? 'die' : 'dice'} per use`
-              : undefined,
+              : definition.usageText,
           className: entry.name,
         },
       ]

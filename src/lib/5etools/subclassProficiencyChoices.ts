@@ -40,8 +40,18 @@ export function normalizeSubclassProficiencyChoices(
     const target = (candidates ?? embedded).get(path.target)?.[0]
     if (!target) return []
     return (rule?.domains ?? []).map((domain) => ({
-      id: getClassProficiencyChoiceId(owner, path.target, domain.domain, path.level),
-      label: `${target.name} ${domain.domain === 'savingThrows' ? 'saving throw' : domain.domain}`,
+      id: getClassProficiencyChoiceId(
+        owner,
+        path.target,
+        domain.domain,
+        path.level,
+        domain.trigger,
+      ),
+      label: domain.trigger
+        ? `${target.name} (${domain.trigger[0].toUpperCase() + domain.trigger.slice(1)})`
+        : domain.domain === 'skill-or-language'
+          ? `${target.name} (skill or language)`
+          : `${target.name} ${domain.domain === 'savingThrows' ? 'saving throw' : domain.domain}`,
       kind: 'proficiency' as const,
       proficiencyDomain: domain.domain,
       owner: { ...owner, featureName: target.name, featureSource: target.source },
@@ -53,7 +63,7 @@ export function normalizeSubclassProficiencyChoices(
       ),
       options: [],
       repeatable: false,
-      replacement: { cadence: 'never' as const },
+      replacement: domain.replacement ?? { cadence: 'never' as const },
       source: { kind: 'class-feature-options' as const, field: 'entries' },
     }))
   })
@@ -78,7 +88,13 @@ export function getSubclassProficiencyDiagnostics(
         choices.some(
           (choice) =>
             choice.id ===
-            getClassProficiencyChoiceId(owner, path.target, domain.domain, path.level),
+            getClassProficiencyChoiceId(
+              owner,
+              path.target,
+              domain.domain,
+              path.level,
+              domain.trigger,
+            ),
         ),
       )
     )

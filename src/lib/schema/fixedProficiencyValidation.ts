@@ -2,6 +2,7 @@ import { getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import {
   decodeFixedProficiencyId,
+  getFixedTrainingSkills,
   getTrainingClassOrder,
   isFixedProficiencyId,
 } from '@/lib/5etools/fixedProficiencyIdentity'
@@ -31,7 +32,21 @@ export function getInvalidFixedProficiencyPaths(
       for (const tag of tags.filter(isFixedProficiencyTag)) {
         const id = tag.grantVariant!,
           relation = decodeFixedProficiencyId(id)
-        const rule = relation && fixedProficiencyRule(relation.target)
+        const baseRule = relation && fixedProficiencyRule(relation.target)
+        const rule =
+          relation && baseRule?.startingSkillFallbacks
+            ? {
+                ...baseRule,
+                training: {
+                  ...baseRule.training,
+                  skills: getFixedTrainingSkills(
+                    baseRule,
+                    relation,
+                    character.classChoiceSelections,
+                  ),
+                },
+              }
+            : baseRule
         const tool = rule?.kind === 'proficient-tools'
         const order = relation && getTrainingClassOrder(relation)
         if (rule?.kind === 'fixed-training') trainingRules.set(id, rule)

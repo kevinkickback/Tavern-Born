@@ -38,6 +38,10 @@ import { normalizeFavoredEnemyChoices } from './favoredEnemyChoices'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
 import { getFeatureVariantMetadata } from './featureVariantMetadata'
 import { getFilteredFeatAlternative } from './filteredFeatAlternative'
+import {
+  getNativeSubclassIntroFeature,
+  isInheritedFighterSubclass,
+} from './nativeSubclassFeatureSource'
 import { normalizeNaturalExplorerChoices } from './naturalExplorerChoices'
 import { DEFT_EXPLORER_TARGET } from './naturalExplorerIdentity'
 import { normalizePsionicChoices } from './psionicChoices'
@@ -359,7 +363,9 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
     }
   }
   if (
-    /whenever you gain (?:a|an|another) [^.]{0,120}\blevel\b/i.test(searchableText) &&
+    /\b(?:whenever|each time) you gain (?:a|an|another) [^.]{0,120}\blevel\b/i.test(
+      searchableText,
+    ) &&
     /\b(?:change|replace)\b/i.test(searchableText)
   ) {
     return {
@@ -367,6 +373,8 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
       maximumPerEvent: /\b(?:change|replace) (?:one|a|an)\b/i.test(searchableText) ? 1 : 'all',
     }
   }
+  if (/\beach time you learn a new [^.]+, you can also replace one\b/i.test(searchableText))
+    return { cadence: 'choice-gain', maximumPerEvent: 1 }
   return { cadence: 'never' }
 }
 
@@ -634,11 +642,91 @@ function normalizeFeatureOptionChoices(
   return { choices, diagnostics }
 }
 
+/** These prose-only producers qualify structured subclass progression pools. */
+function getFighterProgressionOptions(
+  progression: OptFeatureProg,
+  owner: ChoiceOwner,
+  subclass: Subclass5e | undefined,
+  level: number,
+  count: number,
+) {
+  if (owner.type !== 'subclass' || owner.name !== 'Fighter') return undefined
+  const featureType = progression.featureType?.length === 1 ? progression.featureType[0] : undefined
+  const rune = owner.subclassName === 'Rune Knight' && featureType === 'RN'
+  const shot = owner.subclassName === 'Arcane Archer' && featureType === 'AS'
+  const maneuvers =
+    owner.subclassName === 'Battle Master' &&
+    owner.source === 'XPHB' &&
+    owner.subclassSource === 'XPHB' &&
+    featureType === 'MV:B'
+  if (!featureType || (!rune && !shot && !maneuvers)) return undefined
+  if (!subclass || subclass.sourceIdentityConflict) return { options: [] }
+  const inherited = isInheritedFighterSubclass(subclass)
+  if ('_copy' in subclass && !inherited) return { options: [] }
+  const origin = inherited ? 'PHB' : owner.source
+  const introLevel = decodeSubclassFeatureReference(subclass.introFeatureRef ?? '').level
+  if (introLevel !== level) return { options: [] }
+  const name = rune ? 'Rune Carver' : shot ? 'Arcane Shot' : 'Combat Superiority'
+  const declared = getNativeSubclassIntroFeature(owner, subclass, introLevel, name, origin)
+  const feature = declared?.feature
+  if (!declared || !feature || !Array.isArray(feature.entries)) return { options: [] }
+  const featureRef = {
+    ...decodeSubclassFeatureReference(declared.target.slice('subclass-feature|'.length)),
+    name: feature.name,
+    source: feature.source,
+    feature,
+  }
+  const text = getFeatureText(featureRef)
+  if (rune) {
+    const clause = feature.entries.find(
+      (entry): entry is string => typeof entry === 'string' && /\breplace\b/i.test(entry),
+    )
+    const blocks: Record<string, unknown>[] = []
+    collectOptionBlocks(feature.entries, blocks)
+    const [block] = blocks
+    const entries =
+      blocks.length === 1 && block.count === count && Array.isArray(block.entries)
+        ? block.entries
+        : []
+    const options = entries.flatMap((entry) => {
+      const option = getOptionReference(entry, feature.source ?? owner.source)
+      return option?.entityType === 'optionalFeature' && option.source === owner.subclassSource
+        ? [option]
+        : []
+    })
+    return {
+      feature: featureRef,
+      replacement: inferReplacement(clause ?? ''),
+      options: options.length === entries.length ? options : [],
+    }
+  }
+  const tags = parseFilterTags(text).filter(
+    (tag) => tag.entityType === 'optionalFeature' && tag.filter.featureTypes?.includes(featureType),
+  )
+  const filter =
+    tags.length === 1
+      ? tags[0].filter
+      : shot && tags.length === 0 && owner.subclassSource === 'XGE'
+        ? {
+            entityType: 'optionalFeature' as const,
+            featureTypes: [featureType],
+            source: feature.source,
+          }
+        : undefined
+  return {
+    feature: featureRef,
+    replacement: inferReplacement(text),
+    options: [],
+    filter: filter?.source ? filter : undefined,
+  }
+}
+
 function normalizeOptionalFeatureProgressions(
   progressions: readonly OptFeatureProg[],
   refs: readonly ChoiceFeatureReference[],
   owner: ChoiceOwner,
   sourceField: 'optionalfeatureProgression' | 'featProgression' = 'optionalfeatureProgression',
+  subclass?: Subclass5e,
 ): NormalizedCharacterChoice[] {
   return progressions.flatMap((progression, index) => {
     const featureTypes = progression.featureType ?? []
@@ -648,18 +736,28 @@ function normalizeOptionalFeatureProgressions(
     const levelIndex = counts.findIndex((count) => count > 0)
     if (levelIndex < 0) return []
     const maximumSelections = Math.max(...counts)
-    const featureRef = refs.find(
-      (ref) =>
-        ref.name.trim().toLowerCase() === progression.name.trim().toLowerCase() ||
-        featureTypes.some((type) =>
-          getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
-        ) ||
-        categories.some((category) =>
-          getFeatureText(ref).toLowerCase().includes(`category=${category.toLowerCase()}`),
-        ),
+    const scoped = getFighterProgressionOptions(
+      progression,
+      owner,
+      subclass,
+      levelIndex + 1,
+      counts[levelIndex],
     )
-    let replacement = inferReplacement(featureRef ? getFeatureText(featureRef) : '')
-    if (replacement.cadence === 'never') {
+    const featureRef =
+      scoped?.feature ??
+      refs.find(
+        (ref) =>
+          ref.name.trim().toLowerCase() === progression.name.trim().toLowerCase() ||
+          featureTypes.some((type) =>
+            getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
+          ) ||
+          categories.some((category) =>
+            getFeatureText(ref).toLowerCase().includes(`category=${category.toLowerCase()}`),
+          ),
+      )
+    let replacement =
+      scoped?.replacement ?? inferReplacement(featureRef ? getFeatureText(featureRef) : '')
+    if (!scoped && replacement.cadence === 'never') {
       for (const ref of refs) {
         const candidate = inferReplacement(getFeatureText(ref))
         if (candidate.cadence === 'never') continue
@@ -694,9 +792,10 @@ function normalizeOptionalFeatureProgressions(
         minimumSelections: maximumSelections,
         maximumSelections,
         selectionCountByLevel: counts,
-        options: [],
-        optionFilter:
-          categories.length > 0
+        options: scoped?.options ?? [],
+        optionFilter: scoped
+          ? scoped.filter
+          : categories.length > 0
             ? { entityType: 'feat' as const, categories: [...categories] }
             : { entityType: 'optionalFeature' as const, featureTypes: [...featureTypes] },
         repeatable: false,
@@ -1075,7 +1174,13 @@ export function normalizeSubclassRules(
   const featProgressions = subclass.featProgression ?? []
   const progressions = [...optionalFeatureProgressions, ...featProgressions]
   const progression = [
-    ...normalizeOptionalFeatureProgressions(optionalFeatureProgressions, expandedRefs, owner),
+    ...normalizeOptionalFeatureProgressions(
+      optionalFeatureProgressions,
+      expandedRefs,
+      owner,
+      'optionalfeatureProgression',
+      { ...subclass, subclassFeatureRefs: [...refs] } as Subclass5e,
+    ),
     ...normalizeOptionalFeatureProgressions(
       featProgressions,
       expandedRefs,

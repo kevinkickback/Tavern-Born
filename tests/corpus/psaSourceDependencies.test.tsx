@@ -128,15 +128,17 @@ describe.runIf(existsSync('data/class/class-cleric.json'))(
         makeSourceTag('manual', 'User Choice', 'choice'),
       )
       for (const choice of choices) {
-        const targets =
-          choice.proficiencyDomain === 'expertise' ? ['Arcana', 'Nature'] : ['Draconic', 'Dwarvish']
+        const domain = choice.proficiencyDomain
+        if (domain !== 'expertise' && domain !== 'languages')
+          throw new Error('Unexpected PSA Knowledge proficiency choice.')
+        const targets = domain === 'expertise' ? ['Arcana', 'Nature'] : ['Draconic', 'Dwarvish']
         character = materialize(
           character,
           applyClassChoiceSelectionWithGrantsCommand(
             character,
             character.provenance,
             choice,
-            targets.map((name) => getProficiencyOption(choice.proficiencyDomain!, name)),
+            targets.map((name) => getProficiencyOption(domain, name)),
             { classes: f.data.classes, catalogs: f.catalogs },
           ),
         )

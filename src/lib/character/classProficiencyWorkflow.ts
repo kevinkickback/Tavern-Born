@@ -1,7 +1,7 @@
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
-import type { ClassProficiencyDomain, NormalizedCharacterChoice } from '@/types/classRules'
+import type { ClassProficiencyChoiceDomain, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs, ClassChoiceOptionView } from './classChoiceOptions'
 import { getEffectiveOwnerProficiencyChoices } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
@@ -16,7 +16,7 @@ interface ClassProficiencyWorkflow {
   subclassName?: string
   subclassSource?: string
   level: number
-  domain: ClassProficiencyDomain
+  domain: ClassProficiencyChoiceDomain
   choice?: NormalizedCharacterChoice
   selection?: CharacterClassChoiceSelection
   options: ClassChoiceOptionView[]

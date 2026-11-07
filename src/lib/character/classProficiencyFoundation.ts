@@ -3,7 +3,10 @@ import {
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
-import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
+import {
+  classProficiencyRule,
+  getClassProficiencyRuleDomain,
+} from '@/lib/5etools/classProficiencyRules'
 import {
   getInvalidClassProficiencySelectionIds,
   isValidClassProficiencySelection,
@@ -59,10 +62,13 @@ export function projectOwnedProficiencies(
   )
   const liveSelected = (selection: CharacterClassChoiceSelection) => {
     const pool = choices.get(selection.choiceId)?.currentProficiencySkillPool
+    const relation = decodeClassProficiencyChoiceId(selection.choiceId)
+    const rule = relation && classProficiencyRule(relation.target)
+    const domain = getClassProficiencyRuleDomain(rule, relation)
     return selection.selected.filter(
       (option) =>
         (!pool || pool.includes(decodeProficiencyOption(option)?.name ?? '')) &&
-        hasProficiencyCatalogTarget(option, catalogs),
+        hasProficiencyCatalogTarget(option, catalogs, domain?.languageSources),
     )
   }
   const languageFallbacks = fixed.filter(({ rule }) => rule.languageFallback)
@@ -71,7 +77,7 @@ export function projectOwnedProficiencies(
     const relation = decodeClassProficiencyChoiceId(choice.id)
     return (
       relation &&
-      classProficiencyRule(relation.target)?.domains.find((row) => row.domain === relation.domain)
+      getClassProficiencyRuleDomain(classProficiencyRule(relation.target), relation)
         ?.requiresKnownLanguage
     )
   }

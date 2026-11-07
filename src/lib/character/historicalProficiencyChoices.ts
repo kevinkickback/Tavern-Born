@@ -1,16 +1,18 @@
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
-import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
+import {
+  classProficiencyRule,
+  getClassProficiencyRuleDomain,
+} from '@/lib/5etools/classProficiencyRules'
 import type { Character } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 export function getHistoricalProficiencyRule(choiceId: string) {
   const relation = decodeClassProficiencyChoiceId(choiceId)
   const rule = relation && classProficiencyRule(relation.target)
-  return (relation?.domain === 'skills' || relation?.domain === 'savingThrows') &&
-    rule?.proficiencyAtGain &&
-    rule.domains.some((row) => row.domain === relation.domain)
-    ? rule
-    : undefined
+  if (relation?.domain !== 'skills' && relation?.domain !== 'savingThrows') return undefined
+  const domain = getClassProficiencyRuleDomain(rule, relation)
+  const proficiencyAtGain = domain && (domain.trigger ?? rule?.proficiencyAtGain)
+  return proficiencyAtGain ? { proficiencyAtGain } : undefined
 }
 /** Capacity is conditional on an explicit acquisition answer, never today's proficiency. */
 export function resolveHistoricalProficiencyChoice(

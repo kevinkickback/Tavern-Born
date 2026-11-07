@@ -1,3 +1,4 @@
+import type { AbilityName } from '@/types/character'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { CLASS_ORDERS } from './classOrderIdentity'
 import generated from './fixedProficiencyRules.generated.json' with { type: 'json' }
@@ -23,6 +24,9 @@ export interface FixedProficiencyRule {
   useClassLanguagePrinting?: true
   languageFallback?: true
   subclassGain?: { owner: readonly string[]; target: string; position?: 'at-level' }
+  subclassGainPosition?: 'first' | 'at-level'
+  startingSkillFallbacks?: readonly string[]
+  skillCheckModifier?: { skill: string; checkAbility: AbilityName; bonusAbility: AbilityName }
   fallback?: {
     name: string
     count: number

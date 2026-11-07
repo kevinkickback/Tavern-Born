@@ -2,6 +2,34 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|arcane archer|fighter|phb|arcane archer|xge|3|xge",
+      "digest": "cf4fd3d84d03a78c588bbbb6308a76eecdcd83c0b3a8dc20ee0ee496baaa9f00"
+    },
+    {
+      "target": "subclass-feature|arcane archer|fighter|xphb|arcane archer|au|3|au",
+      "digest": "4e6b4b6b3226212e760fbd6b1f5cd9aef9af365155c0cb10c89ccdb3ac9361e6"
+    },
+    {
+      "target": "subclass-feature|banneret|fighter|xphb|banneret|frhof|3|frhof",
+      "digest": "e3b5b69f343cd8cef9606c117dabd01de2e78a7e88bcdd102d120a8371f3f8e9"
+    },
+    {
+      "target": "subclass-feature|battle master|fighter|phb|battle master|phb|3|phb",
+      "digest": "79b014cfd7b1e91bfb874a8f7ff9a97f35582533173f9f1d0e68db1c542c842d"
+    },
+    {
+      "target": "subclass-feature|battle master|fighter|xphb|battle master|xphb|3|xphb",
+      "digest": "4d988bb3146ea1e28ad5f409b63f419e38222191a5cbbf6b8b3f792bd67e928e"
+    },
+    {
+      "target": "subclass-feature|cavalier|fighter|phb|cavalier|xge|3|xge",
+      "digest": "5cbe55132e0498c2da6e6f11bb1d42a6287f21c9ae5eea3c58aa5de0f4891cc9"
+    },
+    {
+      "target": "subclass-feature|samurai|fighter|phb|samurai|xge|3|xge",
+      "digest": "a1512770d7aae605126472d8545ea20526f32bee8f93c663691a8334a1187916"
+    },
+    {
       "target": "subclass-feature|path of the giant|barbarian|phb|giant|bgg|3|bgg",
       "digest": "da60f172039a6c552fbe8a5d068b70bbc0a9bded210d54f1409c6209299f878e"
     },

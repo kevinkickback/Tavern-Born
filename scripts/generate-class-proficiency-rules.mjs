@@ -5,6 +5,7 @@ import path from 'node:path'
 import { createServer } from 'vite'
 import {
   deriveClassProficiencyRules,
+  deriveFaerunLanguagePool,
   deriveLanguagePool,
   validateExpertiseRule,
 } from './lib/class-proficiency-source.mjs'
@@ -19,6 +20,7 @@ import {
   deriveFixedProficiencyRules,
 } from './lib/fixed-proficiency-source.mjs'
 import { deriveLifeDomainProficiency } from './lib/life-domain-proficiency-source.mjs'
+import { emitSharedRegistryModule } from './lib/shared-registry-source.mjs'
 import subclassAncestorSemantics from './lib/subclass-proficiency-ancestor-semantics.json' with {
   type: 'json',
 }
@@ -55,6 +57,14 @@ const rules = variants.filter((row) => row.name === 'Expertise' && row.source ==
 validateExpertiseRule(rules)
 const book = read('book/book-xphb.json')
 const languages = deriveLanguagePool(book)
+const banneretLanguages = [
+  ...new Map(
+    [
+      ...languages.names.map((name) => [name, 'XPHB']),
+      ...deriveFaerunLanguagePool(read('book/book-frhof.json')),
+    ].map((entry) => [JSON.stringify(entry), entry]),
+  ).values(),
+].sort(([left], [right]) => left.localeCompare(right))
 const server = await createServer({
   configFile: 'config/vite.e2e.ts',
   server: { middlewareMode: true, watch: null },
@@ -106,6 +116,7 @@ try {
     toolsFor,
     getSubclassFeatureIdentity,
     getFeatureSourceDigest,
+    banneretLanguages,
   )
   const fixed = deriveFixedProficiencyRules(documents, {
     materializeFeatures: preparation.materializeSubclassFeatureCopies,
@@ -141,6 +152,24 @@ try {
     isTerrainSource: isAuditedNaturalExplorerFeature,
   })
   for (const feature of fixed.features) {
+    if (feature.startingSkillFallbacks) {
+      subclassDerived.push({
+        target: feature.target,
+        digest: feature.digest,
+        fields: feature.fields,
+        optional: false,
+        subclassGainPosition: feature.subclassGainPosition,
+        startingSkillPoolBase: [],
+        domains: feature.startingSkillFallbacks.map((trigger) => ({
+          domain: 'skills',
+          count: 1,
+          skillPool: null,
+          excludeExisting: true,
+          trigger,
+        })),
+      })
+      continue
+    }
     if (!feature.fallback) continue
     subclassDerived.push({
       target: feature.target,
@@ -149,6 +178,7 @@ try {
       optional: false,
       proficiencyAtGain: feature.fallback.name,
       ...(feature.subclassGain && { subclassGainTarget: feature.subclassGain.target }),
+      ...(feature.subclassGainPosition && { subclassGainPosition: feature.subclassGainPosition }),
       domains: [
         feature.fallback.savingThrowPool
           ? {
@@ -205,7 +235,34 @@ try {
     metadata: certificates.subclassProficiencyMetadata,
     intro: getSubclassIntroReference,
     rootDigest: certificates.subclassProficiencyRootDigest,
+    featureDigest: certificates.subclassProficiencyFeatureDigest,
+    featureEntries: certificates.getSubclassProficiencyEntries,
     validateProgression: (root) => {
+      const [progression] = Array.isArray(root.optionalfeatureProgression)
+        ? root.optionalfeatureProgression
+        : []
+      const fighterProgression =
+        root.name === 'Battle Master' && ['PHB', 'XPHB'].includes(root.source)
+          ? ['Maneuvers', 'MV:B']
+          : root.name === 'Arcane Archer' && ['XGE', 'AU'].includes(root.source)
+            ? ['Arcane Shots', 'AS']
+            : undefined
+      if (
+        root.className === 'Fighter' &&
+        root.shortName === root.name &&
+        fighterProgression &&
+        root.optionalfeatureProgression?.length === 1 &&
+        progression?.name === fighterProgression[0] &&
+        JSON.stringify(progression.featureType) === JSON.stringify(fighterProgression.slice(1)) &&
+        progression.progression &&
+        Object.keys(progression.progression).length &&
+        Object.keys(progression).length === 3 &&
+        Object.entries(progression.progression).every(
+          ([level, count]) =>
+            /^(?:[1-9]|1[0-9]|20)$/.test(level) && Number.isSafeInteger(count) && count > 0,
+        )
+      )
+        return
       if (
         root.className === 'Bard' &&
         ['PHB', 'XPHB'].includes(root.classSource) &&
@@ -226,7 +283,10 @@ try {
     [
       ...subclassDerived,
       ...fixed.features.filter(
-        (row) => row.target.startsWith('subclass-feature|') && !row.fallback,
+        (row) =>
+          row.target.startsWith('subclass-feature|') &&
+          !row.fallback &&
+          !row.startingSkillFallbacks,
       ),
       ...conditional.features.filter((row) => row.target.startsWith('subclass-feature|')),
     ],
@@ -302,6 +362,7 @@ try {
       'scripts/lib/conditional-proficiency-semantics.json',
       'scripts/lib/conditional-proficiency-contexts.json',
       'scripts/lib/subclass-proficiency-ancestor-semantics.json',
+      'scripts/lib/shared-registry-source.mjs',
       'src/lib/5etools/naturalExplorerSource.ts',
     ].map((file) => ({ file, sha256: sha(fs.readFileSync(file)) })),
     dependencies: [
@@ -327,7 +388,7 @@ try {
   for (const [file, value] of [
     ['src/lib/5etools/classProficiencyRules.generated.json', derived],
     ['src/lib/5etools/subclassProficiencyRules.generated.json', subclassDerived],
-    ['src/lib/5etools/subclassProficiencyCertificates.generated.json', subclassCertificates],
+    ['src/lib/5etools/subclassProficiencyCertificates.generated.ts', subclassCertificates],
     ['src/lib/5etools/fixedProficiencyRules.generated.json', { ...fixed, toolNames }],
     ['src/lib/5etools/conditionalProficiencyRules.generated.json', conditional],
     ['src/lib/5etools/toolProficiencyCopySemantics.generated.json', toolCopySemantics.certificates],
@@ -336,7 +397,13 @@ try {
     const text = execFileSync(
       process.execPath,
       ['node_modules/@biomejs/biome/bin/biome', 'format', '--stdin-file-path', file],
-      { input: `${JSON.stringify(value, null, 2)}\n`, encoding: 'utf8', windowsHide: true },
+      {
+        input: file.endsWith('.ts')
+          ? emitSharedRegistryModule(value, 'scripts/generate-class-proficiency-rules.mjs')
+          : `${JSON.stringify(value, null, 2)}\n`,
+        encoding: 'utf8',
+        windowsHide: true,
+      },
     )
     if (checking) {
       if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== text)

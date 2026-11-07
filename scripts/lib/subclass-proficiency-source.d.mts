@@ -19,6 +19,7 @@ export function deriveSubclassProficiencyRules(
   toolsFor: (uid: string) => { names: string[]; category: string },
   identityOf: typeof identity.getSubclassFeatureIdentity,
   digest: typeof audit.getFeatureSourceDigest,
+  banneretLanguages?: readonly (readonly [string, string])[],
 ): ClassProficiencyRule[]
 export function deriveSubclassProficiencyCertificates(
   documents: readonly Record<string, unknown>[],
@@ -33,6 +34,8 @@ export function deriveSubclassProficiencyCertificates(
     owner: typeof certificates.getSubclassProficiencyOwner
     digest: typeof certificates.subclassProficiencyDigest
     rootDigest?: typeof certificates.subclassProficiencyRootDigest
+    featureDigest?: typeof certificates.subclassProficiencyFeatureDigest
+    featureEntries?: typeof certificates.getSubclassProficiencyEntries
     entriesDigest: typeof audit.getFeatureSourceDigest
     metadata: typeof certificates.subclassProficiencyMetadata
     intro: typeof content.getSubclassIntroReference
