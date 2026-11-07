@@ -116,6 +116,55 @@ describe('home page integration workflows', () => {
     useCharacterStore.setState(libraryActions)
   })
 
+  test('opens an affected character only after limited access or exact source recovery', async () => {
+    const user = userEvent.setup()
+    const active = makeCharacterFixture({ id: 'active', name: 'Current' })
+    const affected = makeCharacterFixture({
+      id: 'affected',
+      name: 'Affected',
+      race: 'External',
+      raceSource: 'TEST',
+    })
+    const base = {
+      classes: [makeClassFixture({ name: 'Fighter', source: 'PHB' })],
+      backgrounds: [{ name: 'Soldier', source: 'PHB' }],
+    }
+    const other = makeGameDataFixture({ ...base, races: [{ name: 'External', source: 'OTHER' }] })
+    const exact = makeGameDataFixture({ ...base, races: [{ name: 'External', source: 'TEST' }] })
+    useGameDataStore.setState({
+      gameData: other,
+      dataSourceConfig: { type: 'remote', path: 'https://example.test/data', isValid: true },
+      error: null,
+    })
+    useCharacterStore.setState({
+      characters: [active, affected],
+      activeCharacter: active,
+      activeCharacterId: active.id,
+      isActiveCharacterDirty: true,
+    })
+    const refresh = vi.spyOn(useGameDataStore.getState(), 'loadGameData')
+    refresh.mockResolvedValueOnce(false).mockImplementationOnce(() => {
+      useGameDataStore.setState({ gameData: exact })
+      return Promise.resolve(true)
+    })
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'load-affected' }))
+    await user.click(screen.getByRole('button', { name: 'Discard & Switch' }))
+    const dialog = () => screen.getByRole('dialog', { name: 'Additional content unavailable' })
+    expect(within(dialog()).getByText('External (TEST)')).toBeTruthy()
+    await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+    expect(useCharacterStore.getState().activeCharacter).toBe(active)
+    await user.click(screen.getByRole('button', { name: 'load-affected' }))
+    await user.click(screen.getByRole('button', { name: 'Discard & Switch' }))
+    await user.click(within(dialog()).getByRole('button', { name: 'Retry source' }))
+    expect(within(dialog()).getByText('The original rules are still unavailable.')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(active)
+    await user.click(within(dialog()).getByRole('button', { name: 'Retry source' }))
+    await waitFor(() => expect(useCharacterStore.getState().activeCharacterId).toBe(affected.id))
+    expect(useCharacterStore.getState().activeCharacter).toBe(affected)
+  })
+
   test('keeps a failed deletion open for retry and announces completion after it commits', async () => {
     const user = userEvent.setup()
     const first = makeCharacterFixture({ id: 'first', name: 'First' })
@@ -210,7 +259,7 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
   })
 
-  test('marks external saved choices only while the Included SRD is active', () => {
+  test('marks external saved choices only while the exact rules are missing', () => {
     const character = makeCharacterFixture({
       feats: [
         {
@@ -244,7 +293,7 @@ describe('home page integration workflows', () => {
       dataSourceConfig: { type: 'local', path: 'C:/game-data', isValid: true },
     })
     rerender(<HomePage />)
-    expect(screen.queryByText('Additional content')).toBeNull()
+    expect(screen.getByText('Additional content')).toBeTruthy()
   })
 
   test('retains incompatible originals after download failure and exports one oversized backup on retry', async () => {
@@ -573,7 +622,7 @@ describe('home page integration workflows', () => {
     expect(toast.success).toHaveBeenCalledWith('1 character exported')
   })
 
-  test('imports valid files despite failures and reports name, ID, and content conflicts', async () => {
+  test('imports valid files despite failures and reports name and ID conflicts before checking saved content', async () => {
     const user = userEvent.setup()
     const existing = makeCharacterFixture({ id: 'same-id', name: 'Alpha' })
     useCharacterStore.setState({ characters: [existing] })
@@ -617,11 +666,12 @@ describe('home page integration workflows', () => {
     expect(screen.getByText(/assigned a new ID/)).toBeTruthy()
     expect(screen.queryByText(/needs additional game content/)).toBeNull()
     expect(screen.queryByText(/Valid characters were added/)).toBeNull()
-    expect(screen.getByText(/Some characters reference game content/)).toBeTruthy()
+    expect(screen.queryByText(/Some characters reference game content/)).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Additional content unavailable' })).toBeNull()
     expect(screen.getByText(/broken.tbc: Could not parse JSON/)).toBeTruthy()
   })
 
-  test('shows import results for one character when game content cannot be checked', async () => {
+  test('imports a valid save without warning when game content cannot be checked', async () => {
     const user = userEvent.setup()
     const fileInput = mockDynamicFileInput()
     render(<HomePage />)
@@ -630,9 +680,8 @@ describe('home page integration workflows', () => {
     Object.defineProperty(fileInput, 'files', { configurable: true, get: () => [file] })
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
-    expect(await screen.findByText(/1 imported · 0 failed/)).toBeTruthy()
-    expect(screen.getByText(/Game content is not loaded/)).toBeTruthy()
-    expect(toast.success).not.toHaveBeenCalledWith('Character imported successfully')
+    expect(screen.queryByText(/Game content is not loaded/)).toBeNull()
+    expect(toast.success).toHaveBeenCalledWith('Character imported successfully')
   })
 
   test('shows the assigned name and ID for a single import with collisions', async () => {
@@ -723,7 +772,7 @@ describe('home page integration workflows', () => {
     ])
     expect(await screen.findByText(/1 imported · 1 failed/)).toBeTruthy()
     expect(screen.getByText(/party.tbclib · Invalid: Invalid character structure/)).toBeTruthy()
-    expect(screen.getByText(/Game content is not loaded/)).toBeTruthy()
+    expect(screen.queryByText(/Game content is not loaded/)).toBeNull()
   })
 
   test('rejects an oversized character before reading its contents', async () => {

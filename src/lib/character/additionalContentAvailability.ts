@@ -1,7 +1,9 @@
+import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { isClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import { type EntityLookupSet, resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
-import { getEntityLookupKey, getSubclassLookupKey } from '@/lib/5etools/lookups'
+import { buildRaceLookup, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolvePsionic } from '@/lib/5etools/psionics'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import {
@@ -20,19 +22,18 @@ import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
 import { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
+import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
 export interface GameDataAvailabilityIndex {
   backgrounds: ReadonlySet<string>
-  classes: ReadonlySet<string>
   classFeatures: ReadonlySet<string>
   creatures: ReadonlySet<string>
   feats: ReadonlySet<string>
   items: ReadonlySet<string>
   optionalFeatures: ReadonlySet<string>
-  races: ReadonlySet<string>
   spells: ReadonlySet<string>
-  subclasses: ReadonlySet<string>
   subclassFeatures: ReadonlySet<string>
+  raceLookup: EntityLookupSet
   featureOptions?: ClassChoiceFeatureCatalogs
   choiceClasses?: readonly Class5e[]
   subclassFeaturesByOwner: ReadonlyMap<string, ReadonlySet<string>>
@@ -55,15 +56,6 @@ function entityKeys(values: readonly unknown[]): Set<string> {
 }
 
 export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAvailabilityIndex {
-  const races = entityKeys(gameData.races)
-  for (const race of gameData.races) {
-    for (const subrace of race.subraces ?? []) {
-      const key = entityKey(subrace)
-      if (key) races.add(key)
-    }
-  }
-
-  const subclasses = new Set<string>()
   const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
   const subclassTargets = featureCatalogs.subclassTargets
   const classFeatures = new Set(
@@ -72,30 +64,17 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
       return key ? [key] : []
     }),
   )
-  for (const cls of gameData.classes) {
-    for (const subclass of cls.subclasses ?? []) {
-      subclasses.add(getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source))
-      if (subclass.shortName) {
-        subclasses.add(
-          getSubclassLookupKey(cls.name, cls.source, subclass.shortName, subclass.source),
-        )
-      }
-    }
-  }
-
   return {
+    raceLookup: { racesByKey: buildRaceLookup(gameData.races) },
     featureOptions: featureCatalogs,
     choiceClasses: gameData.classes,
     backgrounds: entityKeys(gameData.backgrounds),
-    classes: entityKeys(gameData.classes),
     classFeatures,
     creatures: entityKeys(gameData.creatures ?? []),
     feats: entityKeys(gameData.feats),
     items: entityKeys([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
     optionalFeatures: entityKeys(gameData.optionalfeatures),
-    races,
     spells: entityKeys(gameData.spells),
-    subclasses,
     subclassFeatures: new Set(subclassTargets.unique.keys()),
     subclassFeaturesByOwner: new Map(
       [...subclassTargets.byOwner].map(([owner, targets]) => [owner, new Set(targets.keys())]),
@@ -125,8 +104,6 @@ function choiceIsMissing(
   index: GameDataAvailabilityIndex,
   subclassOwner?: string,
 ): boolean {
-  const target = choice.invocationCantrip
-  if (target && referenceIsMissing(target.name, target.source, index.spells)) return true
   if (choice.entityType === 'psionic')
     return !resolvePsionic(choice, index.featureOptions?.psionics)
   if (choice.entityType === 'proficiency') {
@@ -165,47 +142,59 @@ function choiceIsMissing(
   return referenceIsMissing(choice.name, choice.source, catalogs[choice.entityType])
 }
 
-function spellReferenceIsMissing(reference: string, index: GameDataAvailabilityIndex): boolean {
-  const parsed = parseSpellReference(reference)
-  return referenceIsMissing(parsed.name, parsed.source, index.spells)
+export interface UnavailableCharacterContent {
+  name: string
+  source?: string
 }
 
-/**
- * Reports whether a character has exact, source-qualified saved choices that are absent from the
- * currently loaded catalog. Unqualified custom values are ignored because their origin
- * cannot be determined reliably.
- */
-export function characterUsesContentOutsideCatalog(
-  character: Character,
+/** Exact saved targets. An empty character filter leaves the full loaded catalog authoritative. */
+export function* getUnavailableCharacterContent(
+  saved: Character,
   index: GameDataAvailabilityIndex,
-): boolean {
-  if (referenceIsMissing(character.race, character.raceSource, index.races)) return true
-  if (referenceIsMissing(character.subrace, character.subraceSource, index.races)) return true
-  if (referenceIsMissing(character.background, character.backgroundSource, index.backgrounds)) {
-    return true
+): Generator<UnavailableCharacterContent> {
+  const character = saved.allowedSources?.length ? { ...saved, allowedSources: [] } : saved
+  const race = resolveRaceReference(
+    {
+      name: character.race,
+      source: character.raceSource,
+      subraceName: character.subrace,
+      subraceSource: character.subraceSource,
+    },
+    index.raceLookup,
+  )
+  if (character.race.trim() && character.raceSource?.trim() && !race.parentRace) {
+    yield { name: character.race, source: character.raceSource }
   }
-
-  for (const entry of character.classProgression) {
-    if (referenceIsMissing(entry.name, entry.source, index.classes)) return true
-    if (
-      entry.subclass &&
-      entry.subclassSource &&
-      !index.subclasses.has(
-        getSubclassLookupKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
-      )
-    ) {
-      return true
-    }
-  }
-
-  if (character.feats.some((feat) => featIsMissing(feat, index))) return true
-  if ((character.specialFeats ?? []).some((feat) => featIsMissing(feat, index))) return true
   if (
-    (character.classFeatChoices ?? []).some((choice) =>
-      choice.feats.some((feat) => featIsMissing(feat, index)),
-    )
+    character.subrace?.trim() &&
+    character.subraceSource?.trim() &&
+    character.raceSource?.trim() &&
+    !race.subraceData
   ) {
-    return true
+    yield { name: character.subrace, source: character.subraceSource }
+  }
+  if (referenceIsMissing(character.background, character.backgroundSource, index.backgrounds)) {
+    yield { name: character.background, source: character.backgroundSource }
+  }
+
+  const classes = index.choiceClasses ?? []
+  for (const { name, source, subclass, subclassSource } of character.classProgression) {
+    if (name.trim() && source.trim() && !resolveClassProgressionRules({ name, source }, classes))
+      yield { name, source }
+    if (
+      subclass &&
+      subclassSource &&
+      !resolveClassProgressionRules({ name, source, subclass, subclassSource }, classes)
+    )
+      yield { name: subclass, source: subclassSource }
+  }
+
+  for (const feat of [
+    ...character.feats,
+    ...(character.specialFeats ?? []),
+    ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
+  ]) {
+    if (featIsMissing(feat, index)) yield feat
   }
   const literalStates = new Map(
     getFeatureOptionSelectionStates(character, index.choiceClasses ?? [], index.featureOptions).map(
@@ -219,54 +208,49 @@ export function characterUsesContentOutsideCatalog(
       index.featureOptions,
     ).map((state) => [state.selection.choiceId, state]),
   )
-  if (
-    getEffectiveClassChoiceSelections(
-      character,
-      index.choiceClasses ?? [],
-      index.featureOptions,
-    ).some(
-      (selection) =>
-        !selection.inactive &&
-        (isClassProficiencyChoiceId(selection.choiceId)
-          ? !proficiencyStates.get(selection.choiceId)?.choice ||
-            selection.selected.some((choice) => choiceIsMissing(choice, index))
-          : isFeatureLiteralChoiceId(selection.choiceId)
-            ? literalStates.get(selection.choiceId)?.recovery !== false
-            : selection.selected.some((choice) =>
-                choiceIsMissing(
-                  choice,
-                  index,
-                  selection.subclassName
-                    ? getFeatureOwnerKey(
-                        selection.className,
-                        selection.classSource,
-                        selection.subclassName,
-                        selection.subclassSource,
-                      )
-                    : undefined,
-                ),
-              )),
-    )
-  ) {
-    return true
+  for (const selection of getEffectiveClassChoiceSelections(
+    character,
+    index.choiceClasses ?? [],
+    index.featureOptions,
+  )) {
+    if (selection.inactive) continue
+    if (
+      (isClassProficiencyChoiceId(selection.choiceId) &&
+        !proficiencyStates.get(selection.choiceId)?.choice) ||
+      (isFeatureLiteralChoiceId(selection.choiceId) &&
+        literalStates.get(selection.choiceId)?.recovery !== false)
+    ) {
+      yield { name: selection.label, source: selection.subclassSource ?? selection.classSource }
+      continue
+    }
+    if (isFeatureLiteralChoiceId(selection.choiceId)) continue
+    const owner = selection.subclassName
+      ? getFeatureOwnerKey(
+          selection.className,
+          selection.classSource,
+          selection.subclassName,
+          selection.subclassSource,
+        )
+      : undefined
+    for (const option of selection.selected) {
+      const target = option.invocationCantrip
+      if (target && referenceIsMissing(target.name, target.source, index.spells)) yield target
+      if (choiceIsMissing(option, index, owner)) yield option
+    }
+  }
+  for (const { root, state } of createOptionalClassFeatureActivity(character, index.featureOptions)
+    .states) {
+    if (state === 'unavailable') yield { name: root.name, source: root.source }
   }
 
-  if (character.equipment.some((item) => itemIsMissing(item, index))) return true
-  if (
-    Object.values(character.backgroundEquipmentItemChoices ?? {}).some((reference) =>
-      reference.some((item) => itemIsMissing(item, index)),
-    )
-  ) {
-    return true
-  }
-  if (
-    Object.values(character.classEquipmentItemChoices ?? {}).some((choices) =>
-      Object.values(choices).some((reference) =>
-        reference.some((item) => itemIsMissing(item, index)),
-      ),
-    )
-  ) {
-    return true
+  for (const item of [
+    ...character.equipment,
+    ...Object.values(character.backgroundEquipmentItemChoices ?? {}).flat(),
+    ...Object.values(character.classEquipmentItemChoices ?? {}).flatMap((choices) =>
+      Object.values(choices).flat(),
+    ),
+  ]) {
+    if (itemIsMissing(item, index)) yield item
   }
 
   const spellReferences = character.spells.spellProfiles.flatMap((profile) => [
@@ -277,9 +261,21 @@ export function characterUsesContentOutsideCatalog(
     ...(profile.alwaysPreparedSpells ?? []),
     ...(profile.choices ?? []).flatMap((choice) => choice.selected),
   ])
-  if (spellReferences.some((reference) => spellReferenceIsMissing(reference, index))) return true
+  for (const reference of [
+    ...spellReferences,
+    ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
+  ]) {
+    const spell = parseSpellReference(reference)
+    if (referenceIsMissing(spell.name, spell.source, index.spells)) yield spell
+  }
+  for (const { target } of character.managedClassSpellChoices ?? []) {
+    if (referenceIsMissing(target.name, target.source, index.spells)) yield target
+  }
+}
 
-  return Object.values(character.fixedFeatOptions ?? {}).some((options) =>
-    (options.spells ?? []).some((reference) => spellReferenceIsMissing(reference, index)),
-  )
+export function characterUsesContentOutsideCatalog(
+  character: Character,
+  index: GameDataAvailabilityIndex,
+) {
+  return !getUnavailableCharacterContent(character, index).next().done
 }

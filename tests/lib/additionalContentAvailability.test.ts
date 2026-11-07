@@ -4,6 +4,7 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import {
   characterUsesContentOutsideCatalog,
   createGameDataAvailabilityIndex,
+  getUnavailableCharacterContent,
 } from '@/lib/character/additionalContentAvailability'
 import type { GameData } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -320,4 +321,35 @@ describe('additional content availability', () => {
       ),
     ).toBe(false)
   })
+})
+
+test('recognizes missing selected owner rules despite a wrong parent or conflicting class declaration', () => {
+  const character = makeCharacterFixture({
+    race: 'Elf',
+    raceSource: 'PHB',
+    subrace: 'High Elf',
+    subraceSource: 'PHB',
+  })
+  const highElf = { name: 'High Elf', source: 'PHB' }
+  const incomplete = makeGameDataFixture({
+    ...makeIncludedSrdData(),
+    classes: [makeClassFixture({ name: 'Fighter', source: 'PHB', sourceIdentityConflict: true })],
+    races: [
+      { name: 'Elf', source: 'PHB' },
+      { name: 'Other Elf', source: 'PHB', subraces: [highElf] },
+    ],
+  })
+  expect([
+    ...getUnavailableCharacterContent(character, createGameDataAvailabilityIndex(incomplete)),
+  ]).toEqual([
+    { name: 'High Elf', source: 'PHB' },
+    { name: 'Fighter', source: 'PHB' },
+  ])
+  const exact = makeGameDataFixture({
+    ...makeIncludedSrdData(),
+    races: [{ name: 'Elf', source: 'PHB', subraces: [highElf] }],
+  })
+  expect(
+    characterUsesContentOutsideCatalog(character, createGameDataAvailabilityIndex(exact)),
+  ).toBe(false)
 })

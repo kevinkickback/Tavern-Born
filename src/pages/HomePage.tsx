@@ -20,6 +20,7 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { CharacterCard } from '@/components/character/CharacterCard'
+import { CharacterContentOpeningDialog } from '@/components/character/CharacterContentOpeningDialog'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
@@ -59,6 +60,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
+import { useCharacterContentOpening } from '@/hooks/character/useCharacterContentOpening'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
@@ -108,14 +110,12 @@ interface CharacterImportReport {
     name: string
     originalName: string
     idChanged: boolean
-    missingContent: boolean
   }>
   failures: Array<{
     label: string
     reason: string
     kind: 'parse' | 'validation' | 'format' | 'size' | 'storage'
   }>
-  contentCheckUnavailable: boolean
 }
 
 interface CharacterListRowProps {
@@ -253,7 +253,8 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
-  const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
+  const opening = useCharacterContentOpening()
+  const { requestOpen } = opening
   const deleteCharacters = useCharacterStore((state) => state.deleteCharacters)
   const duplicateCharacter = useCharacterStore((state) => state.duplicateCharacter)
   const { isPending: isLibraryPending, run: runLibraryAction } = useAsyncAction()
@@ -262,7 +263,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     (state) => state.dismissUnsupportedCharacters,
   )
   const gameData = useGameDataStore((state) => state.gameData)
-  const isBundledSrd = useGameDataStore((state) => state.dataSourceConfig?.type === 'bundled')
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -280,14 +280,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const focusCharacterName = readinessFocus === 'identity:name'
   const additionalContentCharacterIds = useMemo(() => {
-    if (!isBundledSrd || !gameData) return new Set<string>()
+    if (!gameData) return new Set<string>()
     const availability = createGameDataAvailabilityIndex(gameData)
     return new Set(
       characters
         .filter((character) => characterUsesContentOutsideCatalog(character, availability))
         .map((character) => character.id),
     )
-  }, [characters, gameData, isBundledSrd])
+  }, [characters, gameData])
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -342,16 +342,16 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         setConfirmSwitchOpen(true)
         return
       }
-      setActiveCharacter(id)
+      requestOpen(id)
     },
-    [activeCharacterId, hasUnsavedChanges, setActiveCharacter],
+    [activeCharacterId, hasUnsavedChanges, requestOpen],
   )
 
   const confirmSwitchCharacter = () => {
     if (!pendingCharacterId) return
-    setActiveCharacter(pendingCharacterId)
     setPendingCharacterId(null)
     setConfirmSwitchOpen(false)
+    requestOpen(pendingCharacterId)
   }
 
   const handleDeleteCharacter = useCallback(
@@ -476,9 +476,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         const report: CharacterImportReport = {
           imported: [],
           failures: [],
-          contentCheckUnavailable: !gameData,
         }
-        const availability = gameData ? createGameDataAvailabilityIndex(gameData) : null
         let isBulkImport = files.length > 1
         const pendingImports: Array<{
           label: string
@@ -534,9 +532,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                 name: character.name,
                 originalName: entry.originalName,
                 idChanged: character.id !== entry.character.id,
-                missingContent: availability
-                  ? characterUsesContentOutsideCatalog(character, availability)
-                  : false,
               })
             })
           } catch (error) {
@@ -562,8 +557,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         }
         if (report.imported.length === 1 && report.failures.length === 0) {
           if (
-            report.contentCheckUnavailable ||
-            report.imported[0]?.missingContent ||
             report.imported[0]?.name !== report.imported[0]?.originalName ||
             report.imported[0]?.idChanged
           ) {
@@ -970,15 +963,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                   </ul>
                 </section>
               )}
-              {(importReport?.imported.length ?? 0) > 0 &&
-                (importReport?.contentCheckUnavailable ||
-                  importReport?.imported.some((entry) => entry.missingContent)) && (
-                  <p className="text-muted-foreground">
-                    {importReport.contentCheckUnavailable
-                      ? 'Game content is not loaded, so saved source references could not be checked. Load the required content before editing affected characters.'
-                      : 'Some characters reference game content that is not currently loaded. Their saved choices remain intact; load the required content to use them fully.'}
-                  </p>
-                )}
             </div>
           </ScrollArea>
           <DialogFooter>
@@ -986,6 +970,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CharacterContentOpeningDialog opening={opening} />
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

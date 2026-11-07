@@ -8,7 +8,7 @@ interface AdditionalContentBadgeProps {
 }
 
 const EXPLANATION =
-  'This character has saved choices that are not available in the Included SRD. Add the data used to create this character to review or edit them.'
+  'This character has saved choices missing from the current game data. Load their original source to review or edit them.'
 
 export function AdditionalContentBadge({ className }: AdditionalContentBadgeProps) {
   return (
