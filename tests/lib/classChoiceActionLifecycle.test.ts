@@ -828,6 +828,12 @@ test('normal source filtering retains a class-owned subclass-target action and i
   expect(resolveClassChoiceOptions(descriptor, options(filtered))).toMatchObject([
     { availability: 'eligible', entries: schoolBeacon.entries },
   ])
+  const repeated = structuredClone(filtered)
+  const repeatedRefs = repeated[0].subclasses![0].subclassFeatureRefs!
+  repeatedRefs.push(repeatedRefs[0])
+  expect(resolveClassChoiceOptions(descriptor, options(repeated))).toMatchObject([
+    { availability: 'retained', entries: [] },
+  ])
   const recovery = (classes: Class5e[]) =>
     validateClassChoices(
       character,

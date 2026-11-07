@@ -1,18 +1,15 @@
 import { resolveClassProgressionRules } from '@/lib/5etools/classData'
-import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { isClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { type EntityLookupSet, resolveRaceReference } from '@/lib/5etools/entityResolvers'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { buildRaceLookup, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolvePsionic } from '@/lib/5etools/psionics'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
-import {
-  getClassChoiceFeatureTarget,
-  getFeatureOwnerKey,
-} from '@/lib/character/classChoiceIdentity'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
   type ClassChoiceFeatureCatalogs,
+  resolveClassChoiceFeatureEntity,
   resolveFeatureOptionEntity,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
@@ -26,17 +23,14 @@ import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivi
 
 export interface GameDataAvailabilityIndex {
   backgrounds: ReadonlySet<string>
-  classFeatures: ReadonlySet<string>
   creatures: ReadonlySet<string>
   feats: ReadonlySet<string>
   items: ReadonlySet<string>
   optionalFeatures: ReadonlySet<string>
   spells: ReadonlySet<string>
-  subclassFeatures: ReadonlySet<string>
   raceLookup: EntityLookupSet
   featureOptions?: ClassChoiceFeatureCatalogs
   choiceClasses?: readonly Class5e[]
-  subclassFeaturesByOwner: ReadonlyMap<string, ReadonlySet<string>>
 }
 
 function entityKey(value: { name?: unknown; source?: unknown }): string | null {
@@ -57,28 +51,16 @@ function entityKeys(values: readonly unknown[]): Set<string> {
 
 export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAvailabilityIndex {
   const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
-  const subclassTargets = featureCatalogs.subclassTargets
-  const classFeatures = new Set(
-    featureCatalogs.classFeatures.flatMap((feature) => {
-      const key = getClassFeatureIdentity(feature)
-      return key ? [key] : []
-    }),
-  )
   return {
     raceLookup: { racesByKey: buildRaceLookup(gameData.races) },
     featureOptions: featureCatalogs,
     choiceClasses: gameData.classes,
     backgrounds: entityKeys(gameData.backgrounds),
-    classFeatures,
     creatures: entityKeys(gameData.creatures ?? []),
     feats: entityKeys(gameData.feats),
     items: entityKeys([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
     optionalFeatures: entityKeys(gameData.optionalfeatures),
     spells: entityKeys(gameData.spells),
-    subclassFeatures: new Set(subclassTargets.unique.keys()),
-    subclassFeaturesByOwner: new Map(
-      [...subclassTargets.byOwner].map(([owner, targets]) => [owner, new Set(targets.keys())]),
-    ),
   }
 }
 
@@ -119,25 +101,28 @@ function choiceIsMissing(
     )
   }
   if (choice.entityType === 'classFeature' || choice.entityType === 'subclassFeature') {
-    const target = getClassChoiceFeatureTarget(choice)
-    const available =
-      choice.entityType === 'classFeature'
-        ? index.classFeatures
-        : subclassOwner
-          ? index.subclassFeaturesByOwner.get(subclassOwner)
-          : index.subclassFeatures
-    return !target || !available?.has(target)
+    const catalogs = index.featureOptions
+    return (
+      !catalogs ||
+      !resolveClassChoiceFeatureEntity(
+        choice,
+        choice.entityType === 'subclassFeature'
+          ? scopeClassChoiceFeatureCatalogs(catalogs, subclassOwner)
+          : catalogs,
+      )
+    )
   }
   const catalogs: Record<
-    Exclude<CharacterClassChoiceOption['entityType'], 'featureOption' | 'proficiency' | 'psionic'>,
+    Exclude<
+      CharacterClassChoiceOption['entityType'],
+      'classFeature' | 'subclassFeature' | 'featureOption' | 'proficiency' | 'psionic'
+    >,
     ReadonlySet<string>
   > = {
-    classFeature: index.classFeatures,
     creature: index.creatures,
     feat: index.feats,
     item: index.items,
     optionalFeature: index.optionalFeatures,
-    subclassFeature: index.subclassFeatures,
   }
   return referenceIsMissing(choice.name, choice.source, catalogs[choice.entityType])
 }

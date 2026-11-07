@@ -142,6 +142,7 @@ describe('level up hit-point choices', () => {
     mockClasses = [
       makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } }),
     ]
+    useGameDataStore.getState().setGameData(makeGameDataFixture({ classes: mockClasses }))
   })
 
   afterEach(() => {

@@ -166,7 +166,7 @@ describe('current source-owned proficiency availability', () => {
 })
 
 describe('additional content availability', () => {
-  test('indexes direct subclass feature objects', () => {
+  test('resolves direct subclass feature objects only from one exact producer', () => {
     const gameData = makeGameDataFixture({
       classes: [
         makeClassFixture({
@@ -185,6 +185,7 @@ describe('additional content availability', () => {
                   subclassShortName: 'Tests',
                   subclassSource: 'HB',
                   level: 3,
+                  entries: ['Original rules'],
                 },
               ],
             },
@@ -193,9 +194,58 @@ describe('additional content availability', () => {
       ],
     })
 
-    expect(createGameDataAvailabilityIndex(gameData).subclassFeatures).toContain(
-      'subclass-feature|direct ward|wizard|phb|tests|hb|3|hb',
+    const [wizard] = gameData.classes
+    const subclass = wizard.subclasses![0]
+    const [feature] = subclass.subclassFeatures as import('@/types/5etools').SubclassFeature[]
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Wizard',
+          source: 'PHB',
+          levels: 3,
+          subclass: ' school of tests ',
+          subclassSource: ' hb ',
+        },
+      ],
+      classChoiceSelections: [
+        {
+          choiceId: 'ward',
+          label: 'Ward',
+          kind: 'optional-feature',
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel: 3,
+          subclassName: 'School of Tests',
+          subclassSource: 'HB',
+          selected: [
+            {
+              entityType: 'subclassFeature',
+              name: 'Direct Ward',
+              source: 'HB',
+              ref: 'Direct Ward|Wizard|PHB|Tests|HB|3|HB',
+              slotLevel: 3,
+            },
+          ],
+        },
+      ],
+    })
+    const unavailable = (features: (typeof feature)[]) =>
+      [
+        ...getUnavailableCharacterContent(
+          character,
+          createGameDataAvailabilityIndex({
+            ...gameData,
+            classes: [{ ...wizard, subclasses: [{ ...subclass, subclassFeatures: features }] }],
+          }),
+        ),
+      ].map((choice) => choice.name)
+    expect(unavailable([feature])).not.toContain('Direct Ward')
+    expect(unavailable([feature])).not.toContain(' school of tests ')
+    expect(unavailable([feature, { ...feature }])).toContain('Direct Ward')
+    expect(unavailable([feature, { ...feature, entries: ['Competing rules'] }])).toContain(
+      'Direct Ward',
     )
+    expect(unavailable([{ ...feature, sourceIdentityConflict: true }])).toContain('Direct Ward')
   })
 
   test('accepts source-qualified choices that are present in the Included SRD catalog', () => {

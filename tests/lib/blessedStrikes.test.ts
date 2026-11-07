@@ -11,6 +11,10 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
+  createGameDataAvailabilityIndex,
+  getUnavailableCharacterContent,
+} from '@/lib/character/additionalContentAvailability'
+import {
   buildClassChoiceFeatureCatalogs,
   type ClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceFeatureCatalogs'
@@ -21,6 +25,7 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import {
   applyClassChoiceSelectionWithGrantsCommand,
+  reconcileClassChoiceSelectionGrants,
   retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
@@ -173,6 +178,30 @@ function verifyChoice(path: string) {
   )
   const strikeTarget = strike && getClassFeatureIdentity(strike)
   if (!strike || !strikeTarget) throw new Error('The exact Divine Strike producer is absent')
+  const otherClassFeatures = data.classFeatures.filter(
+    (feature) => getClassFeatureIdentity(feature) !== strikeTarget,
+  )
+  for (const producers of [
+    [strike, { ...strike, entries: ['Competing rules'] }],
+    [{ ...strike, sourceIdentityConflict: true as const }],
+  ]) {
+    const ambiguous = { ...data, classFeatures: [...otherClassFeatures, ...producers] }
+    expect([
+      ...getUnavailableCharacterContent(divine, createGameDataAvailabilityIndex(ambiguous)),
+    ]).toContainEqual(expect.objectContaining({ name: 'Divine Strike', source: 'XPHB' }))
+    const retained = reconcileClassChoiceSelectionGrants(
+      divine,
+      divine.provenance,
+      divine.classChoiceSelections ?? [],
+      buildClassChoiceFeatureCatalogs(ambiguous),
+    )
+    expect(retained.features.find((feature) => feature.name === strike.name)).toEqual(
+      divine.features.find((feature) => feature.name === strike.name),
+    )
+    expect(retained.provenanceUpdate.features['divine strike']).toEqual(
+      divine.provenance.features['divine strike'],
+    )
+  }
   const conflicting = {
     ...catalogs,
     classFeatureCandidates: new Map(catalogs.classFeatureCandidates),

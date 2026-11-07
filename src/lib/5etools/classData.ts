@@ -195,11 +195,13 @@ export function getSelectedSubclassData(
   entry: Pick<CharacterClassEntry, 'subclass' | 'subclassSource'>,
 ): Subclass5e | undefined {
   if (!classData || !entry.subclass) return undefined
-
-  return (classData.subclasses ?? []).find(
-    (subclass) =>
-      subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
+  const reference = { name: entry.subclass, source: entry.subclassSource }
+  const matches = (classData.subclasses ?? []).filter((subclass) =>
+    entry.subclassSource
+      ? findClassReference(reference, [subclass])
+      : subclass.name === entry.subclass && !subclass.source,
   )
+  return matches.length === 1 && !matches[0].sourceIdentityConflict ? matches[0] : undefined
 }
 
 export function resolveClassProgressionRules(
@@ -209,12 +211,8 @@ export function resolveClassProgressionRules(
   const matches = classes.filter((cls) => findClassReference(entry, [cls]))
   const current = matches.length === 1 ? matches[0] : undefined
   if (!current || current.sourceIdentityConflict) return undefined
-  if (entry.subclass && entry.subclassSource) {
-    const subclasses = (current.subclasses ?? []).filter(
-      (subclass) => subclass.name === entry.subclass && subclass.source === entry.subclassSource,
-    )
-    if (subclasses.length !== 1 || subclasses[0].sourceIdentityConflict) return undefined
-  }
+  if (entry.subclass && entry.subclassSource && !getSelectedSubclassData(current, entry))
+    return undefined
   return current
 }
 

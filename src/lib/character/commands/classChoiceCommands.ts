@@ -13,10 +13,6 @@ import {
 } from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, resolveClassProgressionRules } from '@/lib/5etools/classData'
 import {
-  getClassFeatureIdentity,
-  getSubclassFeatureIdentity,
-} from '@/lib/5etools/classFeatureIdentity'
-import {
   getClassOrderBranch,
   getClassOrderById,
   getSavedClassOrder,
@@ -67,7 +63,6 @@ import {
   getClassChoiceCatalogOptionKey,
   getClassChoiceDeclaration,
   getClassChoiceFeatureId,
-  getClassChoiceFeatureTarget,
   getClassChoiceGrantedFeature,
   getClassChoiceOptionKey,
   getFeatureOwnerKey,
@@ -77,6 +72,7 @@ import {
   createClassChoiceCatalogs,
   getCharacterClassChoices,
   isClassChoiceOptionEligible,
+  resolveClassChoiceFeatureEntity,
   resolveClassChoiceOptions,
   retainsBladeInvocationWithoutPact,
   scopeClassChoiceFeatureCatalogs,
@@ -1488,12 +1484,8 @@ function isSavedFeatureSourceMissing(
   }
   if (option.entityType === 'psionic')
     return catalogs.psionics !== undefined && !resolvePsionic(option, catalogs.psionics)
-  const target = getClassChoiceFeatureTarget(option)
-  if (!target) return false
   if (option.entityType === 'classFeature')
-    return !catalogs.classFeatures.some(
-      (feature) => getClassFeatureIdentity(feature) === target && !feature.sourceIdentityConflict,
-    )
+    return !resolveClassChoiceFeatureEntity(option, catalogs)
   if (option.entityType !== 'subclassFeature') return false
   const owner = selection.subclassName
     ? getFeatureOwnerKey(
@@ -1503,10 +1495,7 @@ function isSavedFeatureSourceMissing(
         selection.subclassSource,
       )
     : undefined
-  const scoped = scopeClassChoiceFeatureCatalogs(catalogs, owner)
-  return !scoped.subclassFeatures.some(
-    (feature) => getSubclassFeatureIdentity(feature) === target && !feature.sourceIdentityConflict,
-  )
+  return !resolveClassChoiceFeatureEntity(option, scopeClassChoiceFeatureCatalogs(catalogs, owner))
 }
 
 /**

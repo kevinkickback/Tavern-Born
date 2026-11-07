@@ -609,28 +609,32 @@ export function resolveClassChoiceFeatureEntity(
   option: NormalizedChoiceOptionReference,
   catalogs: Pick<
     ClassChoiceFeatureCatalogs,
-    'classFeatures' | 'subclassFeatures' | 'subclassFeatureCandidates'
+    | 'classFeatures'
+    | 'classFeatureCandidates'
+    | 'ambiguousClassFeatureTargets'
+    | 'subclassFeatures'
+    | 'subclassFeatureCandidates'
   >,
 ): ClassFeature | SubclassFeature | undefined {
   const target = getClassChoiceFeatureTarget(option)
   if (!target) return undefined
   if (option.entityType === 'classFeature') {
-    return catalogs.classFeatures.find((feature) => getClassFeatureIdentity(feature) === target)
+    if (catalogs.ambiguousClassFeatureTargets?.has(target)) return undefined
+    const candidates = catalogs.classFeatureCandidates
+      ? (catalogs.classFeatureCandidates.get(target) ?? [])
+      : catalogs.classFeatures.filter((feature) => getClassFeatureIdentity(feature) === target)
+    return candidates.length === 1 && !candidates[0].sourceIdentityConflict
+      ? candidates[0]
+      : undefined
   }
   if (option.entityType !== 'subclassFeature') return undefined
-  if (STORM_TARGETS.has(target)) {
-    const candidates =
-      catalogs.subclassFeatureCandidates !== undefined
-        ? (catalogs.subclassFeatureCandidates.get(target) ?? [])
-        : catalogs.subclassFeatures.filter(
-            (feature) => getSubclassFeatureIdentity(feature) === target,
-          )
-    return resolveStormFeature(target, candidates)
-  }
-  const matches = catalogs.subclassFeatures.filter(
-    (feature) => getSubclassFeatureIdentity(feature) === target,
-  )
-  return matches.length === 1 ? matches[0] : undefined
+  const candidates = catalogs.subclassFeatureCandidates
+    ? (catalogs.subclassFeatureCandidates.get(target) ?? [])
+    : catalogs.subclassFeatures.filter((feature) => getSubclassFeatureIdentity(feature) === target)
+  const first = candidates[0]
+  if (!first || candidates.some((feature) => feature.sourceIdentityConflict)) return undefined
+  if (STORM_TARGETS.has(target)) return resolveStormFeature(target, candidates)
+  return candidates.length === 1 ? first : undefined
 }
 
 function isFavoredEnemyOption(o: NormalizedChoiceOptionReference) {
