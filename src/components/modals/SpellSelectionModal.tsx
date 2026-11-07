@@ -98,41 +98,30 @@ export function resolveInitialSpellSelectionIds(
   })
 }
 
-function buildSpellLevelOptions(
+function buildLevelFilter(
   spells: readonly Pick<Spell5e, 'level'>[],
-  allowedLevels?: ReadonlySet<string>,
-): Array<{ value: string; label: string }> {
+  allowedLevels: Set<string> | undefined,
+): FilterSection {
   const levels = new Set<number>()
   for (const spell of spells) {
     if (Number.isInteger(spell.level) && spell.level >= 0) levels.add(spell.level)
   }
-  for (const rawLevel of allowedLevels ?? []) {
-    const level = Number(rawLevel)
-    if (Number.isInteger(level) && level >= 0) levels.add(level)
-  }
-  return [...levels]
+  const options = [...levels]
     .sort((left, right) => left - right)
     .map((level) => ({
       value: String(level),
       label: level === 0 ? 'Cantrip' : `Level ${level}`,
     }))
-}
-
-function buildLevelFilter(
-  spells: readonly Pick<Spell5e, 'level'>[],
-  allowedLevels: Set<string> | undefined,
-): FilterSection {
-  const levelOptions = buildSpellLevelOptions(spells, allowedLevels)
   const disabledValues = allowedLevels
-    ? new Set(levelOptions.map((o) => o.value).filter((v) => !allowedLevels.has(v)))
+    ? new Set(options.map((option) => option.value).filter((value) => !allowedLevels.has(value)))
     : undefined
   return {
     key: 'level',
     label: 'Level',
     type: 'checkboxes',
     columns: 2,
-    options: levelOptions,
-    ...(disabledValues ? { disabledValues } : {}),
+    options,
+    disabledValues,
   }
 }
 
@@ -206,9 +195,6 @@ function matchSpell(
   }
 
   if (search && !spell.name.toLowerCase().includes(search.toLowerCase())) return false
-
-  const levelSet = activeFilters.level
-  if (levelSet?.size && !levelSet.has(String(spell.level))) return false
 
   const schoolSet = activeFilters.school
   if (schoolSet && schoolSet.size > 0 && !schoolSet.has(spell.school)) return false
@@ -390,15 +376,16 @@ export function SpellSelectionModal({
     hasCharSpells,
     hasClassName && allowClassListBypass,
   )
-  const filterSections = useMemo(
-    () => [
-      buildLevelFilter(spellCandidates, allowedLevels),
-      SCHOOL_FILTER,
-      TYPE_FILTER,
-      ...(visibilityFilter ? [visibilityFilter] : []),
-    ],
-    [allowedLevels, spellCandidates, visibilityFilter],
-  )
+  const levelFilter = useMemo(() => {
+    if (!spells.some((spell) => spell.level !== spells[0].level)) return null
+    return buildLevelFilter(spellCandidates, allowedLevels)
+  }, [allowedLevels, spellCandidates, spells])
+  const filterSections = [
+    ...(levelFilter ? [levelFilter] : []),
+    SCHOOL_FILTER,
+    TYPE_FILTER,
+    ...(visibilityFilter ? [visibilityFilter] : []),
+  ]
 
   const effectiveInitialFilters = hasCharSpells
     ? {
@@ -453,8 +440,18 @@ export function SpellSelectionModal({
         />
       )}
       canSelect={canSelect}
-      matchItem={(spell, search, activeFilters) =>
-        matchSpell(
+      matchItem={(spell, search, activeFilters) => {
+        const levels = activeFilters.level
+        if (
+          levelFilter &&
+          levels?.size &&
+          !levels.has(String(spell.level)) &&
+          levelFilter.options.some(
+            ({ value }) => levels.has(value) && !levelFilter.disabledValues?.has(value),
+          )
+        )
+          return false
+        return matchSpell(
           spell,
           search,
           activeFilters,
@@ -467,7 +464,7 @@ export function SpellSelectionModal({
           characterSpellKeys,
           classListReferences,
         )
-      }
+      }}
       filterSections={filterSections}
       categories={categories}
       selectionHint={selectionHint}

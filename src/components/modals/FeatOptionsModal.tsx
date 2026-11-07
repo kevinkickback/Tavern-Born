@@ -178,10 +178,8 @@ const SpellPickStep = memo(function SpellPickStep({
                 key={id}
                 htmlFor={checkboxId}
                 className={cn(
-                  'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
-                  isSelected
-                    ? 'border-l-accent bg-accent/10 text-foreground'
-                    : 'border-l-transparent hover:bg-muted/40',
+                  'flex w-full items-center gap-3 px-3 py-2 transition-colors',
+                  isSelected ? 'bg-accent/10 text-foreground' : 'hover:bg-muted/40',
                   atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
                 )}
               >
@@ -273,10 +271,8 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
                 key={name}
                 htmlFor={checkboxId}
                 className={cn(
-                  'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
-                  isSelected
-                    ? 'border-l-accent bg-accent/10 text-foreground'
-                    : 'border-l-transparent hover:bg-muted/40',
+                  'flex w-full items-center gap-3 px-3 py-2 transition-colors',
+                  isSelected ? 'bg-accent/10 text-foreground' : 'hover:bg-muted/40',
                   atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
                 )}
               >
@@ -386,10 +382,8 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
               <label
                 key={`${f.name}|${f.source ?? ''}`}
                 className={cn(
-                  'flex cursor-pointer items-center gap-3 border-l-2 px-3 py-2 transition-colors',
-                  isSelected
-                    ? 'border-l-accent bg-accent/10 text-foreground'
-                    : 'border-l-transparent hover:bg-muted/40',
+                  'flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors',
+                  isSelected ? 'bg-accent/10 text-foreground' : 'hover:bg-muted/40',
                 )}
               >
                 <input

@@ -192,7 +192,7 @@ function OptionEntries({ option }: { option: ClassChoiceOptionView }) {
   const multiple = visibleEntries.length > 1
 
   return (
-    <div className={cn('space-y-1.5', multiple && 'border-l-2 border-primary/20 pl-2')}>
+    <div className="space-y-1.5">
       {visibleEntries.map(({ entry, key }) => (
         <GameContent
           key={key}

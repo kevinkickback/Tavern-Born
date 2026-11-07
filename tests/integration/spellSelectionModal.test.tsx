@@ -98,6 +98,43 @@ describe('SpellSelectionModal identity', () => {
     expect(screen.queryByText('Light')).toBeNull()
   })
 
+  test('hides a single eligible level and ignores a stale initial level filter', async () => {
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[makeSpell('Light', 'PHB'), makeSpell('Shield', 'PHB', { level: 1 })]}
+        allowedLevels={new Set(['0'])}
+        initialFilters={{ level: new Set(['1']) }}
+        onConfirm={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Light')).toBeTruthy())
+    expect(screen.queryByRole('checkbox', { name: /Cantrip|Level 1/ })).toBeNull()
+    expect(screen.getByRole('checkbox', { name: 'Abjuration' })).toBeTruthy()
+    expect(screen.queryByText('Shield')).toBeNull()
+  })
+
+  test('shows remaining levels when refreshing removes the only checked level', async () => {
+    const first = makeSpell('Shield', 'PHB', { level: 1 })
+    const second = makeSpell('Blur', 'PHB', { level: 2 })
+    const third = makeSpell('Fireball', 'PHB', { level: 3 })
+    const props = {
+      open: true,
+      onOpenChange: vi.fn(),
+      allowedLevels: new Set(['1', '2', '3']),
+      onConfirm: vi.fn(),
+    }
+    const { rerender } = render(<SpellSelectionModal {...props} spells={[first, second, third]} />)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Level 2' }))
+    await waitFor(() => expect(screen.queryByText('Shield')).toBeNull())
+
+    rerender(<SpellSelectionModal {...props} spells={[first, third]} />)
+    expect(screen.queryByRole('checkbox', { name: 'Level 2' })).toBeNull()
+    await waitFor(() => expect(screen.getByText('Shield')).toBeTruthy())
+    expect(screen.getByText('Fireball')).toBeTruthy()
+  })
+
   test('current exact list policy is captured at Confirm while hard targets remain constrained', async () => {
     const onConfirm = vi.fn()
     render(

@@ -21,6 +21,31 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 import { makeStartingEquipmentScenario } from '../fixtures/startingEquipmentFixtures'
 
+test('readiness identifies incomplete equipment choices by their picker label', () => {
+  const { character, data } = makeStartingEquipmentScenario()
+  const lookups = buildGameDataLookups(data)
+  const calculation = createCharacterCalculationContext(character, lookups, lookups)
+  const issues = getCharacterReadiness(character, { calculation }).issues
+
+  expect(issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: 'starting-equipment:class',
+        explanation: expect.stringContaining(
+          'Choose exactly 2 items for “Martial weapons” (choice 1, package A, item 1).',
+        ),
+        navigationTarget: '/build/class?attention=starting-equipment%3Aclass',
+      }),
+      expect.objectContaining({
+        id: 'starting-equipment:background',
+        explanation: expect.stringContaining(
+          'Choose exactly 2 items for “Martial weapons” (choice 1, package A, item 1).',
+        ),
+      }),
+    ]),
+  )
+})
+
 test('owned physical rows reach Actions, Review and actual PDF; removal retains the other owner and manual funds', async () => {
   const scenario = makeStartingEquipmentScenario(),
     data = scenario.data

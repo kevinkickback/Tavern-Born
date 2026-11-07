@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
@@ -102,6 +103,16 @@ function mockDynamicFileInput() {
   return realInput
 }
 
+function GameDataDestination() {
+  const { search } = useLocation()
+  return (
+    <>
+      <p>Settings destination {search}</p>
+      <Link to="/">Return to Home</Link>
+    </>
+  )
+}
+
 describe('home page integration workflows', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -116,7 +127,7 @@ describe('home page integration workflows', () => {
     useCharacterStore.setState(libraryActions)
   })
 
-  test('opens an affected character only after limited access or exact source recovery', async () => {
+  test('dismisses the missing rules dialog or visits Game Data and rechecks on reopen', async () => {
     const user = userEvent.setup()
     const active = makeCharacterFixture({ id: 'active', name: 'Current' })
     const affected = makeCharacterFixture({
@@ -143,24 +154,54 @@ describe('home page integration workflows', () => {
       isActiveCharacterDirty: true,
     })
     const refresh = vi.spyOn(useGameDataStore.getState(), 'loadGameData')
-    refresh.mockResolvedValueOnce(false).mockImplementationOnce(() => {
-      useGameDataStore.setState({ gameData: exact })
-      return Promise.resolve(true)
-    })
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'load-affected' }))
-    await user.click(screen.getByRole('button', { name: 'Discard & Switch' }))
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/settings" element={<GameDataDestination />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    const requestSwitch = async () => {
+      await user.click(screen.getByRole('button', { name: 'load-affected' }))
+      await user.click(screen.getByRole('button', { name: 'Discard & Switch' }))
+    }
     const dialog = () => screen.getByRole('dialog', { name: 'Additional content unavailable' })
+    await requestSwitch()
     expect(within(dialog()).getByText('External (TEST)')).toBeTruthy()
-    await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+    expect(within(dialog()).queryByRole('button', { name: 'Cancel' })).toBeNull()
+    await waitFor(() => expect(document.activeElement).toBe(within(dialog()).getByRole('heading')))
+    await user.keyboard('{Enter}')
+    expect(dialog()).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(active)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'load-affected' })),
+    )
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
     expect(useCharacterStore.getState().activeCharacter).toBe(active)
-    await user.click(screen.getByRole('button', { name: 'load-affected' }))
-    await user.click(screen.getByRole('button', { name: 'Discard & Switch' }))
-    await user.click(within(dialog()).getByRole('button', { name: 'Retry source' }))
-    expect(within(dialog()).getByText('The original rules are still unavailable.')).toBeTruthy()
+
+    await requestSwitch()
+    await waitFor(() => expect(document.activeElement).toBe(within(dialog()).getByRole('heading')))
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    expect(document.activeElement).toBe(within(dialog()).getByRole('button', { name: 'Close' }))
+    await user.keyboard('{Enter}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await requestSwitch()
+    await user.click(within(dialog()).getByRole('link', { name: 'Game Data settings' }))
+    expect(screen.getByText('Settings destination ?section=data')).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(refresh).not.toHaveBeenCalled()
     expect(useCharacterStore.getState().activeCharacter).toBe(active)
-    await user.click(within(dialog()).getByRole('button', { name: 'Retry source' }))
+    expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
+
+    await user.click(screen.getByRole('link', { name: 'Return to Home' }))
+    await act(() => useGameDataStore.setState({ gameData: exact }))
+    await requestSwitch()
     await waitFor(() => expect(useCharacterStore.getState().activeCharacterId).toBe(affected.id))
     expect(useCharacterStore.getState().activeCharacter).toBe(affected)
   })

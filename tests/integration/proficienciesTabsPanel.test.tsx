@@ -382,10 +382,28 @@ describe('BuildProficienciesTabsPanel category panels', () => {
     const user = userEvent.setup()
     const lute = () => screen.getByTitle('Choose: Lute')
     expect(within(lute()).getByText('Available')).toBeTruthy()
+    expect(within(lute()).queryByText('Instrument')).toBeNull()
+    const kit = () => screen.getByRole('button', { name: /Disguise Kit.*proficiency unavailable/ })
+    expect(within(kit()).queryByText('Tool')).toBeNull()
+    await user.hover(kit())
+    expect(single.onFocusChange).toHaveBeenLastCalledWith({
+      type: 'item',
+      category: 'tools',
+      name: 'Disguise Kit',
+      isProficient: false,
+    })
+    expect(single.onExpandDetails).toHaveBeenLastCalledWith(true)
+    kit().focus()
+    await user.keyboard('{Enter}')
+    expect(single.onExpandDetails).toHaveBeenLastCalledWith()
+    expect(single.onResolveChoiceSelection).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('button', { name: /Disguise Kit/ })).toHaveLength(1)
     await user.click(lute())
     expect(single.onResolveChoiceSelection).toHaveBeenCalledWith('tools', 'Lute', true, enter.id)
     const overlap = props([enter, warforged])
     rerender(<BuildProficienciesTabsPanel {...overlap} />)
+    expect(screen.getByTitle('Choose: Disguise Kit')).toBeTruthy()
+    expect(screen.queryByText(/choose 1 tool/i)).toBeNull()
     await user.click(lute())
     expect(overlap.onResolveChoiceSelection).not.toHaveBeenCalled()
     await user.click(screen.getByRole('menuitem', { name: /Warforged.*EFA/ }))

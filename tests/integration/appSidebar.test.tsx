@@ -47,6 +47,9 @@ describe('desktop workspace navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Open Affected Sidebar' }))
     expect(screen.getByRole('dialog', { name: 'Additional content unavailable' })).toBeTruthy()
     expect(screen.getByText('External (TEST)')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Game Data settings' }).getAttribute('href')).toBe(
+      '/settings?section=data',
+    )
     expect(useCharacterStore.getState().activeCharacter).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open with limited access' }))
     expect(useCharacterStore.getState().activeCharacter).toBe(character)

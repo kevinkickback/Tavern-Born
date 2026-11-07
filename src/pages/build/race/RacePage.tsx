@@ -46,7 +46,10 @@ import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getSubraceDisplayName } from '@/lib/calculations/raceDisplay'
+import {
+  getSubraceDisplayName,
+  isSubraceDisplayNameAmbiguous,
+} from '@/lib/calculations/raceDisplay'
 import {
   getAvailableSubraces,
   getDamageTraitDisplay,
@@ -60,6 +63,7 @@ import { getFeatChoiceSelectedRefs } from '@/lib/character/commands/featCommandS
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -113,6 +117,33 @@ export function BuildRacePage() {
   const selectedRace = calculationContext?.raceResolution.parentRace
   const subraces = getAvailableSubraces(catalogRace)
   const selectedSubrace = calculationContext?.raceResolution.subraceData
+  const parentName = selectedRace?.name ?? character?.race ?? ''
+  const subraceName = getSubraceDisplayName(
+    parentName,
+    selectedSubrace?.name ?? character?.subrace ?? '',
+  )
+  const subraceSource = selectedSubrace?.source ?? character?.subraceSource
+  const savedSubraceUnavailable =
+    character?.subrace &&
+    !subraces.some(
+      (subrace) =>
+        normalizeOwnerIdentity(subrace.name) === normalizeOwnerIdentity(character.subrace) &&
+        normalizeOwnerIdentity(subrace.source) === normalizeOwnerIdentity(subraceSource),
+    )
+  const subraceLabels =
+    savedSubraceUnavailable && character.subrace
+      ? [...subraces, { name: character.subrace }]
+      : subraces
+  const renderSubraceLabel = (name: string, source?: string) =>
+    source && isSubraceDisplayNameAmbiguous(parentName, name, subraceLabels) ? (
+      <>
+        {name}
+        {' · '}
+        <span className="text-muted-foreground">{source}</span>
+      </>
+    ) : (
+      name
+    )
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     selectedRace,
     selectedSubrace,
@@ -350,11 +381,15 @@ export function BuildRacePage() {
                         <Badge variant="outline" className="text-xs">
                           {selectedRace?.source ?? character.raceSource ?? displayRace?.source}
                         </Badge>
-                        {character.subrace && (
+                        {subraceName && (
                           <span className="truncate text-xs text-muted-foreground">
-                            {getSubraceDisplayName(character.race, character.subrace)}
-                            {character.subraceSource && ` · ${character.subraceSource}`}
+                            {subraceName}
                           </span>
+                        )}
+                        {savedSubraceUnavailable && subraceSource && (
+                          <Badge variant="outline" className="text-xs">
+                            Saved subrace source {subraceSource}
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -400,12 +435,7 @@ export function BuildRacePage() {
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
                               <SelectValue placeholder="Choose a subrace">
-                                {getSubraceDisplayName(
-                                  selectedRace.name,
-                                  selectedSubrace?.name ?? character.subrace ?? '',
-                                )}
-                                {(selectedSubrace?.source ?? character.subraceSource) &&
-                                  ` · ${selectedSubrace?.source ?? character.subraceSource}`}
+                                {renderSubraceLabel(subraceName, subraceSource)}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -415,8 +445,10 @@ export function BuildRacePage() {
                                   value={getSubraceSelectionValue(subrace.name, subrace.source)}
                                   className="text-xs"
                                 >
-                                  {getSubraceDisplayName(selectedRace.name, subrace.name)}
-                                  {subrace.source && ` · ${subrace.source}`}
+                                  {renderSubraceLabel(
+                                    getSubraceDisplayName(parentName, subrace.name),
+                                    subrace.source,
+                                  )}
                                 </SelectItem>
                               ))}
                             </SelectContent>

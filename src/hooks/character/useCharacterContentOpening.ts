@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   createGameDataAvailabilityIndex,
   getUnavailableCharacterContent,
@@ -36,25 +36,13 @@ function inspectCharacter(id: string) {
 
 export function useCharacterContentOpening(onOpened?: () => void) {
   const [pending, setPending] = useState<PendingOpen | null>(null)
-  const [retrying, setRetrying] = useState(false)
-  const [retryMessage, setRetryMessage] = useState<string | null>(null)
-  const currentRequest = useRef<PendingOpen | null>(null)
-  const retryRequest = useRef<PendingOpen | null>(null)
-  const canRetry = useGameDataStore((state) => state.dataSourceConfig !== null)
-  useEffect(
-    () => () => {
-      currentRequest.current = null
-    },
-    [],
-  )
+  const trigger = useRef<HTMLElement | null>(null)
 
-  const cancel = useCallback(() => {
-    currentRequest.current = null
-    retryRequest.current = null
-    setPending(null)
-    setRetrying(false)
-    setRetryMessage(null)
+  const rememberTrigger = useCallback(() => {
+    trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
   }, [])
+
+  const cancel = useCallback(() => setPending(null), [])
   const finish = useCallback(
     (request: PendingOpen) => {
       const state = useCharacterStore.getState()
@@ -72,66 +60,24 @@ export function useCharacterContentOpening(onOpened?: () => void) {
 
   const requestOpen = useCallback(
     (id: string) => {
-      cancel()
       const request = inspectCharacter(id)
-      if (!request) return
-      if (!request.missing.length) {
-        finish(request)
-        return
-      }
-      currentRequest.current = request
-      setPending(request)
+      if (!request) cancel()
+      else if (request.missing.length) setPending(request)
+      else finish(request)
     },
     [cancel, finish],
   )
 
-  const retry = async () => {
-    const request = currentRequest.current
-    if (!request || retryRequest.current === request) return
-    const { dataSourceConfig, gameData, loadGameData, isLoading, isBackgroundRefreshing } =
-      useGameDataStore.getState()
-    if (!dataSourceConfig) return
-    if (isLoading || isBackgroundRefreshing) {
-      setRetryMessage('A source check is already in progress. Try again after it finishes.')
-      return
-    }
-    retryRequest.current = request
-    setRetrying(true)
-    setRetryMessage(null)
-    try {
-      await loadGameData(dataSourceConfig, Boolean(gameData))
-    } catch {
-      // The source can fail before reporting an outcome. Recheck the current catalog below.
-    }
-    if (currentRequest.current !== request) return
-    retryRequest.current = null
-    setRetrying(false)
-    const latest = inspectCharacter(request.id)
-    if (!latest || latest.previousId !== request.previousId) {
-      cancel()
-      return
-    }
-    if (!latest.missing.length) {
-      finish(latest)
-      return
-    }
-    currentRequest.current = latest
-    setPending(latest)
-    setRetryMessage(
-      useGameDataStore.getState().error ?? 'The original rules are still unavailable.',
-    )
-  }
-
   return {
     pending,
-    retrying,
-    retryMessage,
-    canRetry,
+    rememberTrigger,
+    restoreFocus: () => {
+      if (trigger.current?.isConnected) trigger.current.focus({ preventScroll: true })
+    },
     requestOpen,
     cancel,
-    retry,
     openLimited: () => {
-      if (currentRequest.current) finish(currentRequest.current)
+      if (pending) finish(pending)
     },
   }
 }

@@ -65,7 +65,8 @@ function formatProperties(
 function formatToolType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
   if (!typeCode) return '—'
   const code = typeCode.split('|')[0].toUpperCase()
-  return typeByAbbr?.[code] ?? typeCode
+  const label = typeByAbbr?.[code] ?? typeCode
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function formatLanguageType(type?: string): string {

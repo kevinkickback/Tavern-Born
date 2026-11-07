@@ -178,16 +178,11 @@ export function BuildReviewPage() {
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium">{issue.title}</span>
-                        <span
-                          className={cn(
-                            'block text-xs font-medium',
-                            issue.severity === 'blocking'
-                              ? 'text-warning'
-                              : 'text-muted-foreground',
-                          )}
-                        >
-                          {issue.severity === 'blocking' ? 'Needs attention' : 'Suggestion'}
-                        </span>
+                        {issue.severity === 'recommendation' && (
+                          <span className="block text-xs font-medium text-muted-foreground">
+                            Suggestion
+                          </span>
+                        )}
                         <span className="block text-xs text-muted-foreground">
                           {issue.explanation}
                         </span>

@@ -254,7 +254,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const opening = useCharacterContentOpening()
-  const { requestOpen } = opening
+  const { requestOpen, rememberTrigger } = opening
   const deleteCharacters = useCharacterStore((state) => state.deleteCharacters)
   const duplicateCharacter = useCharacterStore((state) => state.duplicateCharacter)
   const { isPending: isLibraryPending, run: runLibraryAction } = useAsyncAction()
@@ -337,6 +337,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const handleLoadCharacter = useCallback(
     (id: string) => {
       if (id === activeCharacterId) return
+      rememberTrigger()
       if (hasUnsavedChanges) {
         setPendingCharacterId(id)
         setConfirmSwitchOpen(true)
@@ -344,7 +345,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       }
       requestOpen(id)
     },
-    [activeCharacterId, hasUnsavedChanges, requestOpen],
+    [activeCharacterId, hasUnsavedChanges, rememberTrigger, requestOpen],
   )
 
   const confirmSwitchCharacter = () => {

@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,22 +16,39 @@ export function CharacterContentOpeningDialog({
 }: {
   opening: ReturnType<typeof useCharacterContentOpening>
 }) {
-  const { pending, retrying, retryMessage, canRetry, cancel, retry, openLimited } = opening
+  const { pending, cancel, openLimited, restoreFocus } = opening
+  const title = useRef<HTMLHeadingElement>(null)
+  const dismissed = useRef(false)
   if (!pending) return null
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) cancel()
+        if (!open) {
+          dismissed.current = true
+          cancel()
+        }
       }}
     >
-      <DialogContent>
+      <DialogContent
+        onOpenAutoFocus={(event) => {
+          dismissed.current = false
+          event.preventDefault()
+          title.current?.focus()
+        }}
+        onCloseAutoFocus={(event) => {
+          if (!dismissed.current) return
+          event.preventDefault()
+          restoreFocus()
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>Additional content unavailable</DialogTitle>
+          <DialogTitle ref={title} tabIndex={-1}>
+            Additional content unavailable
+          </DialogTitle>
           <DialogDescription>
-            {pending.name || 'This character'} uses rules missing from the current game data. You
-            can open the character and keep the saved choices. Editing choices that need those rules
-            requires their original source.
+            {pending.name || 'This character'} uses unavailable rules. Your choices stay saved.
+            Restore the original source in Game Data settings and reopen to edit affected choices.
           </DialogDescription>
         </DialogHeader>
         <ul
@@ -40,33 +58,17 @@ export function CharacterContentOpeningDialog({
           {pending.missing.map(({ name, source }) => (
             <li key={JSON.stringify([name, source])}>
               {name}
-              {source && ' (' + source + ')'}
+              {source && ` (${source})`}
             </li>
           ))}
         </ul>
-        {retryMessage && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {retryMessage}
-          </p>
-        )}
         <DialogFooter>
-          <Button variant="ghost" onClick={cancel}>
-            Cancel
+          <Button variant="outline" asChild>
+            <Link to="/settings?section=data" onClick={cancel}>
+              Game Data settings
+            </Link>
           </Button>
-          {canRetry ? (
-            <Button variant="outline" disabled={retrying} onClick={() => void retry()}>
-              {retrying ? 'Retrying source…' : 'Retry source'}
-            </Button>
-          ) : (
-            <Button variant="outline" asChild>
-              <Link to="/settings?section=data" onClick={cancel}>
-                Game Data settings
-              </Link>
-            </Button>
-          )}
-          <Button onClick={openLimited} disabled={retrying}>
-            Open with limited access
-          </Button>
+          <Button onClick={openLimited}>Open with limited access</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

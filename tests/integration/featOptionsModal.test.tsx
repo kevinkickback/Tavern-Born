@@ -97,8 +97,8 @@ describe('FeatOptionsModal', () => {
 
     const checkboxes = screen.getAllByRole('checkbox')
     fireEvent.click(checkboxes[0])
-    expect(screen.getByText('Guidance').closest('label')?.className).toContain('border-l-accent')
     expect(screen.getByText('Guidance').closest('label')?.className).toContain('bg-accent/10')
+    expect(screen.getByText('Guidance').closest('label')?.className).not.toContain('border-l-')
     expect(checkboxes[0].className).toContain('data-[state=checked]:bg-accent')
     fireEvent.click(checkboxes[1])
     fireEvent.click(screen.getByRole('button', { name: /Finish/ }))

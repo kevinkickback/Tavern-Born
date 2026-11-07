@@ -50,6 +50,20 @@ export function getSubraceDisplayName(parentName: string, subraceName: string): 
   return depth === 0 && parts.every(Boolean) ? parts.join(': ') : child
 }
 
+export function isSubraceDisplayNameAmbiguous(
+  parentName: string,
+  displayName: string,
+  subraces: readonly { name: string }[],
+): boolean {
+  const label = normalizeOwnerIdentity(displayName)
+  return (
+    subraces.filter(
+      (subrace) =>
+        normalizeOwnerIdentity(getSubraceDisplayName(parentName, subrace.name)) === label,
+    ).length > 1
+  )
+}
+
 /** Retain parent context for summaries that do not show a separate race heading. */
 export function getRaceDisplayName(parentName: string, subraceName?: string): string {
   if (!subraceName) return parentName

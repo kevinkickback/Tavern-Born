@@ -3,23 +3,12 @@ import { ItemCard } from '@/components/modals/ItemSelectionModal'
 import { SelectionModal } from '@/components/modals/SelectionModal'
 import { Button } from '@/components/ui/button'
 import { useItemLookup, useItemTextContext } from '@/hooks/data/useGameData'
-import type { GenericEquipmentChoice } from '@/lib/5etools/startingEquipment'
+import {
+  formatEquipmentChoiceLabel,
+  type GenericEquipmentChoice,
+} from '@/lib/5etools/startingEquipment'
 import { startingItemKey } from '@/lib/5etools/startingEquipmentPolicy'
 import type { StartingItemReference } from '@/types/character'
-
-// Presentation labels do not participate in eligibility or source matching.
-const choiceLabels: Readonly<Record<string, string>> = {
-  weaponsimple: 'Simple weapons',
-  weaponsimplemelee: 'Simple melee weapons',
-  weaponmartial: 'Martial weapons',
-  weaponmartialmelee: 'Martial melee weapons',
-  instrumentmusical: 'Musical instruments',
-  toolartisan: 'Artisan’s tools',
-  setgaming: 'Gaming sets',
-  focusspellcastingarcane: 'Arcane focus',
-  focusspellcastingholy: 'Holy symbol',
-  focusspellcastingdruidic: 'Druidic focus',
-}
 
 export interface GenericEquipmentSelectProps {
   choice: GenericEquipmentChoice
@@ -59,13 +48,13 @@ export function GenericEquipmentSelect({
       .filter((ref) => !items.some((item) => startingItemKey(item) === startingItemKey(ref)))
       .map((ref) => [startingItemKey(ref), `${ref.name} (${ref.source})`]),
   )
-  const typeLabel =
-    choiceLabels[choice.token.toLowerCase()] ?? choice.token.replace(/([a-z])([A-Z])/g, '$1 $2')
   return (
     <>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-foreground">{typeLabel}</p>
+          <p className="text-xs font-medium text-foreground">
+            {formatEquipmentChoiceLabel(choice.token)}
+          </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {value.length} / {choice.quantity} selected
           </p>
