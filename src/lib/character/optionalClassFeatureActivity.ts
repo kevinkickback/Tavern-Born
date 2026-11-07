@@ -43,7 +43,7 @@ import {
   isValidRevisedHunterSelection,
   revisedHunterRules,
 } from '@/lib/5etools/revisedHunterIdentity'
-import { getEffectiveSources } from '@/lib/sourceCompatibility'
+import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Subclass5e } from '@/types/5etools'
 import type {
   Character,
@@ -119,6 +119,12 @@ function buildOptionalClassFeatureActivity(
     (_, index) => !invalid.has(index),
   )
   const earned = (owner: OptionalClassFeatureOwner, level: number) => {
+    if (
+      owner[1] === 'barbarian' &&
+      character.originSystem &&
+      !getSourceCompatibility(owner[2], character.originSystem).compatible
+    )
+      return false
     const entries = character.classProgression.filter(
       (entry) => norm(entry.name) === owner[1] && norm(entry.source) === owner[2],
     )

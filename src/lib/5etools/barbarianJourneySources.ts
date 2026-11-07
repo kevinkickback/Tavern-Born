@@ -1,3 +1,4 @@
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -153,7 +154,11 @@ export function getCurrentBarbarianJourneyFeature(
   if (classes?.length !== 1) return undefined
   const cls = classes[0]
   const source = cls.source.trim().toLowerCase()
-  if (source !== 'phb' && source !== 'xphb') return undefined
+  if (
+    (source !== 'phb' && source !== 'xphb') ||
+    !getSourceCompatibility(source, character.originSystem).compatible
+  )
+    return undefined
   if (
     source === 'phb' &&
     name === 'unarmored defense' &&

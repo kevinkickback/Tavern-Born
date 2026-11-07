@@ -100,7 +100,8 @@ export function getCurrentFixedProficiencies(
       if (!rule) continue
       if (
         rule.languageFallback &&
-        (!getCurrentGiantPower(cls, sub) ||
+        (!getSourceCompatibility(cls.source, character.originSystem).compatible ||
+          !getCurrentGiantPower(cls, sub) ||
           (character.allowedSources?.length &&
             !getEffectiveSources(character.allowedSources, character.originSystem).some(
               (source) => canonicalProficiencyName(source) === owner[3],

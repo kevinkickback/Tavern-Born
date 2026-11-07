@@ -141,9 +141,13 @@ export function getBarbarianRitualGrants(
   if (norm(subclass.name) !== norm(spec.name) || norm(subclass.source) !== source) return undefined
   const revised = source === 'xphb'
   const gains: SubclassSpellGrant[] = []
+  const ability = subclass.spellcastingAbility
   if (
     subclass._copy ||
     subclass.sourceIdentityConflict ||
+    (revised &&
+      ability !== undefined &&
+      (typeof ability !== 'string' || norm(ability) !== 'wis')) ||
     norm(subclass.shortName) !== spec.shortName ||
     getFeatureSourceDigest(subclass.additionalSpells ?? []) !== spec.schedule ||
     !matchesNativeSubclassGain(

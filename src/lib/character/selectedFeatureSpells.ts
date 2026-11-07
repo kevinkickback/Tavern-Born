@@ -36,6 +36,7 @@ import {
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
@@ -322,8 +323,12 @@ export function getSelectedFeatureCantripSetups(
     })
   }
   for (const slot of giantPowerSpellSlots) {
-    if (!hasSavedSelectedFeatureSpellOwner(character, slot)) continue
     const [owner, , producer, level] = slot
+    if (
+      !getSourceCompatibility(owner[2], character.originSystem).compatible ||
+      !hasSavedSelectedFeatureSpellOwner(character, slot)
+    )
+      continue
     const classes = catalogs?.classes?.filter(
       (row) => norm(row.name) === owner[1] && norm(row.source) === owner[2],
     )

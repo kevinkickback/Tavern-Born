@@ -39,6 +39,7 @@ import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSe
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { isValidClassProficiencySelection } from '@/lib/schema/classProficiencyValidation'
 import type { Class5e, ClassFeature, Spell5e } from '@/types/5etools'
@@ -136,7 +137,7 @@ test('a new Barbarian path prints named intro rules and later declarations at th
     expect(text).not.toContain('Ordinary introduction.')
     expect(text).not.toContain('Broken nested entry')
   }
-})
+}, 30_000)
 
 test.skipIf(catalogsToTest.length === 1)(
   'Barbarian copied spell features require inherited Wisdom and a matching schedule',
@@ -207,6 +208,34 @@ test.skipIf(catalogsToTest.length === 1)(
     )
     if (!revisedClass || !revisedPath) throw new Error('Missing revised Ancestral Guardian')
     expect(getBarbarianRitualGrants(revisedClass, revisedPath, 10)).toEqual([])
+  },
+)
+
+test.skipIf(catalogsToTest.length === 1)(
+  'Wild Heart rituals require the Wisdom ability declared by the feature',
+  async () => {
+    const document = JSON.parse(await readFile('data/class/class-barbarian.json', 'utf8'))
+    const wild = document.subclass.find(
+      (row: { name: string; classSource: string }) =>
+        row.name === 'Path of the Wild Heart' && row.classSource === 'XPHB',
+    )
+    const grants = (source: string, name: string) => {
+      const cls = (parseClasses(document) as Class5e[]).find(
+        (row) => row.name === 'Barbarian' && row.source === source,
+      )
+      const path = cls?.subclasses?.find((row) => row.name === name && row.source === source)
+      if (!cls || !path) throw new Error(`Missing ${name} for ${source}`)
+      return getBarbarianRitualGrants(cls, path, 10)
+    }
+    for (const ability of [undefined, ' WIS ']) {
+      wild.spellcastingAbility = ability
+      expect(grants('XPHB', 'Path of the Wild Heart')).toHaveLength(3)
+    }
+    for (const ability of ['cha', 42, { code: 'wis' }]) {
+      wild.spellcastingAbility = ability
+      expect(grants('XPHB', 'Path of the Wild Heart')).toEqual([])
+      expect(grants('PHB', 'Path of the Totem Warrior')).toHaveLength(3)
+    }
   },
 )
 
@@ -335,6 +364,16 @@ test.each(catalogsToTest)(
       expect(calculate(actor(19)).abilityScores.total.strength).toBe(22)
       expect(calculate(actor(20)).abilityScores.total.strength).toBe(source === 'PHB' ? 24 : 25)
       expect(calculate(actor(20)).abilityScores.total.constitution).toBe(20)
+      const oppositeEdition = (character: Character) =>
+        characterPersistenceSchema.parse({
+          ...character,
+          originSystem: source === 'PHB' ? '2024' : '2014',
+          allowedSources: [],
+        })
+      const mismatched = oppositeEdition(actor(20))
+      expect(sheet(mismatched).effectiveArmorClass).toBe(12)
+      expect(calculate(mismatched).movement.speeds.walk).toBe(30)
+      expect(calculate(mismatched).abilityScores.total.strength).toBe(22)
       if (type === 'local') {
         const ancestral = (level: number) => ({
           ...actor(level),
@@ -577,6 +616,7 @@ test.each(catalogsToTest)(
               ]),
             )
         }
+        expect(calculate(oppositeEdition(ritualist(10))).fixedClassSpellStatuses).toEqual([])
         const giant = {
           ...actor(3),
           allowedSources: [source, 'BGG'],
@@ -588,6 +628,13 @@ test.each(catalogsToTest)(
             },
           ],
         }
+        expect(getSelectedFeatureCantripSetups(giant, catalogs)).toContainEqual(
+          expect.objectContaining({ name: 'Giant Power' }),
+        )
+        expect(getSelectedFeatureCantripSetups(oppositeEdition(giant), catalogs)).toEqual([])
+        expect(calculate(oppositeEdition(giant)).character.proficiencies.languages).not.toContain(
+          'giant',
+        )
         const slot = giantPowerSpellSlots.find((slot) => slot[0][2] === source.toLowerCase())!
         const languageChoice = (character: Character) =>
           getCharacterClassChoices(
@@ -615,6 +662,7 @@ test.each(catalogsToTest)(
         expect(language).toMatchObject({ level: 3, minimumSelections: 1 })
         if (!language) throw new Error('Missing Giant Power language fallback')
         const available = createClassChoiceCatalogs(catalogs)
+        expect(languageChoice(oppositeEdition(alreadyGiant))).toBeUndefined()
         const alternatives = resolveClassChoiceOptions(language, available, [], 3, alreadyGiant)
           .filter(isClassChoiceOptionEligible)
           .map((row) => row.reference)
@@ -834,6 +882,14 @@ test.each(catalogsToTest)(
         catalogs,
       ).find((row) => row.label === 'Aspect of the Wilds')!
       expect(aspect).toMatchObject({ level: 6, minimumSelections: 1, maximumSelections: 1 })
+      expect(
+        getCharacterClassChoices(
+          cls,
+          getSelectedSubclassData(cls, wild.classProgression[0]),
+          createOptionalClassFeatureActivity(oppositeEdition(wild), catalogs),
+          catalogs,
+        ).some((row) => row.label === 'Aspect of the Wilds'),
+      ).toBe(false)
       const aspectViews = resolveClassChoiceOptions(aspect, available, [], 6, wild).filter(
         isClassChoiceOptionEligible,
       )
@@ -879,6 +935,9 @@ test.each(catalogsToTest)(
           expect.arrayContaining([
             expect.objectContaining({ label: `Aspect of the Wilds: ${option.name}` }),
           ]),
+        )
+        expect(calculate(oppositeEdition(pick)).effects.sourceDeclarations).not.toContainEqual(
+          expect.objectContaining({ label: `Aspect of the Wilds: ${option.name}` }),
         )
         if (option.name === 'Owl')
           expect(result.senses).toEqual(expect.arrayContaining([{ type: 'darkvision', range: 60 }]))

@@ -809,6 +809,7 @@ function deriveWildHeartAspectEffect(
   )
   const owner = owners[0]
   if (
+    character.originSystem !== '2024' ||
     owners.length !== 1 ||
     owner.levels < 6 ||
     normalizeOwnerIdentity(owner.source) !== 'xphb' ||

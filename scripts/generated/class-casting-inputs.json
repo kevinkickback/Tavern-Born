@@ -183,7 +183,7 @@
     },
     {
       "file": "src/lib/5etools/barbarianJourneySources.ts",
-      "sha256": "8749bd003fd3a9af603ff5124c2c5765821d9af4ccd155dad162b0e7f58be307"
+      "sha256": "4f4df3826f9d99d2157471f95ab0055467600b9cad8ad3043a3500304fda3e93"
     },
     {
       "file": "src/lib/5etools/barbarianPathChoiceIdentity.ts",
@@ -195,7 +195,7 @@
     },
     {
       "file": "src/lib/5etools/barbarianRitualSpells.ts",
-      "sha256": "6b16e3b8a9c825d2d1c24c18c3141e3494bf73b62c05f3106c6594488ab92bc2"
+      "sha256": "b77b2358a02fe728e54c2118244aef982441d11bbdc51d9e117ee3654fc4a0ba"
     },
     {
       "file": "src/lib/5etools/bardCollegeFeatures.ts",
@@ -627,7 +627,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "660dd4a53b4eff8b643eae68f0e38a1831b3c8fb551f25f50cf2179def04185a"
+      "sha256": "793a7322684cd1bc61165140063f529f6e385a794780458c1ab1e1705fb1931c"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
