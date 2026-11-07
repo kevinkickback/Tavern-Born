@@ -406,3 +406,15 @@ source already supplies Giant. Removing or restoring either source recomputes th
 Unarmored Defense uses Dexterity and Constitution and permits a shield. Fast Movement applies
 while the character is free of heavy armor. Primal Champion increases intrinsic Strength and
 Constitution by four, subject to the printing's cap, before equipment effects.
+
+## Cleric domain gains
+
+Classic domains start at level 1 and revised domains start at level 3. Retained classic domains
+keep their exact authored dependencies, including the Plane Shift Knowledge features. Show separate
+features at the gain level even when an introduction and a Channel Divinity option share a level.
+Use the active optional replacement in Class Details and sheet exports.
+
+Domain skill choices and fixed training use the earned source and the selected subclass.
+At level 6, revised Knowledge's Unfettered Mind grants Intelligence saving throw proficiency
+or one saving throw the character lacked. The acquisition choice preserves which branch applied,
+and source withdrawal suspends the resulting benefit.

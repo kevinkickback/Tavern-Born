@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
+import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import {
   formatSpellReference,
@@ -151,10 +152,12 @@ export function ManagedClassSpellsDialog({
   const selected = pickerIndex === null ? undefined : rows[pickerIndex]
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
   const savantGain = selected ? getSavantSpellbookGain(selected.slot) : undefined
+  const selectedArcana = selected ? getClericArcanaSpellRule(selected.slot) : undefined
   const allowClassListBypass =
     !isBookSpecialty &&
     !savantGain &&
     selected?.slot[1] !== 'feature-cantrip' &&
+    !selectedArcana &&
     !(selected && getBardLoreSpellRule(selected.slot))
   const pickerKind =
     (selected &&
@@ -291,22 +294,26 @@ export function ManagedClassSpellsDialog({
                     !specialtyPools.get(slotId)?.defaultReferences.has(draftTarget)))
               const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
+              const arcana = getClericArcanaSpellRule(row.slot)
               const kind =
                 row.slot[1] === 'class-arcanum'
                   ? 'Mystic Arcanum'
                   : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
                     ? 'Cantrip'
                     : (featureLabel ?? 'Spell')
+              const position = arcana
+                ? `Level ${arcana.rank}, choice ${row.slot[4] + 1}`
+                : row.slot[4] + 1
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
                   className={cn('rounded-lg border p-3', chosen && 'border-success/60')}
-                  aria-label={`${kind} ${row.slot[4] + 1}`}
+                  aria-label={`${kind} ${position}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">
-                        {featureNames.get(row.slot[2]) ?? featureLabel ?? kind} {row.slot[4] + 1}
+                        {featureNames.get(row.slot[2]) ?? featureLabel ?? kind} {position}
                       </p>
                       <p className="font-medium">
                         {row.target ? `${row.target.name} (${row.target.source})` : 'Not chosen'}
@@ -380,7 +387,11 @@ export function ManagedClassSpellsDialog({
           onOpenChange={(open) => {
             if (!open) setPickerIndex(null)
           }}
-          title={`Choose ${pickerKind} ${selected.slot[4] + 1}`}
+          title={
+            selectedArcana
+              ? `Choose level ${selectedArcana.rank} spell ${selected.slot[4] + 1}`
+              : `Choose ${pickerKind} ${selected.slot[4] + 1}`
+          }
           spells={pool.spells}
           className={entry.name}
           classSource={entry.source}

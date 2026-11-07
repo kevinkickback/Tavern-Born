@@ -11,6 +11,10 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
+import {
+  getPsaKnowledgeIntroDependency,
+  isPsaKnowledgeDependency,
+} from '@/lib/5etools/psaKnowledgeFeatures'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -76,7 +80,7 @@ export function getDeclaredSubclassStaticFeatures(
       getFeatureSourceDigest(row.entries) === digest
     return valid(feature) && candidates.length && candidates.every(valid) ? feature : undefined
   }
-  const matchesOwner = (ref: string) => {
+  const matchesOwner = (ref: string, dependency?: string) => {
     const declaration = decodeOptionalDeclaration(ref, 'subclassFeature')
     const row = declaration?.decoded
     return row &&
@@ -84,13 +88,19 @@ export function getDeclaredSubclassStaticFeatures(
       norm(row.className) === className &&
       (norm(row.classSource) === source ||
         (source === 'xphb' && norm(row.classSource) === 'phb')) &&
-      norm(row.subclassShortName) === norm(subclass.shortName) &&
-      norm(row.subclassSource) === norm(subclass.source)
+      ((norm(row.subclassShortName) === norm(subclass.shortName) &&
+        norm(row.subclassSource) === norm(subclass.source)) ||
+        isPsaKnowledgeDependency(subclass, declaration.target) ||
+        declaration.target === dependency)
       ? declaration
       : undefined
   }
-  const withNestedRules = (feature: SubclassFeature) => {
+  const withNestedRules = (feature: SubclassFeature, parentDependency?: string) => {
     if (!gain.expandNestedRules || !feature.entries) return feature
+    const dependency =
+      parentDependency && getSubclassFeatureIdentity(feature) === parentDependency
+        ? 'subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb'
+        : undefined
     const siblings = feature.entries.map(record)
     return {
       ...feature,
@@ -98,14 +108,14 @@ export function getDeclaredSubclassStaticFeatures(
         const row = siblings[index]
         const uid = row.subclassFeature
         if (row.type !== 'refSubclassFeature' || typeof uid !== 'string') return entry
-        const child = matchesOwner(uid)
+        const child = matchesOwner(uid, dependency)
         if (
           !child ||
           child.decoded.level !== feature.level ||
           siblings.filter(
             (sibling) =>
               typeof sibling.subclassFeature === 'string' &&
-              matchesOwner(sibling.subclassFeature)?.target === child.target,
+              matchesOwner(sibling.subclassFeature, dependency)?.target === child.target,
           ).length !== 1 ||
           !exactOptionalDeclarationReference(row, uid, 'subclassFeature') ||
           Object.keys(row).some(
@@ -129,10 +139,11 @@ export function getDeclaredSubclassStaticFeatures(
     if (ref.ref === subclass.introFeatureRef && declaration.decoded.level === first) {
       if (!Array.isArray(attached.entries)) return []
       const entries = attached.entries.map(record)
+      const dependency = getPsaKnowledgeIntroDependency(subclass, declaration.target)
       const nested = entries.flatMap((row) => {
         const uid = row.subclassFeature
         if (typeof uid !== 'string') return []
-        const nested = matchesOwner(uid)
+        const nested = matchesOwner(uid, dependency)
         if (!nested?.decoded.level || nested.decoded.level > first) return []
         return [{ target: nested.target, uid, row }]
       })
@@ -147,7 +158,7 @@ export function getDeclaredSubclassStaticFeatures(
         )
           return []
         const exact = verified(row.feature as SubclassFeature | undefined, target)
-        return exact ? [withNestedRules(exact)] : []
+        return exact ? [withNestedRules(exact, dependency)] : []
       })
       if ('sourceDeclaredGains' in gain && verified(attached, declaration.target)) {
         for (const row of entries) {

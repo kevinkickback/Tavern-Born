@@ -54,9 +54,9 @@ test('actual structured tools, two complete rules and five production owner path
   expect(targetKeys.size).toBe(7)
   const expected = {
     features: SUBCLASS_PROFICIENCY_CHECKPOINT.features.filter((row) => targetKeys.has(row.target)),
-    roots: SUBCLASS_PROFICIENCY_CHECKPOINT.roots.filter((row) =>
-      ownerKeys.has(JSON.stringify(row.owner)),
-    ),
+    roots: SUBCLASS_PROFICIENCY_CHECKPOINT.roots
+      .filter((row) => ownerKeys.has(JSON.stringify(row.owner)))
+      .map((row) => ({ ...row, paths: row.paths.filter((path) => targetKeys.has(path.target)) })),
   }
   expect(expected.features).toHaveLength(7)
   expect(expected.roots).toHaveLength(5)

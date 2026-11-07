@@ -125,6 +125,33 @@
       ]
     },
     {
+      "target": "subclass-feature|arcane initiate|cleric|phb|arcana|scag|1|scag",
+      "name": "Arcane Initiate",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["arcana"]
+      },
+      "digest": "0787b6fbfddec98cd53ac175bb1850859bd36889d312c8f72edb0423ca39b0da",
+      "metadataDigest": "12bcc2bbca09c184899916d86d9c0e656afc6c62e611e9ea8654cb9ff092437c",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
       "name": "Bonus Proficiencies",
       "className": "Bard",
@@ -181,6 +208,201 @@
       ]
     },
     {
+      "target": "subclass-feature|bonus proficiencies|cleric|phb|order|tce|1|tce",
+      "name": "Bonus Proficiencies",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"]
+      },
+      "digest": "7794c6de8f2c398b33a360f8d16a68c0181cda23f451789df91f26078c17a1f2",
+      "metadataDigest": "e5c870f6ddea270ef1af5c53e4ee7f1ec26b59c1b0475d36fdec82553b237915",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "otherSources",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|cleric|phb|tempest|phb|1|phb",
+      "name": "Bonus Proficiencies",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"],
+        "weapons": ["martial"]
+      },
+      "digest": "27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337",
+      "metadataDigest": "145cc89803adac797515d306d70be40ce015bdca3939afdd85a8a413dcfb81c7",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|cleric|phb|twilight|tce|1|tce",
+      "name": "Bonus Proficiencies",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"],
+        "weapons": ["martial"]
+      },
+      "digest": "aa020e3bb541ac6a8c2974acf8a01bf949b602999a8aa6cf1baadfd31d5dc6fe",
+      "metadataDigest": "9b21da143d7b753c2c6e6e20f3f4c79f3715be5582fb53ce29b11ab401f1d105",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|cleric|phb|war|phb|1|phb",
+      "name": "Bonus Proficiencies",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"],
+        "weapons": ["martial"]
+      },
+      "digest": "27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337",
+      "metadataDigest": "8250d03d1a4323b45b48173cd289e8da10f79fadcb2ceda9c65d9cd03cb68eff",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|cleric|phb|zeal (psa)|psa|1|psa",
+      "name": "Bonus Proficiencies",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"],
+        "weapons": ["martial"]
+      },
+      "digest": "27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337",
+      "metadataDigest": "3be7b8b5b18d4bba55e63012795c2dacbbeadafd323264f2c7b7f3c7931297a3",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|death|dmg|1|dmg",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "weapons": ["martial"]
+      },
+      "digest": "9b922e8c3cd04cc219682e2a52ebdc5f7717f5700f2a7e7a7277f2c45f49c803",
+      "metadataDigest": "64b5ffaeafd36f3e2a9ba56802003fb8dc4f6fe0e9f5588dce649011243cd721",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|forge|xge|1|xge",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"],
+        "tools": ["smith's tools"]
+      },
+      "digest": "7a6e43269e3a9554ef011b4051e4623f2d2396b620830dc6459dc9391c3b052d",
+      "metadataDigest": "a4fb84e61976867f26944e2b95ab9344cb83aae21f2841b43299b7729e00fa0e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
       "name": "Bonus Proficiency",
       "className": "Cleric",
@@ -203,6 +425,87 @@
         "page",
         "source",
         "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|nature|phb|1|phb",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"]
+      },
+      "digest": "10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4",
+      "metadataDigest": "ddfc8247ea0367633c1551325b9fce96c5eb002b647405166f9ef467580af57e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|solidarity (psa)|psa|1|psa",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"]
+      },
+      "digest": "0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235",
+      "metadataDigest": "2c6e37c78442a1fb5bde73eddd08a45b4fb23699c2248f5851a603c67a82d75a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiency|cleric|phb|strength (psa)|psa|1|psa",
+      "name": "Bonus Proficiency",
+      "className": "Cleric",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["heavy"]
+      },
+      "digest": "10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4",
+      "metadataDigest": "5e8a95f46d42fc7d590a07b7eddab93163dbbe85fe51d5f1aa8167e3bfadf92e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
         "subclassShortName",
         "subclassSource"
       ]
@@ -355,6 +658,43 @@
       "skills": ["nature", "survival"],
       "digest": "d03490da6f2e74df8779efac42d6b62bdd6ad86a1bde9a8fdfd7baec79030226",
       "metadataDigest": "da2ffa5b6f53be26583efcd612a1178117a3d4e24b9e6d5070cc44d5bbcbbf5d",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof",
+      "name": "Unfettered Mind",
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "level": 6,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["intelligence"]
+      },
+      "subclassGain": {
+        "owner": ["cleric", "xphb", "knowledge domain", "frhof"],
+        "target": "class-feature|subclass feature|cleric|xphb|6|xphb",
+        "position": "at-level"
+      },
+      "fallback": {
+        "name": "intelligence",
+        "count": 1,
+        "savingThrowPool": ["strength", "dexterity", "constitution", "wisdom", "charisma"]
+      },
+      "digest": "d0691c227d9e1d465134490834ddc45ec7564f4c4e08c6d78c27e7212a997271",
+      "metadataDigest": "92e67d7e2df37fb5c72ce438a00cc6d4040e68e43d9f92d804d9005e58d76461",
       "fields": [
         "className",
         "classSource",

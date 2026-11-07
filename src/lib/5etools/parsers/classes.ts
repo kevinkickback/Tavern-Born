@@ -31,6 +31,7 @@ import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
 } from '@/lib/5etools/fixedProficiencySource'
+import { auditInheritedDomainSpellRoots } from '@/lib/5etools/legacyClericDomainSpells'
 import {
   auditInheritedOathSpellRoots,
   isInheritedOathSourceFeature,
@@ -535,9 +536,13 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   const subclassRecords = asArray(obj.subclass).map(asObject)
   const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
   const packages = auditSubclassProficiencyPackages(classRecords, subclassRecords, records, origin)
-  const materializedSubclasses = auditInheritedOathSpellRoots(
+  const materializedSubclasses = auditInheritedDomainSpellRoots(
     subclassRecords,
-    auditInheritedBarbarianRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+    auditInheritedOathSpellRoots(
+      subclassRecords,
+      auditInheritedBarbarianRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+    ),
+    records,
   )
   const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {

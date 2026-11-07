@@ -41,7 +41,7 @@ export function normalizeSubclassProficiencyChoices(
     if (!target) return []
     return (rule?.domains ?? []).map((domain) => ({
       id: getClassProficiencyChoiceId(owner, path.target, domain.domain, path.level),
-      label: `${target.name} ${domain.domain}`,
+      label: `${target.name} ${domain.domain === 'savingThrows' ? 'saving throw' : domain.domain}`,
       kind: 'proficiency' as const,
       proficiencyDomain: domain.domain,
       owner: { ...owner, featureName: target.name, featureSource: target.source },

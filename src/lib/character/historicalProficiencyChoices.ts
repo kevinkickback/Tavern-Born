@@ -6,9 +6,9 @@ import type { NormalizedCharacterChoice } from '@/types/classRules'
 export function getHistoricalProficiencyRule(choiceId: string) {
   const relation = decodeClassProficiencyChoiceId(choiceId)
   const rule = relation && classProficiencyRule(relation.target)
-  return relation?.domain === 'skills' &&
+  return (relation?.domain === 'skills' || relation?.domain === 'savingThrows') &&
     rule?.proficiencyAtGain &&
-    rule.domains.some((row) => row.domain === 'skills')
+    rule.domains.some((row) => row.domain === relation.domain)
     ? rule
     : undefined
 }

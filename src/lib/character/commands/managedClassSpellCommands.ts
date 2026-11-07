@@ -1,4 +1,6 @@
 import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
+import { clericDomainCantrips } from '@/lib/5etools/clericDomainCantripSources'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
@@ -15,6 +17,7 @@ import {
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
 import { getOptionalClassFixedSpellNamesAtGain } from '@/lib/character/optionalClassFixedSpells'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
   getInvalidManagedClassSpellPaths,
@@ -72,7 +75,8 @@ export function setManagedClassSpellChoicesCommand(
         throw new RangeError('This class spell slot is invalid.')
       if (
         (request.slot[1] === 'feature-cantrip' ||
-          request.slot[1] === 'class-spellbook-specialty') &&
+          request.slot[1] === 'class-spellbook-specialty' ||
+          getClericArcanaSpellRule(request.slot)) &&
         request.target &&
         request.policy !== 'default'
       )
@@ -237,9 +241,24 @@ export function retainEarnedManagedClassSpells(
         .map(managedClassSpellId),
     )
   const nextIds = earnedIds(nextProgression)
-  const lostSlot = [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
+  // These source-derived slots have no catalog-free quota or level. Retire empty drafts on
+  // an owner change or level loss while preserving saved selections that are still earned.
+  const belongsTo = (entry: CharacterClassEntry, rule: (typeof clericDomainCantrips)[number]) =>
+    norm(entry.name) === 'cleric' &&
+    norm(entry.source) === rule.printing &&
+    norm(entry.subclass) === rule.subclass &&
+    norm(entry.subclassSource) === rule.source
+  const lostDomainProgress = clericDomainCantrips.some((rule) =>
+    character.classProgression.some(
+      (entry) =>
+        belongsTo(entry, rule) &&
+        !nextProgression.some((next) => belongsTo(next, rule) && next.levels >= entry.levels),
+    ),
+  )
+  const lostSlot =
+    lostDomainProgress || [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
   const removed = (character.managedClassSpellChoices ?? []).filter((choice) =>
-    choice.slot[1] === 'feature-cantrip'
+    choice.slot[1] === 'feature-cantrip' || getClericArcanaSpellRule(choice.slot)
       ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
         !nextProgression.some(
           (entry) =>

@@ -57,8 +57,14 @@ export function projectOwnedProficiencies(
     (left, right) =>
       left.choice.level - right.choice.level || left.choice.id.localeCompare(right.choice.id),
   )
-  const liveSelected = (selection: CharacterClassChoiceSelection) =>
-    selection.selected.filter((option) => hasProficiencyCatalogTarget(option, catalogs))
+  const liveSelected = (selection: CharacterClassChoiceSelection) => {
+    const pool = choices.get(selection.choiceId)?.currentProficiencySkillPool
+    return selection.selected.filter(
+      (option) =>
+        (!pool || pool.includes(decodeProficiencyOption(option)?.name ?? '')) &&
+        hasProficiencyCatalogTarget(option, catalogs),
+    )
+  }
   const languageFallbacks = fixed.filter(({ rule }) => rule.languageFallback)
   const normalFixed = fixed.filter(({ rule }) => !rule.languageFallback)
   const requiresKnownLanguage = (choice: NormalizedCharacterChoice) => {

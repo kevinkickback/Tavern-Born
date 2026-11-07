@@ -148,8 +148,19 @@ try {
       fields: feature.fields,
       optional: false,
       proficiencyAtGain: feature.fallback.name,
+      ...(feature.subclassGain && { subclassGainTarget: feature.subclassGain.target }),
       domains: [
-        { domain: 'skills', count: feature.fallback.count, skillPool: feature.fallback.skillPool },
+        feature.fallback.savingThrowPool
+          ? {
+              domain: 'savingThrows',
+              count: feature.fallback.count,
+              savingThrowPool: feature.fallback.savingThrowPool,
+            }
+          : {
+              domain: 'skills',
+              count: feature.fallback.count,
+              skillPool: feature.fallback.skillPool,
+            },
       ],
     })
   }
@@ -193,6 +204,7 @@ try {
     entriesDigest: getFeatureSourceDigest,
     metadata: certificates.subclassProficiencyMetadata,
     intro: getSubclassIntroReference,
+    rootDigest: certificates.subclassProficiencyRootDigest,
     validateProgression: (root) => {
       if (
         root.className === 'Bard' &&

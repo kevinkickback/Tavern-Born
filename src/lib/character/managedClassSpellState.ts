@@ -1,4 +1,5 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
+import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
@@ -28,7 +29,11 @@ export function removeManagedClassSpellMaterialization(
     if (!targets.length) return profile
     const automaticLore = new Set(
       targets
-        .filter((choice) => getBardLoreSpellRule(choice.slot)?.source === 'xphb')
+        .filter(
+          (choice) =>
+            getBardLoreSpellRule(choice.slot)?.source === 'xphb' ||
+            getClericArcanaSpellRule(choice.slot),
+        )
         .map((choice) => getSpellReferenceKey(choice.target.name, choice.target.source)),
     )
     const alwaysPreparedSpells = automaticLore.size

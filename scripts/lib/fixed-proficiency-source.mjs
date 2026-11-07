@@ -102,6 +102,55 @@ const bardCollegeTraining = new Map([
   ],
 ])
 
+const heavy = { armor: ['heavy'] }
+const heavyAndMartial = { ...heavy, weapons: ['martial'] }
+const clericDomainTraining = new Map([
+  [
+    'subclass-feature|bonus proficiency|cleric|phb|death|dmg|1|dmg',
+    ['9b922e8c3cd04cc219682e2a52ebdc5f7717f5700f2a7e7a7277f2c45f49c803', { weapons: ['martial'] }],
+  ],
+  [
+    'subclass-feature|bonus proficiency|cleric|phb|nature|phb|1|phb',
+    ['10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4', heavy],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|cleric|phb|tempest|phb|1|phb',
+    ['27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337', heavyAndMartial],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|cleric|phb|war|phb|1|phb',
+    ['27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337', heavyAndMartial],
+  ],
+  [
+    'subclass-feature|bonus proficiency|cleric|phb|solidarity (psa)|psa|1|psa',
+    ['0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235', heavy],
+  ],
+  [
+    'subclass-feature|bonus proficiency|cleric|phb|strength (psa)|psa|1|psa',
+    ['10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4', heavy],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|cleric|phb|zeal (psa)|psa|1|psa',
+    ['27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337', heavyAndMartial],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|cleric|phb|order|tce|1|tce',
+    ['7794c6de8f2c398b33a360f8d16a68c0181cda23f451789df91f26078c17a1f2', heavy],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|cleric|phb|twilight|tce|1|tce',
+    ['aa020e3bb541ac6a8c2974acf8a01bf949b602999a8aa6cf1baadfd31d5dc6fe', heavyAndMartial],
+  ],
+  [
+    'subclass-feature|bonus proficiency|cleric|phb|forge|xge|1|xge',
+    [
+      '7a6e43269e3a9554ef011b4051e4623f2d2396b620830dc6459dc9391c3b052d',
+      { ...heavy, tools: ["smith's tools"] },
+    ],
+  ],
+])
+const arcaneInitiate = 'subclass-feature|arcane initiate|cleric|phb|arcana|scag|1|scag'
+
 export function deriveFixedProficiencyRules(documents, api) {
   const features = []
   const push = (feature, kind, mechanics, identity) => {
@@ -128,6 +177,61 @@ export function deriveFixedProficiencyRules(documents, api) {
   for (const document of documents) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
       const target = api.subclassIdentity(feature)
+      if (target === 'subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof') {
+        validateFeature(feature, SUBCLASS_FIELDS)
+        if (
+          feature._copy ||
+          api.entriesDigest(feature.entries, false) !==
+            'd0691c227d9e1d465134490834ddc45ec7564f4c4e08c6d78c27e7212a997271'
+        )
+          fail('Unsupported Unfettered Mind source')
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: { savingThrows: ['intelligence'] },
+            subclassGain: {
+              owner: ['cleric', 'xphb', 'knowledge domain', 'frhof'],
+              target: 'class-feature|subclass feature|cleric|xphb|6|xphb',
+              position: 'at-level',
+            },
+            fallback: {
+              name: 'intelligence',
+              count: 1,
+              savingThrowPool: ['strength', 'dexterity', 'constitution', 'wisdom', 'charisma'],
+            },
+          },
+          api.subclassIdentity,
+        )
+        continue
+      }
+      const clericTraining = clericDomainTraining.get(target)
+      if (clericTraining || target === arcaneInitiate) {
+        const orderReference =
+          target === 'subclass-feature|bonus proficiencies|cleric|phb|order|tce|1|tce' &&
+          JSON.stringify(feature.otherSources) === JSON.stringify([{ source: 'GGR', page: 25 }])
+        validateFeature(feature, [
+          ...SUBCLASS_FIELDS,
+          'srd',
+          'srd52',
+          'basicRules2024',
+          ...(orderReference ? ['otherSources'] : []),
+        ])
+        const digest =
+          clericTraining?.[0] ?? '0787b6fbfddec98cd53ac175bb1850859bd36889d312c8f72edb0423ca39b0da'
+        if (feature._copy || api.entriesDigest(feature.entries, false) !== digest)
+          fail('Unsupported Cleric domain training source')
+        if (clericTraining)
+          push(feature, 'fixed-training', { training: clericTraining[1] }, api.subclassIdentity)
+        else
+          push(
+            feature,
+            'fixed-training',
+            { training: { skills: ['arcana'] } },
+            api.subclassIdentity,
+          )
+        continue
+      }
       const bardTraining = bardCollegeTraining.get(target)
       if (bardTraining || target === 'subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof') {
         const digest =

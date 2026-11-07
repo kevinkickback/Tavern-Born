@@ -17,7 +17,12 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { getDirectSubclassFeatureReference } from '@/lib/5etools/nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import {
+  getPsaKnowledgeIntroDependency,
+  isPsaKnowledgeDependency,
+} from '@/lib/5etools/psaKnowledgeFeatures'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
@@ -67,10 +72,18 @@ export function resolveSubclassDetailsSelection(
   const subclass = classData?.subclasses?.find(
     (value) => getEntityLookupKey(value.name, value.source) === key,
   )
+  const introTarget = subclass?.introFeatureRef
+    ? getSubclassFeatureIdentity(decodeSubclassFeatureReference(subclass.introFeatureRef))
+    : undefined
+  const dependency = subclass && getPsaKnowledgeIntroDependency(subclass, introTarget)
+  const entries =
+    dependency && subclass && introTarget
+      ? getDirectSubclassFeatureReference(subclass, introTarget)?.feature?.entries
+      : subclass?.entries
   return {
     name: subclass?.name ?? selection.name,
     source: subclass?.source ?? selection.source,
-    entries: resolveSubclassFeatureRefs(subclass?.entries ?? [], subclass?.shortName),
+    entries: resolveSubclassFeatureRefs(entries ?? [], subclass?.shortName, undefined, dependency),
     levelFeatures: getSubclassFeatureGroups(subclass),
   }
 }
@@ -190,6 +203,7 @@ export function projectClassLevelFeatures(
       ) ?? []
     const targets = refs.flatMap((ref) => {
       const decoded = decodeSubclassFeatureReference(ref.ref)
+      const target = getSubclassFeatureIdentity(decoded)
       return !ref.sourceIdentityConflict &&
         isExactSubclassFeatureReference({ ...ref }, ref.ref) &&
         normalized(decoded.className) === normalized(cls.name) &&
@@ -197,9 +211,11 @@ export function projectClassLevelFeatures(
           (normalized(cls.source) === 'xphb' &&
             normalized(decoded.classSource) === 'phb' &&
             normalized(subclass.source) !== 'xphb')) &&
-        normalized(decoded.subclassShortName) === normalized(subclass.shortName) &&
-        normalized(decoded.subclassSource) === normalized(subclass.source)
-        ? [getSubclassFeatureIdentity(decoded)]
+        ((normalized(decoded.subclassShortName) === normalized(subclass.shortName) &&
+          normalized(decoded.subclassSource) === normalized(subclass.source)) ||
+          (isPsaKnowledgeDependency(subclass, target) &&
+            isPsaKnowledgeDependency(sourceSubclass, target)))
+        ? [target]
         : []
     })
     const exact = features.filter((feature) => {
@@ -213,15 +229,21 @@ export function projectClassLevelFeatures(
       )
     })
     const laterGain = level > (subclassLevel ?? Infinity)
+    const clericDomainGain = normalized(cls.name) === 'cleric' && level === subclassLevel
+    const intro = subclass.introFeatureRef
+      ? getSubclassFeatureIdentity(decodeSubclassFeatureReference(subclass.introFeatureRef))
+      : undefined
     const displayed = laterGain
       ? exact
-      : exact.filter((feature) =>
-          choices.some(
-            (choice) =>
-              level > choice.level &&
-              getProgressiveChoiceGainCount(choice, level) &&
-              isProgressiveChoiceFeature(feature, choice),
-          ),
+      : exact.filter(
+          (feature) =>
+            (clericDomainGain && intro && getSubclassFeatureIdentity(feature) !== intro) ||
+            choices.some(
+              (choice) =>
+                level > choice.level &&
+                getProgressiveChoiceGainCount(choice, level) &&
+                isProgressiveChoiceFeature(feature, choice),
+            ),
         )
     if (!displayed.length) continue
     const current = result.get(level) ?? []

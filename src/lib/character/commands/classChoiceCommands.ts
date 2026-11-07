@@ -349,7 +349,7 @@ function currentLiteralChoice(
       getHistoricalProficiencyRule(choice.id) &&
       !character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.proficiencyAtGain
     )
-      throw new RangeError('Confirm the proficiency setup before choosing a fallback skill.')
+      throw new RangeError('Confirm the proficiency setup before choosing a fallback proficiency.')
     const prior =
       character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.selected ?? []
     const eligible = new Set(

@@ -13,6 +13,7 @@ const CLASS_PROFICIENCY_DOMAINS: readonly ClassProficiencyDomain[] = [
   'languages',
   'tools',
   'skills',
+  'savingThrows',
 ]
 
 /** Proficiencies are named domains, independent of equivalent catalog printings. */

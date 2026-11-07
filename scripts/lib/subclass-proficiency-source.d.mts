@@ -32,6 +32,7 @@ export function deriveSubclassProficiencyCertificates(
     paths: typeof certificates.collectSubclassProficiencyPaths
     owner: typeof certificates.getSubclassProficiencyOwner
     digest: typeof certificates.subclassProficiencyDigest
+    rootDigest?: typeof certificates.subclassProficiencyRootDigest
     entriesDigest: typeof audit.getFeatureSourceDigest
     metadata: typeof certificates.subclassProficiencyMetadata
     intro: typeof content.getSubclassIntroReference

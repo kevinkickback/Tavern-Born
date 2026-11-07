@@ -22,7 +22,7 @@ export function getInvalidFixedProficiencyPaths(
   const pairs = new Map<string, { name: string; id: string }>()
   const trainingRules = new Map<string, NonNullable<ReturnType<typeof fixedProficiencyRule>>>()
   const hasValue = (
-    domain: 'skills' | 'expertise' | 'tools' | 'languages' | 'armor' | 'weapons',
+    domain: 'skills' | 'expertise' | 'tools' | 'languages' | 'armor' | 'weapons' | 'savingThrows',
     name: string,
   ) => character.proficiencies[domain].some((value) => canonicalProficiencyName(value) === name)
   for (const [domain, values] of Object.entries(character.provenance?.proficiencies ?? {})) {
@@ -46,7 +46,11 @@ export function getInvalidFixedProficiencyPaths(
             : rule.kind === 'fixed-languages'
               ? domain === 'languages' && rule.languages?.includes(name) && hasValue(domain, name)
               : rule.kind === 'fixed-training'
-                ? (domain === 'armor' || domain === 'weapons' || domain === 'tools') &&
+                ? (domain === 'armor' ||
+                    domain === 'weapons' ||
+                    domain === 'tools' ||
+                    domain === 'skills' ||
+                    domain === 'savingThrows') &&
                   rule.training?.[domain]?.includes(name) &&
                   hasValue(domain, name)
                 : (domain === 'skills' || domain === 'expertise') &&
@@ -82,9 +86,9 @@ export function getInvalidFixedProficiencyPaths(
     )
       paths.push(['provenance', 'proficiencies', 'expertise', name])
   }
-  // Armor and weapon members are materialized together. Tool members depend on the live catalog.
+  // Fixed training is materialized together. Tool members depend on the live catalog.
   for (const [id, rule] of trainingRules)
-    for (const domain of ['armor', 'weapons'] as const)
+    for (const domain of ['armor', 'weapons', 'skills', 'savingThrows'] as const)
       for (const name of rule.training?.[domain] ?? [])
         if (
           !(character.provenance?.proficiencies[domain]?.[name] ?? []).some(

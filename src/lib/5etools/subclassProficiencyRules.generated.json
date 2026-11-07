@@ -1,5 +1,67 @@
 [
   {
+    "target": "subclass-feature|acolyte of nature|cleric|phb|nature|phb|1|phb",
+    "digest": "a333dc9b77f5dfb06f7ce040f476bf0263109e41d5c39b104b42cb0a170aea70",
+    "optional": false,
+    "subclassGainTargets": [
+      "class-feature|divine domain|cleric|phb|1|phb",
+      "class-feature|cleric subclass|cleric|xphb|3|xphb"
+    ],
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["animal handling", "nature", "survival"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|acolyte of strength|cleric|phb|strength (psa)|psa|1|psa",
+    "digest": "8016ac673ade8b69f3ef6b76464bc136ff2732129528f1339bbfdcec77d6f135",
+    "optional": false,
+    "subclassGainTargets": [
+      "class-feature|divine domain|cleric|phb|1|phb",
+      "class-feature|cleric subclass|cleric|xphb|3|xphb"
+    ],
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["animal handling", "athletics", "nature", "survival"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
     "digest": "66be08e9a75ea40ebd01b11b0527f30ccb90edfa856a3098cf9d01cd104b169e",
     "fields": [
@@ -146,6 +208,38 @@
     ]
   },
   {
+    "target": "subclass-feature|bonus proficiencies|cleric|phb|order|tce|1|tce",
+    "digest": "7794c6de8f2c398b33a360f8d16a68c0181cda23f451789df91f26078c17a1f2",
+    "optional": false,
+    "subclassGainTargets": [
+      "class-feature|divine domain|cleric|phb|1|phb",
+      "class-feature|cleric subclass|cleric|xphb|3|xphb"
+    ],
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "otherSources",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["intimidation", "persuasion"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
     "digest": "ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac",
     "optional": false,
@@ -228,6 +322,37 @@
     ]
   },
   {
+    "target": "subclass-feature|implement of peace|cleric|phb|peace|tce|1|tce",
+    "digest": "4c99ea02e62d4a382b77eed4f78d566dd9f33f6a4d6c6d75763b8263244420df",
+    "optional": false,
+    "subclassGainTargets": [
+      "class-feature|divine domain|cleric|phb|1|phb",
+      "class-feature|cleric subclass|cleric|xphb|3|xphb"
+    ],
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["insight", "performance", "persuasion"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
     "digest": "3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32",
     "optional": false,
@@ -277,6 +402,62 @@
         "domain": "skills",
         "count": 1,
         "skillPool": ["animal handling", "insight", "intimidation", "performance"]
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|student of arcana|cleric|xphb|arcana|au|3|au",
+    "digest": "08c4d06e11f9585e6e79ede71ee9231fc13bcc77bc7f6258c35e5121abe1d9f3",
+    "optional": false,
+    "subclassGainTargets": ["class-feature|cleric subclass|cleric|xphb|3|xphb"],
+    "startingSkillPoolBase": ["arcana"],
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": null,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof",
+    "digest": "d0691c227d9e1d465134490834ddc45ec7564f4c4e08c6d78c27e7212a997271",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "proficiencyAtGain": "intelligence",
+    "subclassGainTarget": "class-feature|subclass feature|cleric|xphb|6|xphb",
+    "domains": [
+      {
+        "domain": "savingThrows",
+        "count": 1,
+        "savingThrowPool": ["strength", "dexterity", "constitution", "wisdom", "charisma"]
       }
     ]
   }

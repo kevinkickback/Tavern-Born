@@ -8,6 +8,8 @@ import {
   ownedClassProficiencyRule as classProficiencyRule,
   optionalClassProficiencyRule,
 } from '@/lib/5etools/ownedClassProficiencyRules'
+import { ABILITY_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import type { Character, CharacterClassChoiceOption } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs, ClassChoiceOptionView } from './classChoiceOptions'
@@ -105,7 +107,9 @@ export function resolveClassProficiencyOptions(
         ? (catalogs.proficiencyTools ?? [])
         : relation?.domain === 'skills'
           ? (catalogs.skills ?? [])
-          : (catalogs.languages ?? [])
+          : relation?.domain === 'savingThrows'
+            ? ABILITY_CATALOG_FALLBACK.map(({ title }) => ({ name: title }))
+            : (catalogs.languages ?? [])
   const views = new Map<string, ClassChoiceOptionView>()
   if (valid)
     for (const candidate of candidates) {
@@ -119,8 +123,21 @@ export function resolveClassProficiencyOptions(
       const name = canonicalProficiencyName(candidate.name)
       if (!name || views.has(name)) continue
       if (
+        relation.domain === 'savingThrows' &&
+        (!domain?.savingThrowPool?.includes(name) ||
+          !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+            ?.proficiencyAtGain?.alreadyProficient ||
+          (!selected.has(name) &&
+            state?.independent.proficiencies.savingThrows.some(
+              (value) => toAbilityName(value) === name,
+            )))
+      )
+        continue
+      if (
         relation.domain === 'skills' &&
-        ((domain?.skillPool !== null && !domain?.skillPool?.includes(name)) ||
+        ((current?.currentProficiencySkillPool &&
+          !current.currentProficiencySkillPool.includes(name)) ||
+          (domain?.skillPool !== null && !domain?.skillPool?.includes(name)) ||
           (optionalClassProficiencyRule(relation.target) || domain?.excludeExisting
             ? proficient.has(name) && !selected.has(name)
             : !!rule?.proficiencyAtGain &&

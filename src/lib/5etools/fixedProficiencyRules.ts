@@ -14,14 +14,21 @@ export interface FixedProficiencyRule {
     | 'proficient-tools'
     | 'fixed-languages'
     | 'fixed-training'
-  training?: Readonly<Partial<Record<'armor' | 'weapons' | 'tools', readonly string[]>>>
+  training?: Readonly<
+    Partial<Record<'armor' | 'weapons' | 'tools' | 'skills' | 'savingThrows', readonly string[]>>
+  >
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string
   useClassLanguagePrinting?: true
   languageFallback?: true
-  subclassGain?: { owner: readonly string[]; target: string }
-  fallback?: { name: string; count: number; skillPool: readonly string[] }
+  subclassGain?: { owner: readonly string[]; target: string; position?: 'at-level' }
+  fallback?: {
+    name: string
+    count: number
+    skillPool?: readonly string[]
+    savingThrowPool?: readonly string[]
+  }
 }
 export interface GeneratedFixedProficiencyRule extends FixedProficiencyRule {
   bundledMetadataDigest?: string

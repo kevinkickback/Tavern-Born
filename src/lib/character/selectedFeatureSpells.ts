@@ -12,13 +12,19 @@ import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getClassCastingLevelAccess } from '@/lib/5etools/classCastingSource'
 import { getClassOrderById } from '@/lib/5etools/classOrderIdentity'
 import {
+  clericDomainCantrips,
+  getClericDomainCantripSource,
+} from '@/lib/5etools/clericDomainCantripSources'
+import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
 import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
+import { getCurrentNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
+  getClericDomainCantripProducer,
   giantPowerSpellSlots,
   isGiantPowerSpellSlot,
   LAND_BONUS_SPELL_SLOT,
@@ -68,6 +74,8 @@ export interface SelectedFeatureCantripSetup {
   name: string
   count: number
   choice?: AdditionalSpellChoiceDescriptor
+  useDeclaredSpellLists?: true
+  spellSchool?: string
   offered: boolean
   reason?: string
 }
@@ -363,6 +371,74 @@ export function getSelectedFeatureCantripSetups(
       ...(pool ? {} : { reason: 'Restore the exact Giant Power source.' }),
     })
   }
+  for (const rule of clericDomainCantrips) {
+    const owner = ['subclass', 'cleric', rule.printing, rule.subclass, rule.source] as const
+    if (!getSourceCompatibility(rule.printing, character.originSystem).compatible) continue
+    const selected = character.classProgression.filter(
+      (entry) =>
+        norm(entry.name) === owner[1] &&
+        norm(entry.source) === owner[2] &&
+        norm(entry.subclass) === owner[3] &&
+        norm(entry.subclassSource) === owner[4],
+    )
+    if (selected.length !== 1) continue
+    const classes = catalogs?.classes?.filter(
+      (cls) => norm(cls.name) === 'cleric' && norm(cls.source) === rule.printing,
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const domains = cls?.subclasses?.filter(
+      (subclass) =>
+        norm(subclass.name) === rule.subclass &&
+        norm(subclass.shortName) === rule.shortName &&
+        norm(subclass.source) === rule.source &&
+        norm(subclass.className) === 'cleric' &&
+        norm(subclass.classSource) === rule.printing,
+    )
+    const available =
+      cls &&
+      domains?.length === 1 &&
+      permitted(allowed, rule.printing) &&
+      (permitted(allowed, rule.source) ||
+        (rule.printing === 'xphb' && rule.subclass === 'nature domain' && rule.source === 'phb')) &&
+      getClericDomainCantripSource(cls, domains[0], rule)
+    if (!available) {
+      const level = (cls && getCurrentNativeSubclassGain(cls)?.level) ?? selected[0].levels
+      if (level <= selected[0].levels)
+        setups.push({
+          owner: [...owner],
+          producer: norm(rule.name),
+          level,
+          name: rule.name,
+          offered: false,
+          count: 0,
+          reason: `Restore the exact ${rule.name} source.`,
+        })
+      continue
+    }
+    const { choice, school, gain: level, target } = available
+    const producer = getClericDomainCantripProducer(rule, target)
+    if (
+      !hasSavedSelectedFeatureSpellOwner(character, [
+        [...owner],
+        'feature-cantrip',
+        producer,
+        level,
+        0,
+      ])
+    )
+      continue
+    setups.push({
+      owner: [...owner],
+      producer,
+      level,
+      name: rule.name,
+      count: choice.count,
+      choice,
+      useDeclaredSpellLists: true,
+      spellSchool: school,
+      offered: true,
+    })
+  }
   return setups
 }
 
@@ -428,6 +504,11 @@ export function getSelectedFeatureCantripPool(
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
           if (
+            setup?.useDeclaredSpellLists &&
+            !getSourceCompatibility(spell.source, character.originSystem).compatible
+          )
+            return false
+          if (
             choice.pool &&
             !choice.pool.some(
               (ref) => getSpellReferenceKey(ref) === getSpellReferenceKey(spell.name, spell.source),
@@ -442,6 +523,12 @@ export function getSelectedFeatureCantripPool(
                 !hasIncludedSrdGiantSpellProof(spell.name, context?.oathSpellSourceByKey)))
           )
             return false
+          if (setup?.spellSchool && spell.school !== setup.spellSchool) return false
+          if (
+            setup?.spellSchool &&
+            (spell.classSpellRouteSource?.input.targetOccurrences.length ?? 0) > 1
+          )
+            return false
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
           if (choice.pool) return true
           const filter = choice.filter
@@ -453,7 +540,9 @@ export function getSelectedFeatureCantripPool(
             checked.classSpellRoutes?.some(
               (route) =>
                 matchesJoinedSpellClassFilter(route, filter.classes) &&
-                (!ownerScoped || (route[3] === listOwner && route[4] === slot[0][2])) &&
+                (!ownerScoped ||
+                  ((setup?.useDeclaredSpellLists || route[3] === listOwner) &&
+                    route[4] === slot[0][2])) &&
                 [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
                   permitted(allowed, source),
                 ),

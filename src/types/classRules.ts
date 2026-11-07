@@ -32,7 +32,7 @@ export type ChoiceOptionEntityType =
   | 'featureOption'
   | 'proficiency'
 
-export type ClassProficiencyDomain = 'expertise' | 'languages' | 'tools' | 'skills'
+export type ClassProficiencyDomain = 'expertise' | 'languages' | 'tools' | 'skills' | 'savingThrows'
 
 export interface NormalizedChoiceOptionReference {
   entityType: ChoiceOptionEntityType
@@ -74,6 +74,8 @@ export interface NormalizedCharacterChoice {
   kind: NormalizedCharacterChoiceKind
   /** Named proficiency semantics; the granting feature remains a separate qualified target. */
   proficiencyDomain?: ClassProficiencyDomain
+  /** Populated only from current class proficiency source authority. */
+  currentProficiencySkillPool?: readonly string[]
   owner: {
     type: 'class' | 'subclass'
     name: string

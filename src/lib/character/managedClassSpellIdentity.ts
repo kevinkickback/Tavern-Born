@@ -1,5 +1,6 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getManagedClassSpellRule, isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
@@ -38,7 +39,11 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
 export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
   if (slot[1] === 'class-spellbook-specialty') return getSpellbookSpecialtyRule(slot)?.name
   if (slot[1] !== 'class-arcanum')
-    return getBardLoreSpellRule(slot)?.name ?? getSavantSpellbookLabel(slot)
+    return (
+      getBardLoreSpellRule(slot)?.name ??
+      getClericArcanaSpellRule(slot)?.name ??
+      getSavantSpellbookLabel(slot)
+    )
   const declaration = getManagedClassSpellRule(slot)?.rule.declaration
   return declaration?.target.split('|')[1]?.replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 }
@@ -91,6 +96,7 @@ export function makeManagedClassSpellTag(
     ...(choice.slot[1] === 'feature-cantrip' ||
     choice.slot[1] === 'class-arcanum' ||
     getBardLoreSpellRule(choice.slot) ||
+    getClericArcanaSpellRule(choice.slot) ||
     getSavantSpellbookLabel(choice.slot)
       ? {
           label:
@@ -120,6 +126,7 @@ export function matchesManagedClassSpellTag(
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
     (choice.slot[1] === 'class-arcanum' ||
     getBardLoreSpellRule(choice.slot) ||
+    getClericArcanaSpellRule(choice.slot) ||
     getSavantSpellbookLabel(choice.slot)
       ? normalizeOwnerIdentity(tag.label) ===
         normalizeOwnerIdentity(getManagedClassSpellFeatureLabel(choice.slot))

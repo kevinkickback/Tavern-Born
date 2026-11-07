@@ -664,12 +664,14 @@ export function ClassChoiceSelectionModal({
             </DialogTitle>
             <DialogDescription>
               When you gained this feature, were you already proficient in{' '}
-              {titleCase(historicalSetup.name)}?
+              {titleCase(historicalSetup.name)}
+              {choice.proficiencyDomain === 'savingThrows' ? ' saving throws' : ''}?
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This answer determines whether you can choose a separate fallback skill. The feature's
-            fixed proficiency and Expertise apply either way.
+            {choice.proficiencyDomain === 'savingThrows'
+              ? 'If you already had this proficiency, choose a saving throw you lack.'
+              : "This answer determines whether you can choose a separate fallback skill. The feature's fixed proficiency and Expertise apply either way."}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -680,6 +682,7 @@ export function ClassChoiceSelectionModal({
               }}
             >
               Already proficient in {titleCase(historicalSetup.name)}
+              {choice.proficiencyDomain === 'savingThrows' ? ' saving throws' : ''}
             </Button>
             <Button
               variant="outline"
@@ -688,7 +691,9 @@ export function ClassChoiceSelectionModal({
                 setEditingHistory(false)
               }}
             >
-              Gained {titleCase(historicalSetup.name)} from this feature
+              Gained {titleCase(historicalSetup.name)}
+              {choice.proficiencyDomain === 'savingThrows' ? ' saving throw proficiency' : ''} from
+              this feature
             </Button>
           </div>
           <DialogFooter>

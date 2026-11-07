@@ -3,6 +3,7 @@ import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { getBardLoreSpellRule } from './bardSpellSources'
 import generated from './classCastingRuntime.generated'
 import type { CastingProducerRule } from './classCastingStructure'
+import { getClericArcanaSpellRule } from './clericArcanaSpells'
 import { getSavantSpellbookGain } from './savantSpellbookRules'
 import { isSelectedFeatureSpellSlot } from './selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from './spellbookSpecialtyRules'
@@ -61,6 +62,7 @@ export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
 export const isManagedClassSpellSlot = (slot: ManagedClassSpellSlot) =>
   !!getManagedClassSpellRule(slot) ||
   !!getBardLoreSpellRule(slot) ||
+  !!getClericArcanaSpellRule(slot) ||
   !!getSavantSpellbookGain(slot) ||
   isSelectedFeatureSpellSlot(slot) ||
   !!getSpellbookSpecialtyRule(slot)
