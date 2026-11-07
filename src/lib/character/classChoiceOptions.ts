@@ -3,6 +3,7 @@ import {
   getCurrentBlessedStrikes,
   isBlessedStrikesOption,
 } from '@/lib/5etools/blessedStrikesSource'
+import { getProgressiveChoiceGainCount } from '@/lib/5etools/classChoiceNormalization'
 import { getClassOrderBranch, getClassOrderById } from '@/lib/5etools/classOrderIdentity'
 import { getCurrentClassOrderOption } from '@/lib/5etools/classOrderSource'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -692,6 +693,35 @@ export function resolveClassChoiceOptions(
   character?: Character,
   knownWarlockCantrips?: readonly Spell5e[],
 ): ClassChoiceOptionView[] {
+  if (getProgressiveChoiceGainCount(choice, choice.level) !== undefined) {
+    const keyOf = (option: OptionalFeatureLike) =>
+      getClassChoiceOptionKey({
+        entityType: 'optionalFeature',
+        name: option.name,
+        source: option.source,
+      })
+    const counts = new Map<string, number>()
+    for (const option of catalogs.optionalFeatures) {
+      const key = keyOf(option)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    catalogs = {
+      ...catalogs,
+      optionalFeatures: catalogs.optionalFeatures.filter((option) => {
+        if (
+          !option.source ||
+          ('sourceIdentityConflict' in option && option.sourceIdentityConflict === true)
+        )
+          return false
+        const key = keyOf(option)
+        return (
+          counts.get(key) === 1 &&
+          (!catalogs.optionalFeatureCandidates ||
+            catalogs.optionalFeatureCandidates.get(key)?.length === 1)
+        )
+      }),
+    }
+  }
   const order = getClassOrderById(choice.id)
   if (order?.owner === 'druid') {
     return [

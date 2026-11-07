@@ -48,7 +48,7 @@ export type ResolveChoiceSelection = (
 
 export interface ProficiencyPanelCallbacks {
   onFocusChange: (focus: ProfFocus) => void
-  onExpandDetails: () => void
+  onExpandDetails: (preview?: boolean) => void
   onResolveChoiceSelection: ResolveChoiceSelection
 }
 

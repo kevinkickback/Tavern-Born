@@ -156,7 +156,7 @@ export function ToolsPanel({
                     name: toolName,
                     isProficient: isSelected,
                   })
-                  onExpandDetails()
+                  onExpandDetails(true)
                 }
 
                 const choose = (id: string) =>
@@ -168,6 +168,10 @@ export function ToolsPanel({
                     type="button"
                     onClick={() => {
                       if (options.length === 1) choose(options[0].id)
+                      if (!actionable) {
+                        focusTool()
+                        onExpandDetails()
+                      }
                     }}
                     onMouseEnter={focusTool}
                     onFocus={focusTool}

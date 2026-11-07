@@ -4,7 +4,11 @@ import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanc
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
 import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getProgressiveChoiceGainCount,
+  getProgressiveChoiceReviewLevel,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import { getClassOrderById } from '@/lib/5etools/classOrderIdentity'
 import {
   canonicalProficiencyName,
@@ -147,6 +151,7 @@ export function useClassChoiceController({
     id: string
     contextKey: string
     savedHandle?: string
+    progressionGainLevel?: number
   } | null>(null)
   const [queue, setQueue] = useState<{
     ids: string[]
@@ -377,7 +382,9 @@ export function useClassChoiceController({
     if (request && request.contextKey !== contextKey) setRequest(null)
     if (request?.savedHandle !== undefined) {
       const latest = (
-        request.id === REVISED_INVOCATION_POOL ? savedCharacter : character
+        request.id === REVISED_INVOCATION_POOL || request.progressionGainLevel !== undefined
+          ? savedCharacter
+          : character
       )?.classChoiceSelections?.find((row) => row.choiceId === request.id)
       if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== request.savedHandle)
         setRequest(null)
@@ -410,7 +417,35 @@ export function useClassChoiceController({
           optionFilter: undefined,
         }
       : resolvedActiveChoice
-  const activeOptionViews =
+  const activeGainLevel =
+    request?.contextKey === contextKey ? request.progressionGainLevel : undefined
+  const savedOptions = activeId ? (selectionByChoiceId.get(activeId)?.selected ?? []) : []
+  const optionsInGain =
+    activeGainLevel === undefined || !resolvedActiveChoice
+      ? savedOptions
+      : savedOptions.filter(
+          (option) =>
+            getProgressiveChoiceReviewLevel(
+              resolvedActiveChoice,
+              option.slotLevel,
+              viewingClassLevel,
+            ) === activeGainLevel,
+        )
+  const gainKeys = new Set(optionsInGain.map(getClassChoiceOptionKey))
+  const otherGainKeys = new Set(
+    savedOptions
+      .filter((option) => !gainKeys.has(getClassChoiceOptionKey(option)))
+      .map(getClassChoiceOptionKey),
+  )
+  const unplacedKeys = new Set(
+    activeGainLevel === undefined
+      ? []
+      : optionsInGain
+          .filter((option) => option.slotLevel !== activeGainLevel)
+          .map(getClassChoiceOptionKey),
+  )
+  const activeSavedOptions = optionsInGain
+  const allActiveOptionViews =
     activeRemovalOnly && activeSaved
       ? activeSaved.selection.selected.map((reference, index) => ({
           reference,
@@ -421,20 +456,34 @@ export function useClassChoiceController({
       : resolvedActiveChoice
         ? (optionViewsByChoiceId.get(resolvedActiveChoice.id) ?? [])
         : []
+  const activeOptionViews =
+    otherGainKeys.size || unplacedKeys.size
+      ? allActiveOptionViews
+          .filter((view) => !otherGainKeys.has(getClassChoiceOptionKey(view.reference)))
+          .map((view) =>
+            unplacedKeys.has(getClassChoiceOptionKey(view.reference))
+              ? {
+                  ...view,
+                  availability: 'retained' as const,
+                  unavailableReason:
+                    'Saved without a current earned slot. Remove it to make a new pick.',
+                }
+              : view,
+          )
+      : allActiveOptionViews
   const activeOptionKeys = new Set(
     activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
   )
   const activeInitialSelectedIds = activeDisplayChoice
-    ? (activeRemovalOnly && activeSaved
-        ? activeSaved.selection.selected
-        : (selectionByChoiceId.get(activeDisplayChoice.id)?.selected ?? [])
-      )
+    ? (activeRemovalOnly && activeSaved ? activeSaved.selection.selected : activeSavedOptions)
         .map(getClassChoiceOptionKey)
         .filter((key) => activeOptionKeys.has(key))
     : []
   const activeRequiredCount =
     !activeRemovalOnly && resolvedActiveChoice
-      ? getRequiredChoiceSelectionCount(resolvedActiveChoice, viewingClassLevel)
+      ? activeGainLevel === undefined
+        ? getRequiredChoiceSelectionCount(resolvedActiveChoice, viewingClassLevel)
+        : (getProgressiveChoiceGainCount(resolvedActiveChoice, activeGainLevel) ?? 0)
       : 0
   const close = () => {
     setRequest(null)
@@ -482,9 +531,7 @@ export function useClassChoiceController({
       const currentViews = new Map(
         activeOptionViews.map((view) => [getClassChoiceOptionKey(view.reference), view]),
       )
-      const previous = new Set(
-        (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
-      )
+      const previous = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
       const draft = new Set(selected.map((view) => getClassChoiceOptionKey(view.reference)))
       if (
         selected.some((view) => {
@@ -513,12 +560,12 @@ export function useClassChoiceController({
               Math.max(0, activeRequiredCount - eligibleSelections.length),
             ),
           ]
-    const previousKeys = new Set(
-      (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
-    )
+    const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
     try {
       const unchanged =
         previousKeys.size === confirmedSelections.length &&
+        (activeGainLevel === undefined ||
+          activeSavedOptions.length === confirmedSelections.length) &&
         (current.kind !== 'creature' ||
           !previousKeys.size ||
           companionStates.some((state) => state.selection.choiceId === current.id)) &&
@@ -530,7 +577,8 @@ export function useClassChoiceController({
           current,
           confirmedSelections.map((option) => option.reference),
           undefined,
-          current.id === BLESSED_STRIKES_ID ||
+          activeGainLevel !== undefined ||
+            current.id === BLESSED_STRIKES_ID ||
             current.id === REVISED_INVOCATION_POOL ||
             current.id === ELEMENTAL_FURY_ID ||
             current.id === REVISED_AFFINITY_ID ||
@@ -542,6 +590,7 @@ export function useClassChoiceController({
                 ? (request?.savedHandle ??
                   (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
                 : undefined,
+          activeGainLevel,
         )
       }
     } catch (error) {
@@ -646,6 +695,7 @@ export function useClassChoiceController({
     selectionByChoiceId,
     selectedViewsByChoiceId,
     activeChoice: activeDisplayChoice,
+    activeGainLevel,
     activeRemovalOnly,
     activeOptionViews,
     activeInitialSelectedIds,
@@ -723,20 +773,28 @@ export function useClassChoiceController({
             },
           }
         : undefined,
-    open: (choice: NormalizedCharacterChoice) => {
+    open: (choice: NormalizedCharacterChoice, progressionGainLevel?: number) => {
       setQueue(null)
       const saved = (
-        choice.id === REVISED_INVOCATION_POOL ? savedCharacter : character
+        choice.id === REVISED_INVOCATION_POOL || progressionGainLevel !== undefined
+          ? savedCharacter
+          : character
       )?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
       setRequest((previous) =>
-        previous?.id === choice.id && previous.contextKey === contextKey
+        previous?.id === choice.id &&
+        previous.contextKey === contextKey &&
+        previous.progressionGainLevel === progressionGainLevel
           ? previous
           : {
               id: choice.id,
               contextKey,
+              progressionGainLevel,
               savedHandle:
-                saved && getOptionalClassPoolSelectionSection(saved)
-                  ? getOptionalPoolSelectionHandle(saved)
+                progressionGainLevel !== undefined ||
+                (saved && getOptionalClassPoolSelectionSection(saved))
+                  ? saved
+                    ? getOptionalPoolSelectionHandle(saved)
+                    : ''
                   : choice.kind === 'creature' ||
                       choice.id === REVISED_INVOCATION_POOL ||
                       choice.id === BLESSED_STRIKES_ID ||

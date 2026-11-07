@@ -197,7 +197,6 @@ export function BuildProficienciesPage() {
       } else {
         setFocused(focus)
       }
-      setCompactPane('right')
     },
     [itemsByName],
   )
@@ -437,9 +436,9 @@ export function BuildProficienciesPage() {
                     toolTypeMap={toolTypeMap}
                     weaponInfoMap={weaponInfoMap}
                     onFocusChange={handleFocusChange}
-                    onExpandDetails={() => {
+                    onExpandDetails={(preview) => {
                       if (detailCollapsed) setDetailCollapsed(false)
-                      setCompactPane('right')
+                      if (!preview) setCompactPane('right')
                     }}
                     onResolveChoiceSelection={handleChoice}
                     expertiseActions={expertise?.actions ?? {}}

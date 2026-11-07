@@ -1,4 +1,9 @@
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getClassChoiceSlotLevels,
+  getProgressiveChoiceGainCount,
+  getProgressiveChoiceReviewLevel,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { CLASS_ORDERS, PRIMAL_ORDER } from '@/lib/5etools/classOrderIdentity'
@@ -353,6 +358,17 @@ export function validateClassChoices(
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
+      const countedSelections = eligibleOptionKeys
+        ? storedSelection.filter(
+            (option) =>
+              eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+              (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+                option.entityType,
+              ) ||
+                (!!savedChoice &&
+                  effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
+          )
+        : storedSelection
       const count =
         choice.kind === 'creature'
           ? Number(
@@ -372,23 +388,29 @@ export function validateClassChoices(
                 ? effectiveRoutes.selectedOptions.filter(
                     ({ selection }) => selection.choiceId === choice.id,
                   ).length
-                : eligibleOptionKeys
-                  ? storedSelection.filter(
-                      (option) =>
-                        eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-                        (![
-                          'classFeature',
-                          'subclassFeature',
-                          'optionalFeature',
-                          'psionic',
-                        ].includes(option.entityType) ||
-                          (!!savedChoice &&
-                            effectiveRoutes.featureIds.has(
-                              getClassChoiceFeatureId(savedChoice, option),
-                            ))),
-                    ).length
-                  : storedSelection.length
-      if (count !== required) {
+                : countedSelections.length
+      const gainLevels =
+        getProgressiveChoiceGainCount(choice, choice.level) === undefined
+          ? []
+          : [...new Set(getClassChoiceSlotLevels(choice))].filter((level) => level <= entry.levels)
+      const misplacedGain = gainLevels.find((level) => {
+        const stored = storedSelection.filter(
+          (option) =>
+            getProgressiveChoiceReviewLevel(choice, option.slotLevel, entry.levels) === level,
+        )
+        return (
+          stored.length > (getProgressiveChoiceGainCount(choice, level) ?? 0) ||
+          stored.some((option) => option.slotLevel !== level)
+        )
+      })
+      const pendingGain =
+        misplacedGain ??
+        gainLevels.find(
+          (level) =>
+            countedSelections.filter((option) => option.slotLevel === level).length <
+            (getProgressiveChoiceGainCount(choice, level) ?? 0),
+        )
+      if (count !== required || pendingGain !== undefined) {
         issues.push(
           readinessIssue(
             classChoiceReadinessId(choice.id),
@@ -397,8 +419,10 @@ export function validateClassChoices(
             `Finish ${choice.label}`,
             decodeFavoredEnemyChoiceId(choice.id)
               ? 'Complete the enemy allocation and confirm its associated spoken language, or explicitly confirm that these enemies speak none.'
-              : `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
-            classChoiceTarget(entry, choice.level, choice.id),
+              : misplacedGain !== undefined
+                ? `Review saved choices at class level ${misplacedGain}. Remove choices that exceed or do not match the earned slots.`
+                : `${entry.name}: choose ${required} ${required === 1 ? 'selection' : 'selections'}; ${count} chosen.`,
+            classChoiceTarget(entry, pendingGain ?? choice.level, choice.id),
           ),
         )
       }

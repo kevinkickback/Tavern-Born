@@ -179,7 +179,7 @@ interface BuildProficienciesTabsPanelProps {
   /** Pre-computed list of tool names to render as selectable pills. */
   visibleToolCandidates: string[]
   onFocusChange: (focus: ProfFocus) => void
-  onExpandDetails: () => void
+  onExpandDetails: (preview?: boolean) => void
   onResolveChoiceSelection: ResolveChoiceSelection
   expertiseActions: Record<string, SkillExpertiseAction[]>
   onExpertiseAction: (skill: string, actionId: string) => void
