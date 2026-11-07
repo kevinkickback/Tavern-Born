@@ -53,6 +53,7 @@ import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
+import { isBladeDependentInvocation } from './warlockBladeChoices'
 
 export interface RetainedChoiceDetails {
   availability: 'available' | 'source-unavailable' | 'missing' | 'inactive'
@@ -224,7 +225,10 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
-        if (choice.choiceId === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option)) {
+        if (
+          (choice.choiceId === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option)) ||
+          isBladeDependentInvocation(choice.choiceId, option)
+        ) {
           details[index] ??= { availability: 'missing', entries: [] }
           return
         }
@@ -271,10 +275,28 @@ export function buildRetainedCharacterDetails(
       continue
     }
     const fighterStyle = getFighterStylePair(selection.choiceId)
-    if (!fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
+    const scopedBlade = selection.selected.some((option) =>
+      isBladeDependentInvocation(selection.choiceId, option),
+    )
+    if (!scopedBlade && !fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
     const details = choiceDetailsById.get(selection.choiceId)
     selection.selected.forEach((option, index) => {
       const detail = details?.[index]
+      if (details && isBladeDependentInvocation(selection.choiceId, option)) {
+        const id = getClassChoiceFeatureId(selection, option)
+        const active = routes.contributions.find(
+          (row) => row.choiceId === selection.choiceId && row.id === id,
+        )
+        details[index] = active
+          ? { availability: 'available', entries: active.entries }
+          : {
+              availability: 'inactive',
+              entries: detail?.entries.length
+                ? detail.entries
+                : ['Restore the earned Warlock level and current Pact of the Blade.'],
+            }
+        return
+      }
       if (
         detail?.availability === 'available' &&
         (fighterStyle

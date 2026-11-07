@@ -140,7 +140,7 @@ export function validateClassChoices(
         row.legacySubclass ||
         row.companion ||
         row.projectedBranch ||
-        row.invocationCantrips) &&
+        row.revisedInvocations) &&
       row.owner &&
       row.recovery,
   )) {
@@ -159,16 +159,20 @@ export function validateClassChoices(
         classChoiceReadinessId(state.selection.choiceId),
         'blocking',
         'class',
-        state.invocationCantrips
-          ? 'Review Eldritch Invocation cantrip targets'
-          : state.enemy?.complete && !state.enemy.languageAvailable
-            ? 'Restore or change Favored Enemy language'
-            : `Restore or remove ${state.selection.label}`,
-        state.invocationCantrips
-          ? 'Choose a current eligible known Warlock cantrip for each saved Invocation, or remove the unavailable choice.'
-          : state.enemy?.complete && !state.enemy.languageAvailable
-            ? 'The confirmed language is unavailable. Restore its source, change the language confirmation, or clear this allocation. The enemy selection remains current.'
-            : 'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
+        state.revisedInvocations === 'blade-prerequisites'
+          ? 'Review Pact of the Blade requirements'
+          : state.revisedInvocations
+            ? 'Review Eldritch Invocation cantrip targets'
+            : state.enemy?.complete && !state.enemy.languageAvailable
+              ? 'Restore or change Favored Enemy language'
+              : `Restore or remove ${state.selection.label}`,
+        state.revisedInvocations === 'blade-prerequisites'
+          ? 'Restore the earned Warlock level and current Pact of the Blade, or remove the unavailable Invocation.'
+          : state.revisedInvocations
+            ? 'Choose a current eligible known Warlock cantrip for each saved Invocation, or remove the unavailable choice.'
+            : state.enemy?.complete && !state.enemy.languageAvailable
+              ? 'The confirmed language is unavailable. Restore its source, change the language confirmation, or clear this allocation. The enemy selection remains current.'
+              : 'The saved choice cannot be matched to current source rules. Restore its source or remove the saved choice.',
         classChoiceTarget(state.owner!, state.selection.classLevel, state.selection.choiceId),
       ),
     )
@@ -464,7 +468,7 @@ export function validateClassChoices(
           state.optionalPool ||
           state.companion ||
           state.projectedBranch ||
-          state.invocationCantrips) &&
+          state.revisedInvocations) &&
         state.recovery
       )
         continue

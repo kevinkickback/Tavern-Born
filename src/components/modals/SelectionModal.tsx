@@ -58,8 +58,14 @@ export interface SelectionModalProps<T> {
   items: T[]
   getItemId: (item: T) => string
   getItemLabel?: (item: T) => string
-  renderCard: (item: T, isSelected: boolean, canSelect: boolean) => ReactNode
+  renderCard: (
+    item: T,
+    isSelected: boolean,
+    canSelect: boolean,
+    selectedIds: ReadonlySet<string>,
+  ) => ReactNode
   matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean
+  matchDraftItem?: (item: T, selectedIds: ReadonlySet<string>, filters: ActiveFilters) => boolean
   filterSections?: FilterSection[]
   categories?: CategoryLimit<T>[]
   selectionHint?: ReactNode
@@ -113,6 +119,7 @@ function SelectionModalInner<T>({
   getItemLabel,
   renderCard,
   matchItem,
+  matchDraftItem,
   filterSections = [],
   categories = [],
   selectionHint,
@@ -161,9 +168,16 @@ function SelectionModalInner<T>({
     if (scrollParentRef.current) scrollParentRef.current.scrollTop = 0
   }, [])
 
-  const filteredItems = useMemo(
+  const matchingItems = useMemo(
     () => items.filter((item) => matchItem(item, search, activeFilters)),
     [items, search, activeFilters, matchItem],
+  )
+  const filteredItems = useMemo(
+    () =>
+      matchDraftItem
+        ? matchingItems.filter((item) => matchDraftItem(item, selectedIds, activeFilters))
+        : matchingItems,
+    [matchingItems, matchDraftItem, selectedIds, activeFilters],
   )
 
   const getVirtualItemKey = useCallback(
@@ -559,7 +573,7 @@ function SelectionModalInner<T>({
                             : 'cursor-not-allowed border-border-subtle opacity-40',
                       )}
                     >
-                      {renderCard(item, isSelected, canSel)}
+                      {renderCard(item, isSelected, canSel, selectedIds)}
                     </button>
                   </div>
                 )

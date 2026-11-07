@@ -68,6 +68,7 @@ export function hasEarnedRevisedInvocationSlots(
   selected: readonly CharacterClassChoiceOption[],
   classLevel: number,
 ) {
+  if (new Set(selected.map(getClassChoiceOptionKey)).size !== selected.length) return false
   const available = getClassChoiceSlotLevels(choice).slice(
     0,
     getRequiredChoiceSelectionCount(choice, classLevel),

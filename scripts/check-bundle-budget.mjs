@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured after adding the selected Pact rule at 6,559,945 B renderer and 1,293,642 B initial.
+  // Measured with Blade Invocation prerequisites at 6,568,553 B renderer and 1,302,594 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6407 * KIB,
-  initialRendererScript: 1264 * KIB,
+  rendererCode: 6415 * KIB,
+  initialRendererScript: 1273 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

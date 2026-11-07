@@ -153,6 +153,14 @@ members suspend only their own option. Saved unavailable picks retain their occu
 recovery details, while their managed benefits/provenance, Actions, prerequisites and PDF suspend.
 Standard options, independent providers and manual rows keep their own authority.
 
+Native PHB and XPHB Thirsting Blade require Warlock 5 and the exact Pact of the Blade selected
+for that owner. Native XPHB Lifedrinker requires Warlock 9 and the same Pact. Eligibility uses
+the current Warlock level and the earned slots for the entire selection. A revised draft may
+select the Pact and its dependent together. Replacing an active revised Pact requires removing
+its active dependents in the same edit. An unavailable source or unmet prerequisite suspends
+the dependent rule while preserving the saved pick for recovery. Full sheets print the active
+source rules and names-only sheets print their labels.
+
 The eight TCE Additional Spells sections for PHB classes use the same Class addition controls and
 exact book-section adoptions. Current section descriptors supply their actual owner, root level and
 source-qualified members. An active adoption permits only matching current spell-list routes; it never learns,

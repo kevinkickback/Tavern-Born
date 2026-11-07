@@ -49,6 +49,7 @@ import {
 } from '@/lib/character/optionalClassFeatureActivity'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
+import { isBladeDependentInvocation } from '@/lib/character/warlockBladeChoices'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
@@ -535,8 +536,10 @@ function deriveClassFeatureActions(
           `feature:${featureId}`,
           label ?? option.name,
           renderEntriesToText(
-            label
-              ? routes.contributions.find((row) => row.id === featureId)?.entries
+            label || isBladeDependentInvocation(selection.choiceId, option)
+              ? routes.contributions.find(
+                  (row) => row.id === featureId && row.choiceId === selection.choiceId,
+                )?.entries
               : feature?.entries,
           ),
           {

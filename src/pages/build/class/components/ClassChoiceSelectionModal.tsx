@@ -30,6 +30,8 @@ import {
   type ClassChoiceOptionView,
   getClassChoiceOptionKey,
   isClassChoiceOptionEligible,
+  isClassChoiceOptionEligibleInDraft,
+  retainsBladeInvocationWithoutPact,
 } from '@/lib/character/classChoiceOptions'
 import { getInvocationRepeatKey } from '@/lib/character/warlockInvocationChoices'
 import { cn } from '@/lib/utils'
@@ -263,9 +265,10 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
         <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
           <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
           <div className="text-xs leading-snug text-warning-foreground">
-            {removalOnly
-              ? 'Source rules are unavailable. Keep or remove this saved choice, or restore its source.'
-              : 'This saved option is no longer eligible. Choose an available replacement to continue.'}
+            {option.unavailableReason ??
+              (removalOnly
+                ? 'Source rules are unavailable. Keep or remove this saved choice, or restore its source.'
+                : 'This saved option is no longer eligible. Choose an available replacement to continue.')}
           </div>
         </div>
       )}
@@ -367,7 +370,7 @@ export function ClassChoiceSelectionModal({
         met: result.met,
         reasons: result.failures,
       })
-      if (!result.met) hasUnmet = true
+      if (!result.met || option.bladePactDraftKey || option.unavailableReason) hasUnmet = true
     }
     return { prerequisiteByOptionKey: results, hasUnmetPrerequisites: hasUnmet }
   }, [characterSnapshot, className, classSource, options])
@@ -497,6 +500,15 @@ export function ClassChoiceSelectionModal({
     }
     return sections
   }, [hasUnmetPrerequisites, options])
+  const matchBladeDraftItem = useCallback(
+    (option: ClassChoiceOptionView, ids: ReadonlySet<string>, filters: ActiveFilters) =>
+      (!option.bladePactDraftKey && !option.unavailableReason) ||
+      filters.prerequisite?.has('showUnmet') ||
+      initialSelectedIds.includes(getClassChoiceOptionKey(option.reference)) ||
+      ids.has(getClassChoiceOptionKey(option.reference)) ||
+      isClassChoiceOptionEligibleInDraft(option, ids),
+    [initialSelectedIds],
+  )
   const matchItem = useCallback(
     (option: ClassChoiceOptionView, search: string, activeFilters: ActiveFilters) => {
       const searchTarget = option.searchText ?? option.reference.name
@@ -561,19 +573,36 @@ export function ClassChoiceSelectionModal({
     [initialSelectedIds, prerequisiteByOptionKey],
   )
   const renderCard = useCallback(
-    (option: ClassChoiceOptionView, selected: boolean) => (
-      <ChoiceOptionCard
-        option={option}
-        selected={selected}
-        removalOnly={removalOnly}
-        prerequisite={
-          prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference)) ?? {
-            met: true,
-            reasons: [],
+    (
+      option: ClassChoiceOptionView,
+      selected: boolean,
+      _canSelect: boolean,
+      ids: ReadonlySet<string>,
+    ) => {
+      const live =
+        !removalOnly && option.bladePactDraftKey
+          ? {
+              ...option,
+              availability: isClassChoiceOptionEligibleInDraft(option, ids)
+                ? ('eligible' as const)
+                : ('retained' as const),
+              unavailableReason: 'Requires your current Pact of the Blade.',
+            }
+          : option
+      return (
+        <ChoiceOptionCard
+          option={live}
+          selected={selected}
+          removalOnly={removalOnly}
+          prerequisite={
+            prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference)) ?? {
+              met: true,
+              reasons: [],
+            }
           }
-        }
-      />
-    ),
+        />
+      )
+    },
     [prerequisiteByOptionKey, removalOnly],
   )
   const canSelect = useCallback(
@@ -584,7 +613,7 @@ export function ClassChoiceSelectionModal({
     ) => {
       const key = getClassChoiceOptionKey(option.reference)
       if (removalOnly) return initialSelectedIds.includes(key)
-      if (!isClassChoiceOptionEligible(option)) return false
+      if (!isClassChoiceOptionEligibleInDraft(option, selectedIds)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
       if (invocationCantrips) {
@@ -689,6 +718,12 @@ export function ClassChoiceSelectionModal({
       getItemLabel={getOptionLabel}
       renderCard={renderCard}
       matchItem={matchItem}
+      matchDraftItem={
+        !removalOnly &&
+        options.some((option) => option.bladePactDraftKey || option.unavailableReason)
+          ? matchBladeDraftItem
+          : undefined
+      }
       filterSections={filterSections}
       categories={limits}
       selectionHint={
@@ -731,20 +766,22 @@ export function ClassChoiceSelectionModal({
           'Intelligence is your psionic ability. Edit these choices to correct setup. These controls do not perform level-up replacements or spend psi points.'
         ) : undefined
       }
-      getConfirmationError={(ids) =>
-        [...ids].some(
+      getConfirmationError={(ids) => {
+        if (retainsBladeInvocationWithoutPact(options, new Set(initialSelectedIds), ids))
+          return 'Remove the dependent Invocations before replacing Pact of the Blade.'
+        return [...ids].some(
           (id) =>
             !options.some(
               (option) =>
                 getClassChoiceOptionKey(option.reference) === id &&
                 (removalOnly ||
                   initialSelectedIds.includes(id) ||
-                  isClassChoiceOptionEligible(option)),
+                  isClassChoiceOptionEligibleInDraft(option, ids)),
             ),
         )
           ? 'Source rules changed. Close and review this choice before confirming.'
           : undefined
-      }
+      }}
       canSelect={canSelect}
       initialSelectedIds={initialSelectedIds}
       onConfirm={(_ids, selected) => onConfirm(selected)}
