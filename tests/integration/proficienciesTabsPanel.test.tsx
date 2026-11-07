@@ -410,6 +410,41 @@ describe('BuildProficienciesTabsPanel category panels', () => {
     expect(repeated.onResolveChoiceSelection).toHaveBeenCalledWith('tools', 'Lute', true, second.id)
   })
 
+  test('labels an overlapping saved subrace tool choice with its parent race', async () => {
+    const tool = "Smith's Tools"
+    const guild = {
+      ...choice('tools', ["artisan's tools"], [tool]),
+      id: 'guild-artisan-tools',
+      sourceTag: {
+        ...sourceTag,
+        sourceType: 'background' as const,
+        sourceName: 'Guild Artisan',
+        sourceRef: 'PHB',
+      },
+    }
+    const mark = {
+      ...guild,
+      id: 'mark-of-making-tools',
+      sourceTag: {
+        ...sourceTag,
+        sourceType: 'subrace' as const,
+        sourceName: 'Mark of Making',
+        sourceRef: 'ERLW',
+      },
+    }
+    const props = panelProps('tools', {
+      raceSelection: { race: 'Human', subrace: 'Mark of Making', subraceSource: 'ERLW' },
+      visibleToolCandidates: [tool],
+      ledger: { choices: [guild, mark], proficiencies: emptyProficiencies },
+    })
+    render(<BuildProficienciesTabsPanel {...props} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByTitle(`Remove choice: ${tool}`))
+    expect(screen.getByRole('menuitem', { name: /Guild Artisan.*PHB/ })).toBeTruthy()
+    await user.click(screen.getByRole('menuitem', { name: /Human \(Mark of Making\).*ERLW/ }))
+    expect(props.onResolveChoiceSelection).toHaveBeenCalledWith('tools', tool, false, mark.id)
+  })
+
   test('preserves tool subtype and language type grouping', async () => {
     const { unmount } = render(
       <BuildProficienciesTabsPanel

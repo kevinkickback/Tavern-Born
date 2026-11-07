@@ -431,6 +431,7 @@ export function BuildProficienciesPage() {
                     activeTab={activeTab}
                     onActiveTabChange={setActiveTab}
                     toolChoiceSlots={toolChoiceSlots}
+                    raceSelection={character}
                     visibleToolCandidates={visibleToolCandidates}
                     languageTypes={languageTypes}
                     toolTypeMap={toolTypeMap}

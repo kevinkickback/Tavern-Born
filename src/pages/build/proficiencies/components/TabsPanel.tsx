@@ -12,6 +12,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { ABILITY_NAMES } from '@/lib/calculations/abilityScores'
+import type { RaceDisplaySelection } from '@/lib/calculations/raceDisplay'
 import type { SkillExpertiseAction } from '@/lib/character/skillExpertiseChoices'
 import type { SkillProficiencyAction } from '@/lib/character/skillProficiencyChoices'
 import { normalizeKey } from '@/lib/provenance/normalization'
@@ -176,6 +177,7 @@ interface BuildProficienciesTabsPanelProps {
   currentProficiencies: CurrentProficiencies
   ledger: ProficiencyLedger
   toolChoiceSlots: ToolChoiceSlot[]
+  raceSelection?: RaceDisplaySelection
   /** Pre-computed list of tool names to render as selectable pills. */
   visibleToolCandidates: string[]
   onFocusChange: (focus: ProfFocus) => void
@@ -206,6 +208,7 @@ export function BuildProficienciesTabsPanel({
   currentProficiencies,
   ledger,
   toolChoiceSlots,
+  raceSelection,
   visibleToolCandidates,
   onFocusChange,
   onExpandDetails,
@@ -468,6 +471,7 @@ export function BuildProficienciesTabsPanel({
 
         <TabsContent value="tools">
           <ToolsPanel
+            raceSelection={raceSelection}
             groups={toolGroups}
             visibleToolCandidates={visibleToolCandidates}
             currentTools={currentProficiencies.tools}

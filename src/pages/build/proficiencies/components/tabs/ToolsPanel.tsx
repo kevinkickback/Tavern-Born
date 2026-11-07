@@ -11,7 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
+import {
+  getRacialSourceDisplayName,
+  type RaceDisplaySelection,
+} from '@/lib/calculations/raceDisplay'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import { normalizeGenericToolKind } from '@/pages/build/proficiencies/model/data'
@@ -38,6 +41,7 @@ interface ToolsPanelProps extends ToolPanelChoices {
   currentTools: CurrentProficiencies['tools']
   expertiseTools?: string[]
   ledger: ProficiencyLedger
+  raceSelection?: RaceDisplaySelection
   sort: ToolSort
   onSortChange: (sort: ToolSort) => void
   onFocusChange: ProficiencyPanelCallbacks['onFocusChange']
@@ -51,6 +55,7 @@ export function ToolsPanel({
   currentTools,
   expertiseTools = [],
   ledger,
+  raceSelection,
   sort,
   onSortChange,
   toolChoiceSlots,
@@ -124,7 +129,7 @@ export function ToolsPanel({
                 const options = isChoiceSelected
                   ? savedChoices.map((choice) => ({
                       id: choice.id,
-                      sourceName: getRacialSourceDisplayName(undefined, choice.sourceTag),
+                      sourceName: getRacialSourceDisplayName(raceSelection, choice.sourceTag),
                       source: choice.sourceTag.sourceRef,
                       label:
                         normalizeGenericToolKind(choice.optionPool[0] ?? '') ?? 'tool proficiency',
