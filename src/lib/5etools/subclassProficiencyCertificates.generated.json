@@ -207,6 +207,31 @@
       "copies": []
     },
     {
+      "target": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof",
+      "rawDigest": "30856a888b81fc0f35b2b35c522bc6e7b6f009f781a716784d7fdfa33e6bc6ac",
+      "metadataDigest": "0ec91db8975e229dbd36b5868403cbe71d2265498e9c8583dd3439e06c2d18c9",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "0b84ebb9ed6308fc27a5d0f845868af6c58de227ab572a931a9a4610840d2397"
+        },
+        {
+          "digest": "c2e87b7e21957f13f2e70f0d5cd53605fc1508dffac7edb603d1b925800b6711"
+        }
+      ],
+      "copies": []
+    },
+    {
       "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
       "rawDigest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f",
       "metadataDigest": "9920b8bad34d257c6a6d427ef61e96ec36c982086bf734876291934691987925",
@@ -383,6 +408,49 @@
           "digest": "433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65"
         }
       ]
+    },
+    {
+      "target": "subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof",
+      "rawDigest": "e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223",
+      "metadataDigest": "7a2b89311b5e76debc8f8836525154f56c8d4f14bc3e6f6908a94c74bd372687",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "f57e01d2399f3658315287e5024284d351261a4ddd971313931e84716ac3dd0f"
+        },
+        {
+          "digest": "35d9c8bcaefce6e8e6558113a9c963e460159360acdbb2fc924d6c20237f6674"
+        },
+        {
+          "digest": "47887cd469779df762453f6085407738691b4b903c40bc172bc3471065a9fd86"
+        },
+        {
+          "digest": "6298258d032560d44f071a8054586611c24593b1db0cf8081343ef0b884ec4db"
+        },
+        {
+          "digest": "b1c0911389c36ababaa47601d4b351b80773c8430ba5844bdb1e06eebdb42869",
+          "reference": "subclass-feature|elemental smite|paladin|xphb|noble genies|frhof|3|frhof"
+        },
+        {
+          "digest": "703d56028b68c193611161bbca69c6daca8a36a038d719672f47566ae2f57bf6",
+          "reference": "subclass-feature|genie spells|paladin|xphb|noble genies|frhof|3|frhof"
+        },
+        {
+          "digest": "8ca134657501f4b68f6f566714b49673f06b8d0fac99f35a966637ff60f2c971",
+          "reference": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
+        }
+      ],
+      "copies": []
     },
     {
       "target": "subclass-feature|purple dragon knight (banneret)|fighter|phb|purple dragon knight (banneret)|scag|3|scag",
@@ -1027,6 +1095,42 @@
           "refs": [
             "Rune Knight|Fighter||Rune Knight|TCE|3",
             "Rune Carver|Fighter||Rune Knight|TCE|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["paladin", "xphb", "oath of the noble genies", "frhof"],
+      "shortName": "Noble Genies",
+      "rawDigest": "de854cdf641478448075544bb43027e6d5749defc4e4afc8536a5cc2c914b58c",
+      "metadataDigest": "3c443dc2371da77c6b1cf4203bdd9bda2079c5c634d0ca3e801ec9844ddc3878",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Oath of the Noble Genies|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF",
+        "Aura of Elemental Shielding|Paladin|XPHB|Noble Genies|FRHoF|7|FRHoF",
+        "Elemental Rebuke|Paladin|XPHB|Noble Genies|FRHoF|15|FRHoF",
+        "Noble Scion|Paladin|XPHB|Noble Genies|FRHoF|20|FRHoF"
+      ],
+      "intro": "Oath of the Noble Genies|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF",
+      "paths": [
+        {
+          "target": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof",
+          "refs": [
+            "Oath of the Noble Genies|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF",
+            "Genie's Splendor|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF"
           ],
           "level": 3
         }

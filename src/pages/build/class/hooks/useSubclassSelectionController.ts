@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
@@ -77,7 +78,12 @@ export function useSubclassSelectionController({
 
   const select = (subclass: Subclass5e) => {
     if (!viewingClassData) return
-    selectSubclass(subclass.name, subclass.source, classProgression, viewingEntry)
+    try {
+      selectSubclass(subclass.name, subclass.source, classProgression, viewingEntry)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'The subclass could not be selected.')
+      return
+    }
     onSelectionApplied(createSubclassDetailsSelection(viewingClassData, subclass))
     setPickerOpen(false)
   }

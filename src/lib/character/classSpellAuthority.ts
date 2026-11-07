@@ -25,6 +25,8 @@ export interface ManagedClassSpellContext {
   catalogs?: ClassChoiceFeatureCatalogs
   /** Current filtered spell authority only; raw text lookups cannot replenish missing targets. */
   spellsByKey?: Readonly<Record<string, Spell5e>>
+  /** Unfiltered classic producers prove inherited oath reprints. Grants still require a visible target. */
+  oathSpellSourceByKey?: Readonly<Record<string, Spell5e>>
   abilityScores?: AbilityScores
   /** Current non-feature spell providers used to qualify selected feature grants. */
   independentSpellProfiles?: readonly SpellProfile[]

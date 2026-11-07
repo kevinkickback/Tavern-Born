@@ -106,6 +106,7 @@ export function SubclassSelectionModal({
       categories={categories}
       canSelect={canSelect}
       initialSelectedIds={initialSelectedIds}
+      closeOnConfirm={false}
       onConfirm={(_ids, items) => {
         if (items.length > 0) onConfirm(items[0])
       }}

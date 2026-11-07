@@ -111,6 +111,31 @@ const reviewedWizardTraditions = {
   ],
 }
 
+const inheritedPaladinOaths = [
+  'oath of the crown|scag',
+  'oath of conquest|xge',
+  'oath of redemption|xge',
+  'oath of the watchers|tce',
+]
+const reviewedPaladinOaths = {
+  phb: [
+    ...inheritedPaladinOaths,
+    'oath of the ancients|phb',
+    'oath of devotion|phb',
+    'oath of vengeance|phb',
+    'oath of glory|tce',
+    'oathbreaker|dmg',
+  ],
+  xphb: [
+    ...inheritedPaladinOaths,
+    'oath of the ancients|xphb',
+    'oath of devotion|xphb',
+    'oath of vengeance|xphb',
+    'oath of glory|xphb',
+    'oath of the noble genies|frhof',
+  ],
+}
+
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
   const tables = entries
@@ -272,7 +297,7 @@ export function getClassStaticFeatureSummaries(
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
     if (
-      (name !== 'druid' && name !== 'wizard' && name !== 'warlock') ||
+      (name !== 'druid' && name !== 'paladin' && name !== 'wizard' && name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
@@ -280,6 +305,45 @@ export function getClassStaticFeatureSummaries(
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'paladin') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const aura =
+        entry.levels >= 6
+          ? getCurrentDirectClassFeature(
+              cls,
+              catalogs,
+              `class-feature|aura of protection|paladin|${source}|6|${source}`,
+            )
+          : undefined
+      const oath = reviewedPaladinOaths[source].includes(
+        `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
+      )
+        ? getDeclaredSubclassStaticFeatures(
+            cls,
+            entry,
+            catalogs,
+            source === 'phb'
+              ? {
+                  level: 3,
+                  intro: 'sacred oath',
+                  later: 'sacred oath feature',
+                  expandNestedRules: true,
+                }
+              : {
+                  level: 3,
+                  intro: 'paladin subclass',
+                  later: 'subclass feature',
+                  expandNestedRules: true,
+                },
+          )
+        : []
+      return [...(aura ? [aura] : []), ...oath].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
     if (name === 'warlock') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       return getWarlockStaticFeatures(cls, entry, catalogs).flatMap((feature) => {

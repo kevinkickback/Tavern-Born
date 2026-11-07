@@ -22,6 +22,10 @@ import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
 } from '@/lib/5etools/fixedProficiencySource'
+import {
+  auditInheritedOathSpellRoots,
+  isInheritedOathSourceFeature,
+} from '@/lib/5etools/legacyPaladinOathSpells'
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
@@ -417,7 +421,7 @@ function resolveInlineSubclassFeatureRef(
     const target = getSubclassFeatureIdentity(parsedRef)
     const declaredCoreSubclass =
       target &&
-      ['druid', 'sorcerer', 'warlock', 'wizard'].includes(
+      ['druid', 'paladin', 'sorcerer', 'warlock', 'wizard'].includes(
         parsedRef.className?.trim().toLowerCase() ?? '',
       ) &&
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
@@ -494,6 +498,7 @@ function auditNativeSubclassCopies(
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
           isDirectWizardTraditionSpellSource(target) ||
+          isInheritedOathSourceFeature(target) ||
           getNativeDraconicFeatureOwner(target) ||
           getNativeWarlockPatronFeatureOwner(target),
       ),
@@ -515,7 +520,10 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   const subclassRecords = asArray(obj.subclass).map(asObject)
   const origin = sourceId ?? `class-document:${subclassProficiencyDigest(obj)}`
   const packages = auditSubclassProficiencyPackages(classRecords, subclassRecords, records, origin)
-  const materializedSubclasses = materializeSubclassCopies(subclassRecords)
+  const materializedSubclasses = auditInheritedOathSpellRoots(
+    subclassRecords,
+    materializeSubclassCopies(subclassRecords),
+  )
   const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
     subclasses: materializedSubclasses,

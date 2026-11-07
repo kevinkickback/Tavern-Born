@@ -205,21 +205,43 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
         ],
       }
     })
-  const conversationalist = features.flatMap((feature) => {
+  const skillRules = new Map([
+    [
+      'subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au',
+      {
+        body: 'ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac',
+        gain: 'class-feature|wizard subclass|wizard|xphb|3|xphb',
+        line: 0,
+        size: 3,
+        modifier: { ability: 'intelligence', minimum: 1 },
+      },
+    ],
+    [
+      "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof",
+      {
+        body: '3b2c4cd56abd82ef10c08572babe419fc460a4b4c8a8133883c9ee62825845d2',
+        gain: 'class-feature|paladin subclass|paladin|xphb|3|xphb',
+        line: 1,
+        size: 4,
+      },
+    ],
+  ])
+  const simpleSkills = features.flatMap((feature) => {
     const target = identity(feature)
-    if (target !== 'subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au')
-      return []
+    const rule = skillRules.get(target)
+    if (!rule) return []
     if (
       seen.has(target) ||
       !only(feature, FEATURE_FIELDS) ||
       !Array.isArray(feature.entries) ||
-      digest(feature.entries) !== 'ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac'
+      digest(feature.entries) !== rule.body
     )
-      fail('Unsupported Enchanting Conversationalist source')
+      fail(`Unsupported ${feature.name} source`)
     seen.add(target)
-    const skillPool = [...feature.entries[0].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map((match) =>
-      match[1].toLowerCase(),
+    const skillPool = [...feature.entries[rule.line].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map(
+      (match) => match[1].toLowerCase(),
     )
+    if (new Set(skillPool).size !== rule.size) fail(`Unverified ${feature.name} skill pool`)
     return [
       {
         target,
@@ -230,13 +252,13 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
           'subclassProficiencySourceAudit',
         ].sort(),
         optional: false,
-        subclassGainTarget: 'class-feature|wizard subclass|wizard|xphb|3|xphb',
-        skillModifier: { label: feature.name, ability: 'intelligence', minimum: 1 },
+        subclassGainTarget: rule.gain,
+        ...(rule.modifier && { skillModifier: { label: feature.name, ...rule.modifier } }),
         domains: [{ domain: 'skills', count: 1, skillPool }],
       },
     ]
   })
-  return [...paired, ...conversationalist].sort((a, b) => a.target.localeCompare(b.target))
+  return [...paired, ...simpleSkills].sort((a, b) => a.target.localeCompare(b.target))
 }
 
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */

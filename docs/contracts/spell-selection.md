@@ -187,6 +187,16 @@ activates the spells already earned by that point. Later schedule additions stil
 authored Druid levels. An unavailable copied declaration suspends its own grants and preserves
 ordinary Druid spell ownership. The classic subclasses keep their classic spell printings.
 
+## Revised inherited Paladin oath spells
+
+Revised Crown, Conquest, Redemption and Watchers copy their exact classic oath records. The
+Paladin's revised subclass gain and the inherited `Oath Spells` table must both be current. Each
+audited oath always prepares two exact revised spell printings at levels 3, 5, 9, 13 and 17.
+The classic spell must currently declare the same-rank revised reprint, and that revised spell
+must be visible to the character.
+These grants sit outside daily preparation capacity. Source loss or a rank conflict suspends the
+affected grant. Independently saved Paladin preparation remains separate and resumes when eligible.
+
 ## Divine Soul and Lunar Sorcery
 
 Divine Magic adds the chosen affinity spell outside the ordinary Sorcerer spell quota. Its Cleric

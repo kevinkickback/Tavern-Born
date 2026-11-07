@@ -56,6 +56,10 @@
     {
       "target": "subclass-feature|draconic bloodline|sorcerer|xphb|draconic|phb|3|phb",
       "digest": "4c86262024499638ab7a795000106d9b6033dedcad79f767472449926c03a31c"
+    },
+    {
+      "target": "subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof",
+      "digest": "e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223"
     }
   ]
 }

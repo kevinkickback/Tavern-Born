@@ -118,6 +118,32 @@
     ]
   },
   {
+    "target": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof",
+    "digest": "3b2c4cd56abd82ef10c08572babe419fc460a4b4c8a8133883c9ee62825845d2",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "subclassGainTarget": "class-feature|paladin subclass|paladin|xphb|3|xphb",
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["acrobatics", "intimidation", "performance", "persuasion"]
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
     "digest": "7efbc0948749d341cd93aead16290a279ed28ace770193f9e2dfcad9a9cedb5b",
     "fields": [

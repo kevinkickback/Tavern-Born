@@ -19,6 +19,10 @@ import {
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
+import {
+  getCurrentOathSpellReprints,
+  isRevisedInheritedOathOwner,
+} from '@/lib/5etools/legacyPaladinOathSpells'
 import { getLegacySorcererSpec } from '@/lib/5etools/legacySorcererSubclassRules'
 import {
   ELDRITCH_HEX_TARGET,
@@ -499,6 +503,9 @@ export function projectManagedClassSpellState(
         : [],
     ),
   )
+  const oathReprints = character.classProgression.some(isRevisedInheritedOathOwner)
+    ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
+    : undefined
   const base = {
     ...stripped,
     spells: {
@@ -506,6 +513,7 @@ export function projectManagedClassSpellState(
       spellProfiles: ensureSpellProfiles(stripped, classMap, undefined, {
         availableSpellReferences,
         visibleSpellLevels,
+        oathReprints,
       }),
     },
   }
@@ -641,6 +649,7 @@ export function projectManagedClassSpellState(
         grant,
         namedPreparation ? visibleSpellLevels : availableSpellReferences,
         visibleSpellLevels,
+        oathReprints,
       )
       if (
         (!active && (namedPreparation || grant.feature)) ||

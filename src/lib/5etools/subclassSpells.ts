@@ -15,6 +15,10 @@ import {
   isRevisedInheritedCircleOwner,
 } from './legacyDruidSubclassSpells'
 import {
+  hasRevisedInheritedOathSpells,
+  isRevisedInheritedOathOwner,
+} from './legacyPaladinOathSpells'
+import {
   divineSoul,
   getCurrentDivineMagic,
   getCurrentLunarSorcery,
@@ -44,6 +48,7 @@ export interface SubclassSpellGrant {
   isCantrip: boolean
   expandedRank?: number
   expectedSpellLevel?: number
+  requiresClassicReprint?: true
   feature?: { name: string; target: string; castingNote?: string }
   castOnly?: { castingTime?: string; ignoresMaterial?: true }
   mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
@@ -53,8 +58,11 @@ export function hasCurrentSubclassSpellGrant(
   grant: SubclassSpellGrant,
   references: { has(reference: string): boolean } | undefined,
   spellLevels: ReadonlyMap<string, number> | undefined,
+  oathReprints?: ReadonlyMap<string, number | undefined>,
 ) {
   const key = getSpellReferenceKey(grant.spellName)
+  if (grant.requiresClassicReprint && oathReprints?.get(key) !== grant.expectedSpellLevel)
+    return false
   return grant.expectedSpellLevel === undefined
     ? references?.has(key) === true
     : spellLevels?.get(key) === grant.expectedSpellLevel
@@ -77,8 +85,14 @@ export function getEarnedSubclassSpellGrants(
   const revisedCircle = isRevisedInheritedCircleOwner(entry)
   const legacySorcerer = getLegacySorcererSpec(entry)
   const illusion = getWizardIllusionCantripOwner(entry)
+  const revisedOath = isRevisedInheritedOathOwner(entry)
   const unavailable =
-    land || revisedCircle || legacySorcerer || illusion || hasWarlockPatronSpellConfiguration(entry)
+    land ||
+    revisedCircle ||
+    revisedOath ||
+    legacySorcerer ||
+    illusion ||
+    hasWarlockPatronSpellConfiguration(entry)
       ? []
       : undefined
   if (
@@ -144,6 +158,16 @@ export function getEarnedSubclassSpellGrants(
             spellName: formatSpellReference(grant.spellName, 'XPHB'),
             expectedSpellLevel: grant.isCantrip ? 0 : Math.ceil(grant.level / 2),
             feature: { name: 'Circle Spells', target: 'inherited-circle-spells' },
+          }))
+        : []
+    if (revisedOath)
+      return hasRevisedInheritedOathSpells(classData, subclasses[0])
+        ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel).map((grant) => ({
+            ...grant,
+            spellName: formatSpellReference(grant.spellName, 'XPHB'),
+            expectedSpellLevel: Math.floor((grant.level - 1) / 4) + 1,
+            requiresClassicReprint: true,
+            feature: { name: 'Oath Spells', target: 'inherited-oath-spells' },
           }))
         : []
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
