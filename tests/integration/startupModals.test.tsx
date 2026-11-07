@@ -43,6 +43,8 @@ function resetGameDataStore() {
     error: null,
     lastLoadedAt: null,
     cacheStatus: 'unknown',
+    remoteStartup: null,
+    sessionBundledSource: null,
     hasHydrated: false,
   })
 }
@@ -66,6 +68,25 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
     expect(screen.getByText('Warming up the dice...')).toBeTruthy()
+  })
+
+  test('cold remote failure keeps the startup overlay and recovery actions available', async () => {
+    const user = userEvent.setup()
+    useGameDataStore.setState({ hasHydrated: true, remoteStartup: 'unavailable', error: 'Offline' })
+    render(
+      <>
+        <AppLoadingOverlay />
+        <DataSourceStartupModal />
+      </>,
+    )
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Use Included SRD for this session' })).toBeTruthy()
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Change source' }))
+    expect(await screen.findByRole('dialog', { name: 'Choose Game Data' })).toBeTruthy()
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    await act(() => useGameDataStore.setState({ isLoading: true }))
+    expect(screen.getByRole('dialog', { name: 'Choose Game Data' })).toBeTruthy()
   })
 
   test('AppLoadingOverlay makes underlying app content inert while startup is blocked', () => {

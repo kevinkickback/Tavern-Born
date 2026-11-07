@@ -72,6 +72,8 @@ function resetGameDataStore() {
     lastDataChangedAt: null,
     lastUpdateCheckAt: null,
     cacheStatus: 'unknown',
+    remoteStartup: null,
+    sessionBundledSource: null,
     hasHydrated: false,
   })
 }
@@ -162,10 +164,14 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(useGameDataStore.getState().cacheStatus).toBe('stale')
+      expect(useGameDataStore.getState().cacheStatus).toBe('remote-cache')
     })
     expect(useGameDataStore.getState().gameData).toEqual(cacheData)
-    expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+    expect(loadGameDataMock).toHaveBeenCalledWith(
+      config,
+      true,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
     expect(toast.info).not.toHaveBeenCalled()
   })
 
@@ -223,7 +229,11 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(loadGameDataMock).toHaveBeenCalledWith(config)
+      expect(loadGameDataMock).toHaveBeenCalledWith(
+        config,
+        false,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
     expect(useGameDataStore.getState().gameData).toBeNull()
     expect(toast.info).not.toHaveBeenCalled()
@@ -259,10 +269,14 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(useGameDataStore.getState().cacheStatus).toBe('fresh')
+      expect(useGameDataStore.getState().cacheStatus).toBe('remote-cache')
     })
     expect(useGameDataStore.getState().gameData).toEqual(cacheData)
-    expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+    expect(loadGameDataMock).toHaveBeenCalledWith(
+      config,
+      true,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
     expect(toast.info).not.toHaveBeenCalled()
   })
 
@@ -369,7 +383,11 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(loadGameDataMock).toHaveBeenCalledWith(config)
+      expect(loadGameDataMock).toHaveBeenCalledWith(
+        config,
+        false,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
     expect(useGameDataStore.getState().gameData).toBeNull()
     expect(toast.info).not.toHaveBeenCalled()
@@ -443,7 +461,11 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+      expect(loadGameDataMock).toHaveBeenCalledWith(
+        config,
+        true,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Game data updated', {
@@ -482,7 +504,11 @@ describe('useDataInit', () => {
     renderHook(() => useDataInit())
 
     await waitFor(() => {
-      expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+      expect(loadGameDataMock).toHaveBeenCalledWith(
+        config,
+        true,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
     })
     expect(toast.success).not.toHaveBeenCalled()
   })

@@ -34,6 +34,12 @@ export function DataSourceStartupModal() {
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
   const error = useGameDataStore((s) => s.error)
   const dataSourceConfig = useGameDataStore((s) => s.dataSourceConfig)
+  const remoteStartup = useGameDataStore((s) => s.remoteStartup)
+  const overlayHasRecovery =
+    remoteStartup === 'checking' ||
+    remoteStartup === 'committing' ||
+    remoteStartup === 'unavailable' ||
+    remoteStartup === 'loading-srd'
 
   const [isForced] = useState(() => Boolean(localStorage.getItem(FORCE_KEY)))
   const [hasAcknowledgedBundledIntro, setHasAcknowledgedBundledIntro] = useState(() =>
@@ -44,7 +50,7 @@ export function DataSourceStartupModal() {
   const isBundledReady = Boolean(gameData && dataSourceConfig?.type === 'bundled')
   const showBundledIntro =
     !isForced && isBundledReady && !hasAcknowledgedBundledIntro && !showExternalSetup
-  const needsSetup = !gameData && !isLoading
+  const needsSetup = !gameData && (!isLoading || remoteStartup === 'setup')
   const shouldShowSelectorOnly = !isForced && (needsSetup || showExternalSetup)
 
   // Wait for both IDB hydration AND useDataInit to finish resolving the cache
@@ -53,10 +59,19 @@ export function DataSourceStartupModal() {
   // arrives.  If there's a load error, allow the modal through so the user
   // can reconfigure.
   useEffect(() => {
-    if (!hasHydrated) return
+    if (!hasHydrated || overlayHasRecovery) return
     if (cacheStatus === 'unknown' && !error) return
     setOpen(isForced || needsSetup || showBundledIntro || showExternalSetup)
-  }, [hasHydrated, cacheStatus, error, isForced, needsSetup, showBundledIntro, showExternalSetup])
+  }, [
+    hasHydrated,
+    cacheStatus,
+    error,
+    isForced,
+    needsSetup,
+    overlayHasRecovery,
+    showBundledIntro,
+    showExternalSetup,
+  ])
 
   const acknowledgeBundledIntro = () => {
     localStorage.setItem(BUNDLED_INTRO_KEY, '1')
@@ -92,7 +107,7 @@ export function DataSourceStartupModal() {
     setOpen(next)
   }
 
-  if (!open) return null
+  if (!open || overlayHasRecovery) return null
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -138,7 +153,9 @@ export function DataSourceStartupModal() {
                 ? 'Tavern Born is ready to use with the included rules.'
                 : showExternalSetup
                   ? 'Add compatible 5etools data from the web or your computer.'
-                  : 'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'}
+                  : remoteStartup === 'setup'
+                    ? 'The saved online source is unavailable. Choose another source or load the Included SRD.'
+                    : 'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'}
           </DialogDescription>
         </DialogHeader>
 

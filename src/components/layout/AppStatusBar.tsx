@@ -56,6 +56,24 @@ function getDataStatus(
     }
   }
 
+  if (cacheStatus === 'session-srd') {
+    return {
+      label: 'Using Included SRD this session',
+      detail: 'The configured online source will be available to retry in Settings.',
+      icon: CloudSlash,
+      tone: 'text-warning-foreground',
+    }
+  }
+
+  if (cacheStatus === 'remote-cache') {
+    return {
+      label: 'Using saved game data',
+      detail: 'The online source could not be checked. The last saved game data is available.',
+      icon: CloudSlash,
+      tone: 'text-warning-foreground',
+    }
+  }
+
   if (cacheStatus === 'offline') {
     return {
       label: 'Using cached game data',
@@ -99,7 +117,9 @@ export function AppStatusBar() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
-  const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
+  const dataSourceConfig = useGameDataStore(
+    (state) => state.sessionBundledSource ?? state.dataSourceConfig,
+  )
   const isLoading = useGameDataStore((state) => state.isLoading)
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)

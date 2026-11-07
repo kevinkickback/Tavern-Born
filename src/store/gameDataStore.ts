@@ -7,6 +7,7 @@ import {
 } from '@/lib/5etools/contentLayers'
 import { loadDataFromSource } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { settleOnAbort } from '@/lib/abortable'
 import {
   clearGameDataCache,
   computeGameDataFingerprint,
@@ -17,13 +18,40 @@ import {
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
-import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
+import type {
+  BundledDataSourceConfig,
+  DataSourceConfig,
+  GameData,
+  GameDataSourceStack,
+} from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
+let remoteStartupPreparation: AbortController | null = null
+let remoteStartupAttempt: AbortController | null = null
+let remoteStartupLoad: Promise<boolean> | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
 const GAME_DATA_STORE_VERSION = 1
+export const REMOTE_STARTUP_TIMEOUT_MS = 15_000
+const remoteTimeout = () =>
+  new DOMException('The game data source did not respond within 15 seconds.', 'TimeoutError')
+
+type RemoteStartupStatus =
+  | 'checking'
+  | 'committing'
+  | 'unavailable'
+  | 'cached'
+  | 'loaded'
+  | 'loading-srd'
+  | 'srd'
+  | 'setup'
+
+interface StartupLoad {
+  signal: AbortSignal
+  beginCommit: () => void
+  sourceStack?: GameDataSourceStack | null
+}
 
 export function migrateGameDataPersistedState(persistedState: unknown): unknown {
   if (!persistedState || typeof persistedState !== 'object' || Array.isArray(persistedState)) {
@@ -111,6 +139,8 @@ export type CacheStatus =
   | 'fresh' // loaded from cache, within 24 h, same source
   | 'stale' // loaded from cache, being refreshed in background
   | 'offline' // loaded from cache, no source configured
+  | 'remote-cache' // matching remote cache retained after a failed or timed-out startup check
+  | 'session-srd' // Included SRD loaded into memory only
   | 'fetched' // freshly fetched from source this session
   | 'unconfigured' // no cache and no source — user must configure
 
@@ -127,6 +157,8 @@ interface GameDataState {
   lastContentFingerprint: string | null
   lastUpdateCheckAt: string | null
   cacheStatus: CacheStatus
+  remoteStartup: RemoteStartupStatus | null
+  sessionBundledSource: BundledDataSourceConfig | null
   /** True once the Zustand persist middleware has read back from IDB. */
   hasHydrated: boolean
 
@@ -156,7 +188,17 @@ interface GameDataState {
    * true only when the content fingerprint changed. Pass `background = true`
    * to refresh without blocking or clearing the current data.
    */
-  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
+  loadGameData: (
+    config: DataSourceConfig,
+    background?: boolean,
+    startup?: StartupLoad,
+  ) => Promise<boolean>
+  checkRemoteStartup: (
+    deadline?: number,
+    sourceStack?: GameDataSourceStack | null,
+  ) => Promise<boolean>
+  useBundledForSession: () => Promise<boolean>
+  reconfigureRemoteStartup: () => void
   refreshGameData: () => Promise<void>
   restoreBundledData: () => Promise<boolean>
   clearGameData: () => Promise<void>
@@ -176,6 +218,8 @@ export const useGameDataStore = create<GameDataState>()(
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
+      remoteStartup: null,
+      sessionBundledSource: null,
       hasHydrated: false,
 
       setGameData: (data) =>
@@ -201,14 +245,60 @@ export const useGameDataStore = create<GameDataState>()(
           setLastDataChangedAt,
           setLastContentFingerprint,
         } = get()
-        const cache = await readGameDataCache()
+        const remoteDeadline =
+          savedSourceConfig?.type === 'remote'
+            ? performance.now() + REMOTE_STARTUP_TIMEOUT_MS
+            : undefined
+        if (remoteDeadline !== undefined && (remoteStartupPreparation || remoteStartupAttempt))
+          return {}
+        const cacheRead = readGameDataCache()
         // The installed pack can change with an app update. Compare against its
         // current manifest, not the version remembered by the previous installation.
         const dataSourceConfig =
           savedSourceConfig?.type === 'bundled'
             ? ((await resolveDefaultBundledSource()) ?? savedSourceConfig)
             : savedSourceConfig
-        const configuredStack = dataSourceConfig ? await resolveSourceStack(dataSourceConfig) : null
+        const stack = dataSourceConfig ? resolveSourceStack(dataSourceConfig) : null
+        const controller = remoteDeadline === undefined ? undefined : new AbortController()
+        if (controller) remoteStartupPreparation = controller
+        const preflight = Promise.all([
+          cacheRead.then((cache) => {
+            if (
+              !cache &&
+              controller &&
+              remoteStartupPreparation === controller &&
+              get().dataSourceConfig === savedSourceConfig
+            ) {
+              set({ remoteStartup: 'checking', error: null })
+            }
+            return cache
+          }),
+          stack,
+        ])
+        const timer =
+          controller &&
+          setTimeout(() => controller.abort(remoteTimeout()), REMOTE_STARTUP_TIMEOUT_MS)
+        let resolved: Awaited<typeof preflight>
+        try {
+          resolved = await (controller ? settleOnAbort(preflight, controller.signal) : preflight)
+        } catch (error) {
+          if (!controller) throw error
+          if (
+            remoteStartupPreparation === controller &&
+            get().dataSourceConfig === savedSourceConfig
+          ) {
+            set({
+              remoteStartup: 'unavailable',
+              error: error instanceof Error ? error.message : null,
+            })
+          }
+          return {}
+        } finally {
+          clearTimeout(timer)
+          if (remoteStartupPreparation === controller) remoteStartupPreparation = null
+        }
+        if (controller && get().dataSourceConfig !== savedSourceConfig) return {}
+        const [cache, configuredStack] = resolved
         const cacheIdentity = configuredStack ?? dataSourceConfig
 
         if (!cache && !dataSourceConfig) {
@@ -223,6 +313,11 @@ export const useGameDataStore = create<GameDataState>()(
 
         if (cache && dataSourceConfig) {
           if (!cacheIdentity || !isCacheForSource(cache, cacheIdentity)) {
+            if (dataSourceConfig.type === 'remote') {
+              return {
+                backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack),
+              }
+            }
             await loadGameData(dataSourceConfig)
             return {}
           }
@@ -231,7 +326,12 @@ export const useGameDataStore = create<GameDataState>()(
             setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
             setLastContentFingerprint(cache.contentFingerprint ?? null)
             setCacheStatus('stale')
-            return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
+            return {
+              backgroundRefresh:
+                dataSourceConfig.type === 'remote'
+                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
+                  : loadGameData(dataSourceConfig, true),
+            }
           }
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
@@ -246,7 +346,12 @@ export const useGameDataStore = create<GameDataState>()(
           const checkedRecently =
             Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
           if (dataSourceConfig.type !== 'bundled' && (opts?.forceCheck || !checkedRecently)) {
-            return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
+            return {
+              backgroundRefresh:
+                dataSourceConfig.type === 'remote'
+                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
+                  : loadGameData(dataSourceConfig, true),
+            }
           }
           return {}
         }
@@ -260,6 +365,9 @@ export const useGameDataStore = create<GameDataState>()(
         }
 
         if (!cache && dataSourceConfig) {
+          if (dataSourceConfig.type === 'remote') {
+            return { backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack) }
+          }
           await loadGameData(dataSourceConfig)
           return {}
         }
@@ -267,11 +375,136 @@ export const useGameDataStore = create<GameDataState>()(
         return {}
       },
 
-      loadGameData: async (config, background = false) => {
+      checkRemoteStartup: async (
+        deadline = performance.now() + REMOTE_STARTUP_TIMEOUT_MS,
+        sourceStack,
+      ) => {
+        const { dataSourceConfig: config, gameData, remoteStartup } = get()
+        if (
+          config?.type !== 'remote' ||
+          remoteStartupPreparation !== null ||
+          remoteStartupAttempt !== null ||
+          remoteStartup === 'committing' ||
+          remoteStartup === 'loading-srd'
+        )
+          return false
+        const attempt = new AbortController()
+        remoteStartupAttempt = attempt
+        const timeoutError = remoteTimeout()
+        const remaining = deadline - performance.now()
+        const timer = setTimeout(() => attempt.abort(timeoutError), Math.max(0, remaining))
+        if (remaining <= 0) attempt.abort(timeoutError)
+        set({ remoteStartup: 'checking' })
+        try {
+          remoteStartupLoad = get().loadGameData(config, Boolean(gameData), {
+            signal: attempt.signal,
+            sourceStack,
+            beginCommit: () => {
+              if (performance.now() >= deadline) attempt.abort(timeoutError)
+              attempt.signal.throwIfAborted()
+              set({ remoteStartup: 'committing' })
+            },
+          })
+          const changed = await remoteStartupLoad
+          if (remoteStartupAttempt !== attempt) return false
+          const current = get()
+          if (!current.error && current.cacheStatus === 'fetched') set({ remoteStartup: 'loaded' })
+          else if (gameData)
+            set({ remoteStartup: 'cached', cacheStatus: 'remote-cache', error: null })
+          else set({ remoteStartup: 'unavailable' })
+          return changed
+        } finally {
+          clearTimeout(timer)
+          if (remoteStartupAttempt === attempt) {
+            remoteStartupAttempt = null
+            remoteStartupLoad = null
+          }
+        }
+      },
+
+      useBundledForSession: async () => {
+        if (!get().gameData && get().remoteStartup === 'committing') {
+          remoteStartupAttempt?.abort()
+          // A transaction that already committed settles as success. Otherwise, wait for abort
+          // before starting the fallback so the two catalogs cannot both win.
+          await remoteStartupLoad
+        }
+        const { gameData, remoteStartup } = get()
+        if (gameData || (remoteStartup !== 'checking' && remoteStartup !== 'unavailable'))
+          return false
+        const requestId = ++activeLoadRequestId
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
+        remoteStartupAttempt?.abort()
+        remoteStartupAttempt = null
+        remoteStartupLoad = null
+        activeLoadController?.abort()
+        const controller = new AbortController()
+        activeLoadController = controller
+        set({
+          remoteStartup: 'loading-srd',
+          isLoading: true,
+          isBackgroundRefreshing: false,
+          loadProgress: null,
+          error: null,
+        })
+        try {
+          const bundled = await resolveDefaultBundledSource()
+          if (!bundled)
+            throw new Error('The Included SRD is unavailable in this copy of Tavern Born.')
+          const required = new Set<string>()
+          const data = await loadDataFromSource(bundled, {
+            signal: controller.signal,
+            onProgress: (current, total, resource) => {
+              if (requestId === activeLoadRequestId)
+                set({ loadProgress: { current, total, resource } })
+            },
+            onResourceFailure: (resource, failure) => {
+              if (failure.required) required.add(resource)
+            },
+          })
+          if (requestId !== activeLoadRequestId) return false
+          if (required.size || getCatalogEntityCount(data) === 0)
+            throw new Error('The Included SRD could not be loaded.')
+          get().setGameData(data)
+          set({
+            remoteStartup: 'srd',
+            sessionBundledSource: bundled,
+            cacheStatus: 'session-srd',
+            isLoading: false,
+            loadProgress: null,
+          })
+          return true
+        } catch (error) {
+          if (requestId === activeLoadRequestId)
+            set({
+              remoteStartup: 'unavailable',
+              isLoading: false,
+              loadProgress: null,
+              error:
+                error instanceof Error ? error.message : 'The Included SRD could not be loaded.',
+            })
+          return false
+        } finally {
+          if (activeLoadController === controller) activeLoadController = null
+        }
+      },
+
+      reconfigureRemoteStartup: () => {
+        if (get().remoteStartup !== 'unavailable') return
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
+        set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
+      },
+
+      loadGameData: async (config, background = false, startup) => {
         const requestId = ++activeLoadRequestId
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
+        const signal = startup
+          ? AbortSignal.any([controller.signal, startup.signal])
+          : controller.signal
 
         if (background) {
           set({
@@ -290,12 +523,17 @@ export const useGameDataStore = create<GameDataState>()(
         try {
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
-          const sourceStack = await resolveSourceStack(config)
+          const stack =
+            startup?.sourceStack === undefined
+              ? resolveSourceStack(config)
+              : Promise.resolve(startup.sourceStack)
+          const sourceStack = await (startup ? settleOnAbort(stack, signal) : stack)
+          signal.throwIfAborted()
           const cacheIdentity = sourceStack ?? config
           const layerMetadata: GameDataLayerCacheMetadataByRole = {}
           const loaderOptions: DataSourceStackLoaderOptions = {
             onProgress: (current, total, resource) => {
-              if (requestId === activeLoadRequestId) {
+              if (requestId === activeLoadRequestId && !signal.aborted) {
                 set({ loadProgress: { current, total, resource } })
               }
             },
@@ -303,17 +541,20 @@ export const useGameDataStore = create<GameDataState>()(
               failedResources.add(resource)
               if (failure.required) failedRequiredResources.add(resource)
             },
-            signal: controller.signal,
+            signal,
             onLayerLoaded: (role, layerData) => {
+              if (signal.aborted) return
               layerMetadata[role] = {
                 contentFingerprint: computeGameDataFingerprint(layerData),
                 entityCount: getCatalogEntityCount(layerData),
               }
             },
           }
-          const data = sourceStack
-            ? await loadGameDataSourceStack(sourceStack, loaderOptions)
-            : await loadDataFromSource(config, loaderOptions)
+          const pending = sourceStack
+            ? loadGameDataSourceStack(sourceStack, loaderOptions)
+            : loadDataFromSource(config, loaderOptions)
+          const data = await (startup ? settleOnAbort(pending, signal) : pending)
+          signal.throwIfAborted()
 
           const existingData = get().gameData
           if (background && failedResources.size > 0) {
@@ -334,6 +575,8 @@ export const useGameDataStore = create<GameDataState>()(
           ) {
             throw new Error('Background refresh returned empty data; keeping existing cache')
           }
+          if (startup && getCatalogEntityCount(data) === 0)
+            throw new Error('The game data source returned an empty catalog.')
 
           // Ignore stale results from superseded requests.
           if (requestId !== activeLoadRequestId) {
@@ -347,21 +590,30 @@ export const useGameDataStore = create<GameDataState>()(
           const prevChangedAt = get().lastDataChangedAt
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
-          const cacheEntry = await enqueueCacheMutation(() =>
-            writeGameDataCache(data, cacheIdentity, {
+          let writeStarted = false
+          const mutation = enqueueCacheMutation(() => {
+            if (requestId !== activeLoadRequestId) return Promise.resolve(null)
+            signal.throwIfAborted()
+            writeStarted = true
+            return writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
               ...(sourceStack ? { layerMetadata } : {}),
-            }),
-          )
+              ...(startup ? { signal, beforeWrite: startup.beginCommit } : {}),
+            })
+          })
+          const cacheEntry = await (startup
+            ? settleOnAbort(mutation, signal, () => !writeStarted)
+            : mutation)
 
           // A clear or newer load may have started while the cache write was queued.
           // The queued clear still runs after this write; do not restore stale state.
-          if (requestId !== activeLoadRequestId) {
+          if (!cacheEntry || requestId !== activeLoadRequestId) {
             return false
           }
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
-          const shouldHydrateMemory = contentChanged || !hadGameData
+          const shouldHydrateMemory =
+            contentChanged || !hadGameData || get().sessionBundledSource !== null
           set({
             gameData: shouldHydrateMemory ? data : get().gameData,
             dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
@@ -375,6 +627,7 @@ export const useGameDataStore = create<GameDataState>()(
             lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
             lastUpdateCheckAt: now,
             cacheStatus: 'fetched',
+            sessionBundledSource: null,
           })
           return contentChanged
         } catch (error) {
@@ -441,6 +694,11 @@ export const useGameDataStore = create<GameDataState>()(
         // Invalidate results even when the underlying operation (notably local IPC
         // reads or an IndexedDB write) cannot be cancelled by AbortController.
         activeLoadRequestId += 1
+        remoteStartupAttempt?.abort()
+        remoteStartupAttempt = null
+        remoteStartupLoad = null
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
         activeLoadController?.abort()
         activeLoadController = null
         set({
@@ -455,6 +713,8 @@ export const useGameDataStore = create<GameDataState>()(
           lastContentFingerprint: null,
           lastUpdateCheckAt: null,
           cacheStatus: 'unconfigured',
+          remoteStartup: null,
+          sessionBundledSource: null,
         })
         // Serialize cache mutations so a write already in flight is always followed
         // by this deletion, while later user-initiated loads write after the clear.
