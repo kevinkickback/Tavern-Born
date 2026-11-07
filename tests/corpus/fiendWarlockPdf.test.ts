@@ -210,17 +210,54 @@ test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($p
   }
 })
 
-test.each(stackCases)('$edition prints only a current earned Blade selection ($pack)', ({
-  pack,
-  edition,
-}) => {
+function bladeSheetFixture(pack: string, edition: (typeof editions)[number]) {
   const raw = dataFor(pack)
   const [, source] = edition
   const data = current(raw, source)
-  const initial = actor(edition, 5)
-  const selected = chooseBlade(initial, data)
+  const rawLookups = lookups(raw)
+  const primaryLookups = lookups(data)
+  const selected = chooseBlade(actor(edition, 5), data)
+  return {
+    data,
+    source,
+    selected,
+    view: (saved: Character, filtered?: GameData) =>
+      createCharacterSheetViewModel(
+        saved,
+        rawLookups,
+        filtered ? lookups(filtered) : primaryLookups,
+      ),
+  }
+}
+
+function expectNoBladeRule(vm: ReturnType<typeof createCharacterSheetViewModel>) {
+  expect(vm.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName)).toBe(false)
+  expect(vm.actions.some((row) => row.name === bladeName)).toBe(false)
+}
+
+test.each(stackCases)('$edition withdraws and restores the selected Blade rule ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { data, source, selected, view } = bladeSheetFixture(pack, edition)
   const cleared = chooseBlade(selected, data, false)
-  const restored = chooseBlade(cleared, data)
+  expectNoBladeRule(view(cleared))
+  const currentView = view(chooseBlade(cleared, data))
+  expect(
+    currentView.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName),
+  ).toBe(true)
+  expect(currentView.actions.some((row) => row.name === bladeName)).toBe(true)
+  expect(currentView.featuresSummary.toLowerCase()).toContain(bladeClause[source])
+  const compact = withoutSheetDescriptions(currentView)
+  expect(compact.featuresSummary).toContain(bladeName)
+  expect(compact.featuresSummary.toLowerCase()).not.toContain(bladeClause[source])
+})
+
+test.each(stackCases)('$edition requires the exact current Blade source ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { data, source, selected, view } = bladeSheetFixture(pack, edition)
   const leaf = (row: unknown): row is { name: string; source: string } =>
     !!row &&
     typeof row === 'object' &&
@@ -235,26 +272,20 @@ test.each(stackCases)('$edition prints only a current earned Blade selection ($p
       leaf(row) ? { ...row, entries: ['You can use your action to apply unverified rules.'] } : row,
     ),
   }
-  const view = (saved: Character, filtered: GameData) =>
-    createCharacterSheetViewModel(saved, lookups(raw), lookups(filtered))
-  const present = (vm: ReturnType<typeof view>) =>
-    vm.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName)
-  for (const invalid of [view(cleared, data), view(selected, without), view(selected, altered)]) {
-    expect(present(invalid)).toBe(false)
-    expect(invalid.actions.some((row) => row.name === bladeName)).toBe(false)
-  }
-  const currentView = view(restored, data)
-  expect(present(currentView)).toBe(true)
-  expect(currentView.featuresSummary.toLowerCase()).toContain(bladeClause[source])
-  const compact = withoutSheetDescriptions(currentView)
-  expect(compact.featuresSummary).toContain(bladeName)
-  expect(compact.featuresSummary.toLowerCase()).not.toContain(bladeClause[source])
+  expectNoBladeRule(view(selected, without))
+  expectNoBladeRule(view(selected, altered))
+})
 
-  const native = currentView.actions.find((row) => row.name === bladeName)
+test.each(stackCases)('$edition preserves normalized and manual Blade actions ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { source, selected, view } = bladeSheetFixture(pack, edition)
+  const native = view(selected).actions.find((row) => row.name === bladeName)
   if (!native) throw new Error('Missing selected Pact action')
   const imported = characterPersistenceSchema.parse({
-    ...restored,
-    classChoiceSelections: restored.classChoiceSelections?.map((selection) => ({
+    ...selected,
+    classChoiceSelections: selected.classChoiceSelections?.map((selection) => ({
       ...selection,
       selected: selection.selected.map((option) => ({
         ...option,
@@ -263,15 +294,14 @@ test.each(stackCases)('$edition prints only a current earned Blade selection ($p
       })),
     })),
   })
-  expect(view(imported, data).actions.find((row) => row.id === native.id)).toEqual(native)
+  expect(view(imported).actions.find((row) => row.id === native.id)).toEqual(native)
   const manual = {
     ...native,
     source: { kind: 'manual' as const, name: bladeName },
     description: 'Independent manual action.',
   }
   const withManual = view(
-    characterPersistenceSchema.parse({ ...restored, manualActions: [manual] }),
-    data,
+    characterPersistenceSchema.parse({ ...selected, manualActions: [manual] }),
   )
   expect(withManual.actions.find((row) => row.id === native.id)).toEqual(manual)
   expect(withManual.featuresSummary.toLowerCase()).toContain(bladeClause[source])
