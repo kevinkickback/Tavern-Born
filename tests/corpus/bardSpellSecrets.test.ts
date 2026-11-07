@@ -145,6 +145,12 @@ test.each(
           expect(calculate(at(2)).character.proficiencies[key], college).not.toContain(name)
         }
       }
+      if (college === 'College of Valor' || college === 'College of Swords') {
+        expect(() => reopen(projected)).not.toThrow()
+        const partial = structuredClone(projected)
+        delete partial.provenance.proficiencies.armor.medium
+        expect(() => reopen(partial)).toThrow()
+      }
     }
     const moon = collegeFixture('XPHB', 'College of the Moon', 'FRHoF')
     const moonActor = moon.at(3)
