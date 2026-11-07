@@ -39,7 +39,7 @@ export const LAND_BONUS_SPELL_SLOT: ManagedClassSpellSlot = [
   0,
 ]
 
-export const BARD_PRIMAL_LORE_SPELL_ADDRESS = selectedFeatureSpellAddress([
+const BARD_PRIMAL_LORE_SPELL_ADDRESS = selectedFeatureSpellAddress([
   BARD_PRIMAL_LORE_TARGET,
   'subclassFeature',
   'primal lore',
