@@ -270,6 +270,64 @@ test.skipIf(!packs.includes('composed')).each(configuredPatrons)(
   },
 )
 
+test.skipIf(!packs.includes('composed'))(
+  'revised Great Old One prepares Hex at Warlock level 10',
+  () => {
+    const data = dataFor('composed')
+    const filtered = current(data, 'XPHB')
+    const primary = lookups(filtered)
+    const retained = lookups(data)
+    const patron = 'Great Old One Patron'
+    const before = actor(editions[1], 9, patron)
+    const earned = actor(editions[1], 10, patron)
+    const fixedHex = (saved: Character, visible = primary) =>
+      createCharacterCalculationContext(saved, visible, retained).fixedClassSpellStatuses.find(
+        (row) => row.featureName === 'Eldritch Hex',
+      )
+    expect(fixedHex(before)).toBeUndefined()
+    expect(fixedHex(earned)).toMatchObject({
+      owner: ['subclass', 'warlock', 'xphb', 'great old one patron', 'xphb'],
+      level: 10,
+      reference: 'Hex|XPHB',
+      prepared: true,
+      active: true,
+    })
+    expect(fixedHex(earned)?.castingNote).toBeUndefined()
+    const view = createCharacterSheetViewModel(earned, retained, primary)
+    expect(view.spellRows.filter((row) => row.name === 'Hex')).toEqual([
+      expect.objectContaining({ name: 'Hex', level: '1', prepared: true }),
+    ])
+
+    const altered = lookups({
+      ...filtered,
+      classes: filtered.classes.map((cls) =>
+        cls.name === 'Warlock' && cls.source === 'XPHB'
+          ? {
+              ...cls,
+              subclasses: cls.subclasses?.map((subclass) =>
+                subclass.name === patron && subclass.source === 'XPHB'
+                  ? {
+                      ...subclass,
+                      additionalSpells: subclass.additionalSpells?.map((block) => ({
+                        ...block,
+                        innate: { 10: { daily: { 1: ['hex|xphb'] } } },
+                      })),
+                    }
+                  : subclass,
+              ),
+            }
+          : cls,
+      ),
+    })
+    expect(fixedHex(earned, altered)).toMatchObject({ active: false, reason: expect.any(String) })
+    expect(
+      createCharacterSheetViewModel(earned, retained, altered).spellRows.some(
+        (row) => row.name === 'Hex',
+      ),
+    ).toBe(false)
+  },
+)
+
 const patronFormCases = [
   {
     edition: editions[0],

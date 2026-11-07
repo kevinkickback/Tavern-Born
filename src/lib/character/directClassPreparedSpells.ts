@@ -1,14 +1,23 @@
+import { parseAdditionalSpellBlocks } from '@/lib/5etools/additionalSpells'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
+import {
+  ELDRITCH_HEX_REFERENCE,
+  ELDRITCH_HEX_RULE_DIGEST,
+  ELDRITCH_HEX_TARGET,
+  getCurrentNativeWarlockPatronRules,
+  getNativeEldritchHexOwner,
+} from '@/lib/5etools/nativeWarlockPatronRules'
 import { decodeOptionalDeclaration } from '@/lib/5etools/optionalClassDeclarationStructure'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm, stripItemTag } from '@/lib/provenance/normalization'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import type { ClassFixedSpellGrant } from './optionalClassFixedSpells'
 
@@ -107,6 +116,62 @@ function matchesPreparedSchedule(
   )
 }
 
+function getEldritchHexGrant(
+  character: Character,
+  entry: CharacterClassEntry,
+  cls: Class5e | undefined,
+  catalogs: ClassChoiceFeatureCatalogs,
+): ClassPreparedSpellGrant | undefined {
+  const level = 10
+  const patron = getNativeEldritchHexOwner(entry)
+  if (
+    !patron ||
+    !Number.isInteger(entry.levels) ||
+    entry.levels < level ||
+    entry.levels > 20 ||
+    !getSourceCompatibility(warlock.source, character.originSystem ?? '2014').compatible
+  )
+    return undefined
+
+  const grant: ClassPreparedSpellGrant = {
+    owner: ['subclass', warlock.name, warlock.source, norm(patron.name), patron.source],
+    target: ELDRITCH_HEX_TARGET,
+    featureName: 'Eldritch Hex',
+    level,
+    reference: ELDRITCH_HEX_REFERENCE,
+    spellLevel: 1,
+  }
+  const unavailable = {
+    ...grant,
+    sourceReason: 'Restore the exact Eldritch Hex feature and its patron spell schedule.',
+  }
+  const current = cls && getCurrentNativeWarlockPatronRules(cls, entry, catalogs)
+  const feature = current?.getDirectFeature(ELDRITCH_HEX_TARGET, ELDRITCH_HEX_RULE_DIGEST)
+  const blocks = current?.subclass.additionalSpells as AdditionalSpellBlock[] | undefined
+  const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
+  const innate = block?.innate
+  if (
+    !feature ||
+    !block ||
+    Object.keys(block).some((key) => key !== 'innate' && key !== 'prepared') ||
+    !innate ||
+    typeof innate !== 'object' ||
+    Array.isArray(innate) ||
+    Object.keys(innate).length !== 1 ||
+    !matchesPreparedSchedule(innate, level, grant.reference)
+  )
+    return unavailable
+
+  // The certified feature supplies preparation semantics for this direct innate schedule.
+  const [spell] = parseAdditionalSpellBlocks([{ innate }])[0].grants
+  return spell?.source === 'innate' &&
+    spell.level === level &&
+    !spell.isCantrip &&
+    getSpellReferenceKey(spell.spellName) === getSpellReferenceKey(grant.reference)
+    ? { ...grant, featureName: feature.name }
+    : unavailable
+}
+
 function getContactPatronGrant(
   cls: Class5e,
   catalogs: ClassChoiceFeatureCatalogs,
@@ -167,7 +232,7 @@ function getContactPatronGrant(
     : unavailable
 }
 
-/** A current certified feature must corroborate its own gain in the class spell schedule. */
+/** A current certified feature must corroborate its own gain in the owner's spell schedule. */
 export function getDirectClassPreparedSpellGrants(
   character: Character,
   classes: readonly Class5e[],
@@ -175,12 +240,11 @@ export function getDirectClassPreparedSpellGrants(
 ): ClassPreparedSpellGrant[] {
   if (!catalogs) return []
   return character.classProgression.flatMap((entry) => {
-    const cls = findClassReference(entry, classes)
-    if (
-      !cls ||
-      character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1
-    )
+    if (character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1)
       return []
+    const cls = findClassReference(entry, classes)
+    const hex = getEldritchHexGrant(character, entry, cls, catalogs)
+    if (!cls) return hex ? [hex] : []
     const blocks = cls.additionalSpells as AdditionalSpellBlock[] | undefined
     const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
     const prepared = block?.prepared
@@ -193,7 +257,10 @@ export function getDirectClassPreparedSpellGrants(
         ? prepared
         : undefined
     if (findClassReference(warlock, [cls]))
-      return entry.levels >= 9 ? [getContactPatronGrant(cls, catalogs, schedule)] : []
+      return [
+        ...(entry.levels >= 9 ? [getContactPatronGrant(cls, catalogs, schedule)] : []),
+        ...(hex ? [hex] : []),
+      ]
     if (!schedule || !Array.isArray(cls.classFeatures) || !Array.isArray(cls.classFeatureRefs))
       return []
 
