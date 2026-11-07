@@ -4,17 +4,25 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { beforeAll, expect, test } from 'vitest'
+import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import {
+  createCharacterSheetViewModel,
+  withoutSheetDescriptions,
+} from '@/lib/pdf/characterSheetViewModel'
 import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { Class5e, ClassFeature, GameData, SubclassFeature } from '@/types/5etools'
+import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
@@ -94,6 +102,44 @@ function lookups(data: GameData) {
   }
 }
 
+const bladeName = 'Pact of the Blade'
+const bladeClause = {
+  PHB: 'perform the ritual over the course of 1 hour',
+  XPHB: 'necrotic, psychic, or radiant damage',
+}
+
+function chooseBlade(saved: Character, data: GameData, selected = true) {
+  const [owner] = saved.classProgression
+  const cls = data.classes.find((row) => row.name === owner.name && row.source === owner.source)
+  if (!cls) throw new Error('Missing exact Warlock')
+  const catalogs = buildClassChoiceFeatureCatalogs(data)
+  const activity = createOptionalClassFeatureActivity(saved, catalogs)
+  const label = cls.source === 'PHB' ? 'Pact Boon' : 'Eldritch Invocations'
+  const choice = getCharacterClassChoices(
+    cls,
+    getSelectedSubclassData(cls, owner),
+    activity,
+    catalogs,
+  ).find((row) => row.label === label)
+  if (!choice) throw new Error('Missing exact Pact choice')
+  const result = applyClassChoiceSelectionWithGrantsCommand(
+    saved,
+    saved.provenance,
+    choice,
+    selected ? [{ entityType: 'optionalFeature', name: bladeName, source: cls.source }] : [],
+    { classes: data.classes, catalogs },
+  )
+  return characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({
+        ...saved,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      }),
+    ),
+  )
+}
+
 function summaries(
   data: GameData,
   edition: (typeof editions)[number],
@@ -126,10 +172,11 @@ test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($p
 }) => {
   const data = dataFor(pack)
   const [, source] = edition
+  const filtered = current(data, source)
   const view = createCharacterSheetViewModel(
-    actor(edition, 20),
+    chooseBlade(actor(edition, 20), filtered),
     lookups(data),
-    lookups(current(data, source)),
+    lookups(filtered),
   )
   const pdf = await generateTestCharacterSheet(view, template, {
     text: { descriptions: 'full', overflow: 'notes' },
@@ -142,6 +189,14 @@ test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($p
     .replace(/\s+/g, ' ')
     .replace(/’/g, "'")
   for (const label of [...labels, 'Eldritch Master']) expect(text).toContain(label)
+  expect(text).toContain(bladeName)
+  expect(text.toLowerCase()).toContain(bladeClause[source])
+  if (template === '2014-custom')
+    expect(text.toLowerCase().split(bladeClause[source])).toHaveLength(2)
+  expect(
+    view.declaredClassFeatureSummaries?.filter((row) => row.compactText === bladeName),
+  ).toHaveLength(1)
+  expect(text.toLowerCase()).not.toContain(bladeClause[source === 'PHB' ? 'XPHB' : 'PHB'])
   expect(text).toMatch(
     /regain all expended (?:Pact Magic )?spell slots when you finish a short or long rest/i,
   )
@@ -153,6 +208,103 @@ test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($p
     expect(text).toMatch(/other than Force/i)
     expect(text).toMatch(/8d10 Psychic damage/i)
   }
+})
+
+function bladeSheetFixture(pack: string, edition: (typeof editions)[number]) {
+  const raw = dataFor(pack)
+  const [, source] = edition
+  const data = current(raw, source)
+  const rawLookups = lookups(raw)
+  const primaryLookups = lookups(data)
+  const selected = chooseBlade(actor(edition, 5), data)
+  return {
+    data,
+    source,
+    selected,
+    view: (saved: Character, filtered?: GameData) =>
+      createCharacterSheetViewModel(
+        saved,
+        rawLookups,
+        filtered ? lookups(filtered) : primaryLookups,
+      ),
+  }
+}
+
+function expectNoBladeRule(vm: ReturnType<typeof createCharacterSheetViewModel>) {
+  expect(vm.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName)).toBe(false)
+  expect(vm.actions.some((row) => row.name === bladeName)).toBe(false)
+}
+
+test.each(stackCases)('$edition withdraws and restores the selected Blade rule ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { data, source, selected, view } = bladeSheetFixture(pack, edition)
+  const cleared = chooseBlade(selected, data, false)
+  expectNoBladeRule(view(cleared))
+  const currentView = view(chooseBlade(cleared, data))
+  expect(
+    currentView.declaredClassFeatureSummaries?.some((row) => row.compactText === bladeName),
+  ).toBe(true)
+  expect(currentView.actions.some((row) => row.name === bladeName)).toBe(true)
+  expect(currentView.featuresSummary.toLowerCase()).toContain(bladeClause[source])
+  const compact = withoutSheetDescriptions(currentView)
+  expect(compact.featuresSummary).toContain(bladeName)
+  expect(compact.featuresSummary.toLowerCase()).not.toContain(bladeClause[source])
+})
+
+test.each(stackCases)('$edition requires the exact current Blade source ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { data, source, selected, view } = bladeSheetFixture(pack, edition)
+  const leaf = (row: unknown): row is { name: string; source: string } =>
+    !!row &&
+    typeof row === 'object' &&
+    'name' in row &&
+    row.name === bladeName &&
+    'source' in row &&
+    row.source === source
+  const without = { ...data, optionalfeatures: data.optionalfeatures.filter((row) => !leaf(row)) }
+  const altered = {
+    ...data,
+    optionalfeatures: data.optionalfeatures.map((row) =>
+      leaf(row) ? { ...row, entries: ['You can use your action to apply unverified rules.'] } : row,
+    ),
+  }
+  expectNoBladeRule(view(selected, without))
+  expectNoBladeRule(view(selected, altered))
+})
+
+test.each(stackCases)('$edition preserves normalized and manual Blade actions ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const { source, selected, view } = bladeSheetFixture(pack, edition)
+  const native = view(selected).actions.find((row) => row.name === bladeName)
+  if (!native) throw new Error('Missing selected Pact action')
+  const imported = characterPersistenceSchema.parse({
+    ...selected,
+    classChoiceSelections: selected.classChoiceSelections?.map((selection) => ({
+      ...selection,
+      selected: selection.selected.map((option) => ({
+        ...option,
+        name: option.name.toUpperCase(),
+        source: option.source?.toLowerCase(),
+      })),
+    })),
+  })
+  expect(view(imported).actions.find((row) => row.id === native.id)).toEqual(native)
+  const manual = {
+    ...native,
+    source: { kind: 'manual' as const, name: bladeName },
+    description: 'Independent manual action.',
+  }
+  const withManual = view(
+    characterPersistenceSchema.parse({ ...selected, manualActions: [manual] }),
+  )
+  expect(withManual.actions.find((row) => row.id === native.id)).toEqual(manual)
+  expect(withManual.featuresSummary.toLowerCase()).toContain(bladeClause[source])
 })
 
 test.each(stackCases)('$edition verifies current rule eligibility ($pack)', ({ pack, edition }) => {

@@ -92,6 +92,7 @@ import {
   type ClassStaticFeatureSummary,
   getClassStaticFeatureSummaries,
 } from './classStaticFeatureSummaries'
+import { getPactOfTheBladeSheetRules, withPactOfTheBladeSheetActions } from './pactOfTheBladeSheet'
 import { getMetamagicDescriptions } from './sorcererSheetRules'
 
 type ModifierResult = { modifier: number; proficient: boolean }
@@ -849,7 +850,12 @@ export function createCharacterSheetViewModel(
       calculationContext.effects.resolutionContext,
     ).map((detail) => ({ ...detail, sourceType: 'racial' as const })),
   ]
-  const actions = deriveCharacterActions(character, {
+  const pactBladeRules = getPactOfTheBladeSheetRules(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    calculationContext.classChoices.prerequisites,
+  )
+  const derivedActions = deriveCharacterActions(character, {
     abilityModifiers,
     proficiencyBonus,
     itemLookup: rawLookups.itemLookup,
@@ -870,6 +876,7 @@ export function createCharacterSheetViewModel(
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
   })
+  const actions = withPactOfTheBladeSheetActions(derivedActions, pactBladeRules)
 
   const optionStates = getFeatureOptionSelectionStates(
     character,
@@ -905,6 +912,19 @@ export function createCharacterSheetViewModel(
       character,
       primaryLookups.classChoiceFeatureCatalogs,
       !!unlimitedWildShape,
+    ),
+    ...pactBladeRules.flatMap(({ body, featureId, actionId, name }) =>
+      body
+        ? [
+            {
+              text: `${name}: ${body}`,
+              compactText: name,
+              replaces: character.features.find((feature) => feature.id === featureId),
+              actionId,
+              actionNotesSource: 'class' as const,
+            },
+          ]
+        : [],
     ),
     ...optionStates
       .filter((state) => state.invocationCantrips)

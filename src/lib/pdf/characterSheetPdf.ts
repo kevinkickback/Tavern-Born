@@ -104,12 +104,27 @@ export async function generateFilledCharacterSheetPdf(
     // With continuation, unselected actions also carry their rules in Notes.
     const printedActions = continueInNotes ? original.actions : viewModel.actions
     const ids = printedActions
-      .filter(
-        (action) =>
-          action.source.kind === 'subclass' &&
-          action.description &&
-          customActionDetails.some(([kind]) => action.kind === kind),
-      )
+      .filter((action) => {
+        if (!action.description || !customActionDetails.some(([kind]) => action.kind === kind))
+          return false
+        if (action.source.kind === 'subclass') return true
+        if (action.source.kind !== 'class') return false
+        const matchingRule = original.declaredClassFeatureSummaries?.some(
+          (row) =>
+            row.actionNotesSource === 'class' &&
+            row.actionId === action.id &&
+            row.text === `${action.name}: ${action.description}`,
+        )
+        if (!matchingRule) return false
+        const group = selection.groups.find((row) => row.id === action.kind)
+        return (
+          !!group &&
+          (group.selected.includes(action.id) ||
+            (continueInNotes &&
+              group.entries.some((row) => row.id === action.id) &&
+              selection.overflow.some((row) => row.id === `content:${group.id}`)))
+        )
+      })
       .map((action) => action.id)
     viewModel = withFeatureLabelsForActionNotes(viewModel, new Set(ids))
   }

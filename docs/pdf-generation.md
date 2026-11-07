@@ -127,6 +127,12 @@ Classic Draconic Bloodline also prints the earned level-18 Draconic Presence rul
 The 2014 custom form keeps the feature labels in Class Features when their rules print in
 action Notes. Names-only exports keep the feature labels.
 
+Warlock sheets print the current selected Pact of the Blade rule. The classic Pact Boon
+and revised Eldritch Invocation use their own source text, including when the character
+uses a sheet template from the other edition. The 2014 custom form keeps the feature
+label in Class Features when action Notes carry the full rule. Names-only exports keep
+the label.
+
 ## Spells and companions
 
 Both 2014 layouts use the shared spell asset per casting source, including subclasses and each
