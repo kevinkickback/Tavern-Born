@@ -30,10 +30,8 @@ function renderPanel(languageChoice: ChoiceRecord) {
         choices: [languageChoice],
         proficiencies: emptyProficiencies,
       }}
-      dropdownToolSlots={[]}
-      artisanToolSlots={[]}
+      toolChoiceSlots={[]}
       visibleToolCandidates={[]}
-      artisanChoiceByNorm={new Map()}
       languageTypes={new Map()}
       toolTypeMap={new Map()}
       weaponInfoMap={new Map()}
