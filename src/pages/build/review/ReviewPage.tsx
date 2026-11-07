@@ -1,6 +1,7 @@
 import { ArrowRight, CheckCircle, ClipboardText, WarningCircle } from '@phosphor-icons/react'
 import { useId, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
@@ -11,6 +12,10 @@ import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
+import {
+  characterUsesContentOutsideCatalog,
+  createGameDataAvailabilityIndex,
+} from '@/lib/character/additionalContentAvailability'
 import { addReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { CharacterOverview } from '@/pages/build/review/CharacterOverview'
@@ -29,17 +34,26 @@ export function BuildReviewPage() {
   const actions = useCharacterActions(character)
   const { effectiveAC } = useArmorClass()
   const { effectiveMaxHP, hitDicePools } = useHitPoints()
-  const sources = useGameDataStore((state) => state.gameData?.sources ?? [])
+  const gameData = useGameDataStore((state) => state.gameData)
+  const availability = useMemo(
+    () => gameData && createGameDataAvailabilityIndex(gameData),
+    [gameData],
+  )
+  const hasUnavailableContent = useMemo(
+    () =>
+      !!character && !!availability && characterUsesContentOutsideCatalog(character, availability),
+    [character, availability],
+  )
 
   const sourceNames = useMemo(() => {
     if (!character || (character.allowedSources?.length ?? 0) === 0) return []
     const namesByAbbreviation = new Map(
-      sources.map((source) => [source.abbreviation.toUpperCase(), source.name]),
+      gameData?.sources.map((source) => [source.abbreviation.toUpperCase(), source.name]),
     )
     return (character.allowedSources ?? []).map(
       (source) => namesByAbbreviation.get(source.toUpperCase()) ?? source,
     )
-  }, [character, sources])
+  }, [character, gameData])
 
   if (!character || !calculation || !readiness) return null
 
@@ -110,6 +124,18 @@ export function BuildReviewPage() {
       </WorkspacePaneHeader>
       <WorkspaceBody className="bg-workspace-pane p-4">
         <Tabs value={section} onValueChange={selectSection} className="mx-auto w-full max-w-6xl">
+          {hasUnavailableContent && (
+            <aside
+              aria-label="Unavailable saved content"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2"
+            >
+              <AdditionalContentBadge showLabel />
+              <p className="text-sm text-muted-foreground">
+                Some choices are unavailable in the current game data. Your choices are still saved.
+                Load their original source to use them fully.
+              </p>
+            </aside>
+          )}
           <TabsContent
             id={`${tabIdPrefix}-panel-attention`}
             value="attention"
@@ -150,13 +176,18 @@ export function BuildReviewPage() {
                       className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       onClick={() => navigate(addReadinessFocus(issue.navigationTarget, issue.id))}
                     >
-                      {issue.severity === 'blocking' ? (
-                        <WarningCircle className="size-4 shrink-0 text-warning" weight="fill" />
-                      ) : (
-                        <CheckCircle className="size-4 shrink-0 text-muted-foreground" />
-                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium">{issue.title}</span>
+                        <span
+                          className={cn(
+                            'block text-xs font-medium',
+                            issue.severity === 'blocking'
+                              ? 'text-warning'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          {issue.severity === 'blocking' ? 'Needs attention' : 'Suggestion'}
+                        </span>
                         <span className="block text-xs text-muted-foreground">
                           {issue.explanation}
                         </span>

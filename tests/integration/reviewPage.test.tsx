@@ -106,6 +106,37 @@ describe('BuildReviewPage', () => {
     vi.clearAllMocks()
   })
 
+  test('shows one additional-content note across tabs until the exact rules return', async () => {
+    const user = userEvent.setup()
+    const exact = useGameDataStore.getState().gameData!
+    const other = { ...exact, races: exact.races.map((race) => ({ ...race, source: 'OTHER' })) }
+    other.lookups = buildGameDataLookups(other)
+    const character = useCharacterStore.getState().activeCharacter!
+    const filteredCharacter = { ...character, allowedSources: ['OTHER'] }
+    useCharacterStore.setState({ activeCharacter: filteredCharacter })
+    useGameDataStore.setState({ gameData: other })
+    render(
+      <MemoryRouter>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    const note = () => screen.getByRole('complementary', { name: 'Unavailable saved content' })
+    expect(within(note()).getByText('Additional content')).toBeTruthy()
+    expect(note().textContent).toContain('Your choices are still saved')
+    const summary = within(screen.getByTestId('readiness-summary'))
+    expect(
+      screen.getByRole('tab', {
+        name: new RegExp(`Needs attention\\s*${summary.getAllByRole('button').length}`),
+      }),
+    ).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Character overview' }))
+    expect(within(note()).getByText('Additional content')).toBeTruthy()
+    await act(() => useGameDataStore.setState({ gameData: exact }))
+    expect(screen.queryByRole('complementary', { name: 'Unavailable saved content' })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter).toBe(filteredCharacter)
+  })
+
   test('keeps equipment details source-qualified across catalog removal and restoration', async () => {
     const user = userEvent.setup()
     const base = useGameDataStore.getState().gameData!
@@ -188,6 +219,12 @@ describe('BuildReviewPage', () => {
     expect(screen.getByText(new RegExp(`^${issueCount} items? to review`))).toBeTruthy()
     expect(screen.getByText(/You can still save and print this character sheet/)).toBeTruthy()
     expect(screen.queryByText('Calculated totals')).toBeNull()
+    const blocked = screen.getByRole('button', { name: /Finish Test language choice/i })
+    const suggestion = screen.getByRole('button', { name: /Add a portrait/i })
+    expect(within(blocked).getByText('Needs attention')).toBeTruthy()
+    expect(within(suggestion).getByText('Suggestion')).toBeTruthy()
+    expect(blocked.querySelectorAll('svg')).toHaveLength(1)
+    expect(suggestion.querySelectorAll('svg')).toHaveLength(1)
 
     await user.click(screen.getByRole('tab', { name: 'Character overview' }))
 
