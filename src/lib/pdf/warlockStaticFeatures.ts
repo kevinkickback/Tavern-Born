@@ -1,24 +1,13 @@
-import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
-import { findClassReference } from '@/lib/5etools/classReference'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import {
-  findNativeSubclass,
-  getDirectSubclassFeatureReference,
-} from '@/lib/5etools/nativeSubclassFeatureSource'
-import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
-import {
-  decodeOptionalDeclaration,
-  exactOptionalDeclarationReference,
-  optionalDeclarationObject as record,
-} from '@/lib/5etools/optionalClassDeclarationStructure'
-import {
-  NATIVE_WARLOCK_PATRONS,
-  type NativeWarlockSource,
-} from '@/lib/5etools/warlockPatronFeatureSource'
+  ELDRITCH_HEX_RULE_DIGEST,
+  getCurrentNativeWarlockPatronRules,
+} from '@/lib/5etools/nativeWarlockPatronRules'
+import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
+import type { NativeWarlockSource } from '@/lib/5etools/warlockPatronFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
-import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
+import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 
 const classFields = new Set([
@@ -35,7 +24,6 @@ const classFields = new Set([
   'basicRules',
   'basicRules2024',
 ])
-const subclassFields = new Set([...classFields, 'subclassShortName', 'subclassSource'])
 
 const bodies = {
   phb: {
@@ -118,7 +106,7 @@ const patronBodies: Record<
       ],
       direct: [
         'ab740c85d92c69644af88522f6ab3adc9a49a260a1d03b069f4040cbcee7b08f',
-        'f7a602c8f69854dc475e8a5fe9ffb1f3a75f441c76990fd058bc094e16c2b780',
+        ELDRITCH_HEX_RULE_DIGEST,
         '52f7a50660a4cccf9e94b8e3680e2d85af29714c0ae7ed7e132ccdbf7e1412a9',
         'f06375baa348d3831fce6876ccf034fbbb9b490c8402c8cc22a438a896744c07',
       ],
@@ -156,106 +144,18 @@ function getPatronStaticFeatures(
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
   source: NativeWarlockSource,
-): SubclassFeature[] {
-  const owner = NATIVE_WARLOCK_PATRONS[source].find((patron) =>
-    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [patron]),
-  )
-  if (
-    !owner ||
-    entry.levels < owner.level ||
-    !matchesNativeSubclassGain(
-      cls,
-      classTarget(
-        source === 'phb' ? 'otherworldly patron' : 'warlock subclass',
-        source,
-        owner.level,
-      ),
-      owner.level,
-    )
-  )
-    return []
-  const subclass = findNativeSubclass(cls, owner)
-  const rules = patronBodies[source][owner.shortName]
-  if (!subclass || !rules) return []
-
-  const ownerKey = getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source)
-  const byTarget = catalogs.subclassTargets
-    ? catalogs.subclassTargets.candidatesByOwner.get(ownerKey)
-    : catalogs.subclassFeatureCandidates
-  const candidates = (target: string) =>
-    catalogs.subclassTargets || byTarget
-      ? (byTarget?.get(target) ?? [])
-      : catalogs.subclassFeatures.filter((row) => getSubclassFeatureIdentity(row) === target)
-  const exactBody = (feature: SubclassFeature | undefined, target: string, digest: string) =>
-    !!digest &&
-    !!feature &&
-    getSubclassFeatureIdentity(feature) === target &&
-    hasFeatureSourceShape(feature, subclassFields) &&
-    Array.isArray(feature.entries) &&
-    getFeatureSourceDigest(feature.entries, false) === digest
-  const verified = (attached: SubclassFeature | undefined, target: string, digest: string) => {
-    const mirrors = candidates(target)
-    return attached &&
-      exactBody(attached, target, digest) &&
-      mirrors.length &&
-      mirrors.every((row) => exactBody(row, target, digest))
-      ? attached
-      : undefined
-  }
-
-  // Intro prose may vary. Verify each unconditional nested declaration and its own body.
-  const targetOf = (uid: unknown) =>
-    typeof uid === 'string' ? decodeOptionalDeclaration(uid, 'subclassFeature')?.target : undefined
-  const nestedFrom = (intro: SubclassFeature | undefined, target: string) => {
-    if (
-      !intro ||
-      !hasFeatureSourceShape(intro, subclassFields) ||
-      getSubclassFeatureIdentity(intro) !== owner.intro ||
-      !Array.isArray(intro.entries)
-    )
-      return undefined
-    const refs = intro.entries.map(record).filter((row) => targetOf(row.subclassFeature) === target)
-    const ref = refs[0]
-    const uid = ref?.subclassFeature
-    return refs.length === 1 &&
-      ref.type === 'refSubclassFeature' &&
-      typeof uid === 'string' &&
-      exactOptionalDeclarationReference(ref, uid, 'subclassFeature') &&
-      Object.keys(ref).every(
-        (key) => key === 'type' || key === 'subclassFeature' || key === 'feature',
-      )
-      ? (ref.feature as SubclassFeature | undefined)
-      : undefined
-  }
-  const intro =
-    targetOf(subclass.introFeatureRef) === owner.intro
-      ? getDirectSubclassFeatureReference(subclass, owner.intro)?.feature
-      : undefined
-  const mirrors = candidates(owner.intro)
-  const nested = owner.nested.flatMap((target, index) => {
-    const digest = rules.nested[index]
-    const feature =
-      mirrors.length && mirrors.every((row) => exactBody(nestedFrom(row, target), target, digest))
-        ? verified(nestedFrom(intro, target), target, digest)
-        : undefined
-    return feature ? [feature] : []
-  })
-
-  const direct = owner.direct.flatMap(({ target, level }, index) => {
-    const gain = classTarget(
-      source === 'phb' ? 'otherworldly patron feature' : 'subclass feature',
-      source,
-      level,
-    )
-    if (entry.levels < level || !matchesNativeSubclassGain(cls, gain, level, 'at-level')) return []
-    const feature = verified(
-      getDirectSubclassFeatureReference(subclass, target)?.feature,
-      target,
-      rules.direct[index],
-    )
-    return feature ? [feature] : []
-  })
-  return [...nested, ...direct]
+) {
+  const current = getCurrentNativeWarlockPatronRules(cls, entry, catalogs)
+  if (!current) return []
+  const rules = patronBodies[source][current.owner.shortName]
+  if (!rules) return []
+  return [
+    ...current.getNestedFeatures(rules.nested),
+    ...current.owner.direct.flatMap(({ target }, index) => {
+      const feature = current.getDirectFeature(target, rules.direct[index])
+      return feature ? [feature] : []
+    }),
+  ]
 }
 
 export function getWarlockStaticFeatures(

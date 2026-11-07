@@ -51,6 +51,11 @@ and exact feature declaration. It appears as always prepared and uses no ordinar
 preparation slot. An independently saved daily choice remains available if the grant
 disappears and the ordinary spell list still permits it.
 
+Revised Great Old One Patron's Eldritch Hex always prepares the exact XPHB Hex spell from
+Warlock level 10 when the current native feature and patron schedule agree. It uses the normal
+Pact Magic casting path. An independently learned Hex keeps its own choice and spell ownership
+when that patron's grant becomes unavailable.
+
 Each record saves its exact target, revision, `default` or `ignore-class-list` policy, and optional
 `prepare:true` for a learned spellbook entry. The explicit bypass changes only list eligibility;
 current target/source, earned ownership, level, schools, fixed-at-gain exclusion and quota still apply.

@@ -19,6 +19,7 @@ import {
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
+import { ELDRITCH_HEX_TARGET } from '@/lib/5etools/nativeWarlockPatronRules'
 import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
@@ -221,7 +222,7 @@ function isAvailableDirectPreparedSpell(spell: Spell5e, spellLevel: number, targ
     (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1
   )
     return false
-  if (target !== CONTACT_PATRON_TARGET) return true
+  if (target !== CONTACT_PATRON_TARGET && target !== ELDRITCH_HEX_TARGET) return true
   const [checked] = auditSpellRouteMultiplicity([spell])
   return (
     checked.classSpellRouteDiagnostics?.length === 0 &&
@@ -688,8 +689,17 @@ export function projectManagedClassSpellState(
           }
         : profile,
     )
+    const tag =
+      grant.owner[0] === 'subclass'
+        ? makeSourceTag(
+            'subclass',
+            entry.subclass ?? grant.owner[3],
+            'fixed',
+            entry.subclassSource ?? grant.owner[4],
+          )
+        : makeSourceTag('class', entry.name, 'fixed', entry.source)
     provenance = addSpellGrant(provenance, grant.reference, {
-      ...makeSourceTag('class', entry.name, 'fixed', entry.source),
+      ...tag,
       label: grant.featureName,
       grantSource: parseSpellReference(grant.reference).source,
       grantVariant: JSON.stringify([
