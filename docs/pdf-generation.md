@@ -133,6 +133,11 @@ uses a sheet template from the other edition. The 2014 custom form keeps the fea
 label in Class Features when action Notes carry the full rule. Names-only exports keep
 the label.
 
+Full descriptions also print the current selected PHB rules for Agonizing Blast, Devil's
+Sight, Eldritch Spear, and Repelling Blast in their feature rows. The three blast rules
+follow the character's current Eldritch Blast eligibility. Names-only exports keep the
+selected feature labels.
+
 ## Spells and companions
 
 Both 2014 layouts use the shared spell asset per casting source, including subclasses and each

@@ -10,7 +10,7 @@ import {
   CLASSIC_PACT_BOON_POOL,
   getCurrentPactBladeState,
   PACT_BLADE_NAME,
-} from '@/lib/character/warlockBladeChoices'
+} from '@/lib/character/warlockInvocationSource'
 import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { CharacterAction } from '@/types/actions'

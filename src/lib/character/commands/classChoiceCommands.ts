@@ -101,6 +101,12 @@ import {
   getRegisteredOptionalPoolSelection,
 } from '@/lib/character/optionalClassPoolSelections'
 import {
+  getInvocationRepeatKey,
+  getRevisedInvocationSlotPrior,
+  getSavedRevisedInvocationOwner,
+  hasEarnedRevisedInvocationSlots,
+} from '@/lib/character/warlockInvocationChoices'
+import {
   CLASSIC_PACT_BOON_POOL,
   getBladeInvocationSource,
   getCurrentPactBladeState,
@@ -108,13 +114,7 @@ import {
   isExactBladeInvocationOption,
   isPactBladeOption,
   PACT_BLADE_NAME,
-} from '@/lib/character/warlockBladeChoices'
-import {
-  getInvocationRepeatKey,
-  getRevisedInvocationSlotPrior,
-  getSavedRevisedInvocationOwner,
-  hasEarnedRevisedInvocationSlots,
-} from '@/lib/character/warlockInvocationChoices'
+} from '@/lib/character/warlockInvocationSource'
 import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'

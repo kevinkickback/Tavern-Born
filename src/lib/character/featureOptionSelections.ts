@@ -70,11 +70,11 @@ import { getOptionalClassPoolSelectionStates } from './optionalClassPoolRecovery
 import { getPsionicRecoveryStates } from './psionicSelections'
 
 import { getStormAuraSelectionStates, type StormAuraRules } from './stormAuraSelections'
-import { isBladeDependentInvocation } from './warlockBladeChoices'
 import {
   getSavedRevisedInvocationOwner,
   hasEarnedRevisedInvocationSlots,
 } from './warlockInvocationChoices'
+import { isBladeDependentInvocation } from './warlockInvocationSource'
 
 const AFFINITY_TARGET = getSubclassFeatureIdentity(
   decodeSubclassFeatureReference(ELEMENTAL_AFFINITY_REF),

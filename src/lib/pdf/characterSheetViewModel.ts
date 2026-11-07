@@ -69,7 +69,7 @@ import {
 } from '@/lib/character/optionalClassFeatureActivity'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
-import { isBladeDependentInvocation } from '@/lib/character/warlockBladeChoices'
+import { isBladeDependentInvocation } from '@/lib/character/warlockInvocationSource'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -89,7 +89,7 @@ import type {
 import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
-
+import { getClassicInvocationDescriptions } from './classicInvocationSheetRules'
 import {
   type ClassStaticFeatureSummary,
   getClassStaticFeatureSummaries,
@@ -188,7 +188,7 @@ export interface CharacterSheetViewModel {
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
   classResourceSummary?: string
-  metamagicDescriptions?: ReadonlyMap<string, string>
+  managedFeatureDescriptions?: ReadonlyMap<string, string>
   weaponRows: CharacterSheetWeaponRow[]
   actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
@@ -365,7 +365,7 @@ function buildFeatureSummaries(
     CharacterSheetViewModel,
     | 'character'
     | 'classResourceSummary'
-    | 'metamagicDescriptions'
+    | 'managedFeatureDescriptions'
     | 'declaredClassFeatureSummaries'
     | 'optionalClassFeatureSummaries'
     | 'featureOptionSummaries'
@@ -408,7 +408,7 @@ function buildFeatureSummaries(
       rows
         .map((row) => {
           const body = descriptions
-            ? (vm.metamagicDescriptions?.get(row.id) ?? row.description)?.trim()
+            ? (vm.managedFeatureDescriptions?.get(row.id) ?? row.description)?.trim()
             : ''
           return body ? `${row.name}: ${body}` : row.name
         })
@@ -994,14 +994,22 @@ export function createCharacterSheetViewModel(
     }),
   ]
 
+  const managedFeatureDescriptions = getMetamagicDescriptions(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    calculationContext.classChoices.prerequisites,
+  )
+  getClassicInvocationDescriptions(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    calculationContext.classChoices.prerequisites,
+  )?.forEach((description, id) => {
+    managedFeatureDescriptions.set(id, description)
+  })
   const featureSummaryModel = {
     character,
     classResourceSummary,
-    metamagicDescriptions: getMetamagicDescriptions(
-      character,
-      primaryLookups.classChoiceFeatureCatalogs,
-      calculationContext.classChoices.prerequisites,
-    ),
+    managedFeatureDescriptions,
     featureOptionSummaries,
     optionalClassFeatureSummaries,
     declaredClassFeatureSummaries,
