@@ -370,7 +370,10 @@ function deriveDomains(feature, languagePool) {
 
 const revisedPrimalKnowledge = 'class-feature|primal knowledge|barbarian|xphb|3|xphb'
 
-export function deriveClassProficiencyRules(features, { classes, languagePool, identity, digest }) {
+export function deriveClassProficiencyRules(
+  features,
+  { classes = [], languagePool, identity, digest },
+) {
   const candidates = features.filter(
     (feature) =>
       ['Expertise', 'Scholar', 'Deft Explorer'].includes(feature.name) ||
