@@ -78,6 +78,27 @@ async function choose(index: number, name: string, kind = 'Cantrip') {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Finish' })).toBeTruthy())
 }
 
+function openWizardSpellbook() {
+  const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
+  wizard.spells = fixture.spells
+  wizard.lookups = buildGameDataLookups(wizard)
+  const original = makeCharacterFixture({
+    allowedSources: ['PHB'],
+    classProgression: [{ name: 'Wizard', source: 'PHB', levels: 18 }],
+  })
+  install(original)
+  useGameDataStore.setState({ gameData: wizard })
+  const before = JSON.stringify(original)
+  render(<Flow level={18} />)
+  return before
+}
+
+const mastery = () => within(screen.getByRole('group', { name: 'Spell Mastery 1' }))
+const clearLearned = () =>
+  fireEvent.click(
+    within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', { name: 'Clear' }),
+  )
+
 beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
     this: HTMLElement,
@@ -193,27 +214,10 @@ describe('Class spell Finish and current-state adapter', () => {
   })
 
   test('Spell Mastery uses same-dialog draft learning and removal without saving the preview', async () => {
-    const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
-    wizard.spells = fixture.spells
-    wizard.lookups = buildGameDataLookups(wizard)
-    const original = makeCharacterFixture({
-      allowedSources: ['PHB'],
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 18 }],
-    })
-    install(original)
-    useGameDataStore.setState({ gameData: wizard })
-    const before = JSON.stringify(original)
-    render(<Flow level={18} />)
+    const before = openWizardSpellbook()
 
     await choose(1, 'Shield', 'Spell')
     await choose(1, 'Shield', 'Spell Mastery')
-    const mastery = () => within(screen.getByRole('group', { name: 'Spell Mastery 1' }))
-    const clearLearned = () =>
-      fireEvent.click(
-        within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', {
-          name: 'Clear',
-        }),
-      )
     expect(mastery().getByText('Chosen')).toBeTruthy()
     clearLearned()
     expect(mastery().queryByText('Chosen')).toBeNull()
@@ -227,6 +231,14 @@ describe('Class spell Finish and current-state adapter', () => {
       ['class-spellbook', { name: 'Shield', source: 'PHB' }],
       ['class-spellbook-specialty', { name: 'Shield', source: 'PHB' }],
     ])
+  })
+
+  test('saved Spell Mastery distinguishes draft removal from a persisted unavailable spell', async () => {
+    openWizardSpellbook()
+    await choose(1, 'Shield', 'Spell')
+    await choose(1, 'Shield', 'Spell Mastery')
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
 
     fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
     clearLearned()
