@@ -175,6 +175,12 @@ ownership and gain path. The standard revised source filter hides it. If a
 source configuration exposes that copy, the creator reports its terrain setup
 as unsupported.
 
+The exact TCE Circle of Spores and Circle of Wildfire copies on the revised Druid use the
+revised printings of their inherited spell schedules. The revised subclass gain at Druid level 3
+activates the spells already earned by that point. Later schedule additions still follow their
+authored Druid levels. An unavailable copied declaration suspends its own grants and preserves
+ordinary Druid spell ownership. The classic subclasses keep their classic spell printings.
+
 ## Selected feature cantrips
 
 Supported selected Class optional-feature and feat cantrips use the same atomic editor, revision

@@ -8,13 +8,14 @@ import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import {
   createCharacterSheetViewModel,
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
-import type { GameData } from '@/types/5etools'
+import type { GameData, SubclassFeature } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
@@ -58,13 +59,35 @@ function actor(source: 'PHB' | 'XPHB', levels: number) {
 
 const classics = ['2014-official', '2014-custom'] as const
 const revised = ['2024-official', '2024-custom'] as const
+
+const reviewedCircles = [
+  ['PHB', 'PHB', 'Circle of the Moon', 'Combat Wild Shape', 'Primal Strike'],
+  ['PHB', 'TCE', 'Circle of Stars', 'Starry Form', 'Cosmic Omen'],
+  ['XPHB', 'XPHB', 'Circle of the Moon', 'Circle Forms', 'Improved Circle Forms'],
+  ['XPHB', 'XPHB', 'Circle of the Sea', 'Wrath of the Sea', 'Aquatic Affinity'],
+  ['XPHB', 'XPHB', 'Circle of the Stars', 'Starry Form', 'Cosmic Omen'],
+  ...(['PHB', 'XPHB'] as const).flatMap((source) => [
+    [
+      source,
+      'XGE',
+      'Circle of Dreams',
+      'Balm of the Summer Court',
+      'Hearth of Moonlight and Shadow',
+    ] as const,
+    [source, 'XGE', 'Circle of the Shepherd', 'Spirit Totem', 'Mighty Summoner'] as const,
+    [source, 'TCE', 'Circle of Spores', 'Halo of Spores', 'Fungal Infestation'] as const,
+    [source, 'TCE', 'Circle of Wildfire', 'Summon Wildfire Spirit', 'Enhanced Bond'] as const,
+  ]),
+] as const
+
 const normalize = (text: string) => text.replace(/[‘’]/g, "'").replace(/\s+/g, ' ')
 async function print(
   model: ReturnType<typeof createCharacterSheetViewModel>,
   template: CharacterSheetTemplateId,
+  descriptions: 'full' | 'names' = 'full',
 ) {
   const bytes = await generateTestCharacterSheet(model, template, {
-    text: { descriptions: 'full', overflow: 'notes' },
+    text: { descriptions, overflow: 'notes' },
   })
   const form = (await PDFDocument.load(bytes)).getForm()
   if (template === '2024-custom') {
@@ -98,6 +121,102 @@ async function print(
   )
   return { text, notes }
 }
+
+test.skipIf(!existsSync('data/class/class-druid.json'))(
+  'reviewed Druid circle rules require an exact declaration and appear at their earned levels',
+  async () => {
+    const data = await load('local', 'data')
+    const current = lookups(data)
+    const raw = JSON.parse(await readFile('data/class/class-druid.json', 'utf8')) as {
+      subclassFeature: SubclassFeature[]
+    }
+    for (const [source, printing, name, initial, later] of reviewedCircles) {
+      const gain = source === 'PHB' ? 2 : 3
+      const selected = (levels: number) => {
+        const character = actor(source, levels)
+        character.allowedSources = [source, printing]
+        character.classProgression[0] = {
+          ...character.classProgression[0],
+          subclass: name,
+          subclassSource: printing,
+        }
+        return character
+      }
+      const gained = selected(gain)
+      const summaries = (level: number, visible = current) =>
+        createCharacterSheetViewModel(
+          level === gain ? gained : selected(level),
+          current,
+          visible,
+        ).declaredClassFeatureSummaries?.map((row) => row.compactText)
+      expect(summaries(gain - 1), name).not.toContain(initial)
+      expect(summaries(gain), name).toContain(initial)
+      expect(summaries(5), name).not.toContain(later)
+      expect(summaries(6), name).toContain(later)
+
+      if (source !== 'XPHB' || (name !== 'Circle of Dreams' && name !== 'Circle of the Sea'))
+        continue
+      const countRows = (featureName: string, classSource: string, count: number) => {
+        const matches = (feature: SubclassFeature) =>
+          feature.name === featureName &&
+          feature.classSource === classSource &&
+          feature.source === printing
+        const originals = raw.subclassFeature.filter(matches)
+        expect(originals).toHaveLength(1)
+        const [original] = originals
+        const parsed = parseClassDocument({
+          ...raw,
+          subclassFeature: raw.subclassFeature.flatMap((feature) => {
+            if (matches(feature)) return Array<SubclassFeature>(count).fill(feature)
+            if (count !== 0 || feature.name !== name || feature.classSource !== classSource)
+              return [feature]
+            // A stale inline rule cannot substitute for the missing authoritative record.
+            return [
+              {
+                ...feature,
+                entries: feature.entries?.map((entry) =>
+                  typeof entry === 'object' &&
+                  entry &&
+                  'subclassFeature' in entry &&
+                  typeof entry.subclassFeature === 'string' &&
+                  entry.subclassFeature.startsWith(`${featureName}|`)
+                    ? { ...entry, feature: original }
+                    : entry,
+                ),
+              },
+            ]
+          }),
+        })
+        return lookups({
+          ...data,
+          classes: parsed.classes as GameData['classes'],
+          classFeatures: parsed.classFeatures as GameData['classFeatures'],
+        })
+      }
+      for (const count of [0, 2]) {
+        const leaf = countRows(initial, printing === 'XGE' ? 'PHB' : source, count)
+        const alternatives =
+          name === 'Circle of the Sea' ? [leaf, countRows(name, source, count)] : [leaf]
+        for (const visible of alternatives) {
+          const summary = summaries(gain, visible)
+          expect(summary, name).not.toContain(initial)
+          expect(summary, name).toContain('Wild Shape')
+        }
+        expect(summaries(gain), name).toContain(initial)
+      }
+      if (name === 'Circle of Dreams') {
+        const sheet = createCharacterSheetViewModel(gained, current, current)
+        const { text } = await print(sheet, revised[0])
+        expect(text).toContain(initial)
+        expect(text).toContain('pool of fey energy')
+        const names = await print(sheet, revised[0], 'names')
+        expect(names.text).toContain(initial)
+        expect(names.text).not.toContain('pool of fey energy')
+      }
+    }
+  },
+  90_000,
+)
 
 test.each(stacks)(
   'exact Druid rules survive all shipped PDF layouts and continue in notes (%s)',
@@ -207,6 +326,11 @@ test.each(stacks)(
     moon.classProgression[0].subclass = 'Circle of the Moon'
     expect(createCharacterSheetViewModel(moon, raw, raw).declaredClassFeatureSummaries).toEqual([
       expect.objectContaining({ text: expect.stringContaining('Base Beast Shapes: Max. CR: 1/4') }),
+      ...(type === 'local'
+        ? ['Combat Wild Shape', 'Circle Forms'].map((compactText) =>
+            expect.objectContaining({ compactText }),
+          )
+        : []),
     ])
   },
   30_000,
