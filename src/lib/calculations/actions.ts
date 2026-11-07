@@ -30,6 +30,7 @@ import {
   getClassChoiceFeatureTarget,
   getClassChoiceOptionKey,
   getFeatureOwnerKey,
+  getInvocationCantripLabel,
 } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -525,13 +526,19 @@ function deriveClassFeatureActions(
         )
         if (action) actions.set(action.id, action)
       } else if (option.entityType === 'optionalFeature') {
+        const label = getInvocationCantripLabel(option)
+        const featureId = getClassChoiceFeatureId(selection, option)
         const feature = context.optionalFeaturesByKey?.[
           getEntityLookupKey(option.name, option.source)
         ] as OptionalFeatureLike | undefined
         const [action] = rulesTextAction(
-          `feature:${getClassChoiceFeatureId(selection, option)}`,
-          option.name,
-          renderEntriesToText(feature?.entries ?? []),
+          `feature:${featureId}`,
+          label ?? option.name,
+          renderEntriesToText(
+            label
+              ? routes.contributions.find((row) => row.id === featureId)?.entries
+              : feature?.entries,
+          ),
           {
             kind: selection.subclassName ? 'subclass' : 'class',
             name: option.name,

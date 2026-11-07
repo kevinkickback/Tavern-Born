@@ -11,6 +11,10 @@ import {
   getSubclassLookupKey,
 } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import {
+  isRevisedTargetedInvocation,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
   getClassChoiceFeatureId,
@@ -146,7 +150,12 @@ export function buildRetainedCharacterDetails(
         subclassFor(entry.name, entry.source, entry.subclass, entry.subclassSource),
       ).forEach(addFeature)
     }
-    for (const state of getFeatureOptionSelectionStates(character, data.classes, featureCatalogs)) {
+    for (const state of getFeatureOptionSelectionStates(
+      character,
+      data.classes,
+      featureCatalogs,
+      data === primary ? prerequisites?.knownWarlockCantrips : undefined,
+    )) {
       if (inactiveLiterals.has(state.selection.choiceId)) continue
       const details = choiceDetailsById.get(state.selection.choiceId) ?? []
       state.details.forEach((row, index) => {
@@ -215,6 +224,10 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
+        if (choice.choiceId === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option)) {
+          details[index] ??= { availability: 'missing', entries: [] }
+          return
+        }
         if (
           option.entityType === 'featureOption' ||
           option.entityType === 'proficiency' ||

@@ -415,6 +415,7 @@ const characterClassChoiceSelectionSchema = z.object({
       name: z.string().min(1),
       source: z.string().optional(),
       ref: z.string().min(1).optional(),
+      invocationCantrip: managedClassSpellChoiceSchema.shape.target.optional(),
       slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
     }),
   ),

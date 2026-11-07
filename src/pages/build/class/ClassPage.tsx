@@ -335,6 +335,7 @@ export function BuildClassPage() {
     viewingClassEntry: viewingEntry,
     viewingSubclassData: viewingSubclassSpellcastingData,
     viewingClassLevel,
+    knownWarlockCantrips: calculation?.classChoices.prerequisites.knownWarlockCantrips,
     includeClassFeatureVariants,
     catalogs: classChoiceCatalogs,
     races,

@@ -14,6 +14,11 @@ import {
   IMPROVED_ELEMENTAL_FURY_LEVEL,
   IMPROVED_ELEMENTAL_FURY_NAME,
 } from '@/lib/5etools/elementalFurySource'
+import {
+  isCurrentRevisedInvocationCantripPool,
+  isRevisedTargetedInvocation,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -22,6 +27,7 @@ import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { getInvalidPsionicSelectionIds } from '@/lib/schema/psionicValidation'
+import type { Spell5e } from '@/types/5etools'
 import type {
   AbilityScores,
   Character,
@@ -47,11 +53,16 @@ import {
 import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
+import {
+  getSavedRevisedInvocationOwner,
+  hasEarnedRevisedInvocationSlots,
+} from './warlockInvocationChoices'
 
 /** Current independent providers only: feature-owned spells cannot qualify their own producer. */
 export interface ClassChoicePrerequisiteContext {
   effectiveAbilityScores?: AbilityScores
   effectiveSpellProfiles?: readonly SpellProfile[]
+  knownWarlockCantrips?: readonly Spell5e[]
 }
 
 /** Exact current contributing routes retain shared IDs; unproved reserved IDs never become manual. */
@@ -165,6 +176,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
           selection.selected,
           owner.levels,
           character,
+          prerequisites?.knownWarlockCantrips,
         )
       : []
     const eligible = new Set(
@@ -175,7 +187,18 @@ function buildEffectiveClassChoiceFeatureRoutes(
     const nativeInvocationPool = isNativeInvocationPool(choice)
     const ambiguousInvocationPool =
       nativeInvocationPool && choiceCandidates.filter((row) => row.id === choice.id).length > 1
+    const validInvocationCantripSlots =
+      isCurrentRevisedInvocationCantripPool(choice, catalogs) &&
+      !ambiguousInvocationPool &&
+      !!getSavedRevisedInvocationOwner(character, selection) &&
+      hasEarnedRevisedInvocationSlots(choice, selection.selected, owner.levels)
     for (const option of selection.selected) {
+      if (
+        (option.invocationCantrip ||
+          (choice.id === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option))) &&
+        !validInvocationCantripSlots
+      )
+        continue
       if (
         option.slotLevel < choice.level ||
         option.slotLevel > owner.levels ||
@@ -296,6 +319,7 @@ const cache = new WeakMap<
     {
       profiles?: readonly SpellProfile[]
       scores?: AbilityScores
+      knownWarlockCantrips?: readonly Spell5e[]
       result: ReturnType<typeof buildEffectiveClassChoiceFeatureRoutes>
     }
   >
@@ -315,13 +339,15 @@ export function getEffectiveClassChoiceFeatureRoutes(
   if (
     old &&
     old.profiles === prerequisites?.effectiveSpellProfiles &&
-    old.scores === prerequisites?.effectiveAbilityScores
+    old.scores === prerequisites?.effectiveAbilityScores &&
+    old.knownWarlockCantrips === prerequisites?.knownWarlockCantrips
   )
     return old.result
   const next = buildEffectiveClassChoiceFeatureRoutes(character, catalogs, prerequisites)
   entries.set(key, {
     profiles: prerequisites?.effectiveSpellProfiles,
     scores: prerequisites?.effectiveAbilityScores,
+    knownWarlockCantrips: prerequisites?.knownWarlockCantrips,
     result: next,
   })
   return next

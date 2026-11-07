@@ -219,6 +219,25 @@ list, Actions and PDF show the patron-only casting and Long Rest condition from
 the certified feature prose, which has no structured casting condition.
 Missing or conflicting feature, schedule, or spell data prompts source recovery.
 
+## Revised Warlock Invocation cantrip targets
+
+Revised Agonizing Blast, Eldritch Spear and Repelling Blast each bind one exact
+known Warlock cantrip to an earned Invocation selection. The shared picker
+offers current source-qualified targets. Agonizing Blast needs damage, Eldritch
+Spear also needs a point range of at least 10 feet, and Repelling Blast also
+needs an attack roll. A repeat uses a different cantrip within the same Invocation.
+
+Current ordinary Warlock cantrips from the exact class list can qualify. The
+native Celestial Patron also qualifies through its earned Celestial Spells
+table and fixed known cantrip schedule. The current
+structured True Strike printing lacks the attack metadata used by the source's
+Repelling Blast filter, so the picker shows that target as unavailable.
+
+An older choice without a target stays editable in its earned slot and
+requires setup before it counts as complete. A lost target or source preserves
+the saved choice until it is restored, retargeted or removed. The Class view
+and character sheet use the same current target and rule.
+
 ## Fixed Warlock Invocation spells
 
 The exact PHB and XPHB Armor of Shadows, Mask of Many Faces and Misty Visions

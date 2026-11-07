@@ -1138,3 +1138,13 @@ export function getRequiredChoiceSelectionCount(
   if (classLevel <= 0) return 0
   return choice.selectionCountByLevel[Math.min(LEVEL_COUNT, classLevel) - 1] ?? 0
 }
+
+export function getClassChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
+  const levels: number[] = []
+  let previous = 0
+  choice.selectionCountByLevel.forEach((count, index) => {
+    for (let slot = previous; slot < count; slot += 1) levels.push(index + 1)
+    previous = count
+  })
+  return levels
+}

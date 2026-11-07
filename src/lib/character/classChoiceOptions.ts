@@ -129,6 +129,13 @@ import {
 import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
+  getRevisedInvocationCantripRule,
+  isCurrentRevisedInvocationCantripPool,
+  isRevisedTargetedInvocation,
+  meetsInvocationCantripCondition,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
+import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
@@ -141,6 +148,7 @@ import type {
   ItemMastery5e,
   OptionalFeatureLike,
   Raw5ePrereq,
+  Spell5e,
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
@@ -152,9 +160,11 @@ import type {
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
 import {
+  getClassChoiceCatalogOptionKey,
   getClassChoiceFeatureTarget,
   getClassChoiceOptionKey,
   getFeatureOwnerKey,
+  getInvocationCantripLabel,
 } from './classChoiceIdentity'
 import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
@@ -168,6 +178,7 @@ import {
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
   availability: 'eligible' | 'retained'
+  displayLabel?: string
   setupComplete?: boolean
   entries: unknown[]
   masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
@@ -647,6 +658,7 @@ export function resolveClassChoiceOptions(
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
   character?: Character,
+  knownWarlockCantrips?: readonly Spell5e[],
 ): ClassChoiceOptionView[] {
   const order = getClassOrderById(choice.id)
   if (order?.owner === 'druid') {
@@ -858,6 +870,10 @@ export function resolveClassChoiceOptions(
       : count
     return count === 1 && candidateCount === 1
   }
+  const targetCantrips =
+    knownWarlockCantrips?.length && isCurrentRevisedInvocationCantripPool(choice, catalogs)
+      ? knownWarlockCantrips
+      : []
   const byKey = new Map(
     resolved
       .map((option) => {
@@ -881,15 +897,72 @@ export function resolveClassChoiceOptions(
           : { ...option, availability: 'retained' as const }
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
+      .flatMap((option) => {
+        if (choice.id !== REVISED_INVOCATION_POOL || !isRevisedTargetedInvocation(option.reference))
+          return [option]
+        if (!targetCantrips.length) return []
+        const key = getClassChoiceCatalogOptionKey(option.reference)
+        const candidates = catalogs.optionalFeatureCandidates
+          ? (catalogs.optionalFeatureCandidates.get(key) ?? [])
+          : catalogs.optionalFeatures.filter(
+              (row) =>
+                getClassChoiceCatalogOptionKey({
+                  entityType: 'optionalFeature',
+                  name: row.name,
+                  source: row.source,
+                }) === key,
+            )
+        const [feature] = candidates
+        const rule =
+          candidates.length === 1 &&
+          feature &&
+          normalized(feature.name) === normalized(option.reference.name)
+            ? getRevisedInvocationCantripRule(feature)
+            : undefined
+        if (!rule || classLevel < rule.prerequisite.level) return []
+        return targetCantrips.flatMap((spell) => {
+          const eligible = meetsInvocationCantripCondition(spell, rule.condition)
+          const trueStrikeMismatch =
+            !eligible &&
+            rule.condition === 'attack' &&
+            normalized(spell.name) === 'true strike' &&
+            normalized(spell.source) === 'xphb'
+          if (!eligible && !trueStrikeMismatch) return []
+          const reference = {
+            ...option.reference,
+            invocationCantrip: { name: spell.name, source: spell.source },
+          }
+          const displayLabel = getInvocationCantripLabel(reference)
+          return [
+            {
+              ...option,
+              reference,
+              displayLabel,
+              searchText: displayLabel,
+              prerequisite: [{ level: rule.prerequisite }],
+              ...(trueStrikeMismatch && {
+                availability: 'retained' as const,
+                entries: [
+                  'The current True Strike printing lacks the attack-roll metadata required by this Invocation.',
+                ],
+              }),
+            },
+          ]
+        })
+      })
       .map((option) => [getClassChoiceOptionKey(option.reference), option]),
   )
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
     if (!byKey.has(key)) {
-      byKey.set(
-        key,
-        resolveExplicitOption(option, catalogs, enemy ? 'eligible' : 'retained', tableDefinitions),
+      const view = resolveExplicitOption(
+        option,
+        catalogs,
+        enemy ? 'eligible' : 'retained',
+        tableDefinitions,
       )
+      const displayLabel = getInvocationCantripLabel(option)
+      byKey.set(key, displayLabel ? { ...view, reference: option, displayLabel } : view)
     }
   }
   const styleOwner =

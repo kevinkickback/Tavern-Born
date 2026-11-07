@@ -19,9 +19,10 @@ import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceId
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { REVISED_AFFINITY_ID } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
+import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
-import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import { getFeatureOwnerKey, getInvocationCantripLabel } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
@@ -61,7 +62,7 @@ import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoo
 import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Race5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, Race5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry, FavoredEnemySetup } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
@@ -71,6 +72,7 @@ interface ClassChoiceControllerParams {
   viewingClassEntry?: CharacterClassEntry
   viewingSubclassData?: Subclass5e
   viewingClassLevel: number
+  knownWarlockCantrips?: readonly Spell5e[]
   includeClassFeatureVariants?: boolean
   catalogs: Omit<
     ClassChoiceCatalogs,
@@ -97,6 +99,7 @@ export function useClassChoiceController({
   viewingClassEntry,
   viewingSubclassData,
   viewingClassLevel,
+  knownWarlockCantrips,
   includeClassFeatureVariants = false,
   catalogs,
   onFeatOptionsRequired,
@@ -223,11 +226,12 @@ export function useClassChoiceController({
               character,
               viewingClassData ? [viewingClassData] : [],
               resolvedCatalogs,
+              knownWarlockCantrips,
             ),
             ...companionStates.filter((state) => state.recovery && !state.choice),
           ]
         : [],
-    [character, viewingClassData, resolvedCatalogs, companionStates],
+    [character, viewingClassData, resolvedCatalogs, companionStates, knownWarlockCantrips],
   )
   const recoveries = useMemo(() => {
     const viewed = viewingClassEntry ?? viewingClassData
@@ -243,6 +247,7 @@ export function useClassChoiceController({
         state.companion ||
         state.classOrder ||
         state.projectedBranch ||
+        state.invocationCantrips ||
         state.selection.choiceId === REVISED_AFFINITY_ID
       )
         return (
@@ -279,6 +284,7 @@ export function useClassChoiceController({
                   selected,
                   viewingClassLevel,
                   character ?? undefined,
+                  knownWarlockCantrips,
                 ),
                 character?.classChoiceSelections ?? [],
               ),
@@ -314,6 +320,7 @@ export function useClassChoiceController({
       viewingClassLevel,
       featureOptionStates,
       character,
+      knownWarlockCantrips,
     ],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
@@ -368,7 +375,9 @@ export function useClassChoiceController({
     if (queue && !queuedChoice) setQueue(null)
     if (request && request.contextKey !== contextKey) setRequest(null)
     if (request?.savedHandle !== undefined) {
-      const latest = character?.classChoiceSelections?.find((row) => row.choiceId === request.id)
+      const latest = (
+        request.id === REVISED_INVOCATION_POOL ? savedCharacter : character
+      )?.classChoiceSelections?.find((row) => row.choiceId === request.id)
       if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== request.savedHandle)
         setRequest(null)
     }
@@ -378,7 +387,7 @@ export function useClassChoiceController({
       !recoveries.some((state) => state.selection.choiceId === request.id)
     )
       setRequest(null)
-  }, [queue, queuedChoice, request, contextKey, choices, recoveries, character])
+  }, [queue, queuedChoice, request, contextKey, choices, recoveries, character, savedCharacter])
   const activeId =
     request?.contextKey === contextKey
       ? request.id
@@ -388,7 +397,9 @@ export function useClassChoiceController({
   const activeSaved = featureOptionStates.find((state) => state.selection.choiceId === activeId)
   const resolvedActiveChoice = choices.find((choice) => choice.id === activeId)
   const activeRemovalOnly =
-    (activeSaved?.recovery && !(activeSaved.enemy && activeSaved.choice)) ?? false
+    (activeSaved?.recovery &&
+      !((activeSaved.enemy || activeSaved.invocationCantrips) && activeSaved.choice)) ??
+    false
   const activeDisplayChoice =
     activeRemovalOnly && activeSaved
       ? {
@@ -403,6 +414,7 @@ export function useClassChoiceController({
       ? activeSaved.selection.selected.map((reference, index) => ({
           reference,
           availability: 'retained' as const,
+          displayLabel: getInvocationCantripLabel(reference),
           entries: activeSaved.details[index]?.entries ?? [],
         }))
       : resolvedActiveChoice
@@ -446,6 +458,7 @@ export function useClassChoiceController({
             activeSaved.companion ||
             activeSaved.classOrder ||
             activeSaved.projectedBranch ||
+            activeSaved.invocationCantrips ||
             activeSaved.selection.choiceId === REVISED_AFFINITY_ID ||
             getLandChoiceRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
@@ -488,10 +501,16 @@ export function useClassChoiceController({
     }
     const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
     const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
-    const confirmedSelections = [
-      ...eligibleSelections,
-      ...retainedSelections.slice(0, Math.max(0, activeRequiredCount - eligibleSelections.length)),
-    ]
+    const confirmedSelections =
+      current.id === REVISED_INVOCATION_POOL
+        ? selected
+        : [
+            ...eligibleSelections,
+            ...retainedSelections.slice(
+              0,
+              Math.max(0, activeRequiredCount - eligibleSelections.length),
+            ),
+          ]
     const previousKeys = new Set(
       (selectionByChoiceId.get(current.id)?.selected ?? []).map(getClassChoiceOptionKey),
     )
@@ -510,6 +529,7 @@ export function useClassChoiceController({
           confirmedSelections.map((option) => option.reference),
           undefined,
           current.id === BLESSED_STRIKES_ID ||
+            current.id === REVISED_INVOCATION_POOL ||
             current.id === ELEMENTAL_FURY_ID ||
             current.id === REVISED_AFFINITY_ID ||
             getClassOrderById(current.id)
@@ -703,7 +723,9 @@ export function useClassChoiceController({
         : undefined,
     open: (choice: NormalizedCharacterChoice) => {
       setQueue(null)
-      const saved = character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+      const saved = (
+        choice.id === REVISED_INVOCATION_POOL ? savedCharacter : character
+      )?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
       setRequest((previous) =>
         previous?.id === choice.id && previous.contextKey === contextKey
           ? previous
@@ -714,6 +736,7 @@ export function useClassChoiceController({
                 saved && getOptionalClassPoolSelectionSection(saved)
                   ? getOptionalPoolSelectionHandle(saved)
                   : choice.kind === 'creature' ||
+                      choice.id === REVISED_INVOCATION_POOL ||
                       choice.id === BLESSED_STRIKES_ID ||
                       choice.id === ELEMENTAL_FURY_ID ||
                       choice.id === REVISED_AFFINITY_ID ||
@@ -744,6 +767,7 @@ export function useClassChoiceController({
                 state.companion ||
                 state.classOrder ||
                 state.projectedBranch ||
+                state.invocationCantrips ||
                 state.selection.choiceId === REVISED_AFFINITY_ID ||
                 getLandChoiceRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)

@@ -3,6 +3,7 @@ import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
+import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -113,12 +114,18 @@ export function hasCurrentClassSpellListRoute(
   entry: CharacterClassEntry,
   spell: Spell5e,
   context: ManagedClassSpellContext,
-  options: { owner?: ClassSpellOwner; requestedTarget?: string; allowOptional?: boolean } = {},
+  options: {
+    owner?: ClassSpellOwner
+    requestedTarget?: string
+    allowOptional?: boolean
+    directOnly?: boolean
+  } = {},
 ) {
   const allowed = sources(character)
   if (!permitted(allowed, spell.source)) return false
   const owner: ClassSpellOwner = options.owner ?? ['class', norm(entry.name), norm(entry.source)]
   const checked = auditSpellRouteMultiplicity([spell])[0]
+  if (options.directOnly && checked.classSpellRouteDiagnostics?.length !== 0) return false
   const routes = checked.classSpellRouteSource ? (checked.classSpellRoutes ?? []) : []
   const lists = options.requestedTarget
     ? DECLARED_CASTING_LISTS[options.requestedTarget]
@@ -126,19 +133,22 @@ export function hasCurrentClassSpellListRoute(
   const listOwners = lists ?? [[owner[1], owner[2]]]
   if (
     listOwners.some(([name, source]) =>
-      routes.some((route) =>
-        routeAllowed(
-          character,
-          owner,
-          [name, source],
-          route,
-          context,
-          options.allowOptional !== false,
-        ),
+      routes.some(
+        (route) =>
+          (!options.directOnly || matchesJoinedSpellClassFilter(route, [name])) &&
+          routeAllowed(
+            character,
+            owner,
+            [name, source],
+            route,
+            context,
+            options.allowOptional !== false,
+          ),
       ),
     )
   )
     return true
+  if (options.directOnly) return false
   const currentParent = context.catalogs?.classes?.filter(
     (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
   )

@@ -2,7 +2,10 @@ import { WarningCircle } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
+import {
+  getClassChoiceOptionKey,
+  getInvocationCantripLabel,
+} from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceOptionView,
   getClassChoiceCompletionCount,
@@ -73,7 +76,7 @@ export function BuildClassChoicesSection({
           selectedCount={state.selection.selected.length}
           isFull={false}
           chosenItems={state.selection.selected.map((row, index) => ({
-            name: row.name,
+            name: getInvocationCantripLabel(row) ?? row.name,
             source: row.source,
             entries: state.details[index]?.entries,
             unavailable: true,
@@ -106,7 +109,7 @@ export function BuildClassChoicesSection({
                 earnedLevel: choice.level,
                 optionKey: getClassChoiceOptionKey(view.reference),
               },
-              name: view.reference.name,
+              name: view.displayLabel ?? view.reference.name,
               source: view.reference.source,
               entries: view.entries,
               masteries: view.masteries,

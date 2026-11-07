@@ -408,12 +408,13 @@ export function createCharacterCalculationContext(
   )
   character = projectEpicBoonSlots(character, epicBoonSlots)
   const dailyIntentSource = character
-  character = projectManagedClassSpellState(character, managedSpellContext).character
+  const initialManagedSpells = projectManagedClassSpellState(character, managedSpellContext)
+  character = initialManagedSpells.character
   const savedClassFeats = character.classFeatChoices
   character = projectEffectiveClassChoiceFeatures(
     character,
     primaryLookups.classChoiceFeatureCatalogs,
-    undefined,
+    { knownWarlockCantrips: initialManagedSpells.knownWarlockCantrips },
   )
   if (character.classFeatChoices !== savedClassFeats) {
     for (const saved of savedClassFeats ?? []) {
@@ -517,6 +518,7 @@ export function createCharacterCalculationContext(
   const prerequisites = {
     effectiveAbilityScores: abilityScores.total,
     effectiveSpellProfiles: managedSpells.independentSpellProfiles,
+    knownWarlockCantrips: managedSpells.knownWarlockCantrips,
   }
   const classChoices = {
     classes: choiceClasses,

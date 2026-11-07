@@ -5,7 +5,10 @@ import {
 } from '@/lib/5etools/blessedStrikesSource'
 import { getLandChoiceRule, LAND_GROUP } from '@/lib/5etools/circleOfTheLand'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getClassChoiceSlotLevels,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   getClassOrderBranch,
@@ -46,6 +49,11 @@ import {
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
+  isCurrentRevisedInvocationCantripPool,
+  isRevisedTargetedInvocation,
+  REVISED_INVOCATION_POOL,
+} from '@/lib/5etools/warlockInvocationCantripSource'
+import {
   getClassChoiceDeclaration,
   getClassChoiceFeatureId,
   getClassChoiceGrantedFeature,
@@ -76,6 +84,7 @@ import {
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
+import { isPlainSpellIdentityPart } from '@/lib/character/managedClassSpellIdentity'
 import {
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
@@ -89,6 +98,12 @@ import {
   getOptionalPoolSelectionHandle,
   getRegisteredOptionalPoolSelection,
 } from '@/lib/character/optionalClassPoolSelections'
+import {
+  getInvocationRepeatKey,
+  getRevisedInvocationSlotPrior,
+  getSavedRevisedInvocationOwner,
+  hasEarnedRevisedInvocationSlots,
+} from '@/lib/character/warlockInvocationChoices'
 import { addGrant } from '@/lib/provenance/ledger'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -504,6 +519,7 @@ export function retainSavedFeatureOptionsCommand(
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
   const registeredPool = getRegisteredOptionalPoolSelection(character, selection)
+  const registeredInvocations = getSavedRevisedInvocationOwner(character, selection)
   const registeredCompanion = isRegisteredCompanionSelection(selection)
   const order = getClassOrderById(choiceId)
   const registeredOrder =
@@ -515,6 +531,7 @@ export function retainSavedFeatureOptionsCommand(
     throw new RangeError('The saved pool owner or slot cannot be verified for removal.')
   if (
     ((registeredPool ||
+      registeredInvocations ||
       registeredCompanion ||
       registeredOrder ||
       registeredBranch ||
@@ -528,6 +545,7 @@ export function retainSavedFeatureOptionsCommand(
     throw new RangeError('The saved choice changed. Review it before confirming.')
   if (
     !registeredPool &&
+    !registeredInvocations &&
     !registeredCompanion &&
     !registeredOrder &&
     !registeredBranch &&
@@ -664,17 +682,6 @@ export function retainSavedFeatureOptionsCommand(
   )
 }
 
-function getChoiceSlotLevels(choice: NormalizedCharacterChoice): number[] {
-  const levels: number[] = []
-  let previousCount = 0
-  choice.selectionCountByLevel.forEach((count, index) => {
-    const gain = Math.max(0, count - previousCount)
-    for (let slot = 0; slot < gain; slot += 1) levels.push(index + 1)
-    previousCount = count
-  })
-  return levels
-}
-
 function findOwner(
   character: Character,
   choice: NormalizedCharacterChoice,
@@ -698,6 +705,93 @@ function validateSelectedOptions(
   }
 }
 
+function verifyInvocationCantripEdit(
+  character: Character,
+  choice: NormalizedCharacterChoice,
+  selected: readonly NormalizedChoiceOptionReference[],
+  previous: CharacterClassChoiceSelection | undefined,
+  authority: ClassChoiceAuthority | undefined,
+  expectedHandle: string | undefined,
+) {
+  if (
+    expectedHandle === undefined ||
+    (previous ? getOptionalPoolSelectionHandle(previous) : '') !== expectedHandle
+  )
+    throw new RangeError('The saved Invocation choices changed. Review them before confirming.')
+  const catalogs = authority?.catalogs
+  const owner = findOwner(character, choice)
+  const classes = catalogs?.classes?.filter((row) => findClassReference(choice.owner, [row]))
+  const cls = classes?.length === 1 ? classes[0] : undefined
+  const current =
+    cls && !cls.sourceIdentityConflict && !('_copy' in cls) && owner && catalogs
+      ? getCharacterClassChoices(
+          cls,
+          getSelectedSubclassData(cls, owner),
+          createOptionalClassFeatureActivity(character, catalogs),
+          catalogs,
+        ).filter((row) => row.id === choice.id)
+      : []
+  if (
+    !isCurrentRevisedInvocationCantripPool(choice, catalogs) ||
+    current.length !== 1 ||
+    !owner ||
+    !catalogs ||
+    (previous &&
+      (!getSavedRevisedInvocationOwner(character, previous) ||
+        !hasEarnedRevisedInvocationSlots(current[0], previous.selected, owner.levels)))
+  )
+    throw new RangeError(
+      'Restore the exact Eldritch Invocations pool before editing its cantrip targets.',
+    )
+
+  const repeats = new Set<string>()
+  const oldKeys = new Set((previous?.selected ?? []).map(getClassChoiceOptionKey))
+  for (const option of selected) {
+    const spell = option.invocationCantrip
+    const repeat = getInvocationRepeatKey(option)
+    if (
+      spell &&
+      (!isRevisedTargetedInvocation(option) ||
+        option.ref ||
+        Object.keys(spell).length !== 2 ||
+        !isPlainSpellIdentityPart(spell.name) ||
+        !isPlainSpellIdentityPart(spell.source) ||
+        (repeat && repeats.has(repeat)))
+    )
+      throw new RangeError('Choose a different eligible cantrip for each repeat of an Invocation.')
+    if (repeat) repeats.add(repeat)
+  }
+  const newTargets = selected.filter(
+    (option) =>
+      isRevisedTargetedInvocation(option) && !oldKeys.has(getClassChoiceOptionKey(option)),
+  )
+  if (newTargets.length) {
+    const { knownWarlockCantrips } = projectManagedClassSpellState(character, {
+      ...authority?.spellContext,
+      catalogs,
+    })
+    const eligible = new Set(
+      resolveClassChoiceOptions(
+        current[0],
+        createClassChoiceCatalogs(catalogs),
+        [],
+        owner.levels,
+        character,
+        knownWarlockCantrips,
+      )
+        .filter((row) => row.availability === 'eligible')
+        .map((row) => getClassChoiceOptionKey(row.reference)),
+    )
+    if (
+      newTargets.some(
+        (option) => !option.invocationCantrip || !eligible.has(getClassChoiceOptionKey(option)),
+      )
+    )
+      throw new RangeError('Choose a current eligible known Warlock cantrip for this Invocation.')
+  }
+  return current[0]
+}
+
 /** Persists a complete or partial source-qualified class choice without applying future effects. */
 export function applyClassChoiceSelectionCommand(
   character: Character,
@@ -707,6 +801,28 @@ export function applyClassChoiceSelectionCommand(
   favoredEnemy?: FavoredEnemySetup,
   expectedSelectionHandle?: string,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (choice.id !== REVISED_INVOCATION_POOL && selected.some((option) => option.invocationCantrip))
+    throw new RangeError(
+      'Choose a cantrip target through the exact revised Eldritch Invocations pool.',
+    )
+  const previousInvocations =
+    choice.id === REVISED_INVOCATION_POOL
+      ? character.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+      : undefined
+  const editsInvocationCantrips =
+    choice.id === REVISED_INVOCATION_POOL &&
+    [...(previousInvocations?.selected ?? []), ...selected].some(
+      (option) => option.invocationCantrip || isRevisedTargetedInvocation(option),
+    )
+  if (editsInvocationCantrips)
+    choice = verifyInvocationCantripEdit(
+      character,
+      choice,
+      selected,
+      previousInvocations,
+      authority,
+      expectedSelectionHandle,
+    )
   if (isRetiredEpicBoonChoice(choice, authority?.catalogs))
     throw new RangeError('Choose or remove this feat through the Epic Boon advancement slot.')
   if (choice.id !== REVISED_AFFINITY_ID && selected.some(isRevisedAffinityOption))
@@ -854,17 +970,19 @@ export function applyClassChoiceSelectionCommand(
     return { classChoiceSelections: character.classChoiceSelections }
   }
   let slotLevels = assignProgressionSlotLevels(
-    (existingSelection?.selected ?? []).map((option) => ({
-      key: getClassChoiceOptionKey(option),
-      slotLevel: option.slotLevel,
-    })),
+    editsInvocationCantrips
+      ? getRevisedInvocationSlotPrior(existingSelection?.selected ?? [], selected)
+      : (existingSelection?.selected ?? []).map((option) => ({
+          key: getClassChoiceOptionKey(option),
+          slotLevel: option.slotLevel,
+        })),
     selected.map(getClassChoiceOptionKey),
-    getChoiceSlotLevels(choice).slice(0, requiredCount),
+    getClassChoiceSlotLevels(choice).slice(0, requiredCount),
     choice.level,
   )
   if (choice.kind === 'psionic') {
     const prior = existingSelection?.selected ?? []
-    const available = [...getChoiceSlotLevels(choice).slice(0, requiredCount)]
+    const available = getClassChoiceSlotLevels(choice).slice(0, requiredCount)
     for (const row of prior.filter((row) =>
       selected.some((option) => getClassChoiceOptionKey(option) === getClassChoiceOptionKey(row)),
     )) {
@@ -1049,20 +1167,28 @@ export function reconcileClassChoiceSelectionGrants(
   features: Feature[]
   proficiencies: Character['proficiencies']
 } {
-  const routes = getEffectiveClassChoiceFeatureRoutes(
-    { ...character, classChoiceSelections: [...selections] },
-    catalogs,
-    {
-      effectiveAbilityScores: spellContext?.abilityScores,
-      effectiveSpellProfiles: projectManagedClassSpellState(
-        { ...character, provenance: ledger, classChoiceSelections: [...selections] },
-        { ...spellContext, catalogs },
-      ).independentSpellProfiles,
-    },
+  const draft = { ...character, classChoiceSelections: [...selections] }
+  const managedSpells = projectManagedClassSpellState(
+    { ...draft, provenance: ledger },
+    { ...spellContext, catalogs },
   )
+  const routes = getEffectiveClassChoiceFeatureRoutes(draft, catalogs, {
+    effectiveAbilityScores: spellContext?.abilityScores,
+    effectiveSpellProfiles: managedSpells.independentSpellProfiles,
+    knownWarlockCantrips: managedSpells.knownWarlockCantrips,
+  })
   const activeSelections = selections
     .filter((selection) => !selection.inactive)
     .map((selection) => {
+      if (selection.choiceId === REVISED_INVOCATION_POOL)
+        return {
+          ...selection,
+          selected: selection.selected.filter(
+            (option) =>
+              !isRevisedTargetedInvocation(option) ||
+              routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
+          ),
+        }
       if (
         selection.kind === 'psionic' ||
         selection.choiceId === BLESSED_STRIKES_ID ||

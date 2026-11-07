@@ -116,6 +116,8 @@ export interface CharacterClassChoiceOption {
   source?: string
   /** Exact class/subclass feature target; an unresolved intent never borrows named rules. */
   ref?: string
+  /** A chosen known cantrip for one revised Eldritch Invocation occurrence. */
+  invocationCantrip?: ManagedClassSpellChoice['target']
   /** Class level at which this selection occupied an available choice slot. */
   slotLevel: number
 }

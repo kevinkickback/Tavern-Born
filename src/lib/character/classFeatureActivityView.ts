@@ -83,6 +83,7 @@ export function resolveActiveClassChoiceDetail(
     selection.selected,
     owner.levels,
     character,
+    prerequisites?.knownWarlockCantrips,
   ).find(
     (row) =>
       row.availability === 'eligible' &&
@@ -90,7 +91,7 @@ export function resolveActiveClassChoiceDetail(
   )
   return (
     option && {
-      name: option.reference.name,
+      name: option.displayLabel ?? option.reference.name,
       source: option.reference.source,
       entries: option.entries,
     }

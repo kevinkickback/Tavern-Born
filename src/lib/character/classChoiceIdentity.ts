@@ -8,6 +8,7 @@ import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import { getFeatureOptionKey } from '@/lib/5etools/featureOptionIdentity'
 import { getPsionicKey } from '@/lib/5etools/psionics'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import type {
   CharacterClassChoiceOption,
   CharacterClassChoiceSelection,
@@ -81,7 +82,7 @@ export function getClassChoiceFeatureTarget(
     : getSubclassFeatureIdentity(target)
 }
 
-export function getClassChoiceOptionKey(option: NormalizedChoiceOptionReference): string {
+export function getClassChoiceCatalogOptionKey(option: NormalizedChoiceOptionReference): string {
   if (option.entityType === 'psionic')
     return `psionic:${getPsionicKey(option.name, option.source ?? '')}`
   if (option.entityType === 'proficiency') {
@@ -96,6 +97,17 @@ export function getClassChoiceOptionKey(option: NormalizedChoiceOptionReference)
     getClassChoiceFeatureTarget(option) ??
     `${option.entityType}|${getEntityLookupKey(option.name, option.source).toLowerCase()}${option.ref ? `|unresolved:${option.ref}` : ''}`
   )
+}
+
+export function getClassChoiceOptionKey(option: NormalizedChoiceOptionReference): string {
+  const key = getClassChoiceCatalogOptionKey(option)
+  const target = option.invocationCantrip
+  return target ? JSON.stringify([key, getSpellReferenceKey(target.name, target.source)]) : key
+}
+
+export function getInvocationCantripLabel(option: NormalizedChoiceOptionReference) {
+  const target = option.invocationCantrip
+  return target ? `${option.name} — ${target.name} (${target.source})` : undefined
 }
 
 /** Shared grants retain their ID when one granting choice is removed. */
