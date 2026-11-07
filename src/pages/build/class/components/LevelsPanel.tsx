@@ -539,10 +539,9 @@ export function BuildClassLevelsPanel({
                   )
                 }
                 const openLevelChoice = (choice: NormalizedCharacterChoice) =>
-                  onOpenClassChoice(
-                    choice,
-                    getProgressiveChoiceGainCount(choice, lv) ? lv : undefined,
-                  )
+                  getProgressiveChoiceGainCount(choice, lv)
+                    ? onOpenClassChoice(choice, lv)
+                    : onOpenClassChoice(choice)
                 const focusedLevelChoiceId =
                   focusLevel !== undefined && focusLevel !== lv
                     ? undefined
