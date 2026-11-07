@@ -76,6 +76,7 @@ export function auditInheritedBarbarianRoots(
       !('_mod' in copy) &&
       !('additionalSpells' in original) &&
       !('subclassFeatures' in original) &&
+      (path !== giantPath || !('spellcastingAbility' in original)) &&
       bases.length === 1 &&
       !('_copy' in bases[0]) &&
       !bases[0].sourceIdentityConflict
@@ -92,6 +93,7 @@ export function getCurrentGiantPower(cls: Class5e, subclass: Subclass5e) {
     norm(cls.name) !== 'barbarian' ||
     !matchesBarbarianPath(record(subclass), giantPath, cls.source) ||
     subclass.sourceIdentityConflict ||
+    subclass.spellcastingAbility !== 'wis' ||
     (revised
       ? !matchesBarbarianPath(record(subclass._copy), giantPath, 'PHB')
       : !!subclass._copy) ||

@@ -3,7 +3,10 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from 'vitest'
-import { hasIncludedSrdGiantSpellProof } from '@/lib/5etools/barbarianGiantPower'
+import {
+  getCurrentGiantPower,
+  hasIncludedSrdGiantSpellProof,
+} from '@/lib/5etools/barbarianGiantPower'
 import { getSavedBarbarianPathOption } from '@/lib/5etools/barbarianPathChoiceIdentity'
 import { getBarbarianRitualGrants } from '@/lib/5etools/barbarianRitualSpells'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
@@ -13,6 +16,7 @@ import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseClasses } from '@/lib/5etools/parsers/classes'
 import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { giantPowerSpellSlots } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
@@ -36,7 +40,7 @@ import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { isValidClassProficiencySelection } from '@/lib/schema/classProficiencyValidation'
-import type { Spell5e } from '@/types/5etools'
+import type { Class5e, Spell5e } from '@/types/5etools'
 import type { Character, Equipment } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -45,6 +49,41 @@ const catalogsToTest = [['bundled', 'resources/srd/core/data']] as Array<
   ['bundled' | 'local', string]
 >
 if (existsSync('data/class/class-barbarian.json')) catalogsToTest.push(['local', 'data'])
+
+test.skipIf(catalogsToTest.length === 1)(
+  'Giant Power requires the revised copy to inherit Wisdom',
+  async () => {
+    const document = JSON.parse(await readFile('data/class/class-barbarian.json', 'utf8'))
+    const power = (doc: typeof document, source: string) => {
+      const cls = (parseClasses(doc) as Class5e[]).find(
+        (row) => row.name === 'Barbarian' && row.source === source,
+      )!
+      const path = cls.subclasses?.find(
+        (row) => row.name === 'Path of the Giant' && row.source === 'BGG',
+      )!
+      return getCurrentGiantPower(cls, path)
+    }
+    expect(power(document, 'PHB')).toBeDefined()
+    expect(power(document, 'XPHB')).toBeDefined()
+    const classic = document.subclass.find(
+      (row: { name: string; classSource: string }) =>
+        row.name === 'Path of the Giant' && row.classSource === 'PHB',
+    )
+    const revised = document.subclass.find(
+      (row: { name: string; classSource: string }) =>
+        row.name === 'Path of the Giant' && row.classSource === 'XPHB',
+    )
+    revised.spellcastingAbility = 'wis'
+    expect(power(document, 'PHB')).toBeDefined()
+    expect(power(document, 'XPHB')).toBeUndefined()
+    classic.spellcastingAbility = 'cha'
+    expect(power(document, 'PHB')).toBeUndefined()
+    expect(power(document, 'XPHB')).toBeUndefined()
+    delete revised.spellcastingAbility
+    classic.spellcastingAbility = 'wis'
+    expect(power(document, 'XPHB')).toBeDefined()
+  },
+)
 
 test('Included SRD proves both Giant Power cantrips without accepting changed classic records', async () => {
   const spells = await Promise.all(

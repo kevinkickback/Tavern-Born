@@ -332,7 +332,6 @@ export function getSelectedFeatureCantripSetups(
       paths?.length === 1 &&
       permitted(allowed, owner[2]) &&
       permitted(allowed, 'bgg') &&
-      paths[0].spellcastingAbility === 'wis' &&
       getCurrentGiantPower(cls, paths[0])
     setups.push({
       owner,
