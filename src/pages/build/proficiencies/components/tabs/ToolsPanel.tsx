@@ -1,17 +1,20 @@
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
-import {
-  hasProfInArray,
-  hasUnresolvedChoiceForKind,
-  normalizeGenericToolKind,
-} from '@/pages/build/proficiencies/model/data'
+import { normalizeGenericToolKind } from '@/pages/build/proficiencies/model/data'
 import {
   formatProfLabel,
   type ProficiencyRowState,
@@ -50,9 +53,7 @@ export function ToolsPanel({
   ledger,
   sort,
   onSortChange,
-  dropdownToolSlots,
-  artisanToolSlots,
-  artisanChoiceByNorm,
+  toolChoiceSlots,
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
@@ -62,43 +63,17 @@ export function ToolsPanel({
   )
   return (
     <div className="space-y-4">
-      {dropdownToolSlots.length > 0 && (
-        <div className="w-full space-y-2">
-          {dropdownToolSlots.map((slot) => (
-            <div
-              key={slot.id}
-              className="w-full max-w-lg border-l-2 border-primary/50 bg-secondary/20 px-3 py-2.5"
-            >
-              <p className="mb-2 text-sm text-muted-foreground">
-                {slot.sourceName}: choose {formatProfLabel(slot.label)}
-              </p>
-              <Select
-                onValueChange={(value) => {
-                  onResolveChoiceSelection('tools', value, true, slot.choiceId)
-                  onFocusChange({
-                    type: 'item',
-                    category: 'tools',
-                    name: value,
-                    isProficient: true,
-                  })
-                  onExpandDetails()
-                }}
-                disabled={slot.options.length === 0}
-              >
-                <SelectTrigger className="h-9 cursor-pointer border-dashed">
-                  <SelectValue placeholder={`${formatProfLabel(slot.label)} (choose type)`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {slot.options.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {formatProfLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {toolChoiceSlots.length > 0 && (
+        <ul className="space-y-1 text-sm text-muted-foreground">
+          {toolChoiceSlots.map((slot) => (
+            <li key={slot.id}>
+              {slot.sourceName}
+              {slot.source && ' (' + slot.source + ')'}: choose {slot.remaining}{' '}
+              {formatProfLabel(slot.label)}
+              {slot.options.length === 0 && ' · No eligible tools available'}
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       <div className="flex items-center justify-end gap-2">
         <span className="text-xs text-muted-foreground">Sort:</span>
@@ -136,44 +111,42 @@ export function ToolsPanel({
               {items.map((toolName) => {
                 const normTool = normalizeKey(toolName)
                 const genericKind = normalizeGenericToolKind(toolName)
-                const isGenericKind = Boolean(genericKind)
-                const hasOptionalChoiceForKind = genericKind
-                  ? hasUnresolvedChoiceForKind(ledger.choices, genericKind)
-                  : false
                 const sourceTags = ledger.proficiencies.tools[normTool] ?? []
-                const hasLedgerGrant = sourceTags.length > 0
-                const isSelected = hasProfInArray(currentTools, toolName) || hasLedgerGrant
-                const isChoiceSelected = ledger.choices.some(
+                const isSelected =
+                  currentTools.some((name) => normalizeKey(name) === normTool) ||
+                  sourceTags.length > 0
+                const savedChoices = ledger.choices.filter(
                   (choice) =>
                     choice.domain === 'tools' &&
                     choice.selected.some((selected) => normalizeKey(selected) === normTool),
                 )
-                const artisanChoiceId = artisanChoiceByNorm.get(normTool)
-                const canSelect =
-                  !isSelected &&
-                  (ledger.choices.some(
-                    (choice) =>
-                      choice.domain === 'tools' &&
-                      choice.selected.length < choice.chooseCount &&
-                      (choice.optionPool.length === 0 ||
-                        choice.optionPool.some(
-                          (poolEntry) => normalizeKey(poolEntry) === normTool,
-                        )),
-                  ) ||
-                    artisanToolSlots.some((slot) =>
-                      slot.options.some((option) => normalizeKey(option) === normTool),
-                    ))
-                const canDeselect = isChoiceSelected
-                const availableInDropdown = dropdownToolSlots.some((slot) =>
-                  slot.options.some((option) => normalizeKey(option) === normTool),
-                )
+                const isChoiceSelected = savedChoices.length > 0
+                const options = isChoiceSelected
+                  ? savedChoices.map((choice) => ({
+                      id: choice.id,
+                      sourceName: getRacialSourceDisplayName(undefined, choice.sourceTag),
+                      source: choice.sourceTag.sourceRef,
+                      label:
+                        normalizeGenericToolKind(choice.optionPool[0] ?? '') ?? 'tool proficiency',
+                    }))
+                  : !isSelected && !genericKind
+                    ? toolChoiceSlots
+                        .filter((slot) =>
+                          slot.options.some((option) => normalizeKey(option) === normTool),
+                        )
+                        .map(({ id, sourceName, source, label }) => ({
+                          id,
+                          sourceName,
+                          source,
+                          label,
+                        }))
+                    : []
+                const actionable = options.length > 0
                 const rowState: ProficiencyRowState = isChoiceSelected
                   ? 'chosen'
                   : isSelected
                     ? 'granted'
-                    : canSelect ||
-                        availableInDropdown ||
-                        (isGenericKind && hasOptionalChoiceForKind)
+                    : actionable
                       ? 'available'
                       : 'unavailable'
                 const focusTool = () => {
@@ -186,51 +159,64 @@ export function ToolsPanel({
                   onExpandDetails()
                 }
 
-                return (
+                const choose = (id: string) =>
+                  onResolveChoiceSelection('tools', toolName, !isChoiceSelected, id)
+                const action = isChoiceSelected ? 'Remove choice' : 'Choose'
+                const button = (
                   <button
                     key={toolName}
                     type="button"
                     onClick={() => {
-                      if (isGenericKind) return
-                      if (canDeselect) onResolveChoiceSelection('tools', toolName, false)
-                      else if (canSelect)
-                        onResolveChoiceSelection('tools', toolName, true, artisanChoiceId)
+                      if (options.length === 1) choose(options[0].id)
                     }}
                     onMouseEnter={focusTool}
                     onFocus={focusTool}
-                    title={
-                      canDeselect
-                        ? `Remove choice: ${formatProfLabel(toolName)}`
-                        : isSelected
-                          ? `${formatProfLabel(toolName)} is granted and cannot be removed`
-                          : canSelect
-                            ? `Choose ${formatProfLabel(toolName)}`
-                            : availableInDropdown
-                              ? `Choose ${formatProfLabel(toolName)} in the tool dropdown`
-                              : undefined
-                    }
+                    title={actionable ? action + ': ' + formatProfLabel(toolName) : undefined}
                     className={cn(
                       'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      !isGenericKind && (canSelect || canDeselect)
-                        ? 'cursor-pointer'
-                        : 'cursor-default',
-                      isGenericKind && hasOptionalChoiceForKind
-                        ? 'bg-primary/5 text-foreground hover:bg-primary/10'
-                        : proficiencyRowClass(rowState, hasPendingChoices),
+                      actionable ? 'cursor-pointer' : 'cursor-default',
+                      proficiencyRowClass(rowState, hasPendingChoices),
                     )}
                   >
-                    <ProficiencyStateIcon
-                      state={rowState}
-                      actionable={!isGenericKind && (canSelect || canDeselect)}
-                    />
-                    <span className="truncate">{formatProfLabel(toolName)}</span>
+                    <ProficiencyStateIcon state={rowState} actionable={actionable} />
+                    <span className="truncate">
+                      {formatProfLabel(toolName)}
+                      {genericKind && isChoiceSelected && ' (choose a specific tool)'}
+                    </span>
                     <span className="ml-auto flex shrink-0 items-center gap-2">
                       {expertiseTools.some(
                         (name) => normalizeKey(name) === normalizeKey(toolName),
                       ) && <span className="text-xs text-primary">Expertise</span>}
-                      <ProficiencyStatus state={rowState} />
+                      {genericKind && isChoiceSelected ? (
+                        <span className="text-xs font-medium text-warning">Needs choice</span>
+                      ) : (
+                        <ProficiencyStatus state={rowState} />
+                      )}
                     </span>
                   </button>
+                )
+                if (options.length < 2) return button
+                return (
+                  <DropdownMenu key={toolName}>
+                    <DropdownMenuTrigger asChild>{button}</DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {options.map(({ id, sourceName, source, label }) => {
+                        const related = options.filter(
+                          (option) => option.sourceName === sourceName && option.source === source,
+                        )
+                        const relatedLabel = related.filter((option) => option.label === label)
+                        return (
+                          <DropdownMenuItem key={id} onSelect={() => choose(id)}>
+                            {action}: {sourceName}
+                            {source && ' (' + source + ')'}
+                            {related.length > 1 && ' · ' + formatProfLabel(label)}
+                            {relatedLabel.length > 1 &&
+                              ' ' + (relatedLabel.findIndex((option) => option.id === id) + 1)}
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )
               })}
             </div>

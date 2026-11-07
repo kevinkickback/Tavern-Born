@@ -175,12 +175,9 @@ interface BuildProficienciesTabsPanelProps {
   availableLanguages: string[]
   currentProficiencies: CurrentProficiencies
   ledger: ProficiencyLedger
-  dropdownToolSlots: ToolChoiceSlot[]
-  artisanToolSlots: ToolChoiceSlot[]
+  toolChoiceSlots: ToolChoiceSlot[]
   /** Pre-computed list of tool names to render as selectable pills. */
   visibleToolCandidates: string[]
-  /** Map from normalised artisan tool name to the choiceId of the first slot that accepts it. */
-  artisanChoiceByNorm: Map<string, string>
   onFocusChange: (focus: ProfFocus) => void
   onExpandDetails: () => void
   onResolveChoiceSelection: ResolveChoiceSelection
@@ -208,10 +205,8 @@ export function BuildProficienciesTabsPanel({
   availableLanguages,
   currentProficiencies,
   ledger,
-  dropdownToolSlots,
-  artisanToolSlots,
+  toolChoiceSlots,
   visibleToolCandidates,
-  artisanChoiceByNorm,
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
@@ -480,9 +475,7 @@ export function BuildProficienciesTabsPanel({
             ledger={ledger}
             sort={toolSort}
             onSortChange={setToolSort}
-            dropdownToolSlots={dropdownToolSlots}
-            artisanToolSlots={artisanToolSlots}
-            artisanChoiceByNorm={artisanChoiceByNorm}
+            toolChoiceSlots={toolChoiceSlots}
             onFocusChange={onFocusChange}
             onExpandDetails={onExpandDetails}
             onResolveChoiceSelection={onResolveChoiceSelection}

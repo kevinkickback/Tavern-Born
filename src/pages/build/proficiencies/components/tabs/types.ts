@@ -53,7 +53,5 @@ export interface ProficiencyPanelCallbacks {
 }
 
 export interface ToolPanelChoices {
-  dropdownToolSlots: ToolChoiceSlot[]
-  artisanToolSlots: ToolChoiceSlot[]
-  artisanChoiceByNorm: Map<string, string>
+  toolChoiceSlots: ToolChoiceSlot[]
 }

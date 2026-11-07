@@ -16,6 +16,7 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getProficiencyCheckNoteRows } from '@/lib/calculations/proficiencyCheckNotes'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { resolveConcreteToolChoiceCommand } from '@/lib/character/commands/featCommands'
 import { applySkillExpertiseActionCommand } from '@/lib/character/commands/skillExpertiseCommands'
 import {
   applySkillProficiencyActionCommand,
@@ -30,7 +31,6 @@ import {
   getReadinessFocus,
 } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
@@ -40,8 +40,6 @@ import {
   type ProficiencyTabValue,
 } from '@/pages/build/proficiencies/components/TabsPanel'
 import {
-  buildArtisanChoiceMap,
-  buildArtisanToolNamesFromSlots,
   buildChoiceCounts,
   buildOptionalToolNamesFromChoices,
   buildSkillDescriptions,
@@ -50,7 +48,6 @@ import {
   buildVisibleToolCandidates,
   getSelectedToolNames,
   hasProfInArray,
-  isArtisanToolSlot,
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
@@ -262,15 +259,51 @@ export function BuildProficienciesPage() {
   }, [ledger.choices, classSkills?.remaining])
   const expertiseChoiceCount = expertise?.remaining ?? 0
 
-  const toolSubtypeOptionsByKind = useMemo(() => {
-    const rawAllowed = character?.allowedSources
-    let effectiveSources: string[] | undefined
-    if (rawAllowed) {
-      const implicit = getImplicitSource(character?.originSystem ?? '2014')
-      effectiveSources = rawAllowed.includes(implicit) ? rawAllowed : [...rawAllowed, implicit]
+  const toolSubtypeOptionsByKind = useMemo(
+    () => buildToolSubtypeOptionsByKind({ itemsBase, items }),
+    [items, itemsBase],
+  )
+  const retainedToolSubtypeOptionsByKind = useMemo(
+    () =>
+      buildToolSubtypeOptionsByKind({ items: sourceData?.items, itemsBase: sourceData?.itemsBase }),
+    [sourceData],
+  )
+  const handleChoice: typeof resolveChoiceSelection = (domain, name, adding, choiceId) => {
+    if (domain !== 'tools') {
+      resolveChoiceSelection(domain, name, adding, choiceId)
+      return
     }
-    return buildToolSubtypeOptionsByKind({ itemsBase, items, allowedSources: effectiveSources })
-  }, [character?.allowedSources, character?.originSystem, items, itemsBase])
+    const requested = ledger.choices.find(
+      (choice) => choice.id === choiceId && choice.domain === 'tools',
+    )
+    const state = useCharacterStore.getState()
+    const current = state.activeCharacter
+    if (!requested || !current || current.id !== savedCharacter?.id) return
+    const hasCurrentCatalog = hasCurrentCharacterSourceContext(
+      current,
+      savedCharacter,
+      useGameDataStore.getState().gameData,
+      sourceData,
+    )
+    const result = resolveConcreteToolChoiceCommand(
+      current,
+      requested,
+      name,
+      adding,
+      hasCurrentCatalog ? toolSubtypeOptionsByKind : undefined,
+      hasCurrentCatalog ? expertiseAuthority.catalogs : undefined,
+      retainedToolSubtypeOptionsByKind,
+    )
+    if (
+      result.provenanceUpdate === current.provenance &&
+      !Object.keys(result.characterPatch).length
+    )
+      return
+    state.updateCharacter(current.id, {
+      ...result.characterPatch,
+      provenance: result.provenanceUpdate,
+    })
+  }
 
   const languageTypes = useMemo(() => {
     const map = new Map<string, string>()
@@ -298,23 +331,9 @@ export function BuildProficienciesPage() {
         selection: character,
         selectedTools: character?.proficiencies.tools ?? [],
         toolSubtypeOptionsByKind,
+        retainedToolSubtypeOptionsByKind,
       }),
-    [character, ledger.choices, toolSubtypeOptionsByKind],
-  )
-
-  const artisanToolSlots = useMemo(
-    () => toolChoiceSlots.filter(isArtisanToolSlot),
-    [toolChoiceSlots],
-  )
-
-  const dropdownToolSlots = useMemo(
-    () => toolChoiceSlots.filter((s) => !isArtisanToolSlot(s)),
-    [toolChoiceSlots],
-  )
-
-  const artisanToolNames = useMemo(
-    () => buildArtisanToolNamesFromSlots(artisanToolSlots),
-    [artisanToolSlots],
+    [character, ledger.choices, toolSubtypeOptionsByKind, retainedToolSubtypeOptionsByKind],
   )
 
   const optionalToolNames = useMemo(
@@ -334,22 +353,10 @@ export function BuildProficienciesPage() {
       buildVisibleToolCandidates({
         availableTools,
         optionalToolNames,
-        artisanToolNames,
         currentTools: character?.proficiencies.tools ?? [],
         selectedToolNames,
       }),
-    [
-      availableTools,
-      optionalToolNames,
-      artisanToolNames,
-      character?.proficiencies.tools,
-      selectedToolNames,
-    ],
-  )
-
-  const artisanChoiceByNorm = useMemo(
-    () => buildArtisanChoiceMap(artisanToolSlots),
-    [artisanToolSlots],
+    [availableTools, optionalToolNames, character?.proficiencies.tools, selectedToolNames],
   )
 
   if (!character) {
@@ -424,10 +431,8 @@ export function BuildProficienciesPage() {
                     ledger={ledger}
                     activeTab={activeTab}
                     onActiveTabChange={setActiveTab}
-                    dropdownToolSlots={dropdownToolSlots}
-                    artisanToolSlots={artisanToolSlots}
+                    toolChoiceSlots={toolChoiceSlots}
                     visibleToolCandidates={visibleToolCandidates}
-                    artisanChoiceByNorm={artisanChoiceByNorm}
                     languageTypes={languageTypes}
                     toolTypeMap={toolTypeMap}
                     weaponInfoMap={weaponInfoMap}
@@ -436,7 +441,7 @@ export function BuildProficienciesPage() {
                       if (detailCollapsed) setDetailCollapsed(false)
                       setCompactPane('right')
                     }}
-                    onResolveChoiceSelection={resolveChoiceSelection}
+                    onResolveChoiceSelection={handleChoice}
                     expertiseActions={expertise?.actions ?? {}}
                     onExpertiseAction={handleExpertiseAction}
                     proficiencyActions={classSkills?.actions}

@@ -101,7 +101,7 @@ test('projects saved subrace owners consistently in source and pending-choice me
     },
   })
   expect(slots).toEqual([expect.objectContaining({ sourceName: 'Elf (High)', options: ['Lute'] })])
-  expect(slots[0].choiceId).toBe(
+  expect(slots[0].id).toBe(
     character.provenance.choices.find((choice) => choice.domain === 'tools')!.id,
   )
   expect(JSON.stringify(character)).toBe(before)

@@ -66,10 +66,8 @@ function panelProps(
     availableLanguages: [],
     currentProficiencies: { armor: [], weapons: [], tools: [], languages: [] },
     ledger: { choices: [], proficiencies: emptyProficiencies },
-    dropdownToolSlots: [],
-    artisanToolSlots: [],
+    toolChoiceSlots: [],
     visibleToolCandidates: [],
-    artisanChoiceByNorm: new Map(),
     languageTypes: new Map(),
     toolTypeMap: new Map(),
     weaponInfoMap: new Map(),
@@ -342,43 +340,74 @@ describe('BuildProficienciesTabsPanel category panels', () => {
     expect(screen.getByText('Not Proficient')).toBeTruthy()
   })
 
-  test('keeps dropdown-only tool options available without adding a direct-row action', async () => {
-    const toolChoice = { ...choice('tools', ['musical instrument']), chooseCount: 1 }
-    const slots = buildToolChoiceSlots({
-      choices: [toolChoice],
-      selectedTools: [],
-      toolSubtypeOptionsByKind: {
-        "artisan's tools": [],
-        'musical instrument': ['Lute'],
-        'gaming set': [],
-        tool: [],
+  test('chooses a concrete instrument from its row and prompts for overlapping owners', async () => {
+    const enter = {
+      ...choice('tools', ['musical instrument']),
+      chooseCount: 1,
+      sourceTag: {
+        ...sourceTag,
+        sourceType: 'background' as const,
+        sourceName: 'Entertainer',
+        sourceRef: 'XPHB',
       },
-    })
-    const props = panelProps('tools', {
-      visibleToolCandidates: ['Lute', 'Disguise Kit'],
-      ledger: { choices: [toolChoice], proficiencies: emptyProficiencies },
-      dropdownToolSlots: slots,
-    })
-    const { rerender } = render(<BuildProficienciesTabsPanel {...props} />)
-    const lute = screen.getByTitle('Choose Lute in the tool dropdown')
+    }
+    const warforged = {
+      ...choice('tools', ['tool']),
+      id: 'warforged-tools',
+      chooseCount: 1,
+      sourceTag: {
+        ...sourceTag,
+        sourceType: 'race' as const,
+        sourceName: 'Warforged',
+        sourceRef: 'EFA',
+      },
+    }
+    const props = (choices: ChoiceRecord[]) =>
+      panelProps('tools', {
+        visibleToolCandidates: ['Lute', 'Disguise Kit'],
+        ledger: { choices, proficiencies: emptyProficiencies },
+        toolChoiceSlots: buildToolChoiceSlots({
+          choices,
+          selectedTools: [],
+          toolSubtypeOptionsByKind: {
+            "artisan's tools": [],
+            'musical instrument': ['Lute'],
+            'gaming set': [],
+            tool: ['Lute', 'Disguise Kit'],
+          },
+        }),
+      })
+    const single = props([enter])
+    const { rerender } = render(<BuildProficienciesTabsPanel {...single} />)
     const user = userEvent.setup()
-    expect(lute.title).toBe('Choose Lute in the tool dropdown')
-    expect(within(lute).getByText('Available')).toBeTruthy()
-    expect(lute.className).not.toContain('bg-muted/30')
-    await user.click(lute)
-    expect(props.onResolveChoiceSelection).not.toHaveBeenCalled()
-    await user.click(screen.getAllByRole('combobox')[0])
-    await user.click(screen.getByRole('option', { name: 'Lute' }))
-    expect(props.onResolveChoiceSelection).toHaveBeenCalledWith(
+    const lute = () => screen.getByTitle('Choose: Lute')
+    expect(within(lute()).getByText('Available')).toBeTruthy()
+    await user.click(lute())
+    expect(single.onResolveChoiceSelection).toHaveBeenCalledWith('tools', 'Lute', true, enter.id)
+    const overlap = props([enter, warforged])
+    rerender(<BuildProficienciesTabsPanel {...overlap} />)
+    await user.click(lute())
+    expect(overlap.onResolveChoiceSelection).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('menuitem', { name: /Warforged.*EFA/ }))
+    expect(overlap.onResolveChoiceSelection).toHaveBeenCalledWith(
       'tools',
       'Lute',
       true,
-      toolChoice.id,
+      warforged.id,
     )
-    rerender(<BuildProficienciesTabsPanel {...props} dropdownToolSlots={[]} />)
-    const unavailable = screen.getByText('Lute').closest('button')!
-    expect(within(unavailable).getByText('Unavailable')).toBeTruthy()
-    expect(unavailable.className).toContain('bg-muted/30')
+    expect(screen.getAllByRole('combobox')).toHaveLength(1)
+
+    const first = {
+      ...enter,
+      sourceTag: { ...enter.sourceTag, sourceName: 'House Agent', sourceRef: 'ERLW' },
+    }
+    const second = { ...first, id: 'house-agent-other-instrument' }
+    const repeated = props([first, second])
+    rerender(<BuildProficienciesTabsPanel {...repeated} />)
+    await user.click(lute())
+    expect(screen.getByRole('menuitem', { name: /House Agent.*Musical Instrument 1/ })).toBeTruthy()
+    await user.click(screen.getByRole('menuitem', { name: /House Agent.*Musical Instrument 2/ }))
+    expect(repeated.onResolveChoiceSelection).toHaveBeenCalledWith('tools', 'Lute', true, second.id)
   })
 
   test('preserves tool subtype and language type grouping', async () => {
