@@ -1,10 +1,11 @@
-import { del, get, set } from 'idb-keyval'
+import { createStore, del, get, set } from 'idb-keyval'
 import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 76
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
+let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {
   data: GameData
@@ -130,6 +131,44 @@ export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
   }
 }
 
+function writeCacheBeforeAbort(entry: GameDataCacheEntry, signal: AbortSignal): Promise<void> {
+  // Use the same database and store as idb-keyval's default get/set/del.
+  abortableCacheStore ??= createStore('keyval-store', 'keyval')
+  let transactionAttached = false
+  const pending = abortableCacheStore('readwrite', (store) => {
+    signal.throwIfAborted()
+    transactionAttached = true
+    const transaction = store.transaction
+    return new Promise<void>((resolve, reject) => {
+      const abort = () => {
+        try {
+          transaction.abort()
+        } catch (error) {
+          // The transaction can already be finished while its event is queued.
+          if (!(error instanceof DOMException && error.name === 'InvalidStateError')) reject(error)
+        }
+      }
+      const cleanup = () => signal.removeEventListener('abort', abort)
+      transaction.oncomplete = () => {
+        cleanup()
+        resolve()
+      }
+      transaction.onabort = () => {
+        cleanup()
+        reject(signal.reason ?? transaction.error ?? new Error('Cache write aborted.'))
+      }
+      signal.addEventListener('abort', abort, { once: true })
+      try {
+        store.put(entry, CACHE_KEY)
+      } catch (error) {
+        cleanup()
+        reject(error)
+      }
+    })
+  })
+  return settleOnAbort(pending, signal, () => !transactionAttached)
+}
+
 export async function writeGameDataCache(
   data: GameData,
   identity: GameDataCacheIdentity,
@@ -177,7 +216,8 @@ export async function writeGameDataCache(
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
   options?.beforeWrite?.()
-  await set(CACHE_KEY, entry)
+  if (options?.signal) await writeCacheBeforeAbort(entry, options.signal)
+  else await set(CACHE_KEY, entry)
   return entry
 }
 

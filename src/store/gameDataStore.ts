@@ -27,11 +27,15 @@ import type {
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
+let remoteStartupPreparation: AbortController | null = null
 let remoteStartupAttempt: AbortController | null = null
+let remoteStartupLoad: Promise<boolean> | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
 const GAME_DATA_STORE_VERSION = 1
 export const REMOTE_STARTUP_TIMEOUT_MS = 15_000
+const remoteTimeout = () =>
+  new DOMException('The game data source did not respond within 15 seconds.', 'TimeoutError')
 
 type RemoteStartupStatus =
   | 'checking'
@@ -46,6 +50,7 @@ type RemoteStartupStatus =
 interface StartupLoad {
   signal: AbortSignal
   beginCommit: () => void
+  sourceStack?: GameDataSourceStack | null
 }
 
 export function migrateGameDataPersistedState(persistedState: unknown): unknown {
@@ -188,7 +193,10 @@ interface GameDataState {
     background?: boolean,
     startup?: StartupLoad,
   ) => Promise<boolean>
-  checkRemoteStartup: () => Promise<boolean>
+  checkRemoteStartup: (
+    deadline?: number,
+    sourceStack?: GameDataSourceStack | null,
+  ) => Promise<boolean>
   useBundledForSession: () => Promise<boolean>
   reconfigureRemoteStartup: () => void
   refreshGameData: () => Promise<void>
@@ -237,14 +245,60 @@ export const useGameDataStore = create<GameDataState>()(
           setLastDataChangedAt,
           setLastContentFingerprint,
         } = get()
-        const cache = await readGameDataCache()
+        const remoteDeadline =
+          savedSourceConfig?.type === 'remote'
+            ? performance.now() + REMOTE_STARTUP_TIMEOUT_MS
+            : undefined
+        if (remoteDeadline !== undefined && (remoteStartupPreparation || remoteStartupAttempt))
+          return {}
+        const cacheRead = readGameDataCache()
         // The installed pack can change with an app update. Compare against its
         // current manifest, not the version remembered by the previous installation.
         const dataSourceConfig =
           savedSourceConfig?.type === 'bundled'
             ? ((await resolveDefaultBundledSource()) ?? savedSourceConfig)
             : savedSourceConfig
-        const configuredStack = dataSourceConfig ? await resolveSourceStack(dataSourceConfig) : null
+        const stack = dataSourceConfig ? resolveSourceStack(dataSourceConfig) : null
+        const controller = remoteDeadline === undefined ? undefined : new AbortController()
+        if (controller) remoteStartupPreparation = controller
+        const preflight = Promise.all([
+          cacheRead.then((cache) => {
+            if (
+              !cache &&
+              controller &&
+              remoteStartupPreparation === controller &&
+              get().dataSourceConfig === savedSourceConfig
+            ) {
+              set({ remoteStartup: 'checking', error: null })
+            }
+            return cache
+          }),
+          stack,
+        ])
+        const timer =
+          controller &&
+          setTimeout(() => controller.abort(remoteTimeout()), REMOTE_STARTUP_TIMEOUT_MS)
+        let resolved: Awaited<typeof preflight>
+        try {
+          resolved = await (controller ? settleOnAbort(preflight, controller.signal) : preflight)
+        } catch (error) {
+          if (!controller) throw error
+          if (
+            remoteStartupPreparation === controller &&
+            get().dataSourceConfig === savedSourceConfig
+          ) {
+            set({
+              remoteStartup: 'unavailable',
+              error: error instanceof Error ? error.message : null,
+            })
+          }
+          return {}
+        } finally {
+          clearTimeout(timer)
+          if (remoteStartupPreparation === controller) remoteStartupPreparation = null
+        }
+        if (controller && get().dataSourceConfig !== savedSourceConfig) return {}
+        const [cache, configuredStack] = resolved
         const cacheIdentity = configuredStack ?? dataSourceConfig
 
         if (!cache && !dataSourceConfig) {
@@ -260,7 +314,9 @@ export const useGameDataStore = create<GameDataState>()(
         if (cache && dataSourceConfig) {
           if (!cacheIdentity || !isCacheForSource(cache, cacheIdentity)) {
             if (dataSourceConfig.type === 'remote') {
-              return { backgroundRefresh: get().checkRemoteStartup() }
+              return {
+                backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack),
+              }
             }
             await loadGameData(dataSourceConfig)
             return {}
@@ -273,7 +329,7 @@ export const useGameDataStore = create<GameDataState>()(
             return {
               backgroundRefresh:
                 dataSourceConfig.type === 'remote'
-                  ? get().checkRemoteStartup()
+                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
                   : loadGameData(dataSourceConfig, true),
             }
           }
@@ -293,7 +349,7 @@ export const useGameDataStore = create<GameDataState>()(
             return {
               backgroundRefresh:
                 dataSourceConfig.type === 'remote'
-                  ? get().checkRemoteStartup()
+                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
                   : loadGameData(dataSourceConfig, true),
             }
           }
@@ -310,7 +366,7 @@ export const useGameDataStore = create<GameDataState>()(
 
         if (!cache && dataSourceConfig) {
           if (dataSourceConfig.type === 'remote') {
-            return { backgroundRefresh: get().checkRemoteStartup() }
+            return { backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack) }
           }
           await loadGameData(dataSourceConfig)
           return {}
@@ -319,34 +375,37 @@ export const useGameDataStore = create<GameDataState>()(
         return {}
       },
 
-      checkRemoteStartup: async () => {
+      checkRemoteStartup: async (
+        deadline = performance.now() + REMOTE_STARTUP_TIMEOUT_MS,
+        sourceStack,
+      ) => {
         const { dataSourceConfig: config, gameData, remoteStartup } = get()
         if (
           config?.type !== 'remote' ||
-          remoteStartup === 'checking' ||
+          remoteStartupPreparation !== null ||
+          remoteStartupAttempt !== null ||
           remoteStartup === 'committing' ||
           remoteStartup === 'loading-srd'
         )
           return false
         const attempt = new AbortController()
         remoteStartupAttempt = attempt
-        const deadline = performance.now() + REMOTE_STARTUP_TIMEOUT_MS
-        const timeoutError = new DOMException(
-          'The game data source did not respond within 15 seconds.',
-          'TimeoutError',
-        )
-        const timer = setTimeout(() => attempt.abort(timeoutError), REMOTE_STARTUP_TIMEOUT_MS)
+        const timeoutError = remoteTimeout()
+        const remaining = deadline - performance.now()
+        const timer = setTimeout(() => attempt.abort(timeoutError), Math.max(0, remaining))
+        if (remaining <= 0) attempt.abort(timeoutError)
         set({ remoteStartup: 'checking' })
         try {
-          const changed = await get().loadGameData(config, Boolean(gameData), {
+          remoteStartupLoad = get().loadGameData(config, Boolean(gameData), {
             signal: attempt.signal,
+            sourceStack,
             beginCommit: () => {
               if (performance.now() >= deadline) attempt.abort(timeoutError)
               attempt.signal.throwIfAborted()
-              clearTimeout(timer)
               set({ remoteStartup: 'committing' })
             },
           })
+          const changed = await remoteStartupLoad
           if (remoteStartupAttempt !== attempt) return false
           const current = get()
           if (!current.error && current.cacheStatus === 'fetched') set({ remoteStartup: 'loaded' })
@@ -356,17 +415,29 @@ export const useGameDataStore = create<GameDataState>()(
           return changed
         } finally {
           clearTimeout(timer)
-          if (remoteStartupAttempt === attempt) remoteStartupAttempt = null
+          if (remoteStartupAttempt === attempt) {
+            remoteStartupAttempt = null
+            remoteStartupLoad = null
+          }
         }
       },
 
       useBundledForSession: async () => {
+        if (!get().gameData && get().remoteStartup === 'committing') {
+          remoteStartupAttempt?.abort()
+          // A transaction that already committed settles as success. Otherwise, wait for abort
+          // before starting the fallback so the two catalogs cannot both win.
+          await remoteStartupLoad
+        }
         const { gameData, remoteStartup } = get()
         if (gameData || (remoteStartup !== 'checking' && remoteStartup !== 'unavailable'))
           return false
         const requestId = ++activeLoadRequestId
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
         remoteStartupAttempt?.abort()
         remoteStartupAttempt = null
+        remoteStartupLoad = null
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
@@ -420,8 +491,10 @@ export const useGameDataStore = create<GameDataState>()(
       },
 
       reconfigureRemoteStartup: () => {
-        if (get().remoteStartup === 'unavailable')
-          set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
+        if (get().remoteStartup !== 'unavailable') return
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
+        set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
       },
 
       loadGameData: async (config, background = false, startup) => {
@@ -450,7 +523,10 @@ export const useGameDataStore = create<GameDataState>()(
         try {
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
-          const stack = resolveSourceStack(config)
+          const stack =
+            startup?.sourceStack === undefined
+              ? resolveSourceStack(config)
+              : Promise.resolve(startup.sourceStack)
           const sourceStack = await (startup ? settleOnAbort(stack, signal) : stack)
           signal.throwIfAborted()
           const cacheIdentity = sourceStack ?? config
@@ -514,9 +590,11 @@ export const useGameDataStore = create<GameDataState>()(
           const prevChangedAt = get().lastDataChangedAt
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
+          let writeStarted = false
           const mutation = enqueueCacheMutation(() => {
             if (requestId !== activeLoadRequestId) return Promise.resolve(null)
             signal.throwIfAborted()
+            writeStarted = true
             return writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
@@ -524,7 +602,9 @@ export const useGameDataStore = create<GameDataState>()(
               ...(startup ? { signal, beforeWrite: startup.beginCommit } : {}),
             })
           })
-          const cacheEntry = await (startup ? settleOnAbort(mutation, signal) : mutation)
+          const cacheEntry = await (startup
+            ? settleOnAbort(mutation, signal, () => !writeStarted)
+            : mutation)
 
           // A clear or newer load may have started while the cache write was queued.
           // The queued clear still runs after this write; do not restore stale state.
@@ -616,6 +696,9 @@ export const useGameDataStore = create<GameDataState>()(
         activeLoadRequestId += 1
         remoteStartupAttempt?.abort()
         remoteStartupAttempt = null
+        remoteStartupLoad = null
+        remoteStartupPreparation?.abort()
+        remoteStartupPreparation = null
         activeLoadController?.abort()
         activeLoadController = null
         set({

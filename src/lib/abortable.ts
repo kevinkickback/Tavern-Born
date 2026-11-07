@@ -1,7 +1,12 @@
 /** Some source readers cannot interrupt an in-flight request. Stop awaiting their result on abort. */
-export function settleOnAbort<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
+export function settleOnAbort<T>(
+  pending: Promise<T>,
+  signal: AbortSignal,
+  canStopWaiting = () => true,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const abort = () => {
+      if (!canStopWaiting()) return
       cleanup()
       reject(signal.reason)
     }

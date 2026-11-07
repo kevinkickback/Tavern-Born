@@ -122,6 +122,26 @@ describe('gameDataStore', () => {
     path: 'https://example.test/data',
     isValid: true,
   }
+
+  test.each([
+    'cache',
+    'manifest',
+  ] as const)('a stalled initial %s lookup uses the remote startup deadline', async (dependency) => {
+    vi.useFakeTimers()
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    if (dependency === 'cache') readGameDataCacheMock.mockReturnValueOnce(deferred().promise)
+    else resolveDefaultBundledSourceMock.mockReturnValueOnce(deferred<null>().promise)
+
+    const startup = useGameDataStore.getState().loadFromCache()
+    await vi.advanceTimersByTimeAsync(0)
+    if (dependency === 'manifest')
+      expect(useGameDataStore.getState().remoteStartup).toBe('checking')
+    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    await expect(startup).resolves.toEqual({})
+    expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
+    expect(useGameDataStore.getState().dataSourceConfig).toBe(remote)
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
   const bundled: DataSourceConfig = {
     type: 'bundled',
     path: 'srd/core',
@@ -132,6 +152,40 @@ describe('gameDataStore', () => {
   const nonempty = (name: string) => ({
     ...makeGameDataFixture(),
     races: [{ name, source: 'PHB' }] as GameData['races'],
+  })
+
+  test('retry rediscovers a matching cache after the initial cache read timed out', async () => {
+    vi.useFakeTimers()
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    readGameDataCacheMock.mockReturnValueOnce(deferred().promise)
+    const startup = useGameDataStore.getState().loadFromCache()
+    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    await startup
+    expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
+
+    const cached = nonempty('Saved race')
+    readGameDataCacheMock.mockResolvedValueOnce({
+      data: cached,
+      sourceSnapshot: { path: remote.path },
+      cachedAt: '2026-01-01T00:00:00.000Z',
+    })
+    loadDataFromSourceMock.mockRejectedValueOnce(new Error('Offline'))
+    const retry = await useGameDataStore.getState().loadFromCache({ forceCheck: true })
+    await expect(retry.backgroundRefresh).resolves.toBe(false)
+    expect(useGameDataStore.getState().remoteStartup).toBe('cached')
+    expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
+  })
+
+  test('changing source cancels a pending startup retry before it can apply a saved cache', async () => {
+    const pending = deferred<unknown>()
+    useGameDataStore.setState({ dataSourceConfig: remote, remoteStartup: 'unavailable' })
+    readGameDataCacheMock.mockReturnValueOnce(pending.promise)
+    const retry = useGameDataStore.getState().loadFromCache({ forceCheck: true })
+    useGameDataStore.getState().reconfigureRemoteStartup()
+    pending.resolve({ data: nonempty('Saved race'), sourceSnapshot: { path: remote.path } })
+    await expect(retry).resolves.toEqual({})
+    expect(useGameDataStore.getState()).toMatchObject({ remoteStartup: 'setup', gameData: null })
+    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
   })
 
   test('a stalled remote startup settles at one deadline and keeps matching saved data', async () => {

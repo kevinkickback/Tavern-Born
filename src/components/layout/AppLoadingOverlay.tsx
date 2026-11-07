@@ -13,11 +13,14 @@ export function AppLoadingOverlay() {
   const loadProgress = useGameDataStore((s) => s.loadProgress)
   const error = useGameDataStore((s) => s.error)
   const remoteStartup = useGameDataStore((s) => s.remoteStartup)
-  const retryRemote = useGameDataStore((s) => s.checkRemoteStartup)
+  const retryRemote = useGameDataStore((s) => s.loadFromCache)
   const loadBundled = useGameDataStore((s) => s.useBundledForSession)
   const reconfigure = useGameDataStore((s) => s.reconfigureRemoteStartup)
   const canUseBundled =
-    !gameData && (remoteStartup === 'checking' || remoteStartup === 'unavailable')
+    !gameData &&
+    (remoteStartup === 'checking' ||
+      remoteStartup === 'committing' ||
+      remoteStartup === 'unavailable')
 
   const shouldStayVisible =
     remoteStartup === 'unavailable' ||
@@ -184,7 +187,7 @@ export function AppLoadingOverlay() {
       {canUseBundled && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
           {remoteStartup === 'unavailable' && (
-            <Button variant="outline" onClick={() => void retryRemote()}>
+            <Button variant="outline" onClick={() => void retryRemote({ forceCheck: true })}>
               Retry
             </Button>
           )}
