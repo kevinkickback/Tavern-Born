@@ -8,6 +8,7 @@ import { buildGameDataLookups, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
@@ -20,6 +21,7 @@ import {
   applyClassChoiceSelectionWithGrantsCommand,
   retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { getFeatureOptionSelectionStates } from '@/lib/character/featureOptionSelections'
@@ -519,4 +521,116 @@ test('retains the target when the current pool disagrees with its source progres
     calculate(chosen, altered).character.features.some((row) => row.name === agonizing.name),
   ).toBe(false)
   expect(state(chosen)?.details[0].available).toBe(true)
+})
+
+test('unrelated progression preserves the stored invocation when its exact target is unavailable', () => {
+  const chosen = choose(learn(actor(), 0, eldritchBlast), [
+    { ...agonizing, invocationCantrip: eldritchBlast },
+  ])
+  const missing = currentLookups({
+    ...data,
+    spells: data.spells.filter(
+      (spell) => spell.name !== eldritchBlast.name || spell.source !== eldritchBlast.source,
+    ),
+  })
+  const context = calculate(chosen, missing)
+  const progressed = reopen(
+    chosen,
+    applyClassProgressionUpdate(
+      chosen,
+      chosen.provenance,
+      [...chosen.classProgression, { name: 'Fighter', source: 'XPHB', levels: 1 }],
+      undefined,
+      {
+        classChoiceFeatureCatalogs: missing.classChoiceFeatureCatalogs,
+        spellContext: context.classChoices.spellContext,
+      },
+    ),
+  )
+  expect(invocationRow(progressed)).toEqual(invocationRow(chosen))
+  expect(progressed.features.find((feature) => feature.name === agonizing.name)).toEqual(
+    chosen.features.find((feature) => feature.name === agonizing.name),
+  )
+  expect(progressed.provenance.features['agonizing blast']).toEqual(
+    chosen.provenance.features['agonizing blast'],
+  )
+  expect(
+    calculate(progressed, missing).character.features.some((row) => row.name === agonizing.name),
+  ).toBe(false)
+  expect(calculate(progressed).character.features.some((row) => row.name === agonizing.name)).toBe(
+    true,
+  )
+})
+
+test('omitted authority preserves only the surviving saved exact Invocation target and grant', () => {
+  const chosen = choose(learn(learn(actor(), 0, eldritchBlast), 1, poisonSpray), [
+    { ...agonizing, invocationCantrip: eldritchBlast },
+    { ...agonizing, invocationCantrip: poisonSpray },
+  ])
+  const selection = invocationRow(chosen)!
+  const kept = selection.selected.find(
+    (option) => option.invocationCantrip?.name === eldritchBlast.name,
+  )!
+  const savedGrant = chosen.provenance.features['agonizing blast']
+  const storedFeatures = (saved: Character) =>
+    saved.features.filter((feature) => feature.name === agonizing.name)
+  expect(storedFeatures(chosen)).toHaveLength(2)
+  expect(savedGrant).toHaveLength(1)
+
+  const next = [...chosen.classProgression, { name: 'Fighter', source: 'XPHB', levels: 1 }]
+  for (const authority of [
+    undefined,
+    { classChoiceFeatureCatalogs: lookups.classChoiceFeatureCatalogs },
+    {
+      classChoiceFeatureCatalogs: { ...lookups.classChoiceFeatureCatalogs, classes: undefined },
+      spellContext: calculate(chosen).classChoices.spellContext,
+    },
+  ]) {
+    const progressed = reopen(
+      chosen,
+      applyClassProgressionUpdate(chosen, chosen.provenance, next, undefined, authority),
+    )
+    expect(invocationRow(progressed)).toEqual(selection)
+    expect(storedFeatures(progressed)).toEqual(storedFeatures(chosen))
+    expect(progressed.provenance.features['agonizing blast']).toEqual(savedGrant)
+  }
+
+  const partial = reopen(
+    chosen,
+    retainSavedFeatureOptionsCommand(
+      chosen,
+      chosen.provenance,
+      selection.choiceId,
+      [getClassChoiceOptionKey(kept)],
+      undefined,
+      getOptionalPoolSelectionHandle(selection),
+    ),
+  )
+  const partialSelection = invocationRow(partial)
+  if (!partialSelection) throw new Error('The retained Invocation choice is missing')
+  expect(partialSelection.selected).toEqual([kept])
+  expect(storedFeatures(partial).map((feature) => feature.id)).toEqual([
+    getClassChoiceFeatureId(selection, kept),
+  ])
+  expect(partial.provenance.features['agonizing blast']).toEqual(savedGrant)
+  const cleared = reopen(
+    partial,
+    retainSavedFeatureOptionsCommand(
+      partial,
+      partial.provenance,
+      selection.choiceId,
+      [],
+      undefined,
+      getOptionalPoolSelectionHandle(partialSelection),
+    ),
+  )
+  expect(storedFeatures(cleared)).toEqual([])
+  expect(cleared.provenance.features['agonizing blast']).toBeUndefined()
+  const removedOwner = reopen(
+    chosen,
+    applyClassProgressionUpdate(chosen, chosen.provenance, [next[1]]),
+  )
+  expect(invocationRow(removedOwner)).toBeUndefined()
+  expect(storedFeatures(removedOwner)).toEqual([])
+  expect(removedOwner.provenance.features['agonizing blast']).toBeUndefined()
 })

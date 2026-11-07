@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { buildClassLookup } from '@/lib/5etools/lookups'
+import { buildClassLookup, buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getClassChoiceGrantedFeature } from '@/lib/character/classChoiceIdentity'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
+import { reconcileClassChoiceSelectionGrants } from '@/lib/character/commands/classChoiceCommands'
 import {
   addMulticlass,
   applyClassEquipmentChoiceCommand,
@@ -22,10 +25,10 @@ import {
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 function applyChange(character: Character, result: ReturnType<typeof applyClassProgressionUpdate>) {
   return { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
@@ -212,6 +215,75 @@ describe('Class Commands', () => {
     ])
 
     expect(result.characterPatch.classProgression).toHaveLength(2)
+  })
+
+  test('level-up rejects a same-name class from another source', () => {
+    const character = makeCharacterFixture()
+    const data = makeGameDataFixture({
+      classes: [makeClassFixture({ name: 'Fighter', source: 'XPHB' })],
+    })
+    const lookups = buildGameDataLookups(data)
+    const calculation = createCharacterCalculationContext(character, lookups, lookups)
+    expect(() =>
+      applyLevelUp(
+        character,
+        character.provenance,
+        [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+        {
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 2,
+          hitDie: 10,
+          dieResult: 6,
+          method: 'manual',
+        },
+        calculation,
+      ),
+    ).toThrow(/restore the current class/i)
+  })
+
+  test('keeps a missing class choice and its saved grant through unrelated reconciliation', () => {
+    const choice: CharacterClassChoiceSelection = {
+      choiceId: 'missing-choice',
+      label: 'Saved class choice',
+      kind: 'optional-feature',
+      className: 'Fighter',
+      classSource: 'PHB',
+      classLevel: 1,
+      selected: [
+        { entityType: 'optionalFeature', name: 'Saved Rule', source: 'PHB', slotLevel: 1 },
+      ],
+    }
+    const feature = getClassChoiceGrantedFeature(choice, choice.selected[0])
+    const actor = makeCharacterFixture({ classChoiceSelections: [choice], features: [feature] })
+    const provenance = addGrant(actor.provenance, 'features', 'Saved Rule', {
+      ...makeSourceTag('class', 'Fighter', 'choice', 'PHB'),
+      grantVariant: choice.choiceId,
+    })
+    const saved = characterPersistenceSchema.parse({ ...actor, provenance })
+    const catalogs = buildClassChoiceFeatureCatalogs(makeGameDataFixture())
+    const current = reconcileClassChoiceSelectionGrants(
+      saved,
+      saved.provenance,
+      saved.classChoiceSelections ?? [],
+      catalogs,
+    )
+    expect(current.features).toEqual(saved.features)
+    expect(current.provenanceUpdate.features).toEqual(saved.provenance.features)
+    const loadedClass = buildClassChoiceFeatureCatalogs(
+      makeGameDataFixture({ classes: [makeClassFixture({ name: 'Fighter', source: 'PHB' })] }),
+    )
+    const missingOption = reconcileClassChoiceSelectionGrants(
+      saved,
+      saved.provenance,
+      saved.classChoiceSelections ?? [],
+      loadedClass,
+    )
+    expect(missingOption.features).toEqual(saved.features)
+    expect(missingOption.provenanceUpdate.features).toEqual(saved.provenance.features)
+    const cleared = reconcileClassChoiceSelectionGrants(saved, saved.provenance, [], catalogs)
+    expect(cleared.features).toEqual([])
+    expect(cleared.provenanceUpdate.features).toEqual({})
   })
 
   test('applyLevelUp records the raw die result with the progression update', () => {

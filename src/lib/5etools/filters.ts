@@ -266,13 +266,22 @@ function filterSubclassContent(
     : undefined
   const directDependency = (target: string | undefined) =>
     !!target && (!directTargets || directTargets.has(target))
-  const prune = (feature: SubclassFeature, dependencyPath: boolean) =>
-    pruneNestedSubclassFeatures(
+  // Keep one producer object when a reference and its level group mirror the same input.
+  const prunedDirect = new WeakMap<SubclassFeature, SubclassFeature>()
+  const prunedDependency = new WeakMap<SubclassFeature, SubclassFeature>()
+  const prune = (feature: SubclassFeature, dependencyPath: boolean) => {
+    const cache = dependencyPath ? prunedDependency : prunedDirect
+    const existing = cache.get(feature)
+    if (existing) return existing
+    const filtered = pruneNestedSubclassFeatures(
       feature,
       include,
       subclassFeatureIdentity(feature, subclass.source).source,
       dependencyPath,
     )
+    cache.set(feature, filtered)
+    return filtered
+  }
   const subclassFeatures = subclass.subclassFeatures?.flatMap((feature) => {
     const identity = subclassFeatureIdentity(feature, subclass.source)
     const dependencyTarget = directDependency(identity.dependencyTarget)

@@ -21,6 +21,7 @@ import type {
 } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
+import { findClassReference } from './classReference'
 
 export type { OptFeatureProg, OptionalFeatureLike }
 
@@ -194,11 +195,25 @@ export function getSelectedSubclassData(
   entry: Pick<CharacterClassEntry, 'subclass' | 'subclassSource'>,
 ): Subclass5e | undefined {
   if (!classData || !entry.subclass) return undefined
-
-  return (classData.subclasses ?? []).find(
-    (subclass) =>
-      subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
+  const reference = { name: entry.subclass, source: entry.subclassSource }
+  const matches = (classData.subclasses ?? []).filter((subclass) =>
+    entry.subclassSource
+      ? findClassReference(reference, [subclass])
+      : subclass.name === entry.subclass && !subclass.source,
   )
+  return matches.length === 1 && !matches[0].sourceIdentityConflict ? matches[0] : undefined
+}
+
+export function resolveClassProgressionRules(
+  entry: Pick<CharacterClassEntry, 'name' | 'source' | 'subclass' | 'subclassSource'>,
+  classes: readonly Class5e[],
+) {
+  const matches = classes.filter((cls) => findClassReference(entry, [cls]))
+  const current = matches.length === 1 ? matches[0] : undefined
+  if (!current || current.sourceIdentityConflict) return undefined
+  if (entry.subclass && entry.subclassSource && !getSelectedSubclassData(current, entry))
+    return undefined
+  return current
 }
 
 /** Overlay subclass-owned spellcasting fields on the base class data. */

@@ -4,7 +4,7 @@ import { associateItemTypeEntries } from '@/lib/5etools/itemTypeEntries'
 import { parseItems } from '@/lib/5etools/parsers/basic'
 import type { GameData, Item5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { MINIMAL_GAME_DATA, seedAppState } from './helpers/startup'
+import { MINIMAL_GAME_DATA, openCharacterFromHome, seedAppState } from './helpers/startup'
 
 const longText = Array.from({ length: 24 }, (_, index) => `Reading guidance ${index + 1}.`)
 const items = associateItemTypeEntries(
@@ -162,10 +162,7 @@ async function openRace(page: Page) {
     activeCharacterId: existing.id,
   })
   await page.reload()
-  await page.getByRole('heading', { name: 'Existing character', exact: true }).click()
-  await expect(
-    page.getByRole('banner').getByText('Existing character', { exact: true }),
-  ).toBeVisible()
+  await openCharacterFromHome(page, 'Existing character')
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const wizard = page.getByRole('dialog', { name: 'Create New Character', exact: true })
   await wizard.getByLabel('Character Name').fill('Preview draft')

@@ -33,6 +33,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   checkMulticlassRequirements,
@@ -135,7 +136,22 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     )
   }
 
+  const resolvePendingClass = (pending: PendingLevelUp, liveClasses = allClasses) => {
+    const selected = classProgression.find(
+      (entry) => entry.name === pending.className && entry.source === pending.classSource,
+    )
+    return resolveClassProgressionRules(
+      selected ?? { name: pending.className, source: pending.classSource },
+      liveClasses,
+    )
+  }
   const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
+    if (
+      !resolvePendingClass(pending, useGameDataStore.getState().gameData?.classes ?? allClasses)
+    ) {
+      toast.error('Restore the current class and subclass rules before adding a level.')
+      return
+    }
     if (pending.kind === 'existing') {
       const targetIndex = classProgression.findIndex(
         (entry) => entry.name === pending.className && entry.source === pending.classSource,
@@ -224,7 +240,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
     const entry = classProgression[index]
     const newClassLevel = entry.levels + 1
-    const classEntity = findClass(entry.name, entry.source)
+    const classEntity = resolveClassProgressionRules(entry, allClasses)
+    if (!classEntity) return
     beginLevelUp({
       kind: 'existing',
       className: entry.name,
@@ -291,6 +308,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const parsedHpDieResult = Number.parseInt(hpDieResult, 10)
   const validHpDieResult =
     pendingLevelUp != null &&
+    !!resolvePendingClass(pendingLevelUp) &&
     Number.isInteger(parsedHpDieResult) &&
     parsedHpDieResult >= 1 &&
     parsedHpDieResult <= pendingLevelUp.hitDie
@@ -408,10 +426,15 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             Level {entry.levels} · {entry.source || 'Unknown source'}
                           </p>
+                          {!resolveClassProgressionRules(entry, allClasses) && (
+                            <p className="text-xs text-warning">
+                              Restore the original rules to add a level.
+                            </p>
+                          )}
                         </div>
                         <Button
                           size="sm"
-                          disabled={isAtCap}
+                          disabled={isAtCap || !resolveClassProgressionRules(entry, allClasses)}
                           onClick={() => handleAddLevel(index)}
                           className="h-8 shrink-0 gap-1.5"
                         >

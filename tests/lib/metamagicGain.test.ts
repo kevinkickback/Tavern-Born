@@ -5,7 +5,12 @@ import {
   buildClassChoiceFeatureCatalogs,
   getCharacterClassChoices,
 } from '@/lib/character/classChoiceOptions'
-import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
+import {
+  applyClassChoiceSelectionCommand,
+  applyClassChoiceSelectionWithGrantsCommand,
+  reconcileClassChoiceSelectionGrants,
+} from '@/lib/character/commands/classChoiceCommands'
+import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
@@ -17,9 +22,10 @@ describe.each(['2014', '2024'] as const)('Sorcerer %s Metamagic gain edits', (ed
   test('assigns a later pick even with earlier holes and rejects duplicate, early, and stale edits', () => {
     const source = edition === '2014' ? 'PHB' : 'XPHB'
     const layer = makeBundledClassCastingLayer('class/class-sorcerer.json')
-    layer.optionalfeatures = parseOptionalFeatures(
+    const optionalFeatures = parseOptionalFeatures(
       JSON.parse(readFileSync('resources/srd/core/data/optionalfeatures.json', 'utf8')),
     )
+    layer.optionalfeatures = optionalFeatures
     const cls = layer.classes.find((row) => row.source === source)!
     const entry = { name: 'Sorcerer', source, levels: 17 }
     const character = makeCharacterFixture({
@@ -67,6 +73,68 @@ describe.each(['2014', '2024'] as const)('Sorcerer %s Metamagic gain edits', (ed
     ])
     const reopened = characterPersistenceSchema.parse({ ...after17, ...at10 })
     const latestHandle = getOptionalPoolSelectionHandle(reopened.classChoiceSelections![0])
+    const grants = reconcileClassChoiceSelectionGrants(
+      reopened,
+      reopened.provenance,
+      reopened.classChoiceSelections!,
+      catalogs,
+    )
+    const withGrants = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...reopened,
+          features: grants.features,
+          provenance: grants.provenanceUpdate,
+        }),
+      ),
+    )
+    const missingCatalogs = buildClassChoiceFeatureCatalogs({
+      ...layer,
+      optionalfeatures: optionalFeatures.filter(
+        (option) =>
+          typeof option !== 'object' ||
+          option === null ||
+          !('name' in option) ||
+          !('source' in option) ||
+          option.name !== careful.name ||
+          option.source !== source,
+      ),
+    })
+    expect(withGrants.provenance.features['careful spell']).toHaveLength(1)
+    const clearedOtherGain = applyClassChoiceSelectionWithGrantsCommand(
+      withGrants,
+      withGrants.provenance,
+      choice,
+      [],
+      { classes: [cls], catalogs: missingCatalogs },
+      undefined,
+      latestHandle,
+      10,
+    )
+    const afterClear = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...withGrants,
+          ...clearedOtherGain.characterPatch,
+          provenance: clearedOtherGain.provenanceUpdate,
+        }),
+      ),
+    )
+    expect(afterClear.features.map((feature) => feature.name)).toEqual([careful.name])
+    expect(afterClear.provenance.features['careful spell']).toEqual(
+      withGrants.provenance.features['careful spell'],
+    )
+    expect(afterClear.provenance.features['distant spell']).toBeUndefined()
+    const variant = reconcileOptionalClassFeatureChoicesCommand(
+      withGrants,
+      withGrants.provenance,
+      { availableClasses: [cls], allClasses: [cls], classChoiceFeatureCatalogs: missingCatalogs },
+      true,
+    )
+    expect(variant.characterPatch.features?.map((feature) => feature.name)).toContain(careful.name)
+    expect(variant.provenanceUpdate.features['careful spell']).toEqual(
+      withGrants.provenance.features['careful spell'],
+    )
     expect(() =>
       applyClassChoiceSelectionCommand(reopened, choice, [], authority, undefined, handle, 17),
     ).toThrow(/saved choices changed/i)

@@ -1,3 +1,4 @@
+import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
@@ -687,6 +688,13 @@ export function applyLevelUp(
 
   if (!targetEntry || targetEntry.levels !== hpChoice.classLevel) {
     throw new Error('Hit-point choice does not match the level being added.')
+  }
+  const rawClassLookups = calculationContext.lookups.raw
+  const currentClasses =
+    rawClassLookups.classChoiceClasses ??
+    (rawClassLookups.classesByKey && Object.values(rawClassLookups.classesByKey))
+  if (currentClasses && !resolveClassProgressionRules(targetEntry, currentClasses)) {
+    throw new RangeError('Restore the current class and subclass rules before adding a level.')
   }
   if (characterLevel < 2 || characterLevel > 20) {
     throw new RangeError('Hit-point gains can only be recorded for character levels 2 through 20.')

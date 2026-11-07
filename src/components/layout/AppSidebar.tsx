@@ -35,6 +35,7 @@ import {
 } from '@phosphor-icons/react'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { CharacterContentOpeningDialog } from '@/components/character/CharacterContentOpeningDialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useCharacterContentOpening } from '@/hooks/character/useCharacterContentOpening'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
@@ -293,7 +295,8 @@ export function AppSidebar() {
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
-  const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
+  const opening = useCharacterContentOpening(() => navigate('/'))
+  const { requestOpen } = opening
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
 
@@ -318,16 +321,14 @@ export function AppSidebar() {
       setConfirmSwitchOpen(true)
       return
     }
-    setActiveCharacter(id)
-    navigate('/')
+    requestOpen(id)
   }
 
   const confirmCharacterSwitch = () => {
     if (!pendingCharacterId) return
-    setActiveCharacter(pendingCharacterId)
     setPendingCharacterId(null)
     setConfirmSwitchOpen(false)
-    navigate('/')
+    requestOpen(pendingCharacterId)
   }
 
   return (
@@ -517,6 +518,7 @@ export function AppSidebar() {
         </nav>
       </aside>
 
+      <CharacterContentOpeningDialog opening={opening} />
       <AlertDialog
         open={confirmSwitchOpen}
         onOpenChange={(open) => {

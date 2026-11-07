@@ -11,7 +11,7 @@ import {
   getProgressiveChoiceReviewLevel,
   getRequiredChoiceSelectionCount,
 } from '@/lib/5etools/classChoiceNormalization'
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { getSelectedSubclassData, resolveClassProgressionRules } from '@/lib/5etools/classData'
 import {
   getClassOrderBranch,
   getClassOrderById,
@@ -44,6 +44,7 @@ import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import { resolvePsionic } from '@/lib/5etools/psionics'
 import {
   isRevisedAffinityOption,
   isRevisedAffinitySourceEnabled,
@@ -57,19 +58,24 @@ import {
   REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
+  getClassChoiceCatalogOptionKey,
   getClassChoiceDeclaration,
   getClassChoiceFeatureId,
   getClassChoiceGrantedFeature,
   getClassChoiceOptionKey,
+  getFeatureOwnerKey,
 } from '@/lib/character/classChoiceIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getCharacterClassChoices,
   isClassChoiceOptionEligible,
+  resolveClassChoiceFeatureEntity,
   resolveClassChoiceOptions,
   retainsBladeInvocationWithoutPact,
+  scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import { getEffectiveOwnerProficiencyChoices } from '@/lib/character/classProficiencyAuthority'
 import {
@@ -124,7 +130,7 @@ import {
   PACT_BLADE_NAME,
 } from '@/lib/character/warlockInvocationSource'
 import { addGrant } from '@/lib/provenance/ledger'
-import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
@@ -1436,9 +1442,11 @@ export function reconcileClassChoiceFeatMirror(
 function rebuildClassChoiceFeatures(
   existing: readonly Feature[],
   selections: readonly CharacterClassChoiceSelection[],
+  preservedIds: ReadonlySet<string>,
 ): Feature[] {
   const retained = existing.filter(
-    (feature) => !feature.id.startsWith(CLASS_CHOICE_FEATURE_ID_PREFIX),
+    (feature) =>
+      !feature.id.startsWith(CLASS_CHOICE_FEATURE_ID_PREFIX) || preservedIds.has(feature.id),
   )
   const existingIdentities = new Set(retained.map((feature) => feature.id))
 
@@ -1453,6 +1461,41 @@ function rebuildClassChoiceFeatures(
   }
 
   return retained
+}
+
+function isSavedFeatureSourceMissing(
+  selection: CharacterClassChoiceSelection,
+  option: CharacterClassChoiceOption,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  if (option.entityType === 'optionalFeature' && option.source?.trim()) {
+    const key = getClassChoiceCatalogOptionKey(option)
+    const matches = catalogs.optionalFeatureCandidates
+      ? (catalogs.optionalFeatureCandidates.get(key) ?? [])
+      : catalogs.optionalFeatures?.filter(
+          (feature) =>
+            getClassChoiceCatalogOptionKey({ ...feature, entityType: 'optionalFeature' }) === key,
+        )
+    return (
+      matches !== undefined &&
+      (matches.length !== 1 ||
+        ('sourceIdentityConflict' in matches[0] && matches[0].sourceIdentityConflict === true))
+    )
+  }
+  if (option.entityType === 'psionic')
+    return catalogs.psionics !== undefined && !resolvePsionic(option, catalogs.psionics)
+  if (option.entityType === 'classFeature')
+    return !resolveClassChoiceFeatureEntity(option, catalogs)
+  if (option.entityType !== 'subclassFeature') return false
+  const owner = selection.subclassName
+    ? getFeatureOwnerKey(
+        selection.className,
+        selection.classSource,
+        selection.subclassName,
+        selection.subclassSource,
+      )
+    : undefined
+  return !resolveClassChoiceFeatureEntity(option, scopeClassChoiceFeatureCatalogs(catalogs, owner))
 }
 
 /**
@@ -1482,8 +1525,77 @@ export function reconcileClassChoiceSelectionGrants(
     effectiveSpellProfiles: managedSpells.independentSpellProfiles,
     knownWarlockCantrips: managedSpells.knownWarlockCantrips,
   })
+  const preservedFeatureIds = new Set<string>()
+  const preservedGrants = new Map<string, Set<string>>()
+  let spellReferences: Set<string> | undefined
+  for (const selection of selections) {
+    const isRevisedInvocation = selection.choiceId === REVISED_INVOCATION_POOL
+    if (!catalogs && !isRevisedInvocation) continue
+    const previous = character.classChoiceSelections?.find(
+      (row) => row.choiceId === selection.choiceId,
+    )
+    if (
+      !previous ||
+      selection.inactive ||
+      previous.inactive !== selection.inactive ||
+      previous.className !== selection.className ||
+      previous.classSource !== selection.classSource ||
+      previous.subclassName !== selection.subclassName ||
+      previous.subclassSource !== selection.subclassSource
+    )
+      continue
+    const entry = findClassReference(
+      { name: selection.className, source: selection.classSource },
+      character.classProgression,
+    )
+    const missingOwner =
+      entry && catalogs?.classes && !resolveClassProgressionRules(entry, catalogs.classes)
+    const savedInvocationOwner =
+      isRevisedInvocation && getSavedRevisedInvocationOwner(draft, selection)
+    for (const option of selection.selected) {
+      if (
+        !isFeatureOption(option) ||
+        !previous.selected.some(
+          (prior) =>
+            prior.slotLevel === option.slotLevel &&
+            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+        )
+      )
+        continue
+      const target =
+        savedInvocationOwner && isRevisedTargetedInvocation(option)
+          ? option.invocationCantrip
+          : undefined
+      if (target && catalogs?.classes && spellContext?.spellsByKey) {
+        spellReferences ??= new Set(
+          Object.values(spellContext.spellsByKey).map((spell) =>
+            getSpellReferenceKey(spell.name, spell.source),
+          ),
+        )
+      }
+      // Missing authority suspends the benefit without retracting the saved grant.
+      const missingTarget =
+        target && !spellReferences?.has(getSpellReferenceKey(target.name, target.source))
+      if (
+        !missingOwner &&
+        !missingTarget &&
+        !(catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
+      )
+        continue
+      preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
+      const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
+      names.add(normalizeKey(option.name))
+      preservedGrants.set(selection.choiceId, names)
+    }
+  }
   const activeSelections = selections
     .filter((selection) => !selection.inactive)
+    .map((selection) => ({
+      ...selection,
+      selected: selection.selected.filter(
+        (option) => !preservedFeatureIds.has(getClassChoiceFeatureId(selection, option)),
+      ),
+    }))
     .map((saved) => {
       const selection = getBladeInvocationSource(saved.choiceId)
         ? {
@@ -1545,7 +1657,8 @@ export function reconcileClassChoiceSelectionGrants(
           !(
             tag.sourceType === 'class' &&
             tag.grantVariant !== undefined &&
-            ownedChoiceIds.has(tag.grantVariant)
+            ownedChoiceIds.has(tag.grantVariant) &&
+            !preservedGrants.get(tag.grantVariant)?.has(key)
           ),
       )
       return retained.length > 0 ? [[key, retained]] : []
@@ -1566,7 +1679,7 @@ export function reconcileClassChoiceSelectionGrants(
 
   const proficiencyGrants = reconcileClassProficiencyGrants(character, provenanceUpdate, selections)
   return {
-    features: rebuildClassChoiceFeatures(character.features, activeSelections),
+    features: rebuildClassChoiceFeatures(character.features, activeSelections, preservedFeatureIds),
     proficiencies: proficiencyGrants.proficiencies,
     provenanceUpdate: proficiencyGrants.provenance!,
   }
@@ -1577,14 +1690,14 @@ function reconcileChoiceMutationGrants(
   character: Character,
   ledger: ProvenanceLedger,
   selections: readonly CharacterClassChoiceSelection[],
-  choice: { kind: NormalizedCharacterChoice['kind']; id?: string; choiceId?: string },
+  choice:
+    | Pick<NormalizedCharacterChoice, 'kind' | 'id' | 'owner'>
+    | Pick<CharacterClassChoiceSelection, 'kind' | 'choiceId' | 'className' | 'classSource'>,
   catalogs?: ClassChoiceFeatureCatalogs,
   spellContext?: ManagedClassSpellContext,
 ) {
-  if (
-    choice.kind !== 'proficiency' &&
-    !isClassProficiencyChoiceId(choice.id ?? choice.choiceId ?? '')
-  )
+  const choiceId = 'id' in choice ? choice.id : choice.choiceId
+  if (choice.kind !== 'proficiency' && !isClassProficiencyChoiceId(choiceId)) {
     return reconcileClassChoiceSelectionGrants(
       character,
       ledger,
@@ -1592,6 +1705,7 @@ function reconcileChoiceMutationGrants(
       catalogs,
       spellContext,
     )
+  }
   const state = reconcileClassProficiencyGrants(character, ledger, selections)
   return {
     features: character.features,

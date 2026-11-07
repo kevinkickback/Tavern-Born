@@ -92,7 +92,7 @@ describe('CharacterCard', () => {
     expect(onLoad).not.toHaveBeenCalled()
   })
 
-  test('shows compact information for saved choices outside the Included SRD', async () => {
+  test('shows compact information for saved choices missing from the active catalog', async () => {
     const user = userEvent.setup()
     render(
       <CharacterCard
@@ -112,7 +112,7 @@ describe('CharacterCard', () => {
 
     await user.hover(indicator)
     expect((await screen.findByRole('tooltip')).textContent).toContain(
-      'not available in the Included SRD',
+      'missing from the current game data',
     )
   })
 })

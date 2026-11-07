@@ -231,12 +231,25 @@ export function indexSubclassFeatureTargets(classes: readonly Class5e[]) {
       )
       const targets = byOwner.get(owner) ?? new Map<string, SubclassFeature>()
       const candidates = candidatesByOwner.get(owner) ?? new Map<string, SubclassFeature[]>()
+      const references = new Set<string>()
+      const ambiguousReferences = new Set<string>()
+      for (const reference of subclass.subclassFeatureRefs ?? []) {
+        const target = getSubclassFeatureIdentity(reference)
+        if (!target) continue
+        if (reference.sourceIdentityConflict || references.has(target))
+          ambiguousReferences.add(target)
+        references.add(target)
+      }
       for (const feature of collectSubclassFeatures(subclass)) {
         const target = getSubclassFeatureIdentity(feature)
         if (target) {
           targets.set(target, feature)
           const producers = candidates.get(target) ?? []
-          if (!producers.includes(feature)) producers.push(feature)
+          if (ambiguousReferences.has(target)) {
+            producers.push({ ...feature, sourceIdentityConflict: true })
+          } else if (!producers.includes(feature)) {
+            producers.push(feature)
+          }
           candidates.set(target, producers)
         }
       }

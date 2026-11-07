@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 function renderSidebar(path = '/build/class') {
   return render(
@@ -28,7 +30,27 @@ describe('desktop workspace navigation', () => {
 
   afterEach(() => {
     cleanup()
+    useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
     vi.clearAllMocks()
+  })
+
+  test('opens a recent character with limited access while keeping the saved references', async () => {
+    const user = userEvent.setup()
+    const character = makeCharacterFixture({
+      name: 'Affected Sidebar',
+      race: 'External',
+      raceSource: 'TEST',
+    })
+    useCharacterStore.setState({ characters: [character], isActiveCharacterDirty: false })
+    useGameDataStore.setState({ gameData: makeGameDataFixture(), dataSourceConfig: null })
+    renderSidebar('/')
+    await user.click(screen.getByRole('button', { name: 'Open Affected Sidebar' }))
+    expect(screen.getByRole('dialog', { name: 'Additional content unavailable' })).toBeTruthy()
+    expect(screen.getByText('External (TEST)')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Open with limited access' }))
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(useCharacterStore.getState().characters[0]).toBe(character)
   })
 
   test('maps build routes to the Builder workspace and active context page', () => {
