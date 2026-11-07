@@ -351,6 +351,41 @@ test.each(
       expect(variantPool(lore, loreSlot).defaultReferences.has(key)).toBe(true)
     }
     const previous = slots.find((slot) => slot[3] === 1)!
+    if (type === 'local') {
+      const outsideList = classic
+        ? { name: 'Gift of Alacrity', source: 'EGW' }
+        : { name: 'Armor of Agathys', source }
+      const withBook = { ...actor, allowedSources: [...new Set([source, outsideList.source])] }
+      for (const slot of [previous, level10]) {
+        const spellContext = context(withBook).classChoices.spellContext
+        const request = {
+          slot,
+          expected: null,
+          expectedEmptyRevision: 0,
+          target: outsideList,
+        }
+        expect(() =>
+          setManagedClassSpellChoiceCommand(
+            withBook,
+            withBook.provenance,
+            { ...request, policy: 'default' },
+            spellContext,
+          ),
+        ).toThrow()
+        const override = reopen(
+          withBook,
+          setManagedClassSpellChoiceCommand(
+            withBook,
+            withBook.provenance,
+            { ...request, policy: 'ignore-class-list' },
+            spellContext,
+          ),
+        )
+        expect(context(override).managedClassSpellStatuses).toMatchObject([
+          { active: true, choice: { policy: 'ignore-class-list' } },
+        ])
+      }
+    }
     const target = classic ? 'Eldritch Blast' : 'Revivify'
     expect(
       pool(previous).defaultReferences.has(`${target.toLowerCase()}|${source.toLowerCase()}`),

@@ -364,7 +364,9 @@ does not become an active export row. Generic Bonus and native APIs cannot creat
 Classic Magical Secrets uses two ordinary Bard known slots at levels 10, 14 and 18. Those slots
 accept a cantrip or an eligible spell of an earned rank from a current class list. Revised Magical
 Secrets expands eligible levelled spells for ordinary gains at level 10 and later to the current
-Cleric, Druid and Wizard lists. Earlier slots retain their own eligibility.
+Cleric, Druid and Wizard lists. Earlier slots retain their own eligibility. Ordinary Bard slots
+in both editions retain the explicit `ignore-class-list` house rule independently of their default
+lists. The dedicated Lore slots require the published lists.
 
 Both Lore printings grant two additional mixed-rank spell choices at level 6 outside the ordinary
 Bard quota. Revised Lore also keeps its chosen levelled spells prepared. Moon chooses one extra

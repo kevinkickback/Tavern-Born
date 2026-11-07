@@ -628,7 +628,7 @@ export function projectManagedClassSpellState(
       continue
     }
     if (
-      (state.lore || state.secrets === 'phb' || choice.policy !== 'ignore-class-list') &&
+      (state.lore || choice.policy !== 'ignore-class-list') &&
       !hasDefaultManagedSpellRoute(character, spell, choice.slot, state, context)
     ) {
       deny('Restore this spell list or its optional feature selection.')
