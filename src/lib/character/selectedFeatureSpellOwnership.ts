@@ -6,6 +6,8 @@ import {
 import {
   declaredSubclassSlots,
   decodeSelectedFeatureSpellAddress,
+  isClericDomainCantripSlot,
+  isDeclaredSubclassCantripSlot,
   selectedFeatureSpellAddress,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -88,10 +90,7 @@ export function hasSavedSelectedFeatureSpellOwner(
   const address = decodeSelectedFeatureSpellAddress(slot[2])
   if (!address) return false
   if (address[1] === 'subclassFeature')
-    return declaredSubclassSlots.some(
-      (row) =>
-        JSON.stringify(row) === JSON.stringify(slot) && hasDeclaredSubclassOwner(character, row),
-    )
+    return isDeclaredSubclassCantripSlot(slot) && hasDeclaredSubclassOwner(character, slot)
   if (address[1] === 'classFeature') {
     const order = getClassOrderById(address[0])
     if (!order || getSavedClassOrder(character, order)?.branch !== 'caster') return false
@@ -120,7 +119,10 @@ export function getSavedSelectedFeatureSpellProducers(character: Character) {
       }),
     ),
   )
-  for (const slot of declaredSubclassSlots) {
+  const savedDomainCantrips = (character.managedClassSpellChoices ?? [])
+    .map((row) => row.slot)
+    .filter(isClericDomainCantripSlot)
+  for (const slot of [...declaredSubclassSlots, ...savedDomainCantrips]) {
     if (!hasDeclaredSubclassOwner(character, slot)) continue
     const [owner, , producer, level] = slot
     producers.add(JSON.stringify([owner, producer, level]))

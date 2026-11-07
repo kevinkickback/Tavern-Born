@@ -34,7 +34,8 @@ export function isValidClassProficiencySelection(
     classProficiencyRule(relation.target)?.domains.find((row) => row.domain === relation.domain)
   const setup = selection.proficiencyAtGain
   const trigger =
-    relation?.domain === 'skills' && classProficiencyRule(relation.target)?.proficiencyAtGain
+    (relation?.domain === 'skills' || relation?.domain === 'savingThrows') &&
+    classProficiencyRule(relation.target)?.proficiencyAtGain
   const historical = !!trigger
   const optional = relation && optionalClassProficiencyRule(relation.target)
   const validSetup = historical
@@ -90,6 +91,7 @@ export function isValidClassProficiencySelection(
         (!domain.languagePool || domain.languagePool.includes(target.name)) &&
         domain.requiresKnownLanguage !== target.name &&
         (!domain.toolPool || domain.toolPool.includes(target.name)) &&
+        (!domain.savingThrowPool || domain.savingThrowPool.includes(target.name)) &&
         option.slotLevel === relation.level
       )
     }) &&
@@ -212,7 +214,9 @@ export function getInvalidClassProficiencyPaths(
           tag.grantSource !== undefined ||
           seen.has(tag.grantVariant!) ||
           !(
-            character.proficiencies[domain as 'skills' | 'expertise' | 'languages' | 'tools'] ?? []
+            character.proficiencies[
+              domain as 'skills' | 'expertise' | 'languages' | 'tools' | 'savingThrows'
+            ] ?? []
           ).some((value) => value.trim().toLowerCase() === name)
         )
           paths.push(['provenance', 'proficiencies', domain, name])

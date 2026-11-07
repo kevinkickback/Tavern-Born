@@ -25,6 +25,11 @@ const FEATURE_FIELDS = [
   'entries',
   '_copy',
 ]
+const orderSource = (feature) =>
+  feature.className === 'Cleric' &&
+  feature.subclassShortName === 'Order' &&
+  feature.source === 'TCE' &&
+  same(feature.otherSources, [{ source: 'GGR', page: 25 }])
 const ROOT_FIELDS = [
   'name',
   'shortName',
@@ -256,6 +261,46 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
         size: 6,
       },
     ],
+    [
+      'subclass-feature|acolyte of nature|cleric|phb|nature|phb|1|phb',
+      {
+        body: 'a333dc9b77f5dfb06f7ce040f476bf0263109e41d5c39b104b42cb0a170aea70',
+        line: 0,
+        size: 3,
+      },
+    ],
+    [
+      'subclass-feature|acolyte of strength|cleric|phb|strength (psa)|psa|1|psa',
+      {
+        body: '8016ac673ade8b69f3ef6b76464bc136ff2732129528f1339bbfdcec77d6f135',
+        line: 0,
+        size: 4,
+      },
+    ],
+    [
+      'subclass-feature|bonus proficiencies|cleric|phb|order|tce|1|tce',
+      {
+        body: '7794c6de8f2c398b33a360f8d16a68c0181cda23f451789df91f26078c17a1f2',
+        line: 0,
+        size: 2,
+      },
+    ],
+    [
+      'subclass-feature|implement of peace|cleric|phb|peace|tce|1|tce',
+      {
+        body: '4c99ea02e62d4a382b77eed4f78d566dd9f33f6a4d6c6d75763b8263244420df',
+        line: 1,
+        size: 3,
+      },
+    ],
+    [
+      'subclass-feature|student of arcana|cleric|xphb|arcana|au|3|au',
+      {
+        body: '08c4d06e11f9585e6e79ede71ee9231fc13bcc77bc7f6258c35e5121abe1d9f3',
+        classSkills: true,
+        size: 6,
+      },
+    ],
   ])
   const simpleSkills = features.flatMap((feature) => {
     const target = identity(feature)
@@ -263,26 +308,44 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
     if (!rule) return []
     if (
       seen.has(target) ||
-      !only(feature, FEATURE_FIELDS) ||
+      !only(feature, orderSource(feature) ? [...FEATURE_FIELDS, 'otherSources'] : FEATURE_FIELDS) ||
       !Array.isArray(feature.entries) ||
       digest(feature.entries) !== rule.body
     )
       fail(`Unsupported ${feature.name} source`)
     seen.add(target)
+    const cleric = feature.className === 'Cleric'
+    const gainTargets = cleric
+      ? [
+          ...(feature.classSource === 'PHB'
+            ? ['class-feature|divine domain|cleric|phb|1|phb']
+            : []),
+          'class-feature|cleric subclass|cleric|xphb|3|xphb',
+        ]
+      : [rule.gain]
+    const startingSkillPoolBase = rule.classSkills
+      ? [...feature.entries[1].entries[0].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map((match) =>
+          match[1].toLowerCase(),
+        )
+      : undefined
     const skillPool =
       rule.line === undefined
         ? null
-        : [...feature.entries[rule.line].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map((match) =>
+        : [...feature.entries[rule.line].matchAll(/\{@skill ([^|}]+)(?:\|XPHB)?\}/g)].map((match) =>
             match[1].toLowerCase(),
           )
-    if (skillPool && new Set(skillPool).size !== rule.size)
+    if (
+      (skillPool && new Set(skillPool).size !== rule.size) ||
+      (startingSkillPoolBase && startingSkillPoolBase.length !== 1)
+    )
       fail(`Unverified ${feature.name} skill pool`)
     return [
       {
         target,
         digest: rule.body,
         optional: false,
-        subclassGainTarget: rule.gain,
+        ...(cleric ? { subclassGainTargets: gainTargets } : { subclassGainTarget: rule.gain }),
+        ...(startingSkillPoolBase && { startingSkillPoolBase }),
         fields: [
           ...Object.keys(feature),
           'featureOptionSourceConflict',
@@ -294,7 +357,7 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
             domain: 'skills',
             count: rule.count ?? 1,
             skillPool,
-            ...(skillPool === null && { excludeExisting: true }),
+            ...((skillPool === null || cleric) && { excludeExisting: true }),
           },
         ],
       },
@@ -332,7 +395,12 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */
 export function deriveSubclassProficiencyCertificates(documents, rules, api) {
   const rootFields = [...ROOT_FIELDS, ...(api.sourceFields ?? [])]
-  const featureFields = [...FEATURE_FIELDS, ...(api.sourceFields ?? [])]
+  const allowedFeature = (row) =>
+    only(row, [
+      ...FEATURE_FIELDS,
+      ...(api.sourceFields ?? []),
+      ...(orderSource(row) ? ['otherSources'] : []),
+    ])
   const validateMetadata = (record, root = false) => {
     for (const field of ['srd', 'srd52', 'basicRules2024']) {
       if (record[field] !== undefined && typeof record[field] !== 'boolean')
@@ -418,7 +486,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
       result.roots.push({
         owner,
         shortName: root.shortName,
-        rawDigest: api.digest(raw),
+        rawDigest: (api.rootDigest ?? api.digest)(raw),
         metadataDigest: api.digest(api.metadata(root, true)),
         fields: Object.keys(root).sort(),
         copies,
@@ -431,7 +499,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
     for (const target of needed) {
       const rows = rawByTarget(target),
         effective = candidates(target)
-      if (rows.length !== 1 || effective.length !== 1 || !only(rows[0], featureFields))
+      if (rows.length !== 1 || effective.length !== 1 || !allowedFeature(rows[0]))
         fail('Missing, duplicate or unsupported enabling feature')
       const raw = rows[0],
         feature = effective[0],
@@ -455,8 +523,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
         if (!parent || seen.has(parent)) fail('Invalid feature copy closure')
         seen.add(parent)
         const matches = rawByTarget(parent)
-        if (matches.length !== 1 || !only(matches[0], featureFields))
-          fail('Ambiguous feature copy base')
+        if (matches.length !== 1 || !allowedFeature(matches[0])) fail('Ambiguous feature copy base')
         copies.push({ target: parent, digest: api.digest(matches[0]) })
         validateMetadata(matches[0])
         current = matches[0]

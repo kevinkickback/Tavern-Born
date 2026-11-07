@@ -15,6 +15,7 @@ interface ClassProficiencyRuleDomain {
   coupled?: boolean
   toolPool?: readonly string[]
   toolCategory?: string
+  savingThrowPool?: readonly string[]
 }
 export interface ClassProficiencyRule {
   target: string
@@ -24,6 +25,8 @@ export interface ClassProficiencyRule {
   /** Only the certified historical fallback descriptor admits acquisition setup. */
   proficiencyAtGain?: string
   subclassGainTarget?: string
+  subclassGainTargets?: readonly string[]
+  startingSkillPoolBase?: readonly string[]
   skillModifier?: { label: string; ability: AbilityName; minimum: number }
   domains: readonly ClassProficiencyRuleDomain[]
 }

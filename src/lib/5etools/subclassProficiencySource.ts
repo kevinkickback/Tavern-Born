@@ -13,6 +13,7 @@ import {
   type SubclassProficiencySourceAudit,
   subclassProficiencyDigest,
   subclassProficiencyMetadata,
+  subclassProficiencyRootDigest,
 } from './subclassProficiencyCertificates'
 import {
   isConditionalOnlySubclassProficiencyTarget,
@@ -160,7 +161,7 @@ export function auditSubclassProficiencyRoots(
     const valid =
       !!(ordinary || packaged) &&
       producers.length === 1 &&
-      subclassProficiencyDigest(raw[index]) === certificate.rawDigest &&
+      subclassProficiencyRootDigest(raw[index]) === certificate.rawDigest &&
       subclassProficiencyDigest(subclassProficiencyMetadata(row, true)) ===
         certificate.metadataDigest &&
       certificate.copies.every((copy) => {

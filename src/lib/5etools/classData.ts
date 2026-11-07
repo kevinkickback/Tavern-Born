@@ -2,6 +2,7 @@ import {
   decodeSubclassFeatureReference,
   getClassFeatureReferenceLevel,
   getSubclassFeatureIdentity,
+  isExactSubclassFeatureReference,
 } from '@/lib/5etools/classFeatureIdentity'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import { getParsedClassSpellSlotProgression } from '@/lib/5etools/classSpellSlotTable'
@@ -22,6 +23,7 @@ import type {
 import type { CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
 import { findClassReference } from './classReference'
+import { getPsaKnowledgeIntroDependency } from './psaKnowledgeFeatures'
 
 export type { OptFeatureProg, OptionalFeatureLike }
 
@@ -263,6 +265,7 @@ export function getSubclassFeatureGroups(
           feature.entries ?? [],
           feature.subclassShortName ?? subclass?.shortName,
           displayedFeatureKeys,
+          subclass && getPsaKnowledgeIntroDependency(subclass, getSubclassFeatureIdentity(feature)),
         ),
       })),
     }))
@@ -302,6 +305,7 @@ export function resolveSubclassFeatureRefs(
   entries: unknown[],
   subclassShortName: string | undefined,
   displayedFeatureKeys?: ReadonlySet<string>,
+  introDependency?: string,
 ): unknown[] {
   const selectedShortName = subclassShortName?.trim().toLowerCase()
   return entries.flatMap((e) => {
@@ -316,6 +320,7 @@ export function resolveSubclassFeatureRefs(
               obj.entries,
               selectedShortName,
               displayedFeatureKeys,
+              introDependency,
             ),
           },
         ]
@@ -326,16 +331,29 @@ export function resolveSubclassFeatureRefs(
     const refStr = typeof obj.subclassFeature === 'string' ? obj.subclassFeature : ''
     const reference = decodeSubclassFeatureReference(refStr)
     const refShortName = reference.subclassShortName.trim().toLowerCase()
+    const key = getSubclassFeatureIdentity(reference)
+    const feature = obj.feature as SubclassFeature | undefined
+    const exactIntro =
+      !!introDependency &&
+      key === introDependency &&
+      isExactSubclassFeatureReference(obj, refStr) &&
+      !!feature &&
+      getSubclassFeatureIdentity(feature) === key &&
+      !feature.sourceIdentityConflict &&
+      !feature.featureOptionSourceConflict &&
+      !feature.isClassFeatureVariant
     // Filter out if no subclass selected or ref is for a different subclass
-    if (!selectedShortName || (refShortName && refShortName !== selectedShortName)) {
+    if (!selectedShortName || (refShortName && refShortName !== selectedShortName && !exactIntro)) {
       return []
     }
-    const key = getSubclassFeatureIdentity(reference)
     if (key && displayedFeatureKeys?.has(key)) return []
     // Expand resolved feature entries
-    const feature = obj.feature as Record<string, unknown> | undefined
     if (feature?.entries && Array.isArray(feature.entries)) {
-      return resolveSubclassFeatureRefs(feature.entries, selectedShortName, displayedFeatureKeys)
+      return resolveSubclassFeatureRefs(
+        feature.entries,
+        exactIntro ? refShortName : selectedShortName,
+        displayedFeatureKeys,
+      )
     }
     // No resolved feature — return feature name as a string stub
     const featureName = refStr.split('|')[0] ?? ''

@@ -11,8 +11,18 @@ import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel, getSubclassFeatureIdentity } from './classFeatureIdentity'
+import {
+  hasInheritedGraveCantrip,
+  hasRevisedGravePreparedCantrip,
+} from './clericDomainCantripSources'
 import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import {
+  hasClassicZealSpellRestriction,
+  hasRevisedInheritedDomainSpells,
+  INHERITED_DOMAIN_SPELLS,
+  isRevisedInheritedDomainOwner,
+} from './legacyClericDomainSpells'
 import {
   hasRevisedInheritedCircleSpells,
   isRevisedInheritedCircleOwner,
@@ -57,14 +67,22 @@ export interface SubclassSpellGrant {
   mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
 }
 
+const zealFireShieldNote = 'This domain spell can create only a warm shield.'
+
 export function hasCurrentSubclassSpellGrant(
   grant: SubclassSpellGrant,
   references: { has(reference: string): boolean } | undefined,
   spellLevels: ReadonlyMap<string, number> | undefined,
   oathReprints?: ReadonlyMap<string, number | undefined>,
+  includedDomainReprints?: ReadonlyMap<string, number | undefined>,
 ) {
   const key = getSpellReferenceKey(grant.spellName)
-  if (grant.requiresClassicReprint && oathReprints?.get(key) !== grant.expectedSpellLevel)
+  if (
+    grant.requiresClassicReprint &&
+    oathReprints?.get(key) !== grant.expectedSpellLevel &&
+    (grant.feature?.target !== INHERITED_DOMAIN_SPELLS ||
+      includedDomainReprints?.get(key) !== grant.expectedSpellLevel)
+  )
     return false
   return grant.expectedSpellLevel === undefined
     ? references?.has(key) === true
@@ -86,12 +104,14 @@ export function getEarnedSubclassSpellGrants(
   const norm = normalizeOwnerIdentity
   const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
   const revisedCircle = isRevisedInheritedCircleOwner(entry)
+  const revisedDomain = isRevisedInheritedDomainOwner(entry)
   const legacySorcerer = getLegacySorcererSpec(entry)
   const illusion = getWizardIllusionCantripOwner(entry)
   const revisedOath = isRevisedInheritedOathOwner(entry)
   const unavailable =
     land ||
     revisedCircle ||
+    revisedDomain ||
     revisedOath ||
     legacySorcerer ||
     illusion ||
@@ -170,6 +190,33 @@ export function getEarnedSubclassSpellGrants(
             feature: { name: 'Circle Spells', target: 'inherited-circle-spells' },
           }))
         : []
+    if (revisedDomain)
+      return hasRevisedInheritedDomainSpells(classData, subclasses[0])
+        ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+            .filter(
+              (grant) =>
+                grant.mode === 'prepared' ||
+                (grant.mode === 'known' &&
+                  grant.isCantrip &&
+                  getSpellNameKey(grant.spellName) === 'spare the dying' &&
+                  hasInheritedGraveCantrip(subclasses[0], first)),
+            )
+            .map((grant) => ({
+              ...grant,
+              spellName: formatSpellReference(grant.spellName, 'XPHB'),
+              level: Math.max(grant.level, first),
+              expectedSpellLevel: grant.isCantrip ? 0 : Math.ceil(grant.level / 2),
+              requiresClassicReprint: true,
+              feature: {
+                name: 'Domain Spells',
+                target: INHERITED_DOMAIN_SPELLS,
+                ...(subclasses[0].name === 'Zeal Domain (PSA)' &&
+                  getSpellNameKey(grant.spellName) === 'fire shield' && {
+                    castingNote: zealFireShieldNote,
+                  }),
+              },
+            }))
+        : []
     if (revisedOath)
       return hasRevisedInheritedOathSpells(classData, subclasses[0])
         ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel).map((grant) => ({
@@ -189,6 +236,49 @@ export function getEarnedSubclassSpellGrants(
         ? []
         : rituals
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    if (norm(entry.name) === 'cleric') {
+      if (
+        norm(entry.source) === 'phb' &&
+        norm(entry.subclass) === 'light domain' &&
+        norm(entry.subclassSource) === 'phb'
+      )
+        return grants.filter((grant) => getSpellNameKey(grant.spellName) !== 'light')
+      if (
+        norm(entry.source) === 'phb' &&
+        norm(entry.subclass) === 'zeal domain (psa)' &&
+        norm(entry.subclassSource) === 'psa'
+      ) {
+        const currentRestriction = hasClassicZealSpellRestriction(classData, subclasses[0])
+        return grants.flatMap((grant) => {
+          if (getSpellNameKey(grant.spellName) !== 'fire shield') return [grant]
+          return currentRestriction && grant.mode === 'prepared'
+            ? [
+                {
+                  ...grant,
+                  expectedSpellLevel: 4,
+                  feature: {
+                    name: 'Domain Spells',
+                    target: 'zeal-domain-spells',
+                    castingNote: zealFireShieldNote,
+                  },
+                },
+              ]
+            : []
+        })
+      }
+      if (
+        norm(entry.source) === 'xphb' &&
+        norm(entry.subclass) === 'grave domain' &&
+        norm(entry.subclassSource) === 'rhw'
+      )
+        return grants.flatMap((grant) =>
+          getSpellReferenceKey(grant.spellName) === 'spare the dying|xphb'
+            ? hasRevisedGravePreparedCantrip(classData, subclasses[0])
+              ? [{ ...grant, isCantrip: true, expectedSpellLevel: 0 }]
+              : []
+            : [grant],
+        )
+    }
     // The conditional Illusion grant is resolved after current ordinary cantrips.
     if (illusion)
       return grants.filter((grant) => getSpellNameKey(grant.spellName) !== 'minor illusion')
@@ -400,6 +490,10 @@ function getLunarSubclassSpells(
     : grants
 }
 
+function readSubclassSpellGain(value: string) {
+  return /^(?:[1-9]|1[0-9]|20)$/.test(value) ? Number(value) : undefined
+}
+
 function pushSpellList(
   grants: SubclassSpellGrant[],
   mode: SubclassSpellGrant['mode'],
@@ -407,8 +501,8 @@ function pushSpellList(
   spells: unknown,
   maxClassLevel: number,
 ): void {
-  const level = Number.parseInt(levelText, 10)
-  if (!Number.isFinite(level) || level < 1 || level > maxClassLevel) return
+  const level = readSubclassSpellGain(levelText)
+  if (!level || level > maxClassLevel) return
   if (!Array.isArray(spells)) return
 
   for (const raw of spells) {
@@ -428,11 +522,12 @@ export function parseSubclassSpells(
   additionalSpells: SubclassAdditionalSpells[] | undefined,
   classLevel: number,
 ): SubclassSpellGrant[] {
-  if (!additionalSpells || additionalSpells.length === 0 || classLevel < 1) return []
+  if (!Array.isArray(additionalSpells) || classLevel < 1) return []
 
   const grants: SubclassSpellGrant[] = []
 
   for (const block of additionalSpells) {
+    if (!block || typeof block !== 'object' || Array.isArray(block)) continue
     for (const [levelText, spells] of Object.entries(block.prepared ?? {})) {
       pushSpellList(grants, 'prepared', levelText, spells, classLevel)
     }
@@ -446,8 +541,8 @@ export function parseSubclassSpells(
     }
 
     for (const [levelText, usageConfig] of Object.entries(block.innate ?? {})) {
-      const level = Number.parseInt(levelText, 10)
-      if (!Number.isFinite(level) || level < 1 || level > classLevel) continue
+      const level = readSubclassSpellGain(levelText)
+      if (!level || level > classLevel) continue
       if (!usageConfig || typeof usageConfig !== 'object') continue
 
       const daily = (usageConfig as Record<string, unknown>).daily

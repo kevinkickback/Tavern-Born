@@ -4,6 +4,11 @@ import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { BARD_PRIMAL_LORE_TARGET } from './bardCollegeFeatures'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
 import { getClassOrderById } from './classOrderIdentity'
+import {
+  clericDomainCantrips,
+  matchesClericCantripTarget,
+  maximumDomainCantrips,
+} from './clericDomainCantripSources'
 import { wizardIllusionCantrips } from './wizardTraditionSpellSources'
 
 export type SelectedFeatureSpellAddress = [
@@ -95,12 +100,61 @@ export const giantPowerSpellSlots = (['phb', 'xphb'] as const).map(
 
 export const isGiantPowerSpellSlot = (slot: ManagedClassSpellSlot) =>
   giantPowerSpellSlots.some((row) => row[2] === slot[2] && row[0][2] === slot[0][2])
+
+export function getClericDomainCantripProducer(
+  rule: (typeof clericDomainCantrips)[number],
+  target: string,
+) {
+  return selectedFeatureSpellAddress([
+    target,
+    'subclassFeature',
+    norm(rule.name),
+    rule.source,
+    target.split('|').slice(1).join('|'),
+    0,
+    0,
+  ])
+}
+
+const isClericDomainCantripAddress = (value: string, target: string) =>
+  clericDomainCantrips.some(
+    (rule) =>
+      matchesClericCantripTarget(rule, target) &&
+      getClericDomainCantripProducer(rule, target) === value,
+  )
+
+export function isClericDomainCantripSlot(slot: ManagedClassSpellSlot) {
+  const [owner, domain, producer, gain, ordinal] = slot
+  if (domain !== 'feature-cantrip' || owner[0] !== 'subclass' || owner[1] !== 'cleric') return false
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  return (
+    Number.isInteger(gain) &&
+    gain >= 1 &&
+    gain <= 20 &&
+    Number.isInteger(ordinal) &&
+    ordinal >= 0 &&
+    ordinal < maximumDomainCantrips &&
+    !!address &&
+    clericDomainCantrips.some(
+      (rule) =>
+        owner[2] === rule.printing &&
+        owner[3] === rule.subclass &&
+        owner[4] === rule.source &&
+        matchesClericCantripTarget(rule, address[0], gain) &&
+        getClericDomainCantripProducer(rule, address[0]) === producer,
+    )
+  )
+}
+
 export const declaredSubclassSlots = [
   BARD_PRIMAL_LORE_SPELL_SLOT,
   LAND_BONUS_SPELL_SLOT,
   ...giantPowerSpellSlots,
   ...wizardIllusionCantripSlots.map(({ slot }) => slot),
 ]
+export const isDeclaredSubclassCantripSlot = (slot: ManagedClassSpellSlot) =>
+  isClericDomainCantripSlot(slot) ||
+  declaredSubclassSlots.some((row) => JSON.stringify(slot) === JSON.stringify(row))
 
 /** Structural saved intent only. Current source/selection, count and eligibility remain live. */
 export function decodeSelectedFeatureSpellAddress(
@@ -124,7 +178,8 @@ export function decodeSelectedFeatureSpellAddress(
           parts[3] !== 'xphb' ||
           parts[4] !== order.caster.target
         : parts[1] === 'subclassFeature'
-          ? !declaredSubclassSlots.some((slot) => slot[2] === value)
+          ? !isClericDomainCantripAddress(value, parts[0]) &&
+            !declaredSubclassSlots.some((slot) => slot[2] === value)
           : parts[4] !== null) ||
       parts[5] !== 0 ||
       parts[6] !== 0 ||
@@ -155,7 +210,7 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
         level === 1 &&
         ordinal === 0)) &&
     (address[1] !== 'subclassFeature' ||
-      declaredSubclassSlots.some((slot) => JSON.stringify(value) === JSON.stringify(slot))) &&
+      isDeclaredSubclassCantripSlot(value as ManagedClassSpellSlot)) &&
     Number.isSafeInteger(level) &&
     level >= 1 &&
     level <= 20 &&

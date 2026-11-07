@@ -106,6 +106,7 @@ export function ensureSpellProfiles(
     availableSpellReferences?: ReadonlySet<string>
     visibleSpellLevels?: ReadonlyMap<string, number>
     oathReprints?: ReadonlyMap<string, number | undefined>
+    includedDomainReprints?: ReadonlyMap<string, number | undefined>
   },
 ): SpellProfile[] {
   if (options?.effectiveSpellProfiles !== undefined)
@@ -154,6 +155,7 @@ export function ensureSpellProfiles(
           exactPreparation ? options?.visibleSpellLevels : options?.availableSpellReferences,
           options?.visibleSpellLevels,
           options?.oathReprints,
+          options?.includedDomainReprints,
         ),
     )
     const grantedSubclassCantrips = grantedSubclassSpells

@@ -2,6 +2,7 @@ import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import { hasRevisedInheritedDomainSpells } from '@/lib/5etools/legacyClericDomainSpells'
 import {
   divineSoul,
   getCurrentDivineMagic,
@@ -243,6 +244,10 @@ export function currentClasses(character: Character, context?: ManagedClassSpell
     )
     .map((row) => ({
       ...row,
-      subclasses: row.subclasses?.filter((subclass) => permitted(allowed, subclass.source)),
+      subclasses: row.subclasses?.filter(
+        (subclass) =>
+          permitted(allowed, subclass.source) ||
+          (subclass.source === 'PHB' && hasRevisedInheritedDomainSpells(row, subclass)),
+      ),
     }))
 }

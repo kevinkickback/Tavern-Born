@@ -387,3 +387,17 @@ declares that they are alternatives. The picker verifies that both sources agree
 address identifies the earning feature and printing, and the live catalog validates the spell.
 Revised Giant Power requires a unique revised cantrip and either its declared same-rank reprint
 or the exact classic Included SRD record. This supports partial Additional Content sources.
+
+## Cleric domain spells
+
+Revised domains that inherit an authored classic spell table prepare both opening rows at
+Cleric level 3, then the remaining rows at 5, 7 and 9. Require a declared same-rank reprint
+or the exact classic Included SRD record and a unique revised spell in the current catalog.
+Native revised tables
+keep their own spell choices and ranks. Zeal's Fire Shield can create only a warm shield.
+
+Nature and Strength choose a Druid cantrip when the domain starts. Classic Death chooses a
+Necromancy cantrip. Both offered Arcana printings choose two Wizard cantrips at their first
+domain gain and one Wizard spell at each rank from 6 to 9 at Cleric level 17. These four spells
+are always prepared outside daily capacity. Classic Light's bonus cantrip respects independent
+sources of Light. Revised Grave prepares Spare the Dying as a cantrip.

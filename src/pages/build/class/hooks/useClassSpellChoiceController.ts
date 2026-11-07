@@ -3,6 +3,7 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
 import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
+import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
@@ -46,7 +47,15 @@ export function useClassSpellChoiceController(
           normalizeOwnerIdentity(row.name) === normalizeOwnerIdentity(entry.name) &&
           normalizeOwnerIdentity(row.source) === normalizeOwnerIdentity(entry.source),
       )
-      if (saved) slots.push(...getSavantSpellbookSlots({ ...saved, levels: entry.levels }))
+      if (saved) {
+        const savedEntry = { ...saved, levels: entry.levels }
+        slots.push(
+          ...getSavantSpellbookSlots(savedEntry),
+          ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
+            getClericArcanaSpellRule,
+          ),
+        )
+      }
     }
     for (const slot of slots) {
       const gain = choices.get(slot[3]) ?? {
@@ -96,7 +105,10 @@ export function useClassSpellChoiceController(
               slot[3],
             )
           : undefined
-      gain.maxSpellLevel = Math.max(gain.maxSpellLevel, authority?.maxSpellLevel ?? 0)
+      gain.maxSpellLevel = Math.max(
+        gain.maxSpellLevel,
+        getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
+      )
       if (domain === 'class-cantrip' || domain === 'feature-cantrip') gain.cantrips++
       else gain.spells++
     }

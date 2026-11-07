@@ -7,13 +7,21 @@ import {
 } from '@/lib/5etools/bardSpellSources'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
-import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+} from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
+import {
+  decodeOptionalDeclaration,
+  exactOptionalDeclarationReference,
+  scanOptionalDeclarationReferences,
+} from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
   getCurrentNativeSorcerer,
   getDraconicPresence,
@@ -26,12 +34,18 @@ import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronF
 import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
-import type { Character, CharacterClassEntry, Feature } from '@/types/character'
+import type {
+  Character,
+  CharacterClassEntry,
+  Feature,
+  OptionalClassFeatureOwner,
+} from '@/types/character'
 import { getDeclaredSubclassStaticFeatures } from './declaredSubclassStaticFeatures'
 import { getWarlockStaticFeatures } from './warlockStaticFeatures'
 
@@ -261,6 +275,106 @@ function savedClassLabel(
   return labels.length === 1 && !labels[0].description?.trim() ? labels[0] : undefined
 }
 
+function getClericStaticSummaries(
+  character: Character,
+  cls: Class5e,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+  source: 'phb' | 'xphb',
+) {
+  const activity = createOptionalClassFeatureActivity(character, catalogs)
+  const classOwner: OptionalClassFeatureOwner = ['class', 'cleric', source]
+  const domainName = norm(entry.subclass)
+  const domainSource = norm(entry.subclassSource)
+  const domainOwner: OptionalClassFeatureOwner = [
+    'subclass',
+    'cleric',
+    source,
+    domainName,
+    domainSource,
+  ]
+  const classic = source === 'phb'
+  const direct = cls.classFeatureRefs ?? []
+  const baseRules = [
+    'channel divinity',
+    'divine intervention',
+    ...(classic
+      ? ['divine intervention improvement', 'channel divinity: turn undead']
+      : ['greater divine intervention', 'sear undead', 'improved blessed strikes']),
+  ]
+  const exact = (ref: (typeof direct)[number] | undefined) => {
+    const target = ref && getClassFeatureIdentity(ref)
+    return ref?.level && ref.level <= entry.levels && target
+      ? getCurrentDirectClassFeature(cls, catalogs, target)
+      : undefined
+  }
+  const base = baseRules.flatMap((name) => {
+    const matches = direct.filter((ref) => norm(ref.name) === name)
+    const feature = matches.length === 1 ? exact(matches[0]) : undefined
+    if (!feature) return []
+    return !classic && name === 'channel divinity'
+      ? [feature, ...getRevisedClericChannelDivinityOptions(feature, catalogs)]
+      : [feature]
+  })
+  if (classic) {
+    const earned = direct
+      .filter(
+        (ref) =>
+          /^destroy undead \(cr \d+(?:\/\d+)?\)$/.test(norm(ref.name)) &&
+          (ref.level ?? Infinity) <= entry.levels,
+      )
+      .sort((a, b) => (b.level ?? 0) - (a.level ?? 0))
+    const current = earned[0]
+    const upgrade = current?.level !== earned[1]?.level ? exact(current) : undefined
+    if (upgrade) base.push(upgrade)
+  }
+  const domains = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+    sourceDeclaredGains: true,
+    expandNestedRules: true,
+  })
+  return [...base, ...domains].flatMap((feature) => {
+    const subclass = 'subclassShortName' in feature
+    const owner = subclass ? domainOwner : classOwner
+    const target = subclass ? getSubclassFeatureIdentity(feature) : getClassFeatureIdentity(feature)
+    const level = feature.level
+    if (!target || !level || !activity.declared(owner, target, level)) return []
+    return featureSummary(feature, activity.entries(owner, target, feature.entries ?? [])).map(
+      (summary) => ({ ...summary, replaces: savedClassLabel(character, entry, feature) }),
+    )
+  })
+}
+
+function getRevisedClericChannelDivinityOptions(
+  feature: ClassFeature,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  const targets: string[] = []
+  scanOptionalDeclarationReferences(feature.entries, (uid, kind, row) => {
+    const target = decodeOptionalDeclaration(uid, kind)?.target
+    if (
+      (target === `class-feature|divine spark|cleric|xphb|${feature.level}|xphb` ||
+        target === `class-feature|turn undead|cleric|xphb|${feature.level}|xphb`) &&
+      exactOptionalDeclarationReference(row, uid, 'classFeature')
+    )
+      targets.push(target)
+  })
+  return targets.flatMap((target) => {
+    if (targets.indexOf(target) !== targets.lastIndexOf(target)) return []
+    const candidates = catalogs.classFeatureCandidates
+      ? catalogs.classFeatureCandidates.get(target)
+      : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === target)
+    const child = candidates?.[0]
+    return candidates?.length === 1 &&
+      child &&
+      !child.sourceIdentityConflict &&
+      !child.featureOptionSourceConflict &&
+      !child.isClassFeatureVariant &&
+      getClassFeatureIdentity(child) === target
+      ? [child]
+      : []
+  })
+}
+
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
 export function getClassStaticFeatureSummaries(
   character: Character,
@@ -330,6 +444,7 @@ export function getClassStaticFeatureSummaries(
     if (
       (name !== 'bard' &&
         name !== 'barbarian' &&
+        name !== 'cleric' &&
         name !== 'druid' &&
         name !== 'paladin' &&
         name !== 'wizard' &&
@@ -341,6 +456,10 @@ export function getClassStaticFeatureSummaries(
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'cleric')
+      return getSourceCompatibility(source, character.originSystem ?? '2014').compatible
+        ? getClericStaticSummaries(character, cls, entry, catalogs, source)
+        : []
     if (name === 'bard') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       const jack = entry.levels >= 2 && getCurrentBardJackOfAllTrades(cls, catalogs)

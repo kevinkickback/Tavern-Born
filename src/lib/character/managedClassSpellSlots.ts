@@ -3,6 +3,11 @@ import {
   CLASS_CASTING_PRODUCERS,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
+import { findClassReference } from '@/lib/5etools/classReference'
+import {
+  getClericArcanaSpellRule,
+  getClericArcanaSpellSlots,
+} from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
@@ -47,7 +52,10 @@ export function getManagedClassSpellSlots(
     ? [
         ...getSelectedFeatureCantripSlots(character, catalogs, prerequisites),
         ...(character.managedClassSpellChoices ?? [])
-          .filter((choice) => choice.slot[1] === 'feature-cantrip')
+          .filter(
+            (choice) =>
+              choice.slot[1] === 'feature-cantrip' || getClericArcanaSpellRule(choice.slot),
+          )
           .map((choice) => choice.slot),
       ].filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]) && slot[3] <= entry.levels)
     : []
@@ -67,6 +75,8 @@ export function getManagedClassSpellSlots(
         : [],
     ),
   )
+  const matches = catalogs?.classes?.filter((cls) => findClassReference(entry, [cls]))
+  const currentClass = matches?.length === 1 ? matches[0] : undefined
   return [
     ...new Map(
       [
@@ -74,6 +84,7 @@ export function getManagedClassSpellSlots(
         ...arcanum,
         ...feature,
         ...getBardLoreSpellSlots(entry),
+        ...getClericArcanaSpellSlots(entry, currentClass),
         ...getSavantSpellbookSlots(entry),
         ...getSpellbookSpecialtySlots(entry),
       ].map((slot) => [managedClassSpellId(slot), slot]),

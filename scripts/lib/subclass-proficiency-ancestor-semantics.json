@@ -6,6 +6,106 @@
       "digest": "da60f172039a6c552fbe8a5d068b70bbc0a9bded210d54f1409c6209299f878e"
     },
     {
+      "target": "subclass-feature|death domain|cleric|phb|death|dmg|1|dmg",
+      "digest": "c0cc2628ef749aa88a1f6c1b9fa55576f431f7ca4e64874743a900e375f3d035"
+    },
+    {
+      "target": "subclass-feature|nature domain|cleric|phb|nature|phb|1|phb",
+      "digest": "0d7c4eb4b87260dcaf4f18e83c2b648d3a253154664613334645282beabaa4a9"
+    },
+    {
+      "target": "subclass-feature|tempest domain|cleric|phb|tempest|phb|1|phb",
+      "digest": "7c633bcdf5b935a27911c0f78122ed06ca1efa3b6b638c546196be474f09c2cd"
+    },
+    {
+      "target": "subclass-feature|war domain|cleric|phb|war|phb|1|phb",
+      "digest": "27b2c40c161eade1fe22c24c554b40af3fe783b83f7bb5f8dd95a2df66b355ea"
+    },
+    {
+      "target": "subclass-feature|solidarity domain (psa)|cleric|phb|solidarity (psa)|psa|1|psa",
+      "digest": "4be285846f30fd862c32f8f0d8d8ffd9c23f8f11a3d2a3b0302240c8212534f5"
+    },
+    {
+      "target": "subclass-feature|strength domain (psa)|cleric|phb|strength (psa)|psa|1|psa",
+      "digest": "2b41c017bdfea0e5200cc56f76822d9d2fd7472491adbbdb68e6cf90b2e3fd4c"
+    },
+    {
+      "target": "subclass-feature|zeal domain (psa)|cleric|phb|zeal (psa)|psa|1|psa",
+      "digest": "9314f9cebf30b874f48ef4d3178aff0306f51401c922ef02ea0e36c179c6fc8d"
+    },
+    {
+      "target": "subclass-feature|arcana domain|cleric|phb|arcana|scag|1|scag",
+      "digest": "727e48b6e98d2d026c6668673a3c38356ba56bff2a38fabd6892af7f71a8fcb0"
+    },
+    {
+      "target": "subclass-feature|order domain|cleric|phb|order|tce|1|tce",
+      "digest": "342db9bde88761626435a043b97df816267f80de57bc39f8b7cace3fb8bf8256"
+    },
+    {
+      "target": "subclass-feature|peace domain|cleric|phb|peace|tce|1|tce",
+      "digest": "446282ba55e44a25af870e482a221f01f7c7f12f74d989c558ed0540f13e3576"
+    },
+    {
+      "target": "subclass-feature|twilight domain|cleric|phb|twilight|tce|1|tce",
+      "digest": "fc100abfcdf4654f2fe9b66f3f832101029bd2777980bd9f4135c9f9098e93e8"
+    },
+    {
+      "target": "subclass-feature|forge domain|cleric|phb|forge|xge|1|xge",
+      "digest": "764bdcbcf5ca138ae4b910ef215120744a026e292a679cd4d2f848777c8048cb"
+    },
+    {
+      "target": "subclass-feature|arcana domain|cleric|xphb|arcana|au|3|au",
+      "digest": "e906f29cf14cacd16ebca35c0abdeda0a83bcf89ca54ed4735f3486f0bd32e2b"
+    },
+    {
+      "target": "subclass-feature|death domain|cleric|xphb|death|dmg|3|dmg",
+      "digest": "8d9a1a818e0cc608ba6c08e18fc0c82c976748439244fe35f30a6fc762b36050"
+    },
+    {
+      "target": "subclass-feature|nature domain|cleric|xphb|nature|phb|3|phb",
+      "digest": "7257e13393d3e5157e0794a22c6d208841e83e3986b2e80684848e5ccf92ce2c"
+    },
+    {
+      "target": "subclass-feature|tempest domain|cleric|xphb|tempest|phb|3|phb",
+      "digest": "84c093a3551bd24e618e48bb78f3ea7b5b4e8a740064483e8ae9720c7be40e29"
+    },
+    {
+      "target": "subclass-feature|war domain|cleric|xphb|war|phb|3|phb",
+      "digest": "8b1148b19a294630c4f2d1d7cc17f76648fa44a48295ec3485f11f50db5627ad"
+    },
+    {
+      "target": "subclass-feature|solidarity domain (psa)|cleric|xphb|solidarity (psa)|psa|3|psa",
+      "digest": "7462969823c973d8c76781f409645003b51e45329376cb0854acc805d1a6f17a"
+    },
+    {
+      "target": "subclass-feature|strength domain (psa)|cleric|xphb|strength (psa)|psa|3|psa",
+      "digest": "933281fbad0c725129de6e8c312b68c67bb6657eff38018a35e735867f18b5af"
+    },
+    {
+      "target": "subclass-feature|zeal domain (psa)|cleric|xphb|zeal (psa)|psa|3|psa",
+      "digest": "bbc426781fe42faf6630e83f655ffee0b986f5d2b0d499cda9b1c6d5ce9bdbe7"
+    },
+    {
+      "target": "subclass-feature|arcana domain|cleric|xphb|arcana|scag|3|scag",
+      "digest": "d034a557d78236edc34d9444283dd174fd0ca8483a48beed9f44189b0613f55e"
+    },
+    {
+      "target": "subclass-feature|order domain|cleric|xphb|order|tce|3|tce",
+      "digest": "f8975378e81b4dccbbefaa3d2d251acc9c501a16be05e2c9d45b8c6cd6dde364"
+    },
+    {
+      "target": "subclass-feature|peace domain|cleric|xphb|peace|tce|3|tce",
+      "digest": "60974f73292227845b5abc27cd260cfe8a97ba629d3466f9dc9ab3dbaa31abd7"
+    },
+    {
+      "target": "subclass-feature|twilight domain|cleric|xphb|twilight|tce|3|tce",
+      "digest": "ca54f3579d5c33e49b1f41a5178330c9c052ec630f8d3e4e6416c68f1c387778"
+    },
+    {
+      "target": "subclass-feature|forge domain|cleric|xphb|forge|xge|3|xge",
+      "digest": "f1f5d7ae8bc68a134c46043c36e37fd805e0de2f0f1d4de66df00b7dafc9d6d2"
+    },
+    {
       "target": "subclass-feature|college of valor|bard|phb|valor|phb|3|phb",
       "digest": "11dcc3d0cf1c42ff2e0258d775f89dff5b126ad2879fff4add089d56a00b63a3"
     },

@@ -6,11 +6,13 @@ import {
 import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
   getSubclassProficiencyOwner,
   subclassProficiencyDigest,
 } from '@/lib/5etools/subclassProficiencyCertificates'
 import { normalizeSubclassProficiencyChoices } from '@/lib/5etools/subclassProficiencyChoices'
+import { ALL_SKILLS } from '@/lib/calculations/skillNames'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { AbilityScores, Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -22,6 +24,27 @@ import {
 import { getFeatureOwnerKey } from './classChoiceIdentity'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { getOptionalClassProficiencyCandidates } from './optionalClassProficiencyChoices'
+
+function readStartingSkillPool(cls: Class5e, base: readonly string[]) {
+  const skills = cls.startingProficiencies?.skills
+  if (cls.sourceIdentityConflict || '_copy' in cls || !Array.isArray(skills) || skills.length !== 1)
+    return undefined
+  const entry = record(skills[0])
+  const { from, count } = record(entry.choose)
+  if (
+    Object.keys(entry).length !== 1 ||
+    Object.keys(record(entry.choose)).length !== 2 ||
+    !Array.isArray(from) ||
+    typeof count !== 'number' ||
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > from.length ||
+    !from.every((row) => typeof row === 'string' && ALL_SKILLS.includes(row.toLowerCase()))
+  )
+    return undefined
+  const names = from.map((row) => row.toLowerCase() as string)
+  return new Set(names).size === names.length ? [...new Set([...base, ...names])] : undefined
+}
 
 /** Full current owner collections are checked before any selected-root/feature first-match projection. */
 export function getCurrentOwnedProficiencyCandidates(
@@ -84,10 +107,27 @@ export function getCurrentOwnedProficiencyCandidates(
     return choices
   return [
     ...choices,
-    ...canonical.filter((choice) => {
+    ...canonical.flatMap((choice) => {
       const relation = decodeClassProficiencyChoiceId(choice.id)
-      const target = relation && classProficiencyRule(relation.target)?.subclassGainTarget
-      return !target || matchesNativeSubclassGain(parents[0], target, choice.level)
+      const rule = relation && classProficiencyRule(relation.target)
+      const targets =
+        rule?.subclassGainTargets ??
+        (rule?.subclassGainTarget ? [rule.subclassGainTarget] : undefined)
+      if (
+        targets &&
+        !targets.some((target) =>
+          matchesNativeSubclassGain(
+            parents[0],
+            target,
+            choice.level,
+            relation?.domain === 'savingThrows' ? 'at-level' : 'first',
+          ),
+        )
+      )
+        return []
+      if (!rule?.startingSkillPoolBase) return [choice]
+      const pool = readStartingSkillPool(parents[0], rule.startingSkillPoolBase)
+      return pool ? [{ ...choice, currentProficiencySkillPool: pool }] : []
     }),
   ]
 }

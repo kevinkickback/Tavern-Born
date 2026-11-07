@@ -3,6 +3,7 @@ import {
   decodeProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { CLASS_PROFICIENCY_RULES } from '@/lib/5etools/classProficiencyRules'
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import {
   type ClassifiableItem,
   getItemTypeCodes,
@@ -19,6 +20,7 @@ export function hasProficiencyCatalogTarget(
 ) {
   const target = decodeProficiencyOption(option)
   if (!target) return false
+  if (target.domain === 'savingThrows') return toAbilityName(target.name) === target.name
   if (target.proficiencyType === 'tool')
     return CLASS_PROFICIENCY_RULES.some((rule) =>
       rule.domains.some((domain) => domain.tools?.includes(target.name)),
@@ -49,6 +51,8 @@ export function getProficiencyOptionEntries(
 ): unknown[] | undefined {
   const target = decodeProficiencyOption(option)
   if (!target || !hasProficiencyCatalogTarget(option, catalogs)) return undefined
+  if (target.domain === 'savingThrows')
+    return ['Gain proficiency with the chosen ability’s saving throws.']
   const tool = target.proficiencyType === 'tool'
   const values =
     target.domain === 'expertise' || target.domain === 'skills'

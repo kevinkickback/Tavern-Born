@@ -1,6 +1,9 @@
 import { getCurrentGiantPower } from '@/lib/5etools/barbarianGiantPower'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
-import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
+import {
+  canonicalProficiencyName,
+  getClassProficiencyChoiceId,
+} from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
 import {
   type FixedProficiencyRelation,
@@ -13,6 +16,7 @@ import {
 import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Character } from '@/types/character'
 import {
@@ -112,10 +116,38 @@ export function getCurrentFixedProficiencies(
         rule.subclassGain &&
         (sub.sourceIdentityConflict ||
           !getSourceCompatibility(cls.source, character.originSystem).compatible ||
-          !matchesNativeSubclassGain(cls, rule.subclassGain.target, path.level))
+          !matchesNativeSubclassGain(
+            cls,
+            rule.subclassGain.target,
+            path.level,
+            rule.subclassGain.position,
+          ))
       )
         continue
-      push({ owner, target: path.target, level: path.level }, rule, sub.name, sub.source)
+      const relation = { owner, target: path.target, level: path.level }
+      if (rule.fallback?.savingThrowPool) {
+        const choiceId = getClassProficiencyChoiceId(
+          {
+            name: cls.name,
+            source: cls.source,
+            subclassName: sub.name,
+            subclassSource: sub.source,
+          },
+          path.target,
+          'savingThrows',
+          path.level,
+        )
+        const setup = character.classChoiceSelections?.find(
+          (row) => row.choiceId === choiceId,
+        )?.proficiencyAtGain
+        const save = rule.fallback.name
+        const tags = character.provenance.proficiencies.savingThrows[save] ?? []
+        const independentlyProficient =
+          character.proficiencies.savingThrows.some((name) => toAbilityName(name) === save) &&
+          (!tags.length || tags.some((tag) => tag.grantVariant !== getFixedProficiencyId(relation)))
+        if (setup?.alreadyProficient ?? independentlyProficient) continue
+      }
+      push(relation, rule, sub.name, sub.source)
     }
   }
   for (const order of CLASS_ORDERS) {

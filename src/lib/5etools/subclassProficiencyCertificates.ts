@@ -59,6 +59,23 @@ export function getSubclassCopyLookupKey(value: Record<string, unknown>): string
 export const getSubclassProficiencyOwner = getSubclassOwnerIdentity
 
 export const subclassProficiencyDigest = (value: unknown) => getFeatureSourceDigest([value], false)
+
+// The AU Cleric's skill and spell clauses are independent source declarations.
+function omitIndependentSpellSchedule(value: Record<string, unknown>) {
+  if (
+    value.name !== 'Arcana Domain' ||
+    value.shortName !== 'Arcana' ||
+    value.source !== 'AU' ||
+    value.className !== 'Cleric' ||
+    value.classSource !== 'XPHB'
+  )
+    return value
+  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'additionalSpells'))
+}
+
+export const subclassProficiencyRootDigest = (value: Record<string, unknown>) =>
+  subclassProficiencyDigest(omitIndependentSpellSchedule(value))
+
 export function subclassProficiencyMetadata(value: Record<string, unknown>, root = false) {
   const derived = new Set([
     'entries',
@@ -74,7 +91,11 @@ export function subclassProficiencyMetadata(value: Record<string, unknown>, root
         ]
       : []),
   ])
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !derived.has(key)))
+  return Object.fromEntries(
+    Object.entries(root ? omitIndependentSpellSchedule(value) : value).filter(
+      ([key]) => !derived.has(key),
+    ),
+  )
 }
 
 export { isExactSubclassProficiencyReference }
