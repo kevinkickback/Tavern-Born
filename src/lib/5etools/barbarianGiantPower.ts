@@ -1,5 +1,8 @@
+import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, Spell5e, Subclass5e, SubclassFeature } from '@/types/5etools'
+import type { AdditionalSpellBlock } from '@/types/additionalSpells'
+import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
@@ -16,9 +19,9 @@ export const isGiantPowerSourceFeature = (target?: string) =>
   target === introTarget || target === GIANT_POWER_TARGET
 
 const giantPath = { name: 'Path of the Giant', shortName: 'Giant', source: 'BGG' }
-const includedSrdGiantSpells = new Map([
-  ['druidcraft', '36c624dc226e2091417341b2f7106880fca4ad176b789efa1bc038cc5310f81e'],
-  ['thaumaturgy', 'ea96e00f8aa18a2302179559a2e34d2f4705706ca439e2cb0bd43aefc2040ad3'],
+const includedSrdGiantSpells = new Set([
+  '36c624dc226e2091417341b2f7106880fca4ad176b789efa1bc038cc5310f81e',
+  'ea96e00f8aa18a2302179559a2e34d2f4705706ca439e2cb0bd43aefc2040ad3',
 ])
 const parsedSpellFields = new Set([
   'classes',
@@ -33,8 +36,6 @@ export function hasIncludedSrdGiantSpellProof(
   spells: Readonly<Record<string, Spell5e>> | undefined,
 ) {
   const key = norm(name)
-  const digest = includedSrdGiantSpells.get(key)
-  if (!digest) return false
   const classics = Object.values(spells ?? {}).filter(
     (spell) => norm(spell.name) === key && norm(spell.source) === 'phb',
   )
@@ -44,7 +45,8 @@ export function hasIncludedSrdGiantSpellProof(
   const original = Object.fromEntries(
     Object.entries(classic).filter(([key]) => !parsedSpellFields.has(key)),
   )
-  return getFeatureSourceDigest([original], false) === digest
+  const digest = getFeatureSourceDigest([original], false)
+  return !!digest && includedSrdGiantSpells.has(digest)
 }
 export const ancestralPath = {
   name: 'Path of the Ancestral Guardian',
@@ -76,13 +78,71 @@ export function auditInheritedBarbarianRoots(
       !('_mod' in copy) &&
       !('additionalSpells' in original) &&
       !('subclassFeatures' in original) &&
-      (path !== giantPath || !('spellcastingAbility' in original)) &&
+      !('spellcastingAbility' in original) &&
       bases.length === 1 &&
       !('_copy' in bases[0]) &&
       !bases[0].sourceIdentityConflict
       ? row
       : { ...row, sourceIdentityConflict: true }
   })
+}
+
+/** The feature prose says to choose one of two direct innate blocks. The blocks supply the spell UIDs. */
+function getGiantPowerCantrips(
+  feature: SubclassFeature,
+  blocks: AdditionalSpellBlock[] | undefined,
+) {
+  if (
+    !feature.level ||
+    !Array.isArray(feature.entries) ||
+    !Array.isArray(blocks) ||
+    blocks.length !== 2
+  )
+    return undefined
+  const level = String(feature.level)
+  const references: string[] = []
+  try {
+    for (const block of blocks) {
+      const innate = block?.innate
+      if (
+        !innate ||
+        Object.keys(block).length !== 1 ||
+        Object.keys(innate).length !== 1 ||
+        !Array.isArray(innate[level]) ||
+        innate[level].length !== 1
+      )
+        return undefined
+      const [{ grants }] = parseAdditionalSpellBlocks([block])
+      const grant = grants[0]
+      if (
+        grants.length !== 1 ||
+        !grant.isCantrip ||
+        norm(parseSpellReference(grant.spellName).source) !== 'phb'
+      )
+        return undefined
+      references.push(grant.spellName)
+    }
+  } catch {
+    return undefined
+  }
+  const declared: string[] = []
+  const prose = feature.entries.map((entry) =>
+    typeof entry === 'string'
+      ? entry.replace(/\{@spell ([^{}|]+(?:\|[^{}|]+)?)\}/g, (_, reference: string) => {
+          declared.push(
+            getSpellReferenceKey(reference, parseSpellReference(reference).source ?? 'PHB'),
+          )
+          return '{@spell choice}'
+        })
+      : entry,
+  )
+  const keys = new Set(references.map((reference) => getSpellReferenceKey(reference)))
+  return getFeatureSourceDigest(prose) ===
+    '032ce447eb936531027e0225599eac75d56cf900f23c7c8659d1958354b527b2' &&
+    new Set(declared).size === 2 &&
+    declared.every((reference) => keys.has(reference))
+    ? references
+    : undefined
 }
 
 export function getCurrentGiantPower(cls: Class5e, subclass: Subclass5e) {
@@ -97,8 +157,6 @@ export function getCurrentGiantPower(cls: Class5e, subclass: Subclass5e) {
     (revised
       ? !matchesBarbarianPath(record(subclass._copy), giantPath, 'PHB')
       : !!subclass._copy) ||
-    getFeatureSourceDigest(subclass.additionalSpells ?? []) !==
-      '87f2529c285cb4ca33c89f792d36083aec7490a2d10c2879f5ccafa449f83008' ||
     !matchesNativeSubclassGain(
       cls,
       revised
@@ -108,23 +166,23 @@ export function getCurrentGiantPower(cls: Class5e, subclass: Subclass5e) {
     )
   )
     return undefined
-  const exact = (feature: SubclassFeature | undefined, target: string, body: string) =>
+  const exact = (
+    feature: SubclassFeature | undefined,
+    target: string,
+  ): feature is SubclassFeature =>
     !!feature &&
     !('_copy' in feature) &&
     !feature.sourceIdentityConflict &&
     !feature.featureOptionSourceConflict &&
     !feature.isClassFeatureVariant &&
-    getSubclassFeatureIdentity(feature) === target &&
-    getFeatureSourceDigest(feature.entries ?? []) === body
+    getSubclassFeatureIdentity(feature) === target
   const intro = getDirectSubclassFeatureReference(subclass, introTarget)
   if (
     !intro ||
     intro.ref !== subclass.introFeatureRef ||
-    !exact(
-      intro.feature,
-      introTarget,
-      'a1ec17a7adacf21ff156b8748da5c088a0fcfcc2ad421eda00245632a2d561d0',
-    )
+    !exact(intro.feature, introTarget) ||
+    getFeatureSourceDigest(intro.feature.entries ?? []) !==
+      'a1ec17a7adacf21ff156b8748da5c088a0fcfcc2ad421eda00245632a2d561d0'
   )
     return undefined
   const refs = (intro.feature?.entries ?? [])
@@ -139,11 +197,7 @@ export function getCurrentGiantPower(cls: Class5e, subclass: Subclass5e) {
   const power = child?.feature as SubclassFeature | undefined
   return refs.length === 1 &&
     exactOptionalDeclarationReference(child, String(child.subclassFeature), 'subclassFeature') &&
-    exact(
-      power,
-      GIANT_POWER_TARGET,
-      'c109955cf9249ef99e5a92e48a36544b97a62b2a48cd2d5db92a71ba7e2f3dab',
-    )
-    ? power
+    exact(power, GIANT_POWER_TARGET)
+    ? getGiantPowerCantrips(power, subclass.additionalSpells as AdditionalSpellBlock[] | undefined)
     : undefined
 }

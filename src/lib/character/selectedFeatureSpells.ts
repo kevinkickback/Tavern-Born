@@ -19,8 +19,8 @@ import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpel
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
-  getGiantPowerSpellReferences,
   giantPowerSpellSlots,
+  isGiantPowerSpellSlot,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -30,7 +30,11 @@ import {
   hasCurrentWizardIllusionCantrip,
   knowsIndependentMinorIllusion,
 } from '@/lib/5etools/wizardTraditionSpellSources'
-import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  formatSpellReference,
+  getSpellNameKey,
+  getSpellReferenceKey,
+} from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
@@ -327,7 +331,7 @@ export function getSelectedFeatureCantripSetups(
     const paths = cls?.subclasses?.filter(
       (row) => norm(row.name) === owner[3] && norm(row.source) === owner[4],
     )
-    const available =
+    const pool =
       cls &&
       paths?.length === 1 &&
       permitted(allowed, owner[2]) &&
@@ -347,9 +351,11 @@ export function getSelectedFeatureCantripSetups(
         isCantrip: true,
         source: 'known',
         usage: 'direct',
-        pool: getGiantPowerSpellReferences(slot),
+        pool: pool
+          ? pool.map((reference) => formatSpellReference(reference, owner[2].toUpperCase()))
+          : [],
       },
-      ...(available ? {} : { reason: 'Restore the exact Giant Power source.' }),
+      ...(pool ? {} : { reason: 'Restore the exact Giant Power source.' }),
     })
   }
   return setups
@@ -406,7 +412,7 @@ export function getSelectedFeatureCantripPool(
   )
   const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
   const listOwner = slot[2] === BARD_PRIMAL_LORE_SPELL_SLOT[2] ? 'druid' : slot[0][1]
-  const giantPower = !!getGiantPowerSpellReferences(slot)
+  const giantPower = isGiantPowerSpellSlot(slot)
   const giantReprints =
     giantPower && slot[0][2] === 'xphb'
       ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
@@ -417,6 +423,13 @@ export function getSelectedFeatureCantripPool(
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
           if (
+            choice.pool &&
+            !choice.pool.some(
+              (ref) => getSpellReferenceKey(ref) === getSpellReferenceKey(spell.name, spell.source),
+            )
+          )
+            return false
+          if (
             giantPower &&
             (spell.classSpellRouteSource?.input.targetOccurrences.length !== 1 ||
               (giantReprints &&
@@ -425,10 +438,7 @@ export function getSelectedFeatureCantripPool(
           )
             return false
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
-          if (choice.pool)
-            return choice.pool.some(
-              (ref) => getSpellReferenceKey(ref) === getSpellReferenceKey(spell.name, spell.source),
-            )
+          if (choice.pool) return true
           const filter = choice.filter
           if (filter && !filter.classes.length) return true
           const checked = auditSpellRouteMultiplicity([spell])[0]

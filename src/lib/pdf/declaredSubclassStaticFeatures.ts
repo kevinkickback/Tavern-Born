@@ -2,7 +2,10 @@ import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
 import { getDirectSubclassFeatureReference } from '@/lib/5etools/nativeSubclassFeatureSource'
-import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import {
+  getCurrentNativeSubclassGain,
+  matchesNativeSubclassGain,
+} from '@/lib/5etools/nativeSubclassGain'
 import {
   decodeOptionalDeclaration,
   exactOptionalDeclarationReference,
@@ -19,13 +22,18 @@ export function getDeclaredSubclassStaticFeatures(
   cls: Class5e,
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
-  gain: { level: number; intro: string; later: string; expandNestedRules?: true },
+  gain: { expandNestedRules?: true } & (
+    | { level: number; intro: string; later: string }
+    | { sourceDeclaredGains: true }
+  ),
 ) {
+  const first = 'level' in gain ? gain.level : getCurrentNativeSubclassGain(cls)?.level
   if (
     !entry.subclass ||
     !entry.subclassSource ||
     !Number.isInteger(entry.levels) ||
-    entry.levels < gain.level ||
+    first === undefined ||
+    entry.levels < first ||
     entry.levels > 20 ||
     !findClassReference(entry, [cls])
   )
@@ -110,11 +118,7 @@ export function getDeclaredSubclassStaticFeatures(
       }),
     }
   }
-  const first = gain.level
-  if (
-    entry.levels < first ||
-    !matchesNativeSubclassGain(cls, classTarget(gain.intro, first), first)
-  )
+  if ('level' in gain && !matchesNativeSubclassGain(cls, classTarget(gain.intro, first), first))
     return []
   return (subclass.subclassFeatureRefs ?? []).flatMap((ref) => {
     const declaration = matchesOwner(ref.ref)
@@ -123,14 +127,16 @@ export function getDeclaredSubclassStaticFeatures(
     const attached = getDirectSubclassFeatureReference(subclass, declaration.target)?.feature
     if (!attached || attached.sourceIdentityConflict || attached.isClassFeatureVariant) return []
     if (ref.ref === subclass.introFeatureRef && declaration.decoded.level === first) {
-      const nested = (attached.entries ?? []).map(record).flatMap((row) => {
+      if (!Array.isArray(attached.entries)) return []
+      const entries = attached.entries.map(record)
+      const nested = entries.flatMap((row) => {
         const uid = row.subclassFeature
         if (typeof uid !== 'string') return []
         const nested = matchesOwner(uid)
         if (!nested?.decoded.level || nested.decoded.level > first) return []
         return [{ target: nested.target, uid, row }]
       })
-      return nested.flatMap(({ target, uid, row }) => {
+      const features = nested.flatMap(({ target, uid, row }) => {
         if (
           nested.filter((entry) => entry.target === target).length !== 1 ||
           row.type !== 'refSubclassFeature' ||
@@ -143,14 +149,32 @@ export function getDeclaredSubclassStaticFeatures(
         const exact = verified(row.feature as SubclassFeature | undefined, target)
         return exact ? [withNestedRules(exact)] : []
       })
+      if ('sourceDeclaredGains' in gain && verified(attached, declaration.target)) {
+        for (const row of entries) {
+          if (
+            row.type !== 'entries' ||
+            typeof row.name !== 'string' ||
+            !row.name.trim() ||
+            !Array.isArray(row.entries) ||
+            !row.entries.length ||
+            entries.filter((other) => other.name === row.name).length !== 1 ||
+            features.some((feature) => feature.name === row.name)
+          )
+            continue
+          features.push({ ...attached, name: row.name, entries: row.entries })
+        }
+      }
+      return features
     }
     if (
-      !matchesNativeSubclassGain(
-        cls,
-        classTarget(gain.later, declaration.decoded.level),
-        declaration.decoded.level,
-        'at-level',
-      )
+      'later' in gain
+        ? !matchesNativeSubclassGain(
+            cls,
+            classTarget(gain.later, declaration.decoded.level),
+            declaration.decoded.level,
+            'at-level',
+          )
+        : !getCurrentNativeSubclassGain(cls, declaration.decoded.level)
     )
       return []
     const feature = verified(attached, declaration.target)

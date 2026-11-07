@@ -166,12 +166,20 @@
       "sha256": "4d86b4fbf4302d89795b9ea92b72c034f590b6dcb9557ae1044545a86444a94c"
     },
     {
+      "file": "src/lib/5etools/additionalSpellIdentity.ts",
+      "sha256": "5a87fe56db474ae571a0c2b13cd36922d497bb23877ede64071fb6622a578428"
+    },
+    {
+      "file": "src/lib/5etools/additionalSpells.ts",
+      "sha256": "bf40758b247a3593480ef1903bcbd9d34f00ce69dd0442074fc8585ebf8752ff"
+    },
+    {
       "file": "src/lib/5etools/backgroundRuleNormalization.ts",
       "sha256": "fb039598540d08e7a2691582752dadc888d1773f09d93cbd00317f0808c0570a"
     },
     {
       "file": "src/lib/5etools/barbarianGiantPower.ts",
-      "sha256": "362c391cdbe779cf7ca4a876ba062145c77b7fc1095bd91c71c967b1519de2d2"
+      "sha256": "9acb954210368ccfb15cb670e0c03e788f0776d6fad08e5f280fcb34d004dae0"
     },
     {
       "file": "src/lib/5etools/barbarianJourneySources.ts",
@@ -187,7 +195,7 @@
     },
     {
       "file": "src/lib/5etools/barbarianRitualSpells.ts",
-      "sha256": "6711ab2acd0e960556ed778fa7086a5b74fa70a6019f0b254f6bc03528dbc08a"
+      "sha256": "6b16e3b8a9c825d2d1c24c18c3141e3494bf73b62c05f3106c6594488ab92bc2"
     },
     {
       "file": "src/lib/5etools/bardCollegeFeatures.ts",
@@ -427,7 +435,7 @@
     },
     {
       "file": "src/lib/5etools/nativeSubclassGain.ts",
-      "sha256": "11e0b4f9bdebb98c94f4489cf257f54aa07af2106337a94bfdbe1077830aed6a"
+      "sha256": "09df57826d05c374cbeb389d9924337b937543c649da7b3ba8ebc2ba5d9641c1"
     },
     {
       "file": "src/lib/5etools/nativeWarlockPatronRules.ts",
@@ -535,7 +543,7 @@
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "49f9991667535ea4c53546fbdbec1a0e280d96b526171ec7925ae1da8eeb33fd"
+      "sha256": "0498b427766dad90ee6e2ca47b94ed43d17400b4f3adfb8b4e3879c06e141c36"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -611,7 +619,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
-      "sha256": "489923072fdeb993d669864ab2a74da5fa749456e7c0e213bcd616656c5ae3dd"
+      "sha256": "77f03f137692311cc7c4ad965441d19ba83eeb945b0cc174467fbb921efdefb6"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",

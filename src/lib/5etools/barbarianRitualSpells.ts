@@ -76,6 +76,7 @@ function getConsultTheSpirits(
   if (
     level < 10 ||
     subclass.sourceIdentityConflict ||
+    typeof subclass.spellcastingAbility !== 'string' ||
     norm(subclass.spellcastingAbility) !== 'wis' ||
     (revised
       ? !matchesBarbarianPath(record(subclass._copy), ancestralPath, 'PHB')

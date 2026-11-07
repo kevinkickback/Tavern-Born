@@ -5,7 +5,7 @@ import {
 } from '@/lib/5etools/classCastingRules'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
-import { getGiantPowerSpellReferences } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import { isGiantPowerSpellSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   getManagedClassSpellOwnerEntry,
@@ -45,7 +45,6 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   const revisions = new Set<number>()
   choices.forEach((choice, index) => {
     const id = managedClassSpellId(choice.slot)
-    const giantPower = getGiantPowerSpellReferences(choice.slot)
     const key = JSON.stringify([
       choice.slot[0].slice(1, 3),
       managedClassSpellUniquenessGroup(choice.slot),
@@ -53,12 +52,8 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     ])
     if (
       !isManagedClassSpellSlot(choice.slot) ||
-      (giantPower &&
-        !giantPower.some(
-          (ref) =>
-            getSpellReferenceKey(ref) ===
-            getSpellReferenceKey(choice.target.name, choice.target.source),
-        )) ||
+      (isGiantPowerSpellSlot(choice.slot) &&
+        normalizeOwnerIdentity(choice.target.source) !== choice.slot[0][2]) ||
       (choice.slot[1] === 'feature-cantrip' &&
         (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||

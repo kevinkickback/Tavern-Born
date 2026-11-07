@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Barbarian journey rules at 6,717,194 B renderer and 1,435,667 B initial.
+  // Measured with Barbarian journey rules at 6,718,143 B renderer and 1,436,767 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6560 * KIB,
-  initialRendererScript: 1403 * KIB,
+  rendererCode: 6561 * KIB,
+  initialRendererScript: 1404 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

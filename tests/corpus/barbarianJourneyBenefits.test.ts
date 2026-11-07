@@ -2,6 +2,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import {
   getCurrentGiantPower,
@@ -16,7 +17,7 @@ import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
-import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { parseClassDocument, parseClasses } from '@/lib/5etools/parsers/classes'
 import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { giantPowerSpellSlots } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
@@ -40,18 +41,105 @@ import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { isValidClassProficiencySelection } from '@/lib/schema/classProficiencyValidation'
-import type { Class5e, Spell5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Spell5e } from '@/types/5etools'
 import type { Character, Equipment } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const catalogsToTest = [['bundled', 'resources/srd/core/data']] as Array<
   ['bundled' | 'local', string]
 >
 if (existsSync('data/class/class-barbarian.json')) catalogsToTest.push(['local', 'data'])
 
+test('a new Barbarian path prints named intro rules and later declarations at their earned gains', async () => {
+  const document = JSON.parse(
+    await readFile('resources/srd/core/data/class/class-barbarian.json', 'utf8'),
+  )
+  document.subclass.push({
+    name: 'Path of the Trial',
+    shortName: 'Trial',
+    className: 'Barbarian',
+    classSource: 'XPHB',
+    source: 'XPHB',
+    subclassFeatures: [
+      'Path of the Trial|Barbarian|XPHB|Trial|XPHB|3|XPHB',
+      'Later Trial|Barbarian|XPHB|Trial|XPHB|6|XPHB',
+    ],
+  })
+  const owner = {
+    className: 'Barbarian',
+    classSource: 'XPHB',
+    subclassShortName: 'Trial',
+    subclassSource: 'XPHB',
+    source: 'XPHB',
+  }
+  document.subclassFeature.push(
+    {
+      ...owner,
+      name: 'Path of the Trial',
+      level: 3,
+      entries: [
+        'Ordinary introduction.',
+        {
+          type: 'entries',
+          name: 'First Trial',
+          entries: [
+            { type: 'entries', name: 'Broken nested entry', entries: {} },
+            'Earned inline rule.',
+          ],
+        },
+      ],
+    },
+    { ...owner, name: 'Later Trial', level: 6, entries: ['Earned later rule.'] },
+  )
+  const parsed = parseClassDocument(document)
+  const classes = parsed.classes as Class5e[]
+  const classFeatures = parsed.classFeatures as ClassFeature[]
+  const inputs = {
+    classChoiceClasses: classes,
+    classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({ classes, classFeatures }),
+  }
+  const sheet = (levels: number) =>
+    createCharacterSheetViewModel(
+      makeCharacterFixture({
+        originSystem: '2024',
+        allowedSources: ['XPHB'],
+        classProgression: [
+          {
+            name: 'Barbarian',
+            source: 'XPHB',
+            subclass: 'Path of the Trial',
+            subclassSource: 'XPHB',
+            levels,
+          },
+        ],
+      }),
+      inputs,
+      inputs,
+    )
+  const names = (levels: number) =>
+    sheet(levels).declaredClassFeatureSummaries?.map((row) => row.compactText)
+  expect(names(2)).not.toContain('First Trial')
+  expect(names(3)).toContain('First Trial')
+  expect(names(5)).not.toContain('Later Trial')
+  expect(names(6)).toContain('Later Trial')
+  for (const id of ['2024-official', '2024-custom'] as const) {
+    const pdf = await PDFDocument.load(await generateTestCharacterSheet(sheet(6), id))
+    const text = pdf
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+      .join(' ')
+    expect(text).toContain('Earned inline rule.')
+    expect(text).toContain('Earned later rule.')
+    expect(text).not.toContain('Ordinary introduction.')
+    expect(text).not.toContain('Broken nested entry')
+  }
+})
+
 test.skipIf(catalogsToTest.length === 1)(
-  'Giant Power requires the revised copy to inherit Wisdom',
+  'Barbarian copied spell features require inherited Wisdom and a matching schedule',
   async () => {
     const document = JSON.parse(await readFile('data/class/class-barbarian.json', 'utf8'))
     const power = (doc: typeof document, source: string) => {
@@ -83,6 +171,42 @@ test.skipIf(catalogsToTest.length === 1)(
     delete revised.spellcastingAbility
     classic.spellcastingAbility = 'wis'
     expect(power(document, 'XPHB')).toBeDefined()
+    const feature = document.subclassFeature.find(
+      (row: { name: string }) => row.name === 'Giant Power',
+    )
+    classic.additionalSpells[0].innate['3'] = ['light#c']
+    expect(power(document, 'PHB')).toBeUndefined()
+    feature.entries[1] = feature.entries[1].replace('{@spell druidcraft}', '{@spell light}')
+    expect(power(document, 'PHB')).toEqual(['light|PHB', 'thaumaturgy|PHB'])
+    expect(power(document, 'XPHB')).toEqual(['light|PHB', 'thaumaturgy|PHB'])
+    for (const malformed of [
+      { innate: { '3': ['light#c', { choose: { from: ['druidcraft#c'] } }] } },
+      { innate: { '3': ['light|XPHB#c'] } },
+      { innate: { '3': ['thaumaturgy#c'] } },
+      { innate: { '3': { will: ['light#c'] } } },
+      { innate: { '4': ['light#c'] } },
+    ]) {
+      classic.additionalSpells[0] = malformed
+      expect(power(document, 'PHB')).toBeUndefined()
+      expect(power(document, 'XPHB')).toBeUndefined()
+    }
+    const ancestral = document.subclass.filter(
+      (row: { name: string }) => row.name === 'Path of the Ancestral Guardian',
+    )
+    ancestral.find(
+      (row: { classSource: string }) => row.classSource === 'PHB',
+    ).spellcastingAbility = 'cha'
+    ancestral.find(
+      (row: { classSource: string }) => row.classSource === 'XPHB',
+    ).spellcastingAbility = 'wis'
+    const revisedClass = (parseClasses(document) as Class5e[]).find(
+      (row) => row.name === 'Barbarian' && row.source === 'XPHB',
+    )
+    const revisedPath = revisedClass?.subclasses?.find(
+      (row) => row.name === 'Path of the Ancestral Guardian',
+    )
+    if (!revisedClass || !revisedPath) throw new Error('Missing revised Ancestral Guardian')
+    expect(getBarbarianRitualGrants(revisedClass, revisedPath, 10)).toEqual([])
   },
 )
 
@@ -235,9 +359,15 @@ test.each(catalogsToTest)(
         )
         const guardian = getSelectedSubclassData(cls, ancestral(10).classProgression[0])
         if (!guardian) throw new Error('Missing Ancestral Guardian')
-        expect(
-          getBarbarianRitualGrants(cls, { ...guardian, spellcastingAbility: 'cha' }, 10),
-        ).toEqual([])
+        for (const spellcastingAbility of ['cha', 42, { code: 'wis' }]) {
+          expect(
+            getBarbarianRitualGrants(
+              cls,
+              { ...guardian, spellcastingAbility } as typeof guardian,
+              10,
+            ),
+          ).toEqual([])
+        }
         expect(
           calculate({ ...ancestral(10), allowedSources: [source] }).fixedClassSpellStatuses,
         ).toEqual([])
@@ -562,6 +692,69 @@ test.each(catalogsToTest)(
         expect(
           calculate({ ...reopened, allowedSources: [source] }).managedClassSpellStatuses,
         ).toMatchObject([{ active: false }])
+        const document = JSON.parse(await readFile('data/class/class-barbarian.json', 'utf8'))
+        const classic = document.subclass.find(
+          (row: { name: string; classSource: string }) =>
+            row.name === 'Path of the Giant' && row.classSource === 'PHB',
+        )
+        const producer = document.subclassFeature.find(
+          (row: { name: string }) => row.name === 'Giant Power',
+        )
+        classic.additionalSpells[0].innate['3'] = ['light#c']
+        producer.entries[1] = producer.entries[1].replace('{@spell druidcraft}', '{@spell light}')
+        const changed = (parseClasses(document) as Class5e[]).find(
+          (row) => row.name === 'Barbarian' && row.source === source,
+        )
+        const changedPath = changed?.subclasses?.find((row) => row.name === 'Path of the Giant')
+        if (!changedPath) throw new Error('Missing modified Giant path fixture')
+        const classes = current.classes.map((row) =>
+          row === cls
+            ? {
+                ...row,
+                subclasses: row.subclasses?.map((path) =>
+                  path.name === changedPath.name ? changedPath : path,
+                ),
+              }
+            : row,
+        )
+        const changedLookups = {
+          ...lookups,
+          classChoiceClasses: classes,
+          classChoiceFeatureCatalogs: { ...catalogs, classes },
+        }
+        const calculateChanged = (character: Character) =>
+          createCharacterCalculationContext(character, changedLookups, raw)
+        const changedContext = calculateChanged(giant).classChoices.spellContext
+        expect(
+          [...getManagedClassSpellPool(giant, slot, changedContext).defaultReferences].sort(),
+        ).toEqual([`light|${source.toLowerCase()}`, `thaumaturgy|${source.toLowerCase()}`])
+        const choice = setManagedClassSpellChoiceCommand(
+          giant,
+          giant.provenance,
+          {
+            slot,
+            expected: null,
+            expectedEmptyRevision: 0,
+            target: { name: 'Light', source },
+            policy: 'default',
+          },
+          changedContext,
+        )
+        const saved = characterPersistenceSchema.parse(
+          JSON.parse(
+            JSON.stringify({
+              ...giant,
+              ...choice.characterPatch,
+              provenance: choice.provenanceUpdate,
+            }),
+          ),
+        )
+        expect(saved.managedClassSpellChoices?.[0]?.slot).toEqual(slot)
+        expect(calculate(saved).managedClassSpellStatuses).toMatchObject([{ active: false }])
+        expect(calculateChanged(saved).managedClassSpellStatuses).toMatchObject([{ active: true }])
+        expect(createCharacterSheetViewModel(saved, raw, changedLookups).spellRows).toContainEqual(
+          expect.objectContaining({ name: expect.stringContaining('Light') }),
+        )
       }
       if (source === 'PHB') continue
       const barbarian = actor(3)

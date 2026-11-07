@@ -167,30 +167,6 @@ const reviewedPaladinOaths = {
   ],
 }
 
-const sharedBarbarianPaths = [
-  'path of the battlerager|scag',
-  'path of the ancestral guardian|xge',
-  'path of the storm herald|xge',
-  'path of the beast|tce',
-  'path of wild magic|tce',
-  'path of the giant|bgg',
-]
-const reviewedBarbarianPaths = {
-  phb: [
-    ...sharedBarbarianPaths,
-    'path of the berserker|phb',
-    'path of the totem warrior|phb',
-    'path of the zealot|xge',
-  ],
-  xphb: [
-    ...sharedBarbarianPaths,
-    'path of the berserker|xphb',
-    'path of the wild heart|xphb',
-    'path of the world tree|xphb',
-    'path of the zealot|xphb',
-  ],
-}
-
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
   const tables = entries
@@ -412,16 +388,10 @@ export function getClassStaticFeatureSummaries(
         gain(20, 'primal champion'),
       ]
       if (source === 'xphb') base.push(gain(3, 'primal knowledge'))
-      const path = reviewedBarbarianPaths[source].includes(
-        `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
-      )
-        ? getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
-            level: 3,
-            intro: source === 'phb' ? 'primal path' : 'barbarian subclass',
-            later: source === 'phb' ? 'path feature' : 'subclass feature',
-            expandNestedRules: true,
-          })
-        : []
+      const path = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
       return [...base, ...path].flatMap((feature) =>
         feature
           ? featureSummary(feature).map((summary) => ({

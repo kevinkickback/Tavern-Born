@@ -93,12 +93,8 @@ export const giantPowerSpellSlots = (['phb', 'xphb'] as const).map(
   ],
 )
 
-export function getGiantPowerSpellReferences(slot: ManagedClassSpellSlot) {
-  if (!giantPowerSpellSlots.some((row) => row[2] === slot[2] && row[0][2] === slot[0][2]))
-    return undefined
-  const printing = slot[0][2].toUpperCase()
-  return [`Druidcraft|${printing}`, `Thaumaturgy|${printing}`]
-}
+export const isGiantPowerSpellSlot = (slot: ManagedClassSpellSlot) =>
+  giantPowerSpellSlots.some((row) => row[2] === slot[2] && row[0][2] === slot[0][2])
 export const declaredSubclassSlots = [
   BARD_PRIMAL_LORE_SPELL_SLOT,
   LAND_BONUS_SPELL_SLOT,

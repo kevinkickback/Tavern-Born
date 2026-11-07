@@ -94,6 +94,12 @@ its Details from the earning accordion. At each choice gain, including increases
 feature's quota, open the picker from that level, save the earned picks, and confirm that earlier
 picks still appear in their original slots after reopening the character.
 
+Use the shared parser when the external JSON declares a gain level, quota, pool, or
+feature relationship. Qualify a new source entry with the same supported structure through
+the applicable picker, save and reopen, and sheet export without adding its name to a registry.
+An adapter for ambiguous or prose-only rules should identify the exact producer and supply
+only the semantics the structured declaration leaves open.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
