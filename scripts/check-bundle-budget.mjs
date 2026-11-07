@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with classic Invocation rules at 6,570,569 B renderer and 1,303,146 B initial.
+  // Measured with native patron sheet rules at 6,573,897 B renderer and 1,303,969 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6417 * KIB,
-  initialRendererScript: 1273 * KIB,
+  rendererCode: 6420 * KIB,
+  initialRendererScript: 1274 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

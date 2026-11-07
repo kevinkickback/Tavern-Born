@@ -138,6 +138,12 @@ Sight, Eldritch Spear, and Repelling Blast in their feature rows. The three blas
 follow the character's current Eldritch Blast eligibility. Names-only exports keep the
 selected feature labels.
 
+Native Archfey, Celestial, and Great Old One patrons print their current earned subclass rules
+through Class Features and Notes. When the classic custom sheet preserves an exact generated
+rule in action Notes, its feature row keeps the label. Revised patron spell tables appear in
+full descriptions from the subclass gain. Spell fields continue to show the character's earned
+spells, and names-only keeps the feature labels.
+
 ## Spells and companions
 
 Both 2014 layouts use the shared spell asset per casting source, including subclasses and each

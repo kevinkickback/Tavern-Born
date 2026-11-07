@@ -8,6 +8,7 @@ import {
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
+import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronFeatureSource'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
@@ -52,7 +53,7 @@ import {
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import type { AtWillInvocationSpellStatus } from '@/lib/character/atWillInvocationSpells'
-import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
+import { getClassChoiceFeatureId, getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
@@ -857,6 +858,16 @@ export function createCharacterSheetViewModel(
     primaryLookups.classChoiceFeatureCatalogs,
     calculationContext.classChoices.prerequisites,
   )
+  const staticFeatureSummaries = getClassStaticFeatureSummaries(
+    character,
+    primaryLookups.classChoiceFeatureCatalogs,
+    !!unlimitedWildShape,
+  )
+  const patronActionIds = new Set(
+    staticFeatureSummaries.flatMap((row) =>
+      row.actionNotesSource === 'subclass' && row.actionId ? [row.actionId] : [],
+    ),
+  )
   const derivedActions = deriveCharacterActions(character, {
     abilityModifiers,
     proficiencyBonus,
@@ -877,6 +888,15 @@ export function createCharacterSheetViewModel(
     feats: calculationContext.feats,
     classFeaturesByKey: rawLookups.classFeaturesByKey,
     optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
+    allowDeclaredFeatureAction: (target, id, owner) => {
+      const patron = getNativeWarlockPatronFeatureOwner(target)
+      return (
+        !patron ||
+        patron.shortName === 'fiend' ||
+        owner !== getFeatureOwnerKey(patron.className, patron.source, patron.name, patron.source) ||
+        patronActionIds.has(id)
+      )
+    },
   })
   const actions = withPactOfTheBladeSheetActions(derivedActions, pactBladeRules)
 
@@ -932,11 +952,7 @@ export function createCharacterSheetViewModel(
       ({ id, choiceId }) => bladeInvocationIds?.get(id) === choiceId,
     ) ?? []
   const declaredClassFeatureSummaries = [
-    ...getClassStaticFeatureSummaries(
-      character,
-      primaryLookups.classChoiceFeatureCatalogs,
-      !!unlimitedWildShape,
-    ),
+    ...staticFeatureSummaries,
     ...pactBladeRules.flatMap(({ body, featureId, actionId, name }) =>
       body
         ? [
