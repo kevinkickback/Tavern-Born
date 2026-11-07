@@ -1,7 +1,10 @@
 import { WarningCircle } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getProgressiveChoiceGainCount,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import {
   getClassChoiceOptionKey,
   getInvocationCantripLabel,
@@ -24,6 +27,7 @@ interface ClassChoicesSectionProps {
   onRecover?: (state: FeatureOptionSelectionState) => void
   diagnostics: ClassChoiceDiagnostic[]
   classLevel: number
+  progressionGainLevel?: number
   selectedViewsByChoiceId: ReadonlyMap<string, ClassChoiceOptionView[]>
   detailCollapsed: boolean
   onChoose: (choice: NormalizedCharacterChoice) => void
@@ -41,6 +45,7 @@ export function BuildClassChoicesSection({
   onRecover,
   diagnostics,
   classLevel,
+  progressionGainLevel,
   selectedViewsByChoiceId,
   detailCollapsed,
   onChoose,
@@ -89,7 +94,11 @@ export function BuildClassChoicesSection({
         />
       ))}
       {choices.map((choice) => {
-        const required = getRequiredChoiceSelectionCount(choice, classLevel)
+        const required =
+          (progressionGainLevel === undefined
+            ? undefined
+            : getProgressiveChoiceGainCount(choice, progressionGainLevel)) ??
+          getRequiredChoiceSelectionCount(choice, classLevel)
         const views = selectedViewsByChoiceId.get(choice.id) ?? []
         const selectedCount = getClassChoiceCompletionCount(choice, views)
         return (
@@ -100,7 +109,12 @@ export function BuildClassChoicesSection({
             feature={feature}
             selectedCount={selectedCount}
             totalAllowed={required}
-            isFull={selectedCount >= required}
+            isFull={
+              progressionGainLevel !== undefined &&
+              getProgressiveChoiceGainCount(choice, progressionGainLevel) !== undefined
+                ? selectedCount === required && views.length === selectedCount
+                : selectedCount >= required
+            }
             chosenItems={views.map((view) => ({
               origin: {
                 kind: 'choice' as const,

@@ -3,7 +3,10 @@ import {
   getCurrentBlessedStrikes,
   getSavedBlessedStrikes,
 } from '@/lib/5etools/blessedStrikesSource'
-import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getProgressiveChoiceGainCount,
+  getRequiredChoiceSelectionCount,
+} from '@/lib/5etools/classChoiceNormalization'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { getClassOrderById, getSavedClassOrder } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -79,6 +82,11 @@ function buildEffectiveClassChoiceFeatureRoutes(
     })
     .filter(activity.choice)
   const choices = new Map(choiceCandidates.map((row) => [row.id, row]))
+  const progressiveChoiceIds = new Set(
+    choiceCandidates
+      .filter((choice) => getProgressiveChoiceGainCount(choice, choice.level))
+      .map((choice) => choice.id),
+  )
   const featureIds = new Set<string>(),
     choiceIds = new Set<string>()
   const masteredWeapons = new Map<string, Set<string>>()
@@ -154,7 +162,8 @@ function buildEffectiveClassChoiceFeatureRoutes(
         (selection.subclassName?.trim().toLowerCase() ?? '') ||
       (choice.owner.subclassSource?.trim().toLowerCase() ?? '') !==
         (selection.subclassSource?.trim().toLowerCase() ?? '') ||
-      selection.selected.length > getRequiredChoiceSelectionCount(choice, owner.levels) ||
+      (!progressiveChoiceIds.has(choice.id) &&
+        selection.selected.length > getRequiredChoiceSelectionCount(choice, owner.levels)) ||
       (!mastery &&
         new Set(selection.selected.map(getClassChoiceOptionKey)).size !== selection.selected.length)
     )
@@ -192,6 +201,13 @@ function buildEffectiveClassChoiceFeatureRoutes(
       !ambiguousInvocationPool &&
       !!getSavedRevisedInvocationOwner(character, selection) &&
       hasEarnedRevisedInvocationSlots(choice, selection.selected, owner.levels)
+    const progressive = progressiveChoiceIds.has(choice.id)
+    const countByGain = new Map<number, number>()
+    if (progressive) {
+      for (const { slotLevel } of selection.selected) {
+        countByGain.set(slotLevel, (countByGain.get(slotLevel) ?? 0) + 1)
+      }
+    }
     for (const option of selection.selected) {
       if (
         (option.invocationCantrip ||
@@ -202,6 +218,9 @@ function buildEffectiveClassChoiceFeatureRoutes(
       if (
         option.slotLevel < choice.level ||
         option.slotLevel > owner.levels ||
+        (progressive &&
+          (countByGain.get(option.slotLevel) ?? 0) >
+            (getProgressiveChoiceGainCount(choice, option.slotLevel) ?? 0)) ||
         (getFighterStylePair(choice.id) && option.slotLevel !== choice.level) ||
         (mastery && !option.source?.trim()) ||
         !eligible.has(getClassChoiceOptionKey(option))
@@ -299,6 +318,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
   return {
     featureIds,
     choiceIds,
+    progressiveChoiceIds,
     masteredWeapons,
     featureNamesByChoice,
     contributions: [...accepted].map((index) => contributions[index]),

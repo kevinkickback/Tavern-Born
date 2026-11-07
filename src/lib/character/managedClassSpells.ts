@@ -343,6 +343,7 @@ export function getManagedClassSpellPool(
   character: Character,
   slot: ManagedClassSpellSlot,
   sourceContext?: ManagedClassSpellContext,
+  projectedStatuses?: readonly ManagedClassSpellStatus[],
 ) {
   if (slot[1] === 'feature-cantrip')
     return getSelectedFeatureCantripPool(character, slot, sourceContext)
@@ -352,13 +353,13 @@ export function getManagedClassSpellPool(
         (spell) => [getSpellReferenceKey(spell.name, spell.source), spell] as const,
       ),
     )
-    const learned = projectManagedClassSpellState(character, sourceContext).statuses.flatMap(
-      ({ choice, active }) => {
-        if (!active || choice.slot[1] !== 'class-spellbook') return []
-        const spell = targets.get(getSpellReferenceKey(choice.target.name, choice.target.source))
-        return spell ? [{ choice, spell }] : []
-      },
-    )
+    const statuses =
+      projectedStatuses ?? projectManagedClassSpellState(character, sourceContext).statuses
+    const learned = statuses.flatMap(({ choice, active }) => {
+      if (!active || choice.slot[1] !== 'class-spellbook') return []
+      const spell = targets.get(getSpellReferenceKey(choice.target.name, choice.target.source))
+      return spell ? [{ choice, spell }] : []
+    })
     return getSpellbookSpecialtyPool(
       character,
       slot,

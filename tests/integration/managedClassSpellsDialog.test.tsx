@@ -207,6 +207,19 @@ describe('Class spell Finish and current-state adapter', () => {
 
     await choose(1, 'Shield', 'Spell')
     await choose(1, 'Shield', 'Spell Mastery')
+    const mastery = () => within(screen.getByRole('group', { name: 'Spell Mastery 1' }))
+    const clearLearned = () =>
+      fireEvent.click(
+        within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', {
+          name: 'Clear',
+        }),
+      )
+    expect(mastery().getByText('Chosen')).toBeTruthy()
+    clearLearned()
+    expect(mastery().queryByText('Chosen')).toBeNull()
+    expect(mastery().getByText(/restore this spell in the draft spellbook/i)).toBeTruthy()
+    await choose(1, 'Shield', 'Spell')
+    expect(mastery().getByText('Chosen')).toBeTruthy()
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
@@ -216,16 +229,9 @@ describe('Class spell Finish and current-state adapter', () => {
     ])
 
     fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
-    fireEvent.click(
-      within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', {
-        name: 'Clear',
-      }),
-    )
-    fireEvent.click(
-      within(screen.getByRole('group', { name: 'Spell Mastery 1' })).getByRole('button', {
-        name: 'Change',
-      }),
-    )
+    clearLearned()
+    expect(mastery().queryByText('Chosen')).toBeNull()
+    fireEvent.click(mastery().getByRole('button', { name: 'Change' }))
     expect(screen.getByRole('dialog', { name: 'Choose Spell Mastery 1' })).toBeTruthy()
     expect(screen.queryByText('Shield')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -233,6 +239,18 @@ describe('Class spell Finish and current-state adapter', () => {
     expect(useCharacterStore.getState().activeCharacter?.managedClassSpellChoices).toEqual(
       saved.managedClassSpellChoices,
     )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    clearLearned()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    expect(mastery().getByText(/the choice is saved/i)).toBeTruthy()
+    await choose(1, 'Shield', 'Spell')
+    expect(mastery().getByText('Chosen')).toBeTruthy()
+    expect(mastery().queryByText(/the choice is saved/i)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    expect(mastery().getByText('Chosen')).toBeTruthy()
   })
 
   test('Spells Sources shows a current fixed subclass grant once', async () => {
