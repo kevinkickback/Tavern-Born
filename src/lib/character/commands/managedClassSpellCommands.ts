@@ -77,8 +77,11 @@ export function setManagedClassSpellChoicesCommand(
         request.policy !== 'default'
       )
         throw new RangeError('Feature spell choices must use their declared spell list.')
-      if (getSavantSpellbookGain(request.slot) && request.target && request.policy !== 'default')
-        throw new RangeError('Evocation Savant choices must use the feature’s Wizard spell list.')
+      const savant = getSavantSpellbookGain(request.slot)
+      if (savant && request.target && request.policy !== 'default')
+        throw new RangeError(
+          `${savant.rule.name} choices must use the feature’s Wizard spell list.`,
+        )
       const id = managedClassSpellId(request.slot)
       if (addressed.has(id)) throw new RangeError('A spell choice was addressed more than once.')
       addressed.add(id)

@@ -120,7 +120,7 @@ export function deriveArtisanToolPool(uid, documents, classify) {
 
 export function deriveSubclassProficiencyRules(features, toolsFor, identity, digest) {
   const seen = new Set()
-  return features
+  const paired = features
     .filter((row) => row.name === 'Blessings of Knowledge')
     .map((feature) => {
       const target = identity(feature)
@@ -205,7 +205,38 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
         ],
       }
     })
-    .sort((a, b) => a.target.localeCompare(b.target))
+  const conversationalist = features.flatMap((feature) => {
+    const target = identity(feature)
+    if (target !== 'subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au')
+      return []
+    if (
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      !Array.isArray(feature.entries) ||
+      digest(feature.entries) !== 'ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac'
+    )
+      fail('Unsupported Enchanting Conversationalist source')
+    seen.add(target)
+    const skillPool = [...feature.entries[0].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map((match) =>
+      match[1].toLowerCase(),
+    )
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        optional: false,
+        subclassGainTarget: 'class-feature|wizard subclass|wizard|xphb|3|xphb',
+        skillModifier: { label: feature.name, ability: 'intelligence', minimum: 1 },
+        domains: [{ domain: 'skills', count: 1, skillPool }],
+      },
+    ]
+  })
+  return [...paired, ...conversationalist].sort((a, b) => a.target.localeCompare(b.target))
 }
 
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */

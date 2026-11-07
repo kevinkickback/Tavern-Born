@@ -1,14 +1,20 @@
 import { getCurrentClassProficiencyChoices } from '@/lib/5etools/classProficiencyChoices'
-import { isClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import {
+  decodeClassProficiencyChoiceId,
+  isClassProficiencyChoiceId,
+} from '@/lib/5etools/classProficiencyIdentity'
+import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import {
   getSubclassProficiencyOwner,
   subclassProficiencyDigest,
 } from '@/lib/5etools/subclassProficiencyCertificates'
 import { normalizeSubclassProficiencyChoices } from '@/lib/5etools/subclassProficiencyChoices'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { AbilityScores, Character, CharacterClassEntry } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
+import type { CharacterEffect } from '@/types/effects'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
@@ -76,7 +82,14 @@ export function getCurrentOwnedProficiencyCandidates(
     )
   )
     return choices
-  return [...choices, ...canonical]
+  return [
+    ...choices,
+    ...canonical.filter((choice) => {
+      const relation = decodeClassProficiencyChoiceId(choice.id)
+      const target = relation && classProficiencyRule(relation.target)?.subclassGainTarget
+      return !target || matchesNativeSubclassGain(parents[0], target, choice.level)
+    }),
+  ]
 }
 
 export function getEarnedOwnerProficiencyCandidates(
@@ -104,4 +117,33 @@ export function getEffectiveOwnerProficiencyChoices(
 ) {
   const activity = createOptionalClassFeatureActivity(character, catalogs)
   return getEarnedOwnerProficiencyCandidates(owner, true, catalogs).filter(activity.choice)
+}
+
+/** The effective ledger contains only current, earned proficiency ownership. */
+export function getOwnedSubclassSkillModifiers(
+  character: Character,
+  abilities: AbilityScores,
+): CharacterEffect[] {
+  return Object.entries(character.provenance?.proficiencies.skills ?? {}).flatMap(([skill, tags]) =>
+    tags.flatMap((tag): CharacterEffect[] => {
+      if (tag.sourceType !== 'subclass' || !tag.grantVariant) return []
+      const choice = decodeClassProficiencyChoiceId(tag.grantVariant)
+      const rule = choice && classProficiencyRule(choice.target)?.skillModifier
+      if (!rule || choice?.domain !== 'skills') return []
+      return [
+        {
+          id: `${tag.grantVariant}:${skill}`,
+          label: rule.label,
+          source: {
+            kind: 'subclass',
+            name: rule.label,
+            source: tag.sourceRef,
+            provenance: { choiceId: tag.grantVariant },
+          },
+          target: { kind: 'skill-modifier', skill },
+          operation: { kind: 'add', value: Math.max(rule.minimum, abilities[rule.ability]) },
+        },
+      ]
+    }),
+  )
 }

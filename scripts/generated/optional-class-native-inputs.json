@@ -162,7 +162,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.ts",
-      "sha256": "dc931f8253c0944b308bbed7023f9b64ac4c4fad3b843a7b1284626eff840f8b"
+      "sha256": "2abfa457a3799c677b3c700f8a8c868f50bd6c5c9838d938cede66f0228cc35c"
     },
     {
       "file": "src/lib/5etools/classReference.ts",
@@ -305,6 +305,10 @@
       "sha256": "6049efd7912f1c0df2d9b98b25551823841e3e5602b3cc3daa5240b438ee514f"
     },
     {
+      "file": "src/lib/5etools/nativeSubclassGain.ts",
+      "sha256": "9616aa853b67ea7ff4f87571ba642fbf9b0fbab2ad9ac033bab54a6464a39892"
+    },
+    {
       "file": "src/lib/5etools/naturalExplorerChoices.ts",
       "sha256": "924dd53357477b14199b0b8971d02128f875b133af679e48c6ba6794125ee7fc"
     },
@@ -354,7 +358,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "492fd674dbd2d35545f40065a0a115803735fa5fefa0037b7558e2a11e8b48fe"
+      "sha256": "0679d6fb1a904e221555a50d36921e0f1d1f444bf503297ab101f3771dc3219f"
     },
     {
       "file": "src/lib/5etools/parsers/shared.ts",
@@ -402,11 +406,11 @@
     },
     {
       "file": "src/lib/5etools/savantSpellbookRules.ts",
-      "sha256": "ab5e13e4424ca9ee05ea62fb0215778ddceb90ebe06b95d03578fbc2fd36c994"
+      "sha256": "4687028cb01dd6edb47be45039e5904e64f36a1a77c16386ad1fd02e8a762d09"
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "42c3b6ea8fc52aa8094dfb79ca3337c727183d9dde1fb48422520235a38609e4"
+      "sha256": "ce2ce13b3af38644c1f76eac1af2cab576a303cc96ffa1964babc8aa360eb810"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -462,7 +466,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.json",
-      "sha256": "5a9ff8416de407ff65af74bf4ed301a60b27e327735bc12a09c6d191dfc2c975"
+      "sha256": "643f768c49c3856c52a72a0dd5a995be81fb3a1da53f7f9471a631f7d3800b1c"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
@@ -478,7 +482,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
-      "sha256": "882cc59d641cf4e776685a3adec8c86c1e9f08bacdf04c8e57c21734c41e29f3"
+      "sha256": "66b30b0d47ae2b372b4216b6c6954a3a9ae3ccadefd14485acbd2346513b7ab5"
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
@@ -503,6 +507,10 @@
     {
       "file": "src/lib/5etools/warlockPatronFeatureSource.ts",
       "sha256": "980eb6f5aafd5a8cea31b16e3a2d3394bba125b62c27549b7633068adf1c7f88"
+    },
+    {
+      "file": "src/lib/5etools/wizardTraditionSpellSources.ts",
+      "sha256": "85f9d13e501f259fcaa391c6fcc404b73305e1b347a2a1ee4399d26c3d4f7023"
     },
     {
       "file": "src/lib/calculations/abilityNames.ts",

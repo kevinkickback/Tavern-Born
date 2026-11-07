@@ -16,6 +16,7 @@ import {
 } from '@/lib/character/atWillInvocationSpells'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCurrentClassOrder } from '@/lib/character/classOrder'
+import { getOwnedSubclassSkillModifiers } from '@/lib/character/classProficiencyAuthority'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
@@ -559,6 +560,7 @@ export function createCharacterCalculationContext(
   const sourceEffects = [
     ...baseSourceEffects,
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
+    ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers),
     ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,

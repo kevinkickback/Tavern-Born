@@ -13,10 +13,15 @@ import {
 import {
   decodeSelectedFeatureSpellAddress,
   LAND_BONUS_SPELL_SLOT,
+  wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  hasCurrentWizardIllusionCantrip,
+  knowsIndependentMinorIllusion,
+} from '@/lib/5etools/wizardTraditionSpellSources'
+import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
@@ -236,6 +241,44 @@ export function getSelectedFeatureCantripSetups(
         : { reason: 'Restore the exact classic Circle of the Land Bonus Cantrip source.' }),
     })
   }
+  for (const { rule, slot } of wizardIllusionCantripSlots) {
+    if (!hasSavedSelectedFeatureSpellOwner(character, slot)) continue
+    const [owner, , producer, level] = slot
+    const qualifies = knowsIndependentMinorIllusion(
+      character,
+      rule,
+      prerequisites?.effectiveSpellProfiles,
+    )
+    const classes = catalogs?.classes?.filter(
+      (cls) => norm(cls.name) === 'wizard' && norm(cls.source) === rule.source,
+    )
+    const available =
+      classes?.length === 1 &&
+      permitted(allowed, rule.source) &&
+      hasCurrentWizardIllusionCantrip(classes[0], rule)
+    if (
+      !qualifies &&
+      !character.managedClassSpellChoices?.some(({ slot: saved }) => same(saved, slot))
+    )
+      continue
+    const choice = parseAdditionalSpellBlocks([
+      { ability: 'int', known: { _: [{ choose: 'level=0|class=Wizard' }] } },
+    ])[0].choices[0]
+    setups.push({
+      owner,
+      producer,
+      level,
+      name: rule.name,
+      offered: qualifies,
+      count: 1,
+      choice,
+      reason: !available
+        ? `Restore the exact ${rule.name} source.`
+        : !qualifies
+          ? 'This extra cantrip requires Minor Illusion from another source.'
+          : undefined,
+    })
+  }
   return setups
 }
 
@@ -288,11 +331,13 @@ export function getSelectedFeatureCantripPool(
   const ownerScoped = ['classFeature', 'subclassFeature'].includes(
     decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
   )
+  const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
   const spells =
     reason || !choice
       ? []
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
+          if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
           if (choice.pool)
             return choice.pool.some(
               (ref) => getSpellReferenceKey(ref) === getSpellReferenceKey(spell.name, spell.source),

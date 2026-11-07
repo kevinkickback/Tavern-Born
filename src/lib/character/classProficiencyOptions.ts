@@ -123,7 +123,8 @@ export function resolveClassProficiencyOptions(
         (!domain?.skillPool?.includes(name) ||
           (optionalClassProficiencyRule(relation.target)
             ? proficient.has(name) && !selected.has(name)
-            : !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+            : !!rule?.proficiencyAtGain &&
+              !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
                 ?.proficiencyAtGain?.alreadyProficient))
       )
         continue

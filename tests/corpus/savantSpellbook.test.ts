@@ -49,6 +49,127 @@ const lookups = (data: GameData) => ({
 const source = 'XPHB'
 const entry = { name: 'Wizard', source, subclass: 'Evoker', subclassSource: source, levels: 20 }
 
+const schools = [
+  ['Abjurer', 'XPHB', 'A'],
+  ['Diviner', 'XPHB', 'D'],
+  ['Illusionist', 'XPHB', 'I'],
+  ['Conjurer', 'AU', 'C'],
+  ['Enchanter', 'AU', 'E'],
+  ['Necromancer', 'AU', 'N'],
+  ['Transmuter', 'AU', 'T'],
+] as const
+
+test.skipIf(!existsSync('data/class/class-wizard.json'))(
+  'configured Savants earn only their school spellbook picks at each Wizard spell tier',
+  async () => {
+    const raw = composeGameDataLayers([
+      await new FiveEToolsDataLoader(
+        { type: 'local', path: resolve('data'), isValid: true },
+        {
+          type: 'local',
+          readJson: async (file) => JSON.parse(await readFile(resolve('data', file), 'utf8')),
+        },
+      ).loadAllData(),
+    ])
+    const rawLookups = buildGameDataLookups(raw)
+    useGameDataStore.setState({ gameData: { ...raw, lookups: rawLookups } })
+    const visible = (allowedSources: string[]) => {
+      const hook = renderHook(() =>
+        useCharacterGameDataParams({ allowedSources, originSystem: '2024' }),
+      )
+      const current = lookups(hook.result.current)
+      hook.unmount()
+      return current
+    }
+    const current = visible([source, 'AU'])
+    const withoutUnearthedArcana = visible([source])
+    for (const [subclass, printing, school] of schools) {
+      const owner = { ...entry, subclass, subclassSource: printing }
+      const actor = makeCharacterFixture({
+        originSystem: '2024',
+        allowedSources: [source, printing],
+        classProgression: [owner],
+      })
+      const context = (character: Character, catalog = current) =>
+        createCharacterCalculationContext(character, catalog, rawLookups).classChoices.spellContext
+      const slots = getManagedClassSpellSlots(owner).filter(getSavantSpellbookGain)
+      const levels = [3, 3, 5, 7, 9, 11, 13, 15, 17]
+      expect(
+        slots.map((slot) => slot[3]),
+        subclass,
+      ).toEqual(levels)
+      for (const gain of new Set(levels)) {
+        const earned = (level: number) =>
+          getManagedClassSpellSlots({ ...owner, levels: level }).filter(getSavantSpellbookGain)
+        expect(
+          earned(gain - 1).some((slot) => slot[3] === gain),
+          subclass,
+        ).toBe(false)
+        expect(
+          earned(gain).filter((slot) => slot[3] === gain),
+          subclass,
+        ).toEqual(slots.filter((slot) => slot[3] === gain))
+      }
+      let saved = actor
+      for (const slot of slots) {
+        const live = context(saved)
+        const pool = getManagedClassSpellPool(saved, slot, live)
+        const tier = Math.floor((slot[3] + 1) / 2)
+        expect(pool.reason, subclass).toBeUndefined()
+        expect(pool.allowedLevels, subclass).toEqual(
+          Array.from({ length: tier }, (_, index) => index + 1),
+        )
+        expect(
+          pool.spells.every(
+            (spell) => spell.school === school && spell.level >= 1 && spell.level <= tier,
+          ),
+          subclass,
+        ).toBe(true)
+        const next = pool.spells.find(
+          (spell) =>
+            spell.source === source &&
+            !saved.managedClassSpellChoices?.some((row) => row.target.name === spell.name),
+        )
+        if (!next) throw new Error(`No exact ${school} spell for ${subclass} at ${slot[3]}`)
+        const result = setManagedClassSpellChoicesCommand(
+          saved,
+          saved.provenance,
+          [
+            {
+              slot,
+              expected: null,
+              expectedEmptyRevision: saved.managedClassSpellRevision ?? 0,
+              target: { name: next.name, source },
+              policy: 'default',
+            },
+          ],
+          live,
+        )
+        saved = characterPersistenceSchema.parse(
+          JSON.parse(
+            JSON.stringify({
+              ...saved,
+              ...result.characterPatch,
+              provenance: result.provenanceUpdate,
+            }),
+          ),
+        )
+      }
+      expect(
+        saved.managedClassSpellChoices?.filter(({ slot }) => getSavantSpellbookGain(slot)),
+        subclass,
+      ).toHaveLength(9)
+      if (printing === 'AU') {
+        expect(
+          getManagedClassSpellPool(saved, slots[0], context(saved, withoutUnearthedArcana)).reason,
+        ).toBeDefined()
+        expect(getManagedClassSpellPool(saved, slots[0], context(saved)).reason).toBeUndefined()
+      }
+    }
+  },
+  90_000,
+)
+
 test.each([
   ['|XPHB', true],
   ['|PHB', false],

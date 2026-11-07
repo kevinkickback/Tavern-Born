@@ -5,9 +5,9 @@ import {
 } from '@/lib/5etools/classOrderIdentity'
 import {
   decodeSelectedFeatureSpellAddress,
-  LAND_BONUS_SPELL_ADDRESS,
   LAND_BONUS_SPELL_SLOT,
   selectedFeatureSpellAddress,
+  wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type {
@@ -69,16 +69,22 @@ export function getSelectedFeatureSpellProducer(
   ])
 }
 
+const declaredSubclassSlots = [
+  LAND_BONUS_SPELL_SLOT,
+  ...wizardIllusionCantripSlots.map(({ slot }) => slot),
+]
+
 /** Saved ownership only; missing source data or suspended permission does not remove intent. */
-function hasClassicLandOwner(character: Character) {
+function hasDeclaredSubclassOwner(character: Character, slot: ManagedClassSpellSlot) {
+  const [owner, , , level] = slot
   const entries = character.classProgression.filter(
     (entry) =>
-      norm(entry.name) === 'druid' &&
-      norm(entry.source) === 'phb' &&
-      norm(entry.subclass) === 'circle of the land' &&
-      norm(entry.subclassSource) === 'phb',
+      norm(entry.name) === owner[1] &&
+      norm(entry.source) === owner[2] &&
+      norm(entry.subclass) === owner[3] &&
+      norm(entry.subclassSource) === owner[4],
   )
-  return entries.length === 1 && entries[0].levels >= LAND_BONUS_SPELL_SLOT[3]
+  return entries.length === 1 && entries[0].levels >= level
 }
 
 export function hasSavedSelectedFeatureSpellOwner(
@@ -87,7 +93,11 @@ export function hasSavedSelectedFeatureSpellOwner(
 ) {
   const address = decodeSelectedFeatureSpellAddress(slot[2])
   if (!address) return false
-  if (slot[2] === LAND_BONUS_SPELL_ADDRESS) return hasClassicLandOwner(character)
+  if (address[1] === 'subclassFeature')
+    return declaredSubclassSlots.some(
+      (row) =>
+        JSON.stringify(row) === JSON.stringify(slot) && hasDeclaredSubclassOwner(character, row),
+    )
   if (address[1] === 'classFeature') {
     const order = getClassOrderById(address[0])
     if (!order || getSavedClassOrder(character, order)?.branch !== 'caster') return false
@@ -116,8 +126,9 @@ export function getSavedSelectedFeatureSpellProducers(character: Character) {
       }),
     ),
   )
-  if (hasClassicLandOwner(character)) {
-    const [owner, , producer, level] = LAND_BONUS_SPELL_SLOT
+  for (const slot of declaredSubclassSlots) {
+    if (!hasDeclaredSubclassOwner(character, slot)) continue
+    const [owner, , producer, level] = slot
     producers.add(JSON.stringify([owner, producer, level]))
   }
   return producers

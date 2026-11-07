@@ -21,6 +21,7 @@ export interface SpellListItem {
   isFixed?: boolean
   removable?: boolean
   castingNote?: string
+  castOnly?: true
 }
 
 export interface PreparedCasterSpellItem {
@@ -201,7 +202,8 @@ export function buildSpellProfileDisplayModels({
         levels,
         availableLevels,
         displayedTotal: isTruePrepared
-          ? items.filter((item) => item.kind === 'cantrip').length + availableClassSpells.length
+          ? items.filter((item) => item.kind === 'cantrip' || item.castOnly).length +
+            availableClassSpells.length
           : items.length,
         missingCantrips,
         missingSpells,
