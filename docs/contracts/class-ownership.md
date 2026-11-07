@@ -94,6 +94,21 @@ its Details from the earning accordion. At each choice gain, including increases
 feature's quota, open the picker from that level, save the earned picks, and confirm that earlier
 picks still appear in their original slots after reopening the character.
 
+### Warlock patron setup and resources
+
+The Genie chooses its patron type at the classic level-1 or revised level-3 subclass gain. Vestige
+Patron chooses its companion type and spell domain at revised level 3. These choices use the shared
+subclass picker and preserve their exact owner, feature and gain in the saved character. If the
+source becomes unavailable, the saved choices are available for recovery while their benefits
+are suspended. Reviewed configured patron rules print at the levels they are earned, including
+classic rules referenced by a revised subclass.
+
+Revised Celestial Patron's Healing Light uses the manual Class Resources controls from Warlock
+level 3. The pool is one plus Warlock level in d6s, the per-use cap is the effective Charisma
+modifier with a minimum of one die, and a Long Rest restores the pool. Current dice and the cap
+appear in the revised sheets. Source or gain loss hides the resource and keeps its saved count
+for exact restoration.
+
 ### Revised Epic Boon advancement
 
 The verified XPHB level-19 declaration grants one advancement. The configured

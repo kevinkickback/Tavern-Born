@@ -1,16 +1,26 @@
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Class5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
-import { ELDRITCH_HEX_REFERENCE, getNativeEldritchHexOwner } from './nativeWarlockPatronRules'
+import {
+  ELDRITCH_HEX_REFERENCE,
+  getNativeEldritchHexOwner,
+  getNativeStepsOfTheFeyOwner,
+  STEPS_OF_THE_FEY_SPELL,
+} from './nativeWarlockPatronRules'
 import { parseSpellToken } from './spellTokens'
+import {
+  getChosenWarlockSpellBlock,
+  hasWarlockPatronSpellConfiguration,
+} from './warlockPatronConfigurations'
 
 export interface SubclassSpellGrant {
   spellName: string
   level: number
   isCantrip: boolean
+  expandedRank?: number
   mode: 'prepared' | 'known' | 'expanded' | 'innate'
 }
 
@@ -26,7 +36,7 @@ export function getEarnedSubclassSpellGrants(
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
   const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
-  const unavailable = land ? [] : undefined
+  const unavailable = land || hasWarlockPatronSpellConfiguration(entry) ? [] : undefined
   const norm = normalizeOwnerIdentity
   if (
     !classData ||
@@ -51,13 +61,38 @@ export function getEarnedSubclassSpellGrants(
   )
   if (subclasses.length !== 1) return unavailable
   if (!land) {
+    const suite = getChosenWarlockSpellBlock(classData, subclasses[0], landContext?.selections)
+    if (suite) {
+      const { block, level } = suite
+      if (!block || classLevel < level) return []
+      if (!block.expanded) return parseSubclassSpells([block], classLevel)
+      // This legacy schedule records Wish with a numeric key, but its table uses spell rank.
+      return Object.entries(block.expanded).flatMap(([rank, spells]) =>
+        spells.map((spellName) => ({
+          spellName: formatSpellReference(spellName, classData.source),
+          level,
+          expandedRank: Number(rank.replace(/^s/, '')),
+          isCantrip: false,
+          mode: 'expanded' as const,
+        })),
+      )
+    }
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
-    if (!getNativeEldritchHexOwner(entry)) return grants
-    // Eldritch Hex has its own source proof. Expanded list access remains independent.
-    const hex = getSpellReferenceKey(ELDRITCH_HEX_REFERENCE)
-    return grants.filter(
-      (grant) => grant.mode === 'expanded' || getSpellReferenceKey(grant.spellName) !== hex,
-    )
+    if (getNativeEldritchHexOwner(entry)) {
+      // Eldritch Hex has its own source proof. Expanded list access remains independent.
+      const hex = getSpellReferenceKey(ELDRITCH_HEX_REFERENCE)
+      return grants.filter(
+        (grant) => grant.mode === 'expanded' || getSpellReferenceKey(grant.spellName) !== hex,
+      )
+    }
+    if (getNativeStepsOfTheFeyOwner(entry)) {
+      // Steps of the Fey changes casting, while Archfey Spells supplies preparation.
+      const mistyStep = getSpellReferenceKey(STEPS_OF_THE_FEY_SPELL)
+      return grants.filter(
+        (grant) => grant.mode !== 'innate' || getSpellReferenceKey(grant.spellName) !== mistyStep,
+      )
+    }
+    return grants
   }
   const terrain = getChosenLandTerrain(classData, subclasses[0], landContext?.selections ?? [])
   if (!terrain) return []

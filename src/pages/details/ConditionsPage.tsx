@@ -769,6 +769,7 @@ export function ConditionsPage() {
                           <p className="text-sm font-semibold">{resource.label}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {resource.className} · {resource.recoveryText}
+                            {resource.usageText && ` · ${resource.usageText}`}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">

@@ -3,7 +3,6 @@ import {
   getLandChoiceRule,
   getLandWardResistance,
   hasLandSanctuary,
-  isValidLandSelection,
 } from '@/lib/5etools/circleOfTheLand'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
@@ -28,6 +27,10 @@ import {
   isValidRevisedHunterSelection,
   revisedHunterOwner,
 } from '@/lib/5etools/revisedHunterIdentity'
+import {
+  getSubclassSpellConfigurationRule,
+  isValidSubclassSpellConfigurationSelection,
+} from '@/lib/5etools/subclassSpellConfiguration'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   isCurrentRevisedInvocationCantripPool,
@@ -352,11 +355,12 @@ export function getFeatureOptionSelectionStates(
         (!isFeatureLiteralChoiceId(selection.choiceId) ||
           selection.choiceId === REVISED_AFFINITY_ID ||
           !!getRevisedHunterRule(selection.choiceId) ||
-          !!getLandChoiceRule(selection.choiceId)),
+          !!getSubclassSpellConfigurationRule(selection.choiceId)),
     )
     .map((selection) => {
       const hunter = getRevisedHunterRule(selection.choiceId)
       const land = getLandChoiceRule(selection.choiceId)
+      const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
       const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
@@ -392,7 +396,7 @@ export function getFeatureOptionSelectionStates(
                 candidate.level === selection.classLevel &&
                 candidate.level <= owner.levels &&
                 (!hunter || isValidRevisedHunterSelection(selection)) &&
-                (!land || isValidLandSelection(selection)) &&
+                (!configuration || isValidSubclassSpellConfigurationSelection(selection)) &&
                 (!revisedAffinity ||
                   (getSavedAffinityDamageType(selection, character.classProgression) &&
                     isRevisedAffinitySourceEnabled(character))) &&
@@ -419,13 +423,13 @@ export function getFeatureOptionSelectionStates(
         !options.some(
           (option) =>
             isClassChoiceOptionEligible(option) &&
-            ((!hunter && !land && !revisedAffinity) ||
+            ((!hunter && !configuration && !revisedAffinity) ||
               selection.selected.some(
                 (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
               )),
         )
       const affinity =
-        !hunter && !land && !revisedAffinity && !recovery && owner && subclass
+        !hunter && !configuration && !revisedAffinity && !recovery && owner && subclass
           ? affinityRules(owner, subclass, catalogs)
           : undefined
       const landWard =
@@ -444,7 +448,7 @@ export function getFeatureOptionSelectionStates(
           !recovery &&
           !!option &&
           isClassChoiceOptionEligible(option) &&
-          !!(hunter || land || revisedAffinity ? option.sourceGroup : option.featureOption)
+          !!(hunter || configuration || revisedAffinity ? option.sourceGroup : option.featureOption)
         const damageType = available ? option.featureOption?.damageType : undefined
         const entries: unknown[] = available
           ? [...option.entries]
@@ -455,7 +459,9 @@ export function getFeatureOptionSelectionStates(
                   ? 'Restore the exact Hunter feature source or remove the saved choice.'
                   : revisedAffinity
                     ? 'Restore the exact Elemental Affinity source or remove the saved choice.'
-                    : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
+                    : configuration
+                      ? 'Restore the exact patron feature source or remove the saved choice.'
+                      : 'Current ancestry and damage rules are unavailable. Restore the exact source or remove the saved choice.',
             ]
         if (available && wardText) entries.push(wardText)
         if (available && affinity) {

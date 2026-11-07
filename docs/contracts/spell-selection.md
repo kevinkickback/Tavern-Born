@@ -56,6 +56,16 @@ Warlock level 10 when the current native feature and patron schedule agree. It u
 Pact Magic casting path. An independently learned Hex keeps its own choice and spell ownership
 when that patron's grant becomes unavailable.
 
+Revised Archfey Patron's Steps of the Fey shows the slot-free Misty Step allowance on the current
+Warlock spell row and revised sheets. The allowance uses the effective Charisma modifier with a
+minimum of one and recovers on a Long Rest. Archfey Spells supplies preparation independently.
+
+The Genie uses only the chosen patron type's expansion for its default spell list. The TCE
+schedule's numeric `9` is the ninth-rank Wish entry, available for the level-17 Mystic Arcanum
+choice. Classic and revised Warlocks use their exact spell printings. Vestige Patron prepares
+only the chosen domain's current spells at Warlock levels 3, 5, 7 and 9. Fixed domain preparation
+and independent spell choices keep separate ownership.
+
 Each record saves its exact target, revision, `default` or `ignore-class-list` policy, and optional
 `prepare:true` for a learned spellbook entry. The explicit bypass changes only list eligibility;
 current target/source, earned ownership, level, schools, fixed-at-gain exclusion and quota still apply.

@@ -1,9 +1,17 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
+import {
+  getCurrentNativeWarlockPatronRules,
+  getNativeHealingLightOwner,
+  HEALING_LIGHT_RESOURCE_ID,
+  HEALING_LIGHT_RULE_DIGEST,
+  HEALING_LIGHT_TARGET,
+} from '@/lib/5etools/nativeWarlockPatronRules'
 import {
   getCurrentNativeSorcerer,
   getSorcererResourceDefs,
@@ -15,6 +23,35 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
 import type { CharacterEffect } from '@/types/effects'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+
+const healingLight: ClassResourceDef = {
+  id: HEALING_LIGHT_RESOURCE_ID,
+  label: 'Healing Light',
+  maxPerLevel: Array.from({ length: 20 }, (_, index) => index + 2),
+  restType: 'long',
+}
+
+function hasCurrentHealingLight(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (
+    character.originSystem !== '2024' ||
+    !catalogs?.classes ||
+    !getNativeHealingLightOwner(entry) ||
+    character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1
+  )
+    return false
+  const current = catalogs.classes.filter((row) => findClassReference(entry, [row]))
+  return (
+    current.length === 1 &&
+    !!getCurrentNativeWarlockPatronRules(current[0], entry, catalogs)?.getNestedFeature(
+      HEALING_LIGHT_TARGET,
+      HEALING_LIGHT_RULE_DIGEST,
+    )
+  )
+}
 
 /** Resolve one class resource's maximum from its rule definition and active effects. */
 function getEffectiveClassResourceMaximum(
@@ -54,6 +91,7 @@ export function getCharacterClassResources(
 ) {
   const currentSorcerer = getCurrentNativeSorcerer(character, options.catalogs)
   const stored = character.classResources ?? {}
+  const healingDiceLimit = Math.max(1, options.charismaModifier)
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
@@ -62,7 +100,10 @@ export function getCharacterClassResources(
         ? getSorcererResourceDefs(currentSorcerer)
         : []
       : getClassResourceDefs(resolveClass(entry), level)
-    return definitions.flatMap((definition) => {
+    const earned = hasCurrentHealingLight(character, entry, options.catalogs)
+      ? [...definitions, healingLight]
+      : definitions
+    return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&
         isClassicDruid(entry) &&
@@ -86,6 +127,10 @@ export function getCharacterClassResources(
           restType: recovery.shortRest !== undefined ? ('short' as const) : ('long' as const),
           recovery,
           recoveryText: formatClassResourceRecovery(recovery),
+          usageText:
+            definition.id === HEALING_LIGHT_RESOURCE_ID
+              ? `Up to ${healingDiceLimit} ${healingDiceLimit === 1 ? 'die' : 'dice'} per use`
+              : undefined,
           className: entry.name,
         },
       ]

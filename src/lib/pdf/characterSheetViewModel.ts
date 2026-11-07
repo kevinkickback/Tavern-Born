@@ -153,6 +153,7 @@ interface CharacterSheetClassResourceRow {
   max: number
   used: number
   recovery: string
+  usageText?: string
   restType: 'short' | 'long'
 }
 
@@ -1075,13 +1076,14 @@ export function createCharacterSheetViewModel(
         effectContext: calculationContext.effects.resolutionContext,
         unlimitedWildShape: !!unlimitedWildShape,
       },
-    ).map(({ id, label, max, current, recoveryText, restType }) => ({
+    ).map(({ id, label, max, current, recoveryText, restType, usageText }) => ({
       id,
       label,
       max,
       used: max - current,
       recovery: recoveryText,
       restType,
+      ...(usageText && { usageText }),
     })),
     weaponRows: buildWeaponRows(actions),
     actions,

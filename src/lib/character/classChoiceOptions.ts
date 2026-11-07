@@ -56,7 +56,6 @@ export {
 
 import { getCurrentCannyChoices, normalizeCannyChoices } from '@/lib/5etools/cannyChoices'
 import {
-  getLandChoiceRule,
   getLandTerrainSetup,
   isCircleOfTheLand,
   LAND_GROUP,
@@ -128,6 +127,7 @@ import {
   stormFeatureRef,
 } from '@/lib/5etools/stormAuraIdentity'
 import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
+import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   getRevisedInvocationCantripRule,
@@ -136,6 +136,12 @@ import {
   meetsInvocationCantripCondition,
   REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
+import {
+  getWarlockPatronConfigurationRules,
+  getWarlockPatronConfigurations,
+  isWarlockPatronConfigurationGroup,
+  resolveWarlockPatronConfigurationOption,
+} from '@/lib/5etools/warlockPatronConfigurations'
 import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
@@ -571,6 +577,8 @@ export function resolveFeatureOptionEntity(
     return resolveRevisedAffinityOption(option, catalogs)
   if (target?.format === 'source-group' && target.group === LAND_GROUP)
     return resolveLandTerrainOption(option, catalogs.classes)
+  if (target?.format === 'source-group' && isWarlockPatronConfigurationGroup(target.group))
+    return resolveWarlockPatronConfigurationOption(option, catalogs.classes)
   if (target?.format === 'source-group')
     return target.group === REVISED_HUNTER_GROUP
       ? resolveRevisedHunterOption(option, catalogs)
@@ -830,7 +838,7 @@ export function resolveClassChoiceOptions(
   if (
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
-    !getLandChoiceRule(choice.id) &&
+    !getSubclassSpellConfigurationRule(choice.id) &&
     choice.id !== REVISED_AFFINITY_ID &&
     (!literal ||
       !(enemy
@@ -1556,6 +1564,7 @@ export function getClassChoiceCandidates(
         ),
     ).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
+    ...getWarlockPatronConfigurations(classData, subclass, catalogs?.classes),
     ...[
       getCurrentLandTerrainSetup(classData, subclass, catalogs),
       getRevisedAffinitySetup(classData, subclass, catalogs),
@@ -1872,6 +1881,24 @@ export function getClassChoiceDiagnosticCandidates(
     )
   )
     rows.push(revisedAffinityDiagnostic)
+  const patronConfigurations = getWarlockPatronConfigurationRules(classData, subclass)
+  if (patronConfigurations.length) {
+    const current = getWarlockPatronConfigurations(classData, subclass, catalogs?.classes)
+    for (const rule of patronConfigurations.filter(
+      (rule) => !current.some(({ id }) => id === rule.id),
+    )) {
+      rows.push({
+        code: 'unverified-required-choice',
+        className: rule.owner.name,
+        classSource: rule.owner.source,
+        subclassName: rule.owner.subclassName,
+        subclassSource: rule.owner.subclassSource,
+        level: rule.level,
+        featureName: rule.label,
+        message: `The exact ${rule.label} rules are unavailable or unsupported.`,
+      })
+    }
+  }
   if (
     catalogs &&
     normalized(classData.name) === 'cleric' &&
