@@ -674,6 +674,7 @@ function resolveExplicitOption(
 ): ClassChoiceOptionView {
   const match = resolveClassChoiceOptionEntity(option, catalogs, cache)
   if (option.entityType === 'featureOption' && match) {
+    const path = 'group' in match ? getBarbarianPathChoiceGroup(String(match.group)) : undefined
     return {
       availability,
       reference: option,
@@ -681,25 +682,28 @@ function resolveExplicitOption(
       presentation: {
         kind: 'feature',
         featureTypeLabels: [
-          'group' in match
-            ? match.group === REVISED_HUNTER_GROUP
-              ? 'Hunter option'
-              : match.group === REVISED_AFFINITY_GROUP
-                ? 'Damage type'
-                : match.group === LAND_GROUP
-                  ? 'Circle terrain'
-                  : isDivineSoulConfigurationGroup(String(match.group))
-                    ? 'Divine affinity'
-                    : isFavoredEnemyOption(option)
-                      ? 'Favored enemy'
-                      : 'Favored terrain'
-            : 'Dragon ancestry',
+          path?.feature ??
+            ('group' in match
+              ? match.group === REVISED_HUNTER_GROUP
+                ? 'Hunter option'
+                : match.group === REVISED_AFFINITY_GROUP
+                  ? 'Damage type'
+                  : match.group === LAND_GROUP
+                    ? 'Circle terrain'
+                    : isDivineSoulConfigurationGroup(String(match.group))
+                      ? 'Divine affinity'
+                      : isFavoredEnemyOption(option)
+                        ? 'Favored enemy'
+                        : 'Favored terrain'
+              : 'Dragon ancestry'),
         ],
       },
       ...('group' in match
         ? { sourceGroup: { group: String(match.group) } }
         : { featureOption: { damageType: (match as FeatureTableOption).damageType } }),
-      searchText: `${option.name} ${'damageType' in match ? match.damageType : ''}`,
+      searchText: path
+        ? `${option.name} ${path.feature} ${path.owner.subclassName} ${option.source ?? ''}`
+        : `${option.name} ${'damageType' in match ? match.damageType : ''}`,
     }
   }
   return match

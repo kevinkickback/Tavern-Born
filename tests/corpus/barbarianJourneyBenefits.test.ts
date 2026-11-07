@@ -162,6 +162,28 @@ test.each(catalogsToTest)(
       const calculate = (character: Character) =>
         createCharacterCalculationContext(character, lookups, raw)
       const sheet = (character: Character) => createCharacterSheetViewModel(character, raw, lookups)
+      for (const level of [2, 3, 4, 5, 19, 20]) {
+        const expected = [
+          'Rage',
+          'Unarmored Defense',
+          ...(level >= 5 ? ['Fast Movement'] : []),
+          ...(level === 20 ? ['Primal Champion'] : []),
+          ...(source === 'XPHB' && level >= 3 ? ['Primal Knowledge'] : []),
+        ]
+        expect(
+          sheet(actor(level)).declaredClassFeatureSummaries?.map((row) => row.compactText),
+        ).toEqual(expected)
+      }
+      const withoutOwner = current.classes.filter((row) => row !== cls)
+      const filteredSheet = createCharacterSheetViewModel(actor(20), raw, {
+        ...lookups,
+        classChoiceClasses: withoutOwner,
+        classChoiceFeatureCatalogs: { ...catalogs, classes: withoutOwner },
+      })
+      expect(filteredSheet.declaredClassFeatureSummaries ?? []).toEqual([])
+      expect(
+        sheet(actor(20)).declaredClassFeatureSummaries?.map((row) => row.compactText),
+      ).toContain('Primal Champion')
       const shield: Equipment = {
         id: 'shield',
         name: 'Shield',
@@ -240,10 +262,16 @@ test.each(catalogsToTest)(
           expect(fury).toMatchObject({ level: 3, minimumSelections: 1, maximumSelections: 1 })
           if (!fury) throw new Error('Missing classic Divine Fury setup')
           const available = createClassChoiceCatalogs(catalogs)
-          const options = resolveClassChoiceOptions(fury, available, [], 3, zealot)
-            .filter(isClassChoiceOptionEligible)
-            .map((row) => row.reference)
+          const views = resolveClassChoiceOptions(fury, available, [], 3, zealot).filter(
+            isClassChoiceOptionEligible,
+          )
+          const options = views.map((row) => row.reference)
           expect(options.map((row) => row.name)).toEqual(['Necrotic', 'Radiant'])
+          for (const view of views)
+            expect(view).toMatchObject({
+              presentation: { featureTypeLabels: ['Divine Fury'] },
+              searchText: expect.stringContaining('Divine Fury'),
+            })
           const change = applyClassChoiceSelectionWithGrantsCommand(
             zealot,
             zealot.provenance,
@@ -613,10 +641,16 @@ test.each(catalogsToTest)(
         catalogs,
       ).find((row) => row.label === 'Aspect of the Wilds')!
       expect(aspect).toMatchObject({ level: 6, minimumSelections: 1, maximumSelections: 1 })
-      const aspects = resolveClassChoiceOptions(aspect, available, [], 6, wild)
-        .filter(isClassChoiceOptionEligible)
-        .map((row) => row.reference)
+      const aspectViews = resolveClassChoiceOptions(aspect, available, [], 6, wild).filter(
+        isClassChoiceOptionEligible,
+      )
+      const aspects = aspectViews.map((row) => row.reference)
       expect(aspects.map((row) => row.name).sort()).toEqual(['Owl', 'Panther', 'Salmon'])
+      for (const view of aspectViews)
+        expect(view).toMatchObject({
+          presentation: { featureTypeLabels: ['Aspect of the Wilds'] },
+          searchText: expect.stringContaining('Aspect of the Wilds'),
+        })
       for (const option of aspects) {
         const change = applyClassChoiceSelectionWithGrantsCommand(
           wild,
