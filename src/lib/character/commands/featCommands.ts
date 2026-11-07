@@ -18,6 +18,10 @@ import {
   resolveSpecialSpellKind,
   setSpecialSpellKind,
 } from '@/lib/character/specialSpellState'
+import {
+  canChooseConcreteTool,
+  type ToolProficiencyPools,
+} from '@/lib/character/toolProficiencyChoices'
 import { getFixedFeatOptionKey, SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import {
   addAbilityBonus,
@@ -31,7 +35,12 @@ import {
 } from '@/lib/provenance'
 import { getRepeatedFeatOptionDomains } from '@/lib/provenance/featSelectionValidation'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
-import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
+import type {
+  ChoiceDomain,
+  ChoiceRecord,
+  ProvenanceLedger,
+  SourceTag,
+} from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, Feat, FeatOptionSelections, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
@@ -299,17 +308,10 @@ function resolveProficiencyChoice(
       ...matchingChoice.selected,
       itemName,
     ])
-    provenanceUpdate = addGrant(
-      provenanceUpdate,
-      domain,
-      itemName,
-      makeSourceTag(
-        matchingChoice.sourceTag.sourceType,
-        matchingChoice.sourceTag.sourceName,
-        'choice',
-        matchingChoice.sourceTag.sourceRef,
-      ),
-    )
+    provenanceUpdate = addGrant(provenanceUpdate, domain, itemName, {
+      ...matchingChoice.sourceTag,
+      grantType: 'choice',
+    })
     if (domain === 'skills') {
       const skills = [...new Set([...character.proficiencies.skills, normalized])]
       return {
@@ -331,12 +333,19 @@ function resolveProficiencyChoice(
   }
 
   const selected = matchingChoice.selected.filter((entry) => normalizeKey(entry) !== normalized)
-  const provenanceUpdate = removeChoiceGrant(
-    resolveChoice(ledger, matchingChoice.id, selected),
-    domain,
-    itemName,
-    matchingChoice.sourceTag,
-  )
+  const resolvedLedger = resolveChoice(ledger, matchingChoice.id, selected)
+  const hasOtherToolChoice =
+    domain === 'tools' &&
+    resolvedLedger.choices.some(
+      (choice) =>
+        choice.id !== matchingChoice.id &&
+        choice.domain === domain &&
+        isSameGrantSource(choice.sourceTag, matchingChoice.sourceTag) &&
+        choice.selected.some((entry) => normalizeKey(entry) === normalized),
+    )
+  const provenanceUpdate = hasOtherToolChoice
+    ? resolvedLedger
+    : removeChoiceGrant(resolvedLedger, domain, itemName, matchingChoice.sourceTag)
   const hasRemainingGrant = Boolean(provenanceUpdate.proficiencies[domain][normalized]?.length)
   if (domain === 'skills') {
     const skills = hasRemainingGrant
@@ -374,6 +383,46 @@ export function resolveProficiencyChoiceCommand(
   return projectProficiencyCommandResult(
     character,
     resolveProficiencyChoice(character, ledger, domain, itemName, adding, choiceId),
+    catalogs,
+  )
+}
+
+export function resolveConcreteToolChoiceCommand(
+  character: Character,
+  requested: Pick<ChoiceRecord, 'id' | 'sourceTag'>,
+  tool: string,
+  adding: boolean,
+  pools?: ToolProficiencyPools,
+  catalogs?: import('@/lib/character/classChoiceFeatureCatalogs').ClassChoiceFeatureCatalogs,
+  retainedPools?: ToolProficiencyPools,
+): CharacterCommandResult {
+  const ledger = character.provenance
+  const matches = ledger.choices.filter(
+    (choice) => choice.id === requested.id && choice.domain === 'tools',
+  )
+  const current = matches.length === 1 ? matches[0] : undefined
+  const key = normalizeKey(tool)
+  if (
+    !current ||
+    !isSameGrantSource(current.sourceTag, requested.sourceTag) ||
+    (adding &&
+      (!pools ||
+        !canChooseConcreteTool(current, tool, pools, retainedPools) ||
+        character.proficiencies.tools.some((name) => normalizeKey(name) === key) ||
+        ledger.proficiencies.tools[key]?.length ||
+        ledger.choices.some(
+          (choice) =>
+            choice.domain === 'tools' && choice.selected.some((name) => normalizeKey(name) === key),
+        )))
+  )
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  return resolveProficiencyChoiceCommand(
+    character,
+    ledger,
+    'tools',
+    tool,
+    adding,
+    current.id,
     catalogs,
   )
 }
