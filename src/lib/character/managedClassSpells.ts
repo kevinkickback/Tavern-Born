@@ -42,6 +42,11 @@ import {
 } from '@/lib/5etools/subclassSpells'
 import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
 import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
+import {
+  getWizardIllusionCantripOwner,
+  hasCurrentWizardIllusionCantrip,
+  knowsIndependentMinorIllusion,
+} from '@/lib/5etools/wizardTraditionSpellSources'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
@@ -155,9 +160,10 @@ function resolveSlot(
   )
   const savant = savantGain && classData && getCurrentSavantSpellbookGrant(slot, classData, catalog)
   if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
-    return 'Restore the current Evocation Savant feature and its spellbook schedule.'
+    return `Restore the current ${savantGain.rule.name} feature and its spellbook schedule.`
   const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
+    character,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const expandedAtGain = new Map(
@@ -169,7 +175,7 @@ function resolveSlot(
     slot[1] === 'class-known' &&
     slot[4] === 0 &&
     authority.rule.unrestrictedGains?.includes(slot[3]) === true
-  return { entry, authority, fixedAtGain, expandedAtGain, privileged, savant, allowed }
+  return { entry, authority, fixedAtGain, expandedAtGain, privileged, savant, allowed, classData }
 }
 
 function targetError(
@@ -178,6 +184,16 @@ function targetError(
   state: Exclude<ReturnType<typeof resolveSlot>, string>,
   saved = false,
 ) {
+  if (slot[1] === 'class-cantrip' && getSpellNameKey(spell.name) === 'minor illusion') {
+    const illusion = getWizardIllusionCantripOwner(state.entry)
+    if (
+      illusion &&
+      slot[3] >= illusion.level &&
+      state.classData &&
+      hasCurrentWizardIllusionCantrip(state.classData, illusion)
+    )
+      return 'Choose another cantrip; the Illusion tradition supplies Minor Illusion at its gain.'
+  }
   if (
     slot[1] === 'class-cantrip'
       ? spell.level !== 0
@@ -189,7 +205,7 @@ function targetError(
   const savant = state.savant
   if (savant) {
     if (!savant.levels.includes(spell.level) || spell.school !== savant.school)
-      return 'Choose an Evocation spell of an eligible level for this gain.'
+      return 'Choose a Wizard spell of the required school and level for this gain.'
     const checked = auditSpellRouteMultiplicity([spell])[0]
     if (
       !checked.classSpellRouteSource ||
@@ -616,6 +632,7 @@ export function projectManagedClassSpellState(
     const grants = getEarnedSubclassSpellGrants(cls, entry, entry.levels, {
       selections: character.classChoiceSelections,
       spells: visibleSpellLevels,
+      character,
     })
     for (const grant of grants ?? []) {
       if (grant.mode === 'expanded') continue
@@ -860,6 +877,35 @@ export function projectManagedClassSpellState(
   const independentSpellProfiles = daily.character.spells.spellProfiles
   profiles = independentSpellProfiles
   provenance = daily.character.provenance
+  for (const entry of character.classProgression) {
+    const rule = getWizardIllusionCantripOwner(entry)
+    const id = toClassProfileId(entry.name, entry.source)
+    const cls = classMap.get(id)
+    if (
+      !rule ||
+      !cls ||
+      entry.levels < rule.level ||
+      !hasCurrentWizardIllusionCantrip(cls, rule) ||
+      knowsIndependentMinorIllusion(character, rule, independentSpellProfiles)
+    )
+      continue
+
+    const reference = formatSpellReference('Minor Illusion', cls.source)
+    if (visibleSpellLevels.get(getSpellReferenceKey(reference)) !== 0) continue
+    profiles = profiles.map((profile) => {
+      if (profile.id !== id) return profile
+      const cantrips = profile.cantrips.some(
+        (spell) => getSpellReferenceKey(spell) === getSpellReferenceKey(reference),
+      )
+        ? profile.cantrips
+        : [...profile.cantrips, reference]
+      return { ...profile, cantrips, fixedSpells: [...(profile.fixedSpells ?? []), reference] }
+    })
+    provenance = addSpellGrant(provenance, reference, {
+      ...makeSourceTag('subclass', entry.subclass ?? rule.subclass, 'fixed', entry.subclassSource),
+      grantSource: cls.source,
+    })
+  }
   for (const status of statuses.filter((row) => row.choice.slot[1] === 'feature-cantrip')) {
     const { choice } = status
     const deny = (reason: string) => {

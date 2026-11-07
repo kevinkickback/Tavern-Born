@@ -106,7 +106,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "c6659f6b2c0b545c879f9d5fd2cce9f132908fc7d9d15935f3735270656cdf83"
+      "sha256": "52cb43417d97c0156eb0df5fe51182b61d4d48b7c76d645e6779e2a37200ec3f"
     }
   ],
   "toolClassificationDependencies": [
@@ -154,7 +154,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "4d7871057da237cb24d1d70fc8c866a37cf8dfd9996f754b30b164f0ce108e87"
+      "sha256": "7038815548e0cb2a6a7ca7333db665ff7d46a93afd6127df1672b63be31f51b6"
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",

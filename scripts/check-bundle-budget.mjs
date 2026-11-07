@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Sorcerer origin rules at 6,628,729 B renderer and 1,352,378 B initial.
+  // Measured with Wizard tradition rules at 6,640,064 B renderer and 1,362,631 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6474 * KIB,
-  initialRendererScript: 1321 * KIB,
+  rendererCode: 6485 * KIB,
+  initialRendererScript: 1331 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

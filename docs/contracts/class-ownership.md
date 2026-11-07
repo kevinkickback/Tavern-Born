@@ -98,6 +98,13 @@ Reviewed Druid Circles print their current subclass rules at the levels that gra
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
 
+### Wizard traditions
+
+Reviewed Wizard traditions print their exact earned subclass rules alongside Arcane Recovery.
+Revised Enchanter earns one skill choice from Enchanting Conversationalist at level 3. Its
+Intelligence bonus, with a minimum of +1, applies to checks for the chosen skill. The choice
+and its effect use the exact current subclass declaration and earning level.
+
 ### Sorcerer origins
 
 Divine Soul chooses its affinity at the classic level-1 or revised level-3 subclass gain. The

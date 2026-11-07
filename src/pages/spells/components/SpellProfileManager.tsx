@@ -529,9 +529,11 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                       </div>
                     </div>
                   ) : null}
-                  {isTruePrepared && (levels.includes(0) || availableClassSpells.length > 0)
+                  {isTruePrepared && (items.length > 0 || availableClassSpells.length > 0)
                     ? (() => {
-                        const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
+                        const casts = items.filter((item) => item.castOnly)
+                        const totalGroups =
+                          Number(levels.includes(0)) + availLevels.length + Number(casts.length > 0)
                         let groupIndex = 0
                         return (
                           <div data-slot="spell-level-grid" className={SPELL_LEVEL_GRID_CLASSES}>
@@ -618,6 +620,18 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                 </SpellLevelGroup>
                               )
                             })}
+                            {casts.length > 0 && (
+                              <KnownSpellLevelGroup
+                                title="Feature casts"
+                                items={casts}
+                                span={getSpanForGroup(groupIndex, totalGroups, casts.length)}
+                                selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
+                                getSpellByName={getSpellByName}
+                                renderSpellName={renderSpellName}
+                                onTogglePrepared={onTogglePrepared}
+                                onRemoveSpell={onRemoveSpell}
+                              />
+                            )}
                           </div>
                         )
                       })()

@@ -116,22 +116,28 @@ without expending a spell slot. Uses are not tracked. Independent casting paths 
 This supports initial selection/correction; spent-use/reset accounting and level-up replacement events
 remain separate. New source producers and unknown prose meanings still require reviewed certification.
 
-## Evocation Savant
+## Revised Wizard Savant
 
-The native revised Evoker earns extra spellbook picks from the linked Evocation Savant
-declaration and its subclass's structured schedule. The initial gain offers two spells at
-Wizard level 3, then one more whenever a higher Wizard spell slot tier becomes available.
-Each slot uses the Wizard's historical class tier and the schedule's Evocation and Wizard-list
-filters. A spellbook contains level 1+ spells, so the source filter's level 0 contributes no
-candidates. Enabled exact routes follow the pinned joined Wizard class filter.
+The eight reviewed revised Wizard traditions earn extra spellbook picks from their own linked
+Savant declaration and subclass schedule. The initial gain offers two spells at Wizard level 3,
+then one more at each higher Wizard spell slot tier through level 17. Each pick uses the class
+tier available at that gain, the exact tradition's school and the current Wizard-list filter.
+The source's level 0 entry is outside the spellbook. Fixed cantrips and other automatic grants
+within the source schedule retain separate ownership.
 
 These selections use the shared managed spellbook. They share book uniqueness, can be prepared
 using ordinary capacity, and can qualify for Spell Mastery or Signature Spells. They do not
 satisfy ordinary learning slots or grant additional casting or preparation capacity. The
 current exact subclass, feature, schedule and parent casting authority must agree. Source
 loss retains intent. Intentional subclass or gain removal retires the affected book choices
-and their editor lifetimes, and unrelated learning remains available. Classic School of
-Evocation uses its copying rule. Other Savant producers require separate source verification.
+and their editor lifetimes, and unrelated learning remains available. Classic traditions retain
+their copying rules.
+
+Classic School of Illusion and revised Illusionist learn Minor Illusion at the subclass gain.
+A character who already knows it can choose a different Wizard cantrip in the same earning
+accordion. The extra slot preserves the ordinary cantrip and uses its own saved ownership.
+Revised Diviner's level-10 Third Eye shows See Invisibility as a conditional cast while that
+benefit is active. It uses no spellbook pick or preparation slot.
 
 ## Wizard spellbook specialties
 

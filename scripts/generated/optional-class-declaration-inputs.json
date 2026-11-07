@@ -126,7 +126,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.ts",
-      "sha256": "dc931f8253c0944b308bbed7023f9b64ac4c4fad3b843a7b1284626eff840f8b"
+      "sha256": "2abfa457a3799c677b3c700f8a8c868f50bd6c5c9838d938cede66f0228cc35c"
     },
     {
       "file": "src/lib/5etools/classReference.ts",
@@ -338,7 +338,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.json",
-      "sha256": "5a9ff8416de407ff65af74bf4ed301a60b27e327735bc12a09c6d191dfc2c975"
+      "sha256": "643f768c49c3856c52a72a0dd5a995be81fb3a1da53f7f9471a631f7d3800b1c"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
@@ -354,7 +354,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
-      "sha256": "882cc59d641cf4e776685a3adec8c86c1e9f08bacdf04c8e57c21734c41e29f3"
+      "sha256": "66b30b0d47ae2b372b4216b6c6954a3a9ae3ccadefd14485acbd2346513b7ab5"
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",

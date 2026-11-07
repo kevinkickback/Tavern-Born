@@ -87,6 +87,37 @@
     ]
   },
   {
+    "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
+    "digest": "ffa637b456039a2cf908ab25740d95752a22d3dad461a817aeba76873e4c6dac",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "subclassGainTarget": "class-feature|wizard subclass|wizard|xphb|3|xphb",
+    "skillModifier": {
+      "label": "Enchanting Conversationalist",
+      "ability": "intelligence",
+      "minimum": 1
+    },
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["deception", "intimidation", "persuasion"]
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
     "digest": "7efbc0948749d341cd93aead16290a279ed28ace770193f9e2dfcad9a9cedb5b",
     "fields": [

@@ -2,6 +2,7 @@ import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
 import { getClassOrderById } from './classOrderIdentity'
+import { wizardIllusionCantrips } from './wizardTraditionSpellSources'
 
 export type SelectedFeatureSpellAddress = [
   choiceId: string,
@@ -20,7 +21,7 @@ const normalized = (value: unknown): value is string =>
 export const selectedFeatureSpellAddress = (parts: SelectedFeatureSpellAddress) =>
   prefix + JSON.stringify(parts)
 
-export const LAND_BONUS_SPELL_ADDRESS = selectedFeatureSpellAddress([
+const LAND_BONUS_SPELL_ADDRESS = selectedFeatureSpellAddress([
   LAND_BONUS_TARGET,
   'subclassFeature',
   'bonus cantrip',
@@ -35,6 +36,29 @@ export const LAND_BONUS_SPELL_SLOT: ManagedClassSpellSlot = [
   LAND_BONUS_SPELL_ADDRESS,
   2,
   0,
+]
+
+export const wizardIllusionCantripSlots = wizardIllusionCantrips.map((rule) => ({
+  rule,
+  slot: [
+    ['subclass', 'wizard', rule.source, rule.subclass, rule.source],
+    'feature-cantrip',
+    selectedFeatureSpellAddress([
+      rule.target,
+      'subclassFeature',
+      norm(rule.name),
+      rule.source,
+      rule.target.split('|').slice(1).join('|'),
+      0,
+      0,
+    ]),
+    rule.level,
+    0,
+  ] satisfies ManagedClassSpellSlot,
+}))
+const declaredSubclassSlots = [
+  LAND_BONUS_SPELL_SLOT,
+  ...wizardIllusionCantripSlots.map(({ slot }) => slot),
 ]
 
 /** Structural saved intent only. Current source/selection, count and eligibility remain live. */
@@ -59,7 +83,7 @@ export function decodeSelectedFeatureSpellAddress(
           parts[3] !== 'xphb' ||
           parts[4] !== order.caster.target
         : parts[1] === 'subclassFeature'
-          ? value !== LAND_BONUS_SPELL_ADDRESS
+          ? !declaredSubclassSlots.some((slot) => slot[2] === value)
           : parts[4] !== null) ||
       parts[5] !== 0 ||
       parts[6] !== 0 ||
@@ -90,7 +114,7 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
         level === 1 &&
         ordinal === 0)) &&
     (address[1] !== 'subclassFeature' ||
-      JSON.stringify(value) === JSON.stringify(LAND_BONUS_SPELL_SLOT)) &&
+      declaredSubclassSlots.some((slot) => JSON.stringify(value) === JSON.stringify(slot))) &&
     Number.isSafeInteger(level) &&
     level >= 1 &&
     level <= 20 &&

@@ -127,6 +127,7 @@ export function ensureSpellProfiles(
     const subclassSpells = getEarnedSubclassSpellGrants(classData, entry, entry.levels, {
       selections: character.classChoiceSelections,
       spells: options?.visibleSpellLevels,
+      character,
     })
     if (
       options?.preserveUnavailableClassProfiles &&
@@ -159,9 +160,13 @@ export function ensureSpellProfiles(
     const grantedSubclassLeveledSpells = grantedSubclassSpells
       .filter((grant) => !grant.isCantrip)
       .map((grant) => grant.spellName)
-    const alwaysPreparedSubclassSpells = grantedSubclassSpells
-      .filter((grant) => grant.mode === 'prepared' || grant.mode === 'innate')
-      .map((grant) => grant.spellName)
+    const alwaysPreparedSubclassSpells = mergeSpellNames(
+      [],
+      grantedSubclassSpells
+        .filter((grant) => grant.mode === 'prepared' || grant.mode === 'innate')
+        .map((grant) => grant.spellName),
+      spellKey,
+    )
 
     // Subclass grants are derived from the current selection. Remove the previous
     // derived set before merging so changing subclasses or losing a level cannot
@@ -186,7 +191,11 @@ export function ensureSpellProfiles(
       ),
       fixedSpells:
         grantedSubclassSpells.length > 0
-          ? grantedSubclassSpells.map((grant) => grant.spellName)
+          ? mergeSpellNames(
+              [],
+              grantedSubclassSpells.map((grant) => grant.spellName),
+              spellKey,
+            )
           : undefined,
       alwaysPreparedSpells:
         alwaysPreparedSubclassSpells.length > 0 ? alwaysPreparedSubclassSpells : undefined,

@@ -169,7 +169,7 @@ export function ManagedClassSpellsDialog({
   )
   const savantHint =
     savantGain && pool?.schools
-      ? `Add an ${pool.schools.map(getSchoolName).join(' or ')} spell of up to ${getOrdinalForm(savantGain.tier)} level to your Wizard spellbook.`
+      ? `Add a Wizard spell from the ${pool.schools.map(getSchoolName).join(' or ')} school of up to ${getOrdinalForm(savantGain.tier)} level to your spellbook.`
       : undefined
   const scoped = new Set(rows.map((row) => managedClassSpellId(row.slot)))
   const peers = new Set([

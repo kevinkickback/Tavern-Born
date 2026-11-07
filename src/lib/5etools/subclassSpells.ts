@@ -1,4 +1,8 @@
-import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  formatSpellReference,
+  getSpellNameKey,
+  getSpellReferenceKey,
+} from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
@@ -29,6 +33,10 @@ import {
   getChosenWarlockSpellBlock,
   hasWarlockPatronSpellConfiguration,
 } from './warlockPatronConfigurations'
+import {
+  getWizardIllusionCantripOwner,
+  WIZARD_THIRD_EYE_TARGET,
+} from './wizardTraditionSpellSources'
 
 export interface SubclassSpellGrant {
   spellName: string
@@ -60,17 +68,19 @@ export function getEarnedSubclassSpellGrants(
   landContext?: {
     selections?: Character['classChoiceSelections']
     spells?: ReadonlyMap<string, number>
+    character?: Character
   },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
+  const norm = normalizeOwnerIdentity
   const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
   const revisedCircle = isRevisedInheritedCircleOwner(entry)
   const legacySorcerer = getLegacySorcererSpec(entry)
+  const illusion = getWizardIllusionCantripOwner(entry)
   const unavailable =
-    land || revisedCircle || legacySorcerer || hasWarlockPatronSpellConfiguration(entry)
+    land || revisedCircle || legacySorcerer || illusion || hasWarlockPatronSpellConfiguration(entry)
       ? []
       : undefined
-  const norm = normalizeOwnerIdentity
   if (
     !classData ||
     norm(classData.name) !== norm(entry.name) ||
@@ -137,8 +147,13 @@ export function getEarnedSubclassSpellGrants(
           }))
         : []
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    // The conditional Illusion grant is resolved after current ordinary cantrips.
+    if (illusion)
+      return grants.filter((grant) => getSpellNameKey(grant.spellName) !== 'minor illusion')
     const shadowCast = getShadowSorceryCast(classData, subclasses[0], classLevel)
     if (shadowCast) grants.push(shadowCast)
+    const thirdEyeCast = getDivinerThirdEyeCast(classData, subclasses[0], classLevel)
+    if (thirdEyeCast) grants.push(thirdEyeCast)
     if (getNativeEldritchHexOwner(entry)) {
       // Eldritch Hex has its own source proof. Expanded list access remains independent.
       const hex = getSpellReferenceKey(ELDRITCH_HEX_REFERENCE)
@@ -172,6 +187,65 @@ export function getEarnedSubclassSpellGrants(
     seen.add(key)
     return [{ ...grant, spellName, isCantrip: spells ? spells.get(key) === 0 : grant.isCantrip }]
   })
+}
+
+function getDivinerThirdEyeCast(
+  cls: Class5e,
+  subclass: Subclass5e,
+  classLevel: number,
+): SubclassSpellGrant | undefined {
+  const norm = normalizeOwnerIdentity
+  if (
+    classLevel < 10 ||
+    norm(cls.name) !== 'wizard' ||
+    norm(cls.source) !== 'xphb' ||
+    cls.sourceIdentityConflict ||
+    cls._copy ||
+    norm(subclass.name) !== 'diviner' ||
+    norm(subclass.source) !== 'xphb' ||
+    norm(subclass.shortName) !== 'diviner' ||
+    subclass.sourceIdentityConflict ||
+    subclass._copy ||
+    !matchesNativeSubclassGain(cls, 'class-feature|wizard subclass|wizard|xphb|3|xphb', 3) ||
+    !matchesNativeSubclassGain(
+      cls,
+      'class-feature|subclass feature|wizard|xphb|10|xphb',
+      10,
+      'at-level',
+    )
+  )
+    return undefined
+  const target = WIZARD_THIRD_EYE_TARGET
+  const rule = getDirectSubclassFeatureReference(subclass, target)?.feature
+  const blocks = subclass.additionalSpells
+  const innate = blocks?.length === 1 ? blocks[0].innate?.['10'] : undefined
+  if (
+    !rule ||
+    getSubclassFeatureIdentity(rule) !== target ||
+    rule.sourceIdentityConflict ||
+    rule.featureOptionSourceConflict ||
+    rule.isClassFeatureVariant ||
+    getFeatureSourceDigest(rule.entries ?? []) !==
+      'fbaf7a09e55be9472782b086ba4dd2ba6526a1874a03626fc33f535f93fc912c' ||
+    !Array.isArray(innate) ||
+    innate.length !== 1 ||
+    innate[0] !== 'see invisibility|xphb'
+  )
+    return undefined
+  return {
+    spellName: 'See Invisibility|XPHB',
+    level: 10,
+    isCantrip: false,
+    expectedSpellLevel: 2,
+    mode: 'cast-only',
+    castOnly: {},
+    feature: {
+      name: rule.name,
+      target,
+      castingNote:
+        'The Third Eye: Cast without a spell slot while this benefit is active. Activate as a Bonus Action. The benefit ends when you start a Short or Long Rest. Finish a Short or Long Rest before activating again.',
+    },
+  }
 }
 
 function getShadowSorceryCast(

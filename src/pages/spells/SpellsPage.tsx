@@ -264,6 +264,11 @@ export function SpellsPage() {
               alwaysPrepared,
               isFixed: fixedSet.has(spellKey),
               isPreparedCaster: true,
+              castingNote: getFixedClassSpellCastingNotes(
+                calculationContext.fixedClassSpellStatuses,
+                formatSpellReference(spell.name, spell.source),
+                profile,
+              ).join(' '),
             },
           }
         }),
@@ -356,6 +361,7 @@ export function SpellsPage() {
           kind: 'spell',
           prepared: false,
           isFixed: true,
+          castOnly: true,
           castingNote: cast.castingNote,
         })
       }
@@ -394,7 +400,7 @@ export function SpellsPage() {
       const profileItems = groupedItems.get(profile.id) ?? []
       const detail = detailsByProfileId.get(profile.id)
       const count = detail?.isTruePreparedCaster
-        ? profileItems.filter((item) => item.kind === 'cantrip').length +
+        ? profileItems.filter((item) => item.kind === 'cantrip' || item.castOnly).length +
           (preparedCasterItemsByProfile.get(profile.id)?.length ?? 0)
         : profileItems.length
       const view =

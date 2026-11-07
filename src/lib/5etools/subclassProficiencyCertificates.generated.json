@@ -146,6 +146,67 @@
       "copies": []
     },
     {
+      "target": "subclass-feature|enchanter|wizard|xphb|enchanter|au|3|au",
+      "rawDigest": "1efd67cc566b517bbe271b57ec7e7e39aeef95f1437ea000d8c79de202869a12",
+      "metadataDigest": "2a6bdabca5fc08da2b606fddc5955d0a177a01122e56bd5b0d156f2522d5f9af",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "22316cf2348e0a56c8be1ce852fbf43152cd964c25d1d60fc86e2e6ac5518c23"
+        },
+        {
+          "digest": "896e1b1fc8136d50de115a81b3426ff2a04721ec51583086700949a71087e021"
+        },
+        {
+          "digest": "b144522f1ba829670de6889f3d65c8e64f7b3049ee36024377c4841e3258e080",
+          "reference": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au"
+        },
+        {
+          "digest": "95adb673cab9fe1f7fc4004b19daf1d4e1231c6576f3e124f3ddd58c32a01c01",
+          "reference": "subclass-feature|enchantment savant|wizard|xphb|enchanter|au|3|au"
+        },
+        {
+          "digest": "5ee3e1e0e150ed2addb1573b115d529fd30913a35731c79773e925fb5e4ea584",
+          "reference": "subclass-feature|hypnotic presence|wizard|xphb|enchanter|au|3|au"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
+      "rawDigest": "9941db2510ec9f26878126c4380cf5378a793277da4373beafa62179b230b002",
+      "metadataDigest": "4bb736588ca84540e229f4da3e598070b1eab894116d0be92714e89051734e64",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "e444c75630a8f527cb98bc1367e31f0a6c169003af365d1b5ab3846e2242a12b"
+        },
+        {
+          "digest": "08b469688d6a76994a2b5c0d7b5a096dcd5a79d42cef8de941884f36f24aeca3"
+        }
+      ],
+      "copies": []
+    },
+    {
       "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
       "rawDigest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f",
       "metadataDigest": "9920b8bad34d257c6a6d427ef61e96ec36c982086bf734876291934691987925",
@@ -1191,6 +1252,42 @@
         {
           "target": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge",
           "refs": ["Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3", "Wind Speaker|Sorcerer||Storm|XGE|1"],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["wizard", "xphb", "enchanter", "au"],
+      "shortName": "Enchanter",
+      "rawDigest": "7ad4c6e6966d2ff7ca001374675dfc331974dc1312fc69eeaf7e541f50cd5b1b",
+      "metadataDigest": "0d617c075a08aa52ebba5c26e3543c4e0b6695135e150f21665be6ea8b5a8902",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "name",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Enchanter|Wizard|XPHB|Enchanter|AU|3|AU",
+        "Split Enchantment|Wizard|XPHB|Enchanter|AU|6|AU",
+        "Instinctive Charm|Wizard|XPHB|Enchanter|AU|10|AU",
+        "Alter Memories|Wizard|XPHB|Enchanter|AU|14|AU"
+      ],
+      "intro": "Enchanter|Wizard|XPHB|Enchanter|AU|3|AU",
+      "paths": [
+        {
+          "target": "subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au",
+          "refs": [
+            "Enchanter|Wizard|XPHB|Enchanter|AU|3|AU",
+            "Enchanting Conversationalist|Wizard|XPHB|Enchanter|AU|3|AU"
+          ],
           "level": 3
         }
       ]

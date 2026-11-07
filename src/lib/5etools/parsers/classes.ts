@@ -26,6 +26,7 @@ import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
 import { REVISED_AFFINITY_TARGET } from '@/lib/5etools/revisedElementalAffinity'
+import { isSavantSpellbookSourceTarget } from '@/lib/5etools/savantSpellbookRules'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
@@ -38,6 +39,7 @@ import {
   materializeSubclassFeatureCopies,
 } from '@/lib/5etools/subclassSourcePreparation'
 import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronFeatureSource'
+import { isDirectWizardTraditionSpellSource } from '@/lib/5etools/wizardTraditionSpellSources'
 import type { ClassFeature, ClassFeatureReference, SubclassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
@@ -415,7 +417,9 @@ function resolveInlineSubclassFeatureRef(
     const target = getSubclassFeatureIdentity(parsedRef)
     const declaredCoreSubclass =
       target &&
-      ['druid', 'sorcerer', 'warlock'].includes(parsedRef.className?.trim().toLowerCase() ?? '') &&
+      ['druid', 'sorcerer', 'warlock', 'wizard'].includes(
+        parsedRef.className?.trim().toLowerCase() ?? '',
+      ) &&
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
     if ('feature' in entry && (isNativeResilienceTarget(target) || declaredCoreSubclass)) {
       // Raw inline data cannot stand in for the missing declared source record.
@@ -488,6 +492,8 @@ function auditNativeSubclassCopies(
         (target) =>
           target === REVISED_AFFINITY_TARGET ||
           isNativeResilienceTarget(target) ||
+          isSavantSpellbookSourceTarget(target) ||
+          isDirectWizardTraditionSpellSource(target) ||
           getNativeDraconicFeatureOwner(target) ||
           getNativeWarlockPatronFeatureOwner(target),
       ),

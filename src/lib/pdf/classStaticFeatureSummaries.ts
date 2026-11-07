@@ -76,6 +76,41 @@ const reviewedSorcererOrigins = {
   ],
 }
 
+const sharedWizardTraditions = [
+  'war magic|xge',
+  'chronurgy magic|egw',
+  'graviturgy magic|egw',
+  'order of scribes|tce',
+]
+const reviewedWizardTraditions = {
+  phb: [
+    ...sharedWizardTraditions,
+    'bladesinging|tce',
+    ...[
+      'abjuration',
+      'conjuration',
+      'divination',
+      'enchantment',
+      'evocation',
+      'illusion',
+      'necromancy',
+      'transmutation',
+    ].map((school) => `school of ${school}|phb`),
+  ],
+  xphb: [
+    ...sharedWizardTraditions,
+    'abjurer|xphb',
+    'diviner|xphb',
+    'evoker|xphb',
+    'illusionist|xphb',
+    'bladesinger|frhof',
+    'conjurer|au',
+    'enchanter|au',
+    'necromancer|au',
+    'transmuter|au',
+  ],
+}
+
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
   const tables = entries
@@ -270,16 +305,35 @@ export function getClassStaticFeatureSummaries(
     }
     if (name === 'wizard') {
       if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
+      const tradition =
+        getSourceCompatibility(source, character.originSystem ?? '2014').compatible &&
+        reviewedWizardTraditions[source].includes(
+          `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
+        )
+          ? getDeclaredSubclassStaticFeatures(
+              cls,
+              entry,
+              catalogs,
+              source === 'phb'
+                ? { level: 2, intro: 'arcane tradition', later: 'arcane tradition feature' }
+                : { level: 3, intro: 'wizard subclass', later: 'subclass feature' },
+            ).flatMap((feature) =>
+              featureSummary(feature).map((summary) => ({
+                ...summary,
+                replaces: savedClassLabel(character, entry, feature),
+              })),
+            )
+          : []
       const feature = getCurrentDirectClassFeature(
         cls,
         catalogs,
         `class-feature|arcane recovery|wizard|${source}|1|${source}`,
       )
-      if (!feature) return []
+      if (!feature) return tradition
       const [summary] = featureSummary(feature)
-      if (!summary) return []
+      if (!summary) return tradition
       const replaces = savedClassLabel(character, entry, feature)
-      return [replaces ? { ...summary, replaces } : summary]
+      return [replaces ? { ...summary, replaces } : summary, ...tradition]
     }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
     const subclasses = cls.subclasses?.filter((subclass) =>

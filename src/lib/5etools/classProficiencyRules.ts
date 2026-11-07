@@ -1,3 +1,4 @@
+import type { AbilityName } from '@/types/character'
 import type { ClassProficiencyDomain } from '@/types/classRules'
 import generated from './classProficiencyRules.generated.json' with { type: 'json' }
 import subclasses from './subclassProficiencyRules.generated.json' with { type: 'json' }
@@ -21,6 +22,8 @@ export interface ClassProficiencyRule {
   optional: boolean
   /** Only the certified historical fallback descriptor admits acquisition setup. */
   proficiencyAtGain?: string
+  subclassGainTarget?: string
+  skillModifier?: { label: string; ability: AbilityName; minimum: number }
   domains: readonly ClassProficiencyRuleDomain[]
 }
 
