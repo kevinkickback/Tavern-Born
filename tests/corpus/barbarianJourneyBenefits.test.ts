@@ -17,6 +17,10 @@ import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { giantPowerSpellSlots } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import {
+  getCharacterClassResources,
+  WARRIOR_OF_THE_GODS_RESOURCE_ID,
+} from '@/lib/calculations/classResources'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import {
   createClassChoiceCatalogs,
@@ -298,6 +302,56 @@ test.each(catalogsToTest)(
             )
             expect(track?.max ?? 0).toBe(max)
           }
+          const zealot = {
+            ...actor(17),
+            classProgression: [
+              {
+                ...actor(17).classProgression[0],
+                subclass: 'Path of the Zealot',
+                subclassSource: 'XPHB',
+              },
+            ],
+            classResources: { [WARRIOR_OF_THE_GODS_RESOURCE_ID]: 2 },
+          }
+          const tracked = (classes: typeof current.classes) => {
+            const filtered = { ...catalogs, classes }
+            const track = (row: { id: string }) => row.id === WARRIOR_OF_THE_GODS_RESOURCE_ID
+            return {
+              app: getCharacterClassResources(zealot, () => cls, {
+                catalogs: filtered,
+                charismaModifier: 0,
+                unlimitedWildShape: false,
+              }).find(track),
+              pdf: createCharacterSheetViewModel(zealot, raw, {
+                ...lookups,
+                classChoiceClasses: classes,
+                classChoiceFeatureCatalogs: filtered,
+              }).classResourceRows.find(track),
+            }
+          }
+          const filteredOut = current.classes.filter(
+            (row) => row.name !== 'Barbarian' || row.source !== 'XPHB',
+          )
+          expect(tracked(filteredOut)).toEqual({ app: undefined, pdf: undefined })
+          expect(tracked([...current.classes, cls])).toEqual({ app: undefined, pdf: undefined })
+          expect(
+            tracked(
+              current.classes.map((row) =>
+                row === cls
+                  ? {
+                      ...row,
+                      subclasses: row.subclasses?.filter(
+                        (path) => path.name !== 'Path of the Zealot',
+                      ),
+                    }
+                  : row,
+              ),
+            ),
+          ).toEqual({ app: undefined, pdf: undefined })
+          expect(tracked(current.classes)).toMatchObject({
+            app: { current: 2, max: 7 },
+            pdf: { max: 7, used: 5 },
+          })
         }
         for (const [level, names] of [
           [2, []],

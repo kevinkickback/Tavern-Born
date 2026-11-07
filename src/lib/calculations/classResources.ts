@@ -42,7 +42,7 @@ const warriorOfTheGods: ClassResourceDef = {
   restType: 'long',
 }
 
-function hasCurrentHealingLight(
+function getCurrentResourceClass(
   character: Character,
   entry: CharacterClassEntry,
   catalogs?: ClassChoiceFeatureCatalogs,
@@ -50,18 +50,11 @@ function hasCurrentHealingLight(
   if (
     character.originSystem !== '2024' ||
     !catalogs?.classes ||
-    !getNativeHealingLightOwner(entry) ||
     character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1
   )
-    return false
+    return undefined
   const current = catalogs.classes.filter((row) => findClassReference(entry, [row]))
-  return (
-    current.length === 1 &&
-    !!getCurrentNativeWarlockPatronRules(current[0], entry, catalogs)?.getNestedFeature(
-      HEALING_LIGHT_TARGET,
-      HEALING_LIGHT_RULE_DIGEST,
-    )
-  )
+  return current.length === 1 ? current[0] : undefined
 }
 
 /** Resolve one class resource's maximum from its rule definition and active effects. */
@@ -100,7 +93,8 @@ export function getCharacterClassResources(
     unlimitedWildShape: boolean
   },
 ) {
-  const currentSorcerer = getCurrentNativeSorcerer(character, options.catalogs)
+  const { catalogs } = options
+  const currentSorcerer = getCurrentNativeSorcerer(character, catalogs)
   const stored = character.classResources ?? {}
   const healingDiceLimit = Math.max(1, options.charismaModifier)
   return character.classProgression.flatMap((entry) => {
@@ -112,13 +106,18 @@ export function getCharacterClassResources(
         : []
       : getClassResourceDefs(resolveClass(entry), level)
     const earned = [...definitions]
-    if (hasCurrentHealingLight(character, entry, options.catalogs)) earned.push(healingLight)
+    const current = getCurrentResourceClass(character, entry, catalogs)
     if (
-      character.originSystem === '2024' &&
-      character.classProgression.filter((row) => findClassReference(entry, [row])).length === 1 &&
-      hasCurrentWarriorOfTheGods(resolveClass(entry), entry)
+      catalogs &&
+      current &&
+      getNativeHealingLightOwner(entry) &&
+      getCurrentNativeWarlockPatronRules(current, entry, catalogs)?.getNestedFeature(
+        HEALING_LIGHT_TARGET,
+        HEALING_LIGHT_RULE_DIGEST,
+      )
     )
-      earned.push(warriorOfTheGods)
+      earned.push(healingLight)
+    if (hasCurrentWarriorOfTheGods(current, entry)) earned.push(warriorOfTheGods)
     return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&
