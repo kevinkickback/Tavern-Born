@@ -138,6 +138,7 @@ export function useClassProvenanceMutations() {
       selected: readonly NormalizedChoiceOptionReference[],
       favoredEnemy?: FavoredEnemySetup,
       expectedSelectionHandle?: string,
+      progressionGainLevel?: number,
     ) => {
       const latest = useCharacterStore.getState().activeCharacter
       if (
@@ -165,6 +166,7 @@ export function useClassProvenanceMutations() {
         current?.classChoices,
         favoredEnemy,
         expectedSelectionHandle,
+        progressionGainLevel,
       )
       if (Object.keys(result.characterPatch).length === 0) return
       updateCharacter(latest.id, {

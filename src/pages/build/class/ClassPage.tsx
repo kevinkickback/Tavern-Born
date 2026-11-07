@@ -12,6 +12,10 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup, useSpellLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import {
+  getClassChoiceSlotLevels,
+  getProgressiveChoiceGainCount,
+} from '@/lib/5etools/classChoiceNormalization'
+import {
   getClassFeatureGroups,
   getSelectedSubclassData,
   getSubclassSelectionInfo,
@@ -53,6 +57,7 @@ import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSub
 import {
   buildLevelsToShow,
   type ClassDetailsSelection,
+  projectClassLevelFeatures,
   resolveSubclassDetailsSelection,
 } from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
@@ -365,8 +370,17 @@ export function BuildClassPage() {
       (state) => state.selection.choiceId === requestedChoiceId,
     )
     if (!requestedChoice && !requestedRecovery) return
-    if (requestedChoice) classChoiceController.open(requestedChoice)
-    else if (requestedRecovery) classChoiceController.openRecovery(requestedRecovery)
+    if (requestedChoice) {
+      if (getProgressiveChoiceGainCount(requestedChoice, requestedChoice.level) !== undefined) {
+        const level =
+          requestedLevel !== undefined &&
+          requestedLevel <= viewingClassLevel &&
+          getProgressiveChoiceGainCount(requestedChoice, requestedLevel)
+            ? requestedLevel
+            : requestedChoice.level
+        classChoiceController.open(requestedChoice, level)
+      } else classChoiceController.open(requestedChoice)
+    } else if (requestedRecovery) classChoiceController.openRecovery(requestedRecovery)
     const next = new URLSearchParams(searchParams)
     next.delete('choice')
     next.delete('class')
@@ -379,6 +393,8 @@ export function BuildClassPage() {
     classChoiceController.openRecovery,
     requestedChoiceId,
     requestedClassKey,
+    requestedLevel,
+    viewingClassLevel,
     searchParams,
     setSearchParams,
     viewingClassKey,
@@ -430,9 +446,6 @@ export function BuildClassPage() {
     activity,
   ])
 
-  const featuresByLevel = useMemo(() => {
-    return getClassFeatureGroups(allClassFeatures)
-  }, [allClassFeatures])
   const { subclassLevel, subclassFeatureName } = useMemo(() => {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
@@ -449,7 +462,11 @@ export function BuildClassPage() {
         viewingClassLevel,
         spellChoicesByLevel,
         classChoiceLevels: [
-          ...classChoiceController.choices.map((choice) => choice.level),
+          ...classChoiceController.choices.flatMap((choice) =>
+            getProgressiveChoiceGainCount(choice, choice.level) !== undefined
+              ? getClassChoiceSlotLevels(choice)
+              : [choice.level],
+          ),
           ...classChoiceController.diagnostics.map((diagnostic) => diagnostic.level ?? 1),
           ...classChoiceController.recoveries.map((state) => state.selection.classLevel),
           ...(character && activity && viewingClass
@@ -493,9 +510,30 @@ export function BuildClassPage() {
         : [],
     [viewingClassDisplayData?.entries],
   )
-  const viewingSubclassDisplayData = viewingClassDisplayData?.subclasses?.find(
+  const matchingSubclasses = viewingClassDisplayData?.subclasses?.filter(
     (subclass) =>
       subclass.name === viewingSubclassData?.name && subclass.source === viewingSubclassData.source,
+  )
+  const viewingSubclassDisplayData =
+    matchingSubclasses?.length === 1 ? matchingSubclasses[0] : undefined
+  const featuresByLevel = useMemo(
+    () =>
+      projectClassLevelFeatures(
+        getClassFeatureGroups(allClassFeatures),
+        viewingClassDisplayData,
+        viewingSubclassDisplayData,
+        viewingSubclassData,
+        classChoiceController.choices,
+        viewingClassLevel,
+      ),
+    [
+      allClassFeatures,
+      viewingClassDisplayData,
+      viewingSubclassDisplayData,
+      viewingSubclassData,
+      classChoiceController.choices,
+      viewingClassLevel,
+    ],
   )
   const allSpells = spells as Spell5e[]
   const [showLevelUpHint, setShowLevelUpHint] = useState(
@@ -679,7 +717,9 @@ export function BuildClassPage() {
           key={
             classChoiceController.activeChoice.id +
             ':' +
-            String(classChoiceController.activeRemovalOnly)
+            String(classChoiceController.activeRemovalOnly) +
+            ':' +
+            String(classChoiceController.activeGainLevel ?? '')
           }
           choice={classChoiceController.activeChoice}
           removalOnly={classChoiceController.activeRemovalOnly}

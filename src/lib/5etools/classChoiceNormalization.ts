@@ -1148,3 +1148,34 @@ export function getClassChoiceSlotLevels(choice: NormalizedCharacterChoice): num
   })
   return levels
 }
+
+/** Cumulative optional-feature pools whose choices can be edited independently at each gain. */
+export function getProgressiveChoiceGainCount(choice: NormalizedCharacterChoice, level: number) {
+  const counts = choice.selectionCountByLevel
+  if (
+    choice.kind !== 'optional-feature' ||
+    choice.source.kind !== 'optional-feature-progression' ||
+    choice.repeatable ||
+    choice.optionFilter?.entityType !== 'optionalFeature' ||
+    // Invocations have a dedicated editor for dependent choices and cantrip targets.
+    choice.optionFilter.featureTypes?.some((type) => type === 'EI') ||
+    !counts.some((count) => count > getRequiredChoiceSelectionCount(choice, choice.level)) ||
+    !counts.every((count, index) => Number.isInteger(count) && count >= (counts[index - 1] ?? 0))
+  )
+    return undefined
+  return (
+    getRequiredChoiceSelectionCount(choice, level) -
+    getRequiredChoiceSelectionCount(choice, level - 1)
+  )
+}
+
+/** Unrecognized saved slots appear in the first group for removal, never for automatic reassignment. */
+export function getProgressiveChoiceReviewLevel(
+  choice: NormalizedCharacterChoice,
+  slotLevel: number,
+  classLevel: number,
+) {
+  return slotLevel <= classLevel && getProgressiveChoiceGainCount(choice, slotLevel)
+    ? slotLevel
+    : choice.level
+}
