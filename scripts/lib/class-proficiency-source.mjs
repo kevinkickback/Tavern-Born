@@ -73,6 +73,37 @@ function validateShape(feature) {
 }
 
 /** Source book tables are development-time semantic input, not a runtime full-book dependency. */
+export function deriveFaerunLanguagePool(book) {
+  const tables = []
+  const visit = (entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return
+    if (entry.type === 'table' && entry.caption === 'Standard Languages of Faerûn')
+      tables.push(entry)
+    if (Array.isArray(entry.entries)) entry.entries.forEach(visit)
+  }
+  visit(book?.data?.[2])
+  const [table] = tables
+  if (
+    tables.length !== 1 ||
+    !same(table.colLabels, ['1d100', 'Language', 'Origin']) ||
+    !Array.isArray(table.rows) ||
+    !table.rows.length
+  )
+    fail('Missing or ambiguous Faerûn language table')
+  const records = table.rows.map((row) => {
+    const language =
+      Array.isArray(row) &&
+      row.length === 3 &&
+      typeof row[1] === 'string' &&
+      /^\{@language ([^|{}]+)\|(XPHB|FRHoF)\}$/.exec(row[1])
+    if (!language) fail('Unsupported Faerûn language table row')
+    return [language[1].toLowerCase(), language[2]]
+  })
+  if (new Set(records.map(([name]) => name)).size !== records.length)
+    fail('Duplicate Faerûn language')
+  return records
+}
+
 export function deriveLanguagePool(book) {
   // The feature links {@book chapter 2|XPHB|2|Choose Languages}. Header matches
   // elsewhere cannot substitute for that target (5etools uses a book chapter index).

@@ -178,15 +178,17 @@ test.each(stacks)(
       expect(project().declaredClassFeatureSummaries).toEqual(vm.declaredClassFeatureSummaries)
 
       const fighter = { name: 'Fighter', source, levels: 7 }
-      expect(
-        project({ ...character, classProgression: [fighter] }).declaredClassFeatureSummaries,
-      ).toEqual([])
+      const fighterRules = project({
+        ...character,
+        classProgression: [fighter],
+      }).declaredClassFeatureSummaries!
+      expect(fighterRules.map((row) => row.compactText)).not.toContain('Arcane Recovery')
       expect(
         project({
           ...character,
           classProgression: [{ ...wizard, levels: 5 }, fighter],
         }).declaredClassFeatureSummaries,
-      ).toEqual(vm.declaredClassFeatureSummaries)
+      ).toEqual([...vm.declaredClassFeatureSummaries!, ...fighterRules])
       expect(
         project({ ...character, classProgression: [wizard, wizard] }).declaredClassFeatureSummaries,
       ).toEqual([])

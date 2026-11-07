@@ -318,10 +318,16 @@ test.each(stacks)(
     expect(summaries('PHB', 10)).toContain('Natural Recovery')
     expect(summaries('XPHB', 10)).toContain('Wild Shape')
     const multiclass = actor('XPHB', 1)
-    multiclass.classProgression.unshift({ name: 'Fighter', source: 'XPHB', levels: 9 })
+    const fighter = { name: 'Fighter', source: 'XPHB', levels: 9 }
+    multiclass.classProgression.unshift(fighter)
+    const fighterRules = createCharacterSheetViewModel(
+      { ...multiclass, classProgression: [fighter] },
+      raw,
+      raw,
+    ).declaredClassFeatureSummaries
     expect(
       createCharacterSheetViewModel(multiclass, raw, raw).declaredClassFeatureSummaries,
-    ).toEqual([])
+    ).toEqual(fighterRules)
     const moon = actor('PHB', 2)
     moon.classProgression[0].subclass = 'Circle of the Moon'
     expect(createCharacterSheetViewModel(moon, raw, raw).declaredClassFeatureSummaries).toEqual([

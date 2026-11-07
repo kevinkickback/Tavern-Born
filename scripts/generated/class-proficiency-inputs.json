@@ -85,6 +85,10 @@
     {
       "file": "book/book-xphb.json",
       "sha256": "602e6c018962729b292810b4f5c2dca7f4f25ab5bc6241bdd18a058d171a13ed"
+    },
+    {
+      "file": "book/book-frhof.json",
+      "sha256": "18028f8e838a8082316229471b327fa9d75db01c61fecf65ed93218f36f628df"
     }
   ],
   "bundledLifeDomainInput": {
@@ -110,7 +114,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "b16e1e206e26a0cba77c8dc81397e288f4b87cd7c3ca44ab3512594f09c08da8"
+      "sha256": "6b3fc45d26c415bada493c3c112b2fcbeb13bc5202cbab99950e43fd71855c35"
     }
   ],
   "toolClassificationDependencies": [
@@ -158,7 +162,11 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "468b7e08f9b64ff5f695b9b56d0e09ccc98774306fd8ab2dd6d2418afd097275"
+      "sha256": "47a3e1491c1e9406f93af8429dfad17c0bccaff0f3e022b1f2c4f1fa677aea0c"
+    },
+    {
+      "file": "scripts/lib/shared-registry-source.mjs",
+      "sha256": "48827b3bd67b85bcd1edf7ce6766d6d9eaf836daf82d5bf6d062611f1557a4d3"
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",
@@ -205,6 +213,30 @@
         "Tinker's Tools|XPHB",
         "Weaver's Tools|XPHB",
         "Woodcarver's Tools|XPHB"
+      ]
+    },
+    {
+      "file": "items.json",
+      "identity": "itemGroup:Artisan's Tools|PHB",
+      "entriesDigest": "2a3dccb9e127858039259488169796a5234d11b06491e4e5f5b63d7945cfced4",
+      "memberIdentities": [
+        "Alchemist's Supplies|PHB",
+        "Brewer's Supplies|PHB",
+        "Calligrapher's Supplies|PHB",
+        "Carpenter's Tools|PHB",
+        "Cartographer's Tools|PHB",
+        "Cobbler's Tools|PHB",
+        "Cook's Utensils|PHB",
+        "Glassblower's Tools|PHB",
+        "Jeweler's Tools|PHB",
+        "Leatherworker's Tools|PHB",
+        "Mason's Tools|PHB",
+        "Painter's Supplies|PHB",
+        "Potter's Tools|PHB",
+        "Smith's Tools|PHB",
+        "Tinker's Tools|PHB",
+        "Weaver's Tools|PHB",
+        "Woodcarver's Tools|PHB"
       ]
     }
   ]

@@ -77,6 +77,23 @@ saved details, legacy feature effects and revised feat effects use the effective
 Revised configured feat options, including spells, follow their exact slot owner. Mixed-edition
 style equivalence and styles from other classes use their existing rules.
 
+### Fighter subclass gains
+
+Arcane Shot and Rune Carver take their earned slot counts from the current progression.
+Revised Arcane Shot and Battle Master use their source filters. Rune Carver reads the qualified option references
+in its producer. Additional slots are editable from their earning accordions, and saved choices
+keep their original levels. The source records replacement opportunities for reference during play.
+
+Cavalier and Samurai share one quota between the listed skills and an eligible language.
+Saved picks and grants carry the chosen domain. Samurai's later saving throw and revised Arcane
+Archer's individual skill alternatives record the proficiency present at acquisition. Current
+Fighter starting skills determine revised Arcane Archer's replacement pool. Banneret derives its
+language pool from both named books and its skills from the separate Well Spoken clause.
+
+Current, earned source rules supply Fighter subclass resource counts, recovery, and passive
+effects. The sheet prints actual earned archetype rules and keeps their source printing separate
+from an inheriting class. Initiative triggers, combat exchanges, and rest events remain descriptive.
+
 ### Class features and choices at their earning levels
 
 Later Class accordions show the selected subclass's active, source-qualified features. They

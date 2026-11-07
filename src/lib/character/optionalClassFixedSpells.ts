@@ -1,7 +1,7 @@
 import { parseSpellToken } from '@/lib/5etools/spellTokens'
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import type { Character, OptionalClassFeatureOwner } from '@/types/character'
-import type { ManagedClassSpellSlot } from '@/types/classCasting'
+import type { FeatureCastOnlyRules, ManagedClassSpellSlot } from '@/types/classCasting'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
@@ -15,7 +15,7 @@ export interface ClassFixedSpellGrant {
 export interface ClassFixedSpellStatus extends ClassFixedSpellGrant {
   prepared: boolean
   active: boolean
-  castOnly?: { castingTime?: string; ignoresMaterial?: true }
+  castOnly?: FeatureCastOnlyRules
   reason?: string
   castingNote?: string
 }

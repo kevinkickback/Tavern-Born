@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Cleric journey rules at 6,823,467 B renderer and 1,539,347 B initial.
-  // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6664 * KIB,
+  // Fighter journey measured 6,829,474 B renderer and 1,538,826 B initial with shared certificates.
+  // The existing initial allowance still covers the smaller initial output.
+  rendererCode: 6670 * KIB,
   initialRendererScript: 1504 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

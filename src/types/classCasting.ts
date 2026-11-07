@@ -47,3 +47,8 @@ export interface ManagedClassSpellChoice {
   /** Preparation requested for this learned spell, including while its rules are unavailable. */
   prepare?: true
 }
+export interface FeatureCastOnlyRules {
+  castingTime?: string
+  ignoresMaterial?: true
+  ignoresComponents?: true
+}

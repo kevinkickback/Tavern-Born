@@ -456,6 +456,7 @@ export function getClassStaticFeatureSummaries(
         name !== 'barbarian' &&
         name !== 'cleric' &&
         name !== 'druid' &&
+        name !== 'fighter' &&
         name !== 'paladin' &&
         name !== 'wizard' &&
         name !== 'warlock') ||
@@ -470,6 +471,43 @@ export function getClassStaticFeatureSummaries(
       return getSourceCompatibility(source, character.originSystem ?? '2014').compatible
         ? getClericStaticSummaries(character, cls, entry, catalogs, source)
         : []
+    if (name === 'fighter') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const classic = source === 'phb'
+      const earned = (cls.classFeatureRefs ?? []).filter(
+        (ref) => ref.level && ref.level <= entry.levels,
+      )
+      const [extraAttack, previousAttack] = earned
+        .filter((ref) =>
+          /^(?:extra attack(?: \(\d+\))?|(?:two|three) extra attacks)$/i.test(ref.name),
+        )
+        .sort((left, right) => (right.level ?? 0) - (left.level ?? 0))
+      const tactical = new Set([
+        'tactical mind',
+        'tactical shift',
+        'tactical master',
+        'studied attacks',
+      ])
+      const baseRules = [
+        ...(extraAttack && extraAttack.level !== previousAttack?.level ? [extraAttack] : []),
+        ...(classic ? [] : earned.filter((ref) => tactical.has(norm(ref.name)))),
+      ]
+      const base = baseRules.flatMap((ref) => {
+        const target = getClassFeatureIdentity(ref)
+        const current = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        return current ? [current] : []
+      })
+      const archetype = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      return [...base, ...archetype].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
     if (name === 'bard') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       const jack = entry.levels >= 2 && getCurrentBardJackOfAllTrades(cls, catalogs)

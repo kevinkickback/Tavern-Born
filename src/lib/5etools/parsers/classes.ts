@@ -431,7 +431,7 @@ function resolveInlineSubclassFeatureRef(
     const target = getSubclassFeatureIdentity(parsedRef)
     const declaredCoreSubclass =
       target &&
-      ['druid', 'paladin', 'sorcerer', 'warlock', 'wizard'].includes(
+      ['druid', 'fighter', 'paladin', 'sorcerer', 'warlock', 'wizard'].includes(
         parsedRef.className?.trim().toLowerCase() ?? '',
       ) &&
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
@@ -510,6 +510,7 @@ function auditNativeSubclassCopies(
           isBarbarianPathChoiceSource(target) ||
           isRevisedZealotResourceSource(target) ||
           isDirectBarbarianRitualTarget(target) ||
+          isDirectFighterRuleTarget(target) ||
           isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
@@ -540,7 +541,10 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     subclassRecords,
     auditInheritedOathSpellRoots(
       subclassRecords,
-      auditInheritedBarbarianRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+      auditInheritedBarbarianRoots(
+        subclassRecords,
+        auditInheritedFighterRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+      ),
     ),
     records,
   )
@@ -628,3 +632,8 @@ export function parseClasses(data: unknown): unknown[] {
 export function parseClassFeatures(data: unknown): unknown[] {
   return parsePreparedClassFeatures(prepareClassDocument(data))
 }
+
+import {
+  auditInheritedFighterRoots,
+  isDirectFighterRuleTarget,
+} from '@/lib/5etools/nativeSubclassFeatureSource'

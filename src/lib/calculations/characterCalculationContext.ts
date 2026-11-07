@@ -43,7 +43,7 @@ import {
 } from '@/lib/character/classProficiencyAuthority'
 import {
   getStartingSkillChoiceLedger,
-  refreshClassProficiencyState,
+  resolveClassProficiencyState,
 } from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
@@ -106,6 +106,7 @@ import {
 } from './characterEffects'
 import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { deriveFighterPassiveEffects } from './fighterPassiveEffects'
 import { getAbilityModifier, getProficiencyBonus } from './gameRules'
 import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement, getWalkingSpeed } from './movement'
@@ -487,11 +488,12 @@ export function createCharacterCalculationContext(
   )
   if (startingSkillLedger !== character.provenance)
     character = { ...character, provenance: startingSkillLedger }
-  character = refreshClassProficiencyState(character, proficiencyClasses, {
+  const proficiencyState = resolveClassProficiencyState(character, {
     ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
     featExpertiseFeats:
       primaryLookups.featExpertiseFeats ?? Object.values(primaryLookups.featsByKey ?? {}),
   })
+  character = proficiencyState.character
   const background = resolveBackgroundReference(
     { name: character.background, source: character.backgroundSource },
     primaryLookups,
@@ -603,13 +605,23 @@ export function createCharacterCalculationContext(
       operation: { kind: 'add', value: Math.max(1, abilityScores.modifiers.wisdom) },
     }))
   })
+  const fighterEffects = deriveFighterPassiveEffects(character, choiceCatalogs?.classes)
+  const fighterHalfProficiencySkills = new Set(
+    fighterEffects.flatMap(({ target, operation }) =>
+      target.kind === 'skill-modifier' && operation.kind === 'add' ? [target.skill] : [],
+    ),
+  )
   const sourceEffects = [
     ...baseSourceEffects,
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
-    ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers),
+    ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers, proficiencyState.fixed),
     ...deriveGeniesSplendorEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...deriveBardDanceEffects(character, choiceCatalogs, abilityScores.modifiers),
-    ...deriveBardJackOfAllTradesEffects(character, choiceCatalogs),
+    ...deriveBardJackOfAllTradesEffects(character, choiceCatalogs).filter(
+      ({ target }) =>
+        target.kind !== 'skill-modifier' || !fighterHalfProficiencySkills.has(target.skill),
+    ),
+    ...fighterEffects,
     ...deriveBarbarianPassiveEffects(
       character,
       choiceCatalogs,

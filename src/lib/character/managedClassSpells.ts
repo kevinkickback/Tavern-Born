@@ -624,7 +624,13 @@ export function projectManagedClassSpellState(
   const oathReprints =
     inheritedDomain ||
     character.classProgression.some(
-      (entry) => isRevisedInheritedOathOwner(entry) || isRevisedAncestralGuardian(entry),
+      (entry) =>
+        isRevisedInheritedOathOwner(entry) ||
+        isRevisedAncestralGuardian(entry) ||
+        (norm(entry.name) === 'fighter' &&
+          norm(entry.source) === 'xphb' &&
+          norm(entry.subclass) === 'psi warrior' &&
+          norm(entry.subclassSource) === 'tce'),
     )
       ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
       : undefined
@@ -1083,6 +1089,9 @@ export function projectManagedClassSpellState(
     status.active = true
     if (pool.featureName === 'Giant Power')
       status.castingNote = 'Giant Power: Wisdom is your spellcasting ability for this cantrip.'
+    if (pool.featureName === 'Arcane Archer Lore' && choice.slot[0][4] === 'au')
+      status.castingNote =
+        'Arcane Archer Lore: Intelligence is your spellcasting ability for this cantrip.'
     const reference = formatSpellReference(choice.target.name, choice.target.source)
     profiles = profiles.map((profile) =>
       profile.id === toClassProfileId(entry.name, entry.source) &&

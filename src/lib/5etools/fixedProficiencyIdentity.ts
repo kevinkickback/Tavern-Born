@@ -1,14 +1,46 @@
+import type { CharacterClassChoiceSelection } from '@/types/character'
 import { CLASS_ORDERS } from './classOrderIdentity'
+import { getClassProficiencyChoiceId } from './classProficiencyIdentity'
 import {
   FIXED_PROFICIENCY_PREFIX,
   type FixedProficiencyRelation,
   getFixedProficiencyId,
 } from './fixedProficiencyAddress'
-import { DIRECT_FIXED_CLASS_CERTIFICATES, fixedProficiencyRule } from './fixedProficiencyRules'
+import {
+  DIRECT_FIXED_CLASS_CERTIFICATES,
+  type FixedProficiencyRule,
+  fixedProficiencyRule,
+} from './fixedProficiencyRules'
 import { getSubclassProficiencyRootCertificate } from './subclassProficiencyRegistry'
 
 export { type FixedProficiencyRelation, getFixedProficiencyId } from './fixedProficiencyAddress'
 export const isFixedProficiencyId = (id: string) => id.startsWith(FIXED_PROFICIENCY_PREFIX)
+
+export function getFixedTrainingSkills(
+  rule: FixedProficiencyRule,
+  relation: FixedProficiencyRelation,
+  selections: readonly CharacterClassChoiceSelection[] | undefined,
+) {
+  const skills = rule.training?.skills ?? []
+  if (!rule.startingSkillFallbacks?.length || relation.owner.length !== 4) return skills
+  const [name, source, subclassName, subclassSource] = relation.owner
+  return skills.filter((skill) => {
+    if (!rule.startingSkillFallbacks?.includes(skill)) return true
+    const id = getClassProficiencyChoiceId(
+      { name, source, subclassName, subclassSource },
+      relation.target,
+      'skills',
+      relation.level,
+      skill,
+    )
+    return !selections?.some(
+      (row) =>
+        row.choiceId === id &&
+        row.proficiencyAtGain?.name === skill &&
+        row.proficiencyAtGain.alreadyProficient,
+    )
+  })
+}
 
 export const getTrainingClassOrder = ({ owner, target, level }: FixedProficiencyRelation) =>
   owner.length === 2 && owner[1] === 'xphb' && level === 1

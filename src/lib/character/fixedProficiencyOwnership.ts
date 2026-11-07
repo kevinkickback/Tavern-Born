@@ -105,6 +105,7 @@ export function grantFixedProficiencies(
     ),
   )
   for (const owner of current) {
+    if (owner.trainingInactive) continue
     const automatic = owner.rule.kind === 'proficient-tools'
     const language = owner.rule.kind === 'fixed-languages'
     if (automatic && phase === 'foundations') continue

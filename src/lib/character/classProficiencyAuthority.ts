@@ -5,7 +5,10 @@ import {
 } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
 import { findClassReference } from '@/lib/5etools/classReference'
-import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import {
+  getCurrentNativeSubclassGain,
+  matchesNativeSubclassGain,
+} from '@/lib/5etools/nativeSubclassGain'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
   getSubclassProficiencyOwner,
@@ -22,6 +25,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
+import type { CurrentFixedProficiency } from './fixedProficiencyAuthority'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { getOptionalClassProficiencyCandidates } from './optionalClassProficiencyChoices'
 
@@ -113,6 +117,13 @@ export function getCurrentOwnedProficiencyCandidates(
       const targets =
         rule?.subclassGainTargets ??
         (rule?.subclassGainTarget ? [rule.subclassGainTarget] : undefined)
+      if (rule?.subclassGainPosition) {
+        const gain = getCurrentNativeSubclassGain(
+          parents[0],
+          rule.subclassGainPosition === 'at-level' ? choice.level : undefined,
+        )
+        if (gain?.level !== choice.level) return []
+      }
       if (
         targets &&
         !targets.some((target) =>
@@ -125,9 +136,13 @@ export function getCurrentOwnedProficiencyCandidates(
         )
       )
         return []
-      if (!rule?.startingSkillPoolBase) return [choice]
+      if (!rule?.startingSkillPoolBase || relation?.domain !== 'skills') return [choice]
       const pool = readStartingSkillPool(parents[0], rule.startingSkillPoolBase)
-      return pool ? [{ ...choice, currentProficiencySkillPool: pool }] : []
+      if (!pool) return []
+      const skillPool = relation.trigger
+        ? pool.filter((skill) => !rule.domains.some((domain) => domain.trigger === skill))
+        : pool
+      return skillPool.length ? [{ ...choice, currentProficiencySkillPool: skillPool }] : []
     }),
   ]
 }
@@ -166,27 +181,43 @@ export function getEffectiveOwnerProficiencyChoices(
 export function getOwnedSubclassSkillModifiers(
   character: Character,
   abilities: AbilityScores,
+  fixed: readonly CurrentFixedProficiency[],
 ): CharacterEffect[] {
-  return Object.entries(character.provenance?.proficiencies.skills ?? {}).flatMap(([skill, tags]) =>
-    tags.flatMap((tag): CharacterEffect[] => {
-      if (tag.sourceType !== 'subclass' || !tag.grantVariant) return []
-      const choice = decodeClassProficiencyChoiceId(tag.grantVariant)
-      const rule = choice && classProficiencyRule(choice.target)?.skillModifier
-      if (!rule || choice?.domain !== 'skills') return []
-      return [
-        {
-          id: `${tag.grantVariant}:${skill}`,
-          label: rule.label,
-          source: {
-            kind: 'subclass',
-            name: rule.label,
-            source: tag.sourceRef,
-            provenance: { choiceId: tag.grantVariant },
+  const selected = Object.entries(character.provenance?.proficiencies.skills ?? {}).flatMap(
+    ([skill, tags]) =>
+      tags.flatMap((tag): CharacterEffect[] => {
+        if (tag.sourceType !== 'subclass' || !tag.grantVariant) return []
+        const choice = decodeClassProficiencyChoiceId(tag.grantVariant)
+        const rule = choice && classProficiencyRule(choice.target)?.skillModifier
+        if (!rule || choice?.domain !== 'skills') return []
+        return [
+          {
+            id: `${tag.grantVariant}:${skill}`,
+            label: rule.label,
+            source: {
+              kind: 'subclass',
+              name: rule.label,
+              source: tag.sourceRef,
+              provenance: { choiceId: tag.grantVariant },
+            },
+            target: { kind: 'skill-modifier', skill },
+            operation: { kind: 'add', value: Math.max(rule.minimum, abilities[rule.ability]) },
           },
-          target: { kind: 'skill-modifier', skill },
-          operation: { kind: 'add', value: Math.max(rule.minimum, abilities[rule.ability]) },
-        },
-      ]
-    }),
+        ]
+      }),
   )
+  const fixedEffects = fixed.flatMap(({ id, rule, sourceRef }): CharacterEffect[] => {
+    const modifier = rule.skillCheckModifier
+    if (!modifier) return []
+    return [
+      {
+        id: `${id}:${modifier.skill}`,
+        label: rule.name,
+        source: { kind: 'subclass', name: rule.name, source: sourceRef },
+        target: { kind: 'skill-modifier', skill: modifier.skill, ability: modifier.checkAbility },
+        operation: { kind: 'add', value: abilities[modifier.bonusAbility] },
+      },
+    ]
+  })
+  return [...selected, ...fixedEffects]
 }

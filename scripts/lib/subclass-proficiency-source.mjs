@@ -98,13 +98,17 @@ export function deriveArtisanToolPool(uid, documents, classify) {
       'name',
       'source',
       'page',
+      'srd',
       'srd52',
+      'basicRules',
       'basicRules2024',
+      'referenceSources',
+      'reprintedAs',
       'type',
       'rarity',
       'items',
     ]) ||
-    group.type !== `AT|${source}` ||
+    group.type !== (source === 'PHB' ? 'AT' : `AT|${source}`) ||
     group.rarity !== 'none' ||
     !Array.isArray(group.items) ||
     !group.items.length
@@ -128,7 +132,13 @@ export function deriveArtisanToolPool(uid, documents, classify) {
   return { names: names.sort(), category: 'AT', group, members: group.items }
 }
 
-export function deriveSubclassProficiencyRules(features, toolsFor, identity, digest) {
+export function deriveSubclassProficiencyRules(
+  features,
+  toolsFor,
+  identity,
+  digest,
+  banneretLanguages,
+) {
   const seen = new Set()
   const paired = features
     .filter((row) => row.name === 'Blessings of Knowledge')
@@ -387,9 +397,254 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
       },
     ]
   })
-  return [...paired, ...simpleSkills, ...giantPower].sort((a, b) =>
-    a.target.localeCompare(b.target),
-  )
+  const studentOfWar = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Student of War' ||
+      feature.className !== 'Fighter' ||
+      feature.subclassShortName !== 'Battle Master' ||
+      feature.source !== feature.classSource ||
+      feature.subclassSource !== feature.classSource ||
+      !['PHB', 'XPHB'].includes(feature.classSource)
+    )
+      return []
+    const target = identity(feature)
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      !Array.isArray(feature.entries) ||
+      feature.entries.length !== 1 ||
+      typeof feature.entries[0] !== 'string'
+    )
+      fail('Unsupported Student of War proficiency producer')
+    seen.add(target)
+    const revised = feature.classSource === 'XPHB'
+    const match = revised
+      ? /^You gain proficiency with (one|two) type of \{@item ([^}]+)\} of your choice, and you gain proficiency in (one|two) skill of your choice from the skills available to Fighters at level 1\.$/.exec(
+          feature.entries[0],
+        )
+      : /^At (\d+)(?:st|nd|rd|th) level, you gain proficiency with (one|two) type of \{@filter (artisan's tools)\|items\|source=(phb)\|miscellaneous=mundane\|type=artisan's tools\} of your choice\.$/i.exec(
+          feature.entries[0],
+        )
+    if (!match || (!revised && Number(match[1]) !== feature.level))
+      fail('Unsupported Student of War rule')
+    const group = revised
+      ? match[2]
+      : `${match[3][0].toUpperCase()}${match[3].slice(1).replace(' tools', ' Tools')}|${match[4].toUpperCase()}`
+    const { names: toolPool, category: toolCategory } = toolsFor(group)
+    const domains = [
+      { domain: 'tools', count: NUMBERS[match[revised ? 1 : 2]], toolPool, toolCategory },
+    ]
+    if (revised)
+      domains.push({
+        domain: 'skills',
+        count: NUMBERS[match[3]],
+        skillPool: null,
+        excludeExisting: true,
+      })
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        ...(revised && { startingSkillPoolBase: [] }),
+        subclassGainPosition: 'first',
+        domains,
+      },
+    ]
+  })
+  const skillOrLanguage = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Bonus Proficiency' ||
+      feature.className !== 'Fighter' ||
+      feature.classSource !== 'PHB' ||
+      feature.source !== 'XGE' ||
+      feature.subclassSource !== 'XGE' ||
+      !['Cavalier', 'Samurai'].includes(feature.subclassShortName)
+    )
+      return []
+    const target = identity(feature)
+    const [entry] = Array.isArray(feature.entries) ? feature.entries : []
+    const match =
+      typeof entry === 'string' &&
+      /^When you choose this archetype at (\d+)(?:st|nd|rd|th) level, you gain proficiency in (one) of the following skills of your choice: ((?:\{@skill [^{}|]+\}, )+or \{@skill [^{}|]+\})\. Alternatively, you learn (one) language of your choice\.$/.exec(
+        entry,
+      )
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature.entries?.length !== 1 ||
+      !match ||
+      Number(match[1]) !== feature.level ||
+      match[2] !== match[4]
+    )
+      fail('Unsupported skill-or-language proficiency producer')
+    const skillPool = [...match[3].matchAll(/\{@skill ([^}]+)\}/g)].map((tag) =>
+      tag[1].toLowerCase(),
+    )
+    if (new Set(skillPool).size !== skillPool.length) fail('Duplicate skill alternative')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [
+          {
+            domain: 'skill-or-language',
+            count: NUMBERS[match[2]],
+            skillPool,
+            excludeExisting: true,
+          },
+        ],
+      },
+    ]
+  })
+  const knightlyEnvoy = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Knightly Envoy' ||
+      feature.className !== 'Fighter' ||
+      feature.classSource !== 'XPHB' ||
+      feature.subclassShortName !== 'Banneret' ||
+      feature.source !== 'FRHoF' ||
+      feature.subclassSource !== feature.source
+    )
+      return []
+    const target = identity(feature)
+    const section = (name) => {
+      const rows = Array.isArray(feature.entries)
+        ? feature.entries.filter((entry) => entry?.name === name)
+        : []
+      const [row] = rows
+      return rows.length === 1 &&
+        row.type === 'entries' &&
+        only(row, ['name', 'type', 'entries']) &&
+        Array.isArray(row.entries) &&
+        row.entries.length === 1 &&
+        typeof row.entries[0] === 'string'
+        ? row.entries[0]
+        : ''
+    }
+    const polyglot =
+      /^You learn (one|two) languages? from the language tables in the Player's Handbook or chapter 2 of this book\. When you finish a \{@variantrule Long Rest\|XPHB\}, you can replace a language learned from this benefit with another language you have heard, seen signed, or read in the past 24 hours\.$/.exec(
+        section('Polyglot'),
+      )
+    const wellSpoken =
+      /^You gain proficiency in (one|two) of the following skills of your choice: ((?:\{@skill [^{}|]+\|XPHB\}, )+or \{@skill [^{}|]+\|XPHB\})\.$/.exec(
+        section('Well Spoken'),
+      )
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      !polyglot ||
+      !wellSpoken ||
+      !banneretLanguages?.length
+    )
+      fail('Unsupported Knightly Envoy proficiency producer')
+    const skillPool = [...wellSpoken[2].matchAll(/\{@skill ([^{}|]+)\|XPHB\}/g)].map((tag) =>
+      tag[1].toLowerCase(),
+    )
+    if (new Set(skillPool).size !== skillPool.length) fail('Duplicate Knightly Envoy skill')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries.filter((entry) => entry?.name !== 'Comprehension')),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [
+          { domain: 'skills', count: NUMBERS[wellSpoken[1]], skillPool, excludeExisting: true },
+          {
+            domain: 'languages',
+            count: NUMBERS[polyglot[1]],
+            languagePool: [...new Set(banneretLanguages.map(([name]) => name))],
+            languageSources: banneretLanguages,
+            replacement: { cadence: 'long-rest', maximumPerEvent: 1 },
+          },
+        ],
+      },
+    ]
+  })
+  const archerLore = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Arcane Archer Lore' ||
+      feature.className !== 'Fighter' ||
+      feature.classSource !== 'PHB' ||
+      feature.subclassShortName !== 'Arcane Archer' ||
+      feature.source !== 'XGE' ||
+      feature.subclassSource !== 'XGE'
+    )
+      return []
+    const target = identity(feature)
+    const [entry] = Array.isArray(feature.entries) ? feature.entries : []
+    const skillText =
+      typeof entry === 'string' &&
+      entry.replace(/, and you choose to learn either [^.]+ cantrip\.$/, '.')
+    const match =
+      skillText &&
+      /^At (\d+)(?:st|nd|rd|th) level, you learn magical theory or some of the secrets of nature—typical for practitioners of this elven martial tradition\. You choose to gain proficiency in either the \{@skill ([^{}|]+)\} or the \{@skill ([^{}|]+)\} skill\.$/.exec(
+        skillText,
+      )
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature.entries?.length !== 1 ||
+      !match ||
+      Number(match[1]) !== feature.level ||
+      match[2] === match[3]
+    )
+      fail('Unsupported Arcane Archer Lore skill producer')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest([skillText]),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [
+          {
+            domain: 'skills',
+            count: 1,
+            skillPool: match.slice(2).map((skill) => skill.toLowerCase()),
+            excludeExisting: true,
+          },
+        ],
+      },
+    ]
+  })
+  return [
+    ...paired,
+    ...simpleSkills,
+    ...giantPower,
+    ...studentOfWar,
+    ...skillOrLanguage,
+    ...knightlyEnvoy,
+    ...archerLore,
+  ].sort((a, b) => a.target.localeCompare(b.target))
 }
 
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */
@@ -465,7 +720,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
           !only(matches[0], rootFields)
         )
           fail('Ambiguous subclass copy base')
-        copies.push({ key, digest: api.digest(matches[0]) })
+        copies.push({ key, digest: (api.rootDigest ?? api.digest)(matches[0]) })
         validateMetadata(matches[0], true)
         current = matches[0]
       }
@@ -530,10 +785,10 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
       }
       result.features.push({
         target,
-        rawDigest: api.digest(raw),
+        rawDigest: (api.featureDigest ?? api.digest)(raw),
         metadataDigest: api.digest(api.metadata(feature)),
         fields: Object.keys(feature).sort(),
-        entries: feature.entries.map((entry) => ({
+        entries: (api.featureEntries?.(feature) ?? feature.entries).map((entry) => ({
           digest: api.entriesDigest([entry]),
           ...(entry?.type === 'refSubclassFeature'
             ? { reference: api.identity(api.decode(entry.subclassFeature)) }

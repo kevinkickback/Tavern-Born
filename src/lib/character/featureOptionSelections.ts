@@ -50,7 +50,7 @@ import type {
 } from '@/types/character'
 import type {
   ClassChoiceDiagnostic,
-  ClassProficiencyDomain,
+  ClassProficiencyChoiceDomain,
   NormalizedCharacterChoice,
 } from '@/types/classRules'
 import { getFeatureOwnerKey, getInvocationCantripLabel } from './classChoiceIdentity'
@@ -101,7 +101,7 @@ export interface FeatureOptionSelectionState {
   storm?: StormAuraRules
   literalGroup?: { family: string; group: string; gain: number; title?: string }
   enemy?: { complete: boolean; languageAvailable: boolean }
-  proficiency?: { domain: ClassProficiencyDomain }
+  proficiency?: { domain: ClassProficiencyChoiceDomain }
   optionalPool?: boolean
   psionic?: boolean
   legacySubclass?: boolean

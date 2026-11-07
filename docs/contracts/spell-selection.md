@@ -404,3 +404,14 @@ gain and ordinal. Counts and class filters stay live, so an edited filter preser
 while that spell remains eligible. A schedule with multiple descriptors at one rank is ambiguous
 because the source supplies no independent descriptor identities. Classic Light's bonus cantrip respects independent
 sources of Light. Revised Grave prepares Spare the Dying as a cantrip.
+
+## Fighter archetype spells
+
+Arcane Archer takes one cantrip from its two current source blocks at the first subclass gain.
+The named alternatives and their spell references must agree. An inherited classic archetype
+requires exact same-rank reprint evidence for the revised printing. Banneret's ritual and its
+proficiency choices are independently sourced.
+
+Psi Warrior's classic Telekinetic Master grants a limited cast. The revised feature always
+prepares the spell and also describes its slot-free cast. The exact current spell schedule,
+feature text, and earned subclass boundary must agree.

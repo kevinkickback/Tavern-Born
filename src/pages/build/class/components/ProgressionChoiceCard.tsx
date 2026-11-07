@@ -69,6 +69,9 @@ export function BuildClassProgressionChoiceCard({
     feature?.origin?.kind === 'declared' && feature.origin.owner[0] === 'subclass'
       ? feature.name
       : undefined
+  const specificProficiency =
+    proficiencyChoice?.trigger || proficiencyChoice?.domain === 'skill-or-language'
+  const displayLabel = specificProficiency ? label : (subclassFeatureName ?? label)
   return (
     <fieldset
       aria-label={label ?? feature?.name}
@@ -82,7 +85,7 @@ export function BuildClassProgressionChoiceCard({
       <div className="flex items-center justify-between px-3 py-2.5">
         <button
           type="button"
-          aria-label={subclassFeatureName}
+          aria-label={specificProficiency ? displayLabel : subclassFeatureName}
           disabled={!feature}
           className="group flex min-w-0 items-center gap-2 text-left disabled:cursor-default"
           onClick={() => {
@@ -100,7 +103,7 @@ export function BuildClassProgressionChoiceCard({
           <div className="min-w-0">
             {label && (
               <div className="flex items-center gap-1.5 text-sm font-semibold">
-                {subclassFeatureName ?? label}
+                {displayLabel}
                 {isFull && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
               </div>
             )}

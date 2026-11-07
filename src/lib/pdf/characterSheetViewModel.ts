@@ -662,11 +662,12 @@ function buildSpellRows(
       const spell = invocations[0]?.spell ?? resolveSpellReference(reference, spellsByKey)
       const castOnly = ordinaryKeys.has(key) ? undefined : castOnlyRules.get(key)
       const castingTime = castOnly?.castingTime ?? (spell ? formatCastingTime(spell.time) : '')
-      const components = spell
-        ? formatComponents(
-            castOnly?.ignoresMaterial ? { ...spell.components, m: undefined } : spell.components,
-          )
-        : ''
+      const components =
+        spell && !castOnly?.ignoresComponents
+          ? formatComponents(
+              castOnly?.ignoresMaterial ? { ...spell.components, m: undefined } : spell.components,
+            )
+          : ''
       const separator = reference.lastIndexOf('|')
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
       const castingNote = [
@@ -694,12 +695,13 @@ function buildSpellRows(
         range: spell ? formatRange(spell.range) : '',
         components,
         castingNote,
-        notes: [spell ? `Range: ${formatRange(spell.range)}; ${components}` : '', castingNote]
+        notes: [spell ? `Range: ${formatRange(spell.range)}` : '', components, castingNote]
           .filter(Boolean)
           .join('; '),
         concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
         ritual: isRitualSpell(spell),
-        material: !castOnly?.ignoresMaterial && !!spell?.components?.m,
+        material:
+          !castOnly?.ignoresComponents && !castOnly?.ignoresMaterial && !!spell?.components?.m,
       }
     })
     .sort((left, right) => {
@@ -1085,6 +1087,7 @@ export function createCharacterSheetViewModel(
       {
         catalogs: primaryLookups.classChoiceFeatureCatalogs,
         charismaModifier: calculationContext.abilityScores.modifiers.charisma,
+        abilityModifiers: calculationContext.abilityScores.modifiers,
         effects: calculationContext.effects.declarations,
         effectContext: calculationContext.effects.resolutionContext,
         unlimitedWildShape: !!unlimitedWildShape,

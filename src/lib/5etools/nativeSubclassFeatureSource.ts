@@ -1,4 +1,4 @@
-import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
 import {
@@ -6,6 +6,76 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from './optionalClassDeclarationStructure'
+
+export const FIGHTER_SUBCLASS_RESOURCE_FEATURES = new Map([
+  ['EGW', ['Unleash Incarnation', 'Reclaim Potential']],
+  ['TCE', ["Giant's Might", 'Runic Shield', 'Psionic Power']],
+  ['XGE', ['Arcane Shot', 'Unwavering Mark', 'Warding Maneuver', 'Fighting Spirit']],
+  ['AU', ['Arcane Shot']],
+  ['FRHoF', ['Group Recovery']],
+  ['XPHB', ['Psionic Power']],
+])
+
+const directFighterRules = new Set([
+  ...[...FIGHTER_SUBCLASS_RESOURCE_FEATURES.values()].flat().map((name) => name.toLowerCase()),
+  'arcane archer lore',
+  'knightly envoy',
+  'telekinetic master',
+  'rune carver',
+  'combat superiority',
+  'remarkable athlete',
+  'guarded mind',
+  'inspiring commander',
+])
+
+export function isDirectFighterRuleTarget(target: string | undefined) {
+  const [, name, className, , subclass] = target?.split('|') ?? []
+  return className === 'fighter' && (name === subclass || directFighterRules.has(name))
+}
+
+const sameFighterSubclass = (row: Record<string, unknown>, base: Record<string, unknown>) =>
+  typeof row.name === 'string' &&
+  row.name === base.name &&
+  row.shortName === base.shortName &&
+  row.source === base.source &&
+  row.className === 'Fighter' &&
+  base.className === 'Fighter'
+
+export function isInheritedFighterSubclass(row: Record<string, unknown>) {
+  const copy = record(row._copy)
+  return (
+    row.classSource === 'XPHB' &&
+    copy.classSource === 'PHB' &&
+    sameFighterSubclass(row, copy) &&
+    !('_mod' in copy)
+  )
+}
+
+export function auditInheritedFighterRoots(
+  raw: readonly Record<string, unknown>[],
+  materialized: readonly Record<string, unknown>[],
+) {
+  return materialized.map((row, index) => {
+    const authored = raw[index]
+    if (row.className !== 'Fighter' || row.classSource !== 'XPHB' || !('_copy' in authored))
+      return row
+    const origins = raw.filter(
+      (base) => base.classSource === 'PHB' && sameFighterSubclass(row, base),
+    )
+    return isInheritedFighterSubclass(row) &&
+      ![
+        'subclassFeatures',
+        'additionalSpells',
+        'spellcastingAbility',
+        'optionalfeatureProgression',
+      ].some((field) => field in authored) &&
+      origins.length === 1 &&
+      !('_copy' in origins[0]) &&
+      !origins[0].sourceIdentityConflict
+      ? row
+      : { ...row, sourceIdentityConflict: true }
+  })
+}
 
 export interface NativeSubclassOwner {
   className: string
@@ -53,4 +123,56 @@ export function getDirectSubclassFeatureReference(subclass: Subclass5e, target: 
     exactOptionalDeclarationReference(record(ref), ref.ref, 'subclassFeature')
   )
     return ref
+}
+
+/** Resolve a single unambiguous feature declared inside the subclass's earned introduction. */
+export function getNativeSubclassIntroFeature(
+  cls: Pick<Class5e, 'name' | 'source'>,
+  subclass: Subclass5e,
+  level: number,
+  featureName: string,
+  origin = cls.source,
+) {
+  const identity = (name: string) =>
+    getSubclassFeatureIdentity({
+      name,
+      className: cls.name,
+      classSource: origin,
+      subclassShortName: subclass.shortName,
+      subclassSource: subclass.source,
+      source: subclass.source,
+      level,
+    })
+  const parent = identity(subclass.name)
+  const target = identity(featureName)
+  if (!parent || !target) return undefined
+  const intro = getDirectSubclassFeatureReference(subclass, parent)
+  const exact = (feature: SubclassFeature | undefined, key: string) =>
+    feature &&
+    !('_copy' in feature) &&
+    !feature.isClassFeatureVariant &&
+    !feature.sourceIdentityConflict &&
+    !feature.featureOptionSourceConflict &&
+    getSubclassFeatureIdentity(feature) === key
+  if (intro?.ref !== subclass.introFeatureRef || !exact(intro?.feature, parent)) return undefined
+
+  const entries = intro?.feature?.entries
+  if (!Array.isArray(entries)) return undefined
+  const matches = entries
+    .map(record)
+    .filter(
+      (row) =>
+        row.type === 'refSubclassFeature' &&
+        typeof row.subclassFeature === 'string' &&
+        decodeOptionalDeclaration(row.subclassFeature, 'subclassFeature')?.target === target,
+    )
+  const [child] = matches
+  const feature = child?.feature as SubclassFeature | undefined
+  return matches.length === 1 &&
+    !child.sourceIdentityConflict &&
+    typeof child.subclassFeature === 'string' &&
+    exactOptionalDeclarationReference(child, child.subclassFeature, 'subclassFeature') &&
+    exact(feature, target)
+    ? { target, entries: feature?.entries, feature }
+    : undefined
 }

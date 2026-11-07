@@ -1,21 +1,36 @@
 import type { AbilityName } from '@/types/character'
-import type { ClassProficiencyDomain } from '@/types/classRules'
+import type { ClassProficiencyChoiceDomain, NormalizedCharacterChoice } from '@/types/classRules'
 import generated from './classProficiencyRules.generated.json' with { type: 'json' }
 import subclasses from './subclassProficiencyRules.generated.json' with { type: 'json' }
 
+export type QualifiedLanguageSources = readonly (readonly [string, string])[]
+
 interface ClassProficiencyRuleDomain {
-  domain: ClassProficiencyDomain
+  domain: ClassProficiencyChoiceDomain
   count: number
   tools?: readonly string[]
   skillPool?: readonly string[] | null
   excludeExisting?: boolean
   distinctEarlier?: boolean
   languagePool?: readonly string[]
+  languageSources?: QualifiedLanguageSources
   requiresKnownLanguage?: string
   coupled?: boolean
   toolPool?: readonly string[]
   toolCategory?: string
   savingThrowPool?: readonly string[]
+  replacement?: NormalizedCharacterChoice['replacement']
+  trigger?: string
+}
+
+export function getClassProficiencyRuleDomain(
+  rule: ClassProficiencyRule | undefined,
+  relation: { domain: ClassProficiencyChoiceDomain; trigger?: string } | undefined,
+) {
+  return (
+    relation &&
+    rule?.domains.find((row) => row.domain === relation.domain && row.trigger === relation.trigger)
+  )
 }
 export interface ClassProficiencyRule {
   target: string
@@ -26,6 +41,7 @@ export interface ClassProficiencyRule {
   proficiencyAtGain?: string
   subclassGainTarget?: string
   subclassGainTargets?: readonly string[]
+  subclassGainPosition?: 'first' | 'at-level'
   startingSkillPoolBase?: readonly string[]
   skillModifier?: { label: string; ability: AbilityName; minimum: number }
   domains: readonly ClassProficiencyRuleDomain[]

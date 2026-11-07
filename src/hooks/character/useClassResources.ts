@@ -42,6 +42,7 @@ export function useClassResources(): {
       {
         catalogs: calculationContext?.lookups.primary.classChoiceFeatureCatalogs,
         charismaModifier: calculationContext?.abilityScores.modifiers.charisma ?? 0,
+        abilityModifiers: calculationContext?.abilityScores.modifiers,
         effects: calculationContext?.effects.declarations,
         effectContext: calculationContext?.effects.resolutionContext,
         unlimitedWildShape,

@@ -125,6 +125,34 @@
       ]
     },
     {
+      "target": "subclass-feature|arcane archer lore|fighter|xphb|arcane archer|au|3|au",
+      "name": "Arcane Archer Lore",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["arcana", "nature"]
+      },
+      "startingSkillFallbacks": ["arcana", "nature"],
+      "subclassGainPosition": "first",
+      "digest": "6cbc4e7dc9b0c3e05a11655f61c66aa01f328739b44b1004cb125f70eaf10209",
+      "metadataDigest": "1a8c2ab01c8be788863af574e6608097b7d8fa41a8410f8988fcb5329e5bc81a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|arcane initiate|cleric|phb|arcana|scag|1|scag",
       "name": "Arcane Initiate",
       "className": "Cleric",
@@ -561,6 +589,44 @@
         "page",
         "source",
         "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge",
+      "name": "Elegant Courtier",
+      "className": "Fighter",
+      "classSource": "PHB",
+      "level": 7,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["wisdom"]
+      },
+      "subclassGainPosition": "at-level",
+      "fallback": {
+        "name": "wisdom",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      },
+      "skillCheckModifier": {
+        "skill": "persuasion",
+        "checkAbility": "charisma",
+        "bonusAbility": "wisdom"
+      },
+      "digest": "d0759e95ac0c9821915bae4040d7c6345aa9759f41a5c5f2d1748267a8fd799d",
+      "metadataDigest": "c19b7926fc81d664485233aef76a91a5a58d96fcb0ef8a2fc8cf6ea06617459f",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
         "subclassShortName",
         "subclassSource"
       ]

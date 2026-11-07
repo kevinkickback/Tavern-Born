@@ -1,4 +1,8 @@
-import type { ClassProficiencyDomain, NormalizedChoiceOptionReference } from '@/types/classRules'
+import type {
+  ClassProficiencyChoiceDomain,
+  ClassProficiencyDomain,
+  NormalizedChoiceOptionReference,
+} from '@/types/classRules'
 import {
   decodeClassFeatureReference,
   decodeSubclassFeatureReference,
@@ -30,8 +34,9 @@ export function canonicalProficiencyName(value: string): string | undefined {
 export function getClassProficiencyChoiceId(
   owner: { name: string; source: string; subclassName?: string; subclassSource?: string },
   target: string,
-  domain: ClassProficiencyDomain,
+  domain: ClassProficiencyChoiceDomain,
   level: number,
+  trigger?: string,
 ): string {
   return (
     PREFIX +
@@ -47,6 +52,7 @@ export function getClassProficiencyChoiceId(
         target,
         domain,
         level,
+        ...(trigger === undefined ? [] : [trigger]),
       ]),
     )
   )
@@ -56,15 +62,16 @@ export function decodeClassProficiencyChoiceId(id: string):
   | {
       owner: [string, string] | [string, string, string, string]
       target: string
-      domain: ClassProficiencyDomain
+      domain: ClassProficiencyChoiceDomain
       level: number
+      trigger?: string
     }
   | undefined {
   if (!isClassProficiencyChoiceId(id)) return undefined
   try {
     const parts: unknown = JSON.parse(decodeURIComponent(id.slice(PREFIX.length)))
-    if (!Array.isArray(parts) || parts.length !== 4) return undefined
-    const [owner, target, domain, level] = parts
+    if (!Array.isArray(parts) || ![4, 5].includes(parts.length)) return undefined
+    const [owner, target, domain, level, trigger] = parts
     if (
       !Array.isArray(owner) ||
       ![2, 4].includes(owner.length) ||
@@ -76,7 +83,12 @@ export function decodeClassProficiencyChoiceId(id: string):
       !(owner.length === 2
         ? target.startsWith('class-feature|')
         : target.startsWith('subclass-feature|')) ||
-      !CLASS_PROFICIENCY_DOMAINS.includes(domain) ||
+      (domain !== 'skill-or-language' && !CLASS_PROFICIENCY_DOMAINS.includes(domain)) ||
+      (parts.length === 5 &&
+        (domain !== 'skills' ||
+          owner.length !== 4 ||
+          typeof trigger !== 'string' ||
+          canonicalProficiencyName(trigger) !== trigger)) ||
       !Number.isInteger(level) ||
       level < 1 ||
       level > 20
@@ -92,8 +104,9 @@ export function decodeClassProficiencyChoiceId(id: string):
     const relation = {
       owner: owner as [string, string] | [string, string, string, string],
       target,
-      domain: domain as ClassProficiencyDomain,
+      domain: domain as ClassProficiencyChoiceDomain,
       level,
+      ...(typeof trigger === 'string' && { trigger }),
     }
     return getClassProficiencyChoiceId(
       {
@@ -104,12 +117,23 @@ export function decodeClassProficiencyChoiceId(id: string):
       target,
       domain,
       level,
+      trigger,
     ) === id
       ? relation
       : undefined
   } catch {
     return undefined
   }
+}
+
+export function allowsProficiencyDomain(
+  choice: ClassProficiencyChoiceDomain,
+  option: ClassProficiencyDomain,
+): boolean {
+  return (
+    choice === option ||
+    (choice === 'skill-or-language' && (option === 'skills' || option === 'languages'))
+  )
 }
 
 export function getProficiencyOption(

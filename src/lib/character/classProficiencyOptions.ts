@@ -1,9 +1,11 @@
 import {
+  allowsProficiencyDomain,
   canonicalProficiencyName,
   decodeClassProficiencyChoiceId,
   decodeProficiencyOption,
   getProficiencyOption,
 } from '@/lib/5etools/classProficiencyIdentity'
+import { getClassProficiencyRuleDomain } from '@/lib/5etools/classProficiencyRules'
 import {
   ownedClassProficiencyRule as classProficiencyRule,
   optionalClassProficiencyRule,
@@ -12,6 +14,7 @@ import { ABILITY_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import type { Character, CharacterClassChoiceOption } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
+import { getClassChoiceOptionKey } from './classChoiceIdentity'
 import type { ClassChoiceFeatureCatalogs, ClassChoiceOptionView } from './classChoiceOptions'
 import { getEffectiveOwnerProficiencyChoices } from './classProficiencyAuthority'
 import { projectOwnedProficiencies } from './classProficiencyFoundation'
@@ -32,7 +35,7 @@ export function resolveClassProficiencyOptions(
 ): ClassChoiceOptionView[] {
   const relation = decodeClassProficiencyChoiceId(choice.id)
   const rule = relation && classProficiencyRule(relation.target)
-  const domain = rule?.domains.find((row) => row.domain === relation?.domain)
+  const domain = getClassProficiencyRuleDomain(rule, relation)
   const state = projection ?? (character && projectOwnedProficiencies(character, catalogs))
   const base = state?.effective
   const current = base?.classProgression
@@ -45,7 +48,7 @@ export function resolveClassProficiencyOptions(
     relation.domain === choice.proficiencyDomain &&
     choice.kind === 'proficiency' &&
     !!current
-  const selected = new Set(saved.flatMap((option) => decodeProficiencyOption(option)?.name ?? []))
+  const selected = new Set(saved.map(getClassChoiceOptionKey))
   const known = new Set(
     base?.proficiencies.languages.map((name) => canonicalProficiencyName(name)) ?? [],
   )
@@ -63,15 +66,16 @@ export function resolveClassProficiencyOptions(
   for (const { selection: other } of state?.current ?? []) {
     if (other.choiceId === choice.id) continue
     const otherRelation = decodeClassProficiencyChoiceId(other.choiceId)!
-    const otherDomain = classProficiencyRule(otherRelation.target)?.domains.find(
-      (row) => row.domain === otherRelation.domain,
+    const otherDomain = getClassProficiencyRuleDomain(
+      classProficiencyRule(otherRelation.target),
+      otherRelation,
     )
     for (const option of other.selected) {
       const target = decodeProficiencyOption(option)!
       if (target.domain === 'languages') {
         if (
           (!otherDomain?.languagePool || otherDomain.languagePool.includes(target.name)) &&
-          hasProficiencyCatalogTarget(option, catalogs)
+          hasProficiencyCatalogTarget(option, catalogs, otherDomain?.languageSources)
         )
           known.add(target.name)
       } else if (
@@ -111,8 +115,21 @@ export function resolveClassProficiencyOptions(
             ? ABILITY_CATALOG_FALLBACK.map(({ title }) => ({ name: title }))
             : (catalogs.languages ?? [])
   const views = new Map<string, ClassChoiceOptionView>()
-  if (valid)
-    for (const candidate of candidates) {
+  if (valid) {
+    const options =
+      relation.domain === 'skill-or-language'
+        ? [
+            ...(catalogs.skills ?? []).map((candidate) => ({
+              candidate,
+              optionDomain: 'skills' as const,
+            })),
+            ...(catalogs.languages ?? []).map((candidate) => ({
+              candidate,
+              optionDomain: 'languages' as const,
+            })),
+          ]
+        : candidates.map((candidate) => ({ candidate, optionDomain: relation.domain }))
+    for (const { candidate, optionDomain } of options) {
       if (
         !candidate ||
         typeof candidate !== 'object' ||
@@ -121,31 +138,41 @@ export function resolveClassProficiencyOptions(
       )
         continue
       const name = canonicalProficiencyName(candidate.name)
-      if (!name || views.has(name)) continue
+      if (!name || optionDomain === 'skill-or-language') continue
+      const tool = 'proficiencyType' in candidate && candidate.proficiencyType === 'tool'
+      const reference = getProficiencyOption(
+        optionDomain,
+        candidate.name,
+        tool ? 'tool' : undefined,
+      )
+      const key = getClassChoiceOptionKey(reference)
+      const alreadySelected = selected.has(key)
+      if (views.has(key)) continue
       if (
-        relation.domain === 'savingThrows' &&
+        optionDomain === 'savingThrows' &&
         (!domain?.savingThrowPool?.includes(name) ||
           !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
             ?.proficiencyAtGain?.alreadyProficient ||
-          (!selected.has(name) &&
+          (!alreadySelected &&
             state?.independent.proficiencies.savingThrows.some(
               (value) => toAbilityName(value) === name,
             )))
       )
         continue
       if (
-        relation.domain === 'skills' &&
+        optionDomain === 'skills' &&
         ((current?.currentProficiencySkillPool &&
           !current.currentProficiencySkillPool.includes(name)) ||
           (domain?.skillPool !== null && !domain?.skillPool?.includes(name)) ||
-          (optionalClassProficiencyRule(relation.target) || domain?.excludeExisting
-            ? proficient.has(name) && !selected.has(name)
-            : !!rule?.proficiencyAtGain &&
-              !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
-                ?.proficiencyAtGain?.alreadyProficient))
+          ((optionalClassProficiencyRule(relation.target) || domain?.excludeExisting) &&
+            proficient.has(name) &&
+            !alreadySelected) ||
+          ((domain?.trigger || rule?.proficiencyAtGain) &&
+            !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+              ?.proficiencyAtGain?.alreadyProficient))
       )
         continue
-      if (relation.domain === 'expertise') {
+      if (optionDomain === 'expertise') {
         if (
           !domain?.coupled &&
           !proficient.has(name) &&
@@ -153,37 +180,45 @@ export function resolveClassProficiencyOptions(
         )
           continue
         if (domain?.skillPool && !domain.skillPool.includes(name)) continue
-        if (domain?.excludeExisting && occupied.has(name) && !selected.has(name)) continue
+        if (domain?.excludeExisting && occupied.has(name) && !alreadySelected) continue
         if (domain?.distinctEarlier && earlier.has(name)) continue
       }
       if (
-        relation.domain === 'languages' &&
+        optionDomain === 'languages' &&
         domain?.languagePool &&
         !domain.languagePool.includes(name)
       )
         continue
-      if (relation.domain === 'languages' && known.has(name) && !selected.has(name)) continue
+      if (optionDomain === 'languages' && known.has(name) && !alreadySelected) continue
       if (
-        relation.domain === 'tools' &&
+        optionDomain === 'languages' &&
+        domain?.languageSources &&
+        !hasProficiencyCatalogTarget(reference, catalogs, domain.languageSources)
+      )
+        continue
+      if (
+        optionDomain === 'tools' &&
         (!domain?.toolPool?.includes(name) ||
           !hasProficiencyCatalogTarget(getProficiencyOption('tools', candidate.name), catalogs))
       )
         continue
-      const tool = 'proficiencyType' in candidate && candidate.proficiencyType === 'tool'
-      views.set(name, {
-        reference: getProficiencyOption(relation.domain, candidate.name, tool ? 'tool' : undefined),
+      views.set(key, {
+        reference,
         availability: 'eligible',
-        entries:
-          getProficiencyOptionEntries(
-            getProficiencyOption(relation.domain, candidate.name, tool ? 'tool' : undefined),
-            catalogs,
-          ) ?? [],
+        entries: getProficiencyOptionEntries(reference, catalogs, domain?.languageSources) ?? [],
       })
     }
+  }
   for (const reference of saved) {
     const target = decodeProficiencyOption(reference)
-    if (!target || target.domain !== relation?.domain || !views.has(target.name)) {
-      views.set(target?.name ?? JSON.stringify(reference), {
+    const key = getClassChoiceOptionKey(reference)
+    if (
+      !target ||
+      !relation ||
+      !allowsProficiencyDomain(relation.domain, target.domain) ||
+      !views.has(key)
+    ) {
+      views.set(key, {
         reference,
         availability: 'retained',
         entries: [],
