@@ -655,8 +655,8 @@ test.skipIf(!packs.includes('composed'))(
       classes: DataFilter.filterClasses(data.classes, { sources: ['XPHB', 'TCE'] }),
     })
     const retained = lookups(data)
-    const sheet = (level: number, visible = catalogs) => {
-      const saved = actor(editions[1], level, 'The Genie')
+    const sheet = (level: number, visible = catalogs, patron = 'The Genie') => {
+      const saved = actor(editions[1], level, patron)
       return createCharacterSheetViewModel(
         {
           ...saved,
@@ -675,6 +675,26 @@ test.skipIf(!packs.includes('composed'))(
     const earned = sheet(6)
     expect(names(earned)).toContain('Elemental Gift')
     expect(names(sheet(6, lookups(current(data, 'XPHB'))))).not.toContain('Elemental Gift')
+    const unreviewed = 'Unreviewed Patron'
+    const otherCatalog = lookups({
+      ...data,
+      classes: catalogs.classChoiceClasses.map((cls) =>
+        cls.name === 'Warlock' && cls.source === 'XPHB'
+          ? {
+              ...cls,
+              subclasses: cls.subclasses?.map((row) =>
+                row.name === 'The Genie' && row.source === 'TCE'
+                  ? { ...row, name: unreviewed }
+                  : row,
+              ),
+            }
+          : cls,
+      ),
+    })
+    const otherNames = names(sheet(6, otherCatalog, unreviewed))
+    expect(otherNames).toContain('Pact Magic')
+    expect(otherNames).not.toContain("Genie's Vessel")
+    expect(otherNames).not.toContain('Elemental Gift')
     for (const template of ['2024-official', '2024-custom'] as const) {
       const bytes = await generateTestCharacterSheet(earned, template, {
         text: { descriptions: 'full', overflow: 'notes' },

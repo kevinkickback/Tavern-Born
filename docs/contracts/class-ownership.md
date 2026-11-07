@@ -100,7 +100,7 @@ The Genie chooses its patron type at the classic level-1 or revised level-3 subc
 Patron chooses its companion type and spell domain at revised level 3. These choices use the shared
 subclass picker and preserve their exact owner, feature and gain in the saved character. If the
 source becomes unavailable, the saved choices are available for recovery while their benefits
-are suspended. Current configured patron rules print at the levels they are earned, including
+are suspended. Reviewed configured patron rules print at the levels they are earned, including
 classic rules referenced by a revised subclass.
 
 Revised Celestial Patron's Healing Light uses the manual Class Resources controls from Warlock

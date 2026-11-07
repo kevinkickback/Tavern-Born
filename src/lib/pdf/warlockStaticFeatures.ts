@@ -127,6 +127,16 @@ const patronBodies: Record<
 }
 
 const magicalCunning = '83b8faed320d8d149abdbfc634697272164384d7bb9f3be075a88c1aac890146'
+const sharedConfiguredPatrons = [
+  'the undying|scag',
+  'the hexblade|xge',
+  'the fathomless|tce',
+  'the genie|tce',
+]
+const configuredPatrons: Record<NativeWarlockSource, readonly string[]> = {
+  phb: [...sharedConfiguredPatrons, 'the celestial|xge', 'the undead|vrgr'],
+  xphb: [...sharedConfiguredPatrons, 'undead patron|rhw', 'vestige patron|au'],
+}
 const classTarget = (name: string, source: NativeWarlockSource, level: number) =>
   `class-feature|${name}|warlock|${source}|${level}|${source}`
 
@@ -180,11 +190,7 @@ function getConfiguredPatronFeatures(
   catalogs: ClassChoiceFeatureCatalogs,
   source: NativeWarlockSource,
 ) {
-  if (
-    !entry.subclass ||
-    !entry.subclassSource ||
-    ['phb', 'xphb'].includes(norm(entry.subclassSource))
-  )
+  if (!configuredPatrons[source].includes(`${norm(entry.subclass)}|${norm(entry.subclassSource)}`))
     return []
   const matches = cls.subclasses?.filter((row) =>
     findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
