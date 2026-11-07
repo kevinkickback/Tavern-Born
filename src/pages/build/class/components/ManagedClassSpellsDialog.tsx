@@ -1,3 +1,4 @@
+import { Check } from '@phosphor-icons/react'
 import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
@@ -32,8 +33,10 @@ import {
   getManagedClassSpellPool,
   type ManagedClassSpellContext,
   type ManagedClassSpellStatus,
+  projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
 import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
+import { cn } from '@/lib/utils'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassSpellSelectionPolicy, ManagedClassSpellChoice } from '@/types/classCasting'
 
@@ -63,8 +66,8 @@ export function ManagedClassSpellsDialog({
   const [opening] = useState(() => character)
   const prepareId = useId()
   const [finish] = useState(() => onFinish)
-  const [rows, setRows] = useState(() =>
-    getManagedClassSpellSlots(entry, character, context?.catalogs, {
+  const [draft, setDraft] = useState(() => {
+    const rows = getManagedClassSpellSlots(entry, character, context?.catalogs, {
       effectiveAbilityScores: context?.abilityScores,
       effectiveSpellProfiles: context?.independentSpellProfiles,
     })
@@ -80,9 +83,60 @@ export function ManagedClassSpellsDialog({
           policy: old?.policy ?? ('default' as ClassSpellSelectionPolicy),
           prepare: old?.prepare === true,
         }
-      }),
+      })
+    return {
+      rows,
+      specialtySlots: rows
+        .map((row) => row.slot)
+        .filter((slot) => slot[1] === 'class-spellbook-specialty'),
+      bookEdits: [] as ManagedClassSpellRequest[],
+    }
+  })
+  const { rows, specialtySlots, bookEdits } = draft
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null)
+  const getRequest = (row: (typeof rows)[number]): ManagedClassSpellRequest => ({
+    slot: row.slot,
+    expected: row.old ?? null,
+    expectedEmptyRevision: opening.managedClassSpellRevision ?? 0,
+    target: row.target,
+    policy: row.policy,
+    ...(row.slot[1] === 'class-spellbook' ? { prepare: row.prepare } : {}),
+  })
+  const bookPreview = useMemo(() => {
+    if (!bookEdits.length) return
+    try {
+      // Preview eligible learned entries independently of draft daily preparation.
+      const preview = setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        bookEdits,
+        context,
+      )
+      const draft = {
+        ...character,
+        ...preview.characterPatch,
+        provenance: preview.provenanceUpdate,
+      }
+      return { draft, statuses: projectManagedClassSpellState(draft, context).statuses }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Invalid draft spellbook choices.' }
+    }
+  }, [character, context, bookEdits])
+  const specialtyPools = useMemo(
+    () =>
+      new Map(
+        specialtySlots.map((slot) => [
+          managedClassSpellId(slot),
+          getManagedClassSpellPool(
+            bookPreview?.draft ?? character,
+            slot,
+            context,
+            bookPreview?.statuses ?? statuses,
+          ),
+        ]),
+      ),
+    [bookPreview, character, context, specialtySlots, statuses],
   )
-  const [picker, setPicker] = useState<{ index: number; draftBook?: Character } | null>(null)
   const featureNames = useMemo(
     () =>
       new Map(
@@ -93,7 +147,7 @@ export function ManagedClassSpellsDialog({
       ),
     [character, context],
   )
-  const selected = picker && rows[picker.index]
+  const selected = pickerIndex === null ? undefined : rows[pickerIndex]
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
   const savantGain = selected ? getSavantSpellbookGain(selected.slot) : undefined
   const allowClassListBypass =
@@ -105,10 +159,13 @@ export function ManagedClassSpellsDialog({
     (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
       ? 'cantrip'
       : 'spell')
-  const draftBook = picker?.draftBook
   const pool = useMemo(
-    () => selected && getManagedClassSpellPool(draftBook ?? character, selected.slot, context),
-    [character, selected, context, draftBook],
+    () =>
+      selected &&
+      (isBookSpecialty
+        ? specialtyPools.get(managedClassSpellId(selected.slot))
+        : getManagedClassSpellPool(character, selected.slot, context)),
+    [character, selected, context, isBookSpecialty, specialtyPools],
   )
   const savantHint =
     savantGain && pool?.schools
@@ -128,7 +185,7 @@ export function ManagedClassSpellsDialog({
       )
       .map((choice) => choice.target.name),
     ...rows.flatMap((row, index) =>
-      index !== picker?.index &&
+      index !== pickerIndex &&
       row.target &&
       (!selected ||
         managedClassSpellUniquenessGroup(row.slot) ===
@@ -144,53 +201,37 @@ export function ManagedClassSpellsDialog({
       policy?: ClassSpellSelectionPolicy
       prepare?: boolean
     },
-  ) => setRows((current) => current.map((row, at) => (at === index ? { ...row, ...patch } : row)))
-  const getRequest = (row: (typeof rows)[number]): ManagedClassSpellRequest => ({
-    slot: row.slot,
-    expected: row.old ?? null,
-    expectedEmptyRevision: opening.managedClassSpellRevision ?? 0,
-    target: row.target,
-    policy: row.policy,
-    ...(row.slot[1] === 'class-spellbook' ? { prepare: row.prepare } : {}),
-  })
+  ) =>
+    setDraft((current) => {
+      const before = current.rows[index]
+      const after = { ...before, ...patch }
+      const nextRows = current.rows.map((row, at) => (at === index ? after : row))
+      if (
+        !specialtySlots.length ||
+        after.slot[1] !== 'class-spellbook' ||
+        (targetKey(before.target) === targetKey(after.target) && before.policy === after.policy)
+      ) {
+        return { ...current, rows: nextRows }
+      }
+      // Only learned-spell changes invalidate the preview, not specialty picks or preparation.
+      const nextBookEdits = nextRows
+        .filter(
+          (row) =>
+            row.slot[1] === 'class-spellbook' &&
+            (targetKey(row.target) !== targetKey(row.old?.target) ||
+              (row.target && row.policy !== (row.old?.policy ?? 'default'))),
+        )
+        .map((row) => ({ ...getRequest(row), prepare: false }))
+      return { ...current, rows: nextRows, bookEdits: nextBookEdits }
+    })
   const openPicker = (index: number) => {
-    if (rows[index].slot[1] !== 'class-spellbook-specialty') {
-      setPicker({ index })
-      return
-    }
-    const bookEdits = rows
-      .filter(
-        (row) =>
-          row.slot[1] === 'class-spellbook' &&
-          (targetKey(row.target) !== targetKey(row.old?.target) ||
-            (row.target && row.policy !== (row.old?.policy ?? 'default'))),
-      )
-      .map((row) => ({ ...getRequest(row), prepare: false }))
-    if (!bookEdits.length) {
-      setPicker({ index })
-      return
-    }
-    try {
-      // Preview eligible learned entries independently of draft daily preparation.
-      const preview = setManagedClassSpellChoicesCommand(
-        character,
-        character.provenance,
-        bookEdits,
-        context,
-      )
-      setPicker({
-        index,
-        draftBook: {
-          ...character,
-          ...preview.characterPatch,
-          provenance: preview.provenanceUpdate,
-        },
-      })
-    } catch (error) {
+    if (rows[index].slot[1] === 'class-spellbook-specialty' && bookPreview?.error) {
       toast.error('Review the draft spellbook choices first.', {
-        description: error instanceof Error ? error.message : undefined,
+        description: bookPreview.error,
       })
+      return
     }
+    setPickerIndex(index)
   }
   const confirm = () => {
     try {
@@ -205,7 +246,7 @@ export function ManagedClassSpellsDialog({
   )
   return (
     <>
-      <Dialog open={picker === null} onOpenChange={onOpenChange}>
+      <Dialog open={pickerIndex === null} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
@@ -217,11 +258,34 @@ export function ManagedClassSpellsDialog({
           </DialogHeader>
           <div className="max-h-[60vh] space-y-3 overflow-y-auto">
             {rows.map((row, index) => {
-              const status = statuses.find(
-                (item) => managedClassSpellId(item.choice.slot) === managedClassSpellId(row.slot),
+              const isSpecialty = row.slot[1] === 'class-spellbook-specialty'
+              const specialtyPreview = isSpecialty ? bookPreview : undefined
+              const slotId = managedClassSpellId(row.slot)
+              const status = (specialtyPreview?.statuses ?? statuses).find(
+                (item) => managedClassSpellId(item.choice.slot) === slotId,
               )
-              const unchangedTarget =
-                row.target && targetKey(row.old?.target) === targetKey(row.target)
+              const draftTarget = targetKey(row.target)
+              const matchesSavedStatus =
+                status &&
+                row.old &&
+                draftTarget &&
+                status.choice.revision === row.old.revision &&
+                targetKey(status.choice.target) === draftTarget &&
+                status.choice.policy === row.policy
+              const unavailable = matchesSavedStatus && !status?.active
+              const lostInDraft =
+                specialtyPreview?.draft &&
+                unavailable &&
+                statuses.some(
+                  (item) => item.active && managedClassSpellId(item.choice.slot) === slotId,
+                )
+              const missingFromDraftBook =
+                isSpecialty &&
+                draftTarget &&
+                (specialtyPreview?.error ||
+                  ((!matchesSavedStatus || lostInDraft) &&
+                    !specialtyPools.get(slotId)?.defaultReferences.has(draftTarget)))
+              const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const kind =
                 row.slot[1] === 'class-arcanum'
@@ -232,7 +296,7 @@ export function ManagedClassSpellsDialog({
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
-                  className="rounded-lg border p-3"
+                  className={cn('rounded-lg border p-3', chosen && 'border-success/60')}
                   aria-label={`${kind} ${row.slot[4] + 1}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -243,10 +307,22 @@ export function ManagedClassSpellsDialog({
                       <p className="font-medium">
                         {row.target ? `${row.target.name} (${row.target.source})` : 'Not chosen'}
                       </p>
-                      {unchangedTarget && status && !status.active && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {status.reason} The choice is saved until you change or clear it.
+                      {chosen && (
+                        <p className="flex items-center gap-1 text-xs font-medium text-success">
+                          <Check className="size-3" weight="bold" aria-hidden />
+                          Chosen
                         </p>
+                      )}
+                      {missingFromDraftBook ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Restore this spell in the draft spellbook or change this choice.
+                        </p>
+                      ) : (
+                        unavailable && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {status?.reason} The choice is saved until you change or clear it.
+                          </p>
+                        )
                       )}
                       {row.policy === 'ignore-class-list' && (
                         <p className="text-xs text-muted-foreground">
@@ -294,11 +370,11 @@ export function ManagedClassSpellsDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {picker && selected && pool && (
+      {pickerIndex !== null && selected && pool && (
         <SpellSelectionModal
           open
           onOpenChange={(open) => {
-            if (!open) setPicker(null)
+            if (!open) setPickerIndex(null)
           }}
           title={`Choose ${pickerKind} ${selected.slot[4] + 1}`}
           spells={pool.spells}
@@ -311,7 +387,6 @@ export function ManagedClassSpellsDialog({
           }
           allowedLevels={allowedLevels}
           initialFilters={{
-            level: allowedLevels,
             visibility: new Set(
               allowClassListBypass && selected.policy === 'ignore-class-list'
                 ? ['ignore-class-list']
@@ -338,13 +413,13 @@ export function ManagedClassSpellsDialog({
           }
           onConfirm={(references, policy) => {
             const reference = references[0] ? parseSpellReference(references[0]) : undefined
-            update(picker.index, {
+            update(pickerIndex, {
               target: reference?.source
                 ? { name: reference.name, source: reference.source }
                 : undefined,
               policy: allowClassListBypass ? policy : 'default',
             })
-            setPicker(null)
+            setPickerIndex(null)
           }}
         />
       )}

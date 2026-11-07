@@ -12,7 +12,8 @@ const { idbGetMock, idbSetMock } = vi.hoisted(() => ({
   idbSetMock: vi.fn(async () => undefined),
 }))
 
-vi.mock('idb-keyval', () => ({
+vi.mock('idb-keyval', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('idb-keyval')>()),
   get: idbGetMock,
   set: idbSetMock,
   del: vi.fn(async () => undefined),
@@ -63,6 +64,73 @@ describe('writeGameDataCache', () => {
   })
 
   afterEach(() => vi.useRealTimers())
+
+  test('aborting the pre-write cache read releases the writer without committing', async () => {
+    let finishRead: (value: unknown) => void = () => {}
+    const pendingRead = new Promise((resolve) => {
+      finishRead = resolve
+    })
+    idbGetMock.mockReturnValueOnce(pendingRead)
+    const attempt = new AbortController()
+    const beforeWrite = vi.fn()
+    const writing = writeGameDataCache(makeGameData(), config, {
+      signal: attempt.signal,
+      beforeWrite,
+    })
+    attempt.abort(new Error('Startup deadline'))
+    await expect(writing).rejects.toThrow('Startup deadline')
+    expect(beforeWrite).not.toHaveBeenCalled()
+    expect(idbSetMock).not.toHaveBeenCalled()
+    finishRead(null)
+    await writeGameDataCache(makeGameData('next'), config)
+    expect(idbSetMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('aborting a queued IndexedDB transaction prevents the catalog from being written', async () => {
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    const useStore = idb.createStore('keyval-store', 'keyval')
+    const blocker = await useStore('readwrite', (store) => {
+      const keepOpen = () => {
+        store.get('lock').onsuccess = keepOpen
+      }
+      keepOpen()
+      return store.transaction
+    })
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put')
+    try {
+      const attempt = new AbortController()
+      const writing = writeGameDataCache(makeGameData(), config, { signal: attempt.signal })
+      await vi.waitFor(() => expect(put).toHaveBeenCalledTimes(1))
+      attempt.abort(new Error('Startup deadline'))
+      await expect(writing).rejects.toThrow('Startup deadline')
+    } finally {
+      blocker.abort()
+      put.mockRestore()
+    }
+    expect(await idb.get('tb:game-data-cache')).toBeUndefined()
+  })
+
+  test('a committed catalog is reported as written when the deadline races its completion event', async () => {
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    const attempt = new AbortController()
+    const originalPut = IDBObjectStore.prototype.put
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+      this: IDBObjectStore,
+      value,
+      key,
+    ) {
+      this.transaction.addEventListener('complete', () => attempt.abort(), { capture: true })
+      return originalPut.call(this, value, key)
+    })
+    try {
+      const entry = await writeGameDataCache(makeGameData(), config, { signal: attempt.signal })
+      expect(attempt.signal.aborted).toBe(true)
+      expect(await idb.get('tb:game-data-cache')).toEqual(entry)
+    } finally {
+      put.mockRestore()
+      await idb.del('tb:game-data-cache')
+    }
+  })
 
   test('retains named target ambiguity through cache and permits an exact unique winning overlay', async () => {
     const weapon = { name: 'Example weapon', source: 'TEST', type: 'M' }

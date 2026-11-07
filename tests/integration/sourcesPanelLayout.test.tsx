@@ -15,17 +15,24 @@ vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
 }))
 
 const dataSourceFixture = vi.hoisted(() => ({
-  type: 'local' as 'local' | 'bundled',
+  type: 'local' as 'local' | 'bundled' | 'remote',
   hasReprints: true,
+  sessionSrd: false,
 }))
 
 vi.mock('@/store/gameDataStore', () => {
   const getState = () => ({
     dataSourceConfig: { type: dataSourceFixture.type },
+    sessionBundledSource: dataSourceFixture.sessionSrd ? { type: 'bundled' } : null,
     gameData: {
       sources: [
         { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
-        { name: "Dungeon Master's Guide", abbreviation: 'DMG', group: 'core' },
+        {
+          name: "Dungeon Master's Guide",
+          abbreviation: 'DMG',
+          group: 'core',
+          hasCharacterOptions: !dataSourceFixture.sessionSrd,
+        },
         { name: "Dungeon Master's Guide (2024)", abbreviation: 'XDMG', group: 'core' },
         {
           name: 'Monster Manual',
@@ -74,6 +81,7 @@ describe('Rules Additional Content panel layout', () => {
   beforeEach(() => {
     dataSourceFixture.type = 'local'
     dataSourceFixture.hasReprints = true
+    dataSourceFixture.sessionSrd = false
     const character = makeCharacterFixture({ allowedSources: ['PHB', 'XGE'] })
     useCharacterStore.setState({
       characters: [character],
@@ -85,6 +93,20 @@ describe('Rules Additional Content panel layout', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test('session SRD does not remove saved remote source selections', () => {
+    dataSourceFixture.type = 'remote'
+    dataSourceFixture.sessionSrd = true
+    const character = makeCharacterFixture({ allowedSources: ['PHB', 'DMG'] })
+    useCharacterStore.setState({ activeCharacter: character, activeCharacterId: character.id })
+    render(
+      <MemoryRouter>
+        <SourcesPanel />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('button', { name: 'None' })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter?.allowedSources).toEqual(['PHB', 'DMG'])
   })
 
   test.each([
