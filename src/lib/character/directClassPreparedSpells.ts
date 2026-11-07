@@ -1,4 +1,8 @@
 import { parseAdditionalSpellBlocks } from '@/lib/5etools/additionalSpells'
+import {
+  hasCurrentBardWordsOfCreation,
+  WORDS_OF_CREATION_TARGET,
+} from '@/lib/5etools/bardSpellSources'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
@@ -245,6 +249,28 @@ export function getDirectClassPreparedSpellGrants(
     const cls = findClassReference(entry, classes)
     const hex = getEldritchHexGrant(character, entry, cls, catalogs)
     if (!cls) return hex ? [hex] : []
+    if (norm(cls.name) === 'bard' && norm(cls.source) === 'xphb' && entry.levels === 20) {
+      const current = hasCurrentBardWordsOfCreation(cls, catalogs)
+      return ['Power Word Heal|XPHB', 'Power Word Kill|XPHB'].map(
+        (reference): ClassPreparedSpellGrant => ({
+          owner: ['class', 'bard', 'xphb'],
+          target: WORDS_OF_CREATION_TARGET,
+          featureName: 'Words of Creation',
+          level: 20,
+          spellLevel: 9,
+          reference,
+          ...(current
+            ? {
+                castingNote:
+                  'Words of Creation: You can target a second creature within 10 feet of the first.',
+              }
+            : {
+                sourceReason:
+                  'Restore the exact Words of Creation feature and class spell schedule.',
+              }),
+        }),
+      )
+    }
     const blocks = cls.additionalSpells as AdditionalSpellBlock[] | undefined
     const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
     const prepared = block?.prepared

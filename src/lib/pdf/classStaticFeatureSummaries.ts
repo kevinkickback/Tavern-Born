@@ -1,4 +1,10 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID } from '@/lib/5etools/archdruidSource'
+import {
+  getCurrentBardJackOfAllTrades,
+  getCurrentBardMagicalSecrets,
+  hasCurrentBardWordsOfCreation,
+  WORDS_OF_CREATION_TARGET,
+} from '@/lib/5etools/bardSpellSources'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
@@ -117,6 +123,31 @@ const inheritedPaladinOaths = [
   'oath of redemption|xge',
   'oath of the watchers|tce',
 ]
+const reviewedBardColleges = {
+  phb: [
+    'college of lore|phb',
+    'college of valor|phb',
+    'college of glamour|xge',
+    'college of swords|xge',
+    'college of whispers|xge',
+    'college of creation|tce',
+    'college of eloquence|tce',
+    'college of spirits|vrgr',
+  ],
+  xphb: [
+    'college of lore|xphb',
+    'college of valor|xphb',
+    'college of glamour|xphb',
+    'college of dance|xphb',
+    'college of the moon|frhof',
+    'college of spirits|rhw',
+    'college of swords|xge',
+    'college of whispers|xge',
+    'college of creation|tce',
+    'college of eloquence|tce',
+  ],
+}
+
 const reviewedPaladinOaths = {
   phb: [
     ...inheritedPaladinOaths,
@@ -297,7 +328,11 @@ export function getClassStaticFeatureSummaries(
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
     if (
-      (name !== 'druid' && name !== 'paladin' && name !== 'wizard' && name !== 'warlock') ||
+      (name !== 'bard' &&
+        name !== 'druid' &&
+        name !== 'paladin' &&
+        name !== 'wizard' &&
+        name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
@@ -305,6 +340,36 @@ export function getClassStaticFeatureSummaries(
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]
+    if (name === 'bard') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const jack = entry.levels >= 2 && getCurrentBardJackOfAllTrades(cls, catalogs)
+      const secrets = (source === 'phb' ? [10, 14, 18] : [10]).flatMap((gain) => {
+        const feature =
+          entry.levels >= gain && getCurrentBardMagicalSecrets([cls], catalogs, source, gain)
+        return feature ? [feature] : []
+      })
+      const words =
+        entry.levels === 20 && hasCurrentBardWordsOfCreation(cls, catalogs)
+          ? getCurrentDirectClassFeature(cls, catalogs, WORDS_OF_CREATION_TARGET)
+          : undefined
+      const college = reviewedBardColleges[source].includes(
+        `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
+      )
+        ? getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+            level: 3,
+            intro: source === 'phb' ? 'bard college' : 'bard subclass',
+            later: source === 'phb' ? 'bard college feature' : 'subclass feature',
+            expandNestedRules: true,
+          })
+        : []
+      return [...(jack ? [jack] : []), ...secrets, ...(words ? [words] : []), ...college].flatMap(
+        (feature) =>
+          featureSummary(feature).map((summary) => ({
+            ...summary,
+            replaces: savedClassLabel(character, entry, feature),
+          })),
+      )
+    }
     if (name === 'paladin') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       const aura =

@@ -4,10 +4,9 @@ import {
   getSavedClassOrder,
 } from '@/lib/5etools/classOrderIdentity'
 import {
+  declaredSubclassSlots,
   decodeSelectedFeatureSpellAddress,
-  LAND_BONUS_SPELL_SLOT,
   selectedFeatureSpellAddress,
-  wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type {
@@ -68,11 +67,6 @@ export function getSelectedFeatureSpellProducer(
     0,
   ])
 }
-
-const declaredSubclassSlots = [
-  LAND_BONUS_SPELL_SLOT,
-  ...wizardIllusionCantripSlots.map(({ slot }) => slot),
-]
 
 /** Saved ownership only; missing source data or suspended permission does not remove intent. */
 function hasDeclaredSubclassOwner(character: Character, slot: ManagedClassSpellSlot) {

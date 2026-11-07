@@ -2,6 +2,7 @@ import {
   type AdditionalSpellChoiceDescriptor,
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
+import { getCurrentBardPrimalLore } from '@/lib/5etools/bardCollegeFeatures'
 import { getClassicLandBonusCantrip } from '@/lib/5etools/circleOfTheLand'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getClassCastingLevelAccess } from '@/lib/5etools/classCastingSource'
@@ -11,6 +12,7 @@ import {
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
 import {
+  BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
@@ -279,6 +281,35 @@ export function getSelectedFeatureCantripSetups(
           : undefined,
     })
   }
+  if (hasSavedSelectedFeatureSpellOwner(character, BARD_PRIMAL_LORE_SPELL_SLOT)) {
+    const classes = catalogs?.classes?.filter(
+      (row) => norm(row.name) === 'bard' && norm(row.source) === 'xphb',
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const colleges = cls?.subclasses?.filter(
+      (row) => norm(row.name) === 'college of the moon' && norm(row.source) === 'frhof',
+    )
+    const available =
+      cls &&
+      colleges?.length === 1 &&
+      permitted(allowed, 'xphb') &&
+      permitted(allowed, 'frhof') &&
+      getCurrentBardPrimalLore(cls, colleges[0])
+    const [owner, , producer, level] = BARD_PRIMAL_LORE_SPELL_SLOT
+    const choice = parseAdditionalSpellBlocks([
+      { ability: 'cha', known: { _: [{ choose: 'level=0|class=Druid' }] } },
+    ])[0].choices[0]
+    setups.push({
+      owner,
+      producer,
+      level,
+      name: 'Primal Lore',
+      count: 1,
+      choice,
+      offered: true,
+      ...(!available && { reason: 'Restore the exact College of the Moon Primal Lore source.' }),
+    })
+  }
   return setups
 }
 
@@ -332,6 +363,7 @@ export function getSelectedFeatureCantripPool(
     decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
   )
   const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
+  const listOwner = slot[2] === BARD_PRIMAL_LORE_SPELL_SLOT[2] ? 'druid' : slot[0][1]
   const spells =
     reason || !choice
       ? []
@@ -351,7 +383,7 @@ export function getSelectedFeatureCantripPool(
             checked.classSpellRoutes?.some(
               (route) =>
                 matchesJoinedSpellClassFilter(route, filter.classes) &&
-                (!ownerScoped || (route[3] === slot[0][1] && route[4] === slot[0][2])) &&
+                (!ownerScoped || (route[3] === listOwner && route[4] === slot[0][2])) &&
                 [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
                   permitted(allowed, source),
                 ),

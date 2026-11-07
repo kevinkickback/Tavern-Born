@@ -95,6 +95,10 @@
     "file": "resources/srd/core/data/class/class-sorcerer.json",
     "sha256": "c144b35830ac7d6ea6cafa34c7278dea1ed4f53cbc45dea24b612de814f0865b"
   },
+  "bundledBardInput": {
+    "file": "resources/srd/core/data/class/class-bard.json",
+    "sha256": "0f94d39e57816eeeca8db68cb6e108bf91a45370dc965a52776a98d471fb4001"
+  },
   "dragonAncestorLanguageSource": {
     "file": "scripts/lib/dragon-ancestor-language-source.mjs",
     "sha256": "3a0e57d4a41a9b648577176d9cb6da14ac43811bb1eb8778c64ca5f871b8112f"
@@ -106,7 +110,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "a98b600828afc2d0337c8b4624c8f210ca9ae571c099211941dda420acf36075"
+      "sha256": "12be4f23d045999bf75cb2b1952f576266b63485719ed3cc07d31d8f8fb1f351"
     }
   ],
   "toolClassificationDependencies": [
@@ -154,7 +158,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "c84fc3f35e68e7c40695d3f8cfb73abdb94dead6221ef9bb8c92d74fc559635f"
+      "sha256": "c3031274f816cdf03bce1d67b0e8c3c3b2816cd23ab89820a0d7b336f09e748a"
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",

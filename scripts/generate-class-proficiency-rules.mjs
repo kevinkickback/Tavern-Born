@@ -19,6 +19,9 @@ import {
   deriveFixedProficiencyRules,
 } from './lib/fixed-proficiency-source.mjs'
 import { deriveLifeDomainProficiency } from './lib/life-domain-proficiency-source.mjs'
+import subclassAncestorSemantics from './lib/subclass-proficiency-ancestor-semantics.json' with {
+  type: 'json',
+}
 import {
   deriveArtisanToolPool,
   deriveSubclassProficiencyCertificates,
@@ -42,6 +45,8 @@ const bundledClericPath = 'resources/srd/core/data/class/class-cleric.json'
 const bundledClericBytes = fs.readFileSync(bundledClericPath)
 const bundledSorcererPath = 'resources/srd/core/data/class/class-sorcerer.json'
 const bundledSorcererBytes = fs.readFileSync(bundledSorcererPath)
+const bundledBardPath = 'resources/srd/core/data/class/class-bard.json'
+const bundledBardBytes = fs.readFileSync(bundledBardPath)
 const features = documents.flatMap((document) => document.classFeature ?? [])
 const itemDocuments = [read('items.json'), read('items-base.json')]
 const optionalRecords = read('optionalfeatures.json').optionalfeature
@@ -187,8 +192,20 @@ try {
     entriesDigest: getFeatureSourceDigest,
     metadata: certificates.subclassProficiencyMetadata,
     intro: getSubclassIntroReference,
-    validateProgression: (root) =>
-      validateConditionalSubclassProgression(root, conditional.features),
+    validateProgression: (root) => {
+      if (
+        root.className === 'Bard' &&
+        ['PHB', 'XPHB'].includes(root.classSource) &&
+        root.name === 'College of Swords' &&
+        root.source === 'XGE' &&
+        getFeatureSourceDigest(root.optionalfeatureProgression) ===
+          getFeatureSourceDigest([
+            { name: 'Fighting Style', featureType: ['FS:B'], progression: { 3: 1 } },
+          ])
+      )
+        return
+      validateConditionalSubclassProgression(root, conditional.features)
+    },
     admittedContexts: conditionalContexts.contexts,
   }
   const subclassCertificates = deriveSubclassProficiencyCertificates(
@@ -220,7 +237,25 @@ try {
       decodeClass: decodeClassFeatureReference,
     },
   )
-  subclassCertificates.packages = [...life.packages, dragonAncestor.package]
+  const bundledBard = JSON.parse(bundledBardBytes)
+  const bundledLore = deriveSubclassProficiencyRules(
+    bundledBard.subclassFeature,
+    toolsFor,
+    getSubclassFeatureIdentity,
+    getFeatureSourceDigest,
+  )
+  const bundledLoreCertificates = bundledLore.map((rule) =>
+    deriveSubclassProficiencyCertificates([bundledBard], [rule], {
+      ...subclassCertificateApi,
+      admittedContexts: [],
+      reviewedAncestors: subclassAncestorSemantics.bundledBardAncestors,
+    }),
+  )
+  subclassCertificates.packages = [
+    ...life.packages,
+    dragonAncestor.package,
+    ...bundledLoreCertificates,
+  ]
   fixed.features.push(life.rule, dragonAncestor.rule)
   fixed.features.sort((left, right) => left.target.localeCompare(right.target))
   const provenance = {
@@ -231,6 +266,7 @@ try {
     inputs,
     bundledLifeDomainInput: { file: bundledClericPath, sha256: sha(bundledClericBytes) },
     bundledDragonAncestorInput: { file: bundledSorcererPath, sha256: sha(bundledSorcererBytes) },
+    bundledBardInput: { file: bundledBardPath, sha256: sha(bundledBardBytes) },
     dragonAncestorLanguageSource: {
       file: 'scripts/lib/dragon-ancestor-language-source.mjs',
       sha256: sha(fs.readFileSync('scripts/lib/dragon-ancestor-language-source.mjs')),

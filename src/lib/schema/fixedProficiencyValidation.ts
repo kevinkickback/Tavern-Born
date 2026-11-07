@@ -46,7 +46,7 @@ export function getInvalidFixedProficiencyPaths(
             : rule.kind === 'fixed-languages'
               ? domain === 'languages' && rule.languages?.includes(name) && hasValue(domain, name)
               : rule.kind === 'fixed-training'
-                ? (domain === 'armor' || domain === 'weapons') &&
+                ? (domain === 'armor' || domain === 'weapons' || domain === 'tools') &&
                   rule.training?.[domain]?.includes(name) &&
                   hasValue(domain, name)
                 : (domain === 'skills' || domain === 'expertise') &&

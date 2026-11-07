@@ -125,6 +125,62 @@
       ]
     },
     {
+      "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
+      "name": "Bonus Proficiencies",
+      "className": "Bard",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["medium"],
+        "weapons": ["scimitar"]
+      },
+      "digest": "cda40923cfa7efdb9346f58df7b12b23fd256d410e4734bffc157bc0bcef8ead",
+      "metadataDigest": "62c077ee00dcd945babaaa8a2aac134d1875d5a17cd44e9bd35a0e89fc586f27",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb",
+      "name": "Bonus Proficiencies",
+      "className": "Bard",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["medium", "shields"],
+        "weapons": ["martial"]
+      },
+      "digest": "ad073a13ddb561483fbabe6593a8575963658bb0fef6545e50618b69b5dbce90",
+      "metadataDigest": "f368d8dcef7f7d2eb1a58806e02e92dfa69def7103bb0926d91c7a59a95e7723",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb",
       "name": "Bonus Proficiency",
       "className": "Cleric",
@@ -147,6 +203,32 @@
         "page",
         "source",
         "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw",
+      "name": "Channeler",
+      "className": "Bard",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["playing cards"]
+      },
+      "digest": "81538ebca283008bf3911485a1a198c11931bf08bdf480a81ae20ea3cd06e7ed",
+      "metadataDigest": "4831b3bf86da5ca1d1634cd80bc5df7b61e5195cba4606ea52acb8da0b5bd100",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
         "subclassShortName",
         "subclassSource"
       ]
@@ -176,6 +258,59 @@
         "page",
         "source",
         "srd",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb",
+      "name": "Martial Training",
+      "className": "Bard",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["medium", "shields"],
+        "weapons": ["martial"]
+      },
+      "digest": "ead1f9c9b3c2176059a9b25bd7cee90830d42a53e0fd72a15d6559df13b86c67",
+      "metadataDigest": "bac61bb45786ba1421fffa3f579e374ceaf93cabd4750ec888a9b97a73ca850e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
+      "name": "Primal Lore",
+      "className": "Bard",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-languages",
+      "languages": ["druidic"],
+      "languageSource": "XPHB",
+      "digest": "3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32",
+      "metadataDigest": "2b7585b9c1e7d323b7d50fd9ec0a19b4ff754d6cbc49f668a827d75b328f74a6",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
         "subclassShortName",
         "subclassSource"
       ]

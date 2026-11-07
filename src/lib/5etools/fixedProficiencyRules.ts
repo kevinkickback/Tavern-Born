@@ -13,7 +13,7 @@ export interface FixedProficiencyRule {
     | 'proficient-tools'
     | 'fixed-languages'
     | 'fixed-training'
-  training?: Readonly<Partial<Record<'armor' | 'weapons', readonly string[]>>>
+  training?: Readonly<Partial<Record<'armor' | 'weapons' | 'tools', readonly string[]>>>
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string

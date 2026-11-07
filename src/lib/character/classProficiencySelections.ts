@@ -3,7 +3,8 @@ import {
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
-import type { SourceTag } from '@/lib/provenance/types'
+import { addAnyClassSkillChoice } from '@/lib/provenance/applyClassGrants'
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import {
   getInvalidClassProficiencySelectionIds,
   isValidClassProficiencySelection,
@@ -19,6 +20,23 @@ import type { FeatureOptionSelectionState } from './featureOptionSelections'
 import { resolveHistoricalProficiencyChoice } from './historicalProficiencyChoices'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
+
+/** Recover only the starting class choice missing in older saves. */
+export function getStartingSkillChoiceLedger(
+  character: Character,
+  ledger: ProvenanceLedger,
+  classes: readonly Class5e[],
+) {
+  const initial = character.initialClass ?? character.classProgression[0]
+  if (!initial) return ledger
+  const owners = character.classProgression.filter((row) => findClassReference(initial, [row]))
+  if (owners.length !== 1) return ledger
+  const matching = classes.filter((row) => findClassReference(owners[0], [row]))
+  const cls = matching.length === 1 ? matching[0] : undefined
+  return cls && !cls.sourceIdentityConflict && Array.isArray(cls.startingProficiencies?.skills)
+    ? addAnyClassSkillChoice(ledger, cls, cls.startingProficiencies.skills)
+    : ledger
+}
 
 function sameAppliedProficiencies(left: Character, right: Character): boolean {
   for (const domain of Object.keys(left.proficiencies) as Array<keyof Character['proficiencies']>) {

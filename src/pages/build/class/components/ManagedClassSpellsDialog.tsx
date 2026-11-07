@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { getBardLoreSpellRule, isClassicMagicalSecretsSlot } from '@/lib/5etools/bardSpellSources'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import {
   formatSpellReference,
@@ -151,7 +152,13 @@ export function ManagedClassSpellsDialog({
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
   const savantGain = selected ? getSavantSpellbookGain(selected.slot) : undefined
   const allowClassListBypass =
-    !isBookSpecialty && !savantGain && selected?.slot[1] !== 'feature-cantrip'
+    !isBookSpecialty &&
+    !savantGain &&
+    selected?.slot[1] !== 'feature-cantrip' &&
+    !(
+      selected &&
+      (getBardLoreSpellRule(selected.slot) || isClassicMagicalSecretsSlot(selected.slot))
+    )
   const pickerKind =
     (selected &&
       (isBookSpecialty || savantGain) &&

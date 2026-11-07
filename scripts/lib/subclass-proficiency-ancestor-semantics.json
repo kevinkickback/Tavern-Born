@@ -2,8 +2,36 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|college of valor|bard|phb|valor|phb|3|phb",
+      "digest": "11dcc3d0cf1c42ff2e0258d775f89dff5b126ad2879fff4add089d56a00b63a3"
+    },
+    {
+      "target": "subclass-feature|college of valor|bard|xphb|valor|xphb|3|xphb",
+      "digest": "b1dcb4c2ef13ca50eac97f05bab38f1f4010a2c8c680af27b3dbbf3fe12e488b"
+    },
+    {
+      "target": "subclass-feature|college of swords|bard|phb|swords|xge|3|xge",
+      "digest": "2a8b5754678c983c82cca4d100682f1d99054a543e05f075b4a8a09e0f0f400d"
+    },
+    {
+      "target": "subclass-feature|college of spirits|bard|xphb|spirits|rhw|3|rhw",
+      "digest": "75b8bc34572108584708f10e6e2eb947942f228b164999e2c5583c3c62decc8d"
+    },
+    {
       "target": "subclass-feature|enchanter|wizard|xphb|enchanter|au|3|au",
       "digest": "1efd67cc566b517bbe271b57ec7e7e39aeef95f1437ea000d8c79de202869a12"
+    },
+    {
+      "target": "subclass-feature|college of lore|bard|phb|lore|phb|3|phb",
+      "digest": "2972b4b6c297f7e64ff4d3121f5bd32cff609d7e17bee8430564aa39c68434f4"
+    },
+    {
+      "target": "subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb",
+      "digest": "b5a879ae1a7d081b6cf9b0a28581dc88f1310b3cf67b263fc27d8e19e6a1874d"
+    },
+    {
+      "target": "subclass-feature|college of the moon|bard|xphb|moon|frhof|3|frhof",
+      "digest": "8a51f062ab4c0447b8eab11812a383a380be567f9f3c42f4af85862dce2f7b10"
     },
     {
       "target": "subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge",
@@ -60,6 +88,16 @@
     {
       "target": "subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof",
       "digest": "e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223"
+    }
+  ],
+  "bundledBardAncestors": [
+    {
+      "target": "subclass-feature|college of lore|bard|phb|lore|phb|3|phb",
+      "digest": "ffce4fb6144432c01f226c46739fe5eda0e386e22825734b8531574451fbc061"
+    },
+    {
+      "target": "subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb",
+      "digest": "2284d5c00e32d249582b232fd801ac7b7509f145d4c64448740456c94cbb7e4c"
     }
   ]
 }

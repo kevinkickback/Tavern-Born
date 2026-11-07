@@ -6,6 +6,7 @@ import {
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
+import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
@@ -170,6 +171,8 @@ export function getEarnedSubclassSpellGrants(
             feature: { name: 'Oath Spells', target: 'inherited-oath-spells' },
           }))
         : []
+    const bardGrants = getBardCollegeSpellGrants(classData, subclasses[0], classLevel)
+    if (bardGrants) return bardGrants
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
     // The conditional Illusion grant is resolved after current ordinary cantrips.
     if (illusion)

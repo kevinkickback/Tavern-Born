@@ -20,6 +20,8 @@ const FEATURE_FIELDS = [
   'level',
   'header',
   'srd',
+  'srd52',
+  'basicRules2024',
   'entries',
   '_copy',
 ]
@@ -41,6 +43,8 @@ const ROOT_FIELDS = [
   '_copy',
   'fluff',
   'srd',
+  'srd52',
+  'basicRules2024',
   'optionalfeatureProgression',
 ]
 const COPY_FIELDS = [
@@ -225,6 +229,32 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
         size: 4,
       },
     ],
+    [
+      'subclass-feature|bonus proficiencies|bard|phb|lore|phb|3|phb',
+      {
+        body: '9d52343bde0d675d8d598d268c762fe560a104b5fe4c400593e5d660008eae2f',
+        gain: 'class-feature|bard college|bard|phb|3|phb',
+        count: 3,
+      },
+    ],
+    [
+      'subclass-feature|bonus proficiencies|bard|xphb|lore|xphb|3|xphb',
+      {
+        body: '123c96dc263a9746a220624ca5bc345ea63c98a7563b8128f57aaf383172b84d',
+        gain: 'class-feature|bard subclass|bard|xphb|3|xphb',
+        count: 3,
+      },
+    ],
+    [
+      'subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof',
+      {
+        body: '3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32',
+        gain: 'class-feature|bard subclass|bard|xphb|3|xphb',
+        count: 1,
+        line: 1,
+        size: 6,
+      },
+    ],
   ])
   const simpleSkills = features.flatMap((feature) => {
     const target = identity(feature)
@@ -238,23 +268,34 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
     )
       fail(`Unsupported ${feature.name} source`)
     seen.add(target)
-    const skillPool = [...feature.entries[rule.line].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map(
-      (match) => match[1].toLowerCase(),
-    )
-    if (new Set(skillPool).size !== rule.size) fail(`Unverified ${feature.name} skill pool`)
+    const skillPool =
+      rule.line === undefined
+        ? null
+        : [...feature.entries[rule.line].matchAll(/\{@skill ([^|}]+)\|XPHB\}/g)].map((match) =>
+            match[1].toLowerCase(),
+          )
+    if (skillPool && new Set(skillPool).size !== rule.size)
+      fail(`Unverified ${feature.name} skill pool`)
     return [
       {
         target,
-        digest: digest(feature.entries),
+        digest: rule.body,
+        optional: false,
+        subclassGainTarget: rule.gain,
         fields: [
           ...Object.keys(feature),
           'featureOptionSourceConflict',
           'subclassProficiencySourceAudit',
         ].sort(),
-        optional: false,
-        subclassGainTarget: rule.gain,
         ...(rule.modifier && { skillModifier: { label: feature.name, ...rule.modifier } }),
-        domains: [{ domain: 'skills', count: 1, skillPool }],
+        domains: [
+          {
+            domain: 'skills',
+            count: rule.count ?? 1,
+            skillPool,
+            ...(skillPool === null && { excludeExisting: true }),
+          },
+        ],
       },
     ]
   })
@@ -266,8 +307,10 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
   const rootFields = [...ROOT_FIELDS, ...(api.sourceFields ?? [])]
   const featureFields = [...FEATURE_FIELDS, ...(api.sourceFields ?? [])]
   const validateMetadata = (record, root = false) => {
-    if (record.srd !== undefined && typeof record.srd !== 'boolean')
-      fail('Unsupported subclass srd metadata')
+    for (const field of ['srd', 'srd52', 'basicRules2024']) {
+      if (record[field] !== undefined && typeof record[field] !== 'boolean')
+        fail(`Unsupported subclass ${field} metadata`)
+    }
     if (root && record.optionalfeatureProgression !== undefined) {
       if (!api.validateProgression) fail('Unadmitted subclass progression metadata')
       api.validateProgression(record)

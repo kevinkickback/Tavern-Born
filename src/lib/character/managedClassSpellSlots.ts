@@ -1,3 +1,4 @@
+import { getBardLoreSpellSlots } from '@/lib/5etools/bardSpellSources'
 import {
   CLASS_CASTING_PRODUCERS,
   getClassSpellProfilePolicy,
@@ -72,6 +73,7 @@ export function getManagedClassSpellSlots(
         ...ordinary,
         ...arcanum,
         ...feature,
+        ...getBardLoreSpellSlots(entry),
         ...getSavantSpellbookSlots(entry),
         ...getSpellbookSpecialtySlots(entry),
       ].map((slot) => [managedClassSpellId(slot), slot]),

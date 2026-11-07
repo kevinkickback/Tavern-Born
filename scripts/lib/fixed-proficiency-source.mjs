@@ -71,6 +71,37 @@ function deriveDruidic(feature) {
   }
 }
 
+const bardCollegeTraining = new Map([
+  [
+    'subclass-feature|bonus proficiencies|bard|phb|valor|phb|3|phb',
+    [
+      'ad073a13ddb561483fbabe6593a8575963658bb0fef6545e50618b69b5dbce90',
+      { armor: ['medium', 'shields'], weapons: ['martial'] },
+    ],
+  ],
+  [
+    'subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb',
+    [
+      'ead1f9c9b3c2176059a9b25bd7cee90830d42a53e0fd72a15d6559df13b86c67',
+      { armor: ['medium', 'shields'], weapons: ['martial'] },
+    ],
+  ],
+  [
+    'subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge',
+    [
+      'cda40923cfa7efdb9346f58df7b12b23fd256d410e4734bffc157bc0bcef8ead',
+      { armor: ['medium'], weapons: ['scimitar'] },
+    ],
+  ],
+  [
+    'subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw',
+    [
+      '81538ebca283008bf3911485a1a198c11931bf08bdf480a81ae20ea3cd06e7ed',
+      { tools: ['playing cards'] },
+    ],
+  ],
+])
+
 export function deriveFixedProficiencyRules(documents, api) {
   const features = []
   const push = (feature, kind, mechanics, identity) => {
@@ -96,6 +127,30 @@ export function deriveFixedProficiencyRules(documents, api) {
   }
   for (const document of documents) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
+      const target = api.subclassIdentity(feature)
+      const bardTraining = bardCollegeTraining.get(target)
+      if (bardTraining || target === 'subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof') {
+        const digest =
+          bardTraining?.[0] ?? '3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32'
+        if (
+          feature._copy ||
+          !only(feature, [...SUBCLASS_FIELDS, 'srd52', 'basicRules2024']) ||
+          !Array.isArray(feature.entries) ||
+          api.entriesDigest(feature.entries, false) !== digest
+        )
+          fail('Unsupported Bard college fixed proficiency source')
+        if (bardTraining) {
+          push(feature, 'fixed-training', { training: bardTraining[1] }, api.subclassIdentity)
+        } else {
+          push(
+            feature,
+            'fixed-languages',
+            { languages: ['druidic'], languageSource: 'XPHB' },
+            api.subclassIdentity,
+          )
+        }
+        continue
+      }
       if (
         feature.name === 'Wind Speaker' &&
         feature.className === 'Sorcerer' &&

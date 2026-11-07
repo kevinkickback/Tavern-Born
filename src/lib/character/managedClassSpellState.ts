@@ -1,3 +1,4 @@
+import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
@@ -25,8 +26,26 @@ export function removeManagedClassSpellMaterialization(
       isManagedClassSpellProfile(choice.slot, profile),
     )
     if (!targets.length) return profile
+    const automaticLore = new Set(
+      targets
+        .filter((choice) => getBardLoreSpellRule(choice.slot)?.source === 'xphb')
+        .map((choice) => getSpellReferenceKey(choice.target.name, choice.target.source)),
+    )
+    const alwaysPreparedSpells = automaticLore.size
+      ? profile.alwaysPreparedSpells?.filter(
+          (reference) =>
+            !automaticLore.has(getSpellReferenceKey(reference)) ||
+            profile.fixedSpells?.some(
+              (fixed) => getSpellReferenceKey(fixed) === getSpellReferenceKey(reference),
+            ),
+        )
+      : profile.alwaysPreparedSpells
+    const independent =
+      alwaysPreparedSpells === profile.alwaysPreparedSpells
+        ? profile
+        : { ...profile, alwaysPreparedSpells }
     const keep = (reference: string) =>
-      isIndependentFixedClassSpell(profile, reference) ||
+      isIndependentFixedClassSpell(independent, reference) ||
       (character.managedClassSpellChoices ?? []).some(
         (choice) =>
           !ids.has(managedClassSpellId(choice.slot)) &&
@@ -44,6 +63,7 @@ export function removeManagedClassSpellMaterialization(
       )
     return {
       ...profile,
+      alwaysPreparedSpells,
       cantrips: profile.cantrips.filter(keep),
       spellsKnown: profile.spellsKnown.filter(keep),
       preparedSpells: profile.preparedSpells.filter(keep),

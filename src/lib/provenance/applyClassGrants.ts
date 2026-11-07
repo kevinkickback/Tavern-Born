@@ -1,3 +1,4 @@
+import { ALL_SKILLS } from '@/lib/calculations/skills'
 import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
 import { addChoicePlaceholder, addGrant, addSpellGrant } from './ledger'
 import { normalizeKey, stripItemTag } from './normalization'
@@ -102,18 +103,14 @@ export function applyClassGrants(
   const skillChoiceEntry = skillsArray.find(
     (s): s is Record<string, unknown> => typeof s === 'object' && s !== null && 'choose' in s,
   ) as { choose?: { from: string[]; count: number } } | undefined
-  if (skillChoiceEntry?.choose) {
-    const choiceRecord: ChoiceRecord = {
-      id: `class:${normalizeKey(cls.name)}:${normalizeKey(cls.source ?? '')}:skills:choose`,
-      domain: 'skills',
-      sourceTag: { ...clsTag, grantType: 'placeholder' },
-      chooseCount: skillChoiceEntry.choose.count ?? 2,
-      optionPool: skillChoiceEntry.choose.from ?? [],
-      selected: [],
-      status: 'pending',
-    }
-    result = addChoicePlaceholder(result, choiceRecord)
-  }
+  if (skillChoiceEntry?.choose)
+    result = addClassSkillChoice(
+      result,
+      clsTag,
+      skillChoiceEntry.choose.count ?? 2,
+      skillChoiceEntry.choose.from ?? [],
+    )
+  else result = addAnyClassSkillChoice(result, cls, skillsArray)
 
   // Saving throw proficiencies (from cls.proficiency: e.g. ['str', 'con'])
   if (!options?.isMulticlassGrant) {
@@ -134,6 +131,46 @@ export function applyClassGrants(
   return result
 }
 
+function addClassSkillChoice(
+  ledger: ProvenanceLedger,
+  cls: ReturnType<typeof makeSourceTag>,
+  count: number,
+  pool: readonly string[],
+) {
+  const choice: ChoiceRecord = {
+    id: `class:${normalizeKey(cls.sourceName)}:${normalizeKey(cls.sourceRef ?? '')}:skills:choose`,
+    domain: 'skills',
+    sourceTag: { ...cls, grantType: 'placeholder' },
+    chooseCount: count,
+    optionPool: [...pool],
+    selected: [],
+    status: 'pending',
+  }
+  return addChoicePlaceholder(ledger, choice)
+}
+
+/** A structured all-skill option has no explicit `choose.from` list. */
+export function addAnyClassSkillChoice(
+  ledger: ProvenanceLedger,
+  cls: { name: string; source?: string },
+  skills: readonly unknown[],
+) {
+  const block = skills.length === 1 ? skills[0] : undefined
+  if (!block || typeof block !== 'object' || !('any' in block) || Object.keys(block).length !== 1)
+    return ledger
+  const count = block.any
+  return typeof count === 'number' &&
+    Number.isInteger(count) &&
+    count > 0 &&
+    count <= ALL_SKILLS.length
+    ? addClassSkillChoice(
+        ledger,
+        makeSourceTag('class', cls.name, 'fixed', cls.source),
+        count,
+        ALL_SKILLS,
+      )
+    : ledger
+}
 export function applyMulticlassGrants(
   cls: Parameters<typeof applyClassGrants>[0],
   ledger: ProvenanceLedger,

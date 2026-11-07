@@ -373,3 +373,16 @@ Bonus spell selection records manual ownership with the selected spell printing.
 bonus list retracts only its removed manual targets. Removing a bonus copy preserves racial,
 class and feat ownership of the same target, including independently prepared class spells.
 Qualified removals never assign an unknown-source grant to the requested printing.
+
+## Bard starting and college benefits
+
+A starting Bard chooses three skills from the skill list and three instruments in both editions.
+The Bard multiclass entry uses its own authored choices. Existing starting Bard saves recover the
+missing skill choice from the current class data without changing existing skill ownership.
+
+Both Lore printings offer three distinct additional skill proficiencies at level 3. Moon offers a
+skill from its six named options, the fixed Druidic language and a separate Druid cantrip at level 3.
+Valor and Swords grant their earned armor and weapon training. Revised Spirits grants Playing Cards
+proficiency. Revised Dance uses Dexterity and Charisma for unarmored AC while wearing neither armor
+nor a shield. Jack of All Trades contributes half proficiency to untrained skill checks from
+Bard level 2. Classic non-skill checks use the rule text in Class Details and full sheets.
