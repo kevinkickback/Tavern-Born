@@ -48,7 +48,6 @@ const sharedOrigins = [
 const reviewedOrigins = {
   PHB: [
     ...sharedOrigins,
-    ['PHB', 'Draconic Bloodline', 'Dragon Ancestor', 'Dragon Wings'],
     ['PHB', 'Wild Magic', 'Tides of Chaos', 'Controlled Chaos'],
     ['XGE', 'Shadow Magic', 'Eyes of the Dark', 'Shadow Walk'],
     ['TCE', 'Aberrant Mind', 'Psionic Spells', 'Revelation in Flesh'],
@@ -58,7 +57,6 @@ const reviewedOrigins = {
     ...sharedOrigins,
     ['XPHB', 'Aberrant Sorcery', 'Psionic Spells', 'Revelation in Flesh'],
     ['XPHB', 'Clockwork Sorcery', 'Clockwork Spells', 'Trance of Order'],
-    ['XPHB', 'Draconic Sorcery', 'Draconic Spells', 'Dragon Wings'],
     ['XPHB', 'Wild Magic Sorcery', 'Tides of Chaos', 'Controlled Chaos'],
     ['FRHoF', 'Spellfire Sorcery', 'Spellfire Burst', 'Honed Spellfire'],
     ['RHW', 'Shadow Sorcery', 'Power of Shadow', 'Shadow Walk'],
@@ -288,7 +286,7 @@ test.skipIf(!hasCatalog).each(editions)(
 
 test.skipIf(!hasCatalog)(
   'revised Shadow Sorcery gains a casting-only Summon Beast at level 6',
-  () => {
+  async () => {
     const { actor, calculate, profile, primary, raw, absent } = fixture(
       editions[1],
       'Shadow Sorcery',
@@ -334,17 +332,36 @@ test.skipIf(!hasCatalog)(
     ).toBe(false)
     expect(profile(saved)?.spellsKnown).not.toContain('Summon Beast|XPHB')
     expect(profile(saved)?.alwaysPreparedSpells).not.toContain('Summon Beast|XPHB')
-    const row = createCharacterSheetViewModel(saved, raw, primary).spellRows.find(
-      (spell) => spell.name === 'Summon Beast',
-    )
+    const sheet = createCharacterSheetViewModel(saved, raw, primary)
+    const row = sheet.spellRows.find((spell) => spell.name === 'Summon Beast')
     expect(row).toMatchObject({
       prepared: false,
+      castOnly: true,
       level: '2',
       castingTime: 'Bonus Action',
       material: false,
     })
     expect(row?.castingNote).toContain('without a spell slot, preparation, or Material components')
+    for (const template of ['2024-official', '2024-custom'] as const) {
+      const bytes = await generateTestCharacterSheet(sheet, template, {
+        text: { descriptions: 'full', overflow: 'notes' },
+      })
+      const form = (await PDFDocument.load(bytes)).getForm()
+      const names = form
+        .getFields()
+        .filter(
+          (field) =>
+            field instanceof PDFTextField &&
+            /^Text_1(?:2[2-9]|[34]\d|5[01])$/.test(field.getName()),
+        ) as PDFTextField[]
+      const summon = names.find((field) => field.getText() === 'Summon Beast')
+      expect(summon, template).toBeDefined()
+      const index = Number(summon?.getName().slice(5)) - 122
+      expect(form.getTextField(`Text_${152 + index}`).getText()).toMatch(/^Bonus(?:;|$)/)
+      expect(form.getCheckBox(`Checkbox_${61 + index * 3}`).isChecked()).toBe(false)
+    }
   },
+  20_000,
 )
 
 test.skipIf(!hasCatalog).each(editions)(

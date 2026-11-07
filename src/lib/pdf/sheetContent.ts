@@ -120,7 +120,9 @@ export function planSheetContent(
         .join('; '),
     }),
   )
-  const spellRows = [...vm.spellRows].sort((a, b) => Number(b.prepared) - Number(a.prepared))
+  const spellRows = [...vm.spellRows].sort(
+    (a, b) => Number(b.prepared || b.castOnly) - Number(a.prepared || a.castOnly),
+  )
   const selectedSpells = select(
     'spells',
     'Spells',
@@ -129,11 +131,11 @@ export function planSheetContent(
     (row, index) => ({
       id: row.id ?? `${row.name}:${index}`,
       name: row.name,
-      detail: `${row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`} · ${row.prepared ? 'Ready' : 'Unprepared'}${row.ritual ? ' · Ritual' : ''}`,
+      detail: `${row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`} · ${row.prepared ? 'Ready' : row.castOnly ? 'Feature cast' : 'Unprepared'}${row.ritual ? ' · Ritual' : ''}`,
       text: [
         row.name,
         row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`,
-        row.prepared ? 'Ready' : 'Unprepared',
+        row.prepared ? 'Ready' : row.castOnly ? 'Feature cast' : 'Unprepared',
         row.castingTimeAndDuration,
         row.notes,
         row.concentration ? 'Concentration' : '',
@@ -142,7 +144,12 @@ export function planSheetContent(
         .filter(Boolean)
         .join('; '),
     }),
-    (row) => template.edition === '2014' || row.prepared || row.level === 'C' || !row.level,
+    (row) =>
+      template.edition === '2014' ||
+      row.prepared ||
+      row.castOnly ||
+      row.level === 'C' ||
+      !row.level,
   )
   let actions = vm.actions
   let feats = vm.feats

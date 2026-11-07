@@ -134,6 +134,7 @@ interface CharacterSheetSpellRow {
   id?: string
   name: string
   prepared: boolean
+  castOnly?: true
   level: string
   castingTimeAndDuration: string
   castingTime: string
@@ -676,8 +677,9 @@ function buildSpellRows(
       return {
         id: key,
         name: spell?.name ?? fallbackName,
-        // PDF readiness includes slot-free casting, as with Mystic Arcanum.
+        // Keep a cast-only route distinct from an ordinary prepared or learned spell.
         prepared: prepared.has(key) || invocations.length > 0,
+        ...(castOnlyRules.has(key) && { castOnly: true as const }),
         level: spell
           ? spell.level === 0
             ? 'C'

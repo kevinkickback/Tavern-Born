@@ -99,7 +99,9 @@ function titleCaseAbility(ability: string | undefined): string {
 export function get2024SpellRows(viewModel: CharacterSheetViewModel) {
   return (
     viewModel.spellRowsForSheet ??
-    viewModel.spellRows.filter((row) => row.prepared || row.level === 'C' || !row.level)
+    viewModel.spellRows.filter(
+      (row) => row.prepared || row.castOnly || row.level === 'C' || !row.level,
+    )
   )
 }
 

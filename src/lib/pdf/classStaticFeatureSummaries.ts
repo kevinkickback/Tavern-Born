@@ -61,7 +61,6 @@ const sharedSorcererOrigins = [
 const reviewedSorcererOrigins = {
   phb: [
     ...sharedSorcererOrigins,
-    'draconic bloodline|phb',
     'wild magic|phb',
     'shadow magic|xge',
     'aberrant mind|tce',
@@ -71,7 +70,6 @@ const reviewedSorcererOrigins = {
     ...sharedSorcererOrigins,
     'aberrant sorcery|xphb',
     'clockwork sorcery|xphb',
-    'draconic sorcery|xphb',
     'wild magic sorcery|xphb',
     'spellfire sorcery|frhof',
     'shadow sorcery|rhw',
@@ -193,21 +191,12 @@ export function getClassStaticFeatureSummaries(
             source === 'phb'
               ? { level: 1, intro: 'sorcerous origin', later: 'sorcerous origin feature' }
               : { level: 3, intro: 'sorcerer subclass', later: 'subclass feature' },
-          ).flatMap((feature) => {
-            const name = norm(feature.name)
-            // The native Draconic adapters retain their own source proofs and action summaries.
-            if (
-              (origin === 'draconic bloodline|phb' &&
-                (name === 'dragon wings' || name === 'draconic presence')) ||
-              (origin === 'draconic sorcery|xphb' &&
-                (name === 'dragon wings' || name === 'dragon companion'))
-            )
-              return []
-            return featureSummary(feature).map((summary) => ({
+          ).flatMap((feature) =>
+            featureSummary(feature).map((summary) => ({
               ...summary,
               replaces: savedClassLabel(character, entry, feature),
-            }))
-          })
+            })),
+          )
         : []
       const actionSummaries = [getDragonWings(sorcerer), getDraconicPresence(sorcerer)].flatMap(
         (rule) => {
