@@ -210,7 +210,7 @@ test('saved race and feat labels survive missing parent rules and restoration wi
   expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
 })
 
-test('parsed full subrace labels show lineage and book while preserving the selected canonical fields', async () => {
+test('parsed subrace labels distinguish competing books and retain the saved source on recovery', async () => {
   const parent = parseRaces({
     race: [
       {
@@ -256,7 +256,8 @@ test('parsed full subrace labels show lineage and book while preserving the sele
   act(() => loadData([], parent))
   expect(selector.textContent).toBe('Draconblood: Brass · BOOK-A')
   act(() => loadData([], null))
-  expect(screen.getByText('Draconblood: Brass · BOOK-A')).toBeTruthy()
+  expect(screen.getByText('Draconblood: Brass', { exact: true })).toBeTruthy()
+  expect(screen.getByText('Saved subrace source BOOK-A', { exact: true })).toBeTruthy()
   expect(screen.queryByRole('combobox', { name: 'Subrace' })).toBeNull()
   expect(useCharacterStore.getState().activeCharacter).toBe(character)
   expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
