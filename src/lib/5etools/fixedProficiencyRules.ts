@@ -17,6 +17,7 @@ export interface FixedProficiencyRule {
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string
+  useClassLanguagePrinting?: true
   subclassGain?: { owner: readonly string[]; target: string }
   fallback?: { name: string; count: number; skillPool: readonly string[] }
 }
@@ -67,5 +68,23 @@ export function fixedProficiencyRule(target: string, owner?: readonly string[]) 
       requiredOwner.some((part, index) => owner[index] !== part))
   )
     return undefined
-  return rule
+  if (!rule?.useClassLanguagePrinting || !owner) return rule
+  const source = owner[1]
+  if (
+    owner.length !== 4 ||
+    owner[0] !== 'sorcerer' ||
+    owner[2] !== 'storm sorcery' ||
+    owner[3] !== 'xge' ||
+    (source !== 'phb' && source !== 'xphb')
+  )
+    return undefined
+  const gainTarget =
+    source === 'phb'
+      ? 'class-feature|sorcerous origin|sorcerer|phb|1|phb'
+      : 'class-feature|sorcerer subclass|sorcerer|xphb|3|xphb'
+  return {
+    ...rule,
+    languageSource: source.toUpperCase(),
+    subclassGain: { owner, target: gainTarget },
+  }
 }

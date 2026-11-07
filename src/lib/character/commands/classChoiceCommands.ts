@@ -25,6 +25,7 @@ import {
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { isDivineSoulConfigurationGroup } from '@/lib/5etools/divineSoulConfiguration'
 import {
   ELEMENTAL_FURY_ID,
   getCurrentElementalFury,
@@ -1064,7 +1065,9 @@ export function applyClassChoiceSelectionCommand(
       const target = decodeFeatureOptionReference(option)
       return (
         target?.format === 'source-group' &&
-        (target.group === LAND_GROUP || isWarlockPatronConfigurationGroup(target.group))
+        (target.group === LAND_GROUP ||
+          isWarlockPatronConfigurationGroup(target.group) ||
+          isDivineSoulConfigurationGroup(target.group))
       )
     })
   )

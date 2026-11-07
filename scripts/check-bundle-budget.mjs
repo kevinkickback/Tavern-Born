@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Druid Circle rules at 6,613,708 B renderer and 1,338,687 B initial.
+  // Measured with Sorcerer origin rules at 6,628,832 B renderer and 1,352,378 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6459 * KIB,
-  initialRendererScript: 1308 * KIB,
+  rendererCode: 6474 * KIB,
+  initialRendererScript: 1321 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

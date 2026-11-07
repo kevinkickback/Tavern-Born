@@ -491,6 +491,77 @@
       "copies": []
     },
     {
+      "target": "subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge",
+      "rawDigest": "5c31a91c606068b377a4277581af9d6a685c68d6e800120e521be08af0d17d09",
+      "metadataDigest": "baa40aa631a5c63a77389837bcbf131a034ad14c86f268f0e6b8bb1423fde955",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "aa71c6e0bdf77378190d2ec071e80303245d3d003ecdf3a0db1b11c297229d0b"
+        },
+        {
+          "digest": "9cd846a623a39437c1da2eb7a0b57f8432f5a89e7295e1e738e8c21339581304"
+        },
+        {
+          "digest": "77f8f9f7a1390626138e8ba3de398eaa4add36557d56420c223b6d76529c44d0",
+          "reference": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge"
+        },
+        {
+          "digest": "f20a7ad7239b57877e9d1b329d92d8a0cc5840e1ecccc573bfa9b4f762cbb158",
+          "reference": "subclass-feature|tempestuous magic|sorcerer|phb|storm|xge|1|xge"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|storm sorcery|sorcerer|xphb|storm|xge|3|xge",
+      "rawDigest": "3b6bb74ea5154368990a10832965aacb02e62d2db9ef6f54342648973a6b7ed1",
+      "metadataDigest": "44234e8e2a24318e036d9896bd3a95bb5fc8168440f77b1192e3b6ce1c3eddb2",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "aa71c6e0bdf77378190d2ec071e80303245d3d003ecdf3a0db1b11c297229d0b"
+        },
+        {
+          "digest": "9cd846a623a39437c1da2eb7a0b57f8432f5a89e7295e1e738e8c21339581304"
+        },
+        {
+          "digest": "77f8f9f7a1390626138e8ba3de398eaa4add36557d56420c223b6d76529c44d0",
+          "reference": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge"
+        },
+        {
+          "digest": "f20a7ad7239b57877e9d1b329d92d8a0cc5840e1ecccc573bfa9b4f762cbb158",
+          "reference": "subclass-feature|tempestuous magic|sorcerer|phb|storm|xge|1|xge"
+        }
+      ],
+      "copies": [
+        {
+          "target": "subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge",
+          "digest": "5c31a91c606068b377a4277581af9d6a685c68d6e800120e521be08af0d17d09"
+        }
+      ]
+    },
+    {
       "target": "subclass-feature|survivalist|rogue|phb|scout|xge|3|xge",
       "rawDigest": "a3e87be35b17b5e577f6389aee5b51a1e89ba4e551e8fc86a2d726b1e175b170",
       "metadataDigest": "da2ffa5b6f53be26583efcd612a1178117a3d4e24b9e6d5070cc44d5bbcbbf5d",
@@ -509,6 +580,29 @@
       "entries": [
         {
           "digest": "d03490da6f2e74df8779efac42d6b62bdd6ad86a1bde9a8fdfd7baec79030226"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge",
+      "rawDigest": "67e5b63f08f674acfee41d650e70b6233e878d25b668f0727b1dc67182503024",
+      "metadataDigest": "b15defc4c4e0a81204946f4e162b3b9d539efc222657c753a234e7a76f8ba570",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "14469546d676a5cb2672d938a273a9f6125e1ad47482b9f11297082bbd57bd0f"
         }
       ],
       "copies": []
@@ -984,6 +1078,41 @@
       ]
     },
     {
+      "owner": ["sorcerer", "phb", "storm sorcery", "xge"],
+      "shortName": "Storm",
+      "rawDigest": "2db0cb3aeb0e6d915b1bef4955432d5972586f16a177615bf500f77cbb82745e",
+      "metadataDigest": "d7853af158a499f01bdd486a82151bf2fbca38c391e3d2fe56251c8b3a977e7d",
+      "fields": [
+        "className",
+        "classSource",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "name",
+        "otherSources",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Storm Sorcery|Sorcerer||Storm|XGE|1",
+        "Heart of the Storm|Sorcerer||Storm|XGE|6",
+        "Storm Guide|Sorcerer||Storm|XGE|6",
+        "Storm's Fury|Sorcerer||Storm|XGE|14",
+        "Wind Soul|Sorcerer||Storm|XGE|18"
+      ],
+      "intro": "Storm Sorcery|Sorcerer||Storm|XGE|1",
+      "paths": [
+        {
+          "target": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge",
+          "refs": ["Storm Sorcery|Sorcerer||Storm|XGE|1", "Wind Speaker|Sorcerer||Storm|XGE|1"],
+          "level": 1
+        }
+      ]
+    },
+    {
       "owner": ["sorcerer", "xphb", "draconic bloodline", "phb"],
       "shortName": "Draconic",
       "rawDigest": "43f37f7fd351e606dc8e75a33d75fe155557f5b9313d78f37d69f4e95e8a01e1",
@@ -1021,6 +1150,47 @@
             "Draconic Bloodline|Sorcerer|XPHB|Draconic||3",
             "Dragon Ancestor|Sorcerer||Draconic||1"
           ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["sorcerer", "xphb", "storm sorcery", "xge"],
+      "shortName": "Storm",
+      "rawDigest": "b1fb03ca0adf69a5ba0c276792f15bb9a6240500d17441a3c641bdaeee9c6592",
+      "metadataDigest": "3a7340ae0ba243c08110f73932727663c06ff9d0d4d69d0f428ae10cfef0fa11",
+      "fields": [
+        "_copy",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluff",
+        "hasFluffImages",
+        "name",
+        "otherSources",
+        "page",
+        "shortName",
+        "source",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Storm Sorcery|XGE|Storm|Sorcerer|PHB",
+          "digest": "2db0cb3aeb0e6d915b1bef4955432d5972586f16a177615bf500f77cbb82745e"
+        }
+      ],
+      "declarations": [
+        "Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3",
+        "Heart of the Storm|Sorcerer||Storm|XGE|6",
+        "Storm Guide|Sorcerer||Storm|XGE|6",
+        "Storm's Fury|Sorcerer||Storm|XGE|14",
+        "Wind Soul|Sorcerer||Storm|XGE|18"
+      ],
+      "intro": "Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3",
+      "paths": [
+        {
+          "target": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge",
+          "refs": ["Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3", "Wind Speaker|Sorcerer||Storm|XGE|1"],
           "level": 3
         }
       ]

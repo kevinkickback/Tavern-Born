@@ -82,6 +82,12 @@ import {
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
 import {
+  getDivineSoulConfiguration,
+  getDivineSoulOwnerRule,
+  isDivineSoulConfigurationGroup,
+  resolveDivineSoulConfigurationOption,
+} from '@/lib/5etools/divineSoulConfiguration'
+import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
@@ -579,6 +585,8 @@ export function resolveFeatureOptionEntity(
     return resolveLandTerrainOption(option, catalogs.classes)
   if (target?.format === 'source-group' && isWarlockPatronConfigurationGroup(target.group))
     return resolveWarlockPatronConfigurationOption(option, catalogs.classes)
+  if (target?.format === 'source-group' && isDivineSoulConfigurationGroup(target.group))
+    return resolveDivineSoulConfigurationOption(option, catalogs.classes)
   if (target?.format === 'source-group')
     return target.group === REVISED_HUNTER_GROUP
       ? resolveRevisedHunterOption(option, catalogs)
@@ -670,9 +678,11 @@ function resolveExplicitOption(
                 ? 'Damage type'
                 : match.group === LAND_GROUP
                   ? 'Circle terrain'
-                  : isFavoredEnemyOption(option)
-                    ? 'Favored enemy'
-                    : 'Favored terrain'
+                  : isDivineSoulConfigurationGroup(String(match.group))
+                    ? 'Divine affinity'
+                    : isFavoredEnemyOption(option)
+                      ? 'Favored enemy'
+                      : 'Favored terrain'
             : 'Dragon ancestry',
         ],
       },
@@ -1568,6 +1578,7 @@ export function getClassChoiceCandidates(
     ...[
       getCurrentLandTerrainSetup(classData, subclass, catalogs),
       getRevisedAffinitySetup(classData, subclass, catalogs),
+      getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
     ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
@@ -1882,6 +1893,18 @@ export function getClassChoiceDiagnosticCandidates(
   )
     rows.push(revisedAffinityDiagnostic)
   const patronConfigurations = getWarlockPatronConfigurationRules(classData, subclass)
+  const divineSoul = getDivineSoulOwnerRule(classData, subclass)
+  if (divineSoul && !getDivineSoulConfiguration(classData, subclass, catalogs?.classes))
+    rows.push({
+      code: 'unverified-required-choice',
+      className: divineSoul.owner.name,
+      classSource: divineSoul.owner.source,
+      subclassName: divineSoul.owner.subclassName,
+      subclassSource: divineSoul.owner.subclassSource,
+      level: divineSoul.level,
+      featureName: 'Divine Soul Affinity',
+      message: 'The exact Divine Soul affinity rules are unavailable or unsupported.',
+    })
   if (patronConfigurations.length) {
     const current = getWarlockPatronConfigurations(classData, subclass, catalogs?.classes)
     for (const rule of patronConfigurations.filter(

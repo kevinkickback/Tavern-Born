@@ -98,6 +98,19 @@ Reviewed Druid Circles print their current subclass rules at the levels that gra
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
 
+### Sorcerer origins
+
+Divine Soul chooses its affinity at the classic level-1 or revised level-3 subclass gain. The
+choice saves one exact origin and grants the affinity's bonus spell. Losing the gain retires the
+choice. Losing the source suspends the spell and preserves the choice for recovery. Lunar phase is
+chosen during play under Lunar Embodiment and Waxing and Waning, so Lunar Sorcery has no permanent
+phase setup. Reviewed Sorcerer origin rules print at their earned levels, using the current
+selected class edition and the rule's own printing.
+
+Wind Speaker grants Primordial at the classic level-1 or revised level-3 Storm Sorcery gain.
+The revised copy uses the exact revised Primordial reprint. Losing the source removes only this
+language ownership. The four dialects are part of the Primordial rule.
+
 ### Warlock patron setup and resources
 
 The Genie chooses its patron type at the classic level-1 or revised level-3 subclass gain. Vestige

@@ -181,6 +181,25 @@ activates the spells already earned by that point. Later schedule additions stil
 authored Druid levels. An unavailable copied declaration suspends its own grants and preserves
 ordinary Druid spell ownership. The classic subclasses keep their classic spell printings.
 
+## Divine Soul and Lunar Sorcery
+
+Divine Magic adds the chosen affinity spell outside the ordinary Sorcerer spell quota. Its Cleric
+list access is available for ordinary Sorcerer choices once the exact subclass feature is earned,
+including when editing an earlier slot. Cleric access is independent of the affinity. Restoring
+the source restores its current grants. An overlapping saved ordinary choice keeps its own
+ownership and can still be edited through the ordinary spell picker.
+
+Lunar Sorcery learns the complete Lunar Spells table and Sacred Flame outside the ordinary quota.
+Classic Sorcerers gain the cantrip and first-rank table entries at level 1. Revised Sorcerers gain
+those and the second-rank entries at level 3. Both gain the remaining ranks at levels 5, 7 and 9.
+The three first-rank spells show the matching phase and the applicable slot-free casting limit.
+Before Waxing and Waning they share one use per Long Rest. At level 6 each phase has one use per
+Long Rest. The app displays the casting rules and leaves phase changes and use tracking to play.
+
+Beasts of Ill Omen gives revised Shadow Sorcery a Summon Beast casting option at level 6. It is
+shown in Spells and on the sheet with its Sorcery Point cost and restrictions. Its source grants
+permission to cast it without a slot or preparation and leaves the ordinary spell list unchanged.
+
 ## Selected feature cantrips
 
 Supported selected Class optional-feature and feat cantrips use the same atomic editor, revision

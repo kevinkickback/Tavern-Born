@@ -2,6 +2,14 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge",
+      "digest": "5c31a91c606068b377a4277581af9d6a685c68d6e800120e521be08af0d17d09"
+    },
+    {
+      "target": "subclass-feature|storm sorcery|sorcerer|xphb|storm|xge|3|xge",
+      "digest": "83223468370f6c4c1ca0be7da743501c8fc62d93d7ec923448509f43d7521f8c"
+    },
+    {
       "target": "subclass-feature|purple dragon knight (banneret)|fighter|phb|purple dragon knight (banneret)|scag|3|scag",
       "digest": "c8de21c80bda120ce3bb9bc2db7bdaaf221277d16d6f201b988f0da367c4c071"
     },

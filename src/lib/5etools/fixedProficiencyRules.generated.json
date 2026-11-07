@@ -234,6 +234,33 @@
         "subclassShortName",
         "subclassSource"
       ]
+    },
+    {
+      "target": "subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge",
+      "name": "Wind Speaker",
+      "className": "Sorcerer",
+      "classSource": "PHB",
+      "level": 1,
+      "kind": "fixed-languages",
+      "languages": ["primordial"],
+      "languageSource": "PHB",
+      "useClassLanguagePrinting": true,
+      "digest": "14469546d676a5cb2672d938a273a9f6125e1ad47482b9f11297082bbd57bd0f",
+      "metadataDigest": "b15defc4c4e0a81204946f4e162b3b9d539efc222657c753a234e7a76f8ba570",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
     }
   ],
   "directClasses": [

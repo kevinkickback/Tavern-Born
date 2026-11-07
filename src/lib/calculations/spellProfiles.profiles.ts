@@ -146,6 +146,7 @@ export function ensureSpellProfiles(
     const grantedSubclassSpells = (subclassSpells ?? []).filter(
       (grant) =>
         grant.mode !== 'expanded' &&
+        grant.mode !== 'cast-only' &&
         hasCurrentSubclassSpellGrant(
           grant,
           exactPreparation ? options?.visibleSpellLevels : options?.availableSpellReferences,

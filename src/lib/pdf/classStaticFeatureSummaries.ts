@@ -52,6 +52,31 @@ const reviewedDruidCircles = {
     'circle of the stars|xphb',
   ],
 }
+const sharedSorcererOrigins = [
+  'pyromancer (psk)|psk',
+  'divine soul|xge',
+  'storm sorcery|xge',
+  'lunar sorcery|dsotdq',
+]
+const reviewedSorcererOrigins = {
+  phb: [
+    ...sharedSorcererOrigins,
+    'draconic bloodline|phb',
+    'wild magic|phb',
+    'shadow magic|xge',
+    'aberrant mind|tce',
+    'clockwork soul|tce',
+  ],
+  xphb: [
+    ...sharedSorcererOrigins,
+    'aberrant sorcery|xphb',
+    'clockwork sorcery|xphb',
+    'draconic sorcery|xphb',
+    'wild magic sorcery|xphb',
+    'spellfire sorcery|frhof',
+    'shadow sorcery|rhw',
+  ],
+}
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
@@ -158,6 +183,32 @@ export function getClassStaticFeatureSummaries(
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
     if (entry === sorcerer?.owner) {
+      const { cls, source } = sorcerer
+      const origin = `${norm(entry.subclass)}|${norm(entry.subclassSource)}`
+      const declared = reviewedSorcererOrigins[source].includes(origin)
+        ? getDeclaredSubclassStaticFeatures(
+            cls,
+            entry,
+            catalogs,
+            source === 'phb'
+              ? { level: 1, intro: 'sorcerous origin', later: 'sorcerous origin feature' }
+              : { level: 3, intro: 'sorcerer subclass', later: 'subclass feature' },
+          ).flatMap((feature) => {
+            const name = norm(feature.name)
+            // The native Draconic adapters retain their own source proofs and action summaries.
+            if (
+              (origin === 'draconic bloodline|phb' &&
+                (name === 'dragon wings' || name === 'draconic presence')) ||
+              (origin === 'draconic sorcery|xphb' &&
+                (name === 'dragon wings' || name === 'dragon companion'))
+            )
+              return []
+            return featureSummary(feature).map((summary) => ({
+              ...summary,
+              replaces: savedClassLabel(character, entry, feature),
+            }))
+          })
+        : []
       const actionSummaries = [getDragonWings(sorcerer), getDraconicPresence(sorcerer)].flatMap(
         (rule) => {
           if (!rule) return []
@@ -173,7 +224,7 @@ export function getClassStaticFeatureSummaries(
       )
       const companion = featureSummary(getDragonCompanion(sorcerer))
       const innate = getInnateSorcery(sorcerer)
-      if (!innate) return [...actionSummaries, ...companion]
+      if (!innate) return [...actionSummaries, ...companion, ...declared]
       const activation = renderEntriesToText(innate.entries?.slice(0, -1))
       return [
         ...actionSummaries,
@@ -191,6 +242,7 @@ export function getClassStaticFeatureSummaries(
             : [],
         ),
         ...companion,
+        ...declared,
       ]
     }
     const name = entry.name.trim().toLowerCase()

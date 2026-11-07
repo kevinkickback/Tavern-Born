@@ -638,6 +638,15 @@ function buildSpellRows(
     ...(profile.alwaysPreparedSpells ?? []),
   ])
   references.push(...invocationSpells.map((row) => row.reference))
+  const ordinaryKeys = new Set(references.map((reference) => getSpellReferenceKey(reference)))
+  const castOnlyRules = new Map(
+    fixedCasting.flatMap((row) =>
+      row.active && row.castOnly ? [[getSpellReferenceKey(row.reference), row.castOnly]] : [],
+    ),
+  )
+  references.push(
+    ...fixedCasting.flatMap((row) => (row.active && row.castOnly ? [row.reference] : [])),
+  )
   const uniqueReferences = [
     ...new Map(
       references.map((reference) => [getSpellReferenceKey(reference), reference]),
@@ -650,6 +659,13 @@ function buildSpellRows(
         (row) => getSpellReferenceKey(row.reference) === key,
       )
       const spell = invocations[0]?.spell ?? resolveSpellReference(reference, spellsByKey)
+      const castOnly = ordinaryKeys.has(key) ? undefined : castOnlyRules.get(key)
+      const castingTime = castOnly?.castingTime ?? (spell ? formatCastingTime(spell.time) : '')
+      const components = spell
+        ? formatComponents(
+            castOnly?.ignoresMaterial ? { ...spell.components, m: undefined } : spell.components,
+          )
+        : ''
       const separator = reference.lastIndexOf('|')
       const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
       const castingNote = [
@@ -670,23 +686,18 @@ function buildSpellRows(
               !leveled.has(getSpellReferenceKey(reference))
             ? 'C'
             : '?',
-        castingTimeAndDuration: spell
-          ? `${formatCastingTime(spell.time)}; ${formatDuration(spell.duration)}`
-          : '',
-        castingTime: spell ? formatCastingTime(spell.time) : '',
+        castingTimeAndDuration: spell ? `${castingTime}; ${formatDuration(spell.duration)}` : '',
+        castingTime,
         duration: spell ? formatDuration(spell.duration) : '',
         range: spell ? formatRange(spell.range) : '',
-        components: spell ? formatComponents(spell.components) : '',
+        components,
         castingNote,
-        notes: [
-          spell ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}` : '',
-          castingNote,
-        ]
+        notes: [spell ? `Range: ${formatRange(spell.range)}; ${components}` : '', castingNote]
           .filter(Boolean)
           .join('; '),
         concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
         ritual: isRitualSpell(spell),
-        material: !!spell?.components?.m,
+        material: !castOnly?.ignoresMaterial && !!spell?.components?.m,
       }
     })
     .sort((left, right) => {
