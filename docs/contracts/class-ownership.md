@@ -77,6 +77,23 @@ saved details, legacy feature effects and revised feat effects use the effective
 Revised configured feat options, including spells, follow their exact slot owner. Mixed-edition
 style equivalence and styles from other classes use their existing rules.
 
+### Class features and choices at their earning levels
+
+Later Class accordions show the selected subclass's active, source-qualified features. They
+replace a generic subclass gain note when every declared feature at that level is available.
+Feature choices keep their picker and link to the named rules in Details. The original subclass
+selection and overview remain at the subclass selection level.
+
+Additional Fighter Weapon Mastery and Warlock Invocation slots appear in the accordions that
+grant them. Each row summarizes the picks saved to that level. Opening it uses the same full pool
+editor as the original feature, with current prerequisites and quota. The existing confirmation
+path preserves retained choices in their original slots and assigns new picks to open slots.
+
+When qualifying a level 1–20 journey, compare each gain with the exact source printing and open
+its Details from the earning accordion. At each choice gain, including increases in an existing
+feature's quota, open the picker from that level, save the earned picks, and confirm that earlier
+picks still appear in their original slots after reopening the character.
+
 ### Revised Epic Boon advancement
 
 The verified XPHB level-19 declaration grants one advancement. The configured

@@ -19,6 +19,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
+import { makeBundledClassCastingLayer } from '../fixtures/classCastingFixtures'
 import { makeFeatureOptionFixture, selectFeatureOption } from '../fixtures/featureOptionFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -122,6 +123,100 @@ function withoutDraconicSubclass(data: ReturnType<typeof makeGameDataFixture>) {
   unavailable.lookups = buildGameDataLookups(unavailable)
   return unavailable
 }
+
+test('later subclass Details use the exact earned rule and recover when its source returns', async () => {
+  const file = 'class/class-paladin.json'
+  const data = makeBundledClassCastingLayer(file)
+  const { container } = mount(
+    data,
+    makeCharacterFixture({
+      allowedSources: ['PHB'],
+      classProgression: [
+        {
+          name: 'Paladin',
+          source: 'PHB',
+          levels: 7,
+          subclass: 'Oath of Devotion',
+          subclassSource: 'PHB',
+        },
+      ],
+    }),
+  )
+  await expand(7)
+  const seventh = within(screen.getByRole('region', { name: /^Level 7\b/ }))
+  const ability = /^Aura of Devotion$/
+  const openAura = () => fireEvent.click(seventh.getByRole('button', { name: ability }))
+  openAura()
+  expect(screen.getByRole('heading', { name: ability })).toBeTruthy()
+  expect(container.querySelector('[data-slot="split-pane-right"]')?.textContent).toMatch(
+    /can't be charmed while you are conscious/i,
+  )
+  expect(seventh.queryByRole('button', { name: 'Sacred Oath feature' })).toBeNull()
+  const original = JSON.stringify(active())
+
+  const missing = makeBundledClassCastingLayer(file, (document) => {
+    document.subclassFeature = document.subclassFeature.filter(
+      (feature) => !(feature.name === 'Aura of Devotion' && feature.source === 'PHB'),
+    )
+  })
+  await act(() => useGameDataStore.setState({ gameData: missing }))
+  expect(seventh.queryByRole('button', { name: ability })).toBeNull()
+  expect(screen.queryByRole('heading', { name: ability })).toBeNull()
+  expect(seventh.getByRole('button', { name: 'Sacred Oath feature' })).toBeTruthy()
+
+  await act(() => useGameDataStore.setState({ gameData: data }))
+  openAura()
+  expect(screen.getByRole('heading', { name: ability })).toBeTruthy()
+  expect(JSON.stringify(active())).toBe(original)
+})
+
+test('a partially available subclass gain keeps its generic fallback while showing known rules', async () => {
+  const extra = 'Additional Sacred Guard'
+  const data = makeBundledClassCastingLayer('class/class-paladin.json', (document) => {
+    const oath = document.subclass.find(
+      (subclass) => subclass.name === 'Oath of Devotion' && subclass.source === 'PHB',
+    )!
+    const refs = oath.subclassFeatures as string[]
+    refs.push(`${extra}|Paladin|PHB|Devotion|PHB|7|TCE`)
+    document.subclassFeature.push({
+      name: extra,
+      source: 'TCE',
+      className: 'Paladin',
+      classSource: 'PHB',
+      subclassShortName: 'Devotion',
+      subclassSource: 'PHB',
+      level: 7,
+      entries: ['The character can use this rule when its source is enabled.'],
+    })
+  })
+  const character = makeCharacterFixture({
+    allowedSources: ['PHB', 'TCE'],
+    classProgression: [
+      {
+        name: 'Paladin',
+        source: 'PHB',
+        levels: 7,
+        subclass: 'Oath of Devotion',
+        subclassSource: 'PHB',
+      },
+    ],
+  })
+  mount(data, character)
+  await expand(7)
+  const seventh = within(screen.getByRole('region', { name: /^Level 7\b/ }))
+  const note = 'Sacred Oath feature'
+  expect(seventh.getByRole('button', { name: extra })).toBeTruthy()
+  expect(seventh.queryByRole('button', { name: note })).toBeNull()
+
+  await act(() => setActiveCharacter({ ...character, allowedSources: ['PHB'] }))
+  expect(seventh.getByRole('button', { name: 'Aura of Devotion' })).toBeTruthy()
+  expect(seventh.queryByRole('button', { name: extra })).toBeNull()
+  expect(seventh.getByRole('button', { name: note })).toBeTruthy()
+
+  await act(() => setActiveCharacter(character))
+  expect(seventh.getByRole('button', { name: extra })).toBeTruthy()
+  expect(seventh.queryByRole('button', { name: note })).toBeNull()
+})
 
 test('revised Hunter Builder shows one recovery row and keeps the unsaved group diagnostic', async () => {
   const path = 'resources/srd/core/data/class/class-ranger.json'

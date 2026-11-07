@@ -74,7 +74,7 @@ describe('subclass selection gain levels', () => {
     expect(readiness(classData, 20)).toEqual([])
     expect(
       buildLevelsToShow({
-        allClassFeatures: [],
+        featureLevels: [],
         asiLevels: [],
         subclassLevel: info.subclassLevel,
         viewingClassLevel: 20,
