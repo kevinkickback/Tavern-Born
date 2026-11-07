@@ -3,7 +3,7 @@ import {
   getSavedBlessedStrikes,
   isBlessedStrikesOption,
 } from '@/lib/5etools/blessedStrikesSource'
-import { getLandChoiceRule, LAND_GROUP } from '@/lib/5etools/circleOfTheLand'
+import { LAND_GROUP } from '@/lib/5etools/circleOfTheLand'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import {
   getClassChoiceSlotLevels,
@@ -52,11 +52,13 @@ import {
 } from '@/lib/5etools/revisedElementalAffinity'
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
+import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import {
   isCurrentRevisedInvocationCantripPool,
   isRevisedTargetedInvocation,
   REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
+import { isWarlockPatronConfigurationGroup } from '@/lib/5etools/warlockPatronConfigurations'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
@@ -485,9 +487,9 @@ function currentLiteralChoice(
   const classData = authority && findClassReference(choice.owner, authority.classes)
   const affinity = choice.id === REVISED_AFFINITY_ID
   const subclassLiteral =
-    affinity || getRevisedHunterRule(choice.id) || getLandChoiceRule(choice.id)
+    affinity || getRevisedHunterRule(choice.id) || getSubclassSpellConfigurationRule(choice.id)
   const owner = subclassLiteral && findOwner(character, choice)
-  if (getLandChoiceRule(choice.id) && !selected.length) return choice
+  if (getSubclassSpellConfigurationRule(choice.id) && !selected.length) return choice
   const current =
     classData &&
     getCharacterClassChoices(
@@ -1057,13 +1059,16 @@ export function applyClassChoiceSelectionCommand(
   )
     throw new RangeError('Choose a Hunter option through its exact subclass feature.')
   if (
-    !getLandChoiceRule(choice.id) &&
+    !getSubclassSpellConfigurationRule(choice.id) &&
     selected.some((option) => {
       const target = decodeFeatureOptionReference(option)
-      return target?.format === 'source-group' && target.group === LAND_GROUP
+      return (
+        target?.format === 'source-group' &&
+        (target.group === LAND_GROUP || isWarlockPatronConfigurationGroup(target.group))
+      )
     })
   )
-    throw new RangeError('Choose a terrain through its exact Circle of the Land feature.')
+    throw new RangeError('Choose an option through its exact subclass feature.')
   if (choice.id.startsWith('psionic-choice:')) {
     const relation = decodePsionicChoiceId(choice.id)
     if (
@@ -1096,7 +1101,7 @@ export function applyClassChoiceSelectionCommand(
       choice.id === ELEMENTAL_FURY_ID ||
       choice.id === REVISED_AFFINITY_ID ||
       getClassOrderById(choice.id) ||
-      getLandChoiceRule(choice.id) ||
+      getSubclassSpellConfigurationRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
       decodeLegacySubclassChoice(choice.id)) &&
     expectedSelectionHandle !== undefined
@@ -1223,8 +1228,8 @@ export function applyClassChoiceSelectionCommand(
       throw new RangeError(
         decodeFavoredEnemyChoiceId(choice.id)
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
-          : getLandChoiceRule(choice.id)
-            ? 'Choose one current terrain for the exact Circle of the Land.'
+          : getSubclassSpellConfigurationRule(choice.id)
+            ? 'Choose one current option for the exact subclass feature.'
             : choice.id === REVISED_AFFINITY_ID
               ? 'Choose one current damage type for Elemental Affinity.'
               : getRevisedHunterRule(choice.id)

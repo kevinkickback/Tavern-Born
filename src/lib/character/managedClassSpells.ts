@@ -19,7 +19,12 @@ import {
   getClassCastingGainAuthority,
 } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
-import { ELDRITCH_HEX_TARGET } from '@/lib/5etools/nativeWarlockPatronRules'
+import {
+  ELDRITCH_HEX_TARGET,
+  getCurrentStepsOfTheFey,
+  STEPS_OF_THE_FEY_SPELL,
+  STEPS_OF_THE_FEY_TARGET,
+} from '@/lib/5etools/nativeWarlockPatronRules'
 import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
@@ -32,6 +37,7 @@ import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
+import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
@@ -150,11 +156,16 @@ function resolveSlot(
     selections: character.classChoiceSelections,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
+  const expandedAtGain = new Map(
+    fixedAtGain.flatMap(({ spellName, expandedRank }) =>
+      expandedRank === undefined ? [] : [[getSpellReferenceKey(spellName), expandedRank] as const],
+    ),
+  )
   const privileged =
     slot[1] === 'class-known' &&
     slot[4] === 0 &&
     authority.rule.unrestrictedGains?.includes(slot[3]) === true
-  return { entry, authority, fixedAtGain, privileged, savant, allowed }
+  return { entry, authority, fixedAtGain, expandedAtGain, privileged, savant, allowed }
 }
 
 function targetError(
@@ -193,12 +204,13 @@ function targetError(
   if (
     !(
       saved &&
-      isCircleOfTheLand(
-        state.entry.name,
-        state.entry.source,
-        state.entry.subclass ?? '',
-        state.entry.subclassSource,
-      )
+      (isVestigePatron(state.entry) ||
+        isCircleOfTheLand(
+          state.entry.name,
+          state.entry.source,
+          state.entry.subclass ?? '',
+          state.entry.subclassSource,
+        ))
     ) &&
     state.fixedAtGain.some(
       (grant) =>
@@ -414,6 +426,7 @@ export function getManagedClassSpellPool(
             hasCurrentClassSpellListRoute(character, state.entry, spell, context ?? {}, {
               owner: slot[0],
               requestedTarget: slot[2],
+              expandedAtGain: state.expandedAtGain,
             }),
         )
         .map((spell) => getSpellReferenceKey(spell.name, spell.source)),
@@ -534,6 +547,7 @@ export function projectManagedClassSpellState(
       !hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, {
         owner,
         requestedTarget: choice.slot[2],
+        expandedAtGain: state.expandedAtGain,
       })
     ) {
       deny('Restore this spell list or its optional feature selection.')
@@ -579,6 +593,7 @@ export function projectManagedClassSpellState(
   for (const entry of character.classProgression) {
     if (!entry.subclass) continue
     const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
+    const namedPreparation = land || isVestigePatron(entry)
     const cls = classMap.get(toClassProfileId(entry.name, entry.source))
     const celestialCantrips =
       entry === warlock &&
@@ -599,10 +614,10 @@ export function projectManagedClassSpellState(
     for (const grant of grants ?? []) {
       if (grant.mode === 'expanded') continue
       const spellKey = getSpellReferenceKey(grant.spellName)
-      const active = land
+      const active = namedPreparation
         ? visibleSpellLevels.has(spellKey)
         : availableSpellReferences.has(spellKey)
-      if (land && !active)
+      if (namedPreparation && !active)
         fixedClassSpellStatuses.push({
           owner: [
             'subclass',
@@ -611,8 +626,8 @@ export function projectManagedClassSpellState(
             norm(entry.subclass),
             norm(entry.subclassSource),
           ],
-          target: 'circle-of-the-land-terrain',
-          featureName: 'Circle of the Land',
+          target: land ? 'circle-of-the-land-terrain' : 'vestige-patron-domain',
+          featureName: land ? 'Circle of the Land' : 'Vestige Spells',
           level: grant.level,
           reference: grant.spellName,
           prepared: true,
@@ -882,6 +897,35 @@ export function projectManagedClassSpellState(
       reference,
       makeManagedClassSpellTag(choice, entry, pool.featureName),
     )
+  }
+  const warlockProfile = profiles.find(
+    (profile) => profile.id === toClassProfileId('Warlock', 'XPHB'),
+  )
+  const charisma = context?.abilityScores?.charisma
+  const mistyStep = getSpellReferenceKey(STEPS_OF_THE_FEY_SPELL)
+  if (
+    warlock &&
+    character.originSystem === '2024' &&
+    charisma !== undefined &&
+    context?.catalogs &&
+    visibleSpellLevels.get(mistyStep) === 2 &&
+    warlockProfile?.spellsKnown.some((reference) => getSpellReferenceKey(reference) === mistyStep)
+  ) {
+    const cls = classMap.get(warlockProfile.id)
+    const steps = cls && getCurrentStepsOfTheFey(cls, warlock, context.catalogs)
+    if (steps) {
+      const count = Math.max(1, getAbilityModifier(charisma))
+      fixedClassSpellStatuses.push({
+        owner: ['subclass', 'warlock', 'xphb', 'archfey patron', 'xphb'],
+        target: STEPS_OF_THE_FEY_TARGET,
+        featureName: steps.name,
+        level: 3,
+        reference: STEPS_OF_THE_FEY_SPELL,
+        prepared: false,
+        active: true,
+        castingNote: `Steps of the Fey: ${count} slot-free ${count === 1 ? 'cast' : 'casts'}. Regain all uses on a Long Rest.`,
+      })
+    }
   }
   return {
     character: {

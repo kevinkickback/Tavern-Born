@@ -861,6 +861,7 @@ export function CharacterOverview({
                     >
                       <p>
                         {resource.current}/{resource.max} available · {resource.recoveryText}
+                        {resource.usageText && ` · ${resource.usageText}`}
                       </p>
                     </DetailEntry>
                   ))}

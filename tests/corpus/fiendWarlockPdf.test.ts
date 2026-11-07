@@ -9,10 +9,16 @@ import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups, getEntityLookupKey } from '@/lib/5etools/lookups'
+import { HEALING_LIGHT_RESOURCE_ID } from '@/lib/5etools/nativeWarlockPatronRules'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import { getCharacterClassChoices } from '@/lib/character/classChoiceOptions'
+import {
+  createClassChoiceCatalogs,
+  getCharacterClassChoices,
+  isClassChoiceOptionEligible,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelectionGrants,
@@ -20,7 +26,10 @@ import {
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
-import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
+import {
+  getManagedClassSpellPool,
+  type ManagedClassSpellContext,
+} from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { renderEntriesToText } from '@/lib/entryText'
 import {
@@ -29,7 +38,7 @@ import {
 } from '@/lib/pdf/characterSheetViewModel'
 import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
-import type { Class5e, ClassFeature, GameData, SubclassFeature } from '@/types/5etools'
+import type { Class5e, ClassFeature, GameData, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
@@ -328,6 +337,290 @@ test.skipIf(!packs.includes('composed'))(
   },
 )
 
+test.skipIf(!packs.includes('composed'))(
+  'revised Archfey keeps Misty Step prepared independently of its exact casting allowance',
+  async () => {
+    const data = dataFor('composed')
+    const filtered = current(data, 'XPHB')
+    const retained = lookups(data)
+    const primary = lookups(filtered)
+    const patron = 'Archfey Patron'
+    const earned = actor(editions[1], 3, patron)
+    const spell = (saved: Character, visible = primary) =>
+      createCharacterSheetViewModel(saved, retained, visible).spellRows.find(
+        (row) => row.name === 'Misty Step',
+      )
+    expect(spell(actor(editions[1], 2, patron))).toBeUndefined()
+    expect(spell(actor(editions[1], 3))).toBeUndefined()
+    for (const [charisma, allowance] of [
+      [8, '1 slot-free cast.'],
+      [16, '3 slot-free casts.'],
+      [20, '5 slot-free casts.'],
+    ] as const) {
+      expect(
+        spell({ ...earned, abilityScores: { ...earned.abilityScores, charisma } }),
+      ).toMatchObject({
+        level: '2',
+        prepared: true,
+        castingNote: `Steps of the Fey: ${allowance} Regain all uses on a Long Rest.`,
+      })
+    }
+    const altered = lookups({
+      ...filtered,
+      classes: filtered.classes.map((cls) =>
+        cls.name === 'Warlock' && cls.source === 'XPHB'
+          ? {
+              ...cls,
+              subclasses: cls.subclasses?.map((subclass) =>
+                subclass.name === patron && subclass.source === 'XPHB'
+                  ? {
+                      ...subclass,
+                      additionalSpells: subclass.additionalSpells?.map((block) => ({
+                        ...block,
+                        innate: { 3: { daily: { 1: ['misty step|xphb'] } } },
+                      })),
+                    }
+                  : subclass,
+              ),
+            }
+          : cls,
+      ),
+    })
+    expect(spell(earned, altered)).toMatchObject({ prepared: true, castingNote: '' })
+    expect(
+      createCharacterCalculationContext(earned, altered, retained).fixedClassSpellStatuses.some(
+        (row) => row.featureName === 'Steps of the Fey',
+      ),
+    ).toBe(false)
+    const view = createCharacterSheetViewModel(earned, retained, primary)
+    for (const template of ['2024-official', '2024-custom'] as const) {
+      for (const descriptions of ['full', 'names'] as const) {
+        const bytes = await generateTestCharacterSheet(view, template, {
+          text: { descriptions, overflow: 'notes' },
+        })
+        const text = (await PDFDocument.load(bytes))
+          .getForm()
+          .getFields()
+          .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+          .join(' ')
+          .replace(/\s+/g, ' ')
+        expect(text).toContain('Steps of the Fey: 1 slot-free cast.')
+      }
+    }
+  },
+)
+
+test.skipIf(!packs.includes('composed'))(
+  'revised Celestial Healing Light uses the current exact owner and persistent remaining dice',
+  async () => {
+    const data = dataFor('composed')
+    const primary = lookups(current(data, 'XPHB'))
+    const retained = lookups(data)
+    const absent = lookups(current(data, 'PHB'))
+    const patron = 'Celestial Patron'
+    const sheet = (saved: Character, visible = primary) =>
+      createCharacterSheetViewModel(saved, retained, visible)
+    const pool = (saved: Character, visible = primary) =>
+      sheet(saved, visible).classResourceRows.find((row) => row.id === HEALING_LIGHT_RESOURCE_ID)
+    const earned = actor(editions[1], 3, patron)
+    expect(pool(actor(editions[1], 2, patron))).toBeUndefined()
+    expect(pool(actor(editions[1], 3))).toBeUndefined()
+    expect(pool(earned)).toMatchObject({
+      max: 4,
+      used: 0,
+      usageText: 'Up to 1 die per use',
+      restType: 'long',
+    })
+    const saved = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...earned,
+          abilityScores: { ...earned.abilityScores, charisma: 16 },
+          classResources: { [HEALING_LIGHT_RESOURCE_ID]: 0 },
+        }),
+      ),
+    )
+    expect(pool(saved)).toMatchObject({ max: 4, used: 4, usageText: 'Up to 3 dice per use' })
+    expect(pool(saved, absent)).toBeUndefined()
+    const [owner] = saved.classProgression
+    expect(
+      pool({
+        ...saved,
+        classProgression: [
+          { ...owner, levels: 2 },
+          { name: 'Fighter', source: 'XPHB', levels: 1 },
+        ],
+      }),
+    ).toBeUndefined()
+    expect(pool({ ...saved, classProgression: [{ ...owner, levels: 20 }] })).toMatchObject({
+      max: 21,
+      used: 21,
+    })
+    const view = sheet(saved)
+    for (const template of ['2024-official', '2024-custom'] as const) {
+      for (const descriptions of ['full', 'names'] as const) {
+        const bytes = await generateTestCharacterSheet(view, template, {
+          text: { descriptions, overflow: 'notes' },
+        })
+        const form = (await PDFDocument.load(bytes)).getForm()
+        const text = ['Text_57', 'Text_58']
+          .map((name) => form.getTextField(name).getText())
+          .join(' ')
+          .replace(/\s+/g, ' ')
+        expect(text).toContain('0/4 d6 remaining. Up to 3 dice per use.')
+        expect(text).toMatch(/long rest/i)
+      }
+    }
+  },
+)
+
+test.skipIf(!packs.includes('composed')).each([
+  { edition: editions[0], patron: 'The Genie', patronSource: 'TCE', level: 1 },
+  { edition: editions[1], patron: 'The Genie', patronSource: 'TCE', level: 3 },
+  { edition: editions[1], patron: 'Vestige Patron', patronSource: 'AU', level: 3 },
+])(
+  '$patron offers exact earned configurations and applies only the chosen schedule ($edition.1)',
+  ({ edition, patron, patronSource, level }) => {
+    const [, source] = edition
+    const data = dataFor('composed')
+    const visible = {
+      ...data,
+      classes: DataFilter.filterClasses(data.classes, {
+        sources: [source, patronSource],
+        suppressedKeys: new Set(),
+      }),
+    }
+    const primary = lookups(visible)
+    const retained = lookups(data)
+    const catalogs = primary.classChoiceFeatureCatalogs
+    const initial = actor(edition, level, patron)
+    const saved = {
+      ...initial,
+      allowedSources: [source, patronSource],
+      classProgression: [{ ...initial.classProgression[0], subclassSource: patronSource }],
+    }
+    const cls = visible.classes.find((row) => row.name === 'Warlock' && row.source === source)
+    if (!cls) throw new Error('Expected the current Warlock class')
+    const subclass = getSelectedSubclassData(cls, saved.classProgression[0])
+    const choices = getCharacterClassChoices(
+      cls,
+      subclass,
+      createOptionalClassFeatureActivity(saved, catalogs),
+      catalogs,
+    ).filter((row) => row.kind === 'feature-option')
+    const calculate = (character: Character, look = primary) =>
+      createCharacterCalculationContext(character, look, retained)
+    const choose = (character: Character, label: string, name: string) => {
+      const choice = choices.find((row) => row.label === label)
+      if (!choice) throw new Error(`Missing ${label}`)
+      expect(choice.level).toBe(level)
+      const options = resolveClassChoiceOptions(
+        choice,
+        createClassChoiceCatalogs(catalogs),
+        [],
+        level,
+        character,
+      ).filter(isClassChoiceOptionEligible)
+      const option = options.find((row) => row.reference.name === name)
+      if (!option) throw new Error(`Missing current ${name}`)
+      const result = applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance!,
+        choice,
+        [option.reference],
+        {
+          classes: visible.classes,
+          catalogs,
+          spellContext: calculate(character).classChoices.spellContext,
+        },
+      )
+      return characterPersistenceSchema.parse(
+        JSON.parse(
+          JSON.stringify({
+            ...character,
+            ...result.characterPatch,
+            provenance: result.provenanceUpdate,
+          }),
+        ),
+      )
+    }
+    const withLevel = (character: Character, levels: number) => ({
+      ...character,
+      classProgression: [{ ...character.classProgression[0], levels }],
+    })
+    if (patronSource === 'TCE') {
+      expect(choices.map(({ label }) => label)).toEqual(['Genie Patron Type'])
+      const dao = choose(saved, 'Genie Patron Type', 'Dao')
+      const marid = choose(saved, 'Genie Patron Type', 'Marid')
+      const pool = (
+        character: Character,
+        domain: 'class-known' | 'class-arcanum',
+        gain: number,
+        visible = primary,
+      ) => {
+        const atGain = withLevel(character, gain)
+        const context = calculate(atGain, visible).classChoices.spellContext
+        const slot = getManagedClassSpellSlots(atGain.classProgression[0], atGain, catalogs).find(
+          (row) => row[1] === domain && row[3] === gain,
+        )
+        if (!slot) throw new Error(`Missing ${domain} at level ${gain}`)
+        return getManagedClassSpellPool(atGain, slot, context).defaultReferences
+      }
+      const spikeGrowth = `spike growth|${source.toLowerCase()}`
+      const blur = `blur|${source.toLowerCase()}`
+      expect(pool(saved, 'class-known', 3)).not.toContain(spikeGrowth)
+      expect(pool(dao, 'class-known', 3)).toContain(spikeGrowth)
+      expect(pool(dao, 'class-known', 3)).not.toContain(blur)
+      expect(pool(marid, 'class-known', 3)).toContain(blur)
+      expect(pool(marid, 'class-known', 3)).not.toContain(spikeGrowth)
+      expect(pool(dao, 'class-known', 9)).not.toContain(`wish|${source.toLowerCase()}`)
+      expect(pool(dao, 'class-arcanum', 17)).toContain(`wish|${source.toLowerCase()}`)
+      const withdrawn = pool(dao, 'class-known', 3, lookups(current(data, source)))
+      expect(withdrawn).not.toContain(spikeGrowth)
+      expect(withdrawn).toContain(`armor of agathys|${source.toLowerCase()}`)
+      expect(pool(dao, 'class-known', 3)).toContain(spikeGrowth)
+      const malformed = JSON.parse(JSON.stringify(dao))
+      malformed.classChoiceSelections[0].selected[0].name = 'Unrelated patron type'
+      expect(characterPersistenceSchema.safeParse(malformed).success).toBe(false)
+    } else {
+      expect(choices.map(({ label }) => label).sort()).toEqual([
+        'Vestige Companion Type',
+        'Vestige Domain',
+      ])
+      const equipped = choose(saved, 'Vestige Companion Type', 'Celestial')
+      const life = choose(equipped, 'Vestige Domain', 'Life Domain')
+      const war = choose(life, 'Vestige Domain', 'War Domain')
+      const prepared = (character: Character, look = primary) =>
+        calculate(character, look)
+          .character.spells.spellProfiles.find((row) => row.id === 'class:Warlock|XPHB')
+          ?.alwaysPreparedSpells?.map((ref) => ref.toLowerCase())
+          .sort() ?? []
+      expect(prepared(saved)).toEqual([])
+      expect(prepared(life)).toEqual([
+        'aid|xphb',
+        'bless|xphb',
+        'cure wounds|xphb',
+        'lesser restoration|xphb',
+      ])
+      expect(prepared(war)).toEqual([
+        'guiding bolt|xphb',
+        'magic weapon|xphb',
+        'shield of faith|xphb',
+        'spiritual weapon|xphb',
+      ])
+      expect(prepared(withLevel(life, 5))).toContain('mass healing word|xphb')
+      expect(prepared(withLevel(life, 7))).toContain('aura of life|xphb')
+      expect(prepared(withLevel(life, 9))).toContain('mass cure wounds|xphb')
+      expect(prepared(life, lookups(current(data, source)))).toEqual([])
+      expect(prepared(life)).toHaveLength(4)
+      expect(war.classChoiceSelections?.map((row) => row.selected[0].name).sort()).toEqual([
+        'Celestial',
+        'War Domain',
+      ])
+    }
+  },
+)
+
 const patronFormCases = [
   {
     edition: editions[0],
@@ -352,6 +645,51 @@ const patronFormCases = [
     ],
   },
 ] as const
+
+test.skipIf(!packs.includes('composed'))(
+  'a configured patron prints its copied rule at the revised Warlock gain',
+  async () => {
+    const data = dataFor('composed')
+    const catalogs = lookups({
+      ...data,
+      classes: DataFilter.filterClasses(data.classes, { sources: ['XPHB', 'TCE'] }),
+    })
+    const retained = lookups(data)
+    const sheet = (level: number, visible = catalogs) => {
+      const saved = actor(editions[1], level, 'The Genie')
+      return createCharacterSheetViewModel(
+        {
+          ...saved,
+          allowedSources: ['XPHB', 'TCE'],
+          classProgression: [{ ...saved.classProgression[0], subclassSource: 'TCE' }],
+        },
+        retained,
+        visible,
+      )
+    }
+    const names = (view: ReturnType<typeof sheet>) =>
+      view.declaredClassFeatureSummaries?.map((row) => row.compactText)
+    expect(names(sheet(2))).not.toContain("Genie's Vessel")
+    expect(names(sheet(3))).toContain("Genie's Vessel")
+    expect(names(sheet(5))).not.toContain('Elemental Gift')
+    const earned = sheet(6)
+    expect(names(earned)).toContain('Elemental Gift')
+    expect(names(sheet(6, lookups(current(data, 'XPHB'))))).not.toContain('Elemental Gift')
+    for (const template of ['2024-official', '2024-custom'] as const) {
+      const bytes = await generateTestCharacterSheet(earned, template, {
+        text: { descriptions: 'full', overflow: 'notes' },
+      })
+      const text = (await PDFDocument.load(bytes))
+        .getForm()
+        .getFields()
+        .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+      expect(text).toContain('Elemental Gift')
+      expect(text.toLowerCase()).toContain('resistance to a damage type')
+    }
+  },
+)
 
 test.skipIf(!packs.includes('composed')).each(patronFormCases)(
   '$template prints $patron rules and names-only labels',
@@ -784,6 +1122,116 @@ test.each(stackCases)('$edition verifies current rule eligibility ($pack)', ({ p
   expect(summaries(data, edition, 20, id).map((row) => row.compactText)).not.toContain(labels[3])
   expect(summaries(data, edition, 20).map((row) => row.compactText)).toContain(labels[3])
 })
+
+test.skipIf(!packs.includes('composed'))(
+  'configured Vestige choices and printable rules require current declared source records',
+  async () => {
+    const data = dataFor('composed')
+    const raw = JSON.parse(await readFile('data/class/class-warlock.json', 'utf8')) as {
+      subclass: Subclass5e[]
+      subclassFeature: SubclassFeature[]
+    }
+    const isVestige = (row: SubclassFeature) =>
+      row.classSource === 'XPHB' &&
+      row.subclassSource === 'AU' &&
+      row.subclassShortName === 'Vestige'
+    const intro = raw.subclassFeature.find((row) => isVestige(row) && row.name === 'Vestige Patron')
+    const domain = raw.subclassFeature.find(
+      (row) => isVestige(row) && row.name === 'Vestige Spells',
+    )
+    const subclass = raw.subclass.find(
+      (row) => row.classSource === 'XPHB' && row.name === 'Vestige Patron' && row.source === 'AU',
+    )
+    if (!intro || !domain || !subclass?.additionalSpells)
+      throw new Error('Missing exact Vestige source records')
+    const initial = actor(editions[1], 3, 'Vestige Patron')
+    const saved = {
+      ...initial,
+      allowedSources: ['XPHB', 'AU'],
+      classProgression: [{ ...initial.classProgression[0], subclassSource: 'AU' }],
+    }
+    const inspect = (document: unknown) => {
+      const parsed = parseClassDocument(document)
+      const visible = lookups({
+        ...data,
+        classes: parsed.classes as Class5e[],
+        classFeatures: parsed.classFeatures as ClassFeature[],
+      })
+      const catalogs = visible.classChoiceFeatureCatalogs
+      const cls = catalogs.classes.find((row) => row.name === 'Warlock' && row.source === 'XPHB')
+      if (!cls) throw new Error('Missing exact revised Warlock')
+      const choices = getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, saved.classProgression[0]),
+        createOptionalClassFeatureActivity(saved, catalogs),
+        catalogs,
+      )
+        .filter((row) => row.kind === 'feature-option')
+        .map((row) => row.label)
+      const rules = getClassStaticFeatureSummaries(saved, catalogs, false).map(
+        (row) => row.compactText,
+      )
+      return { choices, rules }
+    }
+    expect(inspect(raw).choices.sort()).toEqual(['Vestige Companion Type', 'Vestige Domain'])
+    const counterfeitIntro = {
+      ...intro,
+      entries: intro.entries?.map((row) => {
+        const ref = row as { subclassFeature?: string } | undefined
+        return ref?.subclassFeature?.startsWith('Vestige Spells|')
+          ? { ...ref, feature: domain }
+          : row
+      }),
+    }
+    const missing = inspect({
+      ...raw,
+      subclassFeature: raw.subclassFeature.flatMap((row) =>
+        row === domain ? [] : [row === intro ? counterfeitIntro : row],
+      ),
+    })
+    expect(missing.choices).toEqual(['Vestige Companion Type'])
+    expect(missing.rules).not.toContain('Vestige Spells')
+    const domainRef = intro.entries?.find((row) =>
+      (row as { subclassFeature?: string } | undefined)?.subclassFeature?.startsWith(
+        'Vestige Spells|',
+      ),
+    )
+    const duplicate = inspect({
+      ...raw,
+      subclassFeature: raw.subclassFeature.map((row) =>
+        row === intro
+          ? {
+              ...row,
+              entries: [...(row.entries ?? []), { ...(domainRef as object), requiredChoice: true }],
+            }
+          : row,
+      ),
+    })
+    expect(duplicate.choices).toEqual(['Vestige Companion Type'])
+    expect(duplicate.rules).not.toContain('Vestige Spells')
+    const withFeature = (old: SubclassFeature, replacement: SubclassFeature) =>
+      inspect({
+        ...raw,
+        subclassFeature: raw.subclassFeature.map((row) => (row === old ? replacement : row)),
+      }).choices
+    expect(withFeature(intro, { ...intro, isClassFeatureVariant: true })).toEqual([])
+    expect(
+      withFeature(domain, { ...domain, entries: ['This declaration never prepares spells.'] }),
+    ).toEqual(['Vestige Companion Type'])
+    const withSubclass = (replacement: unknown) =>
+      inspect({
+        ...raw,
+        subclass: raw.subclass.map((row) => (row === subclass ? replacement : row)),
+      }).choices
+    expect(withSubclass({ ...subclass, shortName: 'Fiend' })).toEqual([])
+    expect(
+      withSubclass({
+        ...subclass,
+        additionalSpells: [null, ...subclass.additionalSpells.slice(1)],
+      }),
+    ).toEqual(['Vestige Companion Type'])
+  },
+)
 
 async function rawRevisedFiendFixture() {
   const raw = JSON.parse(await readFile('resources/srd/core/data/class/class-warlock.json', 'utf8'))

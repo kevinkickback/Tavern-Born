@@ -5,6 +5,7 @@ import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
+import { hasWarlockPatronSpellConfiguration } from '@/lib/5etools/warlockPatronConfigurations'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
@@ -119,6 +120,7 @@ export function hasCurrentClassSpellListRoute(
     requestedTarget?: string
     allowOptional?: boolean
     directOnly?: boolean
+    expandedAtGain?: ReadonlyMap<string, number>
   } = {},
 ) {
   const allowed = sources(character)
@@ -149,6 +151,11 @@ export function hasCurrentClassSpellListRoute(
   )
     return true
   if (options.directOnly) return false
+  if (
+    options.expandedAtGain?.get(getSpellReferenceKey(spell.name, spell.source)) === spell.level &&
+    checked.classSpellRouteSource?.input.targetOccurrences.length === 1
+  )
+    return true
   const currentParent = context.catalogs?.classes?.filter(
     (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
   )
@@ -165,6 +172,7 @@ export function hasCurrentClassSpellListRoute(
   if (
     currentSubclasses?.length === 1 &&
     !isCircleOfTheLand(entry.name, entry.source, entry.subclass ?? '', entry.subclassSource) &&
+    !hasWarlockPatronSpellConfiguration(entry) &&
     permitted(allowed, entry.subclassSource ?? '') &&
     exactSubclassPath(spell, entry, currentSubclasses[0], options.requestedTarget)
   )

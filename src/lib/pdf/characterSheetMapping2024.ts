@@ -1,3 +1,4 @@
+import { HEALING_LIGHT_RESOURCE_ID } from '@/lib/5etools/nativeWarlockPatronRules'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
 import { getHitDiceUsedTotal } from '@/lib/calculations/hitDice'
 import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
@@ -122,8 +123,26 @@ export function mapCharacterSheet2024(
       ? ''
       : `Additional movement: ${viewModel.additionalMovementSummary}`
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
+  const healingLight = viewModel.classResourceRows.find(
+    ({ id }) => id === HEALING_LIGHT_RESOURCE_ID,
+  )
+  const healingLightText = healingLight
+    ? [
+        `${healingLight.label} — ${healingLight.max - healingLight.used}/${healingLight.max} d6 remaining`,
+        healingLight.usageText,
+        healingLight.recovery,
+      ]
+        .filter(Boolean)
+        .map((text) => `${text}.`)
+        .join(' ')
+    : ''
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
-    withSorcererResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
+    [
+      healingLightText,
+      withSorcererResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
   )
   const primarySpellcasting = viewModel.spellcastingSources[0]
   const spellRows = get2024SpellRows(viewModel)

@@ -1,7 +1,7 @@
-import { isValidLandSelection } from '@/lib/5etools/circleOfTheLand'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { isValidRevisedHunterSelection } from '@/lib/5etools/revisedHunterIdentity'
+import { isValidSubclassSpellConfigurationSelection } from '@/lib/5etools/subclassSpellConfiguration'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { FeatureOptionSelectionState } from '@/lib/character/featureOptionSelections'
 import { getInvalidFeatureOptionSelectionPaths } from '@/lib/schema/featureOptionValidation'
@@ -76,7 +76,7 @@ export function hasUnavailableSubclassConfiguration(
         ? getSubclassConfigurations([choice], classData, subclass).length > 0
         : isValidPsionicSelection(selection) ||
           isValidRevisedHunterSelection(selection) ||
-          isValidLandSelection(selection) ||
+          isValidSubclassSpellConfigurationSelection(selection) ||
           (selection.kind === 'feature-option' &&
             !isFeatureLiteralChoiceId(selection.choiceId) &&
             getInvalidFeatureOptionSelectionPaths({ classChoiceSelections: [selection] }).length ===

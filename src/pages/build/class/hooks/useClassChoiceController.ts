@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { BLESSED_STRIKES_ID } from '@/lib/5etools/blessedStrikesSource'
-import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
 import {
   getProgressiveChoiceGainCount,
   getProgressiveChoiceReviewLevel,
@@ -23,6 +22,7 @@ import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceId
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { REVISED_AFFINITY_ID } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
+import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
@@ -157,7 +157,7 @@ export function useClassChoiceController({
     ids: string[]
     contextKey: string
     catalogs: typeof catalogs
-    landHandles: ReadonlyMap<string, string>
+    configurationHandles: ReadonlyMap<string, string>
   } | null>(null)
   const enemySuggestions = useMemo(
     () =>
@@ -370,8 +370,8 @@ export function useClassChoiceController({
           .find(
             (choice) =>
               choice &&
-              (!queue.landHandles.has(choice.id) ||
-                queue.landHandles.get(choice.id) ===
+              (!queue.configurationHandles.has(choice.id) ||
+                queue.configurationHandles.get(choice.id) ===
                   getOptionalPoolSelectionHandleForChoice(choice.id, character)) &&
               (selectedViewsByChoiceId.get(choice.id) ?? []).filter(isClassChoiceOptionEligible)
                 .length < getRequiredChoiceSelectionCount(choice, viewingClassLevel),
@@ -510,7 +510,7 @@ export function useClassChoiceController({
             activeSaved.projectedBranch ||
             activeSaved.revisedInvocations ||
             activeSaved.selection.choiceId === REVISED_AFFINITY_ID ||
-            getLandChoiceRule(activeSaved.selection.choiceId)
+            getSubclassSpellConfigurationRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
             : undefined,
         )
@@ -584,8 +584,8 @@ export function useClassChoiceController({
             current.id === REVISED_AFFINITY_ID ||
             getClassOrderById(current.id)
             ? request?.savedHandle
-            : getLandChoiceRule(current.id)
-              ? (request?.savedHandle ?? queue?.landHandles.get(current.id))
+            : getSubclassSpellConfigurationRule(current.id)
+              ? (request?.savedHandle ?? queue?.configurationHandles.get(current.id))
               : decodeLegacySubclassChoice(current.id)
                 ? (request?.savedHandle ??
                   (activeSaved ? getOptionalPoolSelectionHandle(activeSaved.selection) : ''))
@@ -664,9 +664,9 @@ export function useClassChoiceController({
         ids: candidates.map((choice) => choice.id),
         contextKey: ownerContext(subclass.name, subclass.source, latest),
         catalogs,
-        landHandles: new Map(
+        configurationHandles: new Map(
           candidates
-            .filter((choice) => getLandChoiceRule(choice.id))
+            .filter((choice) => getSubclassSpellConfigurationRule(choice.id))
             .map((choice) => [
               choice.id,
               getOptionalPoolSelectionHandleForChoice(choice.id, latest),
@@ -801,7 +801,7 @@ export function useClassChoiceController({
                       choice.id === ELEMENTAL_FURY_ID ||
                       choice.id === REVISED_AFFINITY_ID ||
                       getClassOrderById(choice.id) ||
-                      getLandChoiceRule(choice.id) ||
+                      getSubclassSpellConfigurationRule(choice.id) ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
                       decodeLegacySubclassChoice(choice.id)
                     ? saved
@@ -829,7 +829,7 @@ export function useClassChoiceController({
                 state.projectedBranch ||
                 state.revisedInvocations ||
                 state.selection.choiceId === REVISED_AFFINITY_ID ||
-                getLandChoiceRule(state.selection.choiceId)
+                getSubclassSpellConfigurationRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,
             },

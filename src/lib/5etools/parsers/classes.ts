@@ -413,11 +413,12 @@ function resolveInlineSubclassFeatureRef(
   )
   if (!feature) {
     const target = getSubclassFeatureIdentity(parsedRef)
-    if (
-      'feature' in entry &&
-      (isNativeResilienceTarget(target) || getNativeWarlockPatronFeatureOwner(target))
-    ) {
-      // Raw inline data cannot stand in for a missing native source record.
+    const warlockPatron =
+      target &&
+      parsedRef.className?.trim().toLowerCase() === 'warlock' &&
+      ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
+    if ('feature' in entry && (isNativeResilienceTarget(target) || warlockPatron)) {
+      // Raw inline data cannot stand in for the missing declared source record.
       const { feature: _attachment, ...declaration } = entry
       return declaration
     }

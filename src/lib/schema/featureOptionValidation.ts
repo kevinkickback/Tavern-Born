@@ -1,5 +1,4 @@
 import { BLESSED_STRIKES_ID, getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
-import { getLandChoiceRule } from '@/lib/5etools/circleOfTheLand'
 import { ELEMENTAL_FURY_ID, getSavedElementalFury } from '@/lib/5etools/elementalFurySource'
 import {
   decodeFeatureOptionReference,
@@ -7,6 +6,7 @@ import {
   getFeatureOptionKey,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import {
   isRevisedTargetedInvocation,
   REVISED_INVOCATION_POOL,
@@ -56,16 +56,16 @@ export function getInvalidFeatureOptionSelectionPaths(
       paths.push(['classChoiceSelections', index])
       continue
     }
-    const land = getLandChoiceRule(selection.choiceId)
-    if (land && character.classProgression) {
+    const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
+    if (configuration && character.classProgression) {
       const owners = character.classProgression.filter(
         (entry) =>
-          norm(entry.name) === norm(land.owner.name) &&
-          norm(entry.source) === norm(land.owner.source) &&
-          norm(entry.subclass) === norm(land.owner.subclassName) &&
-          norm(entry.subclassSource) === norm(land.owner.subclassSource),
+          norm(entry.name) === norm(configuration.owner.name) &&
+          norm(entry.source) === norm(configuration.owner.source) &&
+          norm(entry.subclass) === norm(configuration.owner.subclassName) &&
+          norm(entry.subclassSource) === norm(configuration.owner.subclassSource),
       )
-      if (owners.length !== 1 || owners[0].levels < land.level) {
+      if (owners.length !== 1 || owners[0].levels < configuration.level) {
         paths.push(['classChoiceSelections', index])
         continue
       }

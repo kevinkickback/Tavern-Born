@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Eldritch Hex preparation at 6,598,484 B renderer and 1,327,326 B initial.
+  // Measured with Warlock patron setup at 6,610,467 B renderer and 1,336,381 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6444 * KIB,
-  initialRendererScript: 1297 * KIB,
+  rendererCode: 6456 * KIB,
+  initialRendererScript: 1306 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

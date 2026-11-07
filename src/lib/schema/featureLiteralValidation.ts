@@ -1,4 +1,3 @@
-import { getLandChoiceRule, isValidLandSelection } from '@/lib/5etools/circleOfTheLand'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
@@ -14,6 +13,10 @@ import {
   getRevisedHunterRule,
   isValidRevisedHunterSelection,
 } from '@/lib/5etools/revisedHunterIdentity'
+import {
+  getSubclassSpellConfigurationRule,
+  isValidSubclassSpellConfigurationSelection,
+} from '@/lib/5etools/subclassSpellConfiguration'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import { getInvalidFavoredEnemySelectionIds } from './favoredEnemyValidation'
 import { getInvalidNaturalExplorerSelectionIds } from './naturalExplorerValidation'
@@ -37,11 +40,13 @@ export function getInvalidFeatureLiteralSelectionIds(
       seen.add(s.choiceId)
       continue
     }
-    const land = getLandChoiceRule(s.choiceId)
-    if (land || getRevisedHunterRule(s.choiceId)) {
+    const configuration = getSubclassSpellConfigurationRule(s.choiceId)
+    if (configuration || getRevisedHunterRule(s.choiceId)) {
       if (
         seen.has(s.choiceId) ||
-        !(land ? isValidLandSelection(s) : isValidRevisedHunterSelection(s))
+        !(configuration
+          ? isValidSubclassSpellConfigurationSelection(s)
+          : isValidRevisedHunterSelection(s))
       )
         invalid.add(s.choiceId)
       seen.add(s.choiceId)

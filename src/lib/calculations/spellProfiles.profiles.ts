@@ -2,6 +2,7 @@ import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
 import { stripManagedClassSpellState } from '@/lib/character/managedClassSpellState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
@@ -138,10 +139,11 @@ export function ensureSpellProfiles(
       entry.subclass ?? '',
       entry.subclassSource,
     )
+    const exactPreparation = land || isVestigePatron(entry)
     const grantedSubclassSpells = (subclassSpells ?? []).filter(
       (grant) =>
         grant.mode !== 'expanded' &&
-        (land ? options?.visibleSpellLevels : options?.availableSpellReferences)?.has(
+        (exactPreparation ? options?.visibleSpellLevels : options?.availableSpellReferences)?.has(
           getSpellReferenceKey(grant.spellName),
         ),
     )

@@ -25,19 +25,38 @@ export const ELDRITCH_HEX_TARGET =
 export const ELDRITCH_HEX_REFERENCE = 'Hex|XPHB'
 export const ELDRITCH_HEX_RULE_DIGEST =
   'f7a602c8f69854dc475e8a5fe9ffb1f3a75f441c76990fd058bc094e16c2b780'
+export const STEPS_OF_THE_FEY_TARGET =
+  'subclass-feature|steps of the fey|warlock|xphb|archfey|xphb|3|xphb'
+export const STEPS_OF_THE_FEY_RULE_DIGEST =
+  '6907f2a31f211aa5e72589666590d2a9b418b4a4ad626d4cf67182755d5d49b3'
+export const STEPS_OF_THE_FEY_SPELL = 'Misty Step|XPHB'
+export const HEALING_LIGHT_TARGET =
+  'subclass-feature|healing light|warlock|xphb|celestial|xphb|3|xphb'
+export const HEALING_LIGHT_RULE_DIGEST =
+  'd5a4c9796760112c562e3f83a828feab91911c9e04b9429f189a97fc5f5b67cb'
+export const HEALING_LIGHT_RESOURCE_ID = 'warlock:xphb:celestial:healing-light'
 
 const eldritchHexPatron = getNativeWarlockPatronFeatureOwner(ELDRITCH_HEX_TARGET)
+const stepsPatron = getNativeWarlockPatronFeatureOwner(STEPS_OF_THE_FEY_TARGET)
+const healingLightPatron = getNativeWarlockPatronFeatureOwner(HEALING_LIGHT_TARGET)
 
-export function getNativeEldritchHexOwner(entry: CharacterClassEntry) {
+function getSelectedNativePatron(entry: CharacterClassEntry, patron: typeof eldritchHexPatron) {
   if (
-    eldritchHexPatron &&
-    findClassReference(entry, [
-      { name: eldritchHexPatron.className, source: eldritchHexPatron.source },
-    ]) &&
-    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [eldritchHexPatron])
+    patron &&
+    findClassReference(entry, [{ name: patron.className, source: patron.source }]) &&
+    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [patron])
   )
-    return eldritchHexPatron
+    return patron
 }
+
+export const getNativeEldritchHexOwner = (entry: CharacterClassEntry) =>
+  getSelectedNativePatron(entry, eldritchHexPatron)
+
+export const getNativeStepsOfTheFeyOwner = (entry: CharacterClassEntry) =>
+  getSelectedNativePatron(entry, stepsPatron)
+
+export const getNativeHealingLightOwner = (entry: CharacterClassEntry) =>
+  getSelectedNativePatron(entry, healingLightPatron)
 
 const subclassFields = new Set([
   'name',
@@ -128,7 +147,8 @@ export function getCurrentNativeWarlockPatronRules(
       : undefined
   }
 
-  const getNestedFeatures = (digests: readonly string[]) => {
+  const getNestedFeature = (target: string, digest: string) => {
+    if (!owner.nested.includes(target)) return undefined
     // Intro prose may vary. Verify each unconditional nested declaration and its own body.
     const targetOf = (uid: unknown) =>
       typeof uid === 'string'
@@ -162,15 +182,37 @@ export function getCurrentNativeWarlockPatronRules(
         ? getDirectSubclassFeatureReference(subclass, owner.intro)?.feature
         : undefined
     const mirrors = candidates(owner.intro)
-    return owner.nested.flatMap((target, index) => {
-      const digest = digests[index]
-      const feature =
-        mirrors.length && mirrors.every((row) => exactBody(nestedFrom(row, target), target, digest))
-          ? verified(nestedFrom(intro, target), target, digest)
-          : undefined
-      return feature ? [feature] : []
-    })
+    return mirrors.length &&
+      mirrors.every((row) => exactBody(nestedFrom(row, target), target, digest))
+      ? verified(nestedFrom(intro, target), target, digest)
+      : undefined
   }
 
-  return { owner, subclass, getDirectFeature, getNestedFeatures }
+  return { owner, subclass, getDirectFeature, getNestedFeature }
+}
+
+export function getCurrentStepsOfTheFey(
+  cls: Class5e,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  if (!getNativeStepsOfTheFeyOwner(entry)) return undefined
+  const current = getCurrentNativeWarlockPatronRules(cls, entry, catalogs)
+  const feature = current?.getNestedFeature(STEPS_OF_THE_FEY_TARGET, STEPS_OF_THE_FEY_RULE_DIGEST)
+  const blocks = current?.subclass.additionalSpells
+  const innate = record(blocks?.[0]?.innate)
+  const usage = record(innate._)
+  const daily = record(usage.daily)
+  const spells = daily.cha
+  return feature &&
+    blocks?.length === 1 &&
+    Object.keys(innate).length === 1 &&
+    Object.keys(usage).length === 1 &&
+    Object.keys(daily).length === 1 &&
+    Array.isArray(spells) &&
+    spells.length === 1 &&
+    typeof spells[0] === 'string' &&
+    spells[0].trim().toLowerCase() === STEPS_OF_THE_FEY_SPELL.toLowerCase()
+    ? feature
+    : undefined
 }
