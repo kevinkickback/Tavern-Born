@@ -1,4 +1,7 @@
-import { getBarbarianPathChoice } from '@/lib/5etools/barbarianPathChoiceIdentity'
+import {
+  getBarbarianPathChoice,
+  GIANT_POWER_TARGET,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
 import {
   BLESSED_STRIKES_TARGET,
   getCurrentBlessedStrikes,
@@ -8,7 +11,10 @@ import {
 } from '@/lib/5etools/blessedStrikesSource'
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
-import { classProficiencyRule } from '@/lib/5etools/classProficiencyRules'
+import {
+  classProficiencyRule,
+  REVISED_PRIMAL_KNOWLEDGE_TARGET,
+} from '@/lib/5etools/classProficiencyRules'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   ELEMENTAL_FURY_ID,
@@ -119,12 +125,6 @@ function buildOptionalClassFeatureActivity(
     (_, index) => !invalid.has(index),
   )
   const earned = (owner: OptionalClassFeatureOwner, level: number) => {
-    if (
-      owner[1] === 'barbarian' &&
-      character.originSystem &&
-      !getSourceCompatibility(owner[2], character.originSystem).compatible
-    )
-      return false
     const entries = character.classProgression.filter(
       (entry) => norm(entry.name) === owner[1] && norm(entry.source) === owner[2],
     )
@@ -240,13 +240,22 @@ function buildOptionalClassFeatureActivity(
     )
       return false
     const owner = optionalClassOwner(row.owner)
+    const pathChoice = getBarbarianPathChoice(row.id)
+    const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (
-      getBarbarianPathChoice(row.id) &&
+      character.originSystem &&
+      (pathChoice ||
+        proficiency?.target === GIANT_POWER_TARGET ||
+        proficiency?.target === REVISED_PRIMAL_KNOWLEDGE_TARGET) &&
+      !getSourceCompatibility(owner[2], character.originSystem).compatible
+    )
+      return false
+    if (
+      pathChoice &&
       allowed &&
       (owner[0] !== 'subclass' || !allowed.has(owner[2]) || !allowed.has(owner[4]))
     )
       return false
-    const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (proficiency) {
       const needed = classProficiencyRule(proficiency.target)?.domains.find(
         (domain) => domain.domain === proficiency.domain,
