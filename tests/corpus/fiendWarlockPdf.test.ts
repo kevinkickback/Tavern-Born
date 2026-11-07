@@ -22,6 +22,7 @@ import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { renderEntriesToText } from '@/lib/entryText'
 import {
   createCharacterSheetViewModel,
   withoutSheetDescriptions,
@@ -190,6 +191,166 @@ function dataFor(pack: string): GameData {
   if (!data) throw new Error('Missing loaded catalog')
   return data
 }
+
+const configuredPatrons = [
+  {
+    edition: editions[0],
+    patron: 'The Archfey',
+    gains: [
+      [1, 'Fey Presence'],
+      [6, 'Misty Escape'],
+      [10, 'Beguiling Defenses'],
+      [14, 'Dark Delirium'],
+    ],
+  },
+  {
+    edition: editions[0],
+    patron: 'The Great Old One',
+    gains: [
+      [1, 'Awakened Mind'],
+      [6, 'Entropic Ward'],
+      [10, 'Thought Shield'],
+      [14, 'Create Thrall'],
+    ],
+  },
+  {
+    edition: editions[1],
+    patron: 'Archfey Patron',
+    gains: [
+      [3, 'Archfey Spells'],
+      [3, 'Steps of the Fey'],
+      [6, 'Misty Escape'],
+      [10, 'Beguiling Defenses'],
+      [14, 'Bewitching Magic'],
+    ],
+  },
+  {
+    edition: editions[1],
+    patron: 'Celestial Patron',
+    gains: [
+      [3, 'Celestial Spells'],
+      [3, 'Healing Light'],
+      [6, 'Radiant Soul'],
+      [10, 'Celestial Resilience'],
+      [14, 'Searing Vengeance'],
+    ],
+  },
+  {
+    edition: editions[1],
+    patron: 'Great Old One Patron',
+    gains: [
+      [3, 'Great Old One Spells'],
+      [3, 'Awakened Mind'],
+      [3, 'Psychic Spells'],
+      [6, 'Clairvoyant Combatant'],
+      [10, 'Eldritch Hex'],
+      [10, 'Thought Shield'],
+      [14, 'Create Thrall'],
+    ],
+  },
+] as const
+
+test.skipIf(!packs.includes('composed')).each(configuredPatrons)(
+  '$patron projects each configured rule at its earned level',
+  ({ edition, patron, gains }) => {
+    const catalogs = buildClassChoiceFeatureCatalogs(current(dataFor('composed'), edition[1]))
+    const labels = new Set<string>(gains.map(([, name]) => name))
+    const levels = new Set(gains.flatMap(([gain]) => [Math.max(1, gain - 1), gain]))
+    for (const level of levels) {
+      const rules = getClassStaticFeatureSummaries(
+        actor(edition, level, patron),
+        catalogs,
+        false,
+      ).filter(({ compactText }) => labels.has(compactText))
+      expect(rules.map(({ compactText }) => compactText)).toEqual(
+        gains.filter(([gain]) => gain <= level).map(([, name]) => name),
+      )
+      for (const { text, compactText } of rules) expect(text).toMatch(`${compactText}: `)
+    }
+  },
+)
+
+const patronFormCases = [
+  {
+    edition: editions[0],
+    patron: 'The Archfey',
+    shortName: 'Archfey',
+    level: 6,
+    template: '2014-custom',
+    gains: [
+      [1, 'Fey Presence'],
+      [6, 'Misty Escape'],
+    ],
+  },
+  {
+    edition: editions[1],
+    patron: 'Great Old One Patron',
+    shortName: 'Great Old One',
+    level: 10,
+    template: '2024-official',
+    gains: [
+      [10, 'Eldritch Hex'],
+      [10, 'Thought Shield'],
+    ],
+  },
+] as const
+
+test.skipIf(!packs.includes('composed')).each(patronFormCases)(
+  '$template prints $patron rules and names-only labels',
+  async ({ edition, patron, shortName, level, template, gains }) => {
+    const [, source] = edition
+    const data = dataFor('composed')
+    const view = createCharacterSheetViewModel(
+      actor(edition, level, patron),
+      lookups(data),
+      lookups(current(data, source)),
+    )
+    const raw = JSON.parse(await readFile('data/class/class-warlock.json', 'utf8')) as {
+      subclassFeature: SubclassFeature[]
+    }
+    const normalize = (text: string) => text.replace(/\s+/g, ' ').replace(/’/g, "'")
+    const rules = gains.map(([gain, label]) => {
+      const matches = raw.subclassFeature.filter(
+        (feature) =>
+          feature.name === label &&
+          feature.level === gain &&
+          feature.source === source &&
+          feature.className === 'Warlock' &&
+          feature.classSource === source &&
+          feature.subclassShortName === shortName &&
+          feature.subclassSource === source,
+      )
+      expect(matches).toHaveLength(1)
+      const body = normalize(renderEntriesToText(matches[0].entries ?? [])).replace(/[.!?]$/, '')
+      expect(body.length).toBeGreaterThan(0)
+      return { label, body }
+    })
+    for (const descriptions of ['full', 'names'] as const) {
+      const bytes = await generateTestCharacterSheet(view, template, {
+        text: { descriptions, overflow: 'notes' },
+      })
+      const fields = (await PDFDocument.load(bytes))
+        .getForm()
+        .getFields()
+        .filter((field) => field instanceof PDFTextField)
+      const printed = normalize(fields.map((field) => field.getText() ?? '').join(' '))
+      const notes = normalize(
+        fields
+          .filter((field) => /Notes\.(Left|Right)$/.test(field.getName()))
+          .map((field) => field.getText() ?? '')
+          .join(' '),
+      )
+      for (const { label, body } of rules) {
+        expect(printed).toContain(label)
+        if (descriptions === 'names') expect(printed).not.toContain(body)
+        else if (template === '2014-custom' && label === 'Misty Escape') {
+          expect(notes).toContain(body)
+          expect(printed.split(body)).toHaveLength(2)
+        } else expect(printed).toContain(body)
+      }
+    }
+  },
+)
 
 test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($pack)', async ({
   pack,
