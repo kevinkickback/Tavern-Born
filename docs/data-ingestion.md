@@ -177,6 +177,19 @@ representation. The generator checks both outputs and includes the runtime modul
   catalog.
 - Parser output and source ordering must be deterministic to avoid cache fingerprint churn.
 
+## Remote startup
+
+The startup overlay waits for a remote catalog check to settle. A single 15-second deadline covers
+source loading, queued resources, and cache preparation. A validated result can commit once it
+owns the cache queue and reaches the atomic write. Cancelling an attempt before that write starts
+prevents it from writing a replacement catalog. Superseded attempts cannot publish late progress.
+
+When a schema-compatible cache matches the configured source stack, a failed check leaves that
+catalog active. With no matching cache, the overlay offers **Use Included SRD for this session** during
+the check. **Retry** appears after failure or timeout, alongside the fallback. The session fallback
+leaves the saved remote configuration and its cache intact. A later successful source check can
+replace the session catalog even when the remote fingerprint is unchanged.
+
 ## Parsing policy
 
 Inspect the relevant pinned upstream 5etools behavior before writing an equivalent parser, reference,
