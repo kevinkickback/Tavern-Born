@@ -183,7 +183,6 @@ function matchSpell(
   subclassSource: string | undefined,
   classListOverrides: Set<string> | undefined,
   enforceClassList: boolean,
-  strictLevels: boolean,
   characterSpellKeys?: ReadonlySet<string>,
   classListReferences?: ReadonlySet<string>,
 ): boolean {
@@ -209,11 +208,7 @@ function matchSpell(
   if (search && !spell.name.toLowerCase().includes(search.toLowerCase())) return false
 
   const levelSet = activeFilters.level
-  if (strictLevels) {
-    if (!levelSet || levelSet.size === 0 || !levelSet.has(String(spell.level))) return false
-  } else {
-    if (levelSet && levelSet.size > 0 && !levelSet.has(String(spell.level))) return false
-  }
+  if (levelSet?.size && !levelSet.has(String(spell.level))) return false
 
   const schoolSet = activeFilters.school
   if (schoolSet && schoolSet.size > 0 && !schoolSet.has(spell.school)) return false
@@ -338,13 +333,20 @@ export function SpellSelectionModal({
   allowClassListBypass = true,
   onConfirm,
 }: SpellSelectionModalProps) {
-  const spells = useMemo(() => {
+  const spellCandidates = useMemo(() => {
     if (!allowedSpellReferences) return allSpells
     const keys = new Set(
       Array.from(allowedSpellReferences, (reference) => getSpellReferenceKey(reference)),
     )
     return allSpells.filter((spell) => keys.has(getSpellSelectionId(spell)))
   }, [allSpells, allowedSpellReferences])
+  const spells = useMemo(
+    () =>
+      allowedLevels
+        ? spellCandidates.filter((spell) => allowedLevels.has(String(spell.level)))
+        : spellCandidates,
+    [allowedLevels, spellCandidates],
+  )
   const retainUnavailable = selectionMode === 'racial-choice'
   const availableIds = useMemo(() => new Set(spells.map(getSpellSelectionId)), [spells])
   const lockedSpellKeys = useMemo(
@@ -390,12 +392,12 @@ export function SpellSelectionModal({
   )
   const filterSections = useMemo(
     () => [
-      buildLevelFilter(spells, allowedLevels),
+      buildLevelFilter(spellCandidates, allowedLevels),
       SCHOOL_FILTER,
       TYPE_FILTER,
       ...(visibilityFilter ? [visibilityFilter] : []),
     ],
-    [allowedLevels, spells, visibilityFilter],
+    [allowedLevels, spellCandidates, visibilityFilter],
   )
 
   const effectiveInitialFilters = hasCharSpells
@@ -462,7 +464,6 @@ export function SpellSelectionModal({
           subclassSource,
           classListOverrideKeys,
           !activeFilters.visibility?.has('ignore-class-list'),
-          !!allowedLevels,
           characterSpellKeys,
           classListReferences,
         )

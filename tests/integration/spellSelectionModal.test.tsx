@@ -38,6 +38,66 @@ function makeSpell(name: string, source: string, overrides: Partial<Spell5e> = {
 }
 
 describe('SpellSelectionModal identity', () => {
+  test('narrows levels like schools within the hard level limits', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[
+          makeSpell('Shield', 'PHB', { level: 1 }),
+          makeSpell('Fireball', 'PHB', { level: 3, school: 'V' }),
+          makeSpell('Fear', 'PHB', { level: 3 }),
+          makeSpell('Ice Storm', 'PHB', { level: 4 }),
+        ]}
+        allowedLevels={new Set(['1', '3'])}
+        onConfirm={onConfirm}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Shield')).toBeTruthy())
+    expect(screen.getByText('Fireball')).toBeTruthy()
+    expect(screen.getByText('Fear')).toBeTruthy()
+    expect(screen.queryByText('Ice Storm')).toBeNull()
+    const first = screen.getByRole('checkbox', { name: 'Level 1' })
+    const third = screen.getByRole('checkbox', { name: 'Level 3' })
+    expect(third.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('checkbox', { name: 'Level 4' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByText('Shield'))
+    fireEvent.click(third)
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="2"]')).toBeTruthy(),
+    )
+    fireEvent.click(first)
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="3"]')).toBeTruthy(),
+    )
+    fireEvent.click(first)
+    fireEvent.click(third)
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="3"]')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Evocation' }))
+    await waitFor(() =>
+      expect(document.querySelector('[data-selection-list-size="1"]')).toBeTruthy(),
+    )
+    expect(screen.getByText('Fireball')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(onConfirm).toHaveBeenCalledWith(['Shield|PHB'], 'default')
+  })
+
+  test('keeps an explicitly empty hard level pool empty', () => {
+    render(
+      <SpellSelectionModal
+        open
+        onOpenChange={vi.fn()}
+        spells={[makeSpell('Light', 'PHB')]}
+        allowedLevels={new Set()}
+        onConfirm={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('Light')).toBeNull()
+  })
+
   test('current exact list policy is captured at Confirm while hard targets remain constrained', async () => {
     const onConfirm = vi.fn()
     render(
@@ -52,7 +112,6 @@ describe('SpellSelectionModal identity', () => {
         classListReferences={new Set(['light|phb'])}
         allowedSpellReferences={new Set(['light|phb', 'message|phb'])}
         allowedLevels={new Set(['0'])}
-        initialFilters={{ level: new Set(['0']) }}
         categories={[{ key: 'choice', label: 'cantrip', max: 1, test: () => true }]}
         onConfirm={onConfirm}
       />,
