@@ -57,10 +57,11 @@ test.skipIf(catalogsToTest.length === 1)(
     const power = (doc: typeof document, source: string) => {
       const cls = (parseClasses(doc) as Class5e[]).find(
         (row) => row.name === 'Barbarian' && row.source === source,
-      )!
-      const path = cls.subclasses?.find(
+      )
+      const path = cls?.subclasses?.find(
         (row) => row.name === 'Path of the Giant' && row.source === 'BGG',
-      )!
+      )
+      if (!cls || !path) throw new Error(`Missing Path of the Giant for ${source}`)
       return getCurrentGiantPower(cls, path)
     }
     expect(power(document, 'PHB')).toBeDefined()
