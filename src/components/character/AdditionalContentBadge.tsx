@@ -5,22 +5,33 @@ import { cn } from '@/lib/utils'
 
 interface AdditionalContentBadgeProps {
   className?: string
+  showLabel?: boolean
 }
 
 const EXPLANATION =
   'This character has saved choices that are not available in the Included SRD. Add the data used to create this character to review or edit them.'
 
-export function AdditionalContentBadge({ className }: AdditionalContentBadgeProps) {
+export function AdditionalContentBadge({
+  className,
+  showLabel = false,
+}: AdditionalContentBadgeProps) {
+  const badgeStyle =
+    'rounded-md border-primary bg-primary/85 text-primary-foreground shadow-sm backdrop-blur-sm'
+  if (showLabel) {
+    return (
+      <Badge variant="outline" className={cn(badgeStyle, className)}>
+        <Warning className="!size-4" weight="bold" aria-hidden />
+        Additional content
+      </Badge>
+    )
+  }
   return (
     <TooltipProvider delayDuration={250}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge
             variant="outline"
-            className={cn(
-              'size-6 rounded-md border-primary bg-primary/85 p-0 text-primary-foreground shadow-sm backdrop-blur-sm',
-              className,
-            )}
+            className={cn(badgeStyle, 'size-6 p-0', className)}
             aria-label={`Additional content. ${EXPLANATION}`}
           >
             <Warning className="!size-4" weight="bold" />
