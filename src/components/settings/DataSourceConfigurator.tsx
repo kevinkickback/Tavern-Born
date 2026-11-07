@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
 import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
 import { validateDataSource } from '@/lib/5etools/validator'
+import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -60,6 +61,7 @@ export function DataSourceConfigurator({
   const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
   const gameData = useGameDataStore((state) => state.gameData)
   const isLoading = useGameDataStore((state) => state.isLoading)
+  const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
@@ -276,7 +278,8 @@ export function DataSourceConfigurator({
   }
 
   const handleRefresh = async () => {
-    if (!dataSourceConfig) return
+    const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
+    if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
     const previousChangedAt = lastDataChangedAt
     try {
       const contentChanged = await loadGameData(dataSourceConfig, true)
@@ -643,12 +646,15 @@ export function DataSourceConfigurator({
               {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
                 <Button
                   onClick={handleRefresh}
-                  disabled={isLoading || !hasActiveDataSource}
+                  disabled={isLoading || isBackgroundRefreshing || !hasActiveDataSource}
                   variant="outline"
                   className="gap-2"
                 >
-                  <ArrowClockwise className="size-4" />
-                  Check for Updates
+                  <ArrowClockwise
+                    className={cn('size-4', isBackgroundRefreshing && 'motion-safe:animate-spin')}
+                    aria-hidden
+                  />
+                  {isBackgroundRefreshing ? 'Checking for updates…' : 'Check for Updates'}
                 </Button>
               )}
               {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
