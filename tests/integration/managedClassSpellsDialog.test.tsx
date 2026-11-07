@@ -231,6 +231,8 @@ describe('Class spell Finish and current-state adapter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
     clearLearned()
     expect(mastery().queryByText('Chosen')).toBeNull()
+    expect(mastery().getByText(/restore this spell in the draft spellbook/i)).toBeTruthy()
+    expect(mastery().queryByText(/the choice is saved/i)).toBeNull()
     fireEvent.click(mastery().getByRole('button', { name: 'Change' }))
     expect(screen.getByRole('dialog', { name: 'Choose Spell Mastery 1' })).toBeTruthy()
     expect(screen.queryByText('Shield')).toBeNull()

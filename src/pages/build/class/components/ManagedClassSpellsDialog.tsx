@@ -260,8 +260,9 @@ export function ManagedClassSpellsDialog({
             {rows.map((row, index) => {
               const isSpecialty = row.slot[1] === 'class-spellbook-specialty'
               const specialtyPreview = isSpecialty ? bookPreview : undefined
+              const slotId = managedClassSpellId(row.slot)
               const status = (specialtyPreview?.statuses ?? statuses).find(
-                (item) => managedClassSpellId(item.choice.slot) === managedClassSpellId(row.slot),
+                (item) => managedClassSpellId(item.choice.slot) === slotId,
               )
               const draftTarget = targetKey(row.target)
               const matchesSavedStatus =
@@ -272,14 +273,18 @@ export function ManagedClassSpellsDialog({
                 targetKey(status.choice.target) === draftTarget &&
                 status.choice.policy === row.policy
               const unavailable = matchesSavedStatus && !status?.active
+              const lostInDraft =
+                specialtyPreview?.draft &&
+                unavailable &&
+                statuses.some(
+                  (item) => item.active && managedClassSpellId(item.choice.slot) === slotId,
+                )
               const missingFromDraftBook =
                 isSpecialty &&
                 draftTarget &&
                 (specialtyPreview?.error ||
-                  (!matchesSavedStatus &&
-                    !specialtyPools
-                      .get(managedClassSpellId(row.slot))
-                      ?.defaultReferences.has(draftTarget)))
+                  ((!matchesSavedStatus || lostInDraft) &&
+                    !specialtyPools.get(slotId)?.defaultReferences.has(draftTarget)))
               const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const kind =
