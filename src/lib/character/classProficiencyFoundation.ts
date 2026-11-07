@@ -40,7 +40,11 @@ export function projectOwnedProficiencies(
   const invalid = getInvalidClassProficiencySelectionIds(character.classChoiceSelections ?? [])
   const choices = new Map(
     character.classProgression
-      .flatMap((owner) => getEffectiveOwnerProficiencyChoices(character, owner, catalogs))
+      .flatMap((owner) =>
+        getEffectiveOwnerProficiencyChoices(character, owner, catalogs, {
+          resolveLanguageFoundation: true,
+        }),
+      )
       .map((choice) => [choice.id, choice]),
   )
   const current: CurrentSelection[] = []
@@ -55,9 +59,20 @@ export function projectOwnedProficiencies(
   )
   const liveSelected = (selection: CharacterClassChoiceSelection) =>
     selection.selected.filter((option) => hasProficiencyCatalogTarget(option, catalogs))
-  let foundations = grantFixedProficiencies(independent, fixed, 'foundations', catalogs)
+  const languageFallbacks = fixed.filter(({ rule }) => rule.languageFallback)
+  const normalFixed = fixed.filter(({ rule }) => !rule.languageFallback)
+  const requiresKnownLanguage = (choice: NormalizedCharacterChoice) => {
+    const relation = decodeClassProficiencyChoiceId(choice.id)
+    return (
+      relation &&
+      classProficiencyRule(relation.target)?.domains.find((row) => row.domain === relation.domain)
+        ?.requiresKnownLanguage
+    )
+  }
+  let foundations = grantFixedProficiencies(independent, normalFixed, 'foundations', catalogs)
   foundations = grantKenseiProficiencies(foundations, character, catalogs)
-  for (const { selection } of current) {
+  for (const { selection, choice } of current) {
+    if (requiresKnownLanguage(choice)) continue
     const selected = liveSelected(selection)
     if (selected.length)
       foundations = grantClassProficiencySelection(
@@ -70,6 +85,28 @@ export function projectOwnedProficiencies(
     if (state.complete && state.languageAvailable && !state.selection.inactive)
       foundations = grantClassProficiencySelection(foundations, state.selection, 'foundations')
   }
+  const independentlyKnown = new Set(
+    foundations.proficiencies.languages.map(canonicalProficiencyName),
+  )
+  for (const { selection, choice } of current) {
+    const needed = requiresKnownLanguage(choice)
+    if (!needed || !independentlyKnown.has(needed)) continue
+    const selected = liveSelected(selection)
+    if (selected.length)
+      foundations = grantClassProficiencySelection(
+        foundations,
+        { ...selection, selected },
+        'foundations',
+      )
+  }
+  foundations = grantFixedProficiencies(
+    foundations,
+    languageFallbacks.filter(({ rule }) =>
+      rule.languages?.every((name) => !independentlyKnown.has(name)),
+    ),
+    'foundations',
+    catalogs,
+  )
   let effective = grantFixedProficiencies(
     refreshFeatExpertiseState(foundations, catalogs?.featExpertiseFeats ?? []),
     fixed,
@@ -109,5 +146,14 @@ export function projectOwnedProficiencies(
     if (selected.length)
       effective = grantClassProficiencySelection(effective, { ...selection, selected }, 'expertise')
   }
-  return { independent, foundations, effective, current, fixed }
+  return {
+    independent,
+    foundations,
+    effective,
+    fixed,
+    current: current.filter(({ choice }) => {
+      const needed = requiresKnownLanguage(choice)
+      return !needed || independentlyKnown.has(needed)
+    }),
+  }
 }

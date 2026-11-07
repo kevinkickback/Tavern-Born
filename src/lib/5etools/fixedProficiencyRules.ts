@@ -1,3 +1,4 @@
+import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { CLASS_ORDERS } from './classOrderIdentity'
 import generated from './fixedProficiencyRules.generated.json' with { type: 'json' }
 
@@ -18,6 +19,7 @@ export interface FixedProficiencyRule {
   languages?: readonly string[]
   languageSource?: string
   useClassLanguagePrinting?: true
+  languageFallback?: true
   subclassGain?: { owner: readonly string[]; target: string }
   fallback?: { name: string; count: number; skillPool: readonly string[] }
 }
@@ -59,6 +61,28 @@ for (const order of CLASS_ORDERS) {
   })
 }
 export function fixedProficiencyRule(target: string, owner?: readonly string[]) {
+  if (target === GIANT_POWER_TARGET) {
+    if (
+      owner &&
+      (owner.length !== 4 ||
+        owner[0] !== 'barbarian' ||
+        !['phb', 'xphb'].includes(owner[1]) ||
+        owner[2] !== 'path of the giant' ||
+        owner[3] !== 'bgg')
+    )
+      return undefined
+    return {
+      target,
+      name: 'Giant Power',
+      className: 'Barbarian',
+      classSource: 'PHB',
+      level: 3,
+      kind: 'fixed-languages',
+      languages: ['giant'],
+      languageFallback: true,
+      ...(owner && { languageSource: owner[1].toUpperCase() }),
+    } satisfies FixedProficiencyRule
+  }
   const rule = rules.get(target)
   const requiredOwner = rule?.subclassGain?.owner
   if (

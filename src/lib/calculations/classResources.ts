@@ -1,4 +1,5 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
+import { hasCurrentWarriorOfTheGods } from '@/lib/5etools/barbarianJourneySources'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
@@ -28,6 +29,16 @@ const healingLight: ClassResourceDef = {
   id: HEALING_LIGHT_RESOURCE_ID,
   label: 'Healing Light',
   maxPerLevel: Array.from({ length: 20 }, (_, index) => index + 2),
+  restType: 'long',
+}
+
+export const WARRIOR_OF_THE_GODS_RESOURCE_ID = 'barbarian-xphb-zealot-warrior-of-the-gods'
+const warriorOfTheGods: ClassResourceDef = {
+  id: WARRIOR_OF_THE_GODS_RESOURCE_ID,
+  label: 'Warrior of the Gods (d12s)',
+  maxPerLevel: Array.from({ length: 20 }, (_, index) =>
+    index < 2 ? 0 : 4 + Number(index >= 5) + Number(index >= 11) + Number(index >= 16),
+  ),
   restType: 'long',
 }
 
@@ -100,9 +111,14 @@ export function getCharacterClassResources(
         ? getSorcererResourceDefs(currentSorcerer)
         : []
       : getClassResourceDefs(resolveClass(entry), level)
-    const earned = hasCurrentHealingLight(character, entry, options.catalogs)
-      ? [...definitions, healingLight]
-      : definitions
+    const earned = [...definitions]
+    if (hasCurrentHealingLight(character, entry, options.catalogs)) earned.push(healingLight)
+    if (
+      character.originSystem === '2024' &&
+      character.classProgression.filter((row) => findClassReference(entry, [row])).length === 1 &&
+      hasCurrentWarriorOfTheGods(resolveClass(entry), entry)
+    )
+      earned.push(warriorOfTheGods)
     return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&

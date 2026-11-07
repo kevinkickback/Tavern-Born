@@ -1,3 +1,10 @@
+import {
+  auditInheritedBarbarianRoots,
+  isGiantPowerSourceFeature,
+} from '@/lib/5etools/barbarianGiantPower'
+import { isRevisedZealotResourceSource } from '@/lib/5etools/barbarianJourneySources'
+import { isBarbarianPathChoiceSource } from '@/lib/5etools/barbarianPathChoices'
+import { isDirectBarbarianRitualTarget } from '@/lib/5etools/barbarianRitualSpells'
 import { isDirectBardCollegeFeature } from '@/lib/5etools/bardCollegeFeatures'
 import { isDirectBardLoreSpellSource } from '@/lib/5etools/bardSpellSources'
 import { auditClassCastingSources } from '@/lib/5etools/classCastingSource'
@@ -499,6 +506,10 @@ function auditNativeSubclassCopies(
           target === REVISED_AFFINITY_TARGET ||
           isDirectBardCollegeFeature(target) ||
           isDirectBardLoreSpellSource(target) ||
+          isBarbarianPathChoiceSource(target) ||
+          isRevisedZealotResourceSource(target) ||
+          isDirectBarbarianRitualTarget(target) ||
+          isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
           isDirectWizardTraditionSpellSource(target) ||
@@ -526,7 +537,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
   const packages = auditSubclassProficiencyPackages(classRecords, subclassRecords, records, origin)
   const materializedSubclasses = auditInheritedOathSpellRoots(
     subclassRecords,
-    materializeSubclassCopies(subclassRecords),
+    auditInheritedBarbarianRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
   )
   const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {

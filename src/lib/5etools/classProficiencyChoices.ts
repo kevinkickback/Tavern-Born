@@ -6,8 +6,13 @@ import {
   decodeClassProficiencyChoiceId,
   getClassProficiencyChoiceId,
 } from './classProficiencyIdentity'
-import { CLASS_PROFICIENCY_RULES, classProficiencyRule } from './classProficiencyRules'
+import {
+  CLASS_PROFICIENCY_RULES,
+  classProficiencyRule,
+  REVISED_PRIMAL_KNOWLEDGE_TARGET,
+} from './classProficiencyRules'
 import { findClassReference } from './classReference'
+import { getCurrentDirectClassFeature } from './directClassFeatureSource'
 import {
   getCurrentDirectFixedClassRules,
   getDirectFixedClassCertificate,
@@ -163,6 +168,24 @@ export function getCurrentClassProficiencyChoices(
     const target = classProficiencyRule(decodeClassProficiencyChoiceId(choice.id)?.target ?? '')
     if (!target || !sources.has(target.target) || (!includeVariants && target.optional))
       return false
+    if (target.target === REVISED_PRIMAL_KNOWLEDGE_TARGET) {
+      const owners = catalogs?.classes?.filter((row) => findClassReference(classData, [row]))
+      const owner = owners?.length === 1 ? owners[0] : undefined
+      const pool = target.domains[0].skillPool
+      return !!(
+        owner &&
+        catalogs &&
+        pool &&
+        getCurrentDirectClassFeature(
+          owner,
+          catalogs,
+          target.target,
+          isAuditedClassProficiencyFeature,
+        ) &&
+        getFeatureSourceDigest(owner.startingProficiencies?.skills ?? []) ===
+          getFeatureSourceDigest([{ choose: { from: pool, count: 2 } }])
+      )
+    }
     if (fixedProficiencyRule(target.target)?.kind !== 'fixed-languages') return true
     const owners = catalogs?.classes?.filter((row) => findClassReference(classData, [row]))
     return !!(

@@ -3,7 +3,10 @@ import {
   decodeProficiencyOption,
   isClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
-import { CLASS_PROFICIENCY_RULES } from '@/lib/5etools/classProficiencyRules'
+import {
+  CLASS_PROFICIENCY_RULES,
+  REVISED_PRIMAL_KNOWLEDGE_TARGET,
+} from '@/lib/5etools/classProficiencyRules'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { isDirectFixedProficiencyRelation } from '@/lib/5etools/fixedProficiencyIdentity'
@@ -43,8 +46,14 @@ export function isValidClassProficiencySelection(
   return (
     !!relation &&
     !!domain &&
+    (relation.target !== REVISED_PRIMAL_KNOWLEDGE_TARGET ||
+      (relation.owner.length === 2 &&
+        relation.owner[0] === 'barbarian' &&
+        relation.owner[1] === 'xphb' &&
+        relation.level === 3)) &&
     (relation.domain !== 'languages' ||
       fixedProficiencyRule(relation.target)?.kind !== 'fixed-languages' ||
+      !!domain.requiresKnownLanguage ||
       isDirectFixedProficiencyRelation(relation)) &&
     (!optional ||
       (JSON.stringify(relation.owner) === JSON.stringify(optional.owner.slice(1)) &&
@@ -79,6 +88,7 @@ export function isValidClassProficiencySelection(
           !domain.skillPool ||
           domain.skillPool.includes(target.name)) &&
         (!domain.languagePool || domain.languagePool.includes(target.name)) &&
+        domain.requiresKnownLanguage !== target.name &&
         (!domain.toolPool || domain.toolPool.includes(target.name)) &&
         option.slotLevel === relation.level
       )

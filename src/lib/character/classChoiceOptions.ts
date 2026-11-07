@@ -54,6 +54,14 @@ export {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 
+import {
+  getBarbarianPathChoice,
+  getBarbarianPathChoiceGroup,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
+import {
+  getBarbarianPathSetup,
+  resolveBarbarianPathOption,
+} from '@/lib/5etools/barbarianPathChoices'
 import { getCurrentCannyChoices, normalizeCannyChoices } from '@/lib/5etools/cannyChoices'
 import {
   getLandTerrainSetup,
@@ -581,6 +589,8 @@ export function resolveFeatureOptionEntity(
   const target = decodeFeatureOptionReference(option)
   if (target?.format === 'source-group' && target.group === REVISED_AFFINITY_GROUP)
     return resolveRevisedAffinityOption(option, catalogs)
+  if (target?.format === 'source-group' && getBarbarianPathChoiceGroup(target.group))
+    return resolveBarbarianPathOption(option, catalogs)
   if (target?.format === 'source-group' && target.group === LAND_GROUP)
     return resolveLandTerrainOption(option, catalogs.classes)
   if (target?.format === 'source-group' && isWarlockPatronConfigurationGroup(target.group))
@@ -848,6 +858,7 @@ export function resolveClassChoiceOptions(
   if (
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
+    !getBarbarianPathChoice(choice.id) &&
     !getSubclassSpellConfigurationRule(choice.id) &&
     choice.id !== REVISED_AFFINITY_ID &&
     (!literal ||
@@ -1573,6 +1584,7 @@ export function getClassChoiceCandidates(
           getFeatureOwnerKey('Ranger', 'XPHB', 'Hunter', 'XPHB'),
         ),
     ).choices,
+    ...getBarbarianPathSetup(classData, subclass, catalogs).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
     ...getWarlockPatronConfigurations(classData, subclass, catalogs?.classes),
     ...[
@@ -1805,6 +1817,13 @@ export function getClassChoiceDiagnosticCandidateSide(
       classData,
       subclass,
       catalogs as ClassChoiceFeatureCatalogs | undefined,
+    ).diagnostics,
+    ...getBarbarianPathSetup(
+      classData,
+      subclass,
+      catalogs?.subclassFeatures
+        ? { ...catalogs, subclassFeatures: catalogs.subclassFeatures }
+        : undefined,
     ).diagnostics,
     ...getActiveRequiredSetupDiagnostics(
       enemyDiagnostics,

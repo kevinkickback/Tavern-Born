@@ -386,3 +386,17 @@ Valor and Swords grant their earned armor and weapon training. Revised Spirits g
 proficiency. Revised Dance uses Dexterity and Charisma for unarmored AC while wearing neither armor
 nor a shield. Jack of All Trades contributes half proficiency to untrained skill checks from
 Bard level 2. Classic non-skill checks use the rule text in Class Details and full sheets.
+
+## Barbarian setup and passive benefits
+
+Revised Primal Knowledge offers one of the six starting Barbarian skills at level 3.
+Classic Zealot records its level-3 Divine Fury damage type. Revised Zealot chooses damage
+when the effect occurs and displays its earned Warrior of the Gods healing dice and recovery.
+Wild Heart records its level-6 Aspect. Owl extends darkvision, and Panther or Salmon uses
+the current walking speed for the chosen movement type. The classic Bear Aspect doubles
+carrying capacity. Giant Power grants Giant or offers an alternate language when an independent
+source already supplies Giant. Removing or restoring either source recomputes the owned result.
+
+Unarmored Defense uses Dexterity and Constitution and permits a shield. Fast Movement applies
+while the character is free of heavy armor. Primal Champion increases intrinsic Strength and
+Constitution by four, subject to the printing's cap, before equipment effects.

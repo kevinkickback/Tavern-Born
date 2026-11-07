@@ -1,5 +1,6 @@
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
+import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { BARD_PRIMAL_LORE_TARGET } from './bardCollegeFeatures'
 import { LAND_BONUS_REF, LAND_BONUS_TARGET } from './circleOfTheLand'
 import { getClassOrderById } from './classOrderIdentity'
@@ -74,9 +75,34 @@ export const wizardIllusionCantripSlots = wizardIllusionCantrips.map((rule) => (
     0,
   ] satisfies ManagedClassSpellSlot,
 }))
+export const giantPowerSpellSlots = (['phb', 'xphb'] as const).map(
+  (source): ManagedClassSpellSlot => [
+    ['subclass', 'barbarian', source, 'path of the giant', 'bgg'],
+    'feature-cantrip',
+    selectedFeatureSpellAddress([
+      GIANT_POWER_TARGET,
+      'subclassFeature',
+      'giant power',
+      'bgg',
+      GIANT_POWER_TARGET.split('|').slice(1).join('|'),
+      0,
+      0,
+    ]),
+    3,
+    0,
+  ],
+)
+
+export function getGiantPowerSpellReferences(slot: ManagedClassSpellSlot) {
+  if (!giantPowerSpellSlots.some((row) => row[2] === slot[2] && row[0][2] === slot[0][2]))
+    return undefined
+  const printing = slot[0][2].toUpperCase()
+  return [`Druidcraft|${printing}`, `Thaumaturgy|${printing}`]
+}
 export const declaredSubclassSlots = [
   BARD_PRIMAL_LORE_SPELL_SLOT,
   LAND_BONUS_SPELL_SLOT,
+  ...giantPowerSpellSlots,
   ...wizardIllusionCantripSlots.map(({ slot }) => slot),
 ]
 

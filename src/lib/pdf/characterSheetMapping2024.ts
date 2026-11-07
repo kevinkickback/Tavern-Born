@@ -1,5 +1,6 @@
 import { HEALING_LIGHT_RESOURCE_ID } from '@/lib/5etools/nativeWarlockPatronRules'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { WARRIOR_OF_THE_GODS_RESOURCE_ID } from '@/lib/calculations/classResources'
 import { getHitDiceUsedTotal } from '@/lib/calculations/hitDice'
 import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
 import {
@@ -125,22 +126,18 @@ export function mapCharacterSheet2024(
       ? ''
       : `Additional movement: ${viewModel.additionalMovementSummary}`
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
-  const healingLight = viewModel.classResourceRows.find(
-    ({ id }) => id === HEALING_LIGHT_RESOURCE_ID,
-  )
-  const healingLightText = healingLight
-    ? [
-        `${healingLight.label} — ${healingLight.max - healingLight.used}/${healingLight.max} d6 remaining`,
-        healingLight.usageText,
-        healingLight.recovery,
-      ]
+  const healingDiceText = viewModel.classResourceRows
+    .filter(({ id }) => id === HEALING_LIGHT_RESOURCE_ID || id === WARRIOR_OF_THE_GODS_RESOURCE_ID)
+    .map(({ id, label, max, used, usageText, recovery }) => {
+      const dice = id === HEALING_LIGHT_RESOURCE_ID ? ' d6' : ''
+      return [`${label} — ${max - used}/${max}${dice} remaining`, usageText, recovery]
         .filter(Boolean)
         .map((text) => `${text}.`)
         .join(' ')
-    : ''
+    })
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
     [
-      healingLightText,
+      ...healingDiceText,
       withSorcererResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
     ]
       .filter(Boolean)

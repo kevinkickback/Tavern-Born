@@ -2,6 +2,7 @@ import {
   type AdditionalSpellChoiceDescriptor,
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
+import { getCurrentGiantPower } from '@/lib/5etools/barbarianGiantPower'
 import { getCurrentBardPrimalLore } from '@/lib/5etools/bardCollegeFeatures'
 import { getClassicLandBonusCantrip } from '@/lib/5etools/circleOfTheLand'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
@@ -11,9 +12,12 @@ import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
+import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
+  getGiantPowerSpellReferences,
+  giantPowerSpellSlots,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -310,6 +314,42 @@ export function getSelectedFeatureCantripSetups(
       ...(!available && { reason: 'Restore the exact College of the Moon Primal Lore source.' }),
     })
   }
+  for (const slot of giantPowerSpellSlots) {
+    if (!hasSavedSelectedFeatureSpellOwner(character, slot)) continue
+    const [owner, , producer, level] = slot
+    const classes = catalogs?.classes?.filter(
+      (row) => norm(row.name) === owner[1] && norm(row.source) === owner[2],
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const paths = cls?.subclasses?.filter(
+      (row) => norm(row.name) === owner[3] && norm(row.source) === owner[4],
+    )
+    const available =
+      cls &&
+      paths?.length === 1 &&
+      permitted(allowed, owner[2]) &&
+      permitted(allowed, 'bgg') &&
+      paths[0].spellcastingAbility === 'wis' &&
+      getCurrentGiantPower(cls, paths[0])
+    setups.push({
+      owner,
+      producer,
+      level,
+      name: 'Giant Power',
+      offered: true,
+      count: 1,
+      choice: {
+        id: producer,
+        level: 0,
+        count: 1,
+        isCantrip: true,
+        source: 'known',
+        usage: 'direct',
+        pool: getGiantPowerSpellReferences(slot),
+      },
+      ...(available ? {} : { reason: 'Restore the exact Giant Power source.' }),
+    })
+  }
   return setups
 }
 
@@ -364,11 +404,23 @@ export function getSelectedFeatureCantripPool(
   )
   const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
   const listOwner = slot[2] === BARD_PRIMAL_LORE_SPELL_SLOT[2] ? 'druid' : slot[0][1]
+  const giantPower = !!getGiantPowerSpellReferences(slot)
+  const giantReprints =
+    giantPower && slot[0][2] === 'xphb'
+      ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
+      : undefined
   const spells =
     reason || !choice
       ? []
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
+          if (
+            giantPower &&
+            (spell.classSpellRouteSource?.input.targetOccurrences.length !== 1 ||
+              (giantReprints &&
+                giantReprints.get(getSpellReferenceKey(spell.name, spell.source)) !== 0))
+          )
+            return false
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
           if (choice.pool)
             return choice.pool.some(

@@ -1,3 +1,4 @@
+import { isRevisedAncestralGuardian } from '@/lib/5etools/barbarianRitualSpells'
 import {
   currentClasses,
   hasBardMagicalSecretsRoute,
@@ -560,7 +561,9 @@ export function projectManagedClassSpellState(
         : [],
     ),
   )
-  const oathReprints = character.classProgression.some(isRevisedInheritedOathOwner)
+  const oathReprints = character.classProgression.some(
+    (entry) => isRevisedInheritedOathOwner(entry) || isRevisedAncestralGuardian(entry),
+  )
     ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
     : undefined
   const base = {
@@ -1013,6 +1016,8 @@ export function projectManagedClassSpellState(
       continue
     }
     status.active = true
+    if (pool.featureName === 'Giant Power')
+      status.castingNote = 'Giant Power: Wisdom is your spellcasting ability for this cantrip.'
     const reference = formatSpellReference(choice.target.name, choice.target.source)
     profiles = profiles.map((profile) =>
       profile.id === toClassProfileId(entry.name, entry.source) &&

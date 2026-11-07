@@ -107,7 +107,22 @@ export function buildSpellProfileDisplayModels({
     )
     const hasUnfulfilledChoices = unfulfilledChoices.length > 0
     if (isRacial && items.length === 0 && !hasUnfulfilledChoices) return []
-    if (profile.type === 'class' && !detail) return []
+    const classSelections =
+      profile.type === 'class'
+        ? managedClassSpellStatuses.filter(
+            (status) =>
+              status.active &&
+              status.choice.slot[0][1] === normalizeOwnerIdentity(profile.className) &&
+              status.choice.slot[0][2] === normalizeOwnerIdentity(profile.classSource),
+          )
+        : undefined
+    if (
+      profile.type === 'class' &&
+      !detail &&
+      !items.some((item) => item.castOnly) &&
+      !classSelections?.some(({ choice }) => choice.slot[1] === 'feature-cantrip')
+    )
+      return []
 
     const isLevelOnly = profile.type === 'class' && !!detail?.isLevelOnlyPreparedCaster
     const isTruePrepared = profile.type === 'class' && !!detail?.isTruePreparedCaster
@@ -146,15 +161,6 @@ export function buildSpellProfileDisplayModels({
           (left, right) => left - right,
         )
       : []
-    const classSelections =
-      profile.type === 'class'
-        ? managedClassSpellStatuses.filter(
-            (status) =>
-              status.active &&
-              status.choice.slot[0][1] === normalizeOwnerIdentity(profile.className) &&
-              status.choice.slot[0][2] === normalizeOwnerIdentity(profile.classSource),
-          )
-        : undefined
     const currentCantrips = classSelections
       ? classSelections.filter((status) => status.choice.slot[1] === 'class-cantrip').length
       : countUniqueSpellNames(

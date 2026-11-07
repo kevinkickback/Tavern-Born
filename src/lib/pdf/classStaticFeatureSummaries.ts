@@ -167,6 +167,30 @@ const reviewedPaladinOaths = {
   ],
 }
 
+const sharedBarbarianPaths = [
+  'path of the battlerager|scag',
+  'path of the ancestral guardian|xge',
+  'path of the storm herald|xge',
+  'path of the beast|tce',
+  'path of wild magic|tce',
+  'path of the giant|bgg',
+]
+const reviewedBarbarianPaths = {
+  phb: [
+    ...sharedBarbarianPaths,
+    'path of the berserker|phb',
+    'path of the totem warrior|phb',
+    'path of the zealot|xge',
+  ],
+  xphb: [
+    ...sharedBarbarianPaths,
+    'path of the berserker|xphb',
+    'path of the wild heart|xphb',
+    'path of the world tree|xphb',
+    'path of the zealot|xphb',
+  ],
+}
+
 function beastShapeLimits(entries: readonly unknown[], level: number) {
   // The classic table is top-level and the revised table is inside its rules group.
   const tables = entries
@@ -329,6 +353,7 @@ export function getClassStaticFeatureSummaries(
     const source = entry.source.trim().toLowerCase()
     if (
       (name !== 'bard' &&
+        name !== 'barbarian' &&
         name !== 'druid' &&
         name !== 'paladin' &&
         name !== 'wizard' &&
@@ -368,6 +393,42 @@ export function getClassStaticFeatureSummaries(
             ...summary,
             replaces: savedClassLabel(character, entry, feature),
           })),
+      )
+    }
+    if (name === 'barbarian') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const gain = (level: number, feature: string) =>
+        entry.levels < level
+          ? undefined
+          : getCurrentDirectClassFeature(
+              cls,
+              catalogs,
+              `class-feature|${feature}|barbarian|${source}|${level}|${source}`,
+            )
+      const base = [
+        gain(1, 'rage'),
+        gain(1, 'unarmored defense'),
+        gain(5, 'fast movement'),
+        gain(20, 'primal champion'),
+      ]
+      if (source === 'xphb') base.push(gain(3, 'primal knowledge'))
+      const path = reviewedBarbarianPaths[source].includes(
+        `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
+      )
+        ? getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+            level: 3,
+            intro: source === 'phb' ? 'primal path' : 'barbarian subclass',
+            later: source === 'phb' ? 'path feature' : 'subclass feature',
+            expandNestedRules: true,
+          })
+        : []
+      return [...base, ...path].flatMap((feature) =>
+        feature
+          ? featureSummary(feature).map((summary) => ({
+              ...summary,
+              replaces: savedClassLabel(character, entry, feature),
+            }))
+          : [],
       )
     }
     if (name === 'paladin') {

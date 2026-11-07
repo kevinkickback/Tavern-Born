@@ -1,17 +1,14 @@
 import { CLASS_ORDERS } from './classOrderIdentity'
+import {
+  FIXED_PROFICIENCY_PREFIX,
+  type FixedProficiencyRelation,
+  getFixedProficiencyId,
+} from './fixedProficiencyAddress'
 import { DIRECT_FIXED_CLASS_CERTIFICATES, fixedProficiencyRule } from './fixedProficiencyRules'
 import { getSubclassProficiencyRootCertificate } from './subclassProficiencyRegistry'
 
-const PREFIX = 'feature-fixed-proficiencies:'
-type FixedProficiencyOwner = [string, string] | [string, string, string, string]
-export interface FixedProficiencyRelation {
-  owner: FixedProficiencyOwner
-  target: string
-  level: number
-}
-export const isFixedProficiencyId = (id: string) => id.startsWith(PREFIX)
-export const getFixedProficiencyId = ({ owner, target, level }: FixedProficiencyRelation) =>
-  PREFIX + encodeURIComponent(JSON.stringify([owner, target, level]))
+export { type FixedProficiencyRelation, getFixedProficiencyId } from './fixedProficiencyAddress'
+export const isFixedProficiencyId = (id: string) => id.startsWith(FIXED_PROFICIENCY_PREFIX)
 
 export const getTrainingClassOrder = ({ owner, target, level }: FixedProficiencyRelation) =>
   owner.length === 2 && owner[1] === 'xphb' && level === 1
@@ -36,7 +33,7 @@ export const isDirectFixedProficiencyRelation = ({
 export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation | undefined {
   if (!isFixedProficiencyId(id)) return undefined
   try {
-    const value: unknown = JSON.parse(decodeURIComponent(id.slice(PREFIX.length)))
+    const value: unknown = JSON.parse(decodeURIComponent(id.slice(FIXED_PROFICIENCY_PREFIX.length)))
     if (!Array.isArray(value) || value.length !== 3) return undefined
     const [owner, target, level] = value
     if (
@@ -51,7 +48,7 @@ export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation |
       return undefined
     const rule = fixedProficiencyRule(target, owner)
     if (!rule || level < rule.level || level > 20) return undefined
-    const relation = { owner: owner as FixedProficiencyOwner, target, level }
+    const relation = { owner: owner as FixedProficiencyRelation['owner'], target, level }
     const qualified =
       owner.length === 2
         ? isDirectFixedProficiencyRelation(relation) || getTrainingClassOrder(relation)

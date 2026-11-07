@@ -110,7 +110,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "12be4f23d045999bf75cb2b1952f576266b63485719ed3cc07d31d8f8fb1f351"
+      "sha256": "f3a5d5a1800220d7c6028a7fe4e4215bb61706e8fe7ea49b38f7dcc87ff90586"
     }
   ],
   "toolClassificationDependencies": [
@@ -120,7 +120,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c75215fd24deed3e9b49ff2c47a71a16df7144ede8a19fd725116dbf2d3b85c6"
+      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
     },
     {
       "file": "src/lib/5etools/concreteToolProficiencies.ts",
@@ -158,7 +158,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "c3031274f816cdf03bce1d67b0e8c3c3b2816cd23ab89820a0d7b336f09e748a"
+      "sha256": "bdbc6ca0b0984eddd538749236914c8686687e3e99fd1e233a179bf16490151e"
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",

@@ -1,24 +1,11 @@
-import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Proficiencies } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
 import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { ALL_SKILLS, getSkillAbility, skillToAbility } from './skillNames'
 
-export { formatModifier }
-
-/**
- * FALLBACK: static skill→ability map used when parsed game data is unavailable
- * (e.g. before data/skills.json has loaded or in tests). Validated against the
- * parsed data in DEV mode via validateSkillToAbilityMap(). When GameDataLookups
- * is available, prefer skillToAbilityMap from there — it is derived directly
- * from data/skills.json and takes precedence over this constant.
- */
-const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = Object.fromEntries(
-  SKILL_CATALOG_FALLBACK.map((skill) => [skill.name, skill.ability]),
-) as Readonly<Record<string, AbilityName>>
-
-export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[]
+export { ALL_SKILLS, formatModifier, getSkillAbility }
 
 /**
  * Validate that the static SKILL_TO_ABILITY map matches skills loaded from
@@ -45,7 +32,7 @@ export function validateSkillToAbilityMap(parsedSkills: unknown[]): void {
       continue
     }
 
-    const staticAbility = SKILL_TO_ABILITY[name]
+    const staticAbility = getSkillAbility(name)
     if (!staticAbility) {
       console.warn(
         `[skills] validateSkillToAbilityMap: skill "${name}" found in JSON but missing from SKILL_TO_ABILITY`,
@@ -65,22 +52,6 @@ export function validateSkillToAbilityMap(parsedSkills: unknown[]): void {
     }
   }
 }
-
-/**
- * Resolve the governing ability for a skill by name.
- * Prefers the parsed map from GameDataLookups when provided;
- * falls back to the static FALLBACK SKILL_TO_ABILITY constant.
- */
-export function getSkillAbility(
-  skillName: string,
-  parsedMap?: Readonly<Record<string, string>>,
-): AbilityName | null {
-  const key = skillName.toLowerCase().trim()
-  const resolved = parsedMap ?? SKILL_TO_ABILITY
-  return (resolved[key] as AbilityName | undefined) ?? null
-}
-
-const SAVING_THROW_ABILITIES: readonly AbilityName[] = ABILITY_NAMES
 
 export function calculateSavingThrowModifier(
   abilityModifier: number,
@@ -112,7 +83,7 @@ export function deriveAllSavingThrows(
   effectContext: EffectResolutionContext = {},
 ): SavingThrowResult[] {
   const proficientSet = new Set(proficientSavingThrows.map((s) => s.toLowerCase()))
-  return SAVING_THROW_ABILITIES.map((ability) => {
+  return ABILITY_NAMES.map((ability) => {
     const proficient = proficientSet.has(ability)
     const modifier = Math.trunc(
       resolveNumericEffect(
@@ -173,7 +144,7 @@ export function deriveAllSkills(
   effects: readonly CharacterEffect[] = [],
   effectContext: EffectResolutionContext = {},
 ): SkillResult[] {
-  const resolvedMap = parsedSkillToAbilityMap ?? SKILL_TO_ABILITY
+  const resolvedMap = parsedSkillToAbilityMap ?? skillToAbility
   const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
   const proficientSet = new Set(proficientSkills.map((s) => s.toLowerCase()))
   const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()))

@@ -1,3 +1,7 @@
+import {
+  getBarbarianPathChoice,
+  getSavedBarbarianPathOption,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
 import { getSavedBlessedStrikes } from '@/lib/5etools/blessedStrikesSource'
 import {
   getLandChoiceRule,
@@ -354,6 +358,7 @@ export function getFeatureOptionSelectionStates(
         !selection.inactive &&
         (!isFeatureLiteralChoiceId(selection.choiceId) ||
           selection.choiceId === REVISED_AFFINITY_ID ||
+          !!getBarbarianPathChoice(selection.choiceId) ||
           !!getRevisedHunterRule(selection.choiceId) ||
           !!getSubclassSpellConfigurationRule(selection.choiceId)),
     )
@@ -362,6 +367,7 @@ export function getFeatureOptionSelectionStates(
       const land = getLandChoiceRule(selection.choiceId)
       const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
       const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
+      const barbarianPathChoice = !!getBarbarianPathChoice(selection.choiceId)
       const owner = findClassReference(
         { name: selection.className, source: selection.classSource },
         character.classProgression,
@@ -396,6 +402,7 @@ export function getFeatureOptionSelectionStates(
                 candidate.level === selection.classLevel &&
                 candidate.level <= owner.levels &&
                 (!hunter || isValidRevisedHunterSelection(selection)) &&
+                (!barbarianPathChoice || getSavedBarbarianPathOption(selection)) &&
                 (!configuration || isValidSubclassSpellConfigurationSelection(selection)) &&
                 (!revisedAffinity ||
                   (getSavedAffinityDamageType(selection, character.classProgression) &&
@@ -423,13 +430,19 @@ export function getFeatureOptionSelectionStates(
         !options.some(
           (option) =>
             isClassChoiceOptionEligible(option) &&
-            ((!hunter && !configuration && !revisedAffinity) ||
+            ((!hunter && !configuration && !revisedAffinity && !barbarianPathChoice) ||
               selection.selected.some(
                 (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
               )),
         )
       const affinity =
-        !hunter && !configuration && !revisedAffinity && !recovery && owner && subclass
+        !hunter &&
+        !configuration &&
+        !revisedAffinity &&
+        !barbarianPathChoice &&
+        !recovery &&
+        owner &&
+        subclass
           ? affinityRules(owner, subclass, catalogs)
           : undefined
       const landWard =
