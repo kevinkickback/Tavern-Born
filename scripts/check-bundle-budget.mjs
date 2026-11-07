@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with earned class choices at 6,581,494 B renderer and 1,307,448 B initial.
+  // Measured with bounded remote startup at 6,588,970 B renderer and 1,313,454 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6428 * KIB,
-  initialRendererScript: 1277 * KIB,
+  rendererCode: 6435 * KIB,
+  initialRendererScript: 1283 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
