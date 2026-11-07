@@ -1,4 +1,5 @@
 import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
+import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
@@ -223,7 +224,10 @@ export function auditSubclassProficiencyFeatures(
         valid,
         packaged && packageAudit?.key,
       ),
-      ...(!valid && !isConditionalOnlySubclassProficiencyTarget(target)
+      // The Giant Power cantrip has its own live rules check. Preserve duplicate and copy conflicts.
+      ...(!valid &&
+      !(target === GIANT_POWER_TARGET && ordinary && producers.length === 1) &&
+      !isConditionalOnlySubclassProficiencyTarget(target)
         ? { featureOptionSourceConflict: true }
         : {}),
     }

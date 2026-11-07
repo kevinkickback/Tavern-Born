@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { CLASS_PROFICIENCY_RULES } from '@/lib/5etools/classProficiencyRules'
 import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
+import type { Class5e } from '@/types/5etools'
 import {
   deriveClassProficiencyRules,
   deriveLanguagePool,
@@ -14,16 +15,32 @@ import rogueLanguageSources from '../fixtures/rogueLanguageSources.json'
 const dependencies = JSON.parse(
   readFileSync('tests/fixtures/classProficiencyDependencies.json', 'utf8'),
 )
+const barbarian = JSON.parse(
+  readFileSync('resources/srd/core/data/class/class-barbarian.json', 'utf8'),
+) as { class: Partial<Class5e>[]; classFeature: typeof proficiencySources }
 const options = () => ({
+  classes: barbarian.class,
   languagePool: deriveLanguagePool(dependencies.book).names,
   identity: getClassFeatureIdentity,
   digest: getFeatureSourceDigest,
 })
 
 test('source-derived checkpoint exactly reproduces the supported complete producers', () => {
+  const primalKnowledge = barbarian.classFeature.find(
+    (feature) =>
+      getClassFeatureIdentity(feature) === 'class-feature|primal knowledge|barbarian|xphb|3|xphb',
+  )
+  if (!primalKnowledge) throw new Error('Missing bundled Primal Knowledge producer')
+  expect(() =>
+    deriveClassProficiencyRules([primalKnowledge], { ...options(), classes: undefined }),
+  ).toThrow(/Unreviewed revised Primal Knowledge source or starting skill list/)
   expect(
     deriveClassProficiencyRules(
-      [...proficiencySources, ...rogueLanguageSources.classFeature],
+      [
+        ...proficiencySources,
+        ...rogueLanguageSources.classFeature,
+        { ...primalKnowledge, page: 52, basicRules2024: true },
+      ],
       options(),
     ),
   ).toEqual(CLASS_PROFICIENCY_RULES)

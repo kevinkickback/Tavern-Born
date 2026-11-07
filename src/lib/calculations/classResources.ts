@@ -1,4 +1,5 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
+import { hasCurrentWarriorOfTheGods } from '@/lib/5etools/barbarianJourneySources'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
@@ -31,7 +32,17 @@ const healingLight: ClassResourceDef = {
   restType: 'long',
 }
 
-function hasCurrentHealingLight(
+export const WARRIOR_OF_THE_GODS_RESOURCE_ID = 'barbarian-xphb-zealot-warrior-of-the-gods'
+const warriorOfTheGods: ClassResourceDef = {
+  id: WARRIOR_OF_THE_GODS_RESOURCE_ID,
+  label: 'Warrior of the Gods (d12s)',
+  maxPerLevel: Array.from({ length: 20 }, (_, index) =>
+    index < 2 ? 0 : 4 + Number(index >= 5) + Number(index >= 11) + Number(index >= 16),
+  ),
+  restType: 'long',
+}
+
+function getCurrentResourceClass(
   character: Character,
   entry: CharacterClassEntry,
   catalogs?: ClassChoiceFeatureCatalogs,
@@ -39,18 +50,11 @@ function hasCurrentHealingLight(
   if (
     character.originSystem !== '2024' ||
     !catalogs?.classes ||
-    !getNativeHealingLightOwner(entry) ||
     character.classProgression.filter((row) => findClassReference(entry, [row])).length !== 1
   )
-    return false
+    return undefined
   const current = catalogs.classes.filter((row) => findClassReference(entry, [row]))
-  return (
-    current.length === 1 &&
-    !!getCurrentNativeWarlockPatronRules(current[0], entry, catalogs)?.getNestedFeature(
-      HEALING_LIGHT_TARGET,
-      HEALING_LIGHT_RULE_DIGEST,
-    )
-  )
+  return current.length === 1 ? current[0] : undefined
 }
 
 /** Resolve one class resource's maximum from its rule definition and active effects. */
@@ -89,7 +93,8 @@ export function getCharacterClassResources(
     unlimitedWildShape: boolean
   },
 ) {
-  const currentSorcerer = getCurrentNativeSorcerer(character, options.catalogs)
+  const { catalogs } = options
+  const currentSorcerer = getCurrentNativeSorcerer(character, catalogs)
   const stored = character.classResources ?? {}
   const healingDiceLimit = Math.max(1, options.charismaModifier)
   return character.classProgression.flatMap((entry) => {
@@ -100,9 +105,19 @@ export function getCharacterClassResources(
         ? getSorcererResourceDefs(currentSorcerer)
         : []
       : getClassResourceDefs(resolveClass(entry), level)
-    const earned = hasCurrentHealingLight(character, entry, options.catalogs)
-      ? [...definitions, healingLight]
-      : definitions
+    const earned = [...definitions]
+    const current = getCurrentResourceClass(character, entry, catalogs)
+    if (
+      catalogs &&
+      current &&
+      getNativeHealingLightOwner(entry) &&
+      getCurrentNativeWarlockPatronRules(current, entry, catalogs)?.getNestedFeature(
+        HEALING_LIGHT_TARGET,
+        HEALING_LIGHT_RULE_DIGEST,
+      )
+    )
+      earned.push(healingLight)
+    if (hasCurrentWarriorOfTheGods(current, entry)) earned.push(warriorOfTheGods)
     return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&

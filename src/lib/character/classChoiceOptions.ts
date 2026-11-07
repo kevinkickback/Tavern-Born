@@ -54,6 +54,14 @@ export {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 
+import {
+  getBarbarianPathChoice,
+  getBarbarianPathChoiceGroup,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
+import {
+  getBarbarianPathSetup,
+  resolveBarbarianPathOption,
+} from '@/lib/5etools/barbarianPathChoices'
 import { getCurrentCannyChoices, normalizeCannyChoices } from '@/lib/5etools/cannyChoices'
 import {
   getLandTerrainSetup,
@@ -581,6 +589,8 @@ export function resolveFeatureOptionEntity(
   const target = decodeFeatureOptionReference(option)
   if (target?.format === 'source-group' && target.group === REVISED_AFFINITY_GROUP)
     return resolveRevisedAffinityOption(option, catalogs)
+  if (target?.format === 'source-group' && getBarbarianPathChoiceGroup(target.group))
+    return resolveBarbarianPathOption(option, catalogs)
   if (target?.format === 'source-group' && target.group === LAND_GROUP)
     return resolveLandTerrainOption(option, catalogs.classes)
   if (target?.format === 'source-group' && isWarlockPatronConfigurationGroup(target.group))
@@ -664,6 +674,7 @@ function resolveExplicitOption(
 ): ClassChoiceOptionView {
   const match = resolveClassChoiceOptionEntity(option, catalogs, cache)
   if (option.entityType === 'featureOption' && match) {
+    const path = 'group' in match ? getBarbarianPathChoiceGroup(String(match.group)) : undefined
     return {
       availability,
       reference: option,
@@ -671,25 +682,28 @@ function resolveExplicitOption(
       presentation: {
         kind: 'feature',
         featureTypeLabels: [
-          'group' in match
-            ? match.group === REVISED_HUNTER_GROUP
-              ? 'Hunter option'
-              : match.group === REVISED_AFFINITY_GROUP
-                ? 'Damage type'
-                : match.group === LAND_GROUP
-                  ? 'Circle terrain'
-                  : isDivineSoulConfigurationGroup(String(match.group))
-                    ? 'Divine affinity'
-                    : isFavoredEnemyOption(option)
-                      ? 'Favored enemy'
-                      : 'Favored terrain'
-            : 'Dragon ancestry',
+          path?.feature ??
+            ('group' in match
+              ? match.group === REVISED_HUNTER_GROUP
+                ? 'Hunter option'
+                : match.group === REVISED_AFFINITY_GROUP
+                  ? 'Damage type'
+                  : match.group === LAND_GROUP
+                    ? 'Circle terrain'
+                    : isDivineSoulConfigurationGroup(String(match.group))
+                      ? 'Divine affinity'
+                      : isFavoredEnemyOption(option)
+                        ? 'Favored enemy'
+                        : 'Favored terrain'
+              : 'Dragon ancestry'),
         ],
       },
       ...('group' in match
         ? { sourceGroup: { group: String(match.group) } }
         : { featureOption: { damageType: (match as FeatureTableOption).damageType } }),
-      searchText: `${option.name} ${'damageType' in match ? match.damageType : ''}`,
+      searchText: path
+        ? `${option.name} ${path.feature} ${path.owner.subclassName} ${option.source ?? ''}`
+        : `${option.name} ${'damageType' in match ? match.damageType : ''}`,
     }
   }
   return match
@@ -848,6 +862,7 @@ export function resolveClassChoiceOptions(
   if (
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
+    !getBarbarianPathChoice(choice.id) &&
     !getSubclassSpellConfigurationRule(choice.id) &&
     choice.id !== REVISED_AFFINITY_ID &&
     (!literal ||
@@ -1573,6 +1588,7 @@ export function getClassChoiceCandidates(
           getFeatureOwnerKey('Ranger', 'XPHB', 'Hunter', 'XPHB'),
         ),
     ).choices,
+    ...getBarbarianPathSetup(classData, subclass, catalogs).choices,
     ...normalizePsionicChoices(classData, subclass, catalogs).choices,
     ...getWarlockPatronConfigurations(classData, subclass, catalogs?.classes),
     ...[
@@ -1805,6 +1821,13 @@ export function getClassChoiceDiagnosticCandidateSide(
       classData,
       subclass,
       catalogs as ClassChoiceFeatureCatalogs | undefined,
+    ).diagnostics,
+    ...getBarbarianPathSetup(
+      classData,
+      subclass,
+      catalogs?.subclassFeatures
+        ? { ...catalogs, subclassFeatures: catalogs.subclassFeatures }
+        : undefined,
     ).diagnostics,
     ...getActiveRequiredSetupDiagnostics(
       enemyDiagnostics,

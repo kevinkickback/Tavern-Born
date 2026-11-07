@@ -368,10 +368,16 @@ function deriveDomains(feature, languagePool) {
   return { domains: [{ ...base, count }], future }
 }
 
-export function deriveClassProficiencyRules(features, { languagePool, identity, digest }) {
+const revisedPrimalKnowledge = 'class-feature|primal knowledge|barbarian|xphb|3|xphb'
+
+export function deriveClassProficiencyRules(
+  features,
+  { classes = [], languagePool, identity, digest },
+) {
   const candidates = features.filter(
     (feature) =>
       ['Expertise', 'Scholar', 'Deft Explorer'].includes(feature.name) ||
+      identity(feature) === revisedPrimalKnowledge ||
       (feature.classSource === 'XPHB' && deriveThievesCant(feature)?.count),
   )
   const seen = new Set()
@@ -379,7 +385,10 @@ export function deriveClassProficiencyRules(features, { languagePool, identity, 
     const target = identity(feature)
     if (!target || seen.has(target)) fail(`Duplicate/malformed proficiency producer: ${target}`)
     seen.add(target)
-    const { domains, future } = deriveDomains(feature, languagePool)
+    const { domains, future } =
+      target === revisedPrimalKnowledge
+        ? deriveRevisedPrimalKnowledge(feature, classes, digest)
+        : deriveDomains(feature, languagePool)
     return {
       feature,
       future,
@@ -415,4 +424,27 @@ export function deriveClassProficiencyRules(features, { languagePool, identity, 
       next[0].rule.domains[0].distinctEarlier = true
     }
   return derived.map(({ rule }) => rule).sort((a, b) => a.target.localeCompare(b.target))
+}
+
+function deriveRevisedPrimalKnowledge(feature, classes, digest) {
+  validateShape(feature)
+  const owners = classes.filter((row) => row.name === 'Barbarian' && row.source === 'XPHB')
+  const skills = owners[0]?.startingProficiencies?.skills
+  const pool = ['animal handling', 'athletics', 'intimidation', 'nature', 'perception', 'survival']
+  if (
+    feature.isClassFeatureVariant ||
+    digest(feature.entries, false) !==
+      '9d2ce4a26e379981a9de9da66a79c82d19eef720468d5d767ff8f4b38ea9f1c9' ||
+    owners.length !== 1 ||
+    owners[0]._copy ||
+    !Array.isArray(skills) ||
+    skills.length !== 1 ||
+    !onlyKeys(skills[0], ['choose']) ||
+    !skills[0].choose ||
+    !onlyKeys(skills[0].choose, ['from', 'count']) ||
+    skills[0].choose.count !== 2 ||
+    !same(skills[0].choose.from, pool)
+  )
+    fail('Unreviewed revised Primal Knowledge source or starting skill list')
+  return { domains: [{ domain: 'skills', count: 1, skillPool: pool, excludeExisting: true }] }
 }

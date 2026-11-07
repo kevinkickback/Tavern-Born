@@ -1,4 +1,8 @@
 import {
+  getBarbarianPathChoice,
+  getBarbarianPathChoiceGroup,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
+import {
   BLESSED_STRIKES_ID,
   getSavedBlessedStrikes,
   isBlessedStrikesOption,
@@ -326,13 +330,20 @@ function currentLiteralChoice(
   if (choice.kind === 'proficiency' || isClassProficiencyChoiceId(choice.id)) {
     const relation = decodeClassProficiencyChoiceId(choice.id)
     const owner = findOwner(character, choice)
+    const eligibilityCharacter =
+      authority?.catalogs &&
+      refreshClassProficiencyState(character, authority.classes, {
+        ...authority.catalogs,
+        featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+      })
     const current =
       owner &&
       authority &&
-      getEffectiveOwnerProficiencyChoices(character, owner, authority.catalogs).find(
+      eligibilityCharacter &&
+      getEffectiveOwnerProficiencyChoices(eligibilityCharacter, owner, authority.catalogs).find(
         (row) => row.id === choice.id,
       )
-    if (!relation || !current || !authority?.catalogs)
+    if (!relation || !current || !authority?.catalogs || !eligibilityCharacter)
       throw new RangeError('Current source rules cannot verify this proficiency choice.')
     if (
       getHistoricalProficiencyRule(choice.id) &&
@@ -341,10 +352,6 @@ function currentLiteralChoice(
       throw new RangeError('Confirm the proficiency setup before choosing a fallback skill.')
     const prior =
       character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.selected ?? []
-    const eligibilityCharacter = refreshClassProficiencyState(character, authority.classes, {
-      ...authority.catalogs,
-      featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
-    })
     const eligible = new Set(
       resolveClassChoiceOptions(
         current,
@@ -488,7 +495,10 @@ function currentLiteralChoice(
   const classData = authority && findClassReference(choice.owner, authority.classes)
   const affinity = choice.id === REVISED_AFFINITY_ID
   const subclassLiteral =
-    affinity || getRevisedHunterRule(choice.id) || getSubclassSpellConfigurationRule(choice.id)
+    affinity ||
+    getBarbarianPathChoice(choice.id) ||
+    getRevisedHunterRule(choice.id) ||
+    getSubclassSpellConfigurationRule(choice.id)
   const owner = subclassLiteral && findOwner(character, choice)
   if (getSubclassSpellConfigurationRule(choice.id) && !selected.length) return choice
   const current =
@@ -1052,6 +1062,14 @@ export function applyClassChoiceSelectionCommand(
   if (choice.id !== REVISED_AFFINITY_ID && selected.some(isRevisedAffinityOption))
     throw new RangeError('Choose a damage type through the exact Elemental Affinity feature.')
   if (
+    selected.some((option) => {
+      const target = decodeFeatureOptionReference(option)
+      const rule = target?.format === 'source-group' && getBarbarianPathChoiceGroup(target.group)
+      return rule && choice.id !== rule.id
+    })
+  )
+    throw new RangeError('Choose through the exact Barbarian path feature.')
+  if (
     !getRevisedHunterRule(choice.id) &&
     selected.some((option) => {
       const target = decodeFeatureOptionReference(option)
@@ -1233,11 +1251,13 @@ export function applyClassChoiceSelectionCommand(
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
           : getSubclassSpellConfigurationRule(choice.id)
             ? 'Choose one current option for the exact subclass feature.'
-            : choice.id === REVISED_AFFINITY_ID
-              ? 'Choose one current damage type for Elemental Affinity.'
-              : getRevisedHunterRule(choice.id)
-                ? 'Choose one current option for the exact Hunter feature.'
-                : 'Choose a different favored terrain for each earned Natural Explorer choice.',
+            : getBarbarianPathChoice(choice.id)
+              ? 'Choose one current option for the exact Barbarian path feature.'
+              : choice.id === REVISED_AFFINITY_ID
+                ? 'Choose one current damage type for Elemental Affinity.'
+                : getRevisedHunterRule(choice.id)
+                  ? 'Choose one current option for the exact Hunter feature.'
+                  : 'Choose a different favored terrain for each earned Natural Explorer choice.',
       )
   }
   if (

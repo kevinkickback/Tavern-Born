@@ -2,6 +2,10 @@ import {
   type AdditionalSpellChoiceDescriptor,
   parseAdditionalSpellBlocks,
 } from '@/lib/5etools/additionalSpells'
+import {
+  getCurrentGiantPower,
+  hasIncludedSrdGiantSpellProof,
+} from '@/lib/5etools/barbarianGiantPower'
 import { getCurrentBardPrimalLore } from '@/lib/5etools/bardCollegeFeatures'
 import { getClassicLandBonusCantrip } from '@/lib/5etools/circleOfTheLand'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
@@ -11,9 +15,12 @@ import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
+import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
+  giantPowerSpellSlots,
+  isGiantPowerSpellSlot,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -23,8 +30,13 @@ import {
   hasCurrentWizardIllusionCantrip,
   knowsIndependentMinorIllusion,
 } from '@/lib/5etools/wizardTraditionSpellSources'
-import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  formatSpellReference,
+  getSpellNameKey,
+  getSpellReferenceKey,
+} from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
@@ -310,6 +322,47 @@ export function getSelectedFeatureCantripSetups(
       ...(!available && { reason: 'Restore the exact College of the Moon Primal Lore source.' }),
     })
   }
+  for (const slot of giantPowerSpellSlots) {
+    const [owner, , producer, level] = slot
+    if (
+      !getSourceCompatibility(owner[2], character.originSystem).compatible ||
+      !hasSavedSelectedFeatureSpellOwner(character, slot)
+    )
+      continue
+    const classes = catalogs?.classes?.filter(
+      (row) => norm(row.name) === owner[1] && norm(row.source) === owner[2],
+    )
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const paths = cls?.subclasses?.filter(
+      (row) => norm(row.name) === owner[3] && norm(row.source) === owner[4],
+    )
+    const pool =
+      cls &&
+      paths?.length === 1 &&
+      permitted(allowed, owner[2]) &&
+      permitted(allowed, 'bgg') &&
+      getCurrentGiantPower(cls, paths[0])
+    setups.push({
+      owner,
+      producer,
+      level,
+      name: 'Giant Power',
+      offered: true,
+      count: 1,
+      choice: {
+        id: producer,
+        level: 0,
+        count: 1,
+        isCantrip: true,
+        source: 'known',
+        usage: 'direct',
+        pool: pool
+          ? pool.map((reference) => formatSpellReference(reference, owner[2].toUpperCase()))
+          : [],
+      },
+      ...(pool ? {} : { reason: 'Restore the exact Giant Power source.' }),
+    })
+  }
   return setups
 }
 
@@ -364,16 +417,33 @@ export function getSelectedFeatureCantripPool(
   )
   const illusionAlternate = wizardIllusionCantripSlots.some((row) => row.slot[2] === slot[2])
   const listOwner = slot[2] === BARD_PRIMAL_LORE_SPELL_SLOT[2] ? 'druid' : slot[0][1]
+  const giantPower = isGiantPowerSpellSlot(slot)
+  const giantReprints =
+    giantPower && slot[0][2] === 'xphb'
+      ? getCurrentOathSpellReprints(context?.oathSpellSourceByKey)
+      : undefined
   const spells =
     reason || !choice
       ? []
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
           if (!spell || spell.level !== 0 || !permitted(allowed, spell.source)) return false
-          if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
-          if (choice.pool)
-            return choice.pool.some(
+          if (
+            choice.pool &&
+            !choice.pool.some(
               (ref) => getSpellReferenceKey(ref) === getSpellReferenceKey(spell.name, spell.source),
             )
+          )
+            return false
+          if (
+            giantPower &&
+            (spell.classSpellRouteSource?.input.targetOccurrences.length !== 1 ||
+              (giantReprints &&
+                giantReprints.get(getSpellReferenceKey(spell.name, spell.source)) !== 0 &&
+                !hasIncludedSrdGiantSpellProof(spell.name, context?.oathSpellSourceByKey)))
+          )
+            return false
+          if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
+          if (choice.pool) return true
           const filter = choice.filter
           if (filter && !filter.classes.length) return true
           const checked = auditSpellRouteMultiplicity([spell])[0]

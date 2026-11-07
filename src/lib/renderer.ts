@@ -76,6 +76,8 @@ function sanitizeRenderedHtml(html: string): string {
   return sanitizeRendererClasses(sanitized)
 }
 
+const entryArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
+
 export function renderEntry(entry: unknown): string {
   if (typeof entry === 'string') {
     return sanitizeRenderedHtml(renderTags(entry))
@@ -93,42 +95,47 @@ export function renderEntry(entry: unknown): string {
       subclassFeature?: string
     }
     if (entryObj.type === 'entries') {
+      if (entryObj.entries !== undefined && !Array.isArray(entryObj.entries)) return ''
       let result = ''
-      if (entryObj.name) {
+      if (typeof entryObj.name === 'string' && entryObj.name) {
         result += `<strong>${entryObj.name}</strong> `
       }
-      if (entryObj.entries) {
-        result += entryObj.entries.map(renderEntry).join(' ')
-      }
+      result += entryArray(entryObj.entries).map(renderEntry).join(' ')
       return sanitizeRenderedHtml(result)
     }
 
     if (entryObj.type === 'item') {
       const itemObj = entryObj as { name?: string; entry?: string; entries?: unknown[] }
       let result = ''
-      if (itemObj.name) result += `<strong>${renderTags(itemObj.name)}</strong> `
-      if (itemObj.entry) result += renderTags(itemObj.entry)
-      else if (itemObj.entries) result += itemObj.entries.map(renderEntry).join(' ')
+      if (typeof itemObj.name === 'string' && itemObj.name)
+        result += `<strong>${renderTags(itemObj.name)}</strong> `
+      if (typeof itemObj.entry === 'string' && itemObj.entry) result += renderTags(itemObj.entry)
+      else result += entryArray(itemObj.entries).map(renderEntry).join(' ')
       return sanitizeRenderedHtml(result)
     }
 
     if (entryObj.type === 'list') {
-      const items = (entryObj.items ?? []).map((item) => `<li>${renderEntry(item)}</li>`).join('')
+      const items = entryArray(entryObj.items)
+        .map((item) => `<li>${renderEntry(item)}</li>`)
+        .join('')
       return sanitizeRenderedHtml(`<ul>${items}</ul>`)
     }
 
     if (entryObj.type === 'table') {
-      const caption = entryObj.caption
-        ? `<caption class="text-sm font-semibold text-left mb-1 text-muted-foreground">${entryObj.caption}</caption>`
-        : ''
-      const headers = (entryObj.colLabels ?? [])
+      const caption =
+        typeof entryObj.caption === 'string' && entryObj.caption
+          ? `<caption class="text-sm font-semibold text-left mb-1 text-muted-foreground">${entryObj.caption}</caption>`
+          : ''
+      const headers = entryArray(entryObj.colLabels)
+        .filter((label): label is string => typeof label === 'string')
         .map(
           (h: string) =>
             `<th class="border border-border bg-muted p-2 text-left font-semibold text-xs uppercase tracking-wide">${renderTags(h)}</th>`,
         )
         .join('')
       const thead = headers ? `<thead><tr>${headers}</tr></thead>` : ''
-      const tbody = (entryObj.rows ?? [])
+      const tbody = entryArray(entryObj.rows)
+        .filter(Array.isArray)
         .map((row) => {
           const cells = row
             .map((cell) => `<td class="border border-border p-2 text-sm">${renderEntry(cell)}</td>`)
@@ -142,9 +149,7 @@ export function renderEntry(entry: unknown): string {
     }
 
     if (entryObj.type === 'inset') {
-      return sanitizeRenderedHtml(
-        entryObj.entries ? entryObj.entries.map(renderEntry).join(' ') : '',
-      )
+      return sanitizeRenderedHtml(entryArray(entryObj.entries).map(renderEntry).join(' '))
     }
 
     if (entryObj.type === 'refSubclassFeature') {

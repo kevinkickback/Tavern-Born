@@ -36,6 +36,7 @@ const ROOT_FIELDS = [
   'reprintedAs',
   'isReprinted',
   'edition',
+  'spellcastingAbility',
   'additionalSpells',
   'subclassFeatures',
   'hasFluff',
@@ -299,7 +300,33 @@ export function deriveSubclassProficiencyRules(features, toolsFor, identity, dig
       },
     ]
   })
-  return [...paired, ...simpleSkills].sort((a, b) => a.target.localeCompare(b.target))
+  const giantPower = features.flatMap((feature) => {
+    const target = identity(feature)
+    if (target !== 'subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg') return []
+    if (
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      digest(feature.entries) !== 'c109955cf9249ef99e5a92e48a36544b97a62b2a48cd2d5db92a71ba7e2f3dab'
+    )
+      fail('Unsupported Giant Power language clause')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        optional: false,
+        domains: [{ domain: 'languages', count: 1, requiresKnownLanguage: 'giant' }],
+      },
+    ]
+  })
+  return [...paired, ...simpleSkills, ...giantPower].sort((a, b) =>
+    a.target.localeCompare(b.target),
+  )
 }
 
 /** Discover finite owner certificates from the SAME production copies and UID traversal. */

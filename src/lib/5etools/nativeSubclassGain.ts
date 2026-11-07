@@ -81,3 +81,16 @@ export function matchesNativeSubclassGain(
       (!gain.feature.sourceIdentityConflict && getClassFeatureIdentity(gain.feature) === target))
   )
 }
+
+/** Resolve an authored first or later subclass gain from the exact class declaration. */
+export function getCurrentNativeSubclassGain(cls: Class5e, level?: number) {
+  const ref = cls.classFeatureRefs?.find(
+    (row) => row.gainSubclassFeature === true && (level === undefined || row.level === level),
+  )
+  if (!ref || ref.level === undefined) return undefined
+  const target = getClassFeatureIdentity(ref)
+  return target &&
+    matchesNativeSubclassGain(cls, target, ref.level, level === undefined ? 'first' : 'at-level')
+    ? ref
+    : undefined
+}

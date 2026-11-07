@@ -373,6 +373,38 @@
     ]
   },
   {
+    "target": "class-feature|primal knowledge|barbarian|xphb|3|xphb",
+    "digest": "9d2ce4a26e379981a9de9da66a79c82d19eef720468d5d767ff8f4b38ea9f1c9",
+    "fields": [
+      "basicRules2024",
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "srd52"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": [
+          "animal handling",
+          "athletics",
+          "intimidation",
+          "nature",
+          "perception",
+          "survival"
+        ],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "class-feature|scholar|wizard|xphb|2|xphb",
     "digest": "c78b17585f872ec1d7700832ee49fdc3a4d3f94f727035bf467cd7c739bda160",
     "fields": [

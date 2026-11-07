@@ -31,8 +31,10 @@ export function resolveClassProficiencyOptions(
   const relation = decodeClassProficiencyChoiceId(choice.id)
   const rule = relation && classProficiencyRule(relation.target)
   const domain = rule?.domains.find((row) => row.domain === relation?.domain)
-  const current = character?.classProgression
-    .flatMap((owner) => getEffectiveOwnerProficiencyChoices(character, owner, catalogs))
+  const state = projection ?? (character && projectOwnedProficiencies(character, catalogs))
+  const base = state?.effective
+  const current = base?.classProgression
+    .flatMap((owner) => getEffectiveOwnerProficiencyChoices(base, owner, catalogs))
     .find((row) => row.id === choice.id)
   const valid =
     !!character &&
@@ -42,8 +44,6 @@ export function resolveClassProficiencyOptions(
     choice.kind === 'proficiency' &&
     !!current
   const selected = new Set(saved.flatMap((option) => decodeProficiencyOption(option)?.name ?? []))
-  const state = projection ?? (character && projectOwnedProficiencies(character, catalogs))
-  const base = state?.effective
   const known = new Set(
     base?.proficiencies.languages.map((name) => canonicalProficiencyName(name)) ?? [],
   )

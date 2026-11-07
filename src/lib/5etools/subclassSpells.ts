@@ -4,8 +4,10 @@ import {
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
+import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -119,6 +121,13 @@ export function getEarnedSubclassSpellGrants(
   )
   if (subclasses.length !== 1) return unavailable
   if (!land) {
+    // The two native Giant Power blocks describe alternatives.
+    if (
+      norm(entry.name) === 'barbarian' &&
+      norm(entry.subclass) === 'path of the giant' &&
+      norm(entry.subclassSource) === 'bgg'
+    )
+      return []
     if (legacySorcerer === divineSoul) {
       const magic = getCurrentDivineMagic(classData, subclasses[0])
       const spell = getChosenDivineSoulSpell(magic, entry.source, landContext?.selections)
@@ -173,6 +182,12 @@ export function getEarnedSubclassSpellGrants(
         : []
     const bardGrants = getBardCollegeSpellGrants(classData, subclasses[0], classLevel)
     if (bardGrants) return bardGrants
+    const rituals = getBarbarianRitualGrants(classData, subclasses[0], classLevel)
+    if (rituals)
+      return landContext?.character &&
+        !getSourceCompatibility(classData.source, landContext.character.originSystem).compatible
+        ? []
+        : rituals
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
     // The conditional Illusion grant is resolved after current ordinary cantrips.
     if (illusion)

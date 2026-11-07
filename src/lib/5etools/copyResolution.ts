@@ -25,7 +25,7 @@
  */
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
-import { getSkillAbility } from '@/lib/calculations/skills'
+import { getSkillAbility } from '@/lib/calculations/skillNames'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
 type CopyKind =

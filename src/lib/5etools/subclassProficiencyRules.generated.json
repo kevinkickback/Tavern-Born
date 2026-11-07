@@ -203,6 +203,31 @@
     ]
   },
   {
+    "target": "subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg",
+    "digest": "c109955cf9249ef99e5a92e48a36544b97a62b2a48cd2d5db92a71ba7e2f3dab",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "domains": [
+      {
+        "domain": "languages",
+        "count": 1,
+        "requiresKnownLanguage": "giant"
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
     "digest": "3785fca05cb215e85fbe0a900ab78a57e8e34297bbf8a705c5bb199d977acc32",
     "optional": false,

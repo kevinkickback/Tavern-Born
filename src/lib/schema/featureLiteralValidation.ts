@@ -1,3 +1,7 @@
+import {
+  getBarbarianPathChoice,
+  getSavedBarbarianPathOption,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import {
   decodeFeatureOptionReference,
@@ -34,6 +38,11 @@ export function getInvalidFeatureLiteralSelectionIds(
   ])
   const seen = new Set<string>()
   for (const s of rows) {
+    if (getBarbarianPathChoice(s.choiceId)) {
+      if (seen.has(s.choiceId) || !getSavedBarbarianPathOption(s)) invalid.add(s.choiceId)
+      seen.add(s.choiceId)
+      continue
+    }
     if (s.choiceId === REVISED_AFFINITY_ID || s.selected.some(isRevisedAffinityOption)) {
       if (seen.has(s.choiceId) || !getSavedAffinityDamageType(s, progression))
         invalid.add(s.choiceId)

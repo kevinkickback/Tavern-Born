@@ -1,3 +1,4 @@
+import { getCurrentGiantPower } from '@/lib/5etools/barbarianGiantPower'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
@@ -12,7 +13,7 @@ import {
 import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
-import { getSourceCompatibility } from '@/lib/sourceCompatibility'
+import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Character } from '@/types/character'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -97,6 +98,16 @@ export function getCurrentFixedProficiencies(
     for (const path of certificate?.paths ?? []) {
       const rule = fixedProficiencyRule(path.target, owner)
       if (!rule) continue
+      if (
+        rule.languageFallback &&
+        (!getSourceCompatibility(cls.source, character.originSystem).compatible ||
+          !getCurrentGiantPower(cls, sub) ||
+          (character.allowedSources?.length &&
+            !getEffectiveSources(character.allowedSources, character.originSystem).some(
+              (source) => canonicalProficiencyName(source) === owner[3],
+            )))
+      )
+        continue
       if (
         rule.subclassGain &&
         (sub.sourceIdentityConflict ||

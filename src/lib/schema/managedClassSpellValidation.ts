@@ -5,6 +5,7 @@ import {
 } from '@/lib/5etools/classCastingRules'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
+import { isGiantPowerSpellSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   getManagedClassSpellOwnerEntry,
@@ -51,6 +52,8 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     ])
     if (
       !isManagedClassSpellSlot(choice.slot) ||
+      (isGiantPowerSpellSlot(choice.slot) &&
+        normalizeOwnerIdentity(choice.target.source) !== choice.slot[0][2]) ||
       (choice.slot[1] === 'feature-cantrip' &&
         (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||

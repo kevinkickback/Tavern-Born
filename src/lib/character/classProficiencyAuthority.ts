@@ -114,9 +114,12 @@ export function getEffectiveOwnerProficiencyChoices(
   character: Character,
   owner: CharacterClassEntry,
   catalogs?: ClassChoiceFeatureCatalogs,
+  options: { resolveLanguageFoundation?: boolean } = {},
 ) {
   const activity = createOptionalClassFeatureActivity(character, catalogs)
-  return getEarnedOwnerProficiencyCandidates(owner, true, catalogs).filter(activity.choice)
+  return getEarnedOwnerProficiencyCandidates(owner, true, catalogs).filter(
+    options.resolveLanguageFoundation ? activity.choiceSource : activity.choice,
+  )
 }
 
 /** The effective ledger contains only current, earned proficiency ownership. */

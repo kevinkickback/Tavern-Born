@@ -373,3 +373,17 @@ Bard quota. Revised Lore also keeps its chosen levelled spells prepared. Moon ch
 Druid cantrip at level 3 and always prepares Moonbeam at level 6. Spirits' Guidance, revised
 Spirit Guardians and Glamour's casting and preparation retain their separate authored benefits.
 Revised Words of Creation prepares both Power Words at level 20 and displays its casting change.
+
+## Barbarian feature spells
+
+Classic Totem Warrior and revised Wild Heart can cast Beast Sense and Speak with Animals as
+rituals from level 3 and Commune with Nature from level 10. Classic and inherited Ancestral
+Guardian can cast Augury or Clairvoyance at level 10 without a spell slot or Material components.
+The spells share one use per Short or Long Rest. Giant Power offers one level-3 cantrip,
+Druidcraft or Thaumaturgy, using Wisdom. These features keep their own cast or choice ownership
+and leave the class spell-slot progression empty.
+The current Giant Power blocks supply the two cantrip references and the feature prose
+declares that they are alternatives. The picker verifies that both sources agree. The saved
+address identifies the earning feature and printing, and the live catalog validates the spell.
+Revised Giant Power requires a unique revised cantrip and either its declared same-rank reprint
+or the exact classic Included SRD record. This supports partial Additional Content sources.

@@ -599,6 +599,31 @@
       "copies": []
     },
     {
+      "target": "subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg",
+      "rawDigest": "6cf8c55a5878d3e6bbb1c72cd6b23183c6b18791cc686f7c48100b0073731a63",
+      "metadataDigest": "014b47783385c461c3a38a0a4670e4b9910cba3dc07401a789e61840cfffd371",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "20c3ad630a9b2de2b9785de108a27644b9d1defe80e1fc5e70e9036578a49250"
+        },
+        {
+          "digest": "ed1db355a3f28891d4afa73b31e951078e0e56d65276e093aa6788ac5706484b"
+        }
+      ],
+      "copies": []
+    },
+    {
       "target": "subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa",
       "rawDigest": "d3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f",
       "metadataDigest": "9920b8bad34d257c6a6d427ef61e96ec36c982086bf734876291934691987925",
@@ -841,6 +866,36 @@
         {
           "digest": "8ca134657501f4b68f6f566714b49673f06b8d0fac99f35a966637ff60f2c971",
           "reference": "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
+        }
+      ],
+      "copies": []
+    },
+    {
+      "target": "subclass-feature|path of the giant|barbarian|phb|giant|bgg|3|bgg",
+      "rawDigest": "da60f172039a6c552fbe8a5d068b70bbc0a9bded210d54f1409c6209299f878e",
+      "metadataDigest": "258ca193c6c96121e3989c0392e4800ac8702a866f1a73b76c5d3de112c05dca",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ],
+      "entries": [
+        {
+          "digest": "04a5bebb9dc3e17d75b09374434168a6771bc0ee76007cb2bff5a9154d6d4528"
+        },
+        {
+          "digest": "95f4f568970acc5c7c6bea7f459aa8b7fceebca0b706493c18e292d14f2af553",
+          "reference": "subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg"
+        },
+        {
+          "digest": "4e39c37d7d9cd86dd6d077c1169a76c843dc9091333d9982c5e4e22cdf2d9be8",
+          "reference": "subclass-feature|giant's havoc|barbarian|phb|giant|bgg|3|bgg"
         }
       ],
       "copies": []
@@ -1156,6 +1211,87 @@
     }
   ],
   "roots": [
+    {
+      "owner": ["barbarian", "phb", "path of the giant", "bgg"],
+      "shortName": "Giant",
+      "rawDigest": "4cd9c42be5be0ee87e992a14c8ee7fc55f70938912e3fa4e51621d825fc8d77e",
+      "metadataDigest": "5c786e2037669d03f222ea38a5b3989d4fcc996717b01cbfcda9b5fcac1338f2",
+      "fields": [
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "spellcastingAbility",
+        "subclassFeatures"
+      ],
+      "copies": [],
+      "declarations": [
+        "Path of the Giant|Barbarian||Giant|BGG|3",
+        "Elemental Cleaver|Barbarian||Giant|BGG|6",
+        "Mighty Impel|Barbarian||Giant|BGG|10",
+        "Demiurgic Colossus|Barbarian||Giant|BGG|14"
+      ],
+      "intro": "Path of the Giant|Barbarian||Giant|BGG|3",
+      "paths": [
+        {
+          "target": "subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg",
+          "refs": [
+            "Path of the Giant|Barbarian||Giant|BGG|3",
+            "Giant Power|Barbarian||Giant|BGG|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
+    {
+      "owner": ["barbarian", "xphb", "path of the giant", "bgg"],
+      "shortName": "Giant",
+      "rawDigest": "819c7e80e00072867b41f1cb612ce5afe9d2f97e1feab3bcb25f422bd8df7a6f",
+      "metadataDigest": "43e4a9abb5e98cfc73cb2e9a584bd40251d017f5f019a3322bbeffadf4e0a6a6",
+      "fields": [
+        "_copy",
+        "additionalSpells",
+        "className",
+        "classSource",
+        "edition",
+        "fluff",
+        "hasFluffImages",
+        "name",
+        "page",
+        "shortName",
+        "source",
+        "spellcastingAbility",
+        "subclassFeatures"
+      ],
+      "copies": [
+        {
+          "key": "Path of the Giant|BGG|Giant|Barbarian|PHB",
+          "digest": "4cd9c42be5be0ee87e992a14c8ee7fc55f70938912e3fa4e51621d825fc8d77e"
+        }
+      ],
+      "declarations": [
+        "Path of the Giant|Barbarian||Giant|BGG|3",
+        "Elemental Cleaver|Barbarian||Giant|BGG|6",
+        "Mighty Impel|Barbarian||Giant|BGG|10",
+        "Demiurgic Colossus|Barbarian||Giant|BGG|14"
+      ],
+      "intro": "Path of the Giant|Barbarian||Giant|BGG|3",
+      "paths": [
+        {
+          "target": "subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg",
+          "refs": [
+            "Path of the Giant|Barbarian||Giant|BGG|3",
+            "Giant Power|Barbarian||Giant|BGG|3"
+          ],
+          "level": 3
+        }
+      ]
+    },
     {
       "owner": ["bard", "phb", "college of lore", "phb"],
       "shortName": "Lore",

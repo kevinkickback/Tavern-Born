@@ -94,6 +94,12 @@ its Details from the earning accordion. At each choice gain, including increases
 feature's quota, open the picker from that level, save the earned picks, and confirm that earlier
 picks still appear in their original slots after reopening the character.
 
+Use the shared parser when the external JSON declares a gain level, quota, pool, or
+feature relationship. Qualify a new source entry with the same supported structure through
+the applicable picker, save and reopen, and sheet export without adding its name to a registry.
+An adapter for ambiguous or prose-only rules should identify the exact producer and supply
+only the semantics the structured declaration leaves open.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
@@ -386,3 +392,17 @@ Valor and Swords grant their earned armor and weapon training. Revised Spirits g
 proficiency. Revised Dance uses Dexterity and Charisma for unarmored AC while wearing neither armor
 nor a shield. Jack of All Trades contributes half proficiency to untrained skill checks from
 Bard level 2. Classic non-skill checks use the rule text in Class Details and full sheets.
+
+## Barbarian setup and passive benefits
+
+Revised Primal Knowledge offers one of the six starting Barbarian skills at level 3.
+Classic Zealot records its level-3 Divine Fury damage type. Revised Zealot chooses damage
+when the effect occurs and displays its earned Warrior of the Gods healing dice and recovery.
+Wild Heart records its level-6 Aspect. Owl extends darkvision, and Panther or Salmon uses
+the current walking speed for the chosen movement type. The classic Bear Aspect doubles
+carrying capacity. Giant Power grants Giant or offers an alternate language when an independent
+source already supplies Giant. Removing or restoring either source recomputes the owned result.
+
+Unarmored Defense uses Dexterity and Constitution and permits a shield. Fast Movement applies
+while the character is free of heavy armor. Primal Champion increases intrinsic Strength and
+Constitution by four, subject to the printing's cap, before equipment effects.

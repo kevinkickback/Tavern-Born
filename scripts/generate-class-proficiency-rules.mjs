@@ -72,6 +72,7 @@ try {
     '/src/lib/5etools/featureSourceAudit.ts',
   )
   const derived = deriveClassProficiencyRules(features, {
+    classes: documents.flatMap((document) => document.class ?? []),
     languagePool: languages.names,
     identity: getClassFeatureIdentity,
     digest: getFeatureSourceDigest,

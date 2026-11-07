@@ -2,6 +2,10 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|path of the giant|barbarian|phb|giant|bgg|3|bgg",
+      "digest": "da60f172039a6c552fbe8a5d068b70bbc0a9bded210d54f1409c6209299f878e"
+    },
+    {
       "target": "subclass-feature|college of valor|bard|phb|valor|phb|3|phb",
       "digest": "11dcc3d0cf1c42ff2e0258d775f89dff5b126ad2879fff4add089d56a00b63a3"
     },

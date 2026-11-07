@@ -11,6 +11,7 @@ interface ClassProficiencyRuleDomain {
   excludeExisting?: boolean
   distinctEarlier?: boolean
   languagePool?: readonly string[]
+  requiresKnownLanguage?: string
   coupled?: boolean
   toolPool?: readonly string[]
   toolCategory?: string
@@ -26,6 +27,9 @@ export interface ClassProficiencyRule {
   skillModifier?: { label: string; ability: AbilityName; minimum: number }
   domains: readonly ClassProficiencyRuleDomain[]
 }
+
+export const REVISED_PRIMAL_KNOWLEDGE_TARGET =
+  'class-feature|primal knowledge|barbarian|xphb|3|xphb'
 
 /** Reviewed source-derived mechanical checkpoint. Never regenerate trusted rules on application load. */
 export const CLASS_PROFICIENCY_RULES = generated as readonly ClassProficiencyRule[]

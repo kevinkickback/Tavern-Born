@@ -1,3 +1,14 @@
+import {
+  BEAR_ASPECT_TARGET,
+  CLASSIC_ASPECT_TARGET,
+  getCurrentBarbarianJourneyFeature,
+  hasCurrentBearAspect,
+} from '@/lib/5etools/barbarianJourneySources'
+import {
+  getSavedBarbarianPathOption,
+  WILD_HEART_ASPECT,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
+import { getCurrentWildHeartAspects } from '@/lib/5etools/barbarianPathChoices'
 import { hasCurrentBardDanceDefense } from '@/lib/5etools/bardCollegeFeatures'
 import { getCurrentBardJackOfAllTrades } from '@/lib/5etools/bardSpellSources'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
@@ -18,6 +29,12 @@ import {
   type AtWillInvocationSpellStatus,
   getAtWillInvocationSpellStatuses,
 } from '@/lib/character/atWillInvocationSpells'
+import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import {
+  getClassChoiceDeclaration,
+  getClassChoiceFeatureTarget,
+  getFeatureOwnerKey,
+} from '@/lib/character/classChoiceIdentity'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCurrentClassOrder } from '@/lib/character/classOrder'
 import {
@@ -34,6 +51,7 @@ import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalPr
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
 import {
   type ClassChoicePrerequisiteContext,
+  getEffectiveClassChoiceFeatureRoutes,
   projectEffectiveClassChoiceFeatures,
 } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
@@ -89,8 +107,8 @@ import {
 import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier, getProficiencyBonus } from './gameRules'
-import { getArmorEquipmentSlots } from './itemClassification'
-import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
+import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
+import { type EffectiveMovement, getEffectiveCharacterMovement, getWalkingSpeed } from './movement'
 import { refreshNativeRacialSpellState } from './nativeRacialSpells'
 import {
   normalizeBackgroundForOriginSystem,
@@ -274,6 +292,7 @@ export function deriveEffectiveAbilityScores(
   subrace?: Race5e,
   background?: Background5e,
   sourceEffects: readonly CharacterEffect[] = [],
+  primalChampionMaximum?: number,
 ): EffectiveAbilityScoreData {
   if (character) character = refreshRaceAbilityState(character, race, subrace)
   const base = character ? { ...character.abilityScores } : makeDefaultAbilityScores(8)
@@ -321,6 +340,13 @@ export function deriveEffectiveAbilityScores(
     asiBonuses,
     featBonuses,
   })
+  // Primal Champion changes the character's own scores. Item effects can still set them.
+  if (primalChampionMaximum !== undefined) {
+    for (const ability of ['strength', 'constitution'] as const) {
+      const score = total[ability]
+      total[ability] = Math.max(score, Math.min(primalChampionMaximum, score + 4))
+    }
+  }
 
   if (character) {
     const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
@@ -519,12 +545,14 @@ export function createCharacterCalculationContext(
       row === slot ? { ...row, state: 'unavailable', asi: undefined } : row,
     )
   }
+  const champion = getCurrentBarbarianJourneyFeature(character, choiceCatalogs, 'primal champion')
   const abilityScores = deriveEffectiveAbilityScores(
     character,
     raceResolution.parentRace,
     raceResolution.subraceData,
     background,
     baseSourceEffects,
+    champion && (champion.source === 'phb' ? 24 : 25),
   )
   const managedSpells = projectManagedClassSpellState(
     character,
@@ -582,6 +610,12 @@ export function createCharacterCalculationContext(
     ...deriveGeniesSplendorEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...deriveBardDanceEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...deriveBardJackOfAllTradesEffects(character, choiceCatalogs),
+    ...deriveBarbarianPassiveEffects(
+      character,
+      choiceCatalogs,
+      abilityScores.modifiers,
+      prerequisites,
+    ),
     ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
@@ -591,6 +625,8 @@ export function createCharacterCalculationContext(
       prerequisites,
     ),
   ]
+  const wildHeart = deriveWildHeartAspectEffect(character, choiceCatalogs, sourceEffects)
+  if (wildHeart) sourceEffects.push(wildHeart)
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 
   return {
@@ -761,6 +797,134 @@ function deriveBardDanceEffects(
     false,
   )
   return effect ? [effect] : []
+}
+
+function deriveWildHeartAspectEffect(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  sourceEffects: readonly CharacterEffect[],
+): CharacterEffect | undefined {
+  const owners = character.classProgression.filter(
+    (row) => normalizeOwnerIdentity(row.name) === 'barbarian',
+  )
+  const owner = owners[0]
+  if (
+    character.originSystem !== '2024' ||
+    owners.length !== 1 ||
+    owner.levels < 6 ||
+    normalizeOwnerIdentity(owner.source) !== 'xphb' ||
+    normalizeOwnerIdentity(owner.subclass) !== 'path of the wild heart' ||
+    normalizeOwnerIdentity(owner.subclassSource) !== 'xphb'
+  )
+    return undefined
+  const saved = character.classChoiceSelections?.filter(
+    (row) => row.choiceId === WILD_HEART_ASPECT.id,
+  )
+  const aspect = saved?.length === 1 && !saved[0].inactive && getSavedBarbarianPathOption(saved[0])
+  if (!aspect || !getCurrentWildHeartAspects(catalogs).some((row) => row.name === aspect))
+    return undefined
+  const label = `Aspect of the Wilds: ${aspect}`
+  const effect = {
+    id: WILD_HEART_ASPECT.target,
+    label,
+    source: {
+      kind: 'subclass' as const,
+      name: label,
+      source: 'XPHB',
+      entityId: WILD_HEART_ASPECT.target,
+    },
+  }
+  if (aspect === 'Owl') {
+    return {
+      ...effect,
+      target: { kind: 'sense', sense: 'darkvision' },
+      operation: { kind: 'add', value: 60 },
+    }
+  }
+  const walk = getWalkingSpeed(getEffectiveCharacterMovement(character, sourceEffects))
+  return {
+    ...effect,
+    target: { kind: 'speed', mode: aspect === 'Panther' ? 'climb' : 'swim' },
+    operation: { kind: 'minimum', value: walk },
+  }
+}
+
+function deriveBarbarianPassiveEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  { constitution, dexterity }: AbilityScores,
+  prerequisites: ClassChoicePrerequisiteContext,
+): CharacterEffect[] {
+  const results: CharacterEffect[] = []
+  const defense = getCurrentBarbarianJourneyFeature(character, catalogs, 'unarmored defense')
+  if (defense) {
+    const effect = unarmoredBaseEffect(
+      character.equipment,
+      defense.target,
+      {
+        kind: 'class',
+        name: defense.feature.name,
+        source: defense.feature.source,
+        entityId: defense.target,
+      },
+      10 + dexterity + constitution,
+    )
+    if (effect) results.push(effect)
+  }
+  const movement = getCurrentBarbarianJourneyFeature(character, catalogs, 'fast movement')
+  const wearsHeavyArmor = character.equipment?.some(
+    (item) => item.equipped && getNormalizedItemTraits(item).armorCategory === 'heavy',
+  )
+  if (movement && !wearsHeavyArmor) {
+    results.push({
+      id: `${movement.target}:speed`,
+      label: movement.feature.name,
+      source: {
+        kind: 'class',
+        name: movement.feature.name,
+        source: movement.feature.source,
+        entityId: movement.target,
+      },
+      target: { kind: 'speed', mode: 'walk' },
+      operation: { kind: 'add', value: 10 },
+    })
+  }
+  if (
+    character.originSystem === '2014' &&
+    character.classProgression.some(
+      (owner) =>
+        findClassReference({ name: 'Barbarian', source: 'PHB' }, [owner]) &&
+        owner.levels >= 6 &&
+        normalizeOwnerIdentity(owner.subclass) === 'path of the totem warrior' &&
+        normalizeOwnerIdentity(owner.subclassSource) === 'phb',
+    ) &&
+    catalogs &&
+    hasCurrentBearAspect(
+      scopeClassChoiceFeatureCatalogs(
+        catalogs,
+        getFeatureOwnerKey('Barbarian', 'PHB', 'Path of the Totem Warrior', 'PHB'),
+      ).subclassFeatureCandidates,
+    ) &&
+    getEffectiveClassChoiceFeatureRoutes(character, catalogs, prerequisites).selectedOptions.some(
+      ({ choice, option }) =>
+        choice.level === 6 &&
+        getClassChoiceDeclaration(choice)?.target === CLASSIC_ASPECT_TARGET &&
+        getClassChoiceFeatureTarget(option) === BEAR_ASPECT_TARGET,
+    )
+  )
+    results.push({
+      id: BEAR_ASPECT_TARGET,
+      label: 'Aspect of the Beast: Bear',
+      source: {
+        kind: 'subclass',
+        name: 'Aspect of the Beast: Bear',
+        source: 'PHB',
+        entityId: BEAR_ASPECT_TARGET,
+      },
+      target: { kind: 'carrying-capacity' },
+      operation: { kind: 'multiply', value: 2 },
+    })
+  return results
 }
 
 function unarmoredBaseEffect(

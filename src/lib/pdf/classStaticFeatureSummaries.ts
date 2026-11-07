@@ -329,6 +329,7 @@ export function getClassStaticFeatureSummaries(
     const source = entry.source.trim().toLowerCase()
     if (
       (name !== 'bard' &&
+        name !== 'barbarian' &&
         name !== 'druid' &&
         name !== 'paladin' &&
         name !== 'wizard' &&
@@ -368,6 +369,36 @@ export function getClassStaticFeatureSummaries(
             ...summary,
             replaces: savedClassLabel(character, entry, feature),
           })),
+      )
+    }
+    if (name === 'barbarian') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const gain = (level: number, feature: string) =>
+        entry.levels < level
+          ? undefined
+          : getCurrentDirectClassFeature(
+              cls,
+              catalogs,
+              `class-feature|${feature}|barbarian|${source}|${level}|${source}`,
+            )
+      const base = [
+        gain(1, 'rage'),
+        gain(1, 'unarmored defense'),
+        gain(5, 'fast movement'),
+        gain(20, 'primal champion'),
+      ]
+      if (source === 'xphb') base.push(gain(3, 'primal knowledge'))
+      const path = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      return [...base, ...path].flatMap((feature) =>
+        feature
+          ? featureSummary(feature).map((summary) => ({
+              ...summary,
+              replaces: savedClassLabel(character, entry, feature),
+            }))
+          : [],
       )
     }
     if (name === 'paladin') {

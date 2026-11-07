@@ -1,4 +1,8 @@
 import {
+  GIANT_POWER_TARGET,
+  getBarbarianPathChoice,
+} from '@/lib/5etools/barbarianPathChoiceIdentity'
+import {
   BLESSED_STRIKES_TARGET,
   getCurrentBlessedStrikes,
   getSavedBlessedStrikes,
@@ -7,6 +11,10 @@ import {
 } from '@/lib/5etools/blessedStrikesSource'
 import { normalizeSubclassRules } from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
+import {
+  classProficiencyRule,
+  REVISED_PRIMAL_KNOWLEDGE_TARGET,
+} from '@/lib/5etools/classProficiencyRules'
 import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   ELEMENTAL_FURY_ID,
@@ -23,6 +31,7 @@ import {
   FAVORED_ENEMY_GRANTS,
 } from '@/lib/5etools/favoredEnemyIdentity'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
+import { getFixedProficiencyId } from '@/lib/5etools/fixedProficiencyAddress'
 import {
   decodeNaturalExplorerChoiceId,
   NATURAL_EXPLORER_GRANTS,
@@ -40,7 +49,7 @@ import {
   isValidRevisedHunterSelection,
   revisedHunterRules,
 } from '@/lib/5etools/revisedHunterIdentity'
-import { getEffectiveSources } from '@/lib/sourceCompatibility'
+import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Subclass5e } from '@/types/5etools'
 import type {
   Character,
@@ -75,7 +84,12 @@ type Actor = Pick<
   Character,
   'classProgression' | 'variantRules' | 'optionalClassFeatureAdoptions'
 > &
-  Partial<Pick<Character, 'allowedSources' | 'originSystem' | 'classChoiceSelections'>>
+  Partial<
+    Pick<
+      Character,
+      'allowedSources' | 'originSystem' | 'classChoiceSelections' | 'proficiencies' | 'provenance'
+    >
+  >
 const norm = (value: string | undefined) => value?.trim().toLowerCase() ?? ''
 const equal = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 const knownOptional = new Set([
@@ -215,7 +229,10 @@ function buildOptionalClassFeatureActivity(
       ? !facets.length || facets.includes(facet)
       : !facets.length || facets.some((value) => !suppressed(owner, target, value))
   }
-  const choice = (row: NormalizedCharacterChoice): boolean => {
+  const checkChoice = (
+    row: NormalizedCharacterChoice,
+    checkLanguageFoundation: boolean,
+  ): boolean => {
     if (
       (row.id === ELEMENTAL_FURY_ID || getRevisedHunterRule(row.id)) &&
       allowed &&
@@ -223,8 +240,43 @@ function buildOptionalClassFeatureActivity(
     )
       return false
     const owner = optionalClassOwner(row.owner)
+    const pathChoice = getBarbarianPathChoice(row.id)
     const proficiency = decodeClassProficiencyChoiceId(row.id)
-    if (proficiency) return declared(owner, proficiency.target, row.level)
+    if (
+      character.originSystem &&
+      (pathChoice ||
+        proficiency?.target === GIANT_POWER_TARGET ||
+        proficiency?.target === REVISED_PRIMAL_KNOWLEDGE_TARGET) &&
+      !getSourceCompatibility(owner[2], character.originSystem).compatible
+    )
+      return false
+    if (
+      pathChoice &&
+      allowed &&
+      (owner[0] !== 'subclass' || !allowed.has(owner[2]) || !allowed.has(owner[4]))
+    )
+      return false
+    if (proficiency) {
+      const needed = classProficiencyRule(proficiency.target)?.domains.find(
+        (domain) => domain.domain === proficiency.domain,
+      )?.requiresKnownLanguage
+      if (needed) {
+        if (
+          allowed &&
+          (!allowed.has(owner[2]) || (owner[0] === 'subclass' && !allowed.has(owner[4])))
+        )
+          return false
+        const tags = character.provenance?.proficiencies.languages[needed] ?? []
+        const ownFixed = getFixedProficiencyId(proficiency)
+        if (
+          checkLanguageFoundation &&
+          (!character.proficiencies?.languages.some((name) => norm(name) === needed) ||
+            (tags.length && tags.every((tag) => tag.grantVariant === ownFixed)))
+        )
+          return false
+      }
+      return declared(owner, proficiency.target, row.level)
+    }
     const enemy = decodeFavoredEnemyChoiceId(row.id)
     if (enemy) return declared(owner, enemy.grant, row.level, 'favored-enemy-language')
     const terrain = decodeNaturalExplorerChoiceId(row.id)
@@ -433,7 +485,8 @@ function buildOptionalClassFeatureActivity(
     catalogs,
     states,
     declared,
-    choice,
+    choice: (row: NormalizedCharacterChoice) => checkChoice(row, true),
+    choiceSource: (row: NormalizedCharacterChoice) => checkChoice(row, false),
     diagnostic,
     entries,
     suppressed,
