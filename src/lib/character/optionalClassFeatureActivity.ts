@@ -1,6 +1,6 @@
 import {
-  getBarbarianPathChoice,
   GIANT_POWER_TARGET,
+  getBarbarianPathChoice,
 } from '@/lib/5etools/barbarianPathChoiceIdentity'
 import {
   BLESSED_STRIKES_TARGET,
