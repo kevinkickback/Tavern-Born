@@ -207,6 +207,11 @@ test.each(stacks)(
     moon.classProgression[0].subclass = 'Circle of the Moon'
     expect(createCharacterSheetViewModel(moon, raw, raw).declaredClassFeatureSummaries).toEqual([
       expect.objectContaining({ text: expect.stringContaining('Base Beast Shapes: Max. CR: 1/4') }),
+      ...(type === 'local'
+        ? ['Combat Wild Shape', 'Circle Forms'].map((compactText) =>
+            expect.objectContaining({ compactText }),
+          )
+        : []),
     ])
   },
   30_000,

@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Measured with Warlock patron setup at 6,610,637 B renderer and 1,336,381 B initial.
+  // Measured with Druid Circle rules at 6,613,708 B renderer and 1,338,687 B initial.
   // Smallest whole-KiB allowances for these measured outputs.
-  rendererCode: 6456 * KIB,
-  initialRendererScript: 1306 * KIB,
+  rendererCode: 6459 * KIB,
+  initialRendererScript: 1308 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

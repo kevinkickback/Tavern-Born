@@ -94,6 +94,10 @@ its Details from the earning accordion. At each choice gain, including increases
 feature's quota, open the picker from that level, save the earned picks, and confirm that earlier
 picks still appear in their original slots after reopening the character.
 
+Reviewed Druid Circles print their current subclass rules at the levels that grant them.
+The source proof keeps the selected Circle and its class edition separate from the printing
+of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
+
 ### Warlock patron setup and resources
 
 The Genie chooses its patron type at the classic level-1 or revised level-3 subclass gain. Vestige

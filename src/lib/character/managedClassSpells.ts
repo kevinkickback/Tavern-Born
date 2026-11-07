@@ -35,7 +35,10 @@ import {
 } from '@/lib/5etools/spellbookSpecialtyRules'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
-import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import {
+  getEarnedSubclassSpellGrants,
+  hasCurrentSubclassSpellGrant,
+} from '@/lib/5etools/subclassSpells'
 import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
 import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
@@ -613,11 +616,13 @@ export function projectManagedClassSpellState(
     })
     for (const grant of grants ?? []) {
       if (grant.mode === 'expanded') continue
-      const spellKey = getSpellReferenceKey(grant.spellName)
-      const active = namedPreparation
-        ? visibleSpellLevels.has(spellKey)
-        : availableSpellReferences.has(spellKey)
-      if (namedPreparation && !active)
+      const inheritedCircle = grant.expectedSpellLevel !== undefined
+      const active = hasCurrentSubclassSpellGrant(
+        grant,
+        namedPreparation ? visibleSpellLevels : availableSpellReferences,
+        visibleSpellLevels,
+      )
+      if ((namedPreparation || inheritedCircle) && !active)
         fixedClassSpellStatuses.push({
           owner: [
             'subclass',
@@ -626,15 +631,24 @@ export function projectManagedClassSpellState(
             norm(entry.subclass),
             norm(entry.subclassSource),
           ],
-          target: land ? 'circle-of-the-land-terrain' : 'vestige-patron-domain',
-          featureName: land ? 'Circle of the Land' : 'Vestige Spells',
+          target: inheritedCircle
+            ? 'inherited-circle-spells'
+            : land
+              ? 'circle-of-the-land-terrain'
+              : 'vestige-patron-domain',
+          featureName: inheritedCircle
+            ? 'Circle Spells'
+            : land
+              ? 'Circle of the Land'
+              : 'Vestige Spells',
           level: grant.level,
           reference: grant.spellName,
-          prepared: true,
+          prepared: grant.mode === 'prepared' || grant.mode === 'innate',
           active,
         })
       if (!active) continue
       if (celestialCantrips && grant.mode === 'known' && grant.isCantrip) {
+        const spellKey = getSpellReferenceKey(grant.spellName)
         const spell = targets.get(spellKey)
         if (spell?.level === 0) {
           const [checked] = auditSpellRouteMultiplicity([spell])

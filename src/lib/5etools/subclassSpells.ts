@@ -5,6 +5,10 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
 import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import {
+  hasRevisedInheritedCircleSpells,
+  isRevisedInheritedCircleOwner,
+} from './legacyDruidSubclassSpells'
+import {
   ELDRITCH_HEX_REFERENCE,
   getNativeEldritchHexOwner,
   getNativeStepsOfTheFeyOwner,
@@ -21,7 +25,19 @@ export interface SubclassSpellGrant {
   level: number
   isCantrip: boolean
   expandedRank?: number
+  expectedSpellLevel?: number
   mode: 'prepared' | 'known' | 'expanded' | 'innate'
+}
+
+export function hasCurrentSubclassSpellGrant(
+  grant: SubclassSpellGrant,
+  references: { has(reference: string): boolean } | undefined,
+  spellLevels: ReadonlyMap<string, number> | undefined,
+) {
+  const key = getSpellReferenceKey(grant.spellName)
+  return grant.expectedSpellLevel === undefined
+    ? references?.has(key) === true
+    : spellLevels?.get(key) === grant.expectedSpellLevel
 }
 
 /** Current selected provider at a historical class gain; undefined means authority is unavailable. */
@@ -36,7 +52,9 @@ export function getEarnedSubclassSpellGrants(
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
   const land = isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
-  const unavailable = land || hasWarlockPatronSpellConfiguration(entry) ? [] : undefined
+  const revisedCircle = isRevisedInheritedCircleOwner(entry)
+  const unavailable =
+    land || revisedCircle || hasWarlockPatronSpellConfiguration(entry) ? [] : undefined
   const norm = normalizeOwnerIdentity
   if (
     !classData ||
@@ -77,6 +95,14 @@ export function getEarnedSubclassSpellGrants(
         })),
       )
     }
+    if (revisedCircle)
+      return hasRevisedInheritedCircleSpells(classData, subclasses[0])
+        ? parseSubclassSpells(subclasses[0].additionalSpells, classLevel).map((grant) => ({
+            ...grant,
+            spellName: formatSpellReference(grant.spellName, 'XPHB'),
+            expectedSpellLevel: grant.isCantrip ? 0 : Math.ceil(grant.level / 2),
+          }))
+        : []
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
     if (getNativeEldritchHexOwner(entry)) {
       // Eldritch Hex has its own source proof. Expanded list access remains independent.

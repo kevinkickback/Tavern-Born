@@ -22,9 +22,11 @@ import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeat
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry, Feature } from '@/types/character'
+import { getDeclaredSubclassStaticFeatures } from './declaredSubclassStaticFeatures'
 import { getWarlockStaticFeatures } from './warlockStaticFeatures'
 
 export interface ClassStaticFeatureSummary {
@@ -33,6 +35,22 @@ export interface ClassStaticFeatureSummary {
   replaces?: Feature
   actionId?: string
   actionNotesSource?: 'class' | 'subclass'
+}
+
+const sharedDruidCircles = [
+  'circle of dreams|xge',
+  'circle of the shepherd|xge',
+  'circle of spores|tce',
+  'circle of wildfire|tce',
+]
+const reviewedDruidCircles = {
+  phb: [...sharedDruidCircles, 'circle of the moon|phb', 'circle of stars|tce'],
+  xphb: [
+    ...sharedDruidCircles,
+    'circle of the moon|xphb',
+    'circle of the sea|xphb',
+    'circle of the stars|xphb',
+  ],
 }
 
 function beastShapeLimits(entries: readonly unknown[], level: number) {
@@ -243,6 +261,23 @@ export function getClassStaticFeatureSummaries(
       }
       return featureSummary(feature, entries)
     })
-    return [...(shape ? [shape] : []), ...landSummaries]
+    const otherCircle = reviewedDruidCircles[source].includes(
+      `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
+    )
+      ? getDeclaredSubclassStaticFeatures(
+          cls,
+          entry,
+          catalogs,
+          source === 'phb'
+            ? { level: 2, intro: 'druid circle', later: 'druid circle feature' }
+            : { level: 3, intro: 'druid subclass', later: 'subclass feature' },
+        ).flatMap((feature) =>
+          featureSummary(feature).map((summary) => ({
+            ...summary,
+            replaces: savedClassLabel(character, entry, feature),
+          })),
+        )
+      : []
+    return [...(shape ? [shape] : []), ...landSummaries, ...otherCircle]
   })
 }
