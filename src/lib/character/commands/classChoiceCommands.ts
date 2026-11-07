@@ -1527,61 +1527,65 @@ export function reconcileClassChoiceSelectionGrants(
   })
   const preservedFeatureIds = new Set<string>()
   const preservedGrants = new Map<string, Set<string>>()
-  if (catalogs) {
-    let spellReferences: Set<string> | undefined
-    for (const selection of selections) {
-      const previous = character.classChoiceSelections?.find(
-        (row) => row.choiceId === selection.choiceId,
-      )
+  let spellReferences: Set<string> | undefined
+  for (const selection of selections) {
+    const isRevisedInvocation = selection.choiceId === REVISED_INVOCATION_POOL
+    if (!catalogs && !isRevisedInvocation) continue
+    const previous = character.classChoiceSelections?.find(
+      (row) => row.choiceId === selection.choiceId,
+    )
+    if (
+      !previous ||
+      selection.inactive ||
+      previous.inactive !== selection.inactive ||
+      previous.className !== selection.className ||
+      previous.classSource !== selection.classSource ||
+      previous.subclassName !== selection.subclassName ||
+      previous.subclassSource !== selection.subclassSource
+    )
+      continue
+    const entry = findClassReference(
+      { name: selection.className, source: selection.classSource },
+      character.classProgression,
+    )
+    const missingOwner =
+      entry && catalogs?.classes && !resolveClassProgressionRules(entry, catalogs.classes)
+    const savedInvocationOwner =
+      isRevisedInvocation && getSavedRevisedInvocationOwner(draft, selection)
+    for (const option of selection.selected) {
       if (
-        !previous ||
-        selection.inactive ||
-        previous.inactive !== selection.inactive ||
-        previous.className !== selection.className ||
-        previous.classSource !== selection.classSource ||
-        previous.subclassName !== selection.subclassName ||
-        previous.subclassSource !== selection.subclassSource
+        !isFeatureOption(option) ||
+        !previous.selected.some(
+          (prior) =>
+            prior.slotLevel === option.slotLevel &&
+            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+        )
       )
         continue
-      const entry = findClassReference(
-        { name: selection.className, source: selection.classSource },
-        character.classProgression,
-      )
-      const missingOwner =
-        entry && catalogs.classes && !resolveClassProgressionRules(entry, catalogs.classes)
-      for (const option of selection.selected) {
-        if (
-          !isFeatureOption(option) ||
-          !previous.selected.some(
-            (prior) =>
-              prior.slotLevel === option.slotLevel &&
-              getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
-          )
+      const target =
+        savedInvocationOwner && isRevisedTargetedInvocation(option)
+          ? option.invocationCantrip
+          : undefined
+      if (target && catalogs?.classes && spellContext?.spellsByKey) {
+        spellReferences ??= new Set(
+          Object.values(spellContext.spellsByKey).map((spell) =>
+            getSpellReferenceKey(spell.name, spell.source),
+          ),
         )
-          continue
-        const target = option.invocationCantrip
-        if (target && spellContext?.spellsByKey) {
-          spellReferences ??= new Set(
-            Object.values(spellContext.spellsByKey).map((spell) =>
-              getSpellReferenceKey(spell.name, spell.source),
-            ),
-          )
-        }
-        const missingTarget =
-          target &&
-          spellReferences &&
-          !spellReferences.has(getSpellReferenceKey(target.name, target.source))
-        if (
-          !missingOwner &&
-          !missingTarget &&
-          !isSavedFeatureSourceMissing(selection, option, catalogs)
-        )
-          continue
-        preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
-        const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
-        names.add(normalizeKey(option.name))
-        preservedGrants.set(selection.choiceId, names)
       }
+      // Missing authority suspends the benefit without retracting the saved grant.
+      const missingTarget =
+        target && !spellReferences?.has(getSpellReferenceKey(target.name, target.source))
+      if (
+        !missingOwner &&
+        !missingTarget &&
+        !(catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
+      )
+        continue
+      preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
+      const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
+      names.add(normalizeKey(option.name))
+      preservedGrants.set(selection.choiceId, names)
     }
   }
   const activeSelections = selections
