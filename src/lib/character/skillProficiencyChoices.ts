@@ -2,10 +2,16 @@ import { decodeProficiencyOption } from '@/lib/5etools/classProficiencyIdentity'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceRow } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
+import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassChoiceOptionKey, isClassChoiceOptionEligible } from './classChoiceOptions'
 import { refreshClassProficiencyState } from './classProficiencySelections'
 import { getClassProficiencyWorkflow } from './classProficiencyWorkflow'
 import type { ExpertiseAuthority } from './skillExpertiseChoices'
+
+export function getSkillProficiencyOptionName(option: NormalizedChoiceOptionReference) {
+  const target = decodeProficiencyOption(option)
+  return target?.domain === 'skills' ? target.name : undefined
+}
 
 export interface SkillProficiencyAction {
   id: string
@@ -28,7 +34,7 @@ export function getSkillProficiencyChoices(
     catalogs,
   )
   const classOwners = getClassProficiencyWorkflow(character, authority.classes, catalogs).filter(
-    (row) => row.domain === 'skills',
+    (row) => row.domain === 'skills' || row.domain === 'skill-or-language',
   )
   const actions: Record<string, SkillProficiencyAction[]> = {}
   const rows: SourceRow[] = []
@@ -81,18 +87,22 @@ export function getSkillProficiencyChoices(
     const selected = owner.selection?.selected ?? []
     const eligible = owner.options.filter(isClassChoiceOptionEligible)
     const quota = owner.choice?.maximumSelections ?? selected.length
-    if (owner.choice) remaining += Math.max(0, quota - selected.length)
+    const openSlots = Math.max(0, quota - selected.length)
+    const canChooseSkill =
+      owner.domain === 'skills' ||
+      eligible.some((option) => getSkillProficiencyOptionName(option.reference))
+    if (owner.choice && canChooseSkill) remaining += openSlots
     for (const pick of selected) {
-      const target = decodeProficiencyOption(pick)
-      if (!target) continue
-      add(target.name, {
+      const skill = getSkillProficiencyOptionName(pick)
+      if (!skill) continue
+      add(skill, {
         id: `class:remove:${owner.id}`,
         ownerId: owner.id,
         kind: 'class',
         adding: false,
         label: `Remove from ${label}`,
       })
-      const applied = (effective.provenance.proficiencies.skills[target.name] ?? []).some(
+      const applied = (effective.provenance.proficiencies.skills[skill] ?? []).some(
         (tag) => tag.grantVariant === owner.id,
       )
       if (!applied)
@@ -114,10 +124,10 @@ export function getSkillProficiencyChoices(
       )
     )
       for (const option of eligible) {
-        const target = decodeProficiencyOption(option.reference)
-        if (!target || selected.some((pick) => decodeProficiencyOption(pick)?.name === target.name))
+        const skill = getSkillProficiencyOptionName(option.reference)
+        if (!skill || selected.some((pick) => getSkillProficiencyOptionName(pick) === skill))
           continue
-        add(target.name, {
+        add(skill, {
           id: `class:add:${owner.id}`,
           ownerId: owner.id,
           kind: 'class',
@@ -125,10 +135,10 @@ export function getSkillProficiencyChoices(
           label: `Use ${label}`,
         })
       }
-    if (owner.choice && selected.length < quota)
+    if (owner.choice && canChooseSkill && openSlots)
       rows.push({
         category: 'Skills',
-        itemName: `${owner.label}, level ${owner.level}: ${quota - selected.length} choice(s) remaining`,
+        itemName: `${owner.label}, level ${owner.level}: ${openSlots} ${owner.domain === 'skill-or-language' ? 'skill or language' : 'choice(s)'} remaining`,
         attribution: owner.subclassName ? 'subclass' : 'class',
         sourceTypes: [owner.subclassName ? 'subclass' : 'class'],
         isPending: true,

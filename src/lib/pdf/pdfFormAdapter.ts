@@ -109,6 +109,7 @@ export async function fillCharacterSheetDocument(
     spellPageIndex?: number
     excludedPageIndices?: number[]
     onTextTruncated?: (fieldName: string) => void
+    paragraphsReservedForOverflow?: ReadonlySet<string>
   },
 ): Promise<PDFDocument> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
@@ -215,7 +216,8 @@ export async function fillCharacterSheetDocument(
     alignMpmbRuledText(form, fieldIndex)
     hideUnwantedFields(form)
   } else {
-    if (options.templateId?.startsWith('2024')) fit2024TextAppearances(pdfDoc, onTextTruncated)
+    if (options.templateId?.startsWith('2024'))
+      fit2024TextAppearances(pdfDoc, onTextTruncated, options.paragraphsReservedForOverflow)
     if (options.templateId === '2014-official')
       normalizeOfficial2014TextAppearances(form, onTextTruncated)
     updateDirtyFieldAppearances(form)
@@ -407,6 +409,7 @@ function normalizeOfficial2014TextAppearances(
 function fit2024TextAppearances(
   pdfDoc: PDFDocument,
   onTextTruncated?: (fieldName: string) => void,
+  paragraphsReservedForOverflow?: ReadonlySet<string>,
 ) {
   const form = pdfDoc.getForm()
   const font = form.getDefaultFont()
@@ -441,18 +444,31 @@ function fit2024TextAppearances(
       widget.setRectangle(rect)
     }
     const { width, height } = widget.getRectangle()
-    const fitted = fitOfficial2024Text(
-      field.getName(),
-      value,
-      font,
-      width,
-      height,
-      widget.getBorderStyle()?.getWidth() ?? 0,
-      scale,
-    )
+    const fit = (text: string) =>
+      fitOfficial2024Text(
+        field.getName(),
+        text,
+        font,
+        width,
+        height,
+        widget.getBorderStyle()?.getWidth() ?? 0,
+        scale,
+      )
+    const fitted = fit(value)
     if (!fitted) continue
-    if (fitted.text !== value) field.setText(fitted.text)
-    field.setFontSize(fitted.fontSize)
+    // The full field goes to Notes on overflow. Keep each qualified note whole and in one place.
+    const main =
+      fitted.truncated &&
+      paragraphsReservedForOverflow?.size &&
+      (field.getName() === 'Text_57' || field.getName() === 'Text_58')
+        ? value
+            .split('\n\n')
+            .filter((row) => !paragraphsReservedForOverflow.has(row))
+            .join('\n\n')
+        : value
+    const visible = main === value ? fitted : (fit(main) ?? { ...fitted, text: '' })
+    if (visible.text !== value) field.setText(visible.text)
+    field.setFontSize(visible.fontSize)
     const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
     for (const appearanceWidget of field.acroField.getWidgets())
       appearanceWidget.dict.set(PDFName.of('DA'), appearance)

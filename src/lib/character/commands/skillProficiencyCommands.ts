@@ -1,11 +1,11 @@
-import {
-  decodeClassProficiencyChoiceId,
-  decodeProficiencyOption,
-} from '@/lib/5etools/classProficiencyIdentity'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceOptions'
 import { getStartingSkillChoiceLedger } from '@/lib/character/classProficiencySelections'
 import type { ExpertiseAuthority } from '@/lib/character/skillExpertiseChoices'
-import { getSkillProficiencyChoices } from '@/lib/character/skillProficiencyChoices'
+import {
+  getSkillProficiencyChoices,
+  getSkillProficiencyOptionName,
+} from '@/lib/character/skillProficiencyChoices'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
@@ -27,16 +27,17 @@ export function removeSavedSkillProficiencyCommand(
   if (actionId.startsWith('class:remove:')) {
     const id = actionId.slice('class:remove:'.length)
     const selection = character.classChoiceSelections?.find((row) => row.choiceId === id)
+    const domain = decodeClassProficiencyChoiceId(id)?.domain
     if (
-      decodeClassProficiencyChoiceId(id)?.domain === 'skills' &&
-      selection?.selected.some((pick) => decodeProficiencyOption(pick)?.name === name)
+      (domain === 'skills' || domain === 'skill-or-language') &&
+      selection?.selected.some((pick) => getSkillProficiencyOptionName(pick) === name)
     )
       return retainSavedFeatureOptionsCommand(
         character,
         ledger,
         id,
         selection.selected
-          .filter((pick) => decodeProficiencyOption(pick)?.name !== name)
+          .filter((pick) => getSkillProficiencyOptionName(pick) !== name)
           .map(getClassChoiceOptionKey),
       )
   } else if (actionId.startsWith('ledger:remove:')) {
@@ -79,14 +80,14 @@ export function applySkillProficiencyActionCommand(
       ledger,
       owner.id,
       selected
-        .filter((pick) => decodeProficiencyOption(pick)?.name !== name)
+        .filter((pick) => getSkillProficiencyOptionName(pick) !== name)
         .map(getClassChoiceOptionKey),
       authority,
     )
   const pick = owner.options.find(
     (option) =>
       option.availability === 'eligible' &&
-      decodeProficiencyOption(option.reference)?.name === name,
+      getSkillProficiencyOptionName(option.reference) === name,
   )!
   return applyClassChoiceSelectionWithGrantsCommand(
     character,

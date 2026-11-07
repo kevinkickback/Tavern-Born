@@ -94,6 +94,10 @@ export async function generateFilledCharacterSheetPdf(
     options.pages,
   )
   const original = viewModel
+  const paragraphsReservedForOverflow =
+    continueInNotes && options.pages?.notes !== false
+      ? new Set(original.proficiencyCheckNotes?.map((row) => compactSheetText(row.text)))
+      : undefined
   viewModel = selection.viewModel
   if (
     template.id === '2014-custom' &&
@@ -281,6 +285,7 @@ export async function generateFilledCharacterSheetPdf(
       organizationImageFieldName: template.organizationImageFieldName,
       additionalSpellPages,
       spellPageIndex: 0,
+      paragraphsReservedForOverflow: part.id === 'main' ? paragraphsReservedForOverflow : undefined,
       onTextTruncated: (name) => {
         const extra = /^SpellPage(\d+)__(.*)$/.exec(name)
         const value = extra
