@@ -51,11 +51,13 @@ export function matchesNativeSubclassGain(
     !raw ||
     declarations[rawIndex]?.target !== target ||
     declarations.some((ref) => !ref) ||
+    ('gainSubclassFeatureHasContent' in raw && raw.gainSubclassFeatureHasContent !== true) ||
     Object.keys(raw).some(
       (key) =>
         ![
           'classFeature',
           'gainSubclassFeature',
+          'gainSubclassFeatureHasContent',
           'name',
           'source',
           'className',

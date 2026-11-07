@@ -1,4 +1,5 @@
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
+import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { getEarnedDraconicResilience } from '@/lib/5etools/draconicResilience'
 import {
   type EntityLookupSet,
@@ -16,7 +17,10 @@ import {
 } from '@/lib/character/atWillInvocationSpells'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { getCurrentClassOrder } from '@/lib/character/classOrder'
-import { getOwnedSubclassSkillModifiers } from '@/lib/character/classProficiencyAuthority'
+import {
+  getEffectiveOwnerProficiencyChoices,
+  getOwnedSubclassSkillModifiers,
+} from '@/lib/character/classProficiencyAuthority'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
@@ -388,6 +392,7 @@ export function createCharacterCalculationContext(
   const managedSpellContext = {
     catalogs: primaryLookups.classChoiceFeatureCatalogs,
     spellsByKey: primaryLookups.spellsByKey,
+    oathSpellSourceByKey: rawLookups.spellsByKey,
     currentRaceResolution: resolveRaceReference(
       {
         name: character.race,
@@ -561,6 +566,7 @@ export function createCharacterCalculationContext(
     ...baseSourceEffects,
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers),
+    ...deriveGeniesSplendorEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...orderSkillEffects,
     ...deriveConditionalProficiencyNotes(
       character,
@@ -638,18 +644,66 @@ function deriveDraconicResilienceEffects(
       operation: { kind: 'add', value: levels },
     },
   ]
-  const { bodyArmor, shield } = getArmorEquipmentSlots(character.equipment ?? [])
-  if (!bodyArmor) {
-    effects.push({
-      id: `${target}:ac`,
-      label: name,
-      source: origin,
-      target: { kind: 'armor-class' },
-      operation: {
-        kind: 'base',
-        value: dexterity + (revised ? 10 + charisma : 13) + (shield ? (shield.ac ?? 2) : 0),
-      },
-    })
-  }
+  const ac = unarmoredBaseEffect(
+    character.equipment,
+    target,
+    origin,
+    dexterity + (revised ? 10 + charisma : 13),
+  )
+  if (ac) effects.push(ac)
   return effects
+}
+
+const GENIES_SPLENDOR_TARGET =
+  "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
+
+function deriveGeniesSplendorEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  { dexterity, charisma }: AbilityScores,
+): CharacterEffect[] {
+  const owners = character.classProgression.filter(
+    (entry) => entry.name.toLowerCase() === 'paladin' && entry.source.toLowerCase() === 'xphb',
+  )
+  const owner = owners[0]
+  if (
+    owners.length !== 1 ||
+    owner.levels < 3 ||
+    owner.subclass?.toLowerCase() !== 'oath of the noble genies' ||
+    owner.subclassSource?.toLowerCase() !== 'frhof'
+  )
+    return []
+  const benefit = getEffectiveOwnerProficiencyChoices(character, owner, catalogs).find(
+    (choice) => decodeClassProficiencyChoiceId(choice.id)?.target === GENIES_SPLENDOR_TARGET,
+  )
+  if (!benefit) return []
+  const effect = unarmoredBaseEffect(
+    character.equipment,
+    GENIES_SPLENDOR_TARGET,
+    {
+      kind: 'subclass',
+      name: benefit.owner.featureName ?? "Genie's Splendor",
+      source: benefit.owner.featureSource ?? 'FRHoF',
+      entityId: GENIES_SPLENDOR_TARGET,
+    },
+    10 + dexterity + charisma,
+  )
+  return effect ? [effect] : []
+}
+
+function unarmoredBaseEffect(
+  equipment: readonly Equipment[] | undefined,
+  target: string,
+  origin: CharacterEffect['source'],
+  base: number,
+): CharacterEffect | undefined {
+  const { bodyArmor, shield } = getArmorEquipmentSlots(equipment ?? [])
+  if (bodyArmor) return undefined
+  return {
+    id: `${target}:ac`,
+    label: origin.name,
+    source: origin,
+    target: { kind: 'armor-class' },
+    operation: { kind: 'base', value: base + (shield ? (shield.ac ?? 2) : 0) },
+  }
 }

@@ -49,6 +49,7 @@ import {
   getItemTypeEntrySources,
   mergeItemTypeEntries,
 } from './itemTypeEntries'
+import { isRevisedInheritedOathIntro } from './legacyPaladinOathSpells'
 import { buildGameDataLookups } from './lookups'
 import { appendMagicVariantReferences, mergeMagicVariants } from './magicVariants'
 import {
@@ -222,7 +223,8 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
         // A native intro and its nested declaration stay together.
         if (
           (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass)) ||
-          isNativeResilienceIntro(classData, subclass, identity)
+          isNativeResilienceIntro(classData, subclass, identity) ||
+          isRevisedInheritedOathIntro(classData, subclass, identity)
         )
           return reference
         const owner =

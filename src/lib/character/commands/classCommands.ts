@@ -492,6 +492,26 @@ export function applyClassProgressionUpdate(
   spellLookups?: ClassProgressionLookups,
 ): ClassCommandResult {
   const previousProgression = character.classProgression
+  const isClassicOathbreaker = (entry: CharacterClassEntry) =>
+    normalizeKey(entry.name) === 'paladin' &&
+    normalizeKey(entry.source) === 'phb' &&
+    normalizeKey(entry.subclass ?? '') === 'oathbreaker' &&
+    normalizeKey(entry.subclassSource ?? '') === 'dmg'
+  const oathbreaker = nextProgression.find(isClassicOathbreaker)
+  const earlierOathbreaker = previousProgression.find(isClassicOathbreaker)
+  if (
+    oathbreaker &&
+    (!earlierOathbreaker || (earlierOathbreaker.levels < 3 && oathbreaker.levels >= 3))
+  ) {
+    const alignment = normalizeKey(character.details?.alignment ?? '').replace(/\s+/g, '-')
+    if (
+      oathbreaker.levels < 3 ||
+      !['lawful-evil', 'neutral-evil', 'chaotic-evil'].includes(alignment)
+    )
+      throw new RangeError(
+        'Oathbreaker requires Paladin level 3 and an evil alignment in Characteristics.',
+      )
+  }
   const removedEntries = previousProgression.filter(
     (old) =>
       !nextProgression.some((entry) => entry.name === old.name && entry.source === old.source),

@@ -19,7 +19,7 @@ export function getDeclaredSubclassStaticFeatures(
   cls: Class5e,
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
-  gain: { level: number; intro: string; later: string },
+  gain: { level: number; intro: string; later: string; expandNestedRules?: true },
 ) {
   if (
     !entry.subclass ||
@@ -81,6 +81,35 @@ export function getDeclaredSubclassStaticFeatures(
       ? declaration
       : undefined
   }
+  const withNestedRules = (feature: SubclassFeature) => {
+    if (!gain.expandNestedRules || !feature.entries) return feature
+    const siblings = feature.entries.map(record)
+    return {
+      ...feature,
+      entries: feature.entries.map((entry, index) => {
+        const row = siblings[index]
+        const uid = row.subclassFeature
+        if (row.type !== 'refSubclassFeature' || typeof uid !== 'string') return entry
+        const child = matchesOwner(uid)
+        if (
+          !child ||
+          child.decoded.level !== feature.level ||
+          siblings.filter(
+            (sibling) =>
+              typeof sibling.subclassFeature === 'string' &&
+              matchesOwner(sibling.subclassFeature)?.target === child.target,
+          ).length !== 1 ||
+          !exactOptionalDeclarationReference(row, uid, 'subclassFeature') ||
+          Object.keys(row).some(
+            (key) => key !== 'type' && key !== 'subclassFeature' && key !== 'feature',
+          )
+        )
+          return entry
+        const exact = verified(row.feature as SubclassFeature | undefined, child.target)
+        return exact ? { type: 'entries', name: exact.name, entries: exact.entries } : entry
+      }),
+    }
+  }
   const first = gain.level
   if (
     entry.levels < first ||
@@ -112,7 +141,7 @@ export function getDeclaredSubclassStaticFeatures(
         )
           return []
         const exact = verified(row.feature as SubclassFeature | undefined, target)
-        return exact ? [exact] : []
+        return exact ? [withNestedRules(exact)] : []
       })
     }
     if (
@@ -125,6 +154,6 @@ export function getDeclaredSubclassStaticFeatures(
     )
       return []
     const feature = verified(attached, declaration.target)
-    return feature ? [feature] : []
+    return feature ? [withNestedRules(feature)] : []
   })
 }

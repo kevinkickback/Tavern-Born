@@ -105,6 +105,7 @@ export function ensureSpellProfiles(
     /** Exact current visible targets; omitted authority cannot grant fixed spell benefits. */
     availableSpellReferences?: ReadonlySet<string>
     visibleSpellLevels?: ReadonlyMap<string, number>
+    oathReprints?: ReadonlyMap<string, number | undefined>
   },
 ): SpellProfile[] {
   if (options?.effectiveSpellProfiles !== undefined)
@@ -152,6 +153,7 @@ export function ensureSpellProfiles(
           grant,
           exactPreparation ? options?.visibleSpellLevels : options?.availableSpellReferences,
           options?.visibleSpellLevels,
+          options?.oathReprints,
         ),
     )
     const grantedSubclassCantrips = grantedSubclassSpells

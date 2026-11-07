@@ -118,6 +118,17 @@ Wind Speaker grants Primordial at the classic level-1 or revised level-3 Storm S
 The revised copy uses the exact revised Primordial reprint. Losing the source removes only this
 language ownership. The four dialects are part of the Primordial rule.
 
+### Paladin oath setup
+
+Oath of the Noble Genies offers one of its four authored skills from Genie's Splendor at Paladin
+level 3. The same current feature independently supplies an unarmored AC formula of 10 plus the
+effective Dexterity and Charisma modifiers. An equipped shield still contributes normally. The
+shared AC resolver chooses among applicable base formulas, then applies equipment bonuses and
+manual adjustments. Worn body armor suspends the Genie's Splendor formula.
+
+Classic Oathbreaker requires at least three Paladin levels and an evil alignment when selected.
+The character's alignment is set in Characteristics.
+
 ### Warlock patron setup and resources
 
 The Genie chooses its patron type at the classic level-1 or revised level-3 subclass gain. Vestige
