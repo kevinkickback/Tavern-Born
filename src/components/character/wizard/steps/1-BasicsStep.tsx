@@ -40,90 +40,89 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
     [onChange],
   )
 
-  return (
-    <div className="flex min-h-full flex-col gap-5">
-      <section aria-labelledby={identityHeadingId}>
-        <h3 id={identityHeadingId} className="text-lg font-semibold">
-          Character identity
-        </h3>
-        <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
-          <div className="space-y-2">
-            <Label htmlFor={characterNameId}>Character Name</Label>
-            <Input
-              id={characterNameId}
-              value={data.name}
-              onChange={(e) => onChange({ name: e.target.value })}
-              placeholder="Enter character name"
-              className={cn(
-                hasError('name') &&
-                  'border-destructive focus-visible:ring-destructive animate-shake',
-              )}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={playerNameId}>Player Name</Label>
-            <Input
-              id={playerNameId}
-              value={data.playerName}
-              onChange={(e) => onChange({ playerName: e.target.value })}
-              placeholder="Enter player name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={ageId}>Age</Label>
-            <Input
-              id={ageId}
-              type="number"
-              min={0}
-              step={1}
-              value={data.age ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value
-                if (raw === '') {
-                  onChange({ age: null })
-                  return
-                }
-                const parsed = Number.parseInt(raw, 10)
-                if (Number.isNaN(parsed)) {
-                  return
-                }
-                onChange({ age: Math.max(0, parsed) })
-              }}
-              placeholder="Enter age"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={genderId}>Gender</Label>
-            <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
-              <SelectTrigger id={genderId}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Non-binary">Non-binary</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+  const identity = (
+    <section aria-labelledby={identityHeadingId}>
+      <h3 id={identityHeadingId} className="text-lg font-semibold">
+        Character Details
+      </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Start with a name and the details for your character sheet.
+      </p>
+      <div className="mt-4 grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-3.5">
+        <div className="col-span-2 space-y-2">
+          <Label htmlFor={characterNameId}>Character Name</Label>
+          <Input
+            id={characterNameId}
+            value={data.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="Enter character name"
+            className={cn(
+              hasError('name') && 'border-destructive focus-visible:ring-destructive animate-shake',
+            )}
+          />
         </div>
-      </section>
+        <div className="col-span-2 space-y-2">
+          <Label htmlFor={playerNameId}>Player Name</Label>
+          <Input
+            id={playerNameId}
+            value={data.playerName}
+            onChange={(e) => onChange({ playerName: e.target.value })}
+            placeholder="Enter player name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={ageId}>Age</Label>
+          <Input
+            id={ageId}
+            type="number"
+            min={0}
+            step={1}
+            value={data.age ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') {
+                onChange({ age: null })
+                return
+              }
+              const parsed = Number.parseInt(raw, 10)
+              if (Number.isNaN(parsed)) {
+                return
+              }
+              onChange({ age: Math.max(0, parsed) })
+            }}
+            placeholder="Years"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={genderId}>Gender</Label>
+          <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
+            <SelectTrigger id={genderId} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+              <SelectItem value="Non-binary">Non-binary</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </section>
+  )
 
-      <section aria-label="Portrait" className="min-h-[26rem] flex-1 border-t border-border pt-3">
-        <PortraitPicker
-          portrait={data.portrait}
-          transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
-          name={data.name}
-          level={1}
-          race="Race"
-          characterClass="Class"
-          gender={data.gender}
-          onPortraitChange={handlePortraitChange}
-          onTransformChange={handleTransformChange}
-          density="compact"
-          collapsible={false}
-        />
-      </section>
-    </div>
+  return (
+    <PortraitPicker
+      identity={identity}
+      portrait={data.portrait}
+      transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
+      name={data.name}
+      level={1}
+      race="Race"
+      characterClass="Class"
+      gender={data.gender}
+      onPortraitChange={handlePortraitChange}
+      onTransformChange={handleTransformChange}
+    />
   )
 }

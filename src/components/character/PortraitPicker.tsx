@@ -1,5 +1,5 @@
 import { Crop, Image, Images, Trash, Upload, X } from '@phosphor-icons/react'
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ interface PortraitPickerProps {
   lastModified?: string
   onPortraitChange: (portrait: string | null) => void
   onTransformChange: (transform: PortraitTransform) => void
-  density?: 'default' | 'compact'
+  identity?: ReactNode
   collapsible?: boolean
 }
 
@@ -47,7 +47,7 @@ export function PortraitPicker({
   lastModified,
   onPortraitChange,
   onTransformChange,
-  density = 'default',
+  identity,
   collapsible = true,
 }: PortraitPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -62,7 +62,7 @@ export function PortraitPicker({
     () => transform ?? DEFAULT_PORTRAIT_TRANSFORM,
   )
   const t = draftTransform
-  const compact = density === 'compact'
+  const isCreator = Boolean(identity)
 
   useEffect(() => {
     setDraftTransform(transform ?? DEFAULT_PORTRAIT_TRANSFORM)
@@ -161,241 +161,274 @@ export function PortraitPicker({
   const clearPortraitButton = (
     <Button
       type="button"
-      variant={compact ? 'ghost' : 'outline'}
-      size={compact ? 'sm' : 'default'}
+      variant={isCreator ? 'ghost' : 'outline'}
+      size={isCreator ? 'sm' : 'default'}
       onClick={handleClear}
       disabled={!portrait}
-      className={compact ? 'ml-auto' : 'w-full'}
+      className={isCreator ? 'ml-auto' : 'w-full'}
     >
-      <X className={cn('size-4', !compact && 'mr-2')} />
+      <X className={cn('size-4', !isCreator && 'mr-2')} />
       Clear Portrait
     </Button>
   )
 
-  return (
-    <>
-      <SplitPane
+  const controls = (
+    <div
+      data-slot="portrait-image-controls"
+      className={cn(
+        'mx-auto min-w-0 w-full space-y-3',
+        !isCreator && 'border-t border-border pt-3',
+      )}
+      style={previewWidth === null ? undefined : { width: previewWidth, maxWidth: '100%' }}
+    >
+      {!isCreator && (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Crop className="h-3.5 w-3.5" weight="duotone" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">Image Controls</span>
+        </div>
+      )}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
+          <Slider
+            thumbLabel="Zoom"
+            value={[t.zoom]}
+            onValueChange={(value) => handleTransformPreview({ zoom: value[0] })}
+            onValueCommit={(value) => handleTransformCommit({ zoom: value[0] })}
+            min={50}
+            max={400}
+            step={5}
+            disabled={!portrait}
+            className="flex-1"
+          />
+          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+            {t.zoom}%
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
+          <Slider
+            thumbLabel="Pan X"
+            value={[t.panX]}
+            onValueChange={(value) => handleTransformPreview({ panX: value[0] })}
+            onValueCommit={(value) => handleTransformCommit({ panX: value[0] })}
+            min={-240}
+            max={240}
+            step={5}
+            disabled={!portrait}
+            className="flex-1"
+          />
+          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+            {t.panX}px
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
+          <Slider
+            thumbLabel="Pan Y"
+            value={[t.panY]}
+            onValueChange={(value) => handleTransformPreview({ panY: value[0] })}
+            onValueCommit={(value) => handleTransformCommit({ panY: value[0] })}
+            min={-240}
+            max={240}
+            step={5}
+            disabled={!portrait}
+            className="flex-1"
+          />
+          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+            {t.panY}px
+          </span>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={resetTransform}
+        disabled={!portrait}
+        className="h-8 w-full text-xs"
+      >
+        Reset View
+      </Button>
+    </div>
+  )
+  const preview = (
+    <section className="flex h-full w-full flex-col overflow-hidden">
+      <WorkspacePaneHeader
+        title={isCreator ? 'Portrait Preview' : 'Card preview'}
+        icon={<Image className="size-4 text-primary" weight="duotone" />}
         className={cn(
-          'my-0 h-full overflow-visible',
-          !previewCollapsed && !libraryCollapsed && 'gap-3',
+          !isCreator && collapsible && 'pr-20',
+          isCreator &&
+            'h-auto border-0 bg-transparent px-0 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
         )}
-        leftClassName={cn(
-          compact ? 'bg-transparent' : 'rounded-lg bg-workspace-detail',
-          !compact && (previewCollapsed ? 'border-0' : 'border border-border'),
+      />
+      <div
+        data-slot="portrait-preview-content"
+        className={cn(
+          'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4',
+          isCreator ? 'px-0 pt-4' : 'p-4',
+          libraryCollapsed
+            ? 'grid-rows-[minmax(0,1fr)_auto] overflow-hidden'
+            : 'content-start grid-rows-[auto_auto] overflow-y-auto',
         )}
-        rightClassName={cn(
-          compact ? 'bg-transparent @min-[840px]:pl-4' : 'rounded-lg bg-workspace-pane',
-          !compact && (libraryCollapsed ? 'border-0' : 'border border-border'),
-        )}
-        leftWidth="var(--workspace-master-width)"
-        leftCollapsed={previewCollapsed}
-        rightCollapsed={libraryCollapsed}
-        onLeftCollapsedChange={setPreviewCollapsed}
-        onRightCollapsedChange={setLibraryCollapsed}
-        compactLeftLabel="Preview"
-        compactRightLabel="Portrait library"
-        showCollapseControls={collapsible}
-        left={
-          <section className="flex h-full w-full flex-col overflow-hidden">
-            <WorkspacePaneHeader
-              title="Card preview"
-              icon={<Image className="size-4 text-primary" weight="duotone" />}
-              className={cn(collapsible && 'pr-20', compact && 'border-0 bg-transparent px-0')}
-            />
-            <div
-              data-slot="portrait-preview-content"
-              className={cn(
-                'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4',
-                compact ? 'px-0 pt-2' : 'p-4',
-                libraryCollapsed
-                  ? 'grid-rows-[minmax(0,1fr)_auto] overflow-hidden'
-                  : 'content-start grid-rows-[auto_auto] overflow-y-auto',
-              )}
-            >
-              <PortraitCardPreview
-                image={portrait}
-                name={name}
-                level={level}
-                race={race}
-                characterClass={characterClass}
-                gender={gender}
-                lastModified={lastModified}
-                transform={t}
-                fit={libraryCollapsed ? 'contain' : 'width'}
-                className={compact ? 'mx-auto max-w-80' : undefined}
-                onWidthChange={setPreviewWidth}
-              />
+      >
+        <PortraitCardPreview
+          image={portrait}
+          name={name}
+          level={level}
+          race={race}
+          characterClass={characterClass}
+          gender={gender}
+          lastModified={lastModified}
+          transform={t}
+          fit={libraryCollapsed ? 'contain' : 'width'}
+          className={isCreator ? 'mx-auto max-w-80' : undefined}
+          onWidthChange={setPreviewWidth}
+        />
 
-              {/* Image Controls — inline below preview */}
-              <div
-                data-slot="portrait-image-controls"
-                className="mx-auto min-w-0 w-full space-y-3 border-t border-border pt-3"
-                style={
-                  previewWidth === null ? undefined : { width: previewWidth, maxWidth: '100%' }
-                }
-              >
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Crop className="h-3.5 w-3.5" weight="duotone" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">
-                    Image Controls
-                  </span>
-                </div>
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
-                    <Slider
-                      value={[t.zoom]}
-                      onValueChange={(value) => handleTransformPreview({ zoom: value[0] })}
-                      onValueCommit={(value) => handleTransformCommit({ zoom: value[0] })}
-                      min={50}
-                      max={400}
-                      step={5}
-                      disabled={!portrait}
-                      className="flex-1"
-                    />
-                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                      {t.zoom}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
-                    <Slider
-                      value={[t.panX]}
-                      onValueChange={(value) => handleTransformPreview({ panX: value[0] })}
-                      onValueCommit={(value) => handleTransformCommit({ panX: value[0] })}
-                      min={-240}
-                      max={240}
-                      step={5}
-                      disabled={!portrait}
-                      className="flex-1"
-                    />
-                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                      {t.panX}px
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
-                    <Slider
-                      value={[t.panY]}
-                      onValueChange={(value) => handleTransformPreview({ panY: value[0] })}
-                      onValueCommit={(value) => handleTransformCommit({ panY: value[0] })}
-                      min={-240}
-                      max={240}
-                      step={5}
-                      disabled={!portrait}
-                      className="flex-1"
-                    />
-                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                      {t.panY}px
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={resetTransform}
-                  disabled={!portrait}
-                  className="h-8 w-full text-xs"
-                >
-                  Reset View
-                </Button>
-              </div>
-            </div>
-          </section>
-        }
-        right={
-          <section className="flex h-full w-full flex-col overflow-hidden">
-            <WorkspacePaneHeader
-              title="Portrait library"
-              icon={<Images className="size-4 text-primary" weight="duotone" />}
-              className={cn(collapsible && 'pr-20', compact && 'border-0 bg-transparent px-0')}
-            >
-              {compact && clearPortraitButton}
-            </WorkspacePaneHeader>
-            <div
-              className={cn(
-                'flex min-h-0 flex-1 flex-col',
-                compact ? 'gap-3 px-0 pt-2' : 'gap-4 p-4',
-              )}
-            >
-              <div
+        {isCreator ? (
+          <details className="border-t border-border pt-2">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+              Adjust portrait
+            </summary>
+            <div className="mt-2">{controls}</div>
+          </details>
+        ) : (
+          controls
+        )}
+      </div>
+    </section>
+  )
+  const library = (
+    <section className="flex h-full w-full flex-col overflow-hidden">
+      <WorkspacePaneHeader
+        title="Portrait library"
+        icon={<Images className="size-4 text-primary" weight="duotone" />}
+        className={cn(
+          !isCreator && collapsible && 'pr-20',
+          isCreator &&
+            'h-auto flex-wrap gap-x-2 gap-y-1 border-0 bg-transparent px-0 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
+        )}
+      >
+        {isCreator && clearPortraitButton}
+      </WorkspacePaneHeader>
+      <div
+        className={cn('flex min-h-0 flex-1 flex-col', isCreator ? 'gap-3 px-0 pt-3' : 'gap-4 p-4')}
+      >
+        <div
+          className={cn(
+            'grid flex-1 content-start overflow-y-auto pr-1',
+            isCreator
+              ? 'max-h-80 auto-rows-max grid-cols-[repeat(auto-fill,minmax(4.75rem,1fr))] gap-2'
+              : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={libraryLoading}
+            className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-primary"
+          >
+            <Upload className="h-5 w-5" />
+            <span className="text-xs leading-tight">Upload</span>
+          </button>
+
+          {savedPortraits.map((saved, index) => (
+            <div key={saved.id} className="relative aspect-square">
+              <button
+                type="button"
+                onClick={() => handlePlaceholder(saved.src)}
+                aria-label={`Use uploaded portrait ${index + 1}`}
+                aria-pressed={portrait === saved.src}
                 className={cn(
-                  'grid flex-1 content-start overflow-y-auto pr-1',
-                  compact
-                    ? 'grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
-                    : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
+                  'size-full cursor-pointer overflow-hidden rounded-lg border transition-colors',
+                  portrait === saved.src
+                    ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
+                    : 'border-border hover:border-accent/50 hover:bg-surface-hover',
                 )}
               >
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={libraryLoading}
-                  className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-primary"
-                >
-                  <Upload className="h-5 w-5" />
-                  <span className="text-xs leading-tight">Upload</span>
-                </button>
-
-                {savedPortraits.map((saved, index) => (
-                  <div key={saved.id} className="relative aspect-square">
-                    <button
-                      type="button"
-                      onClick={() => handlePlaceholder(saved.src)}
-                      aria-label={`Use uploaded portrait ${index + 1}`}
-                      aria-pressed={portrait === saved.src}
-                      className={cn(
-                        'size-full cursor-pointer overflow-hidden rounded-lg border transition-colors',
-                        portrait === saved.src
-                          ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
-                          : 'border-border hover:border-accent/50 hover:bg-surface-hover',
-                      )}
-                    >
-                      <img
-                        src={saved.src}
-                        alt={`Uploaded portrait ${index + 1}`}
-                        className="size-full object-cover"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSaved(saved.id)}
-                      aria-label={`Delete uploaded portrait ${index + 1}`}
-                      title="Delete from gallery"
-                      className="absolute right-1 top-1 flex size-7 cursor-pointer items-center justify-center rounded-md bg-surface-raised/90 text-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Trash className="size-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-
-                {PLACEHOLDER_PORTRAITS.map((src, i) => (
-                  <button
-                    key={src}
-                    type="button"
-                    onClick={() => handlePlaceholder(src)}
-                    aria-pressed={Boolean(portrait && resolvePortraitSrc(portrait) === src)}
-                    className={cn(
-                      'relative aspect-square cursor-pointer overflow-hidden rounded-lg border transition-colors',
-                      portrait && resolvePortraitSrc(portrait) === src
-                        ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
-                        : 'border-border hover:border-accent/50 hover:bg-surface-hover',
-                    )}
-                  >
-                    <img
-                      src={src}
-                      alt={`Placeholder ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-
-              {!compact && clearPortraitButton}
+                <img
+                  src={saved.src}
+                  alt={`Uploaded portrait ${index + 1}`}
+                  className="size-full object-cover"
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteSaved(saved.id)}
+                aria-label={`Delete uploaded portrait ${index + 1}`}
+                title="Delete from gallery"
+                className="absolute right-1 top-1 flex size-7 cursor-pointer items-center justify-center rounded-md bg-surface-raised/90 text-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <Trash className="size-4" aria-hidden="true" />
+              </button>
             </div>
-          </section>
-        }
-      />
+          ))}
+
+          {PLACEHOLDER_PORTRAITS.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => handlePlaceholder(src)}
+              aria-pressed={Boolean(portrait && resolvePortraitSrc(portrait) === src)}
+              className={cn(
+                'relative aspect-square cursor-pointer overflow-hidden rounded-lg border transition-colors',
+                portrait && resolvePortraitSrc(portrait) === src
+                  ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
+                  : 'border-border hover:border-accent/50 hover:bg-surface-hover',
+              )}
+            >
+              <img src={src} alt={`Placeholder ${i + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+
+        {!isCreator && clearPortraitButton}
+      </div>
+    </section>
+  )
+
+  return (
+    <>
+      {isCreator ? (
+        <div className="@container">
+          <div className="grid gap-x-5 gap-y-5 @min-[32.5rem]:grid-cols-2 @min-[46.875rem]:grid-cols-[minmax(0,0.95fr)_minmax(0,1.13fr)_minmax(0,1.3fr)]">
+            <div className="min-w-0">{identity}</div>
+            <div className="min-w-0 @min-[32.5rem]:border-l @min-[32.5rem]:border-border @min-[32.5rem]:pl-5">
+              {preview}
+            </div>
+            <div className="min-w-0 border-t border-border pt-4 @min-[32.5rem]:col-span-2 @min-[46.875rem]:col-span-1 @min-[46.875rem]:border-t-0 @min-[46.875rem]:border-l @min-[46.875rem]:pt-0 @min-[46.875rem]:pl-5">
+              {library}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <SplitPane
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !previewCollapsed && !libraryCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            previewCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            libraryCollapsed ? 'border-0' : 'border border-border',
+          )}
+          leftWidth="var(--workspace-master-width)"
+          leftCollapsed={previewCollapsed}
+          rightCollapsed={libraryCollapsed}
+          onLeftCollapsedChange={setPreviewCollapsed}
+          onRightCollapsedChange={setLibraryCollapsed}
+          compactLeftLabel="Preview"
+          compactRightLabel="Portrait library"
+          showCollapseControls={collapsible}
+          left={preview}
+          right={library}
+        />
+      )}
 
       <input
         ref={fileInputRef}

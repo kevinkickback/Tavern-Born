@@ -44,7 +44,7 @@ export function WizardVariantOptions({
   const baseId = useId()
 
   return (
-    <div className="grid gap-x-8 sm:grid-cols-2">
+    <div className="divide-y divide-border border-y border-border">
       {RULE_OPTIONS.map(({ key, label, description }) => {
         const id = baseId + key
         const detailsId = `${id}-details`
@@ -52,10 +52,7 @@ export function WizardVariantOptions({
         const checked = lockedByRuleset || data.variantRules[key]
         const available = key === 'averageHitPoints' || contentAvailability[key]
         return (
-          <div
-            key={key}
-            className="flex items-start justify-between gap-4 border-t border-border py-3"
-          >
+          <div key={key} className="flex items-start justify-between gap-4 py-3">
             <div className="min-w-0">
               <Label htmlFor={id} className="text-sm font-semibold">
                 {label}

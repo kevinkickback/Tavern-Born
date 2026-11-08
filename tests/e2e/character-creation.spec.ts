@@ -262,6 +262,13 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   const dialog = page.getByRole('dialog', { name: 'Create New Character' })
   await dialog.getByLabel('Character Name').fill('Warning Test')
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
+  const adjustPortrait = dialog.getByText('Adjust portrait', { exact: true })
+  const zoom = dialog.getByRole('slider', { name: 'Zoom' })
+  await expect(zoom).toBeHidden()
+  await adjustPortrait.click()
+  await expect(zoom).toBeVisible()
+  await adjustPortrait.click()
+  await expect(zoom).toBeHidden()
   await dialog.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
   await dialog.getByRole('button', { name: 'Next' }).click()
 
@@ -285,9 +292,13 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await sourceScroller.evaluate((element) => {
     element.scrollTop = element.scrollHeight
   })
-  await dialog.getByRole('button', { name: /Test Source 30/ }).click()
-
+  const listBeforeWarning = await sourceScroller.boundingBox()
   const sourceWarning = dialog.getByText(/Non-recommended sources often contain/)
+  await expect(sourceWarning.locator('..')).toHaveCSS('opacity', '0')
+  await dialog.getByRole('button', { name: /Test Source 30/ }).click()
+  await expect(sourceWarning.locator('..')).toHaveCSS('opacity', '1')
+  expect(await sourceScroller.boundingBox()).toEqual(listBeforeWarning)
+
   const rulesetWarning = dialog.getByText(
     /Revised replacements are always used.*Compatible older options remain available/,
   )
@@ -327,9 +338,41 @@ for (const viewport of [
     await page.getByRole('button', { name: 'New Character' }).first().click()
     const wizard = page.getByRole('dialog', { name: 'Create New Character' })
     await wizard.getByLabel('Character Name').fill('Content choices')
+    await expect(wizard.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
+    const portraitTiles = await wizard
+      .getByRole('button', { name: /Placeholder [1-4]$/ })
+      .evaluateAll((tiles) =>
+        tiles.map((tile) => {
+          const { x, y, width, height } = tile.getBoundingClientRect()
+          return { x, y, width, height }
+        }),
+      )
+    for (const tile of portraitTiles) {
+      expect(Math.abs(tile.width - tile.height)).toBeLessThan(2)
+    }
+    await wizard.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
+    if (viewport.width === 900) {
+      const originalScale = await page.evaluate(() => {
+        const root = document.documentElement
+        const previous = root.style.fontSize
+        root.style.fontSize = '120%'
+        return previous
+      })
+      const clearPortrait = wizard.getByRole('button', { name: 'Clear Portrait' })
+      await clearPortrait.scrollIntoViewIfNeeded()
+      await expect(clearPortrait).toBeInViewport({ ratio: 1 })
+      await wizard.screenshot({
+        animations: 'disabled',
+        path: info.outputPath('basics-large-text.png'),
+      })
+      await page.evaluate((scale) => {
+        document.documentElement.style.fontSize = scale
+      }, originalScale)
+    }
     await wizard.getByRole('button', { name: 'Next' }).click()
     await expect(wizard.getByRole('textbox', { name: 'Search sources' })).toHaveCount(0)
     await wizard.getByRole('button', { name: /5e Legacy/ }).click()
+    await wizard.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()
     const search = wizard.getByRole('textbox', { name: 'Search sources' })
     const region = wizard.getByRole('region', { name: 'Additional Content' })

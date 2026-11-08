@@ -113,6 +113,10 @@ export function ContentStep({
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
 
+  const sourceGuidance = 'Choose the sourcebooks you want to use for this character.'
+  const sourceWarning =
+    'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
+
   return (
     <section className="@container flex h-full min-h-0 min-w-0 flex-col">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -179,19 +183,33 @@ export function ContentStep({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <div
-            aria-live="polite"
-            className="shrink-0 space-y-1.5 text-xs leading-relaxed empty:absolute"
-          >
-            {hasNonPresetSourcesSelected && (
-              <p className="flex items-start gap-2 rounded-md bg-warning/10 px-3 py-2 text-warning-foreground">
-                <Warning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
-                <span>
-                  Non-recommended sources often contain DM-only or outdated options. Select them
-                  only if your campaign uses them.
-                </span>
+          <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
+            <div
+              className="grid rounded-md bg-surface-raised/50"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <p
+                aria-hidden={hasNonPresetSourcesSelected}
+                className={cn(
+                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-2 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                  hasNonPresetSourcesSelected && 'opacity-0',
+                )}
+              >
+                <BookOpen className="mt-0.5 size-4 shrink-0" />
+                <span>{sourceGuidance}</span>
               </p>
-            )}
+              <p
+                aria-hidden={!hasNonPresetSourcesSelected}
+                className={cn(
+                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-2 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                  !hasNonPresetSourcesSelected && 'opacity-0',
+                )}
+              >
+                <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
+                <span>{sourceWarning}</span>
+              </p>
+            </div>
             {data.originSystem === '2024' && (
               <p className="flex items-start gap-2 text-muted-foreground">
                 <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
