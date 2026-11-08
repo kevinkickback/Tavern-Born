@@ -2,6 +2,26 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|gloom stalker|ranger|phb|gloom stalker|xge|3|xge",
+      "digest": "236647dba3f79ecfce45a5a9743944c774a3b88dcc648bef437707e0549c4792"
+    },
+    {
+      "target": "subclass-feature|gloom stalker|ranger|xphb|gloom stalker|xphb|3|xphb",
+      "digest": "5e1f8ebcee6a8ad0353751a06e7f732febc3e492c6903c167362d214d64f2cd1"
+    },
+    {
+      "target": "subclass-feature|drakewarden|ranger|phb|drakewarden|ftd|3|ftd",
+      "digest": "b60ce0136e9a3ad10def5b3543659b94e6b1ee1c63dbb2cc7de8fb69b20c30be"
+    },
+    {
+      "target": "subclass-feature|fey wanderer|ranger|phb|fey wanderer|tce|3|tce",
+      "digest": "6db060888911894687bc0092a0ca7bd0dca04e97c4597b7300e4342480102e8d"
+    },
+    {
+      "target": "subclass-feature|fey wanderer|ranger|xphb|fey wanderer|xphb|3|xphb",
+      "digest": "5d503b2cf043613ac29aebc633e74d30fdf4a06d0ccb3dfca49ef05cf2367a10"
+    },
+    {
       "target": "subclass-feature|warrior of mercy|monk|xphb|mercy|xphb|3|xphb",
       "digest": "c934e8040b01f8ae5ed475d062651cbf16f6d9276c3caa66cdb56e45c53066cb"
     },

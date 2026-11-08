@@ -180,17 +180,52 @@ test('source removal suspends the exact option and restoration keeps intent', ()
   )
   expect(pool.every((row) => row.availability === 'retained')).toBe(true)
   const legacy = load(document, 'PHB')
-  expect(setup(character('PHB', 20), legacy).map((row) => [row.label, row.options.length])).toEqual(
-    [
-      [prey, 3],
-      [defense, 3],
-      ['Multiattack', 2],
-      ["Superior Hunter's Defense", 3],
-    ],
+  const classicActor = character('PHB', 20)
+  const classicChoices = setup(classicActor, legacy)
+  expect(classicChoices.map((row) => [row.label, row.options.length])).toEqual([
+    [prey, 3],
+    [defense, 3],
+    ['Multiattack', 2],
+    ["Superior Hunter's Defense", 3],
+  ])
+  const classic = classicChoices.reduce(
+    (prior, choice) => choose(prior, legacy, choice, [choice.options[1]]),
+    classicActor,
   )
+  const classicText = summaries(classic, legacy)
+  for (const choice of classicChoices) {
+    expect(classicText.split(choice.options[1].name)).toHaveLength(2)
+    expect(classicText).not.toContain(choice.options[0].name)
+  }
 })
 
 type SubclassFeatureLike = { name: string; source: string }
+
+test('classic Hunter prints only the exact authored body of a reopened selection', () => {
+  const legacy = load(document, 'PHB')
+  const actor = character('PHB', 3)
+  const choice = setup(actor, legacy)[0]
+  const hordeBreaker = choice.options.find((row) => row.name === 'Horde Breaker')!
+  const saved = choose(actor, legacy, choice, [hordeBreaker])
+  expect(summaries(saved, legacy)).toContain('Horde Breaker: Once on each of your turns')
+  expect(summaries(saved, legacy).split('Horde Breaker')).toHaveLength(2)
+
+  const copy = structuredClone(document)
+  const selected = copy.subclassFeature.find(
+    (row: SubclassFeatureLike) => row.name === 'Horde Breaker' && row.source === 'PHB',
+  )
+  const base = copy.subclassFeature.find(
+    (row: SubclassFeatureLike) => row.name === 'Giant Killer' && row.source === 'PHB',
+  )
+  const { entries, ...identity } = base
+  expect(entries).toBeDefined()
+  delete selected.entries
+  selected._copy = identity
+  const copied = load(copy, 'PHB')
+  expect(summaries(saved, copied)).not.toContain('Horde Breaker:')
+  expect(summaries(saved, copied)).not.toContain('Large or larger creature')
+  expect(summaries(saved, legacy)).toContain('Horde Breaker: Once on each of your turns')
+})
 
 test('optional variants and missing class gains do not grant Hunter choices', () => {
   const variant = structuredClone(document)

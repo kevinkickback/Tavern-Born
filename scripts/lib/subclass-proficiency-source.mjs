@@ -636,12 +636,18 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
-  const draconicDisciple = features.flatMap((feature) => {
+  const dragonTongues = features.flatMap((feature) => {
+    const monk =
+      feature.name === 'Draconic Disciple' &&
+      feature.className === 'Monk' &&
+      feature.subclassShortName === 'Ascendant Dragon'
+    const ranger =
+      feature.name === 'Draconic Gift' &&
+      feature.className === 'Ranger' &&
+      feature.subclassShortName === 'Drakewarden'
     if (
-      feature.name !== 'Draconic Disciple' ||
-      feature.className !== 'Monk' ||
+      !(monk || ranger) ||
       feature.classSource !== 'PHB' ||
-      feature.subclassShortName !== 'Ascendant Dragon' ||
       feature.source !== 'FTD' ||
       feature.subclassSource !== 'FTD'
     )
@@ -661,11 +667,11 @@ export function deriveSubclassProficiencyRules(
       feature._copy ||
       clauses.length !== 1 ||
       typeof clause !== 'string' ||
-      !/^You learn to speak, read, and write \{@language [^{}|]+\} or one other language of your choice\.$/.test(
+      !/^You learn to speak, read, and write (?:\{@language [^{}|]+\}|Draconic) or one other language of your choice\.$/.test(
         clause,
       )
     )
-      fail('Unsupported Draconic Disciple language clause')
+      fail(`Unsupported ${feature.name} language clause`)
     seen.add(target)
     return [
       {
@@ -682,6 +688,59 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
+  const feyGlamour = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Otherworldly Glamour' ||
+      feature.className !== 'Ranger' ||
+      feature.subclassShortName !== 'Fey Wanderer' ||
+      feature.source !== feature.subclassSource ||
+      !(
+        (feature.classSource === 'PHB' && feature.source === 'TCE') ||
+        (feature.classSource === 'XPHB' && feature.source === 'XPHB')
+      )
+    )
+      return []
+    const target = identity(feature)
+    const clauses = (Array.isArray(feature.entries) ? feature.entries : []).flatMap((entry) => {
+      const match =
+        typeof entry === 'string' &&
+        /^(?:In addition, you gain|You also gain) proficiency in (one|two) of (?:the following|these) skills of your choice: ((?:\{@skill [^{}]+\}, )+or \{@skill [^{}]+\})\.$/.exec(
+          entry,
+        )
+      return match ? [match] : []
+    })
+    const [clause] = clauses
+    const tags = clause ? [...clause[2].matchAll(/\{@skill ([^{}|]+)(?:\|([^{}|]+))?\}/g)] : []
+    const skillPool = tags.map((tag) => tag[1].toLowerCase())
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature._copy ||
+      clauses.length !== 1 ||
+      tags.some((tag) => tag[2] !== (feature.source === 'XPHB' ? 'XPHB' : undefined)) ||
+      new Set(skillPool).size !== tags.length ||
+      tags.length < NUMBERS[clause[1]]
+    )
+      fail('Unsupported Otherworldly Glamour proficiency clause')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [
+          { domain: 'skills', count: NUMBERS[clause[1]], skillPool, excludeExisting: true },
+        ],
+      },
+    ]
+  })
   return [
     ...paired,
     ...simpleSkills,
@@ -690,7 +749,8 @@ export function deriveSubclassProficiencyRules(
     ...skillOrLanguage,
     ...knightlyEnvoy,
     ...archerLore,
-    ...draconicDisciple,
+    ...dragonTongues,
+    ...feyGlamour,
   ].sort((a, b) => a.target.localeCompare(b.target))
 }
 

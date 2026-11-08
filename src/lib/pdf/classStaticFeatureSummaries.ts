@@ -6,6 +6,7 @@ import {
   WORDS_OF_CREATION_TARGET,
 } from '@/lib/5etools/bardSpellSources'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
+import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getClassResourceDefs, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   getClassFeatureIdentity,
@@ -20,8 +21,10 @@ import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSo
 import {
   decodeOptionalDeclaration,
   exactOptionalDeclarationReference,
+  optionalDeclarationObject as record,
   scanOptionalDeclarationReferences,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { revisedHunterRules } from '@/lib/5etools/revisedHunterIdentity'
 import {
   getCurrentNativeSorcerer,
   getDraconicPresence,
@@ -33,7 +36,7 @@ import {
 import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronFeatureSource'
 import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import { getClassChoiceFeatureId, getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   getCharacterClassChoices,
   getEarnedFixedClassChoiceOptions,
@@ -251,6 +254,88 @@ function featureSummary(
   return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
 }
 
+function getClassicHunterSelectedRules(
+  character: Character,
+  owner: CharacterClassEntry,
+  feature: SubclassFeature,
+) {
+  const groups = (feature.entries ?? []).map(record).filter((row) => row.type === 'options')
+  const group = groups[0]
+  const level = feature.level
+  if (
+    !level ||
+    groups.length !== 1 ||
+    !Array.isArray(group.entries) ||
+    typeof group.count !== 'number'
+  )
+    return []
+  const id = getNormalizedClassChoiceId(
+    {
+      type: 'subclass',
+      name: owner.name,
+      source: owner.source,
+      subclassName: owner.subclass,
+      subclassSource: owner.subclassSource,
+    },
+    feature.name,
+    level,
+  )
+  const rows = character.classChoiceSelections?.filter((selection) => selection.choiceId === id)
+  const saved = rows?.[0]
+  if (
+    rows?.length !== 1 ||
+    !saved ||
+    saved.inactive ||
+    saved.kind !== 'subclass-feature' ||
+    saved.classLevel !== feature.level ||
+    getFeatureOwnerKey(
+      saved.className,
+      saved.classSource,
+      saved.subclassName,
+      saved.subclassSource,
+    ) !== getFeatureOwnerKey(owner.name, owner.source, owner.subclass, owner.subclassSource) ||
+    saved.selected.length !== group.count ||
+    new Set(saved.selected.map((option) => getClassChoiceFeatureId(saved, option))).size !==
+      group.count
+  )
+    return []
+  const refs = group.entries.map(record)
+  return saved.selected.flatMap((option) => {
+    if (
+      option.entityType !== 'subclassFeature' ||
+      option.slotLevel !== feature.level ||
+      !option.ref ||
+      norm(option.source) !== norm(feature.source)
+    )
+      return []
+    const target = decodeOptionalDeclaration(option.ref, 'subclassFeature')?.target
+    const choices = refs.filter(
+      (row) =>
+        row.type === 'refSubclassFeature' &&
+        typeof row.subclassFeature === 'string' &&
+        decodeOptionalDeclaration(row.subclassFeature, 'subclassFeature')?.target === target &&
+        exactOptionalDeclarationReference(row, row.subclassFeature, 'subclassFeature'),
+    )
+    const choice = choices[0]?.feature as SubclassFeature | undefined
+    return target &&
+      choices.length === 1 &&
+      choice &&
+      !choice.sourceIdentityConflict &&
+      !choice.featureOptionSourceConflict &&
+      !choice.isClassFeatureVariant &&
+      !('_copy' in choice) &&
+      norm(choice.name) === norm(option.name) &&
+      getSubclassFeatureIdentity(choice) === target
+      ? featureSummary(choice).map((summary) => ({
+          ...summary,
+          replaces: character.features.find(
+            (row) => row.id === getClassChoiceFeatureId(saved, option),
+          ),
+        }))
+      : []
+  })
+}
+
 function savedClassLabel(
   character: Character,
   entry: CharacterClassEntry,
@@ -463,6 +548,7 @@ export function getClassStaticFeatureSummaries(
         name !== 'fighter' &&
         name !== 'monk' &&
         name !== 'paladin' &&
+        name !== 'ranger' &&
         name !== 'wizard' &&
         name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
@@ -510,6 +596,53 @@ export function getClassStaticFeatureSummaries(
         ),
         ...fixed.flatMap((feature) => featureSummary(feature)),
       ]
+    }
+    if (name === 'ranger') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const sheetRules = new Set([
+        'extra attack',
+        "land's stride",
+        'hide in plain sight',
+        'vanish',
+        'roving',
+        'tireless',
+        'relentless hunter',
+        "nature's veil",
+        'precise hunter',
+        'feral senses',
+        'foe slayer',
+      ])
+      const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+        if (!ref.level || ref.level > entry.levels || !sheetRules.has(norm(ref.name))) return []
+        const target = getClassFeatureIdentity(ref)
+        const current = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        return current ? [current] : []
+      })
+      const archetype = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      const classicHunter =
+        norm(entry.subclass) === 'hunter' && norm(entry.subclassSource) === 'phb'
+      const confirmed = classicHunter
+        ? archetype.flatMap((feature) => getClassicHunterSelectedRules(character, entry, feature))
+        : []
+      const declared = [...base, ...archetype].flatMap((feature) => {
+        const target = getSubclassFeatureIdentity(feature)
+        const revisedChoice = revisedHunterRules.some((rule) => rule.target === target)
+        const classicChoice = classicHunter && 'subclassShortName' in feature
+        // The confirmed options are printed independently of the granting rules.
+        const entries = feature.entries?.filter((entry) =>
+          revisedChoice
+            ? typeof entry === 'string'
+            : !classicChoice || record(entry).type !== 'options',
+        )
+        return featureSummary(feature, entries).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        }))
+      })
+      return [...confirmed, ...declared]
     }
     if (name === 'fighter') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []

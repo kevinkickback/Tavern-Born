@@ -119,6 +119,10 @@ export function buildCompanionSheetData(
       : typeof value === 'string'
         ? value
         : ''
+  const companionBonus = (value: unknown) => {
+    const match = typeof value === 'string' && /^([+-]?\d+)\s*\+\s*PB$/u.exec(value)
+    return match ? bonus(Number(match[1]) + vm.proficiencyBonus) : bonus(value)
+  }
   const addsProficiencyToChecksAndSaves =
     !companion.classicRangerLevel &&
     (creature?.trait ?? []).some((trait) =>
@@ -134,7 +138,8 @@ export function buildCompanionSheetData(
     ...ability,
     modifier: ability.score == null ? '' : ability.modifier,
     save: checkBonus(
-      bonus(creature?.save?.[ability.key]) || (ability.score == null ? '' : ability.modifier),
+      companionBonus(creature?.save?.[ability.key]) ||
+        (ability.score == null ? '' : ability.modifier),
     ),
     trained: creature?.save?.[ability.key] != null,
   }))
@@ -143,7 +148,7 @@ export function buildCompanionSheetData(
     return {
       name,
       modifier: checkBonus(
-        bonus(creature?.skill?.[name]) ||
+        companionBonus(creature?.skill?.[name]) ||
           abilities.find((ability) => ability.key === key)?.modifier ||
           '',
       ),
@@ -166,7 +171,7 @@ export function buildCompanionSheetData(
   )
   const actions = (creature?.action ?? []).map((action) => {
     const raw = JSON.stringify(action.entries ?? [])
-    const hit = /\{@hit ([+-]?\d+)\}/u.exec(raw)?.[1]
+    const hit = /\{@hit ([+-]?\d+)\}( plus PB)?/u.exec(raw)
     const fixed = companion.classicRangerLevel ? /\{@h\}\s*(\d+) ([a-z]+) damage/iu.exec(raw) : null
     // A separate save effect belongs in the full description, outside the fixed hit.
     const rolled = fixed
@@ -175,29 +180,31 @@ export function buildCompanionSheetData(
         )?.[0]
       : raw
     const damage =
-      /\{@damage ([^}|]+)[^}]*\}\)?(?: plus your (strength|dexterity|constitution|intelligence|wisdom|charisma) modifier)?(?: ([a-z]+) damage)?/iu.exec(
+      /\{@damage ([^}|]+)[^}]*\}\)?(?: plus (PB)| plus your (strength|dexterity|constitution|intelligence|wisdom|charisma) modifier)?(?: ([a-z]+) damage)?/iu.exec(
         rolled ?? '',
       )
     const damageParts = damage
       ? [
           damage[1],
           damage[2]
-            ? `${vm.abilityModifiers[damage[2].toLowerCase() as AbilityName] >= 0 ? '+' : '-'} ${Math.abs(vm.abilityModifiers[damage[2].toLowerCase() as AbilityName])}`
-            : '',
-          damage[3],
+            ? `+ ${vm.proficiencyBonus}`
+            : damage[3]
+              ? `${vm.abilityModifiers[damage[3].toLowerCase() as AbilityName] >= 0 ? '+' : '-'} ${Math.abs(vm.abilityModifiers[damage[3].toLowerCase() as AbilityName])}`
+              : '',
+          damage[4],
         ]
       : []
     // Mixed hits use short type labels in the narrow cell. The description retains full labels.
     const damageSummary =
       fixed && damage
-        ? `${fixed[1]} ${fixed[2].slice(0, 4)} + ${damage[1].replace(/\s+/gu, '')} ${damage[3]?.slice(0, 4) ?? ''}`.trimEnd()
+        ? `${fixed[1]} ${fixed[2].slice(0, 4)} + ${damage[1].replace(/\s+/gu, '')} ${damage[4]?.slice(0, 4) ?? ''}`.trimEnd()
         : fixed
           ? `${fixed[1]} ${fixed[2]}`
           : damageParts.filter(Boolean).join(' ')
     return {
       name: action.name ?? '',
       bonus: hit
-        ? bonus(Number(hit))
+        ? bonus(Number(hit[1]) + (hit[2] ? vm.proficiencyBonus : 0))
         : /\{@hitYourSpellAttack\b/u.test(raw)
           ? bonus(spellAttackBonus)
           : '',

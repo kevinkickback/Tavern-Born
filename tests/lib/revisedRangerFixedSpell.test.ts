@@ -108,6 +108,34 @@ test('revised Favored Enemy grants exact Mark outside ordinary quota through Act
   expect(text).toContain("Hunter's Mark")
 })
 
+test("Foe Slayer attaches the earned Hunter's Mark die to the existing prepared spell", () => {
+  const note = (levels: number, inputs = lookups) =>
+    createCharacterSheetViewModel(
+      { ...actor, classProgression: [{ ...actor.classProgression[0], levels }] },
+      inputs,
+      inputs,
+    ).spellRows.find((spell) => spell.name === "Hunter's Mark")?.castingNote
+  expect(note(19)).toBe('')
+  expect(note(20)).toContain('d10')
+  const edited = structuredClone(document)
+  const feature = edited.classFeature.find(
+    (row: { name: string; source: string }) => row.name === 'Foe Slayer' && row.source === 'XPHB',
+  )
+  feature.entries[0] = feature.entries[0].replace('d10', 'd12')
+  const changed = parseClassDocument(edited, file)
+  const changedClasses = changed.classes as Class5e[]
+  const changedLookups = {
+    ...lookups,
+    classChoiceClasses: changedClasses,
+    classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+      classes: changedClasses,
+      classFeatures: changed.classFeatures as ClassFeature[],
+      classCastingSources: changed.classCastingSources,
+    }),
+  }
+  expect(note(20, changedLookups)).toContain('d12')
+})
+
 test('source loss and restoration preserve a previously chosen independent daily Mark', () => {
   const missingFeature = {
     ...current,

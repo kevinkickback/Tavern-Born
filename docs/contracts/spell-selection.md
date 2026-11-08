@@ -423,3 +423,13 @@ feature, cost, timing and component rules. They take no prepared spell or ordina
 capacity. Where the granting text also names a cost or spell printing, verify that it agrees
 with the schedule. The 2014 Open Hand rest effect and Empty Body's self-only Astral Projection
 also stay outside the prepared list. The creator keeps its existing manual resource controls.
+
+## Ranger subclass spells
+
+Read earned spells from the current subclass schedule and compare it with the named granting
+table. Revised Fey Wanderer uses the table's always-prepared rule even though the source
+schedule labels those entries learned. Inherited classic grants require the current classic
+declaration and exact same-rank revised spell reprint. An inherited cantrip remains a separate
+fixed grant. Later Fey Reinforcements and Misty Wanderer retain the earlier preparation or
+learned spell and expose their own casting rules when earned. Ethereal Step stays outside
+ordinary spell capacity and uses the source's shorter casting time and duration.

@@ -49,6 +49,7 @@ export interface ManagedClassSpellChoice {
 }
 export interface FeatureCastOnlyRules {
   castingTime?: string
+  duration?: string
   ignoresMaterial?: true
   ignoresComponents?: true
 }

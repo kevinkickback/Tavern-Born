@@ -334,7 +334,7 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "10969eaa1a06eb689a146ddfe80fe5e428fe2c630366b85458f8e8689754178a"
+      "sha256": "b5a78cea2157b3d6f9f6c80529b3236366212937697122a230b77e282c653f91"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
@@ -386,7 +386,7 @@
     },
     {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
-      "sha256": "805a006a4de9b962c923e32447d46be32463ebec02e54b7198d7c655bd49aed7"
+      "sha256": "e76be0f516fdd0d4f658d3d22e92d247927183083c3878bb410e84f540db2bea"
     },
     {
       "file": "src/lib/5etools/nativeSubclassGain.ts",
@@ -446,7 +446,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "ada6712181ce3dfef8b44267f38283b355cdcdc23973a33bd9f5104712f3fcad"
+      "sha256": "9305fc42c0859d1fcc097a28a255d6d7f5dae6f313c4a74f0859bd02d3c38661"
     },
     {
       "file": "src/lib/5etools/parsers/shared.ts",
@@ -479,6 +479,10 @@
     {
       "file": "src/lib/5etools/psionics.ts",
       "sha256": "cc4fe2477faeb9822f0c04d60d4e1677aca50d315366799d66d9d489bbe8f2c4"
+    },
+    {
+      "file": "src/lib/5etools/rangerSubclassSpells.ts",
+      "sha256": "2b3dcb357394736315ef755c8f5e8e0b3815ebf07066f5d0e0eb12bf3082b383"
     },
     {
       "file": "src/lib/5etools/reprints.ts",
@@ -558,7 +562,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.ts",
-      "sha256": "67fea7d4e5a09878bee676e5e904f81713633495fbe03602b4f82c2a2f882e94"
+      "sha256": "7812ed19773e70b4d761757ae77303c6cbb7ed10414f36773f9fdaacb1437ba3"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
@@ -574,7 +578,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
-      "sha256": "d2346677ea9a565b593f0826fca2f3fcd8ccb57f8ad323a94e87388baa880cb4"
+      "sha256": "c1bc4adace17ee98f67a8e282e7968fa47da9756f1d82ac2adbc678755051c7d"
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
@@ -586,7 +590,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "4dda88c9bfc9565cbe566a19945e453b6695413e6398374f46abb7768a466219"
+      "sha256": "90ba2e31854d4a2ab455839c275e49cab9690315ddb0cc8923d0271b6641524c"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
@@ -718,7 +722,7 @@
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "5087d1e697717d49200793ea39a59e53362a0c0328b49bf796533e645c930e9e"
+      "sha256": "59f91e3bd48448b0526a5f58a3e5dfe96717a123b4ddea53e314cb029c34ffa3"
     },
     {
       "file": "src/types/classRules.ts",

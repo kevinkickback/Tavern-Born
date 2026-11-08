@@ -122,6 +122,7 @@ import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
 } from './originSystem'
+import { deriveRangerPassiveEffects } from './rangerPassiveEffects'
 import { ALL_SKILLS } from './skills'
 
 type CoreRulesMetadata = (typeof CORE_RULES_METADATA)[keyof typeof CORE_RULES_METADATA] & {
@@ -663,6 +664,14 @@ export function createCharacterCalculationContext(
       prerequisites,
     ),
   ]
+  sourceEffects.push(
+    ...deriveRangerPassiveEffects(
+      character,
+      choiceCatalogs,
+      abilityScores.modifiers.wisdom,
+      sourceEffects,
+    ),
+  )
   const wildHeart = deriveWildHeartAspectEffect(character, choiceCatalogs, sourceEffects)
   if (wildHeart) sourceEffects.push(wildHeart)
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)

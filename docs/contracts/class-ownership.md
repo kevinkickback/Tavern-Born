@@ -123,6 +123,12 @@ saved gain. A later class level cannot make a pick retroactively eligible in an 
 Classic Four Elements uses the source's required discipline and cumulative schedule this way.
 When its option record and the parent declaration both specify a prerequisite, they must agree.
 
+Ranger's Fey Wanderer skill and Drakewarden language use the existing proficiency workflow at
+the current subclass gain. Iron Mind uses the same historical setup as other fixed proficiencies
+with a fallback choice. A Drakewarden's current source supplies its fixed stat block and
+later size and movement changes. Damage type is chosen when the drake is summoned. The
+creator and sheet describe that rule and leave the choice to play.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.
