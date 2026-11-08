@@ -386,7 +386,7 @@
     },
     {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
-      "sha256": "da4b3c7d19ef7618046ce189f01317e687a77b2b92246a4cd6aa4fa3e7d85566"
+      "sha256": "e76be0f516fdd0d4f658d3d22e92d247927183083c3878bb410e84f540db2bea"
     },
     {
       "file": "src/lib/5etools/nativeSubclassGain.ts",

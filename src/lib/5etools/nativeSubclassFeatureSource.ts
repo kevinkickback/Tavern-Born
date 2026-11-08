@@ -88,10 +88,11 @@ const directRangerRules = new Set([
 ])
 
 export function isDirectRangerRuleTarget(target: string | undefined) {
-  const [, name, className, , subclass] = target?.split('|') ?? []
+  const [, name, className, classSource, subclass, subclassSource] = target?.split('|') ?? []
   return (
     className === 'ranger' &&
     (name === subclass ||
+      (classSource === 'phb' && subclass === 'hunter' && subclassSource === 'phb') ||
       name === `${subclass} spells` ||
       name === `${subclass} magic` ||
       directRangerRules.has(name))
