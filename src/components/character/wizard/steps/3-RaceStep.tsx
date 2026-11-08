@@ -22,7 +22,7 @@ import {
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
-import { CreatorEntityDetails, DetailSection } from '../../DetailCards'
+import { CreatorEntityDetails, DetailRow } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
@@ -300,57 +300,33 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               </div>
             </div>
 
-            {showsRaceBonuses && (
-              <div className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Ability Scores
-                  </span>
-                </div>
-                {asi.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {asi.map((a) => (
-                      <span
-                        key={a}
-                        className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent/10 border border-accent/30 text-sm font-medium"
-                      >
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Info sections — always shown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <DetailSection label="Languages" empty={!languages}>
-                {languages || 'None'}
-              </DetailSection>
-
-              <DetailSection label="Skill Proficiencies" empty={skills.length === 0}>
-                {skills.length > 0 ? skills.join(', ') : 'None'}
-              </DetailSection>
-
-              <DetailSection label="Resistances" empty={resistances === '—'}>
-                {resistances === '—' ? 'None' : resistances}
-              </DetailSection>
-
-              <DetailSection
-                label="Immunities"
-                empty={immunities === '—' && conditionImmunities === '—'}
-              >
-                {immunities !== '—' || conditionImmunities !== '—'
-                  ? [
-                      immunities !== '—' ? immunities : '',
-                      conditionImmunities !== '—' ? `${conditionImmunities} (condition)` : '',
-                    ]
-                      .filter(Boolean)
-                      .join(', ')
-                  : 'None'}
-              </DetailSection>
+            <div className="border-t border-border">
+              {showsRaceBonuses && (
+                <DetailRow label="Ability Scores">
+                  <p className="text-sm text-muted-foreground">{asi.join(' · ') || 'None'}</p>
+                </DetailRow>
+              )}
+              <DetailRow label="Languages">
+                <p className="text-sm text-muted-foreground">{languages || 'None'}</p>
+              </DetailRow>
+              <DetailRow label="Skill Proficiencies">
+                <p className="text-sm text-muted-foreground">{skills.join(', ') || 'None'}</p>
+              </DetailRow>
+              <DetailRow label="Resistances">
+                <p className="text-sm text-muted-foreground">
+                  {resistances === '—' ? 'None' : resistances}
+                </p>
+              </DetailRow>
+              <DetailRow label="Immunities">
+                <p className="text-sm text-muted-foreground">
+                  {[
+                    immunities !== '—' && immunities,
+                    conditionImmunities !== '—' && `${conditionImmunities} (condition)`,
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || 'None'}
+                </p>
+              </DetailRow>
             </div>
 
             {/* Traits */}

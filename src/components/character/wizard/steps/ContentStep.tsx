@@ -30,16 +30,30 @@ export function ContentStep({
   const [search, setSearch] = useState('')
   const [requestedCategory, setCategory] = useState('all')
   const [selectedOnly, setSelectedOnly] = useState(false)
-  const query = search.trim().toLowerCase()
   const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
-  const displaySources = selectableSources.filter(
+  const displaySources = sources.filter(
+    (source) => source.hasCharacterOptions !== false || IMPLICIT_SOURCES.has(source.abbreviation),
+  )
+  const hasAdditionalSources = selectableSources.some(
     (source) => !IMPLICIT_SOURCES.has(source.abbreviation),
   )
-  const coreSource = data.originSystem
-    ? selectableSources.find(
-        (source) => source.abbreviation === getImplicitSource(data.originSystem || '2014'),
-      )
-    : undefined
+  const query = hasAdditionalSources ? search.trim().toLowerCase() : ''
+  const filterSelected = hasAdditionalSources && selectedOnly
+  const includedCore = data.originSystem ? getImplicitSource(data.originSystem) : undefined
+  if (includedCore && displaySources.some((source) => source.abbreviation === includedCore)) {
+    const otherEdition = data.originSystem === '2024' ? '2014' : '2024'
+    const otherCore = getImplicitSource(otherEdition)
+    if (!displaySources.some((source) => source.abbreviation === otherCore)) {
+      // This is a disabled reference in the UI. Only the loaded catalog supplies selectable content.
+      displaySources.push({
+        abbreviation: otherCore,
+        name: "Player's Handbook",
+        group: 'core',
+        year: Number(otherEdition),
+        hasCharacterOptions: false,
+      })
+    }
+  }
   const configuredSources = data.allowedSources || []
   const allowedSources = data.originSystem
     ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
@@ -48,10 +62,9 @@ export function ContentStep({
   const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
   const sourcesByGroup = displaySources.reduce<Record<string, SourceBook[]>>((acc, source) => {
-    if (!acc[source.group]) {
-      acc[source.group] = []
-    }
-    acc[source.group].push(source)
+    const group = IMPLICIT_SOURCES.has(source.abbreviation) ? 'core' : source.group
+    if (!acc[group]) acc[group] = []
+    acc[group].push(source)
     return acc
   }, {})
 
@@ -78,13 +91,15 @@ export function ContentStep({
     ]),
   ]
 
-  const category = sourcesByGroup[requestedCategory]?.length ? requestedCategory : 'all'
+  const category =
+    hasAdditionalSources && sourcesByGroup[requestedCategory]?.length ? requestedCategory : 'all'
   const visibleGroups = groupOrder.flatMap((group) => {
     if (category !== 'all' && category !== group) return []
     const books = (sourcesByGroup[group] ?? [])
       .filter(
         (source) =>
-          (!selectedOnly || selected.has(source.abbreviation)) &&
+          (!filterSelected ||
+            (!IMPLICIT_SOURCES.has(source.abbreviation) && selected.has(source.abbreviation))) &&
           (source.name.toLowerCase().includes(query) ||
             source.abbreviation.toLowerCase().includes(query)),
       )
@@ -93,6 +108,7 @@ export function ContentStep({
   })
 
   const toggleSource = (sourceAbbr: string) => {
+    if (IMPLICIT_SOURCES.has(sourceAbbr)) return
     const source =
       selectableSources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
     if (data.originSystem && !getSourceCompatibility(source, data.originSystem).compatible) return
@@ -145,16 +161,9 @@ export function ContentStep({
   const sourceWarning =
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
-  const includedSource = coreSource && (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-workspace-canvas px-3 py-2 text-sm">
-      <span className="font-semibold">{coreSource.name}</span>
-      <span className="text-xs text-muted-foreground">Included</span>
-    </div>
-  )
-
   return (
     <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
-      <div className="shrink-0 space-y-2 rounded-lg border border-border bg-workspace-canvas px-3 py-2 max-lg:space-y-1 max-lg:py-1">
+      <div className="shrink-0 space-y-2 pb-1 max-lg:space-y-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold">Additional Content</h3>
@@ -164,7 +173,7 @@ export function ContentStep({
               </span>
             )}
           </div>
-          {!isBundledSrd && displaySources.length > 0 && (
+          {!isBundledSrd && hasAdditionalSources && (
             <fieldset className="flex flex-wrap items-center gap-1" aria-label="Sourcebook presets">
               <span className="mr-1 text-xs text-muted-foreground">Presets</span>
               {SOURCE_PRESETS.map((preset) => {
@@ -196,7 +205,7 @@ export function ContentStep({
             </fieldset>
           )}
         </div>
-        {!isBundledSrd && displaySources.length > 0 && (
+        {!isBundledSrd && hasAdditionalSources && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-36 flex-1">
               <MagnifyingGlass
@@ -256,12 +265,9 @@ export function ContentStep({
           </p>
         </div>
       ) : displaySources.length === 0 ? (
-        <>
-          {includedSource}
-          <p className="py-4 text-sm text-muted-foreground">
-            No additional content is available. To add sourcebooks, open Settings → Game Data.
-          </p>
-        </>
+        <p className="py-4 text-sm text-muted-foreground">
+          No additional content is available. To add sourcebooks, open Settings → Game Data.
+        </p>
       ) : (
         <>
           <section
@@ -270,13 +276,9 @@ export function ContentStep({
             aria-label="Additional Content"
             className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {!query &&
-              !selectedOnly &&
-              (category === 'all' || category === 'core') &&
-              includedSource}
             {visibleGroups.length === 0 && (
               <p role="status" className="p-3 text-sm text-muted-foreground">
-                {category === 'all' && !selectedOnly
+                {category === 'all' && !filterSelected
                   ? 'No sources match your search.'
                   : 'No books match these filters.'}
               </p>
@@ -295,10 +297,11 @@ export function ContentStep({
                       key={source.abbreviation}
                       source={source}
                       selected={selected.has(source.abbreviation)}
+                      included={source.abbreviation === includedCore}
                       compatibility={
                         data.originSystem
                           ? getSourceCompatibility(source, data.originSystem)
-                          : { compatible: true }
+                          : { compatible: !IMPLICIT_SOURCES.has(source.abbreviation) }
                       }
                       onClick={() => toggleSource(source.abbreviation)}
                       showSelection
@@ -308,44 +311,51 @@ export function ContentStep({
                 </div>
               </section>
             ))}
-          </section>
-          <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
-            <div
-              className="grid border-l-2 border-border bg-surface-raised/50"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <p
-                aria-hidden={hasNonPresetSourcesSelected}
-                className={cn(
-                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
-                  hasNonPresetSourcesSelected && 'opacity-0',
-                )}
-              >
-                <BookOpen className="mt-0.5 size-4 shrink-0" />
-                <span>{sourceGuidance}</span>
-              </p>
-              <p
-                aria-hidden={!hasNonPresetSourcesSelected}
-                className={cn(
-                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
-                  !hasNonPresetSourcesSelected && 'opacity-0',
-                )}
-              >
-                <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
-                <span>{sourceWarning}</span>
-              </p>
-            </div>
-            {data.originSystem === '2024' && (
-              <p className="flex items-start gap-2 text-muted-foreground">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                <span>
-                  Revised replacements are always used. Compatible older options remain available
-                  when no revised version exists.
-                </span>
+            {!hasAdditionalSources && (
+              <p className="py-2 text-sm text-muted-foreground">
+                No additional content is available. To add sourcebooks, open Settings → Game Data.
               </p>
             )}
-          </div>
+          </section>
+          {hasAdditionalSources && (
+            <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
+              <div
+                className="grid border-l-2 border-border bg-surface-raised/50"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <p
+                  aria-hidden={hasNonPresetSourcesSelected}
+                  className={cn(
+                    'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                    hasNonPresetSourcesSelected && 'opacity-0',
+                  )}
+                >
+                  <BookOpen className="mt-0.5 size-4 shrink-0" />
+                  <span>{sourceGuidance}</span>
+                </p>
+                <p
+                  aria-hidden={!hasNonPresetSourcesSelected}
+                  className={cn(
+                    'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                    !hasNonPresetSourcesSelected && 'opacity-0',
+                  )}
+                >
+                  <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <span>{sourceWarning}</span>
+                </p>
+              </div>
+              {data.originSystem === '2024' && (
+                <p className="flex items-start gap-2 text-muted-foreground">
+                  <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Revised replacements are always used. Compatible older options remain available
+                    when no revised version exists.
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
         </>
       )}
     </section>

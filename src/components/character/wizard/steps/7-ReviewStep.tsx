@@ -2,7 +2,6 @@ import { Warning } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
@@ -24,7 +23,8 @@ import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUt
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
-import type { CharacterWizardData, WizardStepId } from '../types'
+import { PortraitCardPreview } from '../../PortraitCardPreview'
+import type { CharacterWizardData } from '../types'
 
 interface ReviewStepProps {
   data: CharacterWizardData
@@ -32,39 +32,13 @@ interface ReviewStepProps {
   sources: SourceBook[]
   backgroundAbilityData?: BackgroundAbilityData
   variantRuleAvailability?: VariantRuleContentAvailability
-  onEditStep?: (step: WizardStepId) => void
 }
 
-function EditButton({ label, onEdit }: { label: string; onEdit?: () => void }) {
-  return (
-    onEdit && (
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        aria-label={`Edit ${label.toLowerCase()}`}
-        onClick={onEdit}
-      >
-        Edit
-      </Button>
-    )
-  )
-}
-
-function ReviewRow({
-  label,
-  children,
-  onEdit,
-}: {
-  label: string
-  children: ReactNode
-  onEdit?: () => void
-}) {
+function ReviewRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-h-10 items-center gap-3 py-1.5">
       <span className="w-20 shrink-0 text-xs text-muted-foreground">{label}</span>
       <div className="min-w-0 flex-1 break-words text-sm font-semibold">{children}</div>
-      <EditButton label={label} onEdit={onEdit} />
     </div>
   )
 }
@@ -75,7 +49,6 @@ export function ReviewStep({
   sources,
   backgroundAbilityData,
   variantRuleAvailability,
-  onEditStep,
 }: ReviewStepProps) {
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
@@ -168,23 +141,28 @@ export function ReviewStep({
         </Alert>
       )}
 
-      <section className="grid overflow-hidden rounded-lg border border-border bg-workspace-canvas md:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
-        <div className="flex flex-col justify-center p-4 sm:p-5">
+      <section className="grid overflow-hidden rounded-lg border border-border bg-workspace-canvas md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <div className="flex min-w-0 flex-col gap-2 p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Character snapshot
           </p>
-          <h3 className="mt-2 break-words text-2xl font-semibold">
-            {data.name || 'Unnamed character'}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Level 1{data.playerName && ` · Player: ${data.playerName}`}
-          </p>
-          <div className="mt-2 self-start">
-            <EditButton label="Identity" onEdit={onEditStep && (() => onEditStep('basics'))} />
-          </div>
+          <PortraitCardPreview
+            image={data.portrait}
+            name={data.name}
+            level={1}
+            race={getRaceDisplayName(data.race, data.subrace)}
+            characterClass={data.class}
+            gender={data.gender}
+            transform={data.portraitTransform}
+            className="max-w-sm"
+            showActions={false}
+          />
+          {data.playerName && (
+            <p className="text-xs text-muted-foreground">Player: {data.playerName}</p>
+          )}
         </div>
         <div className="min-w-0 divide-y divide-border border-t border-border bg-workspace-pane px-4 py-2 md:border-t-0 md:border-l">
-          <ReviewRow label="Race" onEdit={onEditStep && (() => onEditStep('race'))}>
+          <ReviewRow label="Race">
             <p>{getRaceDisplayName(data.race, data.subrace) || 'Not set'}</p>
             <p className="text-xs font-normal text-muted-foreground">
               {[
@@ -197,12 +175,8 @@ export function ReviewStep({
                 .join(' · ')}
             </p>
           </ReviewRow>
-          <ReviewRow label="Class" onEdit={onEditStep && (() => onEditStep('class'))}>
-            {data.class || 'Not set'}
-          </ReviewRow>
-          <ReviewRow label="Background" onEdit={onEditStep && (() => onEditStep('background'))}>
-            {data.background || 'Not set'}
-          </ReviewRow>
+          <ReviewRow label="Class">{data.class || 'Not set'}</ReviewRow>
+          <ReviewRow label="Background">{data.background || 'Not set'}</ReviewRow>
           <ReviewRow label="Ruleset">
             {data.originSystem ? getOriginSystemLabel(data.originSystem) : 'Not set'}
           </ReviewRow>
@@ -217,10 +191,6 @@ export function ReviewStep({
                 {data.abilityScoreMethod?.replace(/-/g, ' ') || 'Not set'}
               </Badge>
             </div>
-            <EditButton
-              label="Ability scores"
-              onEdit={onEditStep && (() => onEditStep('abilities'))}
-            />
           </div>
           <div className="grid grid-cols-3 gap-2 md:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6">
             {ABILITY_NAMES.map((ability) => {
@@ -259,7 +229,6 @@ export function ReviewStep({
         <section className="min-w-0 rounded-lg border border-border bg-workspace-canvas p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold">Variant Rules</h3>
-            <EditButton label="Rules" onEdit={onEditStep && (() => onEditStep('rules'))} />
           </div>
           <div className="divide-y divide-border">
             {variantRuleRows.map(({ label, enabled, available }) => (
@@ -276,7 +245,6 @@ export function ReviewStep({
       <section className="rounded-lg border border-border bg-workspace-canvas p-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">Sourcebooks</h3>
-          <EditButton label="Sourcebooks" onEdit={onEditStep && (() => onEditStep('content'))} />
         </div>
         {hasRestrictedSources ? (
           <div className="flex flex-wrap gap-1.5">

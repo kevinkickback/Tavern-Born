@@ -470,7 +470,7 @@ for (const viewport of [
     await search.fill('source 30')
     await expect(source).toHaveAttribute('aria-pressed', 'true')
     await wizard.getByRole('button', { name: 'Clear', exact: true }).click()
-    await expect(region.getByRole('button')).toHaveCount(30)
+    await expect(region.getByRole('button')).toHaveCount(32)
     await expect(wizard.getByRole('button', { name: 'Next' })).toBeInViewport()
     await page.screenshot({ path: info.outputPath('content-step.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()
@@ -639,8 +639,9 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await next.click()
   await expect(dialog.getByText('30+1 (capped)', { exact: true })).toBeVisible()
   await dialog.screenshot({ path: info.outputPath('review.png') })
-  await dialog.getByRole('button', { name: 'Edit ability scores', exact: true }).click()
-  await expect(dialog.getByRole('heading', { name: 'Set ability scores' })).toBeFocused()
+  await expect(dialog.getByRole('button', { name: /^Edit\b/ })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Back', exact: true }).click()
+  await expect(dialog.getByRole('heading', { name: 'Set ability scores' })).toBeVisible()
   await expect(dialog.getByRole('spinbutton', { name: 'constitution base score' })).toHaveValue(
     '30',
   )
@@ -649,7 +650,11 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await page.getByRole('option', { name: '13', exact: true }).click()
   await next.click()
   await expect(dialog.getByText('13+1', { exact: true })).toBeVisible()
-  await expect(dialog.getByText('Portrait Preview', { exact: true })).toHaveCount(0)
+  const reviewPortrait = dialog.locator('[data-slot=portrait-card-preview]')
+  await expect(
+    reviewPortrait.getByRole('img', { name: 'Character portrait card preview' }),
+  ).toBeVisible()
+  await expect(reviewPortrait.getByRole('button', { includeHidden: true })).toHaveCount(0)
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect

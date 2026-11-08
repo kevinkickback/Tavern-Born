@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -48,7 +48,19 @@ test('source search is a view filter and hidden selections, presets and None use
     screen.getByRole<HTMLButtonElement>('button', { name: /Revised Dungeon Master Guide/ })
       .disabled,
   ).toBe(true)
-  expect(screen.queryByRole('button', { name: /Revised Player Handbook/ })).toBeNull()
+  const coreGroup = screen.getByRole('heading', { name: 'Core Rulebooks' }).parentElement!
+  const included = within(coreGroup).getByRole<HTMLButtonElement>('button', {
+    name: /PHB Included/,
+  })
+  const incompatible = within(coreGroup).getByRole<HTMLButtonElement>('button', {
+    name: /XPHB Requires the 2024 ruleset/,
+  })
+  expect(included.disabled).toBe(true)
+  expect(incompatible.disabled).toBe(true)
+  expect(included.getAttribute('aria-pressed')).toBe('true')
+  await user.click(included)
+  await user.click(incompatible)
+  expect(screen.getByLabelText('Selected sources').textContent).toBe('XGE')
   await user.type(search, '  aTlAs ')
   expect(screen.queryByRole('button', { name: /Xanathar/ })).toBeNull()
   expect(screen.getByLabelText('Selected sources').textContent).toBe('XGE')
@@ -71,9 +83,29 @@ test('search is local to Additional Content and survives catalog refresh without
   const onChange = vi.fn()
   const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2024' as const }
   const { rerender } = render(<ContentStep data={data} sources={sources} onChange={onChange} />)
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /XPHB Included/ }).disabled).toBe(
+    true,
+  )
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', {
+      name: /PHB Replaced by the revised core rulebook/,
+    }).disabled,
+  ).toBe(true)
   await user.type(screen.getByRole('textbox', { name: 'Search sources' }), 'missing')
   expect(onChange).not.toHaveBeenCalled()
   expect(screen.queryByRole('switch')).toBeNull()
+  rerender(
+    <ContentStep
+      data={data}
+      sources={sources.filter((source) => source.abbreviation === 'XPHB')}
+      onChange={onChange}
+    />,
+  )
+  expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
+  expect(screen.getByRole('button', { name: /XPHB Included/ })).toBeTruthy()
+  expect(
+    screen.getByRole('button', { name: /PHB.*Replaced by the revised core rulebook/ }),
+  ).toBeTruthy()
   rerender(
     <ContentStep
       data={data}
@@ -92,7 +124,20 @@ test('core-only catalogs explain that no additional sources are available withou
   const core = buildSourcesList(['PHB'], {
     book: [{ id: 'PHB', name: 'Player Handbook', group: 'core' }],
   })
-  render(<ContentStep data={INITIAL_CHARACTER_DATA} sources={core} onChange={onChange} />)
+  render(
+    <ContentStep
+      data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2014' }}
+      sources={core}
+      onChange={onChange}
+    />,
+  )
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /PHB Included/ }).disabled).toBe(
+    true,
+  )
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: /XPHB.*Requires the 2024 ruleset/ })
+      .disabled,
+  ).toBe(true)
   expect(screen.getByText(/No additional content is available/)).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
   expect(onChange).not.toHaveBeenCalled()

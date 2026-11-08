@@ -58,6 +58,15 @@ export function DetailSection({
   )
 }
 
+export function DetailRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1 border-b border-border py-2 @sm:grid-cols-[minmax(8rem,1fr)_2fr]">
+      <h3 className="text-sm font-semibold">{label}</h3>
+      {children}
+    </div>
+  )
+}
+
 export function DetailHtmlSection({
   label,
   html,
@@ -68,8 +77,7 @@ export function DetailHtmlSection({
   recursiveLookup?: RecursiveLookup
 }) {
   return (
-    <div className="grid gap-1 border-b border-border py-2 @sm:grid-cols-[minmax(8rem,1fr)_2fr]">
-      <h3 className="text-sm font-semibold">{label}</h3>
+    <DetailRow label={label}>
       {html ? (
         <GameContent
           entry={html}
@@ -79,6 +87,6 @@ export function DetailHtmlSection({
       ) : (
         <p className="text-sm text-muted-foreground">None</p>
       )}
-    </div>
+    </DetailRow>
   )
 }

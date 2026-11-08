@@ -5,6 +5,7 @@ import type { SourceBook } from '@/types/5etools'
 interface SourcebookChoiceProps {
   source: SourceBook
   selected: boolean
+  included?: boolean
   compatibility: { compatible: boolean; reason?: string }
   onClick: () => void
   className?: string
@@ -15,6 +16,7 @@ interface SourcebookChoiceProps {
 export function SourcebookChoice({
   source,
   selected,
+  included = false,
   compatibility,
   onClick,
   className,
@@ -24,9 +26,9 @@ export function SourcebookChoice({
   return (
     <button
       type="button"
-      aria-pressed={selected}
+      aria-pressed={selected || included}
       onClick={onClick}
-      disabled={!compatibility.compatible}
+      disabled={included || !compatibility.compatible}
       title={compatibility.reason}
       className={cn(
         'flex items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm',
@@ -44,10 +46,10 @@ export function SourcebookChoice({
           aria-hidden="true"
           className={cn(
             'mt-0.5 grid size-4 shrink-0 place-items-center rounded-sm border border-border-strong',
-            selected && 'border-primary bg-primary text-primary-foreground',
+            (selected || included) && 'border-primary bg-primary text-primary-foreground',
           )}
         >
-          {selected && <Check className="size-3" weight="bold" />}
+          {(selected || included) && <Check className="size-3" weight="bold" />}
         </span>
       ) : (
         <BookOpen
@@ -65,7 +67,8 @@ export function SourcebookChoice({
           {source.abbreviation}
           {source.year && ` (${source.year})`}
         </div>
-        {!compatibility.compatible && (
+        {included && <div className="mt-0.5 text-xs text-success-foreground">Included</div>}
+        {!included && !compatibility.compatible && (
           <div className="mt-0.5 text-[11px] text-warning">{compatibility.reason}</div>
         )}
       </div>

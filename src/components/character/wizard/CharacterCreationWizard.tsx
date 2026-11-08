@@ -346,18 +346,13 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     subraceName: characterData.subrace,
     subraceSource: characterData.subraceSource,
   })
-  const introHeadingRef = useRef<HTMLHeadingElement>(null)
   const Step = stepId ? STEP_COMPONENTS[stepId] : undefined
   const intro = activeStep && StepIcon && (
     <div className="mb-3 shrink-0">
       <p className="pl-[2.875rem] text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
         {activeStep.section}
       </p>
-      <h2
-        ref={introHeadingRef}
-        tabIndex={-1}
-        className="mt-1 flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl"
-      >
+      <h2 className="mt-1 flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">
         <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/35 bg-primary/10 text-primary">
           <StepIcon className="size-5" weight="duotone" aria-hidden="true" />
         </span>
@@ -399,10 +394,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           {Step && (
             <Step
               intro={intro}
-              onEditStep={(id: WizardStepId) => {
-                revisitStep(WIZARD_STEPS.findIndex((step) => step.id === id) + 1)
-                requestAnimationFrame(() => introHeadingRef.current?.focus({ preventScroll: true }))
-              }}
               data={characterData}
               onChange={updateCharacterData}
               invalidFields={invalidFields}
