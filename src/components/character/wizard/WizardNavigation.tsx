@@ -31,15 +31,15 @@ export function WizardNavigation({
     <nav
       ref={track}
       aria-label="Character creation progress"
-      className="relative overflow-x-auto px-2 py-2.5 lg:px-6"
+      className="relative overflow-x-auto p-0.5"
     >
-      <ol className="mx-auto grid w-full min-w-[52rem] max-w-5xl grid-cols-8 items-center">
+      <ol className="flex w-max min-w-max items-center">
         {steps.map((step, index) => {
           const position = index + 1
           const isCurrent = currentStep === position
           const isCompleted = completedThrough >= position
           const chipClass = cn(
-            'inline-flex h-6 w-[6.25rem] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-1 text-xs leading-none',
+            'inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-xs leading-none',
             isCurrent
               ? 'border-foreground/55 bg-surface-raised font-semibold text-foreground'
               : isCompleted
@@ -59,20 +59,23 @@ export function WizardNavigation({
           return (
             <li
               key={step.id}
-              className="flex min-w-0 items-center"
+              className="flex items-center"
               data-step={position}
               aria-current={isCurrent ? 'step' : undefined}
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'h-px flex-1',
-                  index > 0 && (completedThrough >= index ? 'bg-success/50' : 'bg-border-strong'),
-                )}
-              />
+              {index > 0 && (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'h-px w-4 shrink-0',
+                    completedThrough >= index ? 'bg-success/50' : 'bg-border-strong',
+                  )}
+                />
+              )}
               {position < currentStep ? (
                 <button
                   type="button"
+                  data-slot="wizard-step-chip"
                   aria-label={`${step.label}, completed`}
                   className={cn(chipClass, 'hover:bg-success/20 focus-visible:outline-ring')}
                   onClick={() => onRevisit(position)}
@@ -81,15 +84,10 @@ export function WizardNavigation({
                   {status}
                 </button>
               ) : (
-                <span className={chipClass}>{status}</span>
+                <span data-slot="wizard-step-chip" className={chipClass}>
+                  {status}
+                </span>
               )}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'h-px flex-1',
-                  position < steps.length && (isCompleted ? 'bg-success/50' : 'bg-border-strong'),
-                )}
-              />
             </li>
           )
         })}

@@ -20,7 +20,6 @@ interface PortraitCardPreviewProps {
   transform?: PortraitTransform
   className?: string
   fit?: 'width' | 'contain'
-  portraitOnly?: boolean
   onWidthChange?: (width: number) => void
 }
 
@@ -35,7 +34,6 @@ export function PortraitCardPreview({
   transform,
   className,
   fit = 'width',
-  portraitOnly = false,
   onWidthChange,
 }: PortraitCardPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -109,10 +107,9 @@ export function PortraitCardPreview({
             lastModified={lastModified}
             transform={transform}
             cardSize={CHARACTER_CARD_LOGICAL_WIDTH}
-            portraitOnly={portraitOnly}
             portraitTransition
             actions={
-              !portraitOnly && typeof level === 'number' ? (
+              typeof level === 'number' ? (
                 <div className="pointer-events-none flex gap-3" aria-hidden="true">
                   <Button
                     variant="outline"

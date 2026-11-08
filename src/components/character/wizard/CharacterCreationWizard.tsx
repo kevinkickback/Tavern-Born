@@ -378,7 +378,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         aria-busy={isCreating}
         className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane"
       >
-        <header className="flex h-14 shrink-0 items-center border-b border-border bg-workspace-pane px-4 pr-14 sm:px-6">
+        <header className="flex h-14 shrink-0 items-center border-b border-border bg-workspace-canvas px-4 pr-14 sm:px-6">
           <DialogTitle className="text-sm font-semibold">Create New Character</DialogTitle>
         </header>
         <div
@@ -423,7 +423,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           completedThrough={completedThrough}
           onRevisit={revisitStep}
           onNext={handleNext}
-          onCancel={handleClose}
           isPending={isCreating}
         />
         <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>

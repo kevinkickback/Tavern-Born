@@ -72,24 +72,17 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
   const progress = dialog.getByRole('navigation', { name: 'Character creation progress' })
   await expect(progress.locator('[aria-current=step]')).toHaveText('Rules')
-  const positions = await progress.getByRole('listitem').evaluateAll((items) =>
-    items.map((item) => {
-      const chip = item.querySelector(':scope > :nth-child(2)')
-      if (!chip) throw new Error('Missing progress chip')
-      const bounds = chip.getBoundingClientRect()
-      return bounds.x + bounds.width / 2
+  const bounds = await progress.locator('[data-slot=wizard-step-chip]').evaluateAll((chips) =>
+    chips.map((chip) => {
+      const { left, right } = chip.getBoundingClientRect()
+      return { left, right }
     }),
   )
-  const intervals = positions.slice(1).map((position, index) => position - positions[index])
-  expect(Math.max(...intervals) - Math.min(...intervals)).toBeLessThan(1)
-  const widths = await progress
-    .getByRole('listitem')
-    .evaluateAll((items) =>
-      items.map(
-        (item) => item.querySelector(':scope > :nth-child(2)')?.getBoundingClientRect().width ?? 0,
-      ),
-    )
-  expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(1)
+  expect(bounds).toHaveLength(8)
+  const gaps = bounds.slice(1).map((chip, index) => chip.left - bounds[index].right)
+  expect(Math.min(...gaps)).toBeGreaterThan(0)
+  expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1)
+  await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0)
   await expect(progress.getByRole('button', { name: 'Basics, completed' })).toBeVisible()
   await expect(progress.getByRole('button', { name: 'Sourcebooks' })).toHaveCount(0)
 
@@ -104,7 +97,7 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await expect(dialog.getByLabel('Character Name')).toHaveValue('Retained Wizard Hero')
   await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
 
-  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await dialog.getByRole('button', { name: 'Close' }).click()
   await page
     .getByRole('alertdialog', { name: 'Discard character creation?' })
     .getByRole('button', { name: 'Discard changes' })
@@ -153,12 +146,12 @@ test('wizard exit confirmation keeps focus and input until discard is confirmed'
   await expect(gender).toHaveText('Non-binary')
   await expect(wizard.getByLabel('Character Name')).toHaveValue('')
 
-  const cancel = wizard.getByRole('button', { name: 'Cancel' })
-  await cancel.click()
+  const close = wizard.getByRole('button', { name: 'Close', exact: true })
+  await close.click()
   await page.mouse.click(5, 5)
   await expect(confirmation).toBeVisible()
   await keepEditing.click()
-  await expect(cancel).toBeFocused()
+  await expect(close).toBeFocused()
   await wizard.getByRole('button', { name: 'Close', exact: true }).click()
   await discard.click()
   await expect(wizard).toBeHidden()
@@ -207,7 +200,7 @@ test('reverted source choices adopt late recommended defaults without losing dra
       },
     })
   })
-  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await wizard.getByRole('button', { name: 'Close' }).click()
   const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
   await expect(confirmation).toBeVisible()
   await confirmation.getByRole('button', { name: 'Keep editing' }).click()
@@ -240,7 +233,7 @@ test('empty source selection survives refresh under discard confirmation', async
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
   await wizard.getByRole('button', { name: 'None', exact: true }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
-  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await wizard.getByRole('button', { name: 'Close' }).click()
   const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
   await expect(confirmation).toBeVisible()
   await page.evaluate(async () => {
@@ -260,7 +253,7 @@ test('empty source selection survives refresh under discard confirmation', async
   await confirmation.getByRole('button', { name: 'Keep editing' }).click()
   await expect(wizard.getByRole('button', { name: /Refresh additional content/ })).toBeVisible()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
-  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await wizard.getByRole('button', { name: 'Close' }).click()
   await confirmation.getByRole('button', { name: 'Discard changes' }).click()
   await newCharacter.click()
   await wizard.getByLabel('Character Name').fill('New wizard lifetime')
@@ -296,15 +289,30 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   ).toBe(4)
   await expect(library.getByRole('button', { name: 'Upload' })).toBeInViewport()
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
-  const adjustPortrait = dialog.getByText('Adjust portrait', { exact: true })
-  const zoom = dialog.getByRole('slider', { name: 'Zoom' })
-  await expect(zoom).toBeHidden()
-  await expect(dialog.locator('[data-slot=portrait-card-preview]')).not.toContainText('Level 1')
-  await adjustPortrait.click()
-  await expect(zoom).toBeVisible()
+  await expect(dialog.getByText('Adjust portrait', { exact: true })).toBeVisible()
   await expect(dialog.locator('[data-slot=portrait-card-preview]')).toContainText('Level 1')
-  await adjustPortrait.click()
-  await expect(zoom).toBeHidden()
+  await expect(dialog.getByText('Level 1 · Draft', { exact: true })).toHaveCount(0)
+  const zoom = dialog.getByRole('slider', { name: 'Zoom' })
+  await expect(zoom).toBeInViewport()
+  const tones = await dialog.evaluate((modal) => {
+    const background = (selector: string) => {
+      const element = modal.querySelector(selector)
+      if (!element) throw new Error(`Missing wizard surface: ${selector}`)
+      return getComputedStyle(element).backgroundColor
+    }
+    return [
+      getComputedStyle(modal).backgroundColor,
+      background('header'),
+      background('footer'),
+      background('aside'),
+    ]
+  })
+  expect(tones[0]).not.toBe(tones[1])
+  expect(new Set(tones.slice(1)).size).toBe(1)
+  await zoom.press('ArrowRight')
+  await expect(zoom).toHaveAttribute('aria-valuenow', '155')
+  await dialog.getByRole('button', { name: 'Reset View' }).click()
+  await expect(zoom).toHaveAttribute('aria-valuenow', '150')
   await dialog.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
   await dialog.getByRole('button', { name: 'Next' }).click()
 

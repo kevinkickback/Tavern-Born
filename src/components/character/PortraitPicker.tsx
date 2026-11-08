@@ -54,7 +54,6 @@ export function PortraitPicker({
   const selectionVersionRef = useRef(0)
   const mountedRef = useRef(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
-  const [adjustingPortrait, setAdjustingPortrait] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
   const [previewWidth, setPreviewWidth] = useState<number | null>(null)
   const [savedPortraits, setSavedPortraits] = useState<SavedPortrait[]>([])
@@ -177,17 +176,17 @@ export function PortraitPicker({
     <div
       data-slot="portrait-image-controls"
       className={cn(
-        'mx-auto min-w-0 w-full space-y-3',
-        !isCreator && 'border-t border-border pt-3',
+        'mx-auto min-w-0 w-full space-y-3 border-t border-border',
+        isCreator ? 'pt-2' : 'pt-3',
       )}
       style={previewWidth === null ? undefined : { width: previewWidth, maxWidth: '100%' }}
     >
-      {!isCreator && (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Crop className="h-3.5 w-3.5" weight="duotone" />
-          <span className="text-[11px] font-bold uppercase tracking-wider">Image Controls</span>
-        </div>
-      )}
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Crop className="h-3.5 w-3.5" weight="duotone" aria-hidden="true" />
+        <span className="text-[11px] font-bold uppercase tracking-wider">
+          {isCreator ? 'Adjust portrait' : 'Image Controls'}
+        </span>
+      </div>
       <div className="space-y-2.5">
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
@@ -283,29 +282,10 @@ export function PortraitPicker({
           lastModified={lastModified}
           transform={t}
           fit={libraryCollapsed ? 'contain' : 'width'}
-          portraitOnly={isCreator && !adjustingPortrait}
           onWidthChange={setPreviewWidth}
         />
 
-        {isCreator && (
-          <div>
-            <h3 className="break-words text-lg font-semibold">{name || 'Unnamed Character'}</h3>
-            <p className="text-sm text-muted-foreground">Level {level ?? 1} · Draft</p>
-          </div>
-        )}
-        {isCreator ? (
-          <details
-            className="border-t border-border pt-2"
-            onToggle={(event) => setAdjustingPortrait(event.currentTarget.open)}
-          >
-            <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-              Adjust portrait
-            </summary>
-            <div className="mt-2">{controls}</div>
-          </details>
-        ) : (
-          controls
-        )}
+        {controls}
       </div>
     </section>
   )
@@ -406,7 +386,7 @@ export function PortraitPicker({
             {identity}
             {library}
           </div>
-          <aside className="min-w-0 border-t border-border bg-workspace-pane p-4 sm:p-6 md:border-t-0 md:border-l">
+          <aside className="min-w-0 border-t border-border bg-workspace-canvas p-4 sm:p-6 md:border-t-0 md:border-l">
             {preview}
           </aside>
         </div>
