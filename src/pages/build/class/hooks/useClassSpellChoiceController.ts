@@ -4,6 +4,7 @@ import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanc
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
 import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
+import { getArcaneDabbler, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
@@ -52,12 +53,20 @@ export function useClassSpellChoiceController(
         slots.push(
           ...getSavantSpellbookSlots(savedEntry),
           ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
-            getClericArcanaSpellRule,
+            (slot) => getClericArcanaSpellRule(slot) || isArcaneDabblerSlot(slot),
           ),
         )
       }
     }
+    const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
     for (const slot of slots) {
+      if (
+        dabbler &&
+        isArcaneDabblerSlot(slot) &&
+        slot[2] === dabbler.target &&
+        slot[4] >= dabbler.count
+      )
+        continue
       const gain = choices.get(slot[3]) ?? {
         cantrips: 0,
         spells: 0,
@@ -95,7 +104,7 @@ export function useClassSpellChoiceController(
         )
       const finite = getManagedClassSpellRule(slot)
       const authority =
-        scoped && finite && domain !== 'feature-cantrip'
+        scoped && finite && domain !== 'feature-cantrip' && domain !== 'feature-prepared'
           ? getClassCastingGainAuthority(
               scoped,
               owner,
@@ -108,6 +117,9 @@ export function useClassSpellChoiceController(
       gain.maxSpellLevel = Math.max(
         gain.maxSpellLevel,
         getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
+        dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
+          ? Math.max(...dabbler.ranks)
+          : 0,
       )
       if (domain === 'class-cantrip' || domain === 'feature-cantrip') gain.cantrips++
       else gain.spells++

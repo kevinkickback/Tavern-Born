@@ -1,6 +1,7 @@
 import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { clericDomainCantrips } from '@/lib/5etools/clericDomainCantripSources'
+import { isArcaneDabblerOwner } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { preserveDailyClassSpellIntent } from '@/lib/character/dailyClassSpells'
@@ -75,6 +76,7 @@ export function setManagedClassSpellChoicesCommand(
         throw new RangeError('This class spell slot is invalid.')
       if (
         (request.slot[1] === 'feature-cantrip' ||
+          request.slot[1] === 'feature-prepared' ||
           request.slot[1] === 'class-spellbook-specialty' ||
           getClericArcanaSpellRule(request.slot)) &&
         request.target &&
@@ -197,6 +199,7 @@ export function setManagedClassSpellChoicesCommand(
   for (const edit of grants) {
     if (
       edit.request.slot[1] !== 'feature-cantrip' &&
+      edit.request.slot[1] !== 'feature-prepared' &&
       edit.request.slot[1] !== 'class-spellbook-specialty' &&
       !edit.sameTarget &&
       edit.request.target &&
@@ -253,6 +256,7 @@ export function retainEarnedManagedClassSpells(
   const lostDynamicProgress = character.classProgression.some(
     (entry) =>
       (isArcaneArcherCantripOwner(entry) ||
+        isArcaneDabblerOwner(entry) ||
         clericDomainCantrips.some((rule) => belongsTo(entry, rule))) &&
       !nextProgression.some(
         (next) => ownerKey(next) === ownerKey(entry) && next.levels >= entry.levels,
@@ -261,7 +265,9 @@ export function retainEarnedManagedClassSpells(
   const lostSlot =
     lostDynamicProgress || [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
   const removed = (character.managedClassSpellChoices ?? []).filter((choice) =>
-    choice.slot[1] === 'feature-cantrip' || getClericArcanaSpellRule(choice.slot)
+    choice.slot[1] === 'feature-cantrip' ||
+    choice.slot[1] === 'feature-prepared' ||
+    getClericArcanaSpellRule(choice.slot)
       ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
         !nextProgression.some(
           (entry) =>

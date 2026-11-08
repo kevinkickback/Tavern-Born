@@ -120,7 +120,10 @@ export function buildSpellProfileDisplayModels({
       profile.type === 'class' &&
       !detail &&
       !items.some((item) => item.castOnly) &&
-      !classSelections?.some(({ choice }) => choice.slot[1] === 'feature-cantrip')
+      !classSelections?.some(
+        ({ choice }) =>
+          choice.slot[1] === 'feature-cantrip' || choice.slot[1] === 'feature-prepared',
+      )
     )
       return []
 

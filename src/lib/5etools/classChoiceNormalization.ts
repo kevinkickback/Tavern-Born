@@ -1379,8 +1379,12 @@ export function getProgressiveChoiceGainCount(choice: NormalizedCharacterChoice,
     choice.source.kind === 'class-table' &&
     choice.optionFilter?.entityType === 'item' &&
     !choice.optionFilter.requiresMastery
+  const psionics =
+    choice.kind === 'psionic' &&
+    choice.source.kind === 'class-table' &&
+    choice.optionFilter?.entityType === 'psionic'
   if (
-    (!optionalFeatures && !tableItems) ||
+    (!optionalFeatures && !tableItems && !psionics) ||
     choice.repeatable ||
     !counts.some((count) => count > getRequiredChoiceSelectionCount(choice, choice.level)) ||
     !counts.every((count, index) => Number.isInteger(count) && count >= (counts[index - 1] ?? 0))

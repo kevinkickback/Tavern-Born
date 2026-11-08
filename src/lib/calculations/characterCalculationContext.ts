@@ -36,6 +36,12 @@ import {
   getMonkUnarmoredMovement,
 } from '@/lib/5etools/monkBaseRules'
 import { deriveMonkSubclassSenses } from '@/lib/5etools/monkSubclassRules'
+import {
+  getCurrentMysticRules,
+  getMysticBodyEffects,
+  getMysticImmortalDurability,
+  isMysticJourneyOwner,
+} from '@/lib/5etools/mysticJourneyRules'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { getScionResistance } from '@/lib/5etools/rogueScion'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
@@ -651,6 +657,7 @@ export function createCharacterCalculationContext(
   const sourceEffects = [
     ...baseSourceEffects,
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
+    ...deriveMysticPassiveEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...getOwnedSubclassSkillModifiers(character, abilityScores.modifiers, proficiencyState.fixed),
     ...deriveGeniesSplendorEffects(character, choiceCatalogs, abilityScores.modifiers),
     ...deriveBardDanceEffects(character, choiceCatalogs, abilityScores.modifiers),
@@ -790,6 +797,42 @@ function deriveDraconicResilienceEffects(
     dexterity + (revised ? 10 + charisma : 13),
   )
   if (ac) effects.push(ac)
+  return effects
+}
+
+function deriveMysticPassiveEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  { dexterity, constitution }: AbilityScores,
+): CharacterEffect[] {
+  const owner = character.classProgression.find(isMysticJourneyOwner)
+  const current = owner && getCurrentMysticRules(character, owner, catalogs)
+  if (!current) return []
+  const effects = getMysticBodyEffects(current)
+  const durability = getMysticImmortalDurability(character, current)
+  if (!durability) return effects
+  const { target, hitPoints, armorClass } = durability
+  const source = {
+    kind: 'subclass' as const,
+    name: 'Immortal Durability',
+    source: current.owner.source,
+    entityId: target,
+  }
+  effects.push({
+    id: `${target}:hp`,
+    label: source.name,
+    source,
+    target: { kind: 'hit-point-maximum' },
+    operation: { kind: 'add', value: hitPoints },
+  })
+  const armor = unarmoredBaseEffect(
+    character.equipment,
+    target,
+    source,
+    armorClass + dexterity + constitution,
+    false,
+  )
+  if (armor) effects.push(armor)
   return effects
 }
 

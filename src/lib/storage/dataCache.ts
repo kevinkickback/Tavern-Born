@@ -3,7 +3,7 @@ import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 86
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 87
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 

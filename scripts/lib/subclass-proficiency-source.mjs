@@ -834,9 +834,57 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
+  const mysticSkills = features.flatMap((feature) => {
+    if (
+      feature.className !== 'Mystic' ||
+      feature.classSource !== 'UATheMysticClass' ||
+      feature.subclassSource !== feature.classSource ||
+      feature.source !== feature.classSource
+    )
+      return []
+    const [line] = feature.entries ?? []
+    const clause =
+      typeof line === 'string' &&
+      /^At (\d+)(?:st|nd|rd|th) level, you gain proficiency with (one|two) of the following skills of your choice: ((?:\{@skill [^{}|]+\}, )+(?:(?:and|or) )?\{@skill [^{}|]+\})\.$/.exec(
+        line,
+      )
+    if (!clause) return []
+    const target = identity(feature)
+    const count = NUMBERS[clause[2]]
+    const skillPool = [...clause[3].matchAll(/\{@skill ([^{}|]+)\}/g)].map((tag) =>
+      tag[1].toLowerCase(),
+    )
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature._copy ||
+      feature.entries.length !== 1 ||
+      Number(clause[1]) !== feature.level ||
+      new Set(skillPool).size !== skillPool.length ||
+      skillPool.length < count
+    )
+      fail('Unsupported Mystic skill proficiency clause')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [{ domain: 'skills', count, skillPool, excludeExisting: true }],
+      },
+    ]
+  })
   return [
     ...paired,
     ...artificerTools,
+    ...mysticSkills,
     ...masterOfIntrigue,
     ...simpleSkills,
     ...giantPower,

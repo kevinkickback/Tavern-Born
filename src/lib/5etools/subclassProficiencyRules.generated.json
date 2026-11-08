@@ -126,6 +126,42 @@
     ]
   },
   {
+    "target": "subclass-feature|awakened talent|mystic|uathemysticclass|awakened|uathemysticclass|1|uathemysticclass",
+    "digest": "36fe053cfcdaacb227483fb2509cbd200cf2caac9c52dae3b4c98b3323db8b4b",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 2,
+        "skillPool": [
+          "animal handling",
+          "deception",
+          "insight",
+          "intimidation",
+          "investigation",
+          "perception",
+          "persuasion"
+        ],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb",
     "digest": "66be08e9a75ea40ebd01b11b0527f30ccb90edfa856a3098cf9d01cd104b169e",
     "fields": [
@@ -520,6 +556,44 @@
         "domain": "languages",
         "count": 1,
         "requiresKnownLanguage": "giant"
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|hermit's study|mystic|uathemysticclass|wu jen|uathemysticclass|1|uathemysticclass",
+    "digest": "071ac9903651f06948a3c0aa5f7ee3d201df1ff87ee2ccbdb864440ee270add3",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 2,
+        "skillPool": [
+          "animal handling",
+          "arcana",
+          "history",
+          "insight",
+          "medicine",
+          "nature",
+          "perception",
+          "religion",
+          "survival"
+        ],
+        "excludeExisting": true
       }
     ]
   },

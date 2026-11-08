@@ -36,6 +36,7 @@ import {
   auditInheritedOathSpellRoots,
   isInheritedOathSourceFeature,
 } from '@/lib/5etools/legacyPaladinOathSpells'
+import { isDirectMysticFeatureTarget } from '@/lib/5etools/mysticFeatureIdentity'
 import {
   auditInheritedSubclassRoots,
   isDirectArtificerRuleTarget,
@@ -46,7 +47,10 @@ import {
 } from '@/lib/5etools/nativeSubclassFeatureSource'
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
-import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
+import {
+  auditPsionicFeatureSources,
+  isDirectPsionicSourceTarget,
+} from '@/lib/5etools/psionicSources'
 import { REVISED_AFFINITY_TARGET } from '@/lib/5etools/revisedElementalAffinity'
 import { isSavantSpellbookSourceTarget } from '@/lib/5etools/savantSpellbookRules'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
@@ -539,6 +543,8 @@ function auditNativeSubclassCopies(
           isDirectRangerRuleTarget(target) ||
           isDirectRogueRuleTarget(target) ||
           isDirectArtificerRuleTarget(target) ||
+          isDirectMysticFeatureTarget(target) ||
+          isDirectPsionicSourceTarget(target) ||
           isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||

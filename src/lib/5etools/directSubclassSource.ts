@@ -14,7 +14,7 @@ export function getCurrentDirectSubclassSource(
   character: Character,
   entry: CharacterClassEntry,
   classes: readonly Class5e[] | undefined,
-  className: 'Artificer' | 'Fighter' | 'Rogue',
+  className: 'Artificer' | 'Fighter' | 'Mystic' | 'Rogue',
 ) {
   const classKey = norm(className)
   if (
@@ -22,7 +22,11 @@ export function getCurrentDirectSubclassSource(
     !entry.subclass ||
     !entry.subclassSource ||
     !getSourceCompatibility(entry.source, character.originSystem).compatible ||
-    character.classProgression.filter((row) => norm(row.name) === classKey).length !== 1
+    character.classProgression.filter(
+      (row) =>
+        norm(row.name) === classKey &&
+        (className !== 'Mystic' || norm(row.source) === norm(entry.source)),
+    ).length !== 1
   )
     return undefined
   const parents = classes?.filter(

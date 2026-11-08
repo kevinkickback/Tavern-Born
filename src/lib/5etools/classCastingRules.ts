@@ -4,6 +4,7 @@ import { getBardLoreSpellRule } from './bardSpellSources'
 import generated from './classCastingRuntime.generated'
 import type { CastingProducerRule } from './classCastingStructure'
 import { getClericArcanaSpellRule } from './clericArcanaSpells'
+import { isArcaneDabblerSlot } from './mysticArcaneDabbler'
 import { getSavantSpellbookGain } from './savantSpellbookRules'
 import { isSelectedFeatureSpellSlot } from './selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from './spellbookSpecialtyRules'
@@ -46,7 +47,12 @@ export const DECLARED_CASTING_LISTS: Readonly<
 export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
   if (!Array.isArray(slot) || slot.length !== 5) return undefined
   const [owner, domain, target, level, ordinal] = slot
-  if (domain === 'feature-cantrip' || domain === 'class-spellbook-specialty') return undefined
+  if (
+    domain === 'feature-cantrip' ||
+    domain === 'feature-prepared' ||
+    domain === 'class-spellbook-specialty'
+  )
+    return undefined
   if (!['class-cantrip', 'class-known', 'class-spellbook', 'class-arcanum'].includes(domain))
     return undefined
   const rule = CLASS_CASTING_PRODUCERS.find(
@@ -63,6 +69,7 @@ export const isManagedClassSpellSlot = (slot: ManagedClassSpellSlot) =>
   !!getManagedClassSpellRule(slot) ||
   !!getBardLoreSpellRule(slot) ||
   !!getClericArcanaSpellRule(slot) ||
+  isArcaneDabblerSlot(slot) ||
   !!getSavantSpellbookGain(slot) ||
   isSelectedFeatureSpellSlot(slot) ||
   !!getSpellbookSpecialtyRule(slot)

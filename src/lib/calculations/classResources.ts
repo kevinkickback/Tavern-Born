@@ -12,6 +12,12 @@ import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
 import { getCurrentMonkBaseRules, getMonkBaseResources } from '@/lib/5etools/monkBaseRules'
 import { getMonkSubclassResources } from '@/lib/5etools/monkSubclassRules'
 import {
+  getCurrentMysticRules,
+  getMysticLimitedUseResources,
+  getMysticMasteryResource,
+  getMysticPsiLimit,
+} from '@/lib/5etools/mysticJourneyRules'
+import {
   getCurrentNativeWarlockPatronRules,
   getNativeHealingLightOwner,
   HEALING_LIGHT_RESOURCE_ID,
@@ -128,6 +134,11 @@ export function getCharacterClassResources(
         options.abilityModifiers?.intelligence,
       ),
     )
+    const mystic = getCurrentMysticRules(character, entry, catalogs)
+    const mastery = getMysticMasteryResource(mystic)
+    const psiLimit = getMysticPsiLimit(mystic)
+    if (mastery) earned.push(mastery)
+    if (mystic) earned.push(...getMysticLimitedUseResources(character, mystic))
     if (monk?.owner === entry) earned.push(...getMonkBaseResources(monk))
     if (ranger?.owner === entry)
       earned.push(
@@ -201,7 +212,9 @@ export function getCharacterClassResources(
           usageText:
             definition.id === HEALING_LIGHT_RESOURCE_ID
               ? `Up to ${healingDiceLimit} ${healingDiceLimit === 1 ? 'die' : 'dice'} per use`
-              : definition.usageText,
+              : definition.label === 'Psi Points' && psiLimit
+                ? `Psi Limit is ${psiLimit}.`
+                : definition.usageText,
           className: entry.name,
         },
       ]
