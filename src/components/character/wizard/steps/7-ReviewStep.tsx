@@ -145,49 +145,47 @@ export function ReviewStep({
       )}
 
       <div className="space-y-4">
-        <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <div className="flex flex-col items-stretch gap-4 md:flex-row">
-            <div className="w-full max-w-[420px] shrink-0">
-              <PortraitCardPreview
-                image={data.portrait}
-                name={data.name}
-                level={1}
-                race={getRaceDisplayName(data.race, data.subrace)}
-                characterClass={data.class}
-                gender={data.gender}
-                transform={data.portraitTransform}
-                showActions={false}
-              />
-            </div>
+        <div className="flex flex-col items-stretch gap-4 md:flex-row">
+          <div className="w-full max-w-[420px] shrink-0">
+            <PortraitCardPreview
+              image={data.portrait}
+              name={data.name}
+              level={1}
+              race={getRaceDisplayName(data.race, data.subrace)}
+              characterClass={data.class}
+              gender={data.gender}
+              transform={data.portraitTransform}
+              showActions={false}
+            />
+          </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="rounded-lg border border-border bg-card/60 p-3 h-full">
-                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                  Character Snapshot
-                </div>
-                <InfoRow label="Background" value={data.background} warn={!data.background} />
-                <InfoRow
-                  label="Ruleset"
-                  value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
-                  warn={!data.originSystem}
-                />
-                <InfoRow label="Size" value={sizeValue} />
-                <InfoRow label="Speed" value={speedValue} />
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
-                  <span className="text-xs text-muted-foreground">Darkvision</span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 text-xs font-semibold',
-                      hasDarkvision ? 'text-success' : 'text-muted-foreground',
-                    )}
-                  >
-                    {hasDarkvision && <Eye className="h-3.5 w-3.5" />}
-                    {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
-                  </span>
-                </div>
-                <InfoRow label="Race Source" value={data.raceSource} />
-                {data.playerName && <InfoRow label="Player" value={data.playerName} />}
+          <div className="flex-1 min-w-0">
+            <div className="rounded-lg border border-border bg-card/60 p-3 h-full">
+              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                Character Snapshot
               </div>
+              <InfoRow label="Background" value={data.background} warn={!data.background} />
+              <InfoRow
+                label="Ruleset"
+                value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
+                warn={!data.originSystem}
+              />
+              <InfoRow label="Size" value={sizeValue} />
+              <InfoRow label="Speed" value={speedValue} />
+              <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
+                <span className="text-xs text-muted-foreground">Darkvision</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 text-xs font-semibold',
+                    hasDarkvision ? 'text-success' : 'text-muted-foreground',
+                  )}
+                >
+                  {hasDarkvision && <Eye className="h-3.5 w-3.5" />}
+                  {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
+                </span>
+              </div>
+              <InfoRow label="Race Source" value={data.raceSource} />
+              {data.playerName && <InfoRow label="Player" value={data.playerName} />}
             </div>
           </div>
         </div>

@@ -1,9 +1,13 @@
-import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react'
+import { Barbell } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import {
+  AbilityScoreEditor,
+  type AbilityScoreMethod,
+  AbilityScoreMethodTabs,
+} from '@/components/character/AbilityScoreEditor'
 import { RacialAbilityChoiceSummary } from '@/components/character/RacialAbilityChoiceSummary'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
-import { Progress } from '@/components/ui/progress'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -13,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { Tabs } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useAbilityScores } from '@/hooks/character/useAbilityScores'
 import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
@@ -29,7 +33,6 @@ import {
   type AbilityName,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
-import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
 import {
   findFocusedProvenanceChoice,
   getReadinessFocus,
@@ -40,11 +43,6 @@ import { getPendingBackgroundAbilityRows } from '@/lib/provenance/abilityBonusRo
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
-import {
-  BuildAbilityScoresCustomScoresPanel,
-  BuildAbilityScoresPointBuyPanel,
-  BuildAbilityScoresStandardArrayPanel,
-} from '@/pages/build/ability-scores/components/MethodPanels'
 import {
   buildSkillDetailsMap,
   selectSkillDetails,
@@ -87,7 +85,7 @@ export function BuildAbilityScoresPage() {
   const { skills } = useFilteredGameData()
   const skillList = useSkillList()
   const skillToAbilityMap = useSkillToAbilityMap()
-  const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
+  const { scores, setScore, setAllScores } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { applyRaceAsiDistribution, applyRaceAsiChoices } = useRaceProvenanceMutations()
   const { applyBackgroundAbilityChoices, reconcileBackgroundAbilityChoices } =
@@ -102,7 +100,8 @@ export function BuildAbilityScoresPage() {
     setCompactPane('right')
   }
 
-  const method = character?.variantRules?.abilityScoreMethod ?? 'standard-array'
+  const savedMethod = character?.variantRules?.abilityScoreMethod
+  const method = savedMethod ?? 'standard-array'
 
   const {
     normalizedRaceSelection,
@@ -233,6 +232,12 @@ export function BuildAbilityScoresPage() {
     return <NoCharCard icon={<Barbell weight="duotone" />} noun="assign ability scores" />
   }
 
+  const setMethod = (method: AbilityScoreMethod) => {
+    updateCharacter(character.id, {
+      variantRules: { ...character.variantRules, abilityScoreMethod: method },
+    })
+  }
+
   return (
     <WorkspacePage className="p-3">
       <WorkspaceBody className="flex overflow-hidden">
@@ -259,55 +264,22 @@ export function BuildAbilityScoresPage() {
           compactRightLabel="Ability details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
-            <>
+            <Tabs
+              value={method}
+              activationMode="manual"
+              onValueChange={(value) => setMethod(value as AbilityScoreMethod)}
+              className="min-h-0 flex-1 gap-0"
+            >
               <WorkspacePaneHeader
                 ariaLabel="Ability score method"
                 className={detailCollapsed ? 'pr-20' : undefined}
               >
-                <div className="h-full min-w-0 flex-1 overflow-x-auto">
-                  <fieldset className="inline-flex h-full min-w-max items-stretch gap-5 border-0 p-0">
-                    <legend className="sr-only">Ability score method</legend>
-                    {(
-                      [
-                        { value: 'point-buy', label: 'Point Buy', icon: Coins },
-                        {
-                          value: 'standard-array',
-                          label: 'Standard Array',
-                          icon: ListNumbers,
-                        },
-                        { value: 'custom', label: 'Custom', icon: PencilSimple },
-                      ] as const
-                    ).map(({ value, label, icon: Icon }) => {
-                      const active = method === value
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() =>
-                            updateCharacter(character.id, {
-                              variantRules: {
-                                ...character.variantRules,
-                                abilityScoreMethod: value,
-                              },
-                            })
-                          }
-                          className={cn(
-                            'flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
-                            active
-                              ? 'border-primary text-foreground'
-                              : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-                          )}
-                        >
-                          <Icon
-                            className={cn('size-4 shrink-0', active && 'text-primary')}
-                            weight={active ? 'fill' : 'regular'}
-                          />
-                          {label}
-                        </button>
-                      )
-                    })}
-                  </fieldset>
-                </div>
+                <AbilityScoreMethodTabs
+                  // Older characters may be previewing Standard Array without a saved method.
+                  onConfirmStandardArray={
+                    savedMethod ? undefined : () => setMethod('standard-array')
+                  }
+                />
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="p-4">
@@ -318,67 +290,15 @@ export function BuildAbilityScoresPage() {
                       baseScoresHighlighted && 'animate-route-focus',
                     )}
                   >
-                    <Tabs
-                      value={method}
-                      onValueChange={(v) =>
-                        updateCharacter(character.id, {
-                          variantRules: {
-                            ...character.variantRules,
-                            abilityScoreMethod: v as 'point-buy' | 'standard-array' | 'custom',
-                          },
-                        })
-                      }
-                    >
-                      <div className="mb-5 flex flex-wrap items-center justify-end gap-3">
-                        {method === 'point-buy' && (
-                          <div className="ml-auto min-w-72">
-                            <div className="min-w-0 flex-1">
-                              <div className="mb-1.5 flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                <span>Ability points</span>
-                                <span className="font-mono text-sm font-bold text-foreground">
-                                  {pointBuyTotal} / {POINT_BUY_BUDGET}
-                                </span>
-                              </div>
-                              <Progress
-                                value={Math.min(100, (pointBuyTotal / POINT_BUY_BUDGET) * 100)}
-                                className="h-2"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <TabsContent value="point-buy">
-                        <BuildAbilityScoresPointBuyPanel
-                          scores={scores}
-                          racialBonuses={displayBonuses}
-                          pointBuyRemaining={pointBuyRemaining}
-                          setScore={setScore}
-                          selectedAbility={selectedAbility}
-                          onSelectAbility={handleSelectAbility}
-                        />
-                      </TabsContent>
-
-                      <TabsContent value="standard-array">
-                        <BuildAbilityScoresStandardArrayPanel
-                          scores={scores}
-                          racialBonuses={displayBonuses}
-                          setAllScores={setAllScores}
-                          selectedAbility={selectedAbility}
-                          onSelectAbility={handleSelectAbility}
-                        />
-                      </TabsContent>
-
-                      <TabsContent value="custom">
-                        <BuildAbilityScoresCustomScoresPanel
-                          scores={scores}
-                          racialBonuses={displayBonuses}
-                          setScore={setScore}
-                          selectedAbility={selectedAbility}
-                          onSelectAbility={handleSelectAbility}
-                        />
-                      </TabsContent>
-                    </Tabs>
+                    <AbilityScoreEditor
+                      method={method}
+                      scores={scores}
+                      bonuses={displayBonuses}
+                      setScore={setScore}
+                      setAllScores={setAllScores}
+                      selectedAbility={selectedAbility}
+                      onSelectAbility={handleSelectAbility}
+                    />
                     {raceAsiData.choices.length > 0 && (
                       <section
                         ref={raceBonusesRef}
@@ -624,7 +544,7 @@ export function BuildAbilityScoresPage() {
                   emptyText={`No ability bonus sources recorded. Select a ${character.originSystem === '2024' ? 'background' : 'race'} to get started.`}
                 />
               </div>
-            </>
+            </Tabs>
           }
           right={
             <BuildAbilityScoresDetailsPanel

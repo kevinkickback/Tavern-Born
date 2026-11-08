@@ -1,8 +1,3 @@
-import {
-  type AbilityName,
-  makeDefaultStandardArrayAssignment,
-} from '@/lib/calculations/abilityScores'
-
 export { buildRacialBonuses } from '@/lib/calculations/abilityScores'
 
 export interface SkillDetail {
@@ -11,9 +6,6 @@ export interface SkillDetail {
   source?: string
   page?: number
 }
-
-export const DEFAULT_STANDARD_ARRAY_ASSIGNMENT: Partial<Record<AbilityName, number>> =
-  makeDefaultStandardArrayAssignment()
 
 export function formatTitleCase(input: string): string {
   return input.replace(/\b\w/g, (match) => match.toUpperCase())

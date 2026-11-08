@@ -5,6 +5,7 @@ import {
   MINIMAL_GAME_DATA,
   readPersistedCharacters,
   seedAppState,
+  selectCharacterFromHome,
 } from './helpers/startup'
 
 const SOURCE_GROUPS = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
@@ -516,6 +517,8 @@ test('creates a complete character and persists it across a full reload', async 
 
     await expect(dialog.getByRole('tab', { name: 'Point Buy' })).toBeVisible()
     await expect(dialog.getByText('27 of 27 points remaining')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Increase strength' }).click()
+    await expect(dialog.getByText('26 of 27 points remaining')).toBeVisible()
     await dialog.getByRole('button', { name: 'Next' }).click()
   })
 
@@ -544,6 +547,27 @@ test('creates a complete character and persists it across a full reload', async 
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-character-create-seed')
   await expect(page.getByText('E2E Created Hero').first()).toBeVisible()
+
+  await selectCharacterFromHome(page, 'E2E Created Hero')
+  await page.goto('/#/build/ability-scores')
+  await expect(page.getByRole('tab', { name: 'Point Buy' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await expect(page.getByText('26 of 27 points remaining')).toBeVisible()
+  await page.getByRole('button', { name: 'Increase strength' }).click()
+  await expect(page.getByText('25 of 27 points remaining')).toBeVisible()
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () => {
+      const characters = (await readPersistedCharacters(page)) as Array<{
+        name?: string
+        abilityScores?: { strength?: number }
+      }>
+      return characters.find((character) => character.name === 'E2E Created Hero')?.abilityScores
+        ?.strength
+    })
+    .toBe(10)
 })
 
 test('revised background bonuses update review, starting HP, and the saved character', async ({

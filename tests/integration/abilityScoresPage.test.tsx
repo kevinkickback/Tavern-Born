@@ -88,6 +88,30 @@ describe('BuildAbilityScoresPage', () => {
     vi.clearAllMocks()
   })
 
+  test('commits the displayed Standard Array when an older character has no method', async () => {
+    const user = userEvent.setup()
+    const character = useCharacterStore.getState().activeCharacter!
+    const legacy = {
+      ...character,
+      variantRules: { ...character.variantRules, abilityScoreMethod: undefined },
+    }
+    useCharacterStore.setState({ characters: [legacy], activeCharacter: legacy })
+
+    renderPage('/build/ability-scores?attention=rules:ability-score-method')
+    const methods = screen.getByRole('tablist', { name: 'Ability score method' })
+    for (const tab of within(methods).getAllByRole('tab')) {
+      expect(document.getElementById(tab.getAttribute('aria-controls') ?? '')).not.toBeNull()
+    }
+    const standardArray = within(methods).getByRole('tab', { name: 'Standard Array' })
+    expect(standardArray.getAttribute('aria-selected')).toBe('true')
+    standardArray.focus()
+    await user.keyboard('{Enter}')
+
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.variantRules?.abilityScoreMethod).toBe('standard-array')
+    expect(updated?.abilityScores).toEqual(legacy.abilityScores)
+  })
+
   test('edits revised background bonuses in the canonical ability-score section', async () => {
     const user = userEvent.setup()
     renderPage()

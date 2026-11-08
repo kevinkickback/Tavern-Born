@@ -2,12 +2,10 @@ import { useCallback, useMemo } from 'react'
 import {
   ABILITY_NAMES,
   type AbilityName,
-  calculatePointBuyTotal,
   formatModifier,
-  getRemainingPointBuy,
   getValidPointBuyScores,
 } from '@/lib/calculations/abilityScores'
-import { getAbilityModifier, POINT_BUY_BUDGET, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
+import { getAbilityModifier, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
 
 /**
@@ -18,8 +16,6 @@ export interface AbilityScoreState {
   scores: Record<AbilityName, number>
   modifiers: Record<AbilityName, number>
   modifierStrings: Record<AbilityName, string>
-  pointBuyTotal: number
-  pointBuyRemaining: number
   validPointBuyScores: number[]
   setScore: (ability: AbilityName, score: number) => void
   setAllScores: (scores: Partial<Record<AbilityName, number>>) => void
@@ -60,9 +56,6 @@ export function useAbilityScores(): AbilityScoreState {
     [modifiers],
   )
 
-  const pointBuyTotal = useMemo(() => calculatePointBuyTotal(scores), [scores])
-  const pointBuyRemaining = useMemo(() => getRemainingPointBuy(scores, POINT_BUY_BUDGET), [scores])
-
   const validPointBuyScores = useMemo(() => getValidPointBuyScores(), [])
 
   const setScore = useCallback(
@@ -102,8 +95,6 @@ export function useAbilityScores(): AbilityScoreState {
     scores,
     modifiers,
     modifierStrings,
-    pointBuyTotal,
-    pointBuyRemaining,
     validPointBuyScores,
     setScore,
     setAllScores,

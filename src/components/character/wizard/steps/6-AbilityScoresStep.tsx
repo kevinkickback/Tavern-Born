@@ -1,8 +1,10 @@
-import { AbilityScoreCard } from '@/components/character/AbilityScoreCard'
+import {
+  AbilityScoreEditor,
+  type AbilityScoreMethod,
+  AbilityScoreMethodTabs,
+} from '@/components/character/AbilityScoreEditor'
 import { RacialAbilityChoiceSummary } from '@/components/character/RacialAbilityChoiceSummary'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -10,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   formatAbilityBonus,
@@ -19,31 +21,20 @@ import {
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import {
   ABILITY_ABBREVIATIONS,
-  ABILITY_NAMES,
   type AbilityName,
   type BackgroundAbilityData,
   buildBackgroundBonuses,
   buildRacialBonuses,
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
-  isValidStandardArrayAssignment,
   makeDefaultAbilityScores,
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
-import {
-  ABILITY_SCORE_ABSOLUTE_MAX,
-  ABILITY_SCORE_MIN,
-  POINT_BUY_BUDGET,
-  POINT_BUY_COSTS,
-  POINT_BUY_MAX,
-  POINT_BUY_MIN,
-  STANDARD_ARRAY,
-} from '@/lib/calculations/gameRules'
+import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import {
   normalizeRaceSelectionForOriginSystem,
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
-import { cn } from '@/lib/utils'
 import type { StepProps } from '../types'
 
 interface AbilityScoresStepProps extends StepProps {
@@ -268,180 +259,13 @@ function BackgroundAsiBonuses({
   )
 }
 
-function PointBuyPanel({
-  scores,
-  abilityBonuses,
-  setScore,
-  remaining,
-}: {
-  scores: Record<AbilityName, number>
-  abilityBonuses: Partial<Record<AbilityName, number>>
-  setScore: (a: AbilityName, v: number) => void
-  remaining: number
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
-      {ABILITY_NAMES.map((ability) => {
-        const score = scores[ability] ?? POINT_BUY_MIN
-        const costNow = POINT_BUY_COSTS[score] ?? 0
-        const costNext = POINT_BUY_COSTS[score + 1] ?? 999
-        const canDecrease = score > POINT_BUY_MIN
-        const canIncrease = score < POINT_BUY_MAX && remaining >= costNext - costNow
-        return (
-          <AbilityScoreCard
-            key={ability}
-            ability={ability}
-            score={score}
-            bonus={abilityBonuses[ability]}
-            variant="wizard"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className={cn(
-                  'h-8 w-8 p-0 text-base font-bold',
-                  !canDecrease && 'opacity-35 cursor-not-allowed',
-                )}
-                aria-label={`Decrease ${ability}`}
-                disabled={!canDecrease}
-                onClick={() => setScore(ability, score - 1)}
-              >
-                −
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className={cn(
-                  'h-8 w-8 p-0 text-base font-bold',
-                  !canIncrease && 'opacity-35 cursor-not-allowed',
-                )}
-                aria-label={`Increase ${ability}`}
-                disabled={!canIncrease}
-                onClick={() => setScore(ability, score + 1)}
-              >
-                +
-              </Button>
-            </div>
-          </AbilityScoreCard>
-        )
-      })}
-    </div>
-  )
-}
-
-function StandardArrayPanel({
-  scores,
-  abilityBonuses,
-  setAllScores,
-}: {
-  scores: Record<AbilityName, number>
-  abilityBonuses: Partial<Record<AbilityName, number>>
-  setAllScores: (next: Partial<Record<AbilityName, number>>) => void
-}) {
-  const assignments = isValidStandardArrayAssignment(scores) ? scores : DEFAULT_STANDARD_SCORES
-
-  const assign = (ability: AbilityName, raw: string) => {
-    const value = Number(raw)
-    if (!Number.isFinite(value)) return
-    const next = { ...assignments, [ability]: value }
-    const swapTarget = ABILITY_NAMES.find((ab) => ab !== ability && assignments[ab] === value)
-    if (swapTarget) next[swapTarget] = assignments[ability]
-    setAllScores(next)
-  }
-  return (
-    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
-      {ABILITY_NAMES.map((ability) => {
-        const base = assignments[ability]
-        return (
-          <AbilityScoreCard
-            key={ability}
-            ability={ability}
-            score={base ?? 8}
-            bonus={abilityBonuses[ability]}
-            variant="wizard"
-          >
-            <div className="flex justify-center">
-              <Select
-                value={base !== undefined ? String(base) : ''}
-                onValueChange={(v) => assign(ability, v)}
-              >
-                <SelectTrigger
-                  aria-label={`${ability} base score`}
-                  className="h-9 w-[90px] px-2 text-sm"
-                >
-                  <SelectValue placeholder="Choose…" />
-                </SelectTrigger>
-                <SelectContent className="w-[90px] min-w-[90px]">
-                  {STANDARD_ARRAY.map((v) => (
-                    <SelectItem key={v} value={String(v)} className="pr-6">
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </AbilityScoreCard>
-        )
-      })}
-    </div>
-  )
-}
-
-function CustomPanel({
-  scores,
-  abilityBonuses,
-  setScore,
-}: {
-  scores: Record<AbilityName, number>
-  abilityBonuses: Partial<Record<AbilityName, number>>
-  setScore: (a: AbilityName, v: number) => void
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
-      {ABILITY_NAMES.map((ability) => {
-        const val = scores[ability] ?? ABILITY_SCORE_MIN
-        return (
-          <AbilityScoreCard
-            key={ability}
-            ability={ability}
-            score={val}
-            bonus={abilityBonuses[ability]}
-            variant="wizard"
-          >
-            <div className="flex justify-center">
-              <Input
-                aria-label={`${ability} base score`}
-                type="number"
-                min={ABILITY_SCORE_MIN}
-                max={ABILITY_SCORE_ABSOLUTE_MAX}
-                value={val}
-                className="h-10 w-24 text-center font-mono font-bold text-base"
-                onChange={(e) =>
-                  setScore(
-                    ability,
-                    Math.min(
-                      ABILITY_SCORE_ABSOLUTE_MAX,
-                      Math.max(ABILITY_SCORE_MIN, Number(e.target.value) || ABILITY_SCORE_MIN),
-                    ),
-                  )
-                }
-              />
-            </div>
-          </AbilityScoreCard>
-        )
-      })}
-    </div>
-  )
-}
-
 export function AbilityScoresStep({
   data,
   onChange,
   raceResolution,
   backgroundAbilityData,
 }: AbilityScoresStepProps) {
-  const method = data.abilityScoreMethod || 'point-buy'
+  const method = (data.abilityScoreMethod || 'point-buy') as AbilityScoreMethod
   const methods = getAbilityScoreMethodOptions(data.originSystem || '2014')
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
@@ -478,13 +302,8 @@ export function AbilityScoresStep({
         )
       : {}
 
-  const pointsUsed = ABILITY_NAMES.reduce(
-    (sum, ability) => sum + (POINT_BUY_COSTS[scores[ability]] ?? 0),
-    0,
-  )
-  const remaining = POINT_BUY_BUDGET - pointsUsed
-  const setAllScores = (next: Partial<Record<AbilityName, number>>) => {
-    onChange({ abilityScores: next as Record<string, number> })
+  const setAllScores = (next: Record<AbilityName, number>) => {
+    onChange({ abilityScores: next })
   }
 
   const setScore = (ability: AbilityName, value: number) => {
@@ -499,17 +318,9 @@ export function AbilityScoresStep({
         className="gap-3"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabsList className="h-auto flex-wrap justify-start gap-1.5 bg-transparent p-0">
-            {methods.map(({ value, label }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className="rounded-md border border-border bg-workspace-pane px-3 py-1.5 data-[state=active]:border-primary/50 data-[state=active]:bg-primary/10"
-              >
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="h-10 min-w-0">
+            <AbilityScoreMethodTabs />
+          </div>
           <Button variant="ghost" size="sm" onClick={() => setAllScores(fallbackScores)}>
             Reset base scores
           </Button>
@@ -517,21 +328,13 @@ export function AbilityScoresStep({
         <p className="text-sm text-muted-foreground">
           {methods.find((option) => option.value === method)?.description}
         </p>
-        {method === 'point-buy' && (
-          <div>
-            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <strong className={cn(remaining < 0 && 'text-destructive')}>
-                {remaining} of {POINT_BUY_BUDGET} points remaining
-              </strong>
-              <span className="text-xs text-muted-foreground">{pointsUsed} points used</span>
-            </div>
-            <Progress
-              aria-label="Point buy budget used"
-              value={Math.min(100, (pointsUsed / POINT_BUY_BUDGET) * 100)}
-              className="h-2"
-            />
-          </div>
-        )}
+        <AbilityScoreEditor
+          method={method}
+          scores={scores}
+          bonuses={abilityBonuses}
+          setScore={setScore}
+          setAllScores={setAllScores}
+        />
         {showRaceOriginBonuses ? (
           <RaceAsiBonuses
             data={data}
@@ -546,24 +349,6 @@ export function AbilityScoresStep({
             abilityData={backgroundAbilityData}
           />
         ) : null}
-        <TabsContent value="point-buy" className="flex min-h-0 flex-col">
-          <PointBuyPanel
-            scores={scores}
-            abilityBonuses={abilityBonuses}
-            setScore={setScore}
-            remaining={remaining}
-          />
-        </TabsContent>
-        <TabsContent value="standard-array" className="flex min-h-0 flex-col">
-          <StandardArrayPanel
-            scores={scores}
-            abilityBonuses={abilityBonuses}
-            setAllScores={setAllScores}
-          />
-        </TabsContent>
-        <TabsContent value="custom" className="flex min-h-0 flex-col">
-          <CustomPanel scores={scores} abilityBonuses={abilityBonuses} setScore={setScore} />
-        </TabsContent>
       </Tabs>
     </div>
   )
