@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import {
   CLASS_CASTING_PRODUCERS,
@@ -7,6 +7,7 @@ import {
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
 import { ensureSpellProfiles } from '@/lib/calculations/spellProfiles.profiles'
@@ -17,12 +18,14 @@ import {
   setManagedClassSpellChoicesCommand,
 } from '@/lib/character/commands/managedClassSpellCommands'
 import { managedClassSpellId } from '@/lib/character/managedClassSpellIdentity'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import {
+  getManagedClassSpellPool,
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
-import type { Spell5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Spell5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
@@ -89,6 +92,131 @@ const add = (character: Character, target: string, address = slot(), prepare?: b
 }
 const profile = (character: Character, name = 'Bard') =>
   character.spells.spellProfiles.find((row) => row.className === name)!
+
+const mysticFile = 'data/class/class-mystic.json'
+test.skipIf(!existsSync(mysticFile))(
+  'Arcane Dabbler uses the current source quota and preserves saved spells through source loss',
+  () => {
+    const raw = JSON.parse(readFileSync(mysticFile, 'utf8'))
+    const authority = () => {
+      const parsed = parseClassDocument(raw)
+      return {
+        ...context,
+        catalogs: buildClassChoiceFeatureCatalogs({
+          ...data,
+          classes: parsed.classes as Class5e[],
+          classFeatures: parsed.classFeatures as ClassFeature[],
+        }),
+      }
+    }
+    const mystic = {
+      name: 'Mystic',
+      source: 'UATheMysticClass',
+      levels: 6,
+      subclass: 'Order of the Wu Jen',
+      subclassSource: 'UATheMysticClass',
+    }
+    const opening = initial(mystic)
+    const published = authority()
+    const slots = (character: Character, input: ManagedClassSpellContext) =>
+      getManagedClassSpellSlots(character.classProgression[0], character, input.catalogs).filter(
+        (address) => address[1] === 'feature-prepared',
+      )
+    expect(slots(initial({ ...mystic, levels: 5 }), published)).toEqual([])
+    const gained = slots(opening, published)
+    expect(gained).toHaveLength(3)
+    const address = gained[2]
+    const spell = getManagedClassSpellPool(opening, address, published).spells[0]
+    expect(spell?.level).toBeGreaterThan(0)
+    const target = { name: spell.name, source: spell.source }
+    const saved = characterPersistenceSchema.parse(
+      apply(
+        opening,
+        {
+          slot: address,
+          target,
+          expected: null,
+          policy: 'default',
+        },
+        published,
+      ),
+    )
+    const reference = `${spell.name}|${spell.source}`
+    expect(profile(saved, 'Mystic').alwaysPreparedSpells).toContain(reference)
+    expect(projectManagedClassSpellState(saved, published).statuses[0].castingNote).toContain(
+      'Spellcasting ability is unspecified',
+    )
+
+    const feature = raw.subclassFeature.find((row: ClassFeature) => row.name === 'Arcane Dabbler')
+    feature.entries[0] = feature.entries[0].replace('learn three', 'learn two')
+    const reduced = authority()
+    expect(slots(opening, reduced)).toHaveLength(2)
+    const dormant = projectManagedClassSpellState(saved, reduced)
+    expect(dormant.statuses[0].active).toBe(false)
+    expect(profile(dormant.character, 'Mystic').alwaysPreparedSpells ?? []).not.toContain(reference)
+    expect(dormant.character.managedClassSpellChoices).toEqual(saved.managedClassSpellChoices)
+    expect(projectManagedClassSpellState(dormant.character, published).statuses[0].active).toBe(
+      true,
+    )
+    const cleared = apply(
+      saved,
+      { slot: address, expected: saved.managedClassSpellChoices![0], policy: 'default' },
+      reduced,
+    )
+    expect(cleared.managedClassSpellChoices).toEqual([])
+    const reopened = characterPersistenceSchema.parse(cleared)
+    expect(profile(reopened, 'Mystic').alwaysPreparedSpells ?? []).not.toContain(reference)
+    expect(profile(reopened, 'Mystic').spellsKnown).not.toContain(reference)
+    const rolledBack = retainEarnedManagedClassSpells(saved, [{ ...mystic, levels: 5 }])
+    expect(rolledBack.managedClassSpellChoices).toEqual([])
+    expect(profile(rolledBack, 'Mystic').alwaysPreparedSpells ?? []).not.toContain(reference)
+    const entries = [...feature.entries]
+    feature.entries[0] = entries[0].replace('class=wizard', 'class=wizard;sorcerer')
+    feature.entries[4] = entries[4].replace('class=wizard', 'class=wizard;sorcerer')
+    expect(slots(opening, authority())).toEqual([])
+    feature.entries[0] = entries[0]
+    feature.entries[4] = entries[4].replace('chosen wizard spells', 'chosen cleric spells')
+    expect(slots(opening, authority())).toEqual([])
+
+    const wuJen = raw.subclass.find((row: { shortName: string }) => row.shortName === 'Wu Jen')
+    wuJen.subclassFeatures = wuJen.subclassFeatures.map((ref: unknown) =>
+      typeof ref === 'string' && ref.startsWith('Arcane Dabbler|')
+        ? ref.replace(/\|6$/, '|14')
+        : ref,
+    )
+    feature.level = 14
+    feature.entries = [...entries]
+    feature.entries[0] = entries[0].replace('At 6th', 'At 14th')
+    const moved = authority()
+    const advanced = { ...saved, classProgression: [{ ...mystic, levels: 20 }] }
+    const gainedAgain = slots(advanced, moved).find((row) => row[3] === 14)!
+    const overlap = characterPersistenceSchema.parse(
+      apply(
+        advanced,
+        {
+          slot: gainedAgain,
+          target,
+          expected: null,
+          policy: 'default',
+        },
+        moved,
+      ),
+    )
+    const retained = characterPersistenceSchema.parse(
+      apply(
+        overlap,
+        {
+          slot: address,
+          expected: overlap.managedClassSpellChoices!.find((row) => row.slot[3] === 6)!,
+          policy: 'default',
+        },
+        moved,
+      ),
+    )
+    expect(retained.managedClassSpellChoices?.map((row) => row.slot[3])).toEqual([14])
+    expect(profile(retained, 'Mystic').alwaysPreparedSpells).toContain(reference)
+  },
+)
 
 describe('addressed current class spell choices', () => {
   test.each(

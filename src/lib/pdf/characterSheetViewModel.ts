@@ -1117,27 +1117,26 @@ export function createCharacterSheetViewModel(
       fixedSpells,
       invocationSpells,
     ),
-    spellcastingPages: spellcastingSources.map((detail, index) => ({
-      detail,
-      spellRows: buildSpellRows(
-        character.spells.spellProfiles.filter(
-          (profile) =>
-            profile.id === detail.profileId ||
-            (index === 0 && !spellcastingSources.some((caster) => caster.profileId === profile.id)),
-        ),
-        rawLookups.spellsByKey ?? {},
-        spellcastingDetails,
-        calculationContext.managedClassSpellStatuses.filter((status) =>
-          character.spells.spellProfiles.some(
-            (profile) =>
-              profile.id === detail.profileId &&
-              isManagedClassSpellProfile(status.choice.slot, profile),
+    spellcastingPages: spellcastingSources.map((detail, index) => {
+      const profiles = character.spells.spellProfiles.filter(
+        (profile) =>
+          profile.id === detail.profileId ||
+          (index === 0 && !spellcastingSources.some((caster) => caster.profileId === profile.id)),
+      )
+      return {
+        detail,
+        spellRows: buildSpellRows(
+          profiles,
+          rawLookups.spellsByKey ?? {},
+          spellcastingDetails,
+          calculationContext.managedClassSpellStatuses.filter((status) =>
+            profiles.some((profile) => isManagedClassSpellProfile(status.choice.slot, profile)),
           ),
+          fixedSpells,
+          invocationSpells.filter((row) => row.profileId === detail.profileId),
         ),
-        fixedSpells,
-        invocationSpells.filter((row) => row.profileId === detail.profileId),
-      ),
-    })),
+      }
+    }),
     spellSlots: calculationContext.classCasting.slots,
     magicItems,
     companions,

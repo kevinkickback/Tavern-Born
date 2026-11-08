@@ -14,7 +14,7 @@ export function getCurrentDirectSubclassSource(
   character: Character,
   entry: CharacterClassEntry,
   classes: readonly Class5e[] | undefined,
-  className: 'Artificer' | 'Fighter' | 'Rogue',
+  className: 'Artificer' | 'Fighter' | 'Mystic' | 'Rogue',
 ) {
   const classKey = norm(className)
   if (

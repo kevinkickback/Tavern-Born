@@ -308,6 +308,22 @@
     {
       "target": "subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof",
       "digest": "e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223"
+    },
+    {
+      "target": "subclass-feature|order of the avatar|mystic|uathemysticclass|avatar|uathemysticclass|1|uathemysticclass",
+      "digest": "dd0114404bb185beebbddfee6393f26f110590ae95c892f6bf5724852d1be8cf"
+    },
+    {
+      "target": "subclass-feature|order of the awakened|mystic|uathemysticclass|awakened|uathemysticclass|1|uathemysticclass",
+      "digest": "aea303ce4aa2b73f1d6d0cbd3dda1aa2bebf9289955f9c6d8c8b2923387cc710"
+    },
+    {
+      "target": "subclass-feature|order of the soul knife|mystic|uathemysticclass|soul knife|uathemysticclass|1|uathemysticclass",
+      "digest": "c03007d45583e89e2e0762bdf6dfc3030a7e1e728ce4a07bf794c8ac12e6b549"
+    },
+    {
+      "target": "subclass-feature|order of the wu jen|mystic|uathemysticclass|wu jen|uathemysticclass|1|uathemysticclass",
+      "digest": "e6fbede9e4f14820886477e932095b499e53464d8c94603df644a0e99d6321e2"
     }
   ],
   "bundledBardAncestors": [

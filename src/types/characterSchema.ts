@@ -78,6 +78,7 @@ const managedClassSpellChoiceSchema = z
         'class-spellbook-specialty',
         'class-arcanum',
         'feature-cantrip',
+        'feature-prepared',
       ]),
       z
         .string()

@@ -157,11 +157,12 @@ export function ManagedClassSpellsDialog({
     !isBookSpecialty &&
     !savantGain &&
     selected?.slot[1] !== 'feature-cantrip' &&
+    selected?.slot[1] !== 'feature-prepared' &&
     !selectedArcana &&
     !(selected && getBardLoreSpellRule(selected.slot))
   const pickerKind =
     (selected &&
-      (isBookSpecialty || savantGain) &&
+      (isBookSpecialty || savantGain || selected.slot[1] === 'feature-prepared') &&
       getManagedClassSpellFeatureLabel(selected.slot)) ||
     (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
       ? 'cantrip'

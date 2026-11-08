@@ -49,6 +49,8 @@ import {
 import { getLegacySorcererSpec } from '@/lib/5etools/legacySorcererSubclassRules'
 import { getCurrentMonkBaseRules, getEmptyBodySpell } from '@/lib/5etools/monkBaseRules'
 import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
+import { getArcaneDabbler, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
+import { ARCANE_DABBLER } from '@/lib/5etools/mysticFeatureIdentity'
 import {
   ELDRITCH_HEX_TARGET,
   getCurrentStepsOfTheFey,
@@ -134,7 +136,11 @@ function resolveSlot(
   classes: readonly Class5e[] = currentClasses(character, context),
   gainAuthority = getClassCastingGainAuthority,
 ) {
-  if (slot[1] === 'feature-cantrip' || slot[1] === 'class-spellbook-specialty')
+  if (
+    slot[1] === 'feature-cantrip' ||
+    slot[1] === 'feature-prepared' ||
+    slot[1] === 'class-spellbook-specialty'
+  )
     return 'Use this selected feature’s spell choices.'
   const savantGain = getSavantSpellbookGain(slot)
   const lore = getBardLoreSpellRule(slot)
@@ -513,6 +519,67 @@ export function applySpellbookSpecialtyPreparation(
   }
 }
 
+function getFeaturePreparedSpellPool(
+  character: Character,
+  slot: ManagedClassSpellSlot,
+  context?: ManagedClassSpellContext,
+  reference?: string,
+) {
+  const entry = isArcaneDabblerSlot(slot)
+    ? getManagedClassSpellOwnerEntry(slot, character.classProgression)
+    : undefined
+  const rule = entry && getArcaneDabbler(character, entry, currentClasses(character, context))
+  const current =
+    rule && rule.target === slot[2] && rule.level === slot[3] && slot[4] < rule.count
+      ? rule
+      : undefined
+  const allowed = sources(character)
+  const candidates = current ? Object.values(context?.spellsByKey ?? {}) : []
+  const targets = reference
+    ? new Set([reference])
+    : new Set(
+        candidates
+          .filter(
+            (spell) => current?.ranks.includes(spell.level) && permitted(allowed, spell.source),
+          )
+          .map((spell) => getSpellReferenceKey(spell.name, spell.source)),
+      )
+  const spells = current
+    ? auditSpellRouteMultiplicity(
+        candidates.filter((spell) => targets.has(getSpellReferenceKey(spell.name, spell.source))),
+      ).filter(
+        (spell) =>
+          current.ranks.includes(spell.level) &&
+          permitted(allowed, spell.source) &&
+          spell.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+          !spell.classSpellRouteDiagnostics?.length &&
+          spell.classSpellRoutes?.some(
+            (route) =>
+              matchesJoinedSpellClassFilter(route, current.classes) &&
+              [route[2], route[4], ...(route[6] ? [route[6]] : [])].every((source) =>
+                permitted(allowed, source),
+              ),
+          ),
+      )
+    : []
+  return {
+    spells,
+    defaultReferences: new Set(
+      spells.map((spell) => getSpellReferenceKey(spell.name, spell.source)),
+    ),
+    maxSpellLevel: current ? Math.max(...current.ranks) : 0,
+    allowedLevels: current?.ranks ?? [],
+    reason: current
+      ? undefined
+      : 'Restore the current Arcane Dabbler rules or clear the saved spell.',
+    schools: undefined,
+    privileged: false,
+    featureName: ARCANE_DABBLER,
+    entry,
+    rule: current,
+  }
+}
+
 /** Picker and command share all hard bounds; the explicit bypass changes only default list membership. */
 export function getManagedClassSpellPool(
   character: Character,
@@ -522,6 +589,8 @@ export function getManagedClassSpellPool(
 ) {
   if (slot[1] === 'feature-cantrip')
     return getSelectedFeatureCantripPool(character, slot, sourceContext)
+  if (slot[1] === 'feature-prepared')
+    return getFeaturePreparedSpellPool(character, slot, sourceContext)
   if (slot[1] === 'class-spellbook-specialty') {
     const targets = new Map(
       Object.values(sourceContext?.spellsByKey ?? {}).map(
@@ -695,7 +764,11 @@ export function projectManagedClassSpellState(
     const deny = (reason: string) => {
       status.reason = reason
     }
-    if (choice.slot[1] === 'feature-cantrip' || choice.slot[1] === 'class-spellbook-specialty')
+    if (
+      choice.slot[1] === 'feature-cantrip' ||
+      choice.slot[1] === 'feature-prepared' ||
+      choice.slot[1] === 'class-spellbook-specialty'
+    )
       continue
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
@@ -973,12 +1046,14 @@ export function projectManagedClassSpellState(
       ]),
     })
   }
-  for (const { choice, spell, entry, authority } of active) {
+  const addManagedGrant = (
+    choice: ManagedClassSpellChoice,
+    entry: CharacterClassEntry,
+    field: 'cantrips' | 'spellsKnown',
+    automatic: boolean,
+    featureName?: string,
+  ) => {
     const reference = formatSpellReference(choice.target.name, choice.target.source)
-    const field = spell.level === 0 ? 'cantrips' : 'spellsKnown'
-    const lore = getBardLoreSpellRule(choice.slot)
-    const automatic =
-      (lore?.source === 'xphb' && spell.level > 0) || !!getClericArcanaSpellRule(choice.slot)
     const add = (refs: string[] = []) =>
       refs.some((row) => getSpellReferenceKey(row) === getSpellReferenceKey(reference))
         ? refs
@@ -996,14 +1071,36 @@ export function projectManagedClassSpellState(
     provenance = addSpellGrant(
       provenance,
       reference,
-      makeManagedClassSpellTag(
-        choice,
-        entry,
-        choice.slot[1] === 'class-arcanum'
-          ? authority.declaration.feature.name
-          : featurePools.get(JSON.stringify(choice.slot.slice(0, 4)))?.featureName,
-      ),
+      makeManagedClassSpellTag(choice, entry, featureName),
     )
+  }
+  for (const { choice, spell, entry, authority } of active) {
+    const lore = getBardLoreSpellRule(choice.slot)
+    addManagedGrant(
+      choice,
+      entry,
+      spell.level === 0 ? 'cantrips' : 'spellsKnown',
+      (lore?.source === 'xphb' && spell.level > 0) || !!getClericArcanaSpellRule(choice.slot),
+      choice.slot[1] === 'class-arcanum' ? authority.declaration.feature.name : undefined,
+    )
+  }
+  for (const status of statuses.filter(({ choice }) => choice.slot[1] === 'feature-prepared')) {
+    const { choice } = status
+    const reference = getSpellReferenceKey(choice.target.name, choice.target.source)
+    const pool = getFeaturePreparedSpellPool(character, choice.slot, context, reference)
+    const spell = pool.spells.find(
+      (row) => getSpellReferenceKey(row.name, row.source) === reference,
+    )
+    const cost = spell && pool.rule?.costs.find((row) => row.rank === spell.level)?.cost
+    if (invalid || !pool.entry || !spell || cost === undefined || choice.policy !== 'default') {
+      status.reason = invalid
+        ? 'The saved class spell ownership is invalid.'
+        : (pool.reason ?? 'Restore the exact spell in the current Arcane Dabbler filter.')
+      continue
+    }
+    status.active = true
+    status.castingNote = `Arcane Dabbler. This spell is always prepared. Create a level ${spell.level} slot as a Bonus Action for ${cost} Psi Points, subject to your Psi Limit. The slot expires after use or a Long Rest. Spellcasting ability is unspecified.`
+    addManagedGrant(choice, pool.entry, 'spellsKnown', true, ARCANE_DABBLER)
   }
   // Specialty choices borrow learned entries. They never materialize another grant or fulfill their own eligibility.
   const automaticByOwner = new Map<CharacterClassEntry, Set<string>>()

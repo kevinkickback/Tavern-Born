@@ -5,6 +5,7 @@ import {
 } from '@/lib/5etools/classCastingRules'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
+import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { isGiantPowerSpellSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -60,6 +61,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
           choice.policy !== 'default')) ||
       (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
       ((getSavantSpellbookGain(choice.slot) ||
+        isArcaneDabblerSlot(choice.slot) ||
         getBardLoreSpellRule(choice.slot) ||
         getClericArcanaSpellRule(choice.slot)) &&
         (choice.policy !== 'default' ||
@@ -141,6 +143,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
                 !!getBardLoreSpellRule(choice.slot)
               : field === 'spellsKnown'
                 ? choice.slot[1] === 'class-known' ||
+                  choice.slot[1] === 'feature-prepared' ||
                   choice.slot[1] === 'class-spellbook' ||
                   choice.slot[1] === 'class-arcanum'
                 : choice.slot[1] === 'class-spellbook' && choice.prepare === true),
@@ -191,7 +194,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         fields
           .flatMap((field) => matchingProfiles[0][field])
           .filter((reference) => getSpellReferenceKey(reference) === target).length !== 1 ||
-        (!!getClericArcanaSpellRule(choice.slot) &&
+        ((isArcaneDabblerSlot(choice.slot) || !!getClericArcanaSpellRule(choice.slot)) &&
           matchingProfiles[0].alwaysPreparedSpells?.filter(
             (reference) => getSpellReferenceKey(reference) === target,
           ).length !== 1)

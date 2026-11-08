@@ -1138,7 +1138,9 @@ export function applyClassChoiceSelectionCommand(
     if ((latest ? getOptionalPoolSelectionHandle(latest) : '') !== expectedSelectionHandle)
       throw new RangeError('The saved allocation changed. Review it before confirming.')
   }
-  choice = currentLiteralChoice(character, choice, selected, authority)
+  if (!gain || choice.kind !== 'psionic') {
+    choice = currentLiteralChoice(character, choice, selected, authority)
+  }
   const owner = findOwner(character, choice)
   const classLevel = owner?.levels ?? 0
   if (!owner || classLevel < choice.level) {
@@ -1309,7 +1311,7 @@ export function applyClassChoiceSelectionCommand(
         choice.level,
         minimumLevelByKey,
       )
-  if (choice.kind === 'psionic') {
+  if (!gain && choice.kind === 'psionic') {
     const prior = existingSelection?.selected ?? []
     const available = getClassChoiceSlotLevels(choice).slice(0, requiredCount)
     for (const row of prior.filter((row) =>

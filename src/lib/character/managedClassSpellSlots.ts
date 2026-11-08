@@ -8,6 +8,7 @@ import {
   getClericArcanaSpellRule,
   getClericArcanaSpellSlots,
 } from '@/lib/5etools/clericArcanaSpells'
+import { getArcaneDabblerSlots, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
@@ -54,7 +55,9 @@ export function getManagedClassSpellSlots(
         ...(character.managedClassSpellChoices ?? [])
           .filter(
             (choice) =>
-              choice.slot[1] === 'feature-cantrip' || getClericArcanaSpellRule(choice.slot),
+              choice.slot[1] === 'feature-cantrip' ||
+              isArcaneDabblerSlot(choice.slot) ||
+              getClericArcanaSpellRule(choice.slot),
           )
           .map((choice) => choice.slot),
       ].filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]) && slot[3] <= entry.levels)
@@ -85,6 +88,7 @@ export function getManagedClassSpellSlots(
         ...feature,
         ...getBardLoreSpellSlots(entry),
         ...getClericArcanaSpellSlots(entry, currentClass),
+        ...(character ? getArcaneDabblerSlots(character, entry, catalogs?.classes) : []),
         ...getSavantSpellbookSlots(entry),
         ...getSpellbookSpecialtySlots(entry),
       ].map((slot) => [managedClassSpellId(slot), slot]),

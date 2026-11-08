@@ -325,6 +325,32 @@ export function deriveFixedProficiencyRules(documents, api) {
         )
         continue
       }
+      if (
+        feature.className === 'Mystic' &&
+        feature.classSource === 'UATheMysticClass' &&
+        feature.subclassSource === feature.classSource &&
+        feature.source === feature.classSource &&
+        feature.entries?.length === 1 &&
+        typeof feature.entries[0] === 'string'
+      ) {
+        const rule =
+          /^At (\d+)(?:st|nd|rd|th) level, you gain proficiency with medium armor and (shields|martial weapons)\.$/.exec(
+            feature.entries[0],
+          )
+        if (rule && !feature._copy && Number(rule[1]) === feature.level) {
+          const training =
+            rule[2] === 'shields'
+              ? { armor: ['medium', 'shields'] }
+              : { armor: ['medium'], weapons: ['martial'] }
+          push(
+            feature,
+            'fixed-training',
+            { training, subclassGainPosition: 'first' },
+            api.subclassIdentity,
+          )
+          continue
+        }
+      }
       if (rogue) {
         push(
           feature,

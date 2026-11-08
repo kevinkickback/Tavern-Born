@@ -6,6 +6,8 @@ import {
   isExactSubclassFeatureReference as isExactSubclassProficiencyReference,
 } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import { isArcaneDabblerDeclaration } from './mysticFeatureIdentity'
+import { PSIONIC_CLASS_SOURCE } from './psionicIdentity'
 
 type SubclassProficiencyOwner = [string, string, string, string]
 export interface SubclassProficiencyPath {
@@ -141,8 +143,27 @@ function omitIndependentSchedule(value: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'additionalSpells'))
 }
 
-export const subclassProficiencyRootDigest = (value: Record<string, unknown>) =>
-  subclassProficiencyDigest(omitIndependentSchedule(value))
+export function getSubclassProficiencyDeclarations<T>(
+  root: Record<string, unknown>,
+  values: readonly T[],
+) {
+  return root.name === 'Order of the Wu Jen' &&
+    root.shortName === 'Wu Jen' &&
+    root.className === 'Mystic' &&
+    root.classSource === PSIONIC_CLASS_SOURCE &&
+    root.source === PSIONIC_CLASS_SOURCE
+    ? values.filter((value) => !isArcaneDabblerDeclaration(value))
+    : values
+}
+
+export function subclassProficiencyRootDigest(value: Record<string, unknown>) {
+  const root = omitIndependentSchedule(value)
+  if (!Array.isArray(root.subclassFeatures)) return subclassProficiencyDigest(root)
+  const declarations = getSubclassProficiencyDeclarations(root, root.subclassFeatures)
+  return subclassProficiencyDigest(
+    declarations === root.subclassFeatures ? root : { ...root, subclassFeatures: declarations },
+  )
+}
 
 export function subclassProficiencyMetadata(value: Record<string, unknown>, root = false) {
   const derived = new Set([

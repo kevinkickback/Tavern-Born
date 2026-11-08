@@ -1,5 +1,6 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
+import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
@@ -14,6 +15,14 @@ import {
   hasSavedSelectedFeatureSpellOwner,
 } from './selectedFeatureSpellOwnership'
 
+const automaticallyPrepared = (choice: ManagedClassSpellChoice) =>
+  getBardLoreSpellRule(choice.slot)?.source === 'xphb' ||
+  !!getClericArcanaSpellRule(choice.slot) ||
+  isArcaneDabblerSlot(choice.slot)
+
+const choiceReference = (choice: ManagedClassSpellChoice) =>
+  getSpellReferenceKey(choice.target.name, choice.target.source)
+
 /** Source-free inverse for precisely addressed ownership; every other saved relation is retained. */
 export function removeManagedClassSpellMaterialization(
   character: Character,
@@ -27,19 +36,24 @@ export function removeManagedClassSpellMaterialization(
       isManagedClassSpellProfile(choice.slot, profile),
     )
     if (!targets.length) return profile
-    const automaticLore = new Set(
-      targets
-        .filter(
-          (choice) =>
-            getBardLoreSpellRule(choice.slot)?.source === 'xphb' ||
-            getClericArcanaSpellRule(choice.slot),
+    const retained = (character.managedClassSpellChoices ?? []).filter((choice) => {
+      const id = managedClassSpellId(choice.slot)
+      return (
+        !ids.has(id) &&
+        isManagedClassSpellProfile(choice.slot, profile) &&
+        (character.provenance.spells[getSpellNameKey(choice.target.name)] ?? []).some(
+          (tag) => tag.grantVariant === id,
         )
-        .map((choice) => getSpellReferenceKey(choice.target.name, choice.target.source)),
-    )
-    const alwaysPreparedSpells = automaticLore.size
+      )
+    })
+    const retainedReferences = new Set(retained.map(choiceReference))
+    const retainedAutomatic = new Set(retained.filter(automaticallyPrepared).map(choiceReference))
+    const automatic = new Set(targets.filter(automaticallyPrepared).map(choiceReference))
+    const alwaysPreparedSpells = automatic.size
       ? profile.alwaysPreparedSpells?.filter(
           (reference) =>
-            !automaticLore.has(getSpellReferenceKey(reference)) ||
+            !automatic.has(getSpellReferenceKey(reference)) ||
+            retainedAutomatic.has(getSpellReferenceKey(reference)) ||
             profile.fixedSpells?.some(
               (fixed) => getSpellReferenceKey(fixed) === getSpellReferenceKey(reference),
             ),
@@ -51,16 +65,7 @@ export function removeManagedClassSpellMaterialization(
         : { ...profile, alwaysPreparedSpells }
     const keep = (reference: string) =>
       isIndependentFixedClassSpell(independent, reference) ||
-      (character.managedClassSpellChoices ?? []).some(
-        (choice) =>
-          !ids.has(managedClassSpellId(choice.slot)) &&
-          isManagedClassSpellProfile(choice.slot, profile) &&
-          (character.provenance.spells[getSpellNameKey(choice.target.name)] ?? []).some(
-            (tag) => tag.grantVariant === managedClassSpellId(choice.slot),
-          ) &&
-          getSpellReferenceKey(choice.target.name, choice.target.source) ===
-            getSpellReferenceKey(reference),
-      ) ||
+      retainedReferences.has(getSpellReferenceKey(reference)) ||
       !targets.some(
         (choice) =>
           getSpellReferenceKey(choice.target.name, choice.target.source) ===

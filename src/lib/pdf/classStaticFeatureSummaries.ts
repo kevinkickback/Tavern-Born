@@ -23,6 +23,7 @@ import {
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
+import { getCurrentMysticRules, getMysticPsiLimit } from '@/lib/5etools/mysticJourneyRules'
 import {
   decodeOptionalDeclaration,
   exactOptionalDeclarationReference,
@@ -681,6 +682,35 @@ export function getClassStaticFeatureSummaries(
         }
       })
       return [...base, ...specialistRules].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
+    if (name === 'mystic') {
+      const current = getCurrentMysticRules(character, entry, catalogs)
+      if (!current) return []
+      const limit = getMysticPsiLimit(current)
+      const base = current.features.flatMap((feature) => {
+        if (
+          [
+            'Ability Score Improvement',
+            'Psionic Disciplines and Talents',
+            'Using a Discipline',
+          ].includes(feature.name)
+        )
+          return []
+        if (feature.name === 'Psionics') {
+          return limit ? [{ ...feature, entries: [`Current Psi Limit is ${limit}.`] }] : []
+        }
+        return [feature]
+      })
+      const order = getDeclaredSubclassStaticFeatures(current.cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      return [...base, ...order].flatMap((feature) =>
         featureSummary(feature).map((summary) => ({
           ...summary,
           replaces: savedClassLabel(character, entry, feature),

@@ -52,6 +52,12 @@ Mystic talent, discipline and order-bonus selections use the same Class-choice o
 current-benefit projection. Their distinct catalog, saved relation and setup limits are described
 in [psionic setup](psionic-selection.md).
 
+The Mystic class table supplies each earned talent and discipline increase. Show an independent
+picker at each increase and preserve earlier allocations when the new gain changes. The order's
+current Bonus Disciplines clause supplies its setup count and order filter. Read fixed training and
+skill choices from their declaring order features. The sheet expands earned order references to
+their actual rules and reads Psi Limit and Psionic Mastery uses from their authored progression.
+
 Legacy College of Swords and Way of the Kensei setup retain their declaring XGE subclass owner
 and exact PHB targets under either PHB or XPHB parents. Their qualified dependency catalogs are
 limited to these Class choices; they do not enable PHB sources, ordinary inventory options or

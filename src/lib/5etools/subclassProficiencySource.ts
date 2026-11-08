@@ -5,6 +5,7 @@ import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   collectSubclassProficiencyPaths,
   getSubclassCopyLookupKey,
+  getSubclassProficiencyDeclarations,
   getSubclassProficiencyEntries,
   getSubclassProficiencyOwner,
   isArcaneArcherLoreProficiencyFeature,
@@ -348,11 +349,17 @@ export function getCurrentSubclassProficiencyCertificate(
       certificate.metadataDigest ||
     subclass.introFeatureRef !== certificate.intro ||
     !Array.isArray(subclass.subclassFeatures) ||
-    !orderedDeclarations(subclass.subclassFeatures, certificate.declarations) ||
+    !orderedDeclarations(
+      getSubclassProficiencyDeclarations<unknown>(subclass, subclass.subclassFeatures),
+      getSubclassProficiencyDeclarations(subclass, certificate.declarations),
+    ) ||
     !Array.isArray(subclass.subclassFeatureRefs) ||
     !orderedDeclarations(
-      subclass.subclassFeatureRefs.map((ref) => ref.ref),
-      certificate.declarations,
+      getSubclassProficiencyDeclarations(
+        subclass,
+        subclass.subclassFeatureRefs.map((ref) => ref.ref),
+      ),
+      getSubclassProficiencyDeclarations(subclass, certificate.declarations),
     ) ||
     subclass.subclassFeatureRefs.some(
       (ref) =>

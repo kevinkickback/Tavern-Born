@@ -303,6 +303,34 @@
       ]
     },
     {
+      "target": "subclass-feature|armor training|mystic|uathemysticclass|avatar|uathemysticclass|1|uathemysticclass",
+      "name": "Armor Training",
+      "className": "Mystic",
+      "classSource": "UATheMysticClass",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["medium", "shields"]
+      },
+      "subclassGainPosition": "first",
+      "digest": "1837e3e0df4203d83d344c04fd22ff19a741969e51a54a3dcb3a2dc54c90f937",
+      "metadataDigest": "6b15bea6d59bb5f0e19234bc319bdcc94a1cb229e24bc9ffc9062215c4507d6a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|assassin's tools|rogue|xphb|assassin|xphb|3|xphb",
       "name": "Assassin's Tools",
       "className": "Rogue",
@@ -1067,6 +1095,35 @@
       },
       "digest": "ead1f9c9b3c2176059a9b25bd7cee90830d42a53e0fd72a15d6559df13b86c67",
       "metadataDigest": "bac61bb45786ba1421fffa3f579e374ceaf93cabd4750ec888a9b97a73ca850e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|martial training|mystic|uathemysticclass|soul knife|uathemysticclass|1|uathemysticclass",
+      "name": "Martial Training",
+      "className": "Mystic",
+      "classSource": "UATheMysticClass",
+      "level": 1,
+      "kind": "fixed-training",
+      "training": {
+        "armor": ["medium"],
+        "weapons": ["martial"]
+      },
+      "subclassGainPosition": "first",
+      "digest": "b5b5eee8633d7ca1fd8ff08674d65600733faaf4216c161a0da2579743e10cf5",
+      "metadataDigest": "a62d21606ca3c771d3a79460639c6949e10f65bcc45062a9224659af4f490c63",
       "fields": [
         "className",
         "classSource",

@@ -434,6 +434,15 @@ fixed grant. Later Fey Reinforcements and Misty Wanderer retain the earlier prep
 learned spell and expose their own casting rules when earned. Ethereal Step stays outside
 ordinary spell capacity and uses the source's shorter casting time and duration.
 
+## Mystic Arcane Dabbler
+
+The current Wu Jen declaration supplies its earned level, spell count, class and rank filter,
+and Psi Point costs. Each saved spell retains its exact feature slot and printing. The live filter
+determines eligibility in the Class picker, on reload, and when rendering Spells and the sheet.
+These spells stay always prepared outside ordinary class quotas. The feature describes making a
+temporary slot as a Bonus Action within the Psi Limit and leaves the spellcasting ability
+unspecified. The app displays these rules alongside the spells for manual use.
+
 ## Rogue feature casts
 
 Scion's current deity table and innate schedule agree on each cantrip. The choice supplies

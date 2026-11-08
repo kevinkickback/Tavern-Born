@@ -2,10 +2,14 @@
 import fs from 'node:fs'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import { normalizeClassChoices } from '@/lib/5etools/classChoiceNormalization'
+import {
+  getProgressiveChoiceGainCount,
+  normalizeClassChoices,
+} from '@/lib/5etools/classChoiceNormalization'
 import { decodeClassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { getCurrentMysticRules, getMysticMasteryResource } from '@/lib/5etools/mysticJourneyRules'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { parsePsionics } from '@/lib/5etools/parsers/psionics'
 import { normalizePsionicChoices } from '@/lib/5etools/psionicChoices'
@@ -203,6 +207,57 @@ test('required Psionics diagnostics survive alternate owner printings and canoni
 })
 
 describe.skipIf(!hasSource)('configured Mystic psionic actor and current-source lifecycle', () => {
+  test('Psionic Mastery requires agreement between the opening schedule and earned uses', () => {
+    const character = actor(20)
+    const resource = (data: GameData) =>
+      getMysticMasteryResource(
+        getCurrentMysticRules(
+          character,
+          character.classProgression[0],
+          buildClassChoiceFeatureCatalogs(data),
+        ),
+      )
+    expect(resource(catalog())?.maxPerLevel[19]).toBe(4)
+    const current = structuredClone(source)
+    const feature = current.classFeature.find(
+      (row: ClassFeature) => row.name === 'Psionic Mastery (4/Day)',
+    )
+    feature.entries[0] = feature.entries[0].replace('four times', 'three times')
+    const parsed = parseClassDocument(current)
+    expect(
+      resource({
+        ...catalog(),
+        classes: parsed.classes as Class5e[],
+        classFeatures: parsed.classFeatures as ClassFeature[],
+      }),
+    ).toBeUndefined()
+  })
+
+  test('a compatible table edit moves the talent gain and the current bonus clause sets its own quota', () => {
+    const current = structuredClone(source)
+    current.class[0].classTableGroups[0].rows[2][0] = 1
+    const bonus = current.subclassFeature.find(
+      (row: ClassFeature) =>
+        row.name === 'Bonus Disciplines' &&
+        'subclassShortName' in row &&
+        row.subclassShortName === 'Avatar',
+    )
+    bonus.entries[0] = bonus.entries[0].replace('learn two', 'learn three')
+    const parsed = parseClassDocument(current)
+    const data = {
+      ...catalog(),
+      classes: parsed.classes as Class5e[],
+      classFeatures: parsed.classFeatures as ClassFeature[],
+    }
+    const { rows } = choices(data, actor(4))
+    const talents = rows.find((choice) => choice.label === 'Psionic Talents')!
+    const disciplines = rows.find((choice) => choice.label === 'Bonus Disciplines')!
+    expect(getProgressiveChoiceGainCount(talents, 3)).toBe(0)
+    expect(getProgressiveChoiceGainCount(talents, 4)).toBe(1)
+    expect(disciplines.selectionCountByLevel).toEqual(Array(20).fill(3))
+    expect(disciplines.optionFilter?.psionicOrders).toEqual(['Avatar'])
+  })
+
   test('all current table counts and six order pools derive from source, with no Soul Knife bonus', () => {
     const data = catalog(),
       cls = data.classes[0]
@@ -282,6 +337,24 @@ describe.skipIf(!hasSource)('configured Mystic psionic actor and current-source 
       projectEffectiveClassChoiceFeatures(base, catalogs).features.map((row) => row.name),
     ).toEqual([name])
   })
+
+  test('an incomplete order catalog keeps each independently available saved bonus discipline', () => {
+    const data = catalog()
+    const name = 'Crown of Despair'
+    const character = characterPersistenceSchema.parse(
+      pick(data, actor(), 'Bonus Disciplines', [name]),
+    )
+    const partial = {
+      ...data,
+      psionics: data.psionics?.filter((row) => row.order !== 'Avatar' || row.name === name),
+    }
+    const { catalogs, rows } = choices(partial, character)
+    expect(rows.find((row) => row.label === 'Bonus Disciplines')?.selectionCountByLevel[0]).toBe(2)
+    expect(
+      projectEffectiveClassChoiceFeatures(character, catalogs).features.map((row) => row.name),
+    ).toEqual([name])
+  })
+
   test('unrelated unresolvable catalog rows cannot grant benefits or suspend an available earned selection', () => {
     const data = catalog(),
       character = pick(data, actor(), 'Psionic Talents', ['Beacon'])

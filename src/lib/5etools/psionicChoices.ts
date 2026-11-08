@@ -17,7 +17,7 @@ import {
   type PsionicPool,
   psionicBonusRef,
 } from './psionicIdentity'
-import { isAuditedPsionicSource } from './psionicSources'
+import { isAuditedPsionicSource, readBonusDisciplines } from './psionicSources'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 type Owner = NormalizedCharacterChoice['owner']
@@ -72,8 +72,16 @@ function currentSource(
         : catalogs.subclassFeatures.filter((row) => getSubclassFeatureIdentity(row) === target)
   // Filtering produces independent refs/level-group copies within one qualified owner.
   // Raw competitors already carry audit conflicts; every current copy must still prove this target.
-  return candidates.length > 0 && candidates.every((row) => isAuditedPsionicSource(row, target))
-    ? candidates[0]
+  const authored = matches[0].reference.feature
+  const rule = authored?.name === 'Bonus Disciplines' ? readBonusDisciplines(authored) : undefined
+  return candidates.length > 0 &&
+    candidates.every((row) => {
+      if (!isAuditedPsionicSource(row, target)) return false
+      if (!rule) return true
+      const candidate = readBonusDisciplines(row)
+      return candidate?.count === rule.count && candidate.order === rule.order
+    })
+    ? authored
     : undefined
 }
 function tableCounts(classData: ClassInput, type: 'T' | 'D'): number[] | undefined {
@@ -220,14 +228,15 @@ export function normalizePsionicChoices(
     : undefined
   if (order === 'Soul Knife') {
     if (!validIntro) diagnostics.push(diagnostic(subowner, `Order of the ${order}`, introRef))
-  } else if (root && intro && validIntro && currentSource(bonus, subowner, subdecl, catalogs)) {
-    const feature = currentSource(bonus, subowner, subdecl, catalogs)!
-    const text = JSON.stringify(feature.entries)
-    const count = /learn (\w+) additional psionic disciplines/.exec(text)?.[1]
-    if (count === 'two' && text.includes(`|type=D|order=${order}`))
-      choices.push(choice(subowner, 'bonus-discipline', Array(20).fill(2), bonusRef, order))
+  } else {
+    const feature = root && intro && validIntro && currentSource(bonus, subowner, subdecl, catalogs)
+    const rule = feature && readBonusDisciplines(feature)
+    if (rule)
+      choices.push(
+        choice(subowner, 'bonus-discipline', Array(20).fill(rule.count), bonusRef, rule.order),
+      )
     else diagnostics.push(diagnostic(subowner, 'Bonus Disciplines', bonusRef))
-  } else diagnostics.push(diagnostic(subowner, 'Bonus Disciplines', bonusRef))
+  }
   return { choices, diagnostics }
 }
 
