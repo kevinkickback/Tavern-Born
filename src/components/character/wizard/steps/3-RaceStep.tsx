@@ -1,4 +1,4 @@
-import { BookOpen, MagnifyingGlass, Users, X } from '@phosphor-icons/react'
+import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
@@ -19,7 +19,7 @@ import {
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
-import { DetailSection } from '../../DetailCards'
+import { CreatorEntityDetails, DetailSection } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
@@ -150,10 +150,10 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   const raceSummary = getRaceSummary(displayRace)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
+    <div className="grid min-w-0 gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
       {/* Left: Race list */}
-      <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
-        <div className="p-3 border-b border-border">
+      <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
+        <div className="shrink-0 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-semibold text-sm">
               Races
@@ -181,7 +181,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
             )}
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 space-y-0.5">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-2">
           {searchFilteredRaces.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No races found</div>
           ) : (
@@ -193,11 +193,12 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                   key={`${race.name}|${race.source ?? ''}`}
                   type="button"
                   onClick={() => handleSelectRace(race)}
+                  aria-pressed={isSelected}
                   className={cn(
                     'w-full text-left px-3 py-2 rounded-md transition-all text-sm',
                     isSelected
-                      ? 'bg-accent/15 text-foreground border border-accent/40'
-                      : 'hover:bg-muted/50 border border-transparent',
+                      ? 'border border-primary/50 bg-primary/10 text-foreground'
+                      : 'bg-workspace-pane hover:bg-surface-hover border border-transparent',
                   )}
                 >
                   <div className="font-semibold truncate">{race.name}</div>
@@ -218,190 +219,165 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       </div>
 
       {/* Right: Race details */}
-      <div className="@container flex-1 min-h-0 min-w-0 flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
-        {!selectedRace ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <Users className="h-10 w-10 mx-auto text-muted-foreground/40" />
-              <p className="text-muted-foreground text-sm">Select a race to view details</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-col h-full">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-border">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-xl font-bold">
-                  {selectedRace.name}
-                  {selectedSubrace && (
-                    <span className="text-primary ml-1.5">
-                      ({getSubraceDisplayName(selectedRace.name, selectedSubrace.name)})
-                    </span>
-                  )}
-                </h2>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span className="font-mono">{selectedRace.source}</span>
-                  {selectedRace.page && <span>p.{selectedRace.page}</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Scrollable content */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
-              {raceSummary && (
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">
-                      Race Overview
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{raceSummary}</p>
-                </div>
-              )}
-
-              {/* Subrace selector */}
-              {subraces.length > 0 && (
-                <div className="rounded-lg border border-border bg-card/50 p-3">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Subrace
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {orderedSubraces.map((sr) => {
-                      const name = getSubraceDisplayName(selectedRace.name, sr.name)
-                      const isActive =
-                        sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? '')
-                      return (
-                        <button
-                          key={`${sr.name}|${sr.source ?? ''}`}
-                          type="button"
-                          onClick={() => handleSelectSubrace(sr)}
-                          className={cn(
-                            'px-3 py-1.5 rounded-md text-xs font-semibold transition-all border',
-                            isActive
-                              ? 'bg-accent text-accent-foreground border-accent'
-                              : 'bg-card border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          {name}
-                          {sr.source &&
-                            isSubraceDisplayNameAmbiguous(selectedRace.name, name, subraces) && (
-                              <>
-                                {' · '}
-                                <span className="text-[10px] opacity-75">{sr.source}</span>
-                              </>
-                            )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Quick stats */}
-              <div className="grid grid-cols-1 @md:grid-cols-3 gap-2">
-                <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Size
-                  </span>
-                  <span className="text-sm font-semibold mt-0.5">{size.join(' / ') || '—'}</span>
-                </div>
-                <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Speed
-                  </span>
-                  <span className="text-sm font-semibold mt-0.5">{speed || '—'}</span>
-                </div>
-                <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Darkvision
-                  </span>
-                  <span className="text-sm font-semibold mt-0.5">
-                    {displayRace?.darkvision ? `${displayRace.darkvision} ft.` : '—'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Ability Scores */}
-              <div className="rounded-lg border border-border bg-card p-3">
+      <CreatorEntityDetails
+        entity={selectedRace}
+        subtitle={
+          selectedRace && selectedSubrace
+            ? getSubraceDisplayName(selectedRace.name, selectedSubrace.name)
+            : undefined
+        }
+        placeholder="Select a race to view details"
+      >
+        {selectedRace && (
+          <>
+            {raceSummary && (
+              <div className="max-w-[72ch] space-y-1.5">
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Ability Scores
+                    Race Overview
                   </span>
                 </div>
-                {asi.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">None</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {asi.map((a) => (
-                      <span
-                        key={a}
-                        className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent/10 border border-accent/30 text-sm font-medium"
+                <p className="text-sm text-muted-foreground leading-relaxed">{raceSummary}</p>
+              </div>
+            )}
+
+            {/* Subrace selector */}
+            {subraces.length > 0 && (
+              <div className="rounded-lg border border-border bg-card/50 p-3">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Subrace
+                </span>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {orderedSubraces.map((sr) => {
+                    const name = getSubraceDisplayName(selectedRace.name, sr.name)
+                    const isActive =
+                      sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? '')
+                    return (
+                      <button
+                        key={`${sr.name}|${sr.source ?? ''}`}
+                        type="button"
+                        onClick={() => handleSelectSubrace(sr)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-md text-xs font-semibold transition-all border',
+                          isActive
+                            ? 'bg-accent text-accent-foreground border-accent'
+                            : 'bg-card border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
+                        )}
                       >
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Info sections — always shown */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <DetailSection label="Languages" empty={!languages}>
-                  {languages || 'None'}
-                </DetailSection>
-
-                <DetailSection label="Skill Proficiencies" empty={skills.length === 0}>
-                  {skills.length > 0 ? skills.join(', ') : 'None'}
-                </DetailSection>
-
-                <DetailSection label="Resistances" empty={resistances === '—'}>
-                  {resistances === '—' ? 'None' : resistances}
-                </DetailSection>
-
-                <DetailSection
-                  label="Immunities"
-                  empty={immunities === '—' && conditionImmunities === '—'}
-                >
-                  {immunities !== '—' || conditionImmunities !== '—'
-                    ? [
-                        immunities !== '—' ? immunities : '',
-                        conditionImmunities !== '—' ? `${conditionImmunities} (condition)` : '',
-                      ]
-                        .filter(Boolean)
-                        .join(', ')
-                    : 'None'}
-                </DetailSection>
-              </div>
-
-              {/* Traits */}
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Racial Traits
-                  </span>
+                        {name}
+                        {sr.source &&
+                          isSubraceDisplayNameAmbiguous(selectedRace.name, name, subraces) && (
+                            <>
+                              {' · '}
+                              <span className="text-[10px] opacity-75">{sr.source}</span>
+                            </>
+                          )}
+                      </button>
+                    )
+                  })}
                 </div>
-                {traits.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No traits available</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {traits.map((trait) => (
-                      <TraitTooltip
-                        key={trait.key}
-                        previewKey={JSON.stringify(['race-trait', trait.key])}
-                        name={trait.name}
-                        source={displayRace?.source}
-                        entries={trait.entries}
-                        recursiveLookup={recursiveLookup}
-                      />
-                    ))}
-                  </div>
-                )}
+              </div>
+            )}
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-3 divide-x divide-border border-y border-border bg-workspace-pane">
+              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">Size</span>
+                <span className="text-sm font-semibold mt-0.5">{size.join(' / ') || '—'}</span>
+              </div>
+              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">Speed</span>
+                <span className="text-sm font-semibold mt-0.5">{speed || '—'}</span>
+              </div>
+              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Darkvision
+                </span>
+                <span className="text-sm font-semibold mt-0.5">
+                  {displayRace?.darkvision ? `${displayRace.darkvision} ft.` : '—'}
+                </span>
               </div>
             </div>
-          </div>
+
+            {/* Ability Scores */}
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Ability Scores
+                </span>
+              </div>
+              {asi.length === 0 ? (
+                <p className="text-sm text-muted-foreground">None</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {asi.map((a) => (
+                    <span
+                      key={a}
+                      className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent/10 border border-accent/30 text-sm font-medium"
+                    >
+                      {a}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Info sections — always shown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <DetailSection label="Languages" empty={!languages}>
+                {languages || 'None'}
+              </DetailSection>
+
+              <DetailSection label="Skill Proficiencies" empty={skills.length === 0}>
+                {skills.length > 0 ? skills.join(', ') : 'None'}
+              </DetailSection>
+
+              <DetailSection label="Resistances" empty={resistances === '—'}>
+                {resistances === '—' ? 'None' : resistances}
+              </DetailSection>
+
+              <DetailSection
+                label="Immunities"
+                empty={immunities === '—' && conditionImmunities === '—'}
+              >
+                {immunities !== '—' || conditionImmunities !== '—'
+                  ? [
+                      immunities !== '—' ? immunities : '',
+                      conditionImmunities !== '—' ? `${conditionImmunities} (condition)` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(', ')
+                  : 'None'}
+              </DetailSection>
+            </div>
+
+            {/* Traits */}
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-xs font-semibold uppercase text-muted-foreground">
+                  Racial Traits
+                </span>
+              </div>
+              {traits.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No traits available</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {traits.map((trait) => (
+                    <TraitTooltip
+                      key={trait.key}
+                      previewKey={JSON.stringify(['race-trait', trait.key])}
+                      name={trait.name}
+                      source={displayRace?.source}
+                      entries={trait.entries}
+                      recursiveLookup={recursiveLookup}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
-      </div>
+      </CreatorEntityDetails>
     </div>
   )
 }

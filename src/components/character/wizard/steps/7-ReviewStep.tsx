@@ -1,16 +1,17 @@
 import { Eye, EyeSlash, Warning } from '@phosphor-icons/react'
-import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
+  type BackgroundAbilityData,
+  buildBackgroundBonuses,
   buildRacialBonuses,
   formatModifier,
   getRaceAbilityData,
 } from '@/lib/calculations/abilityScores'
-import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { ABILITY_SCORE_ABSOLUTE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
 import {
   getOriginSystemLabel,
   normalizeRaceSelectionForOriginSystem,
@@ -27,6 +28,7 @@ interface ReviewStepProps {
   data: CharacterWizardData
   raceResolution: ResolvedRaceReference
   sources: SourceBook[]
+  backgroundAbilityData?: BackgroundAbilityData
   variantRuleAvailability?: VariantRuleContentAvailability
 }
 
@@ -53,6 +55,7 @@ export function ReviewStep({
   data,
   raceResolution,
   sources,
+  backgroundAbilityData,
   variantRuleAvailability,
 }: ReviewStepProps) {
   const showRaceOriginBonuses = usesRaceOriginBenefits(
@@ -77,7 +80,7 @@ export function ReviewStep({
       ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
       : normalizedSelection.race
 
-  const racialBonuses = showRaceOriginBonuses
+  const abilityBonuses = showRaceOriginBonuses
     ? buildRacialBonuses(
         getRaceAbilityData(
           normalizedSelection.race,
@@ -86,7 +89,13 @@ export function ReviewStep({
         ),
         data.raceAsiChoices ?? [],
       )
-    : {}
+    : backgroundAbilityData && data.backgroundAsi
+      ? buildBackgroundBonuses(
+          backgroundAbilityData,
+          data.backgroundAsi.blockIndex,
+          data.backgroundAsi.choices,
+        )
+      : {}
 
   const sourceLabelByAbbreviation = new Map(
     sources.map((source) => [source.abbreviation, source.name]),
@@ -130,7 +139,7 @@ export function ReviewStep({
   ]
 
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {missingFields.length > 0 && (
         <Alert variant="destructive" className="shrink-0 py-2">
           <Warning className="h-4 w-4" />
@@ -140,56 +149,51 @@ export function ReviewStep({
         </Alert>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+      <div>
         <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-muted/20 p-4">
-            <div className="flex gap-4 items-stretch">
-              <div className="w-[420px] shrink-0">
-                <PortraitCardPreview
-                  image={data.portrait}
-                  name={data.name}
-                  level={1}
-                  race={getRaceDisplayName(data.race, data.subrace)}
-                  characterClass={data.class}
-                  gender={data.gender}
-                  transform={data.portraitTransform}
+          <section className="rounded-lg border border-border bg-workspace-pane p-4">
+            <h3 className="break-words text-xl font-semibold">
+              {data.name || 'Unnamed character'}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">Level 1</p>
+            <div className="mt-3 grid gap-x-8 sm:grid-cols-2">
+              <div>
+                <InfoRow
+                  label="Race"
+                  value={getRaceDisplayName(data.race, data.subrace)}
+                  warn={!data.race}
+                />
+                <InfoRow label="Class" value={data.class} warn={!data.class} />
+                <InfoRow label="Background" value={data.background} warn={!data.background} />
+                <InfoRow
+                  label="Ruleset"
+                  value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
+                  warn={!data.originSystem}
                 />
               </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="rounded-lg border border-border bg-card/60 p-3 h-full">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                    Character Snapshot
-                  </div>
-                  <InfoRow label="Background" value={data.background} warn={!data.background} />
-                  <InfoRow
-                    label="Ruleset"
-                    value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
-                    warn={!data.originSystem}
-                  />
-                  <InfoRow label="Size" value={sizeValue} />
-                  <InfoRow label="Speed" value={speedValue} />
-                  <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
-                    <span className="text-xs text-muted-foreground">Darkvision</span>
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 text-xs font-semibold',
-                        hasDarkvision ? 'text-success' : 'text-muted-foreground',
-                      )}
-                    >
-                      {hasDarkvision ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <EyeSlash className="h-3.5 w-3.5" />
-                      )}
-                      {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
-                    </span>
-                  </div>
-                  <InfoRow label="Race Source" value={data.raceSource} />
+              <div>
+                <InfoRow label="Size" value={sizeValue} />
+                <InfoRow label="Speed" value={speedValue} />
+                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
+                  <span className="text-xs text-muted-foreground">Darkvision</span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 text-xs font-semibold',
+                      hasDarkvision ? 'text-success' : 'text-muted-foreground',
+                    )}
+                  >
+                    {hasDarkvision ? (
+                      <Eye className="h-3.5 w-3.5" />
+                    ) : (
+                      <EyeSlash className="h-3.5 w-3.5" />
+                    )}
+                    {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
+                  </span>
                 </div>
+                <InfoRow label="Race Source" value={data.raceSource} />
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
@@ -204,8 +208,8 @@ export function ReviewStep({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 xl:grid-cols-3 gap-2">
                 {ABILITY_NAMES.map((ability) => {
                   const base = (data.abilityScores?.[ability] as number | undefined) ?? 8
-                  const bonus = racialBonuses[ability] ?? 0
-                  const total = base + bonus
+                  const bonus = abilityBonuses[ability] ?? 0
+                  const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
                   const mod = getAbilityModifier(total)
                   return (
                     <div
@@ -219,6 +223,7 @@ export function ReviewStep({
                       {bonus !== 0 && (
                         <div className="text-xs font-semibold leading-none text-success-foreground">
                           {base}+{bonus}
+                          {base + bonus > total && ' (capped)'}
                         </div>
                       )}
                       <div

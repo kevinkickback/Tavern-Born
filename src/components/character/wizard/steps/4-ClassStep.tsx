@@ -1,4 +1,4 @@
-import { BookOpen, MagicWand, MagnifyingGlass, X } from '@phosphor-icons/react'
+import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import {
@@ -10,7 +10,7 @@ import { getClassSummary } from '@/lib/calculations/entrySummary'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
-import { DetailHtmlSection, DetailSection } from '../../DetailCards'
+import { CreatorEntityDetails, DetailHtmlSection, DetailSection } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
@@ -69,9 +69,9 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
   const classFeatures = selectedClass ? getClassFeatures(selectedClass) : []
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
-      <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
-        <div className="p-3 border-b border-border">
+    <div className="grid min-w-0 gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
+      <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
+        <div className="shrink-0 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-semibold text-sm">
               Classes
@@ -100,7 +100,7 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 space-y-0.5">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-2">
           {searchFilteredClasses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No classes found.</div>
           ) : (
@@ -113,11 +113,12 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
                   type="button"
                   key={`${cls.name}|${cls.source ?? ''}`}
                   onClick={() => onChange({ class: cls.name, classSource: cls.source ?? '' })}
+                  aria-pressed={isSelected}
                   className={cn(
                     'w-full text-left px-3 py-2 rounded-md transition-all text-sm border',
                     isSelected
-                      ? 'bg-accent/15 text-foreground border-accent/40'
-                      : 'hover:bg-muted/50 border-transparent',
+                      ? 'border-primary/50 bg-primary/10 text-foreground'
+                      : 'bg-workspace-pane hover:bg-surface-hover border-transparent',
                   )}
                 >
                   <div className="font-semibold truncate">{cls.name}</div>
@@ -133,104 +134,77 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
         </div>
       </div>
 
-      <div className="@container flex-1 min-h-0 min-w-0 flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
-        {!selectedClass ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <MagicWand className="h-10 w-10 mx-auto text-muted-foreground/40" />
-              <p className="text-muted-foreground text-sm">Select a class to view details</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-col h-full">
-            <div className="px-5 py-4 border-b border-border">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-xl font-bold">{selectedClass.name}</h2>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span className="font-mono">{selectedClass.source}</span>
-                  {selectedClass.page && <span>p.{selectedClass.page}</span>}
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
-              {classSummary && (
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">
-                      Class Overview
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{classSummary}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 @md:grid-cols-3 gap-2">
-                <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
+      <CreatorEntityDetails entity={selectedClass} placeholder="Select a class to view details">
+        {selectedClass && (
+          <>
+            {classSummary && (
+              <div className="max-w-[72ch] space-y-1.5">
+                <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Hit Dice
-                  </span>
-                  <span className="text-sm font-semibold mt-0.5 font-mono">
-                    d{selectedClass.hd?.faces ?? 6}
+                    Class Overview
                   </span>
                 </div>
-
-                <DetailSection label="Saving Throws">{savingThrows}</DetailSection>
-
-                <DetailSection label="Spellcasting Stat">{spellcastingStat}</DetailSection>
+                <p className="text-sm text-muted-foreground leading-relaxed">{classSummary}</p>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
-                <DetailHtmlSection
-                  label="Armor Proficiencies"
-                  html={armorHtml}
-                  recursiveLookup={recursiveLookup}
-                />
-                <DetailHtmlSection
-                  label="Weapon Proficiencies"
-                  html={weaponsHtml}
-                  recursiveLookup={recursiveLookup}
-                />
-                <DetailHtmlSection
-                  label="Tool Proficiencies"
-                  html={toolsHtml}
-                  recursiveLookup={recursiveLookup}
-                />
-              </div>
+            <div className="grid grid-cols-1 @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
+              <DetailSection label="Hit Dice">d{selectedClass.hd?.faces ?? 6}</DetailSection>
 
-              {classFeatures.length > 0 && (
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">
-                      Signature Features
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {classFeatures.map((feature) => (
-                      <TraitTooltip
-                        key={`${feature.name}|${feature.source ?? ''}`}
-                        previewKey={JSON.stringify([
-                          'class-feature',
-                          selectedClass.name,
-                          selectedClass.source,
-                          feature.name,
-                          feature.source,
-                          feature.entries,
-                        ])}
-                        name={feature.name}
-                        source={feature.source}
-                        entries={feature.entries}
-                        recursiveLookup={recursiveLookup}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              <DetailSection label="Saving Throws">{savingThrows}</DetailSection>
+
+              <DetailSection label="Spellcasting Stat">{spellcastingStat}</DetailSection>
             </div>
-          </div>
+
+            <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
+              <DetailHtmlSection
+                label="Armor Proficiencies"
+                html={armorHtml}
+                recursiveLookup={recursiveLookup}
+              />
+              <DetailHtmlSection
+                label="Weapon Proficiencies"
+                html={weaponsHtml}
+                recursiveLookup={recursiveLookup}
+              />
+              <DetailHtmlSection
+                label="Tool Proficiencies"
+                html={toolsHtml}
+                recursiveLookup={recursiveLookup}
+              />
+            </div>
+
+            {classFeatures.length > 0 && (
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
+                    Signature Features
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {classFeatures.map((feature) => (
+                    <TraitTooltip
+                      key={`${feature.name}|${feature.source ?? ''}`}
+                      previewKey={JSON.stringify([
+                        'class-feature',
+                        selectedClass.name,
+                        selectedClass.source,
+                        feature.name,
+                        feature.source,
+                        feature.entries,
+                      ])}
+                      name={feature.name}
+                      source={feature.source}
+                      entries={feature.entries}
+                      recursiveLookup={recursiveLookup}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
-      </div>
+      </CreatorEntityDetails>
     </div>
   )
 }

@@ -13,6 +13,8 @@ export type WizardStepId =
 export interface WizardStep {
   id: WizardStepId
   label: string
+  title: string
+  description: string
   icon: React.ElementType
 }
 
@@ -37,6 +39,7 @@ export interface CharacterWizardData {
   allowedSources: string[]
   raceAsiChoices: string[][]
   raceAsiBlockIndex: 0 | 1
+  backgroundAsi?: { blockIndex: number; choices: string[] }
   variantRules: {
     optionalClassFeatures: boolean
     averageHitPoints: boolean

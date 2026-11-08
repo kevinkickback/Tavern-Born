@@ -18,7 +18,7 @@ export function RulesStep({
 }) {
   const configuredSources = data.allowedSources || []
   return (
-    <div className="@container space-y-7">
+    <div className="@container space-y-6">
       <section className="space-y-3">
         <div>
           <h3 className="text-lg font-semibold">Ruleset</h3>
@@ -105,8 +105,8 @@ export function RulesStep({
         <div>
           <h3 className="text-lg font-semibold">Rule Options</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Some options depend on the books you choose in Additional Content. You can return here
-            after choosing them.
+            Some options depend on the books you choose in Sourcebooks. You can return here after
+            choosing them.
           </p>
         </div>
         <WizardVariantOptions

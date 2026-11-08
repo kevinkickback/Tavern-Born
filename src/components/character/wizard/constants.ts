@@ -12,14 +12,62 @@ import { DEFAULT_PORTRAIT_TRANSFORM, PLACEHOLDER_PORTRAITS } from '@/lib/portrai
 import type { WizardStep } from './types'
 
 export const WIZARD_STEPS: WizardStep[] = [
-  { id: 'basics', label: 'Basics', icon: User },
-  { id: 'rules', label: 'Rules', icon: Sparkle },
-  { id: 'content', label: 'Additional Content', icon: Books },
-  { id: 'race', label: 'Race', icon: Users },
-  { id: 'class', label: 'Class', icon: Sword },
-  { id: 'background', label: 'Background', icon: BookOpen },
-  { id: 'abilities', label: 'Ability Scores', icon: ChartBar },
-  { id: 'review', label: 'Review', icon: CheckCircle },
+  {
+    id: 'basics',
+    label: 'Basics',
+    title: 'Character details',
+    description: 'Add the name and details you want on your character sheet.',
+    icon: User,
+  },
+  {
+    id: 'rules',
+    label: 'Rules',
+    title: 'Choose a ruleset',
+    description: 'Set the edition and rules your character will use.',
+    icon: Sparkle,
+  },
+  {
+    id: 'content',
+    label: 'Sourcebooks',
+    title: 'Choose sourcebooks',
+    description: 'Include the books your table allows for this character.',
+    icon: Books,
+  },
+  {
+    id: 'race',
+    label: 'Race',
+    title: 'Choose a race',
+    description: 'Compare traits, movement, and other benefits.',
+    icon: Users,
+  },
+  {
+    id: 'class',
+    label: 'Class',
+    title: 'Choose a class',
+    description: 'Compare hit dice, training, spellcasting, and class features.',
+    icon: Sword,
+  },
+  {
+    id: 'background',
+    label: 'Background',
+    title: 'Choose a background',
+    description: 'See what your character’s life before adventuring grants them.',
+    icon: BookOpen,
+  },
+  {
+    id: 'abilities',
+    label: 'Ability Scores',
+    title: 'Set ability scores',
+    description: 'Set your base scores and check how bonuses affect your modifiers.',
+    icon: ChartBar,
+  },
+  {
+    id: 'review',
+    label: 'Review',
+    title: 'Review your character',
+    description: 'Check your choices before creating your level 1 character.',
+    icon: CheckCircle,
+  },
 ]
 
 export const INITIAL_CHARACTER_DATA = {

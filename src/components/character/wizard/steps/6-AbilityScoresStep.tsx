@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { AbilityScoreCard } from '@/components/character/AbilityScoreCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   formatAbilityBonus,
+  formatBackgroundAbilityPatterns,
   formatRacialAbilityPatterns,
 } from '@/lib/calculations/abilityScoreDisplay'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
@@ -21,6 +21,8 @@ import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
+  type BackgroundAbilityData,
+  buildBackgroundBonuses,
   buildRacialBonuses,
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
@@ -29,6 +31,7 @@ import {
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import {
+  ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
   POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
@@ -45,6 +48,7 @@ import type { StepProps } from '../types'
 
 interface AbilityScoresStepProps extends StepProps {
   raceResolution: ResolvedRaceReference
+  backgroundAbilityData?: BackgroundAbilityData
 }
 
 const DEFAULT_STANDARD_SCORES = makeDefaultStandardArrayAssignment()
@@ -91,7 +95,7 @@ function RaceAsiBonuses({
   }
 
   return (
-    <section className="mx-auto mt-5 flex w-full max-w-3xl shrink-0 flex-col gap-3 rounded-lg border border-border bg-surface-raised/45 p-4">
+    <section className="mt-5 flex flex-col gap-3 border-y border-border bg-workspace-pane p-4">
       <div>
         <h3 className="text-sm font-semibold">Racial Bonuses</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -174,13 +178,101 @@ function RaceAsiBonuses({
   )
 }
 
+function BackgroundAsiBonuses({
+  data,
+  onChange,
+  abilityData,
+}: Pick<StepProps, 'data' | 'onChange'> & { abilityData: BackgroundAbilityData }) {
+  const { blockIndex = 0, choices = [] } = data.backgroundAsi ?? {}
+  const block = abilityData.blocks[blockIndex]
+  const hasChoices = choices.some(Boolean)
+  if (!block && !hasChoices) return null
+  const patterns = formatBackgroundAbilityPatterns(abilityData)
+
+  return (
+    <section className="mt-5 space-y-3 border-y border-border bg-workspace-pane p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">Background Bonuses</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {block
+              ? `Assign the bonuses from ${data.background} now, or finish them later in the Builder.`
+              : 'These bonuses are no longer available with the current source data.'}
+          </p>
+        </div>
+        {hasChoices && (
+          <Button variant="ghost" size="sm" onClick={() => onChange({ backgroundAsi: undefined })}>
+            Clear bonuses
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        {patterns.length > 1 && (
+          <Select
+            value={String(blockIndex)}
+            onValueChange={(value) =>
+              onChange({ backgroundAsi: { blockIndex: Number(value), choices: [] } })
+            }
+          >
+            <SelectTrigger
+              aria-label="Background bonus distribution"
+              className="max-w-full text-xs"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {patterns.map((pattern, index) => (
+                <SelectItem key={JSON.stringify([index, pattern])} value={String(index)}>
+                  {pattern}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {block &&
+          Array.from(block.weights.entries(), ([index, weight]) => (
+            <Select
+              key={index}
+              value={choices[index] ?? ''}
+              onValueChange={(ability) => {
+                const next = Array.from(block.weights, (_, slot) => choices[slot] ?? '')
+                next[index] = ability
+                onChange({ backgroundAsi: { blockIndex, choices: next } })
+              }}
+            >
+              <SelectTrigger
+                aria-label={`Background bonus ${index + 1} (+${weight})`}
+                className="text-xs"
+              >
+                <SelectValue placeholder={`+${weight} Choose ability`} />
+              </SelectTrigger>
+              <SelectContent>
+                {block.from.map((ability) => (
+                  <SelectItem
+                    key={ability}
+                    value={ability}
+                    disabled={choices.some(
+                      (selected, slot) => slot !== index && selected === ability,
+                    )}
+                  >
+                    +{weight} {ABILITY_ABBREVIATIONS[ability]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+      </div>
+    </section>
+  )
+}
+
 function PointBuyPanel({
   scores,
-  racialBonuses,
+  abilityBonuses,
   setScore,
 }: {
   scores: Record<AbilityName, number>
-  racialBonuses: Partial<Record<AbilityName, number>>
+  abilityBonuses: Partial<Record<AbilityName, number>>
   setScore: (a: AbilityName, v: number) => void
 }) {
   const pointsUsed = ABILITY_NAMES.reduce((sum, ab) => sum + (POINT_BUY_COSTS[scores[ab]] ?? 0), 0)
@@ -191,14 +283,14 @@ function PointBuyPanel({
     <div className="flex flex-col gap-3">
       <div className="shrink-0 rounded-lg border border-border bg-surface-raised/45 px-4 py-3">
         <div className="mb-2 flex justify-between text-sm font-semibold">
-          <span className="uppercase tracking-wider text-muted-foreground">Ability Points</span>
+          <span className="text-muted-foreground">Point Buy Budget</span>
           <span className={cn(remaining < 0 && 'text-destructive font-bold')}>
-            {pointsUsed} / {POINT_BUY_BUDGET}
+            {remaining} of {POINT_BUY_BUDGET} points remaining
           </span>
         </div>
-        <Progress value={budgetPct} className="h-2.5" />
+        <Progress aria-label="Point buy budget used" value={budgetPct} className="h-2.5" />
       </div>
-      <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
         {ABILITY_NAMES.map((ability) => {
           const score = scores[ability] ?? POINT_BUY_MIN
           const costNow = POINT_BUY_COSTS[score] ?? 0
@@ -210,8 +302,8 @@ function PointBuyPanel({
               key={ability}
               ability={ability}
               score={score}
-              bonus={racialBonuses[ability]}
-              variant="console"
+              bonus={abilityBonuses[ability]}
+              variant="wizard"
             >
               <div className="flex items-center justify-center gap-2">
                 <Button
@@ -221,6 +313,7 @@ function PointBuyPanel({
                     'h-8 w-8 p-0 text-base font-bold',
                     !canDecrease && 'opacity-35 cursor-not-allowed',
                   )}
+                  aria-label={`Decrease ${ability}`}
                   disabled={!canDecrease}
                   onClick={() => setScore(ability, score - 1)}
                 >
@@ -233,6 +326,7 @@ function PointBuyPanel({
                     'h-8 w-8 p-0 text-base font-bold',
                     !canIncrease && 'opacity-35 cursor-not-allowed',
                   )}
+                  aria-label={`Increase ${ability}`}
                   disabled={!canIncrease}
                   onClick={() => setScore(ability, score + 1)}
                 >
@@ -249,43 +343,25 @@ function PointBuyPanel({
 
 function StandardArrayPanel({
   scores,
-  racialBonuses,
+  abilityBonuses,
   setAllScores,
 }: {
   scores: Record<AbilityName, number>
-  racialBonuses: Partial<Record<AbilityName, number>>
+  abilityBonuses: Partial<Record<AbilityName, number>>
   setAllScores: (next: Partial<Record<AbilityName, number>>) => void
 }) {
-  const [assignments, setAssignments] = useState<Partial<Record<AbilityName, number>>>(() =>
-    isValidStandardArrayAssignment(scores) ? { ...scores } : { ...DEFAULT_STANDARD_SCORES },
-  )
-
-  useEffect(() => {
-    if (!isValidStandardArrayAssignment(scores)) {
-      const fallback = { ...DEFAULT_STANDARD_SCORES }
-      setAssignments(fallback)
-      setAllScores(fallback)
-    }
-    // Keep local assignment edits stable while normalizing invalid incoming scores.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scores, setAllScores])
+  const assignments = isValidStandardArrayAssignment(scores) ? scores : DEFAULT_STANDARD_SCORES
 
   const assign = (ability: AbilityName, raw: string) => {
     const value = Number(raw)
     if (!Number.isFinite(value)) return
-    const next = { ...assignments }
-    const current = next[ability]
-    const swapTarget = ABILITY_NAMES.find((ab) => ab !== ability && next[ab] === value)
-    if (swapTarget) next[swapTarget] = current ?? STANDARD_ARRAY[0] ?? 8
-    next[ability] = value
-    setAssignments(next)
-    const update: Partial<Record<AbilityName, number>> = {}
-    for (const ab of ABILITY_NAMES) if (next[ab] !== undefined) update[ab] = next[ab] as number
-    setAllScores(update)
+    const next = { ...assignments, [ability]: value }
+    const swapTarget = ABILITY_NAMES.find((ab) => ab !== ability && assignments[ab] === value)
+    if (swapTarget) next[swapTarget] = assignments[ability]
+    setAllScores(next)
   }
-
   return (
-    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const base = assignments[ability]
         return (
@@ -293,15 +369,18 @@ function StandardArrayPanel({
             key={ability}
             ability={ability}
             score={base ?? 8}
-            bonus={racialBonuses[ability]}
-            variant="console"
+            bonus={abilityBonuses[ability]}
+            variant="wizard"
           >
             <div className="flex justify-center">
               <Select
                 value={base !== undefined ? String(base) : ''}
                 onValueChange={(v) => assign(ability, v)}
               >
-                <SelectTrigger className="h-9 w-[90px] px-2 text-sm">
+                <SelectTrigger
+                  aria-label={`${ability} base score`}
+                  className="h-9 w-[90px] px-2 text-sm"
+                >
                   <SelectValue placeholder="Choose…" />
                 </SelectTrigger>
                 <SelectContent className="w-[90px] min-w-[90px]">
@@ -322,15 +401,15 @@ function StandardArrayPanel({
 
 function CustomPanel({
   scores,
-  racialBonuses,
+  abilityBonuses,
   setScore,
 }: {
   scores: Record<AbilityName, number>
-  racialBonuses: Partial<Record<AbilityName, number>>
+  abilityBonuses: Partial<Record<AbilityName, number>>
   setScore: (a: AbilityName, v: number) => void
 }) {
   return (
-    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const val = scores[ability] ?? ABILITY_SCORE_MIN
         return (
@@ -338,18 +417,25 @@ function CustomPanel({
             key={ability}
             ability={ability}
             score={val}
-            bonus={racialBonuses[ability]}
-            variant="console"
+            bonus={abilityBonuses[ability]}
+            variant="wizard"
           >
             <div className="flex justify-center">
               <Input
+                aria-label={`${ability} base score`}
                 type="number"
-                min={1}
-                max={30}
+                min={ABILITY_SCORE_MIN}
+                max={ABILITY_SCORE_ABSOLUTE_MAX}
                 value={val}
                 className="h-10 w-24 text-center font-mono font-bold text-base"
                 onChange={(e) =>
-                  setScore(ability, Math.min(30, Math.max(1, Number(e.target.value) || 1)))
+                  setScore(
+                    ability,
+                    Math.min(
+                      ABILITY_SCORE_ABSOLUTE_MAX,
+                      Math.max(ABILITY_SCORE_MIN, Number(e.target.value) || ABILITY_SCORE_MIN),
+                    ),
+                  )
                 }
               />
             </div>
@@ -360,7 +446,12 @@ function CustomPanel({
   )
 }
 
-export function AbilityScoresStep({ data, onChange, raceResolution }: AbilityScoresStepProps) {
+export function AbilityScoresStep({
+  data,
+  onChange,
+  raceResolution,
+  backgroundAbilityData,
+}: AbilityScoresStepProps) {
   const method = data.abilityScoreMethod || 'point-buy'
   const methods = getAbilityScoreMethodOptions(data.originSystem || '2014')
   const showRaceOriginBonuses = usesRaceOriginBenefits(
@@ -388,9 +479,15 @@ export function AbilityScoresStep({ data, onChange, raceResolution }: AbilitySco
   )
   const isLineageRaceAsiFallback =
     showRaceOriginBonuses && hasFlexibleRaceOriginAsi(normalizedSelection.race)
-  const racialBonuses = showRaceOriginBonuses
+  const abilityBonuses = showRaceOriginBonuses
     ? buildRacialBonuses(raceAsiData, data.raceAsiChoices ?? [])
-    : {}
+    : backgroundAbilityData && data.backgroundAsi
+      ? buildBackgroundBonuses(
+          backgroundAbilityData,
+          data.backgroundAsi.blockIndex,
+          data.backgroundAsi.choices,
+        )
+      : {}
 
   const setAllScores = (next: Partial<Record<AbilityName, number>>) => {
     onChange({ abilityScores: next as Record<string, number> })
@@ -401,7 +498,7 @@ export function AbilityScoresStep({ data, onChange, raceResolution }: AbilitySco
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col">
+    <div className="@container flex w-full flex-col">
       <Tabs
         value={method}
         onValueChange={(value) => onChange({ abilityScoreMethod: value })}
@@ -425,19 +522,22 @@ export function AbilityScoresStep({ data, onChange, raceResolution }: AbilitySco
               </TabsTrigger>
             ))}
           </TabsList>
+          <Button variant="ghost" size="sm" onClick={() => setAllScores(fallbackScores)}>
+            Reset scores
+          </Button>
         </div>
         <TabsContent value="point-buy" className="flex min-h-0 flex-col">
-          <PointBuyPanel scores={scores} racialBonuses={racialBonuses} setScore={setScore} />
+          <PointBuyPanel scores={scores} abilityBonuses={abilityBonuses} setScore={setScore} />
         </TabsContent>
         <TabsContent value="standard-array" className="flex min-h-0 flex-col">
           <StandardArrayPanel
             scores={scores}
-            racialBonuses={racialBonuses}
+            abilityBonuses={abilityBonuses}
             setAllScores={setAllScores}
           />
         </TabsContent>
         <TabsContent value="custom" className="flex min-h-0 flex-col">
-          <CustomPanel scores={scores} racialBonuses={racialBonuses} setScore={setScore} />
+          <CustomPanel scores={scores} abilityBonuses={abilityBonuses} setScore={setScore} />
         </TabsContent>
       </Tabs>
       {showRaceOriginBonuses ? (
@@ -447,6 +547,8 @@ export function AbilityScoresStep({ data, onChange, raceResolution }: AbilitySco
           raceAsiData={raceAsiData}
           isLineageRaceAsiFallback={isLineageRaceAsiFallback}
         />
+      ) : backgroundAbilityData ? (
+        <BackgroundAsiBonuses data={data} onChange={onChange} abilityData={backgroundAbilityData} />
       ) : null}
     </div>
   )

@@ -1,14 +1,22 @@
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
+import {
+  getBackgroundAbilityData,
+  isBackgroundAbilitySelectionComplete,
+} from '@/lib/calculations/abilityScores'
 import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
+import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import { sameStartingReference } from '@/lib/character/startingEquipmentGrants'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { applyBackgroundSelectionCommand } from './backgroundCommands'
+import {
+  applyBackgroundAbilityChoicesCommand,
+  applyBackgroundSelectionCommand,
+} from './backgroundCommands'
 import { applyClassSelectionCommand } from './classCommands'
 import {
   applyRaceAsiChoicesCommand,
@@ -26,6 +34,7 @@ export interface InitialCharacterSelections {
   raceAsiChoices?: string[][]
   classEquipmentChoices?: string[]
   backgroundEquipmentChoices?: string[]
+  backgroundAsi?: { blockIndex: number; choices: string[] }
 }
 
 export interface InitialCharacterLookups extends NativeSpellLookups {
@@ -104,6 +113,32 @@ export function buildInitialCharacter(
       itemLookup,
       undefined,
       equipmentPolicy(selections.background, 'background'),
+    )
+    character = applyPatch(character, result.characterPatch)
+    ledger = result.provenanceUpdate
+  }
+
+  if (selections.backgroundAsi) {
+    const { blockIndex, choices } = selections.backgroundAsi
+    const background = selections.background
+    const abilityData = getBackgroundAbilityData(
+      normalizeBackgroundForOriginSystem(background, character.originSystem),
+    )
+    const block = abilityData.blocks[blockIndex]
+    if (
+      character.originSystem !== '2024' ||
+      !background ||
+      choices.length !== block?.weights.length ||
+      !isBackgroundAbilitySelectionComplete(abilityData, blockIndex, choices)
+    ) {
+      throw new RangeError('Review the ability bonuses for your selected background.')
+    }
+    const result = applyBackgroundAbilityChoicesCommand(
+      character,
+      ledger,
+      background,
+      blockIndex,
+      choices,
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate

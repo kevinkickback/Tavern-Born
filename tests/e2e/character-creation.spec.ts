@@ -70,6 +70,10 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
   await dialog.getByRole('button', { name: 'Next' }).click()
   await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
+  const progress = dialog.getByRole('navigation', { name: 'Character creation progress' })
+  await expect(progress.locator('[aria-current=step]')).toHaveText('Rules')
+  await expect(progress.getByRole('button', { name: 'Basics, completed' })).toBeVisible()
+  await expect(progress.getByRole('button', { name: 'Sourcebooks' })).toHaveCount(0)
 
   const dialogBounds = await dialog.boundingBox()
   if (!dialogBounds || dialogBounds.x <= 1) throw new Error('Expected space outside the wizard')
@@ -77,7 +81,8 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
 
   await expect(dialog).toBeVisible()
   await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
-  await dialog.getByRole('button', { name: 'Back' }).click()
+  await progress.getByRole('button', { name: 'Basics, completed' }).click()
+  await expect(progress.locator('[aria-current=step]')).toHaveText('Basics')
   await expect(dialog.getByLabel('Character Name')).toHaveValue('Retained Wizard Hero')
   await expect(dialog.getByRole('combobox', { name: 'Gender' })).toHaveText('Non-binary')
 
@@ -451,7 +456,7 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByRole('button', { name: 'Next' }).click()
 
     await expect(dialog.getByRole('tab', { name: 'Point Buy' })).toBeVisible()
-    await expect(dialog.getByText('0 / 27')).toBeVisible()
+    await expect(dialog.getByText('27 of 27 points remaining')).toBeVisible()
     await dialog.getByRole('button', { name: 'Next' }).click()
   })
 
@@ -475,4 +480,103 @@ test('creates a complete character and persists it across a full reload', async 
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-character-create-seed')
   await expect(page.getByText('E2E Created Hero').first()).toBeVisible()
+})
+
+test('revised background bonuses update review, starting HP, and the saved character', async ({
+  page,
+}) => {
+  const gameData: GameData = {
+    ...CHARACTER_CREATION_GAME_DATA,
+    races: CHARACTER_CREATION_GAME_DATA.races.map((race) => ({
+      ...race,
+      source: 'XPHB',
+      edition: 'one',
+    })),
+    classes: CHARACTER_CREATION_GAME_DATA.classes.map((cls) => ({
+      ...cls,
+      source: 'XPHB',
+      edition: 'one',
+    })),
+    backgrounds: CHARACTER_CREATION_GAME_DATA.backgrounds.map((background) => ({
+      ...background,
+      source: 'XPHB',
+      edition: 'one',
+      ability: [{ choose: { weighted: { from: ['con', 'int', 'wis'], weights: [2, 1] } } }],
+      feats: [{ 'Magic Initiate; Cleric|XPHB': true }],
+    })),
+    sources: CHARACTER_CREATION_GAME_DATA.sources.map((source) => ({
+      ...source,
+      abbreviation: 'XPHB',
+      year: 2024,
+    })),
+  }
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-character-desk-background', gameData)
+  await page.getByRole('button', { name: 'New Character' }).first().click()
+  const dialog = page.getByRole('dialog', { name: 'Create New Character' })
+  const next = dialog.getByRole('button', { name: 'Next' })
+  await dialog.getByLabel('Character Name').fill('Character Desk Hero')
+  await next.click()
+  await dialog.getByRole('button', { name: /5.5e Revised/ }).click()
+  for (const title of [
+    'Choose sourcebooks',
+    'Choose a race',
+    'Choose a class',
+    'Choose a background',
+  ]) {
+    await next.click()
+    await expect(dialog.getByRole('heading', { name: title, exact: true })).toBeVisible()
+  }
+  await expect(dialog.getByText('Magic Initiate (Cleric)', { exact: true })).toBeVisible()
+  await next.click()
+  await dialog.getByRole('tab', { name: 'Standard Array' }).click()
+  await dialog.getByRole('combobox', { name: 'constitution base score' }).click()
+  await page.getByRole('option', { name: '13', exact: true }).click()
+  await dialog.getByRole('combobox', { name: 'Background bonus 1 (+2)' }).click()
+  await page.getByRole('option', { name: '+2 INT', exact: true }).click()
+  await next.click()
+  await expect(
+    dialog.getByText('Finish choosing background bonuses or clear them to assign them later.'),
+  ).toBeVisible()
+  await dialog.getByRole('combobox', { name: 'Background bonus 2 (+1)' }).click()
+  await expect(page.getByRole('option', { name: '+1 INT', exact: true })).toHaveAttribute(
+    'data-disabled',
+    '',
+  )
+  await page.getByRole('option', { name: '+1 CON', exact: true }).click()
+  await dialog.getByRole('tab', { name: 'Custom' }).click()
+  await dialog.getByRole('spinbutton', { name: 'constitution base score' }).fill('30')
+  await expect(
+    dialog.getByRole('heading', { name: 'constitution', exact: true }).locator('..'),
+  ).toContainText('Total 30')
+  await next.click()
+  await expect(dialog.getByText('30+1 (capped)', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Back', exact: true }).click()
+  await dialog.getByRole('tab', { name: 'Standard Array' }).click()
+  await dialog.getByRole('combobox', { name: 'constitution base score' }).click()
+  await page.getByRole('option', { name: '13', exact: true }).click()
+  await next.click()
+  await expect(dialog.getByText('13+1', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('Portrait Preview', { exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Create', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect
+    .poll(async () => {
+      const characters = (await readPersistedCharacters(page)) as Array<{ name?: string }>
+      return characters.find((character) => character.name === 'Character Desk Hero')
+    })
+    .toMatchObject({
+      backgroundAsiChoices: ['intelligence', 'constitution'],
+      abilityScores: { constitution: 13 },
+      hitPoints: { current: 12 },
+      provenance: {
+        abilityBonuses: expect.arrayContaining([
+          expect.objectContaining({
+            ability: 'constitution',
+            value: 1,
+            sourceTag: expect.objectContaining({ sourceName: 'Acolyte', sourceRef: 'XPHB' }),
+          }),
+        ]),
+      },
+    })
 })

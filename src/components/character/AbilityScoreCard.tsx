@@ -3,7 +3,7 @@ import {
   type AbilityName,
   formatModifier,
 } from '@/lib/calculations/abilityScores'
-import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { ABILITY_SCORE_ABSOLUTE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 
 interface AbilityScoreCardProps {
@@ -14,7 +14,7 @@ interface AbilityScoreCardProps {
   interactive?: boolean
   selected?: boolean
   onSelect?: () => void
-  variant?: 'card' | 'console'
+  variant?: 'card' | 'console' | 'wizard'
 }
 
 export function AbilityScoreCard({
@@ -27,8 +27,39 @@ export function AbilityScoreCard({
   onSelect,
   variant = 'card',
 }: AbilityScoreCardProps) {
-  const total = score + bonus
+  const total =
+    variant === 'wizard' ? Math.min(score + bonus, ABILITY_SCORE_ABSOLUTE_MAX) : score + bonus
   const mod = getAbilityModifier(total)
+
+  if (variant === 'wizard') {
+    return (
+      <section className="min-w-0 rounded-lg border border-border bg-workspace-pane p-2.5 text-center sm:p-3">
+        <h3 className="break-words text-sm font-semibold capitalize">{ability}</h3>
+        <div className="mt-3 flex min-h-9 justify-center">{children}</div>
+        <div className="mt-2 flex flex-wrap justify-center gap-x-2 text-xs text-muted-foreground">
+          <span>Base {score}</span>
+          {bonus !== 0 && (
+            <span className="text-success-foreground">Bonus {formatModifier(bonus)}</span>
+          )}
+        </div>
+        <div className="mt-2 flex items-baseline justify-center gap-2 border-t border-border pt-2 tabular-nums">
+          <span className="font-mono text-2xl font-bold">
+            <span className="sr-only">Total </span>
+            {total}
+          </span>
+          <span
+            className={cn(
+              'text-sm font-semibold',
+              mod >= 0 ? 'text-success-foreground' : 'text-destructive',
+            )}
+          >
+            <span className="sr-only">Modifier </span>
+            {formatModifier(mod)}
+          </span>
+        </div>
+      </section>
+    )
+  }
 
   if (variant === 'console') {
     const consoleScore = (

@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
@@ -43,13 +44,10 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
   const identity = (
     <section aria-labelledby={identityHeadingId}>
       <h3 id={identityHeadingId} className="text-lg font-semibold">
-        Character Details
+        Identity
       </h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Start with a name and the details for your character sheet.
-      </p>
-      <div className="mt-4 grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-3.5">
-        <div className="col-span-2 space-y-2">
+      <div className="mt-3 grid grid-cols-2 gap-3.5 @min-[32rem]:grid-cols-4 @min-[64rem]:grid-cols-6">
+        <div className="col-span-2 min-w-0 space-y-2 @min-[32rem]:col-span-2">
           <Label htmlFor={characterNameId}>Character Name</Label>
           <Input
             id={characterNameId}
@@ -61,7 +59,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
             )}
           />
         </div>
-        <div className="col-span-2 space-y-2">
+        <div className="col-span-2 min-w-0 space-y-2 @min-[32rem]:col-span-2">
           <Label htmlFor={playerNameId}>Player Name</Label>
           <Input
             id={playerNameId}
@@ -118,8 +116,8 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
       transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
       name={data.name}
       level={1}
-      race="Race"
-      characterClass="Class"
+      race={getRaceDisplayName(data.race, data.subrace) || 'Race'}
+      characterClass={data.class || 'Class'}
       gender={data.gender}
       onPortraitChange={handlePortraitChange}
       onTransformChange={handleTransformChange}

@@ -118,10 +118,10 @@ export function ContentStep({
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
   return (
-    <section className="@container flex h-full min-h-0 min-w-0 flex-col">
+    <section className="@container flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">Additional Content</h3>
+          <h3 className="text-sm font-semibold">Additional Content</h3>
           {!isBundledSrd && allowedSources.length > 0 && (
             <span
               data-allowed-sources-count

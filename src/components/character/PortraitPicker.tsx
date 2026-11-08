@@ -283,7 +283,7 @@ export function PortraitPicker({
           lastModified={lastModified}
           transform={t}
           fit={libraryCollapsed ? 'contain' : 'width'}
-          className={isCreator ? 'max-w-sm' : undefined}
+          className={isCreator ? 'mx-auto max-w-lg' : undefined}
           onWidthChange={setPreviewWidth}
         />
 
@@ -320,7 +320,7 @@ export function PortraitPicker({
           className={cn(
             'grid flex-1 content-start overflow-y-auto pr-1',
             isCreator
-              ? 'min-h-0 max-h-[65vh] auto-rows-max grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2 @min-[38rem]:max-h-none'
+              ? 'min-h-0 max-h-[42vh] auto-rows-max grid-cols-[repeat(auto-fill,minmax(min(100%,6.5rem),1fr))] gap-2 @min-[55rem]:[@media(min-height:850px)]:max-h-[52vh] @min-[55rem]:[@media(min-height:850px)]:grid-cols-4'
               : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
           )}
         >
@@ -392,14 +392,14 @@ export function PortraitPicker({
   return (
     <>
       {isCreator ? (
-        <div className="@container h-full">
-          <div className="grid gap-6 @min-[38rem]:h-full @min-[38rem]:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-            <div className="min-w-0 space-y-5 @min-[38rem]:min-h-0 @min-[38rem]:overflow-y-auto @min-[38rem]:pr-3">
+        <div className="@container">
+          <div className="grid gap-5 @min-[45rem]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] @min-[45rem]:gap-6">
+            <div className="min-w-0 space-y-5">
               {identity}
-              <div className="border-t border-border pt-4">{preview}</div>
+              <div className="border-t border-border pt-4">{library}</div>
             </div>
-            <div className="min-h-0 min-w-0 border-t border-border pt-4 @min-[38rem]:border-t-0 @min-[38rem]:border-l @min-[38rem]:pt-0 @min-[38rem]:pl-6">
-              {library}
+            <div className="min-w-0 rounded-lg border border-border bg-workspace-pane p-4 @min-[45rem]:self-start @min-[45rem]:p-5">
+              {preview}
             </div>
           </div>
         </div>
