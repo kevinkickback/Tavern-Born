@@ -85,7 +85,7 @@ export function decodeClassProficiencyChoiceId(id: string):
         : target.startsWith('subclass-feature|')) ||
       (domain !== 'skill-or-language' && !CLASS_PROFICIENCY_DOMAINS.includes(domain)) ||
       (parts.length === 5 &&
-        (domain !== 'skills' ||
+        ((domain !== 'skills' && domain !== 'tools') ||
           owner.length !== 4 ||
           typeof trigger !== 'string' ||
           canonicalProficiencyName(trigger) !== trigger)) ||

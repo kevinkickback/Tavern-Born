@@ -200,6 +200,10 @@ export function resolveClassProficiencyOptions(
         optionDomain === 'tools' &&
         ((!domain?.toolCategory && !domain?.toolPool) ||
           (domain.toolPool && !domain.toolPool.includes(name)) ||
+          (domain.excludeExisting && tools.has(name) && !alreadySelected) ||
+          (domain.trigger &&
+            !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+              ?.proficiencyAtGain?.alreadyProficient) ||
           !hasProficiencyCatalogTarget(reference, catalogs, undefined, domain.toolCategory))
       )
         continue

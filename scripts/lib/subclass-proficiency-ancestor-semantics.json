@@ -2,6 +2,46 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|alchemist|artificer|efa|alchemist|efa|3|efa",
+      "digest": "e261832ab9de93a05dcc6ec94afb3a89caa75462bdfeb0946320ca6698707269"
+    },
+    {
+      "target": "subclass-feature|armorer|artificer|efa|armorer|efa|3|efa",
+      "digest": "a27a485a3ac0f9abd26b1c7003780987c870296a142f6cd5e6773d28863ce69c"
+    },
+    {
+      "target": "subclass-feature|artillerist|artificer|efa|artillerist|efa|3|efa",
+      "digest": "e7864e8f3d5ec58069c838700a0efe95583cf78bafa13101187e24a421664aed"
+    },
+    {
+      "target": "subclass-feature|battle smith|artificer|efa|battle smith|efa|3|efa",
+      "digest": "4d79e88288443a729e355d8541945ed9c8dce4bf7d6a2ea32ea0c791ff1de5e0"
+    },
+    {
+      "target": "subclass-feature|cartographer|artificer|efa|cartographer|efa|3|efa",
+      "digest": "2df7bf488d3b1104f707635cad603288195375bfc3ce84fd0e39f2c32f5259b6"
+    },
+    {
+      "target": "subclass-feature|reanimator|artificer|efa|reanimator|rhw|3|rhw",
+      "digest": "f5ea0360a77c255de7870e28088facd9f2812568e8d064854e789cefae179089"
+    },
+    {
+      "target": "subclass-feature|alchemist|artificer|tce|alchemist|tce|3|tce",
+      "digest": "c1b91abeea8fa12e30e7067f4ce2647ad8a35da3c3267299e9583fe589b37d3b"
+    },
+    {
+      "target": "subclass-feature|armorer|artificer|tce|armorer|tce|3|tce",
+      "digest": "c44036b6868d2571f43801b7687c5d4dea2033718c5d47ddc4f773dc8977890f"
+    },
+    {
+      "target": "subclass-feature|artillerist|artificer|tce|artillerist|tce|3|tce",
+      "digest": "091baedfab52dde196e9e477dda92c8cda04ddce8952bd2bd40c7fecd18a9114"
+    },
+    {
+      "target": "subclass-feature|battle smith|artificer|tce|battle smith|tce|3|tce",
+      "digest": "40f432087d3ca6ff59c30cb330b383433e435bc2a60eceb8cf9f8529164cf1a5"
+    },
+    {
       "target": "subclass-feature|gloom stalker|ranger|phb|gloom stalker|xge|3|xge",
       "digest": "236647dba3f79ecfce45a5a9743944c774a3b88dcc648bef437707e0549c4792"
     },

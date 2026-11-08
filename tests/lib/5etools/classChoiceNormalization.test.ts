@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import {
+  getProgressiveChoiceGainCount,
   getRequiredChoiceSelectionCount,
   normalizeClassChoices,
   normalizeSubclassRules,
@@ -578,6 +579,7 @@ describe('class choice normalization', () => {
     })
     expect(getRequiredChoiceSelectionCount(mastery!, 1)).toBe(3)
     expect(getRequiredChoiceSelectionCount(mastery!, 4)).toBe(4)
+    expect(getProgressiveChoiceGainCount(mastery!, 4)).toBeUndefined()
   })
 
   test('preserves weapon-range restrictions from item filter tags', () => {

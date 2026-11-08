@@ -340,6 +340,62 @@
       ]
     },
     {
+      "target": "subclass-feature|battle ready|artificer|efa|battle smith|efa|3|efa",
+      "name": "Battle Ready",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "weapons": ["martial"]
+      },
+      "subclassGainPosition": "first",
+      "digest": "5fd28edadf007051451931bc20f0712ea4458b439b22cfa94776d5cec745bcc9",
+      "metadataDigest": "96c7efb21b9f327fdf20e042e0de29514e587b93a08d9e98522fd229ef36102a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|battle ready|artificer|tce|battle smith|tce|3|tce",
+      "name": "Battle Ready",
+      "className": "Artificer",
+      "classSource": "TCE",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "weapons": ["martial"]
+      },
+      "subclassGainPosition": "first",
+      "digest": "292e8c67efbd2b3126f08184175ff196a1d41c3f98490791821c5d408c6acf69",
+      "metadataDigest": "6975f17c6dac6f8fbd97bf805ed87a5a13efeecef41fb4828a691b6bc18befa0",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "otherSources",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiencies|bard|phb|swords|xge|3|xge",
       "name": "Bonus Proficiencies",
       "className": "Bard",
@@ -1092,6 +1148,40 @@
       ]
     },
     {
+      "target": "subclass-feature|reanimator's skill set|artificer|efa|reanimator|rhw|3|rhw",
+      "name": "Reanimator's Skill Set",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["alchemist's supplies"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["alchemist's supplies"],
+      "trainingTools": [
+        {
+          "name": "alchemist's supplies",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "e6836cfcc3f5bdad3dc21e9cca2a736e732638078f7fbe4443a4df8671ebb94b",
+      "metadataDigest": "f82040e0adb7500103b7be7e9a794dadfa7a269b310c6bd482d7379eaeb2dc0a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
       "name": "Royal Envoy",
       "className": "Fighter",
@@ -1131,6 +1221,334 @@
       "skills": ["nature", "survival"],
       "digest": "d03490da6f2e74df8779efac42d6b62bdd6ad86a1bde9a8fdfd7baec79030226",
       "metadataDigest": "da2ffa5b6f53be26583efcd612a1178117a3d4e24b9e6d5070cc44d5bbcbbf5d",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tool proficiency|artificer|tce|alchemist|tce|3|tce",
+      "name": "Tool Proficiency",
+      "className": "Artificer",
+      "classSource": "TCE",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["alchemist's supplies"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["alchemist's supplies"],
+      "trainingTools": [
+        {
+          "name": "alchemist's supplies",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "digest": "92c9cc63ebfedbebc0e47b5cb62d1722f013bd37428bfcc02514f4af983b0837",
+      "metadataDigest": "98262ca92b51a098d21334e48e151bf06079a5830625fb343d4964489065d896",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "otherSources",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tool proficiency|artificer|tce|artillerist|tce|3|tce",
+      "name": "Tool Proficiency",
+      "className": "Artificer",
+      "classSource": "TCE",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["woodcarver's tools"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["woodcarver's tools"],
+      "trainingTools": [
+        {
+          "name": "woodcarver's tools",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "digest": "b0b8750c9d989b5b9c800c2dc6899b75392e059bdf32a03d924d941d73acb443",
+      "metadataDigest": "503751d735a4978e521f006eeb9052016be7b1817024f1cafd2355f40fbe9132",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "otherSources",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tool proficiency|artificer|tce|battle smith|tce|3|tce",
+      "name": "Tool Proficiency",
+      "className": "Artificer",
+      "classSource": "TCE",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["smith's tools"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["smith's tools"],
+      "trainingTools": [
+        {
+          "name": "smith's tools",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "digest": "1370f0c2dc2d8f5a690b4d900ccad7f076ca7d8411ebd32464fb5ee01e6cf979",
+      "metadataDigest": "e979da209b60df6547ab67fe1108674997389741ebd307f358ac081010fa717c",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "otherSources",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|efa|alchemist|efa|3|efa",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["alchemist's supplies", "herbalism kit"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["alchemist's supplies", "herbalism kit"],
+      "trainingTools": [
+        {
+          "name": "alchemist's supplies",
+          "source": "XPHB"
+        },
+        {
+          "name": "herbalism kit",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "6b3e1f1ae1fe3ef99c5016e87f7a716ad3ccd9f4d4b8a109f8176fee6f8013b9",
+      "metadataDigest": "04fc1e5a5a68cdc2b132dbd33570ee7a21c799c3cb6f2ed5002ed5c1a83276c7",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|efa|armorer|efa|3|efa",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["smith's tools"],
+        "armor": ["heavy"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["smith's tools"],
+      "trainingTools": [
+        {
+          "name": "smith's tools",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "59bee4a90a8281e57673fd541a3f79011a4b458f91e5cf0548ad130c9160127a",
+      "metadataDigest": "27ee01a2e2377e76f6c350d70bd2191313f51c7d42822db642cfdb87e0355ea6",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|efa|artillerist|efa|3|efa",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["woodcarver's tools"],
+        "weapons": ["martial ranged weapons"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["woodcarver's tools"],
+      "trainingTools": [
+        {
+          "name": "woodcarver's tools",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "5bb31797b6c5c778fa399aa07bd03f2aef7bb9f73c873db66a105c99e452f893",
+      "metadataDigest": "676ee71b0bf900a717f21867aa87f60d2fb27d364ea9625e414317d032e974f8",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|efa|battle smith|efa|3|efa",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["smith's tools"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["smith's tools"],
+      "trainingTools": [
+        {
+          "name": "smith's tools",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "fcce48d446be03973ecfd8dccc30e9640c74323ad2fb7cdfb1ee3d556e660c6d",
+      "metadataDigest": "16425d0f165e348c3a85d1f5d32d053e0d94ef667aa9662328ae080fda3b2418",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|efa|cartographer|efa|3|efa",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "EFA",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["calligrapher's supplies", "cartographer's tools"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["calligrapher's supplies", "cartographer's tools"],
+      "trainingTools": [
+        {
+          "name": "calligrapher's supplies",
+          "source": "XPHB"
+        },
+        {
+          "name": "cartographer's tools",
+          "source": "XPHB"
+        }
+      ],
+      "digest": "e9009b0dac0081e4a9b7cfdcee4521c6259dc6267d94d9a8acdd6d72c2d9f6e6",
+      "metadataDigest": "2d006c5cd12b2c2a79c19bba29b491ca0d163a21b71bb68832a5ce65ad0f5f9e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|tools of the trade|artificer|tce|armorer|tce|3|tce",
+      "name": "Tools of the Trade",
+      "className": "Artificer",
+      "classSource": "TCE",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["smith's tools"],
+        "armor": ["heavy"]
+      },
+      "subclassGainPosition": "first",
+      "trainingToolFallbacks": ["smith's tools"],
+      "trainingTools": [
+        {
+          "name": "smith's tools",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "digest": "25c6092deb2a3bc8362eecf434d5301dd08cfe5f3cfa3d406782c79f423fea30",
+      "metadataDigest": "83e583cec883b71fb30d91cd77455f2eef86a0e73f6abc11b4e1d94b4a1a2f39",
       "fields": [
         "className",
         "classSource",

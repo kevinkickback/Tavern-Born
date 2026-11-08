@@ -4,7 +4,11 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { getConcreteToolProficiencyName } from '@/lib/5etools/concreteToolProficiencies'
 import { getConditionalOptionalIdentity } from '@/lib/5etools/conditionalProficiencySource'
-import { buildClassFeatureLookup } from '@/lib/5etools/lookups'
+import {
+  buildClassFeatureLookup,
+  buildItemPropertyLookup,
+  buildItemTypeLookup,
+} from '@/lib/5etools/lookups'
 import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import type {
   Class5e,
@@ -35,7 +39,10 @@ export interface ClassChoiceFeatureCatalogs {
   languages?: readonly Language5e[]
   proficiencyTools?: readonly Item5e[]
   allConcreteTools?: readonly Item5e[]
+  items?: readonly Item5e[]
   itemsBase?: readonly Item5e[]
+  itemPropertyByAbbr?: Readonly<Record<string, string>>
+  itemTypeByAbbr?: Readonly<Record<string, string>>
   featExpertiseFeats?: readonly Feat5e[]
   optionalFeatures?: readonly OptionalFeatureLike[]
   optionalFeatureCandidates?: ReadonlyMap<string, readonly OptionalFeatureLike[]>
@@ -129,6 +136,8 @@ export function buildClassChoiceFeatureCatalogs(
         | 'languages'
         | 'items'
         | 'itemsBase'
+        | 'itemProperties'
+        | 'itemTypes'
         | 'feats'
         | 'optionalfeatures'
         | 'optionalClassFeatureSources'
@@ -169,7 +178,10 @@ export function buildClassChoiceFeatureCatalogs(
     optionalClassSections: data.optionalClassSections ?? [],
     skills: data.skills ?? [],
     languages: data.languages ?? [],
+    items: data.items ?? [],
     itemsBase: data.itemsBase ?? [],
+    itemPropertyByAbbr: buildItemPropertyLookup(data.itemProperties ?? []),
+    itemTypeByAbbr: buildItemTypeLookup(data.itemTypes ?? []),
     proficiencyTools: [...(data.items ?? []), ...(data.itemsBase ?? [])].filter(
       (item) =>
         isSelectableEquipmentItem(item) &&

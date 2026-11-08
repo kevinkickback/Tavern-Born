@@ -18,9 +18,9 @@ import {
   isValidRevisedHunterSelection,
 } from '@/lib/5etools/revisedHunterIdentity'
 import {
-  getSubclassSpellConfigurationRule,
-  isValidSubclassSpellConfigurationSelection,
-} from '@/lib/5etools/subclassSpellConfiguration'
+  getSubclassFeatureConfigurationRule,
+  isValidSubclassFeatureConfigurationSelection,
+} from '@/lib/5etools/subclassFeatureConfiguration'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import { getInvalidFavoredEnemySelectionIds } from './favoredEnemyValidation'
 import { getInvalidNaturalExplorerSelectionIds } from './naturalExplorerValidation'
@@ -49,12 +49,12 @@ export function getInvalidFeatureLiteralSelectionIds(
       seen.add(s.choiceId)
       continue
     }
-    const configuration = getSubclassSpellConfigurationRule(s.choiceId)
+    const configuration = getSubclassFeatureConfigurationRule(s.choiceId)
     if (configuration || getRevisedHunterRule(s.choiceId)) {
       if (
         seen.has(s.choiceId) ||
         !(configuration
-          ? isValidSubclassSpellConfigurationSelection(s)
+          ? isValidSubclassFeatureConfigurationSelection(s)
           : isValidRevisedHunterSelection(s))
       )
         invalid.add(s.choiceId)

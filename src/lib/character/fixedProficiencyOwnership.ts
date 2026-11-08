@@ -1,4 +1,7 @@
-import { canonicalProficiencyName } from '@/lib/5etools/classProficiencyIdentity'
+import {
+  canonicalProficiencyName,
+  getClassProficiencyChoiceId,
+} from '@/lib/5etools/classProficiencyIdentity'
 import { getConcreteToolProficiencyName } from '@/lib/5etools/concreteToolProficiencies'
 import { decodeFixedProficiencyId } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
@@ -147,6 +150,25 @@ export function grantFixedProficiencies(
       for (const name of names) {
         if (domain === 'tools') {
           if (!tools.has(name)) continue
+          if (owner.owner.length === 4 && owner.rule.trainingToolFallbacks?.includes(name)) {
+            const [className, classSource, subclassName, subclassSource] = owner.owner
+            const id = getClassProficiencyChoiceId(
+              { name: className, source: classSource, subclassName, subclassSource },
+              owner.rule.target,
+              'tools',
+              owner.level,
+              name,
+            )
+            if (
+              character.classChoiceSelections?.some(
+                (row) =>
+                  row.choiceId === id &&
+                  row.proficiencyAtGain?.name === name &&
+                  row.proficiencyAtGain.alreadyProficient,
+              )
+            )
+              continue
+          }
           const tool =
             owner.rule.trainingTools?.find((item) => item.name === name) ?? owner.rule.trainingTool
           if (tool?.name === name) {

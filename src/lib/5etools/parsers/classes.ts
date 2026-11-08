@@ -36,6 +36,14 @@ import {
   auditInheritedOathSpellRoots,
   isInheritedOathSourceFeature,
 } from '@/lib/5etools/legacyPaladinOathSpells'
+import {
+  auditInheritedSubclassRoots,
+  isDirectArtificerRuleTarget,
+  isDirectFighterRuleTarget,
+  isDirectMonkSpellTarget,
+  isDirectRangerRuleTarget,
+  isDirectRogueRuleTarget,
+} from '@/lib/5etools/nativeSubclassFeatureSource'
 import { auditNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { auditOptionalClassFeatureSources } from '@/lib/5etools/optionalClassFeatureSource'
 import { auditPsionicFeatureSources } from '@/lib/5etools/psionicSources'
@@ -222,7 +230,11 @@ function parsePreparedClasses(data: unknown): unknown[] {
     return Array.isArray(record.entries)
       ? {
           ...record,
-          entries: enrichEntriesSubclassRefs(record.entries, rawSubclassFeatureRecords),
+          entries: enrichEntriesSubclassRefs(
+            record.entries,
+            rawSubclassFeatureRecords,
+            isDirectArtificerRuleTarget(getSubclassFeatureIdentity(record)),
+          ),
         }
       : feature
   })
@@ -429,13 +441,17 @@ function resolveInlineSubclassFeatureRef(
   )
   if (!feature) {
     const target = getSubclassFeatureIdentity(parsedRef)
+    const directArtificer = isDirectArtificerRuleTarget(target)
     const declaredCoreSubclass =
       target &&
       ['druid', 'fighter', 'paladin', 'sorcerer', 'warlock', 'wizard'].includes(
         parsedRef.className?.trim().toLowerCase() ?? '',
       ) &&
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
-    if ('feature' in entry && (isNativeResilienceTarget(target) || declaredCoreSubclass)) {
+    if (
+      'feature' in entry &&
+      (isNativeResilienceTarget(target) || declaredCoreSubclass || directArtificer)
+    ) {
       // Raw inline data cannot stand in for the missing declared source record.
       const { feature: _attachment, ...declaration } = entry
       return declaration
@@ -448,7 +464,11 @@ function resolveInlineSubclassFeatureRef(
     feature: Array.isArray(feature.entries)
       ? {
           ...feature,
-          entries: enrichEntriesSubclassRefs(feature.entries, subclassFeatureRecords),
+          entries: enrichEntriesSubclassRefs(
+            feature.entries,
+            subclassFeatureRecords,
+            isDirectArtificerRuleTarget(getSubclassFeatureIdentity(feature)),
+          ),
         }
       : feature,
   }
@@ -457,6 +477,7 @@ function resolveInlineSubclassFeatureRef(
 function enrichEntriesSubclassRefs(
   entries: unknown[],
   subclassFeatureRecords: unknown[],
+  includeListItems = false,
 ): unknown[] {
   return entries.map((e) => {
     if (typeof e !== 'object' || e === null) return e
@@ -467,8 +488,11 @@ function enrichEntriesSubclassRefs(
     if (Array.isArray(obj.entries)) {
       return {
         ...obj,
-        entries: enrichEntriesSubclassRefs(obj.entries, subclassFeatureRecords),
+        entries: enrichEntriesSubclassRefs(obj.entries, subclassFeatureRecords, includeListItems),
       }
+    }
+    if (includeListItems && obj.type === 'list' && Array.isArray(obj.items)) {
+      return { ...obj, items: enrichEntriesSubclassRefs(obj.items, subclassFeatureRecords, true) }
     }
     return e
   })
@@ -514,6 +538,7 @@ function auditNativeSubclassCopies(
           isDirectMonkSpellTarget(target) ||
           isDirectRangerRuleTarget(target) ||
           isDirectRogueRuleTarget(target) ||
+          isDirectArtificerRuleTarget(target) ||
           isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
@@ -635,11 +660,3 @@ export function parseClasses(data: unknown): unknown[] {
 export function parseClassFeatures(data: unknown): unknown[] {
   return parsePreparedClassFeatures(prepareClassDocument(data))
 }
-
-import {
-  auditInheritedSubclassRoots,
-  isDirectFighterRuleTarget,
-  isDirectMonkSpellTarget,
-  isDirectRangerRuleTarget,
-  isDirectRogueRuleTarget,
-} from '@/lib/5etools/nativeSubclassFeatureSource'

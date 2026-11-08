@@ -9,6 +9,7 @@ import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5eto
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { FeatureCastOnlyRules } from '@/types/classCasting'
 import { isArcaneArcherCantripOwner } from './arcaneArcherCantripSource'
+import { getAlchemistFeatureCasts } from './artificerAlchemistSpells'
 import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
@@ -310,6 +311,8 @@ export function getEarnedSubclassSpellGrants(
         ? []
         : rituals
     const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    const alchemist = getAlchemistFeatureCasts(classData, subclasses[0], classLevel)
+    if (alchemist) return [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
     if (norm(entry.name) === 'cleric') {
       if (
         norm(entry.source) === 'phb' &&

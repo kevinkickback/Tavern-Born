@@ -1,3 +1,9 @@
+import { getAlchemistChemicalDefenses } from '@/lib/5etools/artificerAlchemistSpells'
+import {
+  getArtificerAttunedSaveBonus,
+  getArtificerAttunementLimit,
+  getCurrentArtificerRules,
+} from '@/lib/5etools/artificerJourneyRules'
 import {
   BEAR_ASPECT_TARGET,
   CLASSIC_ASPECT_TARGET,
@@ -147,6 +153,7 @@ export interface EffectiveAbilityScoreData {
 }
 
 interface CharacterEquipmentCalculationState {
+  attunementLimit: number
   all: readonly Equipment[]
   equipped: readonly Equipment[]
   attuned: readonly Equipment[]
@@ -638,6 +645,9 @@ export function createCharacterCalculationContext(
       target.kind === 'skill-modifier' && operation.kind === 'add' ? [target.skill] : [],
     ),
   )
+  const artificer = getCurrentArtificerRules(character, choiceCatalogs)
+  const attuned = allEquipment.filter((item) => item.attuned)
+  const artificerBonus = getArtificerAttunedSaveBonus(artificer, attuned.length)
   const sourceEffects = [
     ...baseSourceEffects,
     ...deriveDraconicResilienceEffects(character, choiceCatalogs, abilityScores.modifiers),
@@ -650,6 +660,22 @@ export function createCharacterCalculationContext(
     ),
     ...fighterEffects,
     ...getScionResistance(character, choiceCatalogs?.classes),
+    ...getAlchemistChemicalDefenses(character, choiceCatalogs?.classes),
+    ...(artificer && artificerBonus
+      ? ABILITY_NAMES.map(
+          (ability): CharacterEffect => ({
+            id: `${artificerBonus.feature.target}:${ability}`,
+            label: artificerBonus.feature.name,
+            source: {
+              kind: 'class',
+              name: artificerBonus.feature.name,
+              source: artificer.owner.source,
+            },
+            target: { kind: 'saving-throw-modifier', ability },
+            operation: { kind: 'add', value: artificerBonus.value },
+          }),
+        )
+      : []),
     ...deriveMonkUnarmoredEffects(character, choiceCatalogs, monk, abilityScores.modifiers),
     ...deriveMonkSubclassSenses(character, choiceCatalogs?.classes),
     ...deriveBarbarianPassiveEffects(
@@ -724,7 +750,11 @@ export function createCharacterCalculationContext(
     equipment: {
       all: allEquipment,
       equipped: allEquipment.filter((item) => item.equipped),
-      attuned: allEquipment.filter((item) => item.attuned),
+      attuned,
+      attunementLimit: getArtificerAttunementLimit(
+        artificer,
+        CORE_RULES_METADATA[character.originSystem].maxAttunedItems,
+      ),
     },
     movement: getEffectiveCharacterMovement(character, sourceEffects),
     effects: {

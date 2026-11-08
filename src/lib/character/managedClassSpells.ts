@@ -1,3 +1,7 @@
+import {
+  getArtificerGrantedCantrip,
+  getCurrentArtificerRules,
+} from '@/lib/5etools/artificerJourneyRules'
 import { isRevisedAncestralGuardian } from '@/lib/5etools/barbarianRitualSpells'
 import {
   currentClasses,
@@ -107,6 +111,7 @@ import {
 } from './managedClassSpellIdentity'
 import { stripManagedClassSpellState } from './managedClassSpellState'
 import {
+  type ClassFixedSpellGrant,
   type ClassFixedSpellStatus,
   getOptionalClassFixedSpellGrants,
   getOptionalClassFixedSpellNamesAtGain,
@@ -239,6 +244,18 @@ function resolveSlot(
     character,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
+  const fixedCantrip =
+    slot[1] === 'class-cantrip' && norm(entry.name) === 'artificer'
+      ? getArtificerGrantedCantrip(getCurrentArtificerRules(character, context?.catalogs))
+      : undefined
+  if (fixedCantrip && fixedCantrip.feature.level <= slot[3]) {
+    fixedAtGain.push({
+      spellName: fixedCantrip.reference,
+      isCantrip: true,
+      level: fixedCantrip.feature.level,
+      mode: 'known',
+    })
+  }
   const expandedAtGain = new Map(
     fixedAtGain.flatMap(({ spellName, expandedRank }) =>
       expandedRank === undefined ? [] : [[getSpellReferenceKey(spellName), expandedRank] as const],
@@ -859,27 +876,49 @@ export function projectManagedClassSpellState(
     }
   }
   let profiles = base.spells.spellProfiles
+  const artificer = getCurrentArtificerRules(character, context?.catalogs)
+  const artificerCantrip = getArtificerGrantedCantrip(artificer)
   const grants = [
+    ...(artificer && artificerCantrip
+      ? [
+          {
+            grant: {
+              owner: ['class', norm(artificer.owner.name), norm(artificer.owner.source)],
+              target: artificerCantrip.feature.target,
+              featureName: artificerCantrip.feature.name,
+              level: artificerCantrip.feature.level,
+              reference: artificerCantrip.reference,
+            } satisfies ClassFixedSpellGrant,
+            cantrip: true,
+            spellLevel: undefined,
+            castingNote: undefined,
+            sourceReason: undefined,
+          },
+        ]
+      : []),
     ...getOptionalClassFixedSpellGrants(character, context?.catalogs).map((grant) => ({
       grant,
+      cantrip: false,
       spellLevel: undefined,
       castingNote: undefined,
       sourceReason: undefined,
     })),
     ...directPrepared.map(({ spellLevel, castingNote, sourceReason, ...grant }) => ({
       grant,
+      cantrip: false,
       spellLevel,
       castingNote,
       sourceReason,
     })),
   ]
-  for (const { grant, spellLevel, castingNote, sourceReason } of grants) {
+  for (const { grant, cantrip, spellLevel, castingNote, sourceReason } of grants) {
     const prepared = spellLevel !== undefined
     const spell = targets.get(getSpellReferenceKey(grant.reference))
     const reason =
       sourceReason ??
       (!spell ||
       !permitted(allowed, spell.source) ||
+      (cantrip && spell.level !== 0) ||
       (prepared && !isAvailableDirectPreparedSpell(spell, spellLevel, grant.target))
         ? 'Restore the exact spell printing from the enabled content.'
         : undefined)
@@ -905,7 +944,9 @@ export function projectManagedClassSpellState(
       profile.id === toClassProfileId(entry.name, entry.source)
         ? {
             ...profile,
-            spellsKnown: add(profile.spellsKnown),
+            ...(cantrip
+              ? { cantrips: add(profile.cantrips) }
+              : { spellsKnown: add(profile.spellsKnown) }),
             fixedSpells: add(profile.fixedSpells ?? []),
             ...(prepared && { alwaysPreparedSpells: add(profile.alwaysPreparedSpells ?? []) }),
           }

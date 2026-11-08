@@ -1,3 +1,4 @@
+import { ARMOR_MODEL_GROUP } from '@/lib/5etools/artificerArmorModels'
 import {
   getBarbarianPathChoice,
   getBarbarianPathChoiceGroup,
@@ -57,7 +58,7 @@ import {
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { SCION_GROUP } from '@/lib/5etools/rogueScion'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
-import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
+import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import {
   isCurrentRevisedInvocationCantripPool,
   isRevisedTargetedInvocation,
@@ -498,9 +499,9 @@ function currentLiteralChoice(
     affinity ||
     getBarbarianPathChoice(choice.id) ||
     getRevisedHunterRule(choice.id) ||
-    getSubclassSpellConfigurationRule(choice.id)
+    getSubclassFeatureConfigurationRule(choice.id)
   const owner = subclassLiteral && findOwner(character, choice)
-  if (getSubclassSpellConfigurationRule(choice.id) && !selected.length) return choice
+  if (getSubclassFeatureConfigurationRule(choice.id) && !selected.length) return choice
   const current =
     classData &&
     getCharacterClassChoices(
@@ -1006,6 +1007,13 @@ export function applyClassChoiceSelectionCommand(
   expectedSelectionHandle?: string,
   progressionGainLevel?: number,
 ): Pick<Character, 'classChoiceSelections'> {
+  if (
+    progressionGainLevel === undefined &&
+    selected.length &&
+    (choice.kind === 'item' || choice.optionFilter?.featureTypes?.includes('AI')) &&
+    getProgressiveChoiceGainCount(choice, choice.level) !== undefined
+  )
+    throw new RangeError('Choose this option through its earned level.')
   const gain =
     progressionGainLevel === undefined
       ? undefined
@@ -1075,13 +1083,14 @@ export function applyClassChoiceSelectionCommand(
   )
     throw new RangeError('Choose a Hunter option through its exact subclass feature.')
   if (
-    !getSubclassSpellConfigurationRule(choice.id) &&
+    !getSubclassFeatureConfigurationRule(choice.id) &&
     selected.some((option) => {
       const target = decodeFeatureOptionReference(option)
       return (
         target?.format === 'source-group' &&
         (target.group === LAND_GROUP ||
           target.group === SCION_GROUP ||
+          target.group === ARMOR_MODEL_GROUP ||
           isWarlockPatronConfigurationGroup(target.group) ||
           isDivineSoulConfigurationGroup(target.group))
       )
@@ -1120,7 +1129,7 @@ export function applyClassChoiceSelectionCommand(
       choice.id === ELEMENTAL_FURY_ID ||
       choice.id === REVISED_AFFINITY_ID ||
       getClassOrderById(choice.id) ||
-      getSubclassSpellConfigurationRule(choice.id) ||
+      getSubclassFeatureConfigurationRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
       decodeLegacySubclassChoice(choice.id)) &&
     expectedSelectionHandle !== undefined
@@ -1247,7 +1256,7 @@ export function applyClassChoiceSelectionCommand(
       throw new RangeError(
         decodeFavoredEnemyChoiceId(choice.id)
           ? 'Use distinct enemies for each earned choice and confirm the complete setup.'
-          : getSubclassSpellConfigurationRule(choice.id)
+          : getSubclassFeatureConfigurationRule(choice.id)
             ? 'Choose one current option for the exact subclass feature.'
             : getBarbarianPathChoice(choice.id)
               ? 'Choose one current option for the exact Barbarian path feature.'

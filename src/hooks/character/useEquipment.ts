@@ -29,6 +29,7 @@ export interface EquipmentState {
   carryCapacity: number
   isEncumbered: boolean
   attunedCount: number
+  attunementLimit: number
   currency: Currency
   totalCurrencyCopper: number
   addManyFromGameData: (items: readonly Item5e[]) => void
@@ -45,6 +46,7 @@ export function useEquipment(): EquipmentState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const armorTraining = calculationContext?.character.proficiencies.armor
+  const attunementLimit = calculationContext?.equipment.attunementLimit ?? MAX_ATTUNEMENT_SLOTS
 
   const equipment = character?.equipment ?? []
   const currency = character?.currency ?? DEFAULT_CURRENCY
@@ -176,12 +178,20 @@ export function useEquipment(): EquipmentState {
   const toggleAttune = useCallback(
     (id: string) => {
       if (!character) return
-      const item = equipment.find((e) => e.id === id)
+      const latest = useCharacterStore.getState().activeCharacter
+      if (
+        latest?.id !== character.id ||
+        latest.classProgression !== character.classProgression ||
+        latest.allowedSources !== character.allowedSources
+      )
+        return
+      const items = latest.equipment ?? []
+      const item = items.find((e) => e.id === id)
       if (!item) return
-      if (!item.attuned && attunedCount >= MAX_ATTUNEMENT_SLOTS) return
-      patchEquipment(equipment.map((e) => (e.id === id ? { ...e, attuned: !e.attuned } : e)))
+      if (!item.attuned && items.filter((row) => row.attuned).length >= attunementLimit) return
+      patchEquipment(items.map((e) => (e.id === id ? { ...e, attuned: !e.attuned } : e)))
     },
-    [character, equipment, attunedCount, patchEquipment],
+    [character, attunementLimit, patchEquipment],
   )
 
   const updateCurrency = useCallback(
@@ -200,6 +210,7 @@ export function useEquipment(): EquipmentState {
     carryCapacity,
     isEncumbered: totalWeight > carryCapacity,
     attunedCount,
+    attunementLimit,
     currency,
     totalCurrencyCopper,
     addManyFromGameData,

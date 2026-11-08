@@ -114,10 +114,18 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "299cc9dd5e3c129a0bd0c80db0e089f5e31058b9015866048f501c30e55a226a"
+      "sha256": "5294b57573aa0517f9e204ecc2f019bc64305da01a1174e466b77670ba0525b0"
     }
   ],
   "toolClassificationDependencies": [
+    {
+      "file": "scripts/lib/artificer-proficiency-source.mjs",
+      "sha256": "2e49a74c745c987a236be3e8c43742ffb65f0055f2130f19ce719745c91a90c0"
+    },
+    {
+      "file": "scripts/lib/fixed-proficiency-source.mjs",
+      "sha256": "29439c307f9491dae74aaaae3dc0a5a18a1c2e01a8b721231e9b7e1cc25357e9"
+    },
     {
       "file": "src/lib/calculations/itemClassification.ts",
       "sha256": "9b5f873202d7aa4cff15c217c4c6d145037f7e04a057283ec9920c611f53b755"
@@ -162,7 +170,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "e6c02d51464aae7344806405d4320749c61037b7bd50b44f1a658db8e17697d9"
+      "sha256": "09b722d9a48a6f43ec54b6aa00ebca6765edb640d13709e25e76e6336a45a78e"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",

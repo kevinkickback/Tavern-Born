@@ -381,7 +381,14 @@ export function useClassAsiFeatController({
       character,
       slot,
       replacement,
-      catalogs ? { catalogs, feats, prerequisites: featPickerSnapshot } : undefined,
+      catalogs
+        ? {
+            catalogs,
+            feats,
+            prerequisites: featPickerSnapshot,
+            rawClasses: calculationContext?.lookups.raw.classesByKey,
+          }
+        : undefined,
     )
     if (next === character) return false
     const patch: Partial<Character> = {}

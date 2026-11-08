@@ -33,6 +33,7 @@ import {
   getEpicBoonAdvancementReference,
   isEpicBoonAdvancement,
   isEpicBoonFeatureReference,
+  isRevisedEpicBoonOwner,
 } from './epicBoonAdvancement'
 import { normalizeFavoredEnemyChoices } from './favoredEnemyChoices'
 import { normalizeFeatureTableChoices } from './featureTableOptions'
@@ -1164,19 +1165,22 @@ function collectSubclassChoiceFeatureRefs(
 export function normalizeClassChoices(
   classData: Pick<
     Class5e,
-    'name' | 'source' | 'sourceIdentityConflict' | 'classTableGroups' | 'optionalfeatureProgression'
+    | 'name'
+    | 'source'
+    | 'edition'
+    | 'sourceIdentityConflict'
+    | 'classTableGroups'
+    | 'optionalfeatureProgression'
   >,
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const owner = classChoiceOwner(classData)
-  const misplacedBoons =
-    classData.source.trim().toLowerCase() === 'xphb'
-      ? refs.filter(
-          (ref) =>
-            isEpicBoonFeatureReference(ref) &&
-            getClassFeatureReferenceLevel(ref) !== EPIC_BOON_LEVEL,
-        )
-      : []
+  const misplacedBoons = isRevisedEpicBoonOwner(classData)
+    ? refs.filter(
+        (ref) =>
+          isEpicBoonFeatureReference(ref) && getClassFeatureReferenceLevel(ref) !== EPIC_BOON_LEVEL,
+      )
+    : []
   if (misplacedBoons.length) refs = refs.filter((ref) => !misplacedBoons.includes(ref))
   const psionic = normalizePsionicChoices({ ...classData, classFeatureRefs: [...refs] }, undefined)
   const declarations = collectUnconditionalFeatureReferences(refs, 'classFeature')
@@ -1361,16 +1365,23 @@ export function getClassChoiceSlotLevels(choice: NormalizedCharacterChoice): num
   return levels
 }
 
-/** Cumulative optional-feature pools whose choices can be edited independently at each gain. */
+/** Cumulative source pools whose choices can be edited independently at each gain. */
 export function getProgressiveChoiceGainCount(choice: NormalizedCharacterChoice, level: number) {
   const counts = choice.selectionCountByLevel
-  if (
-    choice.kind !== 'optional-feature' ||
-    choice.source.kind !== 'optional-feature-progression' ||
-    choice.repeatable ||
-    (!choice.fixedOptions?.length && choice.optionFilter?.entityType !== 'optionalFeature') ||
+  const optionalFeatures =
+    choice.kind === 'optional-feature' &&
+    choice.source.kind === 'optional-feature-progression' &&
+    (choice.fixedOptions?.length || choice.optionFilter?.entityType === 'optionalFeature') &&
     // Invocations have a dedicated editor for dependent choices and cantrip targets.
-    choice.optionFilter?.featureTypes?.some((type) => type === 'EI') ||
+    !choice.optionFilter?.featureTypes?.includes('EI')
+  const tableItems =
+    choice.kind === 'item' &&
+    choice.source.kind === 'class-table' &&
+    choice.optionFilter?.entityType === 'item' &&
+    !choice.optionFilter.requiresMastery
+  if (
+    (!optionalFeatures && !tableItems) ||
+    choice.repeatable ||
     !counts.some((count) => count > getRequiredChoiceSelectionCount(choice, choice.level)) ||
     !counts.every((count, index) => Number.isInteger(count) && count >= (counts[index - 1] ?? 0))
   )
