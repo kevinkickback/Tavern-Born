@@ -1,11 +1,11 @@
-import { BookOpen, Check } from '@phosphor-icons/react'
+import { BookOpen, Check, LockSimple } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 
 interface SourcebookChoiceProps {
   source: SourceBook
   selected: boolean
-  included?: boolean
+  required?: boolean
   compatibility: { compatible: boolean; reason?: string }
   onClick: () => void
   className?: string
@@ -16,7 +16,7 @@ interface SourcebookChoiceProps {
 export function SourcebookChoice({
   source,
   selected,
-  included = false,
+  required = false,
   compatibility,
   onClick,
   className,
@@ -26,19 +26,22 @@ export function SourcebookChoice({
   return (
     <button
       type="button"
-      aria-pressed={selected || included}
+      aria-pressed={selected || required}
       onClick={onClick}
-      disabled={included || !compatibility.compatible}
-      title={compatibility.reason}
+      disabled={required || !compatibility.compatible}
+      title={required ? undefined : compatibility.reason}
       className={cn(
         'flex items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm',
         showSelection && 'bg-workspace-canvas',
         className,
-        !compatibility.compatible &&
+        !required &&
+          !compatibility.compatible &&
           'cursor-not-allowed opacity-50 hover:border-border hover:text-muted-foreground',
-        selected
-          ? 'border-accent bg-accent/10 text-foreground'
-          : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
+        required
+          ? 'cursor-not-allowed border-border bg-muted/20 text-muted-foreground'
+          : selected
+            ? 'border-accent bg-accent/10 text-foreground'
+            : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
       )}
     >
       {showSelection ? (
@@ -46,10 +49,16 @@ export function SourcebookChoice({
           aria-hidden="true"
           className={cn(
             'mt-0.5 grid size-4 shrink-0 place-items-center rounded-sm border border-border-strong',
-            (selected || included) && 'border-primary bg-primary text-primary-foreground',
+            required
+              ? 'border-border bg-muted text-muted-foreground'
+              : selected && 'border-primary bg-primary text-primary-foreground',
           )}
         >
-          {(selected || included) && <Check className="size-3" weight="bold" />}
+          {required ? (
+            <LockSimple className="size-3" weight="bold" />
+          ) : (
+            selected && <Check className="size-3" weight="bold" />
+          )}
         </span>
       ) : (
         <BookOpen
@@ -67,8 +76,10 @@ export function SourcebookChoice({
           {source.abbreviation}
           {source.year && ` (${source.year})`}
         </div>
-        {included && <div className="mt-0.5 text-xs text-success-foreground">Included</div>}
-        {!included && !compatibility.compatible && (
+        {required && (
+          <div className="mt-0.5 text-xs font-medium text-muted-foreground">Required</div>
+        )}
+        {!required && !compatibility.compatible && (
           <div className="mt-0.5 text-[11px] text-warning">{compatibility.reason}</div>
         )}
       </div>

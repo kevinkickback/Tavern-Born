@@ -1,4 +1,4 @@
-import { BookOpen, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
+import { Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
 import { type ReactNode, useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
 import { Button } from '@/components/ui/button'
@@ -157,7 +157,6 @@ export function ContentStep({
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
 
-  const sourceGuidance = 'Choose the sourcebooks you want to use for this character.'
   const sourceWarning =
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
@@ -177,7 +176,7 @@ export function ContentStep({
           key={preset.id}
           type="button"
           size="sm"
-          variant={activePreset === preset.id ? 'secondary' : 'outline'}
+          variant={activePreset === preset.id ? 'default' : 'outline'}
           aria-pressed={activePreset === preset.id}
           title={preset.description}
           onClick={() => applySourcePreset(preset)}
@@ -188,7 +187,7 @@ export function ContentStep({
       <Button
         type="button"
         size="sm"
-        variant={activePreset === 'none' ? 'secondary' : 'outline'}
+        variant={activePreset === 'none' ? 'default' : 'outline'}
         aria-pressed={activePreset === 'none'}
         onClick={() => onChange({ allowedSources: [] })}
       >
@@ -293,7 +292,7 @@ export function ContentStep({
                       key={source.abbreviation}
                       source={source}
                       selected={selected.has(source.abbreviation)}
-                      included={source.abbreviation === includedCore}
+                      required={source.abbreviation === includedCore}
                       compatibility={
                         data.originSystem
                           ? getSourceCompatibility(source, data.originSystem)
@@ -315,29 +314,15 @@ export function ContentStep({
           </section>
           {hasAdditionalSources && (
             <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
-              <div
-                className="grid border-l-2 border-border bg-surface-raised/50"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                <p
-                  aria-hidden={hasNonPresetSourcesSelected}
-                  className={cn(
-                    'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
-                    hasNonPresetSourcesSelected && 'opacity-0',
-                  )}
-                >
-                  <BookOpen className="mt-0.5 size-4 shrink-0" />
-                  <span>{sourceGuidance}</span>
-                </p>
+              <div aria-live="polite" aria-atomic="true">
                 <p
                   aria-hidden={!hasNonPresetSourcesSelected}
                   className={cn(
-                    'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                    'flex items-start gap-2 border-l-2 border-border bg-surface-raised/50 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
                     !hasNonPresetSourcesSelected && 'opacity-0',
                   )}
                 >
-                  <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <Warning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
                   <span>{sourceWarning}</span>
                 </p>
               </div>

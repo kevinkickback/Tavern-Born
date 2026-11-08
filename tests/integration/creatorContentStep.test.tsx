@@ -43,6 +43,7 @@ test('source search is a view filter and hidden selections, presets and None use
   }
   render(<Harness />)
   const search = screen.getByRole('textbox', { name: 'Search sources' })
+  expect(screen.queryByText(/Choose the sourcebooks you want/)).toBeNull()
   expect(screen.queryByRole('button', { name: /Provenance only/ })).toBeNull()
   expect(
     screen.getByRole<HTMLButtonElement>('button', { name: /Revised Dungeon Master Guide/ })
@@ -50,7 +51,7 @@ test('source search is a view filter and hidden selections, presets and None use
   ).toBe(true)
   const coreGroup = screen.getByRole('heading', { name: 'Core Rulebooks' }).parentElement!
   const included = within(coreGroup).getByRole<HTMLButtonElement>('button', {
-    name: /PHB Included/,
+    name: /PHB Required/,
   })
   const incompatible = within(coreGroup).getByRole<HTMLButtonElement>('button', {
     name: /XPHB Requires the 2024 ruleset/,
@@ -83,7 +84,7 @@ test('search is local to Additional Content and survives catalog refresh without
   const onChange = vi.fn()
   const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2024' as const }
   const { rerender } = render(<ContentStep data={data} sources={sources} onChange={onChange} />)
-  expect(screen.getByRole<HTMLButtonElement>('button', { name: /XPHB Included/ }).disabled).toBe(
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /XPHB Required/ }).disabled).toBe(
     true,
   )
   expect(
@@ -102,7 +103,7 @@ test('search is local to Additional Content and survives catalog refresh without
     />,
   )
   expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
-  expect(screen.getByRole('button', { name: /XPHB Included/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /XPHB Required/ })).toBeTruthy()
   expect(
     screen.getByRole('button', { name: /PHB.*Replaced by the revised core rulebook/ }),
   ).toBeTruthy()
@@ -131,7 +132,7 @@ test('core-only catalogs explain that no additional sources are available withou
       onChange={onChange}
     />,
   )
-  expect(screen.getByRole<HTMLButtonElement>('button', { name: /PHB Included/ }).disabled).toBe(
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /PHB Required/ }).disabled).toBe(
     true,
   )
   expect(
