@@ -6,13 +6,14 @@ import type * as preparation from '../../src/lib/5etools/subclassSourcePreparati
 import type * as identity from '../../src/lib/5etools/classFeatureIdentity'
 import type * as content from '../../src/lib/5etools/subclassContent'
 import type * as audit from '../../src/lib/5etools/featureSourceAudit'
-export function deriveArtisanToolPool(
+export function deriveToolGroupPool(
   uid: string,
   documents: readonly Record<string, unknown>[],
   classify: {
     types: (type: ClassifiableItem['type']) => string[]
     selectable: (item: ClassifiableItem & { items?: unknown }) => boolean
   },
+  category?: 'AT' | 'GS',
 ): { names: string[]; category: string; group: Record<string, unknown>; members: string[] }
 export function deriveSubclassProficiencyRules(
   features: readonly Record<string, unknown>[],

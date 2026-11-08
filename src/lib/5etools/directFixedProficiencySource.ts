@@ -24,17 +24,25 @@ export const directFeatures: ReadonlyMap<string, GeneratedFixedProficiencyRule> 
     rule,
   ]),
 )
-export const directOwners: ReadonlyMap<string, DirectFixedClassCertificate> = new Map(
-  DIRECT_FIXED_CLASS_CERTIFICATES.map((row) => [JSON.stringify(row.owner), row]),
-)
+const certificatesByOwner = new Map<string, DirectFixedClassCertificate[]>()
+for (const certificate of DIRECT_FIXED_CLASS_CERTIFICATES) {
+  const key = JSON.stringify(certificate.owner)
+  const certificates = certificatesByOwner.get(key) ?? []
+  certificates.push(certificate)
+  certificatesByOwner.set(key, certificates)
+}
+export const directOwners: ReadonlyMap<string, readonly DirectFixedClassCertificate[]> =
+  certificatesByOwner
 export const ownerKey = (row: Record<string, unknown>) =>
   JSON.stringify(
     [row.name, row.source].map((value) =>
       typeof value === 'string' ? value.trim().toLowerCase() : null,
     ),
   )
-export const getDirectFixedClassCertificate = (owner: { name: string; source: string }) =>
-  directOwners.get(ownerKey(owner))
+export const getDirectFixedClassCertificate = (
+  owner: { name: string; source: string },
+  target: string,
+) => directOwners.get(ownerKey(owner))?.find((certificate) => certificate.target === target)
 const stamp = (
   certificate: unknown,
   origin: string,
@@ -106,27 +114,26 @@ export function auditDirectFixedClassDeclarations(
   origin: string,
 ) {
   return records.map((root, index) => {
-    const certificate = directOwners.get(ownerKey(root))
-    if (!certificate) return root
+    const certificates = directOwners.get(ownerKey(root))
+    if (!certificates) return root
     const declarations = Array.isArray(root.classFeatures) ? root.classFeatures : []
-    const ordinal = declarations.findIndex(
-      (row) =>
-        typeof row === 'string' && subclassProficiencyDigest(row) === certificate.declarationDigest,
-    )
-    const verified =
+    const validRoot =
       !Object.getOwnPropertyDescriptor(root, 'fixedProficiencySourceAudit') &&
       !root._copy &&
-      records.filter((row) => ownerKey(row) === ownerKey(root)).length === 1 &&
-      declarationOccurrences(declarations, certificate.target) === 1 &&
-      ordinal >= 0 &&
-      declarations[ordinal] === certificate.rawDeclaration
+      records.filter((row) => ownerKey(row) === ownerKey(root)).length === 1
     return {
       ...root,
-      fixedProficiencySourceAudit: stamp(
-        certificate,
-        `${origin}:class:${index}:declaration:${ordinal}`,
-        verified,
-      ),
+      fixedProficiencySourceAudit: certificates.map((certificate) => {
+        const ordinal = declarations.indexOf(certificate.rawDeclaration)
+        return stamp(
+          certificate,
+          `${origin}:class:${index}:declaration:${ordinal}`,
+          validRoot &&
+            ordinal >= 0 &&
+            subclassProficiencyDigest(declarations[ordinal]) === certificate.declarationDigest &&
+            declarationOccurrences(declarations, certificate.target) === 1,
+        )
+      }),
     }
   })
 }
@@ -148,20 +155,20 @@ function currentFeature(rule: GeneratedFixedProficiencyRule, candidates: readonl
     : undefined
 }
 
-/** Explicit current raw declarations, direct refs, catalogs and embedded producer must all agree. */
-export function getCurrentDirectFixedClassRules(
+interface FixedClassCatalogs {
+  classFeatures: readonly ClassFeature[]
+  classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
+}
+
+function getCurrentDirectRule(
   classData: Class5e,
-  catalogs: {
-    classFeatures: readonly ClassFeature[]
-    classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
-  },
-): GeneratedFixedProficiencyRule[] {
-  const certificate = directOwners.get(ownerKey(classData))
+  catalogs: FixedClassCatalogs,
+  certificate: DirectFixedClassCertificate,
+) {
   if (
-    !certificate ||
-    classData.sourceIdentityConflict ||
-    classData._copy ||
-    !isStamped(classData.fixedProficiencySourceAudit, certificate) ||
+    !Array.isArray(classData.fixedProficiencySourceAudit) ||
+    classData.fixedProficiencySourceAudit.filter((row) => isStamped(row, certificate)).length !==
+      1 ||
     !Array.isArray(classData.classFeatures) ||
     declarationOccurrences(classData.classFeatures, certificate.target) !== 1 ||
     classData.classFeatures.filter((row) => row === certificate.rawDeclaration).length !== 1 ||
@@ -212,4 +219,15 @@ export function getCurrentDirectFixedClassRules(
     currentFeature(rule, [ref.feature])
     ? [rule]
     : []
+}
+
+/** Explicit current raw declarations, direct refs, catalogs and embedded producer must all agree. */
+export function getCurrentDirectFixedClassRules(
+  classData: Class5e,
+  catalogs: FixedClassCatalogs,
+): GeneratedFixedProficiencyRule[] {
+  if (classData.sourceIdentityConflict || classData._copy) return []
+  return (directOwners.get(ownerKey(classData)) ?? []).flatMap((certificate) =>
+    getCurrentDirectRule(classData, catalogs, certificate),
+  )
 }

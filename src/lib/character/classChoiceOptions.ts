@@ -134,6 +134,12 @@ import {
   resolveRevisedHunterOption,
 } from '@/lib/5etools/revisedHunterChoices'
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
+import {
+  getScionConfiguration,
+  isScionOwner,
+  resolveScionOption,
+  SCION_GROUP,
+} from '@/lib/5etools/rogueScion'
 import { resolveStormFeature } from '@/lib/5etools/stormAuraChoices'
 import {
   isStormAuraChoiceId,
@@ -598,6 +604,8 @@ export function resolveFeatureOptionEntity(
     return resolveWarlockPatronConfigurationOption(option, catalogs.classes)
   if (target?.format === 'source-group' && isDivineSoulConfigurationGroup(target.group))
     return resolveDivineSoulConfigurationOption(option, catalogs.classes)
+  if (target?.format === 'source-group' && target.group === SCION_GROUP)
+    return resolveScionOption(option, catalogs.classes)
   if (target?.format === 'source-group')
     return target.group === REVISED_HUNTER_GROUP
       ? resolveRevisedHunterOption(option, catalogs)
@@ -691,11 +699,13 @@ function resolveExplicitOption(
                   ? 'Damage type'
                   : match.group === LAND_GROUP
                     ? 'Circle terrain'
-                    : isDivineSoulConfigurationGroup(String(match.group))
-                      ? 'Divine affinity'
-                      : isFavoredEnemyOption(option)
-                        ? 'Favored enemy'
-                        : 'Favored terrain'
+                    : match.group === SCION_GROUP
+                      ? 'Dread Allegiance'
+                      : isDivineSoulConfigurationGroup(String(match.group))
+                        ? 'Divine affinity'
+                        : isFavoredEnemyOption(option)
+                          ? 'Favored enemy'
+                          : 'Favored terrain'
               : 'Dragon ancestry'),
         ],
       },
@@ -1680,6 +1690,7 @@ export function getClassChoiceCandidates(
       getCurrentLandTerrainSetup(classData, subclass, catalogs),
       getRevisedAffinitySetup(classData, subclass, catalogs),
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
+      getScionConfiguration(classData, subclass, catalogs?.classes),
     ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }
@@ -2002,6 +2013,22 @@ export function getClassChoiceDiagnosticCandidates(
     rows.push(revisedAffinityDiagnostic)
   const patronConfigurations = getWarlockPatronConfigurationRules(classData, subclass)
   const divineSoul = getDivineSoulOwnerRule(classData, subclass)
+  const scionGain = classData.classFeatureRefs?.find((row) => row.gainSubclassFeature)?.level
+  if (
+    scionGain &&
+    isScionOwner(classData, subclass) &&
+    !getScionConfiguration(classData, subclass, catalogs?.classes)
+  )
+    rows.push({
+      code: 'unverified-required-choice',
+      className: 'Rogue',
+      classSource: 'XPHB',
+      subclassName: 'Scion of the Three',
+      subclassSource: 'FRHoF',
+      level: scionGain,
+      featureName: 'Dread Allegiance',
+      message: 'Restore the exact Dread Allegiance feature and its matching cantrip schedule.',
+    })
   if (divineSoul && !getDivineSoulConfiguration(classData, subclass, catalogs?.classes))
     rows.push({
       code: 'unverified-required-choice',

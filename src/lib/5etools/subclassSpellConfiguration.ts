@@ -4,6 +4,7 @@ import {
   getDivineSoulConfigurationRule,
   isValidDivineSoulSelection,
 } from './divineSoulConfiguration'
+import { getScionConfigurationRule, isValidScionSelection } from './rogueScion'
 import {
   getWarlockPatronConfigurationRule,
   isValidWarlockPatronConfiguration,
@@ -12,9 +13,12 @@ import {
 export const getSubclassSpellConfigurationRule = (id: string) =>
   getLandChoiceRule(id) ??
   getWarlockPatronConfigurationRule(id) ??
-  getDivineSoulConfigurationRule(id)
+  getDivineSoulConfigurationRule(id) ??
+  getScionConfigurationRule(id)
 
 export const isValidSubclassSpellConfigurationSelection = (row: CharacterClassChoiceSelection) =>
   getLandChoiceRule(row.choiceId)
     ? isValidLandSelection(row)
-    : isValidWarlockPatronConfiguration(row) || isValidDivineSoulSelection(row)
+    : isValidWarlockPatronConfiguration(row) ||
+      isValidDivineSoulSelection(row) ||
+      isValidScionSelection(row)

@@ -129,6 +129,14 @@ with a fallback choice. A Drakewarden's current source supplies its fixed stat b
 later size and movement changes. Damage type is chosen when the drake is summoned. The
 creator and sheet describe that rule and leave the choice to play.
 
+Rogue can earn several independent fixed proficiency grants from the same class printing.
+Each grant is checked against its own current feature and declaration. Mastermind uses the
+gaming-set category for live item eligibility. Its quotas appear only in the prose, so the
+source certificate checks the exact Master of Intrigue clause. Scion's deity choice reads
+the current spell and resistance from the same source table row. The revised Rogue's
+Cunning Strike and Devious Strikes use the same exact referenced rules in Class Details
+and sheet output. Strike options are chosen when attacking.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.

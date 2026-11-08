@@ -25,6 +25,7 @@ import {
   scanOptionalDeclarationReferences,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
 import { revisedHunterRules } from '@/lib/5etools/revisedHunterIdentity'
+import { getRogueStrikeEntries } from '@/lib/5etools/rogueStrikeEntries'
 import {
   getCurrentNativeSorcerer,
   getDraconicPresence,
@@ -549,6 +550,7 @@ export function getClassStaticFeatureSummaries(
         name !== 'monk' &&
         name !== 'paladin' &&
         name !== 'ranger' &&
+        name !== 'rogue' &&
         name !== 'wizard' &&
         name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
@@ -562,6 +564,39 @@ export function getClassStaticFeatureSummaries(
       return getSourceCompatibility(source, character.originSystem ?? '2014').compatible
         ? getClericStaticSummaries(character, cls, entry, catalogs, source)
         : []
+    if (name === 'rogue') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+        if (
+          !ref.level ||
+          ref.level > entry.levels ||
+          ref.gainSubclassFeature ||
+          norm(ref.source) !== source ||
+          [
+            'ability score improvement',
+            'epic boon',
+            'expertise',
+            "thieves' cant",
+            'weapon mastery',
+          ].includes(norm(ref.name))
+        )
+          return []
+        const target = getClassFeatureIdentity(ref)
+        const feature = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        return feature ? [{ ...feature, entries: getRogueStrikeEntries(feature, catalogs) }] : []
+      })
+      const archetype = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+        expandUncountedFixedGroups: true,
+      })
+      return [...base, ...archetype].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
     if (name === 'monk') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {

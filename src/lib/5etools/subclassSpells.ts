@@ -58,6 +58,8 @@ import {
   getRangerEtherealStep,
   getRevisedRangerSubclassSpells,
 } from './rangerSubclassSpells'
+import { getRoguePhantomSpellGrants } from './roguePhantomSpells'
+import { getChosenScionAllegiance, isScionOwner } from './rogueScion'
 import { parseSpellToken } from './spellTokens'
 import {
   getChosenWarlockSpellBlock,
@@ -171,6 +173,33 @@ export function getEarnedSubclassSpellGrants(
       const etherealStep = getRangerEtherealStep(classData, subclasses[0], classLevel)
       return etherealStep ? [...grants, etherealStep] : grants
     }
+    if (isScionOwner(classData, subclasses[0])) {
+      const scion = getChosenScionAllegiance(
+        classData,
+        subclasses[0],
+        classLevel,
+        landContext?.selections,
+      )
+      return scion
+        ? [
+            {
+              spellName: scion.spell,
+              level: scion.level,
+              isCantrip: true,
+              expectedSpellLevel: 0,
+              mode: 'cast-only',
+              castOnly: {},
+              feature: {
+                name: 'Dread Allegiance',
+                target: scion.target,
+                castingNote: `Dread Allegiance (${scion.name}): Use Intelligence for this cantrip.`,
+              },
+            },
+          ]
+        : []
+    }
+    const phantom = getRoguePhantomSpellGrants(classData, subclasses[0], classLevel)
+    if (phantom) return phantom
     if (isArcaneArcherCantripOwner(entry)) return []
     const monk = getMonkSubclassSpellGrants(classData, subclasses[0], classLevel)
     if (monk)

@@ -68,7 +68,12 @@ export function projectOwnedProficiencies(
     return selection.selected.filter(
       (option) =>
         (!pool || pool.includes(decodeProficiencyOption(option)?.name ?? '')) &&
-        hasProficiencyCatalogTarget(option, catalogs, domain?.languageSources),
+        hasProficiencyCatalogTarget(
+          option,
+          catalogs,
+          domain?.languageSources,
+          domain?.toolCategory,
+        ),
     )
   }
   const languageFallbacks = fixed.filter(({ rule }) => rule.languageFallback)

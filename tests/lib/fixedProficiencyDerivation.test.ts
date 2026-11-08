@@ -14,7 +14,6 @@ import { deriveDragonAncestorLanguage } from '../../scripts/lib/dragon-ancestor-
 import { deriveFixedProficiencyRules } from '../../scripts/lib/fixed-proficiency-source.mjs'
 import { conditionalSources } from '../fixtures/conditionalProficiencyFixtures'
 import { fixedSources } from '../fixtures/fixedProficiencyFixtures'
-import rogueLanguageSources from '../fixtures/rogueLanguageSources.json'
 
 const api = {
   materializeFeatures: preparation.materializeSubclassFeatureCopies,
@@ -39,6 +38,9 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
   const bundledMonk = JSON.parse(
     readFileSync('resources/srd/core/data/class/class-monk.json', 'utf8'),
   )
+  const bundledRogue = JSON.parse(
+    readFileSync('resources/srd/core/data/class/class-rogue.json', 'utf8'),
+  )
   const bundledSorcerer = JSON.parse(
     readFileSync('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
   )
@@ -62,14 +64,7 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
   if (configured) expect(windSpeaker).toHaveLength(1)
   const bard = existsSync(configuredBard) ? [JSON.parse(readFileSync(configuredBard, 'utf8'))] : []
   const derived = deriveFixedProficiencyRules(
-    [
-      sources,
-      bundledDruid,
-      bundledMonk,
-      rogueLanguageSources,
-      { subclassFeature: windSpeaker },
-      ...bard,
-    ],
+    [sources, bundledDruid, bundledMonk, bundledRogue, { subclassFeature: windSpeaker }, ...bard],
     api,
   )
   derived.features.push(dragon.rule)
@@ -81,19 +76,22 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
         : (row.kind !== 'fixed-training' || row.target.startsWith('class-feature|')) &&
           (configured || row.target !== windSpeakerTarget),
     ).map((row) =>
-      row.className === 'Druid' || row.className === 'Monk'
+      row.bundledMetadataDigest && ['Druid', 'Monk', 'Rogue'].includes(row.className)
         ? {
             ...row,
             metadataDigest: row.bundledMetadataDigest,
-            fields: row.fields.filter((field) => !['page', 'basicRules2024'].includes(field)),
+            fields: row.fields.filter(
+              (field) => !['page', 'basicRules', 'basicRules2024'].includes(field),
+            ),
           }
         : row,
     ),
     directClasses: DIRECT_FIXED_CLASS_CERTIFICATES.map((certificate) => {
-      if (certificate.owner[0] !== 'monk') return certificate
-      // The Included SRD removes optional rows before the classic Monk grant.
+      const doc = { monk: bundledMonk, rogue: bundledRogue }[certificate.owner[0]]
+      if (!doc) return certificate
+      // Included SRD can remove optional rows before the certified grant.
       const source = certificate.owner[1].toUpperCase()
-      const printing = bundledMonk.class.find((row: { source: string }) => row.source === source)
+      const printing = doc.class.find((row: { source: string }) => row.source === source)
       return {
         ...certificate,
         ordinal: printing.classFeatures.indexOf(certificate.rawDeclaration),

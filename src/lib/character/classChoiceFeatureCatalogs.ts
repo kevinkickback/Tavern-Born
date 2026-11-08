@@ -171,7 +171,9 @@ export function buildClassChoiceFeatureCatalogs(
     languages: data.languages ?? [],
     itemsBase: data.itemsBase ?? [],
     proficiencyTools: [...(data.items ?? []), ...(data.itemsBase ?? [])].filter(
-      (item) => isSelectableEquipmentItem(item) && getItemTypeCodes(item.type).includes('AT'),
+      (item) =>
+        isSelectableEquipmentItem(item) &&
+        getItemTypeCodes(item.type).some((type) => type === 'AT' || type === 'GS'),
     ),
     allConcreteTools: [...(data.items ?? []), ...(data.itemsBase ?? [])].filter(
       (item) => !!getConcreteToolProficiencyName(item),

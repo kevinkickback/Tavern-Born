@@ -26,7 +26,7 @@ export function getDeclaredSubclassStaticFeatures(
   cls: Class5e,
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
-  gain: { expandNestedRules?: true } & (
+  gain: { expandNestedRules?: true; expandUncountedFixedGroups?: true } & (
     | { level: number; intro: string; later: string }
     | { sourceDeclaredGains: true }
   ),
@@ -101,10 +101,21 @@ export function getDeclaredSubclassStaticFeatures(
       parentDependency && getSubclassFeatureIdentity(feature) === parentDependency
         ? 'subclass-feature|blessings of knowledge|cleric|phb|knowledge|phb|1|phb'
         : undefined
-    const siblings = feature.entries.map(record)
+    // Only certified automatic groups may expand all their uncounted references.
+    const entries = feature.entries.flatMap((entry) => {
+      const group = record(entry)
+      return gain.expandUncountedFixedGroups &&
+        group.type === 'options' &&
+        Object.keys(group).every((key) => key === 'type' || key === 'entries') &&
+        Array.isArray(group.entries) &&
+        group.entries.every((child) => record(child).type === 'refSubclassFeature')
+        ? group.entries
+        : [entry]
+    })
+    const siblings = entries.map(record)
     return {
       ...feature,
-      entries: feature.entries.map((entry, index) => {
+      entries: entries.map((entry, index) => {
         const row = siblings[index]
         const uid = row.subclassFeature
         if (row.type !== 'refSubclassFeature' || typeof uid !== 'string') return entry

@@ -26,6 +26,7 @@ import {
 } from '@/lib/5etools/classFeatureIdentity'
 import { PRIMAL_ORDER } from '@/lib/5etools/classOrderIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getRogueStrikeEntries } from '@/lib/5etools/rogueStrikeEntries'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
@@ -217,7 +218,9 @@ export function BuildClassPage() {
         ? {
             ...resolved,
             entries: effectiveDeclaredEntries(
-              current.entries ?? [],
+              origin.owner[0] === 'class'
+                ? getRogueStrikeEntries(current, featureCatalogs)
+                : (current.entries ?? []),
               activity,
               origin.owner,
               origin.target,
@@ -432,7 +435,7 @@ export function BuildClassPage() {
           earnedLevel: feature.level ?? 1,
         } as ClassFeatureDetailOrigin,
         entries: effectiveDeclaredEntries(
-          feature.entries ?? [],
+          getRogueStrikeEntries(feature, featureCatalogs),
           activity,
           owner,
           getClassFeatureIdentity(feature),
@@ -446,6 +449,7 @@ export function BuildClassPage() {
     viewingClassData,
     includeClassFeatureVariants,
     activity,
+    featureCatalogs,
   ])
 
   const { subclassLevel, subclassFeatureName } = useMemo(() => {

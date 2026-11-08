@@ -147,7 +147,8 @@ export function grantFixedProficiencies(
       for (const name of names) {
         if (domain === 'tools') {
           if (!tools.has(name)) continue
-          const tool = owner.rule.trainingTool
+          const tool =
+            owner.rule.trainingTools?.find((item) => item.name === name) ?? owner.rule.trainingTool
           if (tool?.name === name) {
             const exact = (source: string) =>
               catalogs?.allConcreteTools?.filter(

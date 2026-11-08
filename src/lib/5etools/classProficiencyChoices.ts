@@ -93,7 +93,6 @@ export function normalizeClassProficiencyChoices(
   const canny = normalizeCannyChoices(owner, declarations)
   const choices: NormalizedCharacterChoice[] = [...canny.choices]
   const diagnostics: ClassChoiceDiagnostic[] = [...canny.diagnostics]
-  const direct = getDirectFixedClassCertificate(owner)
   for (const rule of CLASS_PROFICIENCY_RULES) {
     if (rule.target === DEFT_EXPLORER_TARGET) continue
     const rows = declarations.filter(
@@ -101,7 +100,7 @@ export function normalizeClassProficiencyChoices(
     )
     const row = rows[0]
     const ref =
-      row?.reference.ref ?? (direct?.target === rule.target ? direct.rawDeclaration : undefined)
+      row?.reference.ref ?? getDirectFixedClassCertificate(owner, rule.target)?.rawDeclaration
     if (!ref) continue
     const target = decodeClassFeatureReference(ref)
     const declared = {
