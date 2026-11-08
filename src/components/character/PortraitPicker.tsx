@@ -62,6 +62,7 @@ export function PortraitPicker({
     () => transform ?? DEFAULT_PORTRAIT_TRANSFORM,
   )
   const t = draftTransform
+  const compact = density === 'compact'
 
   useEffect(() => {
     setDraftTransform(transform ?? DEFAULT_PORTRAIT_TRANSFORM)
@@ -157,6 +158,20 @@ export function PortraitPicker({
     onTransformChange(next)
   }
 
+  const clearPortraitButton = (
+    <Button
+      type="button"
+      variant={compact ? 'ghost' : 'outline'}
+      size={compact ? 'sm' : 'default'}
+      onClick={handleClear}
+      disabled={!portrait}
+      className={compact ? 'ml-auto' : 'w-full'}
+    >
+      <X className={cn('size-4', !compact && 'mr-2')} />
+      Clear Portrait
+    </Button>
+  )
+
   return (
     <>
       <SplitPane
@@ -165,12 +180,12 @@ export function PortraitPicker({
           !previewCollapsed && !libraryCollapsed && 'gap-3',
         )}
         leftClassName={cn(
-          'rounded-lg bg-workspace-detail',
-          previewCollapsed ? 'border-0' : 'border border-border',
+          compact ? 'bg-transparent' : 'rounded-lg bg-workspace-detail',
+          !compact && (previewCollapsed ? 'border-0' : 'border border-border'),
         )}
         rightClassName={cn(
-          'rounded-lg bg-workspace-pane',
-          libraryCollapsed ? 'border-0' : 'border border-border',
+          compact ? 'bg-transparent @min-[840px]:pl-4' : 'rounded-lg bg-workspace-pane',
+          !compact && (libraryCollapsed ? 'border-0' : 'border border-border'),
         )}
         leftWidth="var(--workspace-master-width)"
         leftCollapsed={previewCollapsed}
@@ -185,12 +200,13 @@ export function PortraitPicker({
             <WorkspacePaneHeader
               title="Card preview"
               icon={<Image className="size-4 text-primary" weight="duotone" />}
-              className={cn(collapsible && 'pr-20')}
+              className={cn(collapsible && 'pr-20', compact && 'border-0 bg-transparent px-0')}
             />
             <div
               data-slot="portrait-preview-content"
               className={cn(
-                'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4 p-4',
+                'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4',
+                compact ? 'px-0 pt-2' : 'p-4',
                 libraryCollapsed
                   ? 'grid-rows-[minmax(0,1fr)_auto] overflow-hidden'
                   : 'content-start grid-rows-[auto_auto] overflow-y-auto',
@@ -206,6 +222,7 @@ export function PortraitPicker({
                 lastModified={lastModified}
                 transform={t}
                 fit={libraryCollapsed ? 'contain' : 'width'}
+                className={compact ? 'mx-auto max-w-80' : undefined}
                 onWidthChange={setPreviewWidth}
               />
 
@@ -292,18 +309,20 @@ export function PortraitPicker({
             <WorkspacePaneHeader
               title="Portrait library"
               icon={<Images className="size-4 text-primary" weight="duotone" />}
-              className={cn(collapsible && 'pr-20')}
-            />
+              className={cn(collapsible && 'pr-20', compact && 'border-0 bg-transparent px-0')}
+            >
+              {compact && clearPortraitButton}
+            </WorkspacePaneHeader>
             <div
               className={cn(
                 'flex min-h-0 flex-1 flex-col',
-                density === 'compact' ? 'gap-3 p-3' : 'gap-4 p-4',
+                compact ? 'gap-3 px-0 pt-2' : 'gap-4 p-4',
               )}
             >
               <div
                 className={cn(
                   'grid flex-1 content-start overflow-y-auto pr-1',
-                  density === 'compact'
+                  compact
                     ? 'grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
                     : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
                 )}
@@ -372,16 +391,7 @@ export function PortraitPicker({
                 ))}
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClear}
-                disabled={!portrait}
-                className="w-full"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear Portrait
-              </Button>
+              {!compact && clearPortraitButton}
             </div>
           </section>
         }

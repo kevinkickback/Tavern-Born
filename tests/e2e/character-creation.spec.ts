@@ -247,17 +247,35 @@ test('empty source selection survives refresh under discard confirmation', async
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
 })
 
-test('Rules warnings remain visible while Additional Content scrolls', async ({ page }) => {
+test('Source guidance stays visible while the full-width book list scrolls', async ({
+  page,
+}, info) => {
   await page.goto('/')
-  await ensureStartupPromptResolved(page, 'e2e-character-creation', GAME_DATA_WITH_MANY_SOURCES)
+  await ensureStartupPromptResolved(page, 'e2e-character-creation', {
+    ...GAME_DATA_WITH_MANY_SOURCES,
+    optionalfeatures: [
+      { name: 'Optional Rule: Test Feature', source: 'TEST30', isClassFeatureVariant: true },
+    ],
+  })
 
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Create New Character' })
   await dialog.getByLabel('Character Name').fill('Warning Test')
+  await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
+  await dialog.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
   await dialog.getByRole('button', { name: 'Next' }).click()
 
   await dialog.getByRole('button', { name: /5\.5e Revised/ }).click()
+  const optionalFeatures = dialog.getByRole('switch', { name: 'Allow Optional Class Features' })
+  await expect(optionalFeatures).toBeDisabled()
+  await expect(dialog.getByRole('switch', { name: 'Any-Race Subclasses' })).toBeVisible()
+  await expect(dialog.getByRole('switch', { name: 'Prefer Newer Printings' })).toBeDisabled()
+  const averageHitPoints = dialog.getByRole('switch', { name: 'Average Hit Points' })
+  await averageHitPoints.click()
+  await expect(dialog.getByText('Ability Score Generation')).toHaveCount(0)
+  await dialog.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
   await dialog.getByRole('button', { name: 'Next' }).click()
+  await expect(dialog.getByRole('switch')).toHaveCount(0)
   const sourceScroller = dialog.getByRole('region', { name: 'Additional Content' })
   await expect(sourceScroller).toBeVisible()
   await expect
@@ -274,11 +292,23 @@ test('Rules warnings remain visible while Additional Content scrolls', async ({ 
     /Revised replacements are always used.*Compatible older options remain available/,
   )
   await expect(sourceWarning).toBeInViewport()
+  await dialog.screenshot({ animations: 'disabled', path: info.outputPath('content-warnings.png') })
   await expect(rulesetWarning).toBeInViewport()
   await expect(dialog.getByRole('button', { name: 'Next' })).toBeInViewport()
   await expect
     .poll(() => sourceScroller.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0)
+  await dialog.getByRole('button', { name: 'Back' }).click()
+  await expect(averageHitPoints).toHaveAttribute('aria-checked', 'false')
+  await expect(optionalFeatures).toBeEnabled()
+  await optionalFeatures.click()
+  await dialog.getByRole('button', { name: 'Next' }).click()
+  await dialog.getByRole('button', { name: 'None' }).click()
+  await dialog.getByRole('button', { name: 'Back' }).click()
+  await expect(optionalFeatures).toHaveAttribute('aria-checked', 'true')
+  await expect(dialog.getByText('Currently inactive')).toBeVisible()
+  await optionalFeatures.click()
+  await expect(optionalFeatures).toBeDisabled()
 })
 
 for (const viewport of [
@@ -369,6 +399,7 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByRole('button', { name: /Acolyte\s+PHB/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
 
+    await expect(dialog.getByRole('tab', { name: 'Point Buy' })).toBeVisible()
     await expect(dialog.getByText('0 / 27')).toBeVisible()
     await dialog.getByRole('button', { name: 'Next' }).click()
   })

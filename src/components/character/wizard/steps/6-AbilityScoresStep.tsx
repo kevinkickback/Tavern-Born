@@ -16,6 +16,7 @@ import {
   formatAbilityBonus,
   formatRacialAbilityPatterns,
 } from '@/lib/calculations/abilityScoreDisplay'
+import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
@@ -360,7 +361,8 @@ function CustomPanel({
 }
 
 export function AbilityScoresStep({ data, onChange, raceResolution }: AbilityScoresStepProps) {
-  const method = (data.abilityScoreMethod ?? 'point-buy') as string
+  const method = data.abilityScoreMethod || 'point-buy'
+  const methods = getAbilityScoreMethodOptions(data.originSystem || '2014')
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
   )
@@ -409,28 +411,19 @@ export function AbilityScoresStep({ data, onChange, raceResolution }: AbilitySco
           <div>
             <h3 className="text-sm font-semibold">Ability score method</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Choose how the six base scores are assigned.
+              {methods.find((option) => option.value === method)?.description}
             </p>
           </div>
           <TabsList className="h-10 self-end rounded-none border-0 bg-transparent p-0">
-            <TabsTrigger
-              value="point-buy"
-              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
-            >
-              Point Buy
-            </TabsTrigger>
-            <TabsTrigger
-              value="standard-array"
-              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
-            >
-              Standard Array
-            </TabsTrigger>
-            <TabsTrigger
-              value="custom"
-              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
-            >
-              Custom
-            </TabsTrigger>
+            {methods.map(({ value, label }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
         <TabsContent value="point-buy" className="flex min-h-0 flex-col">

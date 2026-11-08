@@ -72,7 +72,7 @@ describe('Wizard rule controls', () => {
 
   test('disables content-specific rules whose records are unavailable', () => {
     render(
-      <ContentStep
+      <RulesStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, preferNewerPrintings: false },
@@ -98,11 +98,11 @@ describe('Wizard rule controls', () => {
 
   test('enables a content-specific rule when its matching record is available', () => {
     render(
-      <ContentStep
+      <RulesStep
         data={INITIAL_CHARACTER_DATA}
         onChange={vi.fn()}
         sources={[]}
-        contentAvailability={{
+        variantRuleAvailability={{
           optionalClassFeatures: true,
           anyRaceSubclasses: true,
           preferNewerPrintings: true,
@@ -125,7 +125,7 @@ describe('Wizard rule controls', () => {
 
   test('explains that newer printings are always preferred for 2024 characters', () => {
     render(
-      <ContentStep
+      <RulesStep
         data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
         onChange={vi.fn()}
         sources={[]}
@@ -144,7 +144,7 @@ describe('Wizard rule controls', () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
-      <ContentStep
+      <RulesStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: {

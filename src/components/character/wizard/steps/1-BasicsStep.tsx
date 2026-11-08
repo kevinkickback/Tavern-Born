@@ -1,4 +1,3 @@
-import { IdentificationCard } from '@phosphor-icons/react'
 import { useCallback, useId } from 'react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { Input } from '@/components/ui/input'
@@ -20,6 +19,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
   const playerNameId = useId()
   const ageId = useId()
   const genderId = useId()
+  const identityHeadingId = useId()
 
   const hasError = (field: string) => invalidFields.has(field)
 
@@ -42,17 +42,11 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
 
   return (
     <div className="flex min-h-full flex-col gap-5">
-      <section className="overflow-hidden rounded-lg border border-border bg-workspace-pane">
-        <div className="flex items-center gap-2 border-b border-border bg-surface-raised px-4 py-3">
-          <IdentificationCard className="size-4 text-primary" weight="duotone" />
-          <div>
-            <h3 className="text-sm font-semibold">Character identity</h3>
-            <p className="text-xs text-muted-foreground">
-              Add the details used on your character sheet.
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-x-5 gap-y-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-labelledby={identityHeadingId}>
+        <h3 id={identityHeadingId} className="text-lg font-semibold">
+          Character identity
+        </h3>
+        <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
           <div className="space-y-2">
             <Label htmlFor={characterNameId}>Character Name</Label>
             <Input
@@ -115,7 +109,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
         </div>
       </section>
 
-      <section className="min-h-[28rem] flex-1">
+      <section aria-label="Portrait" className="min-h-[26rem] flex-1 border-t border-border pt-3">
         <PortraitPicker
           portrait={data.portrait}
           transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}

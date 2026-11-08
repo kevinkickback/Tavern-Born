@@ -321,7 +321,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             <div
               className={cn(
                 'min-h-0 flex-1 p-4 sm:p-6 lg:pr-12',
-                stepId === 'content' ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto',
+                stepId === 'content' ? 'overflow-hidden' : 'overflow-y-auto',
               )}
             >
               {validationError && invalidFields.size === 0 && (
@@ -335,7 +335,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   data={characterData}
                   onChange={updateCharacterData}
                   invalidFields={invalidFields}
-                  contentAvailability={variantRuleAvailability}
                   isBundledSrd={isBundledSrd}
                   races={wizardData.races}
                   recursiveLookup={wizardData.recursiveLookup}

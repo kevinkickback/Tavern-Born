@@ -1,5 +1,5 @@
 import { Sparkle } from '@phosphor-icons/react'
-import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
@@ -11,20 +11,21 @@ export function RulesStep({
   onChange,
   sources = [],
   invalidFields,
-}: StepProps & { sources?: SourceBook[] }) {
+  variantRuleAvailability,
+}: StepProps & {
+  sources?: SourceBook[]
+  variantRuleAvailability?: VariantRuleContentAvailability
+}) {
   const configuredSources = data.allowedSources || []
-  const abilityScoreMethods = getAbilityScoreMethodOptions(
-    data.originSystem === '2024' ? '2024' : '2014',
-  )
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Sparkle className="h-4 w-4 text-primary" weight="fill" />
           <div>
-            <h3 className="text-sm font-semibold">Ruleset</h3>
+            <h3 className="text-lg font-semibold">Ruleset</h3>
             <p className="text-xs text-muted-foreground">
-              Choose the rules foundation for this character.
+              Choose the edition this character will use.
             </p>
           </div>
         </div>
@@ -39,14 +40,12 @@ export function RulesStep({
             {
               value: '2014' as const,
               label: '5e Legacy (2014)',
-              description:
-                'The original 5th Edition ruleset. Widely supported, highly stable, and compatible with a large library of adventures and supplements.',
+              description: 'Use the original 5th Edition rules and character options.',
             },
             {
               value: '2024' as const,
               label: '5.5e Revised (2024)',
-              description:
-                'An updated version of 5th Edition with rebalanced classes, improved feats, and streamlined mechanics. Broadly compatible with earlier content.',
+              description: 'Use the revised rules and compatible earlier options.',
             },
           ].map((option) => {
             const selected = data.originSystem === option.value
@@ -54,6 +53,7 @@ export function RulesStep({
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={selected}
                 onClick={() =>
                   onChange({
                     originSystem: option.value,
@@ -99,43 +99,20 @@ export function RulesStep({
         )}
       </section>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkle className="h-4 w-4 text-primary" weight="fill" />
-            <h3 className="text-sm font-semibold">Ability Score Generation</h3>
-          </div>
-
-          <div className="flex rounded-lg overflow-hidden border border-border">
-            {abilityScoreMethods.map(({ value, label }, i) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onChange({ abilityScoreMethod: value })}
-                className={cn(
-                  'flex-1 px-3 py-2 text-sm font-semibold transition-all',
-                  i > 0 && 'border-l border-border',
-                  data.abilityScoreMethod === value
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-transparent hover:bg-accent/10',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-xs text-muted-foreground leading-relaxed min-h-[2.5rem]">
-            {abilityScoreMethods.find((method) => method.value === data.abilityScoreMethod)
-              ?.description ?? ''}
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-lg font-semibold">Rule Options</h3>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Some options depend on the books you select in Additional Content. Use Back from that
+            step to revisit these settings.
           </p>
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Hit Points</h3>
-          <WizardVariantOptions data={data} onChange={onChange} keys={['averageHitPoints']} />
-        </section>
-      </div>
+        </div>
+        <WizardVariantOptions
+          data={data}
+          onChange={onChange}
+          contentAvailability={variantRuleAvailability}
+        />
+      </section>
     </div>
   )
 }

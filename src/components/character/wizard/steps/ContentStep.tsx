@@ -1,8 +1,7 @@
-import { BookOpen, Warning } from '@phosphor-icons/react'
+import { BookOpen, Info, Warning } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
 import { Input } from '@/components/ui/input'
-import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import {
   getSourceCompatibility,
   normalizeAllowedSources,
@@ -12,17 +11,14 @@ import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourc
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
-import { NO_CONTENT_SPECIFIC_RULES, WizardVariantOptions } from '../WizardVariantOptions'
 
 export function ContentStep({
   data,
   onChange,
   sources = [],
-  contentAvailability = NO_CONTENT_SPECIFIC_RULES,
   isBundledSrd = false,
 }: StepProps & {
   sources?: SourceBook[]
-  contentAvailability?: VariantRuleContentAvailability
   isBundledSrd?: boolean
 }) {
   const [search, setSearch] = useState('')
@@ -116,196 +112,168 @@ export function ContentStep({
   const hasNonPresetSourcesSelected = allowedSources.some(
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
-  const preferNewerPrintingsEnabled =
-    data.originSystem === '2024' || (data.variantRules?.preferNewerPrintings ?? false)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-6 md:flex-row">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" weight="fill" />
-            <h4 className="font-semibold text-lg">Additional Content</h4>
-            {!isBundledSrd && allowedSources.length > 0 && (
-              <span
-                data-allowed-sources-count
-                className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]"
-              >
-                {allowedSources.length}
-              </span>
-            )}
-          </div>
-          {!isBundledSrd && (
-            <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
-              {[
-                ...SOURCE_PRESETS.map((preset) => ({
-                  key: preset.id,
-                  label: preset.label,
-                  title: preset.description,
-                  onClick: () => applySourcePreset(preset),
-                  active: isPresetActive(preset),
-                })),
-                {
-                  key: 'none',
-                  label: 'None',
-                  title: 'Clear all selected content',
-                  onClick: selectNoneSources,
-                  active: false,
-                },
-              ].map((action, index, allActions) => (
-                <div key={action.key} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={action.onClick}
-                    className={cn(
-                      'font-medium text-primary hover:underline',
-                      action.active && 'underline',
-                    )}
-                    title={action.title}
-                  >
-                    {action.label}
-                  </button>
-                  {index < allActions.length - 1 && (
-                    <span className="text-muted-foreground">|</span>
-                  )}
-                </div>
-              ))}
-            </div>
+    <section className="@container flex h-full min-h-0 min-w-0 flex-col">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-primary" weight="fill" />
+          <h3 className="text-lg font-semibold">Additional Content</h3>
+          {!isBundledSrd && allowedSources.length > 0 && (
+            <span
+              data-allowed-sources-count
+              className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]"
+            >
+              {allowedSources.length}
+            </span>
           )}
         </div>
-
-        {isBundledSrd ? (
-          <div className="px-5 py-6 text-center">
-            <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
-            <p className="mx-auto mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              The included SRD does not provide additional sourcebooks to enable. To add more
-              options, open Settings → Game Data and add compatible 5etools data.
-            </p>
-          </div>
-        ) : displaySources.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
-            No additional content is available. To add sourcebooks, open Settings → Game Data.
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 flex flex-col gap-2">
-            <div className="relative shrink-0">
-              <Input
-                aria-label="Search sources"
-                placeholder="Search by name or abbreviation…"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="pr-16"
-              />
-              {search && (
+        {!isBundledSrd && (
+          <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
+            {[
+              ...SOURCE_PRESETS.map((preset) => ({
+                key: preset.id,
+                label: preset.label,
+                title: preset.description,
+                onClick: () => applySourcePreset(preset),
+                active: isPresetActive(preset),
+              })),
+              {
+                key: 'none',
+                label: 'None',
+                title: 'Clear all selected content',
+                onClick: selectNoneSources,
+                active: false,
+              },
+            ].map((action, index, allActions) => (
+              <div key={action.key} className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute inset-y-0 right-3 text-xs text-primary"
+                  onClick={action.onClick}
+                  className={cn(
+                    'font-medium text-primary hover:underline',
+                    action.active && 'underline',
+                  )}
+                  title={action.title}
                 >
-                  Clear
+                  {action.label}
                 </button>
-              )}
-            </div>
-            {query &&
-              !displaySources.some(
-                (source) =>
-                  source.name.toLowerCase().includes(query) ||
-                  source.abbreviation.toLowerCase().includes(query),
-              ) && (
-                <p role="status" className="py-6 text-sm text-muted-foreground">
-                  No sources match your search.
-                </p>
-              )}
-            <section
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
-              tabIndex={0}
-              aria-label="Additional Content"
-              className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {groupOrder.map((group) => {
-                const groupSources = sourcesByGroup[group]?.filter(
-                  (source) =>
-                    !query ||
-                    source.name.toLowerCase().includes(query) ||
-                    source.abbreviation.toLowerCase().includes(query),
-                )
-                if (!groupSources || groupSources.length === 0) return null
-
-                return (
-                  <div key={group} className="space-y-1.5">
-                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {groupLabels[group] ?? group}
-                    </h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {groupSources.map((source) => {
-                        const compatibility = data.originSystem
-                          ? getSourceCompatibility(source, data.originSystem)
-                          : { compatible: true }
-                        return (
-                          <SourcebookChoice
-                            key={source.abbreviation}
-                            source={source}
-                            selected={allowedSources.includes(source.abbreviation)}
-                            compatibility={compatibility}
-                            onClick={() => toggleSource(source.abbreviation)}
-                            className="transition-all"
-                            wrapName
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </section>
+                {index < allActions.length - 1 && <span className="text-muted-foreground">|</span>}
+              </div>
+            ))}
           </div>
         )}
-      </section>
+      </div>
 
-      <aside className="shrink-0 space-y-5 md:w-56 md:overflow-y-auto md:border-l md:border-border md:pl-5">
-        <section className="space-y-4">
-          <h3 className="text-sm font-semibold">Options for this content</h3>
-          <WizardVariantOptions
-            data={data}
-            onChange={onChange}
-            keys={['optionalClassFeatures', 'anyRaceSubclasses', 'preferNewerPrintings']}
-            contentAvailability={contentAvailability}
-          />
-        </section>{' '}
-        <div aria-live="polite" className="contents">
-          {hasNonPresetSourcesSelected && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                Non-recommended sources often contain DM-only or outdated content. These may clutter
-                your options with material not intended for players.
-              </span>
-            </div>
-          )}
-
-          {data.originSystem === '2024' && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                {preferNewerPrintingsEnabled
-                  ? 'Revised replacements are always used. Compatible older options remain available when no revised version exists.'
-                  : ''}
-              </span>
-            </div>
-          )}
-
-          {data.originSystem === '2014' && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                {preferNewerPrintingsEnabled
-                  ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
-                  : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
-              </span>
-            </div>
-          )}
+      {isBundledSrd ? (
+        <div className="px-5 py-6 text-center">
+          <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
+          <p className="mx-auto mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            The included SRD does not provide additional sourcebooks to enable. To add more options,
+            open Settings → Game Data and add compatible 5etools data.
+          </p>
         </div>
-      </aside>
-    </div>
+      ) : displaySources.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
+          No additional content is available. To add sourcebooks, open Settings → Game Data.
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <div
+            aria-live="polite"
+            className="shrink-0 space-y-1.5 text-xs leading-relaxed empty:absolute"
+          >
+            {hasNonPresetSourcesSelected && (
+              <p className="flex items-start gap-2 rounded-md bg-warning/10 px-3 py-2 text-warning-foreground">
+                <Warning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>
+                  Non-recommended sources often contain DM-only or outdated options. Select them
+                  only if your campaign uses them.
+                </span>
+              </p>
+            )}
+            {data.originSystem === '2024' && (
+              <p className="flex items-start gap-2 text-muted-foreground">
+                <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>
+                  Revised replacements are always used. Compatible older options remain available
+                  when no revised version exists.
+                </span>
+              </p>
+            )}
+          </div>
+          <div className="relative shrink-0">
+            <Input
+              aria-label="Search sources"
+              placeholder="Search by name or abbreviation…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="pr-16"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute inset-y-0 right-3 text-xs text-primary"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {query &&
+            !displaySources.some(
+              (source) =>
+                source.name.toLowerCase().includes(query) ||
+                source.abbreviation.toLowerCase().includes(query),
+            ) && (
+              <p role="status" className="py-6 text-sm text-muted-foreground">
+                No sources match your search.
+              </p>
+            )}
+          <section
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
+            tabIndex={0}
+            aria-label="Additional Content"
+            className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {groupOrder.map((group) => {
+              const groupSources = sourcesByGroup[group]?.filter(
+                (source) =>
+                  !query ||
+                  source.name.toLowerCase().includes(query) ||
+                  source.abbreviation.toLowerCase().includes(query),
+              )
+              if (!groupSources || groupSources.length === 0) return null
+
+              return (
+                <div key={group} className="space-y-1.5">
+                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {groupLabels[group] ?? group}
+                  </h5>
+                  <div className="grid gap-2 @min-[420px]:grid-cols-2 @min-[820px]:grid-cols-3">
+                    {groupSources.map((source) => {
+                      const compatibility = data.originSystem
+                        ? getSourceCompatibility(source, data.originSystem)
+                        : { compatible: true }
+                      return (
+                        <SourcebookChoice
+                          key={source.abbreviation}
+                          source={source}
+                          selected={allowedSources.includes(source.abbreviation)}
+                          compatibility={compatibility}
+                          onClick={() => toggleSource(source.abbreviation)}
+                          className="transition-all"
+                          wrapName
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </section>
+        </div>
+      )}
+    </section>
   )
 }

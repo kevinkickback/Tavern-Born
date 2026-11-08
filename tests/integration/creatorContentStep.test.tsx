@@ -66,42 +66,14 @@ test('source search is a view filter and hidden selections, presets and None use
   expect(screen.getByLabelText('Selected sources').textContent).toBe('')
 })
 
-test('search leaves content availability unchanged and preserves inactive intent and the 2024 lock', async () => {
-  const user = userEvent.setup(),
-    onChange = vi.fn()
-  const data = {
-    ...INITIAL_CHARACTER_DATA,
-    originSystem: '2024' as const,
-    variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, anyRaceSubclasses: true },
-  }
-  const { rerender } = render(
-    <ContentStep
-      data={data}
-      sources={sources}
-      onChange={onChange}
-      contentAvailability={{
-        optionalClassFeatures: true,
-        anyRaceSubclasses: false,
-        preferNewerPrintings: false,
-      }}
-    />,
-  )
+test('search is local to Additional Content and survives catalog refresh without editing the draft', async () => {
+  const user = userEvent.setup()
+  const onChange = vi.fn()
+  const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2024' as const }
+  const { rerender } = render(<ContentStep data={data} sources={sources} onChange={onChange} />)
   await user.type(screen.getByRole('textbox', { name: 'Search sources' }), 'missing')
   expect(onChange).not.toHaveBeenCalled()
-  expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Allow Optional Class Features' })
-      .disabled,
-  ).toBe(false)
-  expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Any-Race Subclasses' }).disabled,
-  ).toBe(false)
-  expect(screen.getByText('Currently inactive')).toBeTruthy()
-  expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Prefer Newer Printings' }).disabled,
-  ).toBe(true)
-  expect(
-    screen.getByRole('switch', { name: 'Prefer Newer Printings' }).getAttribute('data-state'),
-  ).toBe('checked')
+  expect(screen.queryByRole('switch')).toBeNull()
   rerender(
     <ContentStep
       data={data}
@@ -110,6 +82,7 @@ test('search leaves content availability unchanged and preserves inactive intent
     />,
   )
   expect(onChange).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: /Restored book/ })).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Clear' }))
   expect(screen.getByRole('button', { name: /Restored book/ })).toBeTruthy()
 })
