@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
-import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
+import {
+  normalizeRaceSelectionForOriginSystem,
+  usesRaceOriginBenefits,
+} from '@/lib/calculations/originSystem'
 import {
   getSubraceDisplayName,
   isSubraceDisplayNameAmbiguous,
@@ -64,7 +67,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     )
     if (hasValidSelection) return
 
-    const firstRace = filteredRaces[0]
+    const firstRace = orderedRaces[0]
     if (!firstRace) return
 
     const firstSubrace = getAvailableSubraces(firstRace)[0]
@@ -76,7 +79,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       raceAsiChoices: [],
       raceAsiBlockIndex: 0,
     })
-  }, [data.race, data.raceSource, filteredRaces, getAvailableSubraces, onChange])
+  }, [data.race, data.raceSource, filteredRaces, getAvailableSubraces, onChange, orderedRaces])
 
   const subraces = getAvailableSubraces(selectedRace)
   const orderedSubraces = sortCreatorOptions(subraces, (subrace) =>
@@ -133,12 +136,15 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     })
   }
 
-  const asi = getAsiDisplay(
-    normalizedSelection.race,
-    data.raceAsiBlockIndex ?? 0,
-    data.raceAsiChoices,
-    normalizedSelection.subrace,
-  )
+  const showsRaceBonuses = usesRaceOriginBenefits(data.originSystem || '2014')
+  const asi = showsRaceBonuses
+    ? getAsiDisplay(
+        normalizedSelection.race,
+        data.raceAsiBlockIndex ?? 0,
+        data.raceAsiChoices,
+        normalizedSelection.subrace,
+      )
+    : []
   const size = displayRace?.size ?? []
   const speed = getSpeedDisplay(displayRace)
   const languages = getLanguageDisplay(displayRace)
@@ -294,28 +300,29 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               </div>
             </div>
 
-            {/* Ability Scores */}
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  Ability Scores
-                </span>
-              </div>
-              {asi.length === 0 ? (
-                <p className="text-sm text-muted-foreground">None</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {asi.map((a) => (
-                    <span
-                      key={a}
-                      className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent/10 border border-accent/30 text-sm font-medium"
-                    >
-                      {a}
-                    </span>
-                  ))}
+            {showsRaceBonuses && (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
+                    Ability Scores
+                  </span>
                 </div>
-              )}
-            </div>
+                {asi.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {asi.map((a) => (
+                      <span
+                        key={a}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent/10 border border-accent/30 text-sm font-medium"
+                      >
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Info sections — always shown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

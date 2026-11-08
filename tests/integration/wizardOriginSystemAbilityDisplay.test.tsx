@@ -134,9 +134,8 @@ describe('wizard 2024 origin-system ability display', () => {
       />,
     )
 
-    expect(
-      screen.getByText('Choose 1 ability from STR, DEX (+2) · Choose 1 ability from STR, DEX (+1)'),
-    ).toBeTruthy()
+    expect(screen.getByText('Choose 1 ability from STR, DEX (+2)')).toBeTruthy()
+    expect(screen.getByText('Choose 1 ability from STR, DEX (+1)')).toBeTruthy()
     expect(screen.getByText('Bonus +2')).toBeTruthy()
     expect(screen.queryByText('Bonus +3')).toBeNull()
   })

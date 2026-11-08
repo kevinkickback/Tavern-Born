@@ -1,6 +1,7 @@
-import { BookOpen, Info, Warning } from '@phosphor-icons/react'
+import { BookOpen, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   getSourceCompatibility,
@@ -27,6 +28,8 @@ export function ContentStep({
   isBundledSrd?: boolean
 }) {
   const [search, setSearch] = useState('')
+  const [requestedCategory, setCategory] = useState('all')
+  const [selectedOnly, setSelectedOnly] = useState(false)
   const query = search.trim().toLowerCase()
   const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
   const displaySources = selectableSources.filter(
@@ -41,6 +44,7 @@ export function ContentStep({
   const allowedSources = data.originSystem
     ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
     : configuredSources
+  const selected = new Set(allowedSources)
   const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
   const sourcesByGroup = displaySources.reduce<Record<string, SourceBook[]>>((acc, source) => {
@@ -73,6 +77,20 @@ export function ContentStep({
       ...Object.keys(sourcesByGroup),
     ]),
   ]
+
+  const category = sourcesByGroup[requestedCategory]?.length ? requestedCategory : 'all'
+  const visibleGroups = groupOrder.flatMap((group) => {
+    if (category !== 'all' && category !== group) return []
+    const books = (sourcesByGroup[group] ?? [])
+      .filter(
+        (source) =>
+          (!selectedOnly || selected.has(source.abbreviation)) &&
+          (source.name.toLowerCase().includes(query) ||
+            source.abbreviation.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name) || a.abbreviation.localeCompare(b.abbreviation))
+    return books.length > 0 ? [{ group, books }] : []
+  })
 
   const toggleSource = (sourceAbbr: string) => {
     const source =
@@ -110,7 +128,7 @@ export function ContentStep({
     const presetSources = data.originSystem
       ? normalizeSelectableAllowedSources(availablePresetSources, data.originSystem, sources)
       : availablePresetSources
-    if (presetSources.length !== allowedSources.length) {
+    if (presetSources.length === 0 || presetSources.length !== allowedSources.length) {
       return false
     }
     return presetSources.every((abbreviation) => allowedSources.includes(abbreviation))
@@ -128,85 +146,111 @@ export function ContentStep({
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
   const includedSource = coreSource && (
-    <div className="flex items-center justify-between gap-3 border-y border-border px-2 py-2 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-workspace-canvas px-3 py-2 text-sm">
       <span className="font-semibold">{coreSource.name}</span>
       <span className="text-xs text-muted-foreground">Included</span>
     </div>
   )
 
   return (
-    <section className="@container flex min-h-0 min-w-0 flex-1 flex-col">
-      {!isBundledSrd && displaySources.length > 0 && (
-        <div className="relative mb-1.5 shrink-0">
-          <Input
-            aria-label="Search sources"
-            placeholder="Search by name or abbreviation…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="pr-16"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute inset-y-0 right-3 text-xs text-primary"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
-      <div className="mb-1.5 flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Additional Content</h3>
-          {!isBundledSrd && allowedSources.length > 0 && (
-            <span
-              data-allowed-sources-count
-              className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]"
-            >
-              {allowedSources.length}
-            </span>
-          )}
-        </div>
-        {!isBundledSrd && (
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              ...SOURCE_PRESETS.map((preset) => ({
-                key: preset.id,
-                label: preset.label,
-                title: preset.description,
-                onClick: () => applySourcePreset(preset),
-                active: isPresetActive(preset),
-              })),
-              {
-                key: 'none',
-                label: 'None',
-                title: 'Clear all selected content',
-                onClick: selectNoneSources,
-                active: false,
-              },
-            ].map((action) => (
-              <button
-                key={action.key}
+    <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
+      <div className="shrink-0 space-y-2 rounded-lg border border-border bg-workspace-canvas px-3 py-2 max-lg:space-y-1 max-lg:py-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Additional Content</h3>
+            {!isBundledSrd && allowedSources.length > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <span data-allowed-sources-count>{allowedSources.length}</span> selected
+              </span>
+            )}
+          </div>
+          {!isBundledSrd && displaySources.length > 0 && (
+            <fieldset className="flex flex-wrap items-center gap-1" aria-label="Sourcebook presets">
+              <span className="mr-1 text-xs text-muted-foreground">Presets</span>
+              {SOURCE_PRESETS.map((preset) => {
+                const active = isPresetActive(preset)
+                return (
+                  <Button
+                    key={preset.id}
+                    type="button"
+                    aria-pressed={active}
+                    variant={active ? 'secondary' : 'ghost'}
+                    size="sm"
+                    title={preset.description}
+                    onClick={() => applySourcePreset(preset)}
+                  >
+                    {preset.label}
+                  </Button>
+                )
+              })}
+              <Button
                 type="button"
-                aria-pressed={action.active}
-                onClick={action.onClick}
-                className={cn(
-                  'rounded-md border border-border bg-workspace-pane px-2.5 py-1 text-xs hover:bg-surface-hover',
-                  action.active && 'border-primary/50 bg-primary/10 text-primary',
-                )}
-                title={action.title}
+                aria-pressed={allowedSources.length === 0}
+                variant={allowedSources.length === 0 ? 'secondary' : 'ghost'}
+                size="sm"
+                title="Clear all selected content"
+                onClick={selectNoneSources}
               >
-                {action.label}
-              </button>
-            ))}
+                None
+              </Button>
+            </fieldset>
+          )}
+        </div>
+        {!isBundledSrd && displaySources.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-36 flex-1">
+              <MagnifyingGlass
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                aria-label="Search sources"
+                placeholder="Find a book by name or code…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="pl-8 pr-14"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute inset-y-0 right-3 text-xs text-primary"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <select
+              aria-label="Sourcebook category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="h-9 max-w-full rounded-md border border-border bg-workspace-pane px-2 text-sm focus-visible:outline-ring"
+            >
+              <option value="all">All categories</option>
+              {groupOrder
+                .filter((group) => sourcesByGroup[group]?.length > 0)
+                .map((group) => (
+                  <option key={group} value={group}>
+                    {groupLabels[group] ?? group}
+                  </option>
+                ))}
+            </select>
+            <Button
+              type="button"
+              variant={selectedOnly ? 'secondary' : 'outline'}
+              size="sm"
+              aria-pressed={selectedOnly}
+              onClick={() => setSelectedOnly(!selectedOnly)}
+            >
+              Selected only
+            </Button>
           </div>
         )}
       </div>
       {isBundledSrd ? (
         <div className="px-5 py-6 text-center">
-          <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
-          <p className="mx-auto mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm font-semibold">Using the included SRD</p>
+          <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
             The included SRD does not provide additional sourcebooks to enable. To add more options,
             open Settings → Game Data and add compatible 5etools data.
           </p>
@@ -219,59 +263,51 @@ export function ContentStep({
           </p>
         </>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          {query &&
-            !displaySources.some(
-              (source) =>
-                source.name.toLowerCase().includes(query) ||
-                source.abbreviation.toLowerCase().includes(query),
-            ) && (
-              <p role="status" className="py-6 text-sm text-muted-foreground">
-                No sources match your search.
-              </p>
-            )}
+        <>
           <section
             // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
             tabIndex={0}
             aria-label="Additional Content"
-            className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {!query && includedSource}
-            {groupOrder.map((group) => {
-              const groupSources = sourcesByGroup[group]?.filter(
-                (source) =>
-                  !query ||
-                  source.name.toLowerCase().includes(query) ||
-                  source.abbreviation.toLowerCase().includes(query),
-              )
-              if (!groupSources || groupSources.length === 0) return null
-
-              return (
-                <div key={group} className="space-y-1.5">
-                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {groupLabels[group] ?? group}
-                  </h5>
-                  <div className="divide-y divide-border border-y border-border">
-                    {groupSources.map((source) => {
-                      const compatibility = data.originSystem
-                        ? getSourceCompatibility(source, data.originSystem)
-                        : { compatible: true }
-                      return (
-                        <SourcebookChoice
-                          key={source.abbreviation}
-                          source={source}
-                          selected={allowedSources.includes(source.abbreviation)}
-                          compatibility={compatibility}
-                          onClick={() => toggleSource(source.abbreviation)}
-                          row
-                          wrapName
-                        />
-                      )
-                    })}
-                  </div>
+            {!query &&
+              !selectedOnly &&
+              (category === 'all' || category === 'core') &&
+              includedSource}
+            {visibleGroups.length === 0 && (
+              <p role="status" className="p-3 text-sm text-muted-foreground">
+                {category === 'all' && !selectedOnly
+                  ? 'No sources match your search.'
+                  : 'No books match these filters.'}
+              </p>
+            )}
+            {visibleGroups.map(({ group, books }) => (
+              <section key={group} className="space-y-2">
+                <h4 className="flex items-baseline gap-2 text-sm font-semibold">
+                  {groupLabels[group] ?? group}
+                  <span aria-hidden="true" className="text-xs font-normal text-muted-foreground">
+                    {books.length}
+                  </span>
+                </h4>
+                <div className="grid gap-2 @min-[25rem]:grid-cols-2 @min-[54rem]:grid-cols-3">
+                  {books.map((source) => (
+                    <SourcebookChoice
+                      key={source.abbreviation}
+                      source={source}
+                      selected={selected.has(source.abbreviation)}
+                      compatibility={
+                        data.originSystem
+                          ? getSourceCompatibility(source, data.originSystem)
+                          : { compatible: true }
+                      }
+                      onClick={() => toggleSource(source.abbreviation)}
+                      showSelection
+                      wrapName
+                    />
+                  ))}
                 </div>
-              )
-            })}
+              </section>
+            ))}
           </section>
           <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
             <div
@@ -310,7 +346,7 @@ export function ContentStep({
               </p>
             )}
           </div>
-        </div>
+        </>
       )}
     </section>
   )

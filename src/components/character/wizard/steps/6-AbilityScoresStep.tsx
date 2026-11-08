@@ -1,4 +1,5 @@
 import { AbilityScoreCard } from '@/components/character/AbilityScoreCard'
+import { RacialAbilityChoiceSummary } from '@/components/character/RacialAbilityChoiceSummary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
@@ -14,7 +15,6 @@ import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   formatAbilityBonus,
   formatBackgroundAbilityPatterns,
-  formatRacialAbilityPatterns,
 } from '@/lib/calculations/abilityScoreDisplay'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import {
@@ -98,11 +98,13 @@ function RaceAsiBonuses({
     <section className="flex flex-col gap-3 border-y border-border bg-workspace-pane p-4">
       <div>
         <h3 className="text-sm font-semibold">Racial Bonuses</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {choices.length > 0
-            ? formatRacialAbilityPatterns(raceAsiData)
-            : 'Apply the bonuses granted by your selected race.'}
-        </p>
+        {choices.length > 0 ? (
+          <RacialAbilityChoiceSummary choices={choices} />
+        ) : (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Apply the bonuses granted by your selected race.
+          </p>
+        )}
       </div>
       {isLineageRaceAsiFallback && (
         <Tabs

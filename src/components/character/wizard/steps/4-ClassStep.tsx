@@ -48,11 +48,11 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
     )
     if (hasValidSelection) return
 
-    const firstClass = filteredClasses[0]
+    const firstClass = orderedClasses[0]
     if (!firstClass) return
 
     onChange({ class: firstClass.name, classSource: firstClass.source ?? '' })
-  }, [data.class, data.classSource, filteredClasses, onChange])
+  }, [data.class, data.classSource, filteredClasses, onChange, orderedClasses])
 
   const spellcastingStat = selectedClass ? getSpellcastingStatDisplay(selectedClass) : 'None'
   const savingThrows = selectedClass ? getSavingThrowsDisplay(selectedClass) : 'None'

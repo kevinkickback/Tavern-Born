@@ -288,6 +288,12 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
     ),
   ).toBe(4)
   await expect(library.getByRole('button', { name: 'Upload' })).toBeInViewport()
+  const tallLibrary = await library.evaluate((element) => element.clientHeight)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect
+    .poll(async () => tallLibrary - (await library.evaluate((element) => element.clientHeight)))
+    .toBeGreaterThan(150)
+  await page.setViewportSize({ width: 1280, height: 1000 })
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
   await expect(dialog.getByText('Adjust portrait', { exact: true })).toBeVisible()
   await expect(dialog.locator('[data-slot=portrait-card-preview]')).toContainText('Level 1')
@@ -319,6 +325,10 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await dialog.getByRole('button', { name: /5\.5e Revised/ }).click()
   const optionalFeatures = dialog.getByRole('switch', { name: 'Allow Optional Class Features' })
   await expect(optionalFeatures).toBeDisabled()
+  await expect(dialog.getByText('Unavailable with selected content')).toHaveCount(0)
+  const unavailable = dialog.getByRole('group', { name: 'Allow Optional Class Features' })
+  await unavailable.hover()
+  await expect(page.getByRole('tooltip')).toHaveText('Unavailable with selected content')
   await expect(dialog.getByRole('switch', { name: 'Any-Race Subclasses' })).toBeVisible()
   await expect(dialog.getByRole('switch', { name: 'Prefer Newer Printings' })).toBeDisabled()
   const averageHitPoints = dialog.getByRole('switch', { name: 'Average Hit Points' })
@@ -393,6 +403,8 @@ for (const viewport of [
           return { x, y, width, height }
         }),
       )
+    expect(portraitTiles).toHaveLength(4)
+    expect(portraitTiles[3].y).toBeGreaterThan(portraitTiles[0].y + portraitTiles[0].height)
     for (const tile of portraitTiles) {
       expect(Math.abs(tile.width / tile.height - 7 / 6)).toBeLessThan(0.025)
     }
@@ -420,6 +432,10 @@ for (const viewport of [
     await wizard.getByRole('button', { name: /5e Legacy/ }).click()
     await wizard.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()
+    await expect(wizard.getByRole('button', { name: 'None', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     const search = wizard.getByRole('textbox', { name: 'Search sources' })
     const region = wizard.getByRole('region', { name: 'Additional Content' })
     expect(await region.evaluate((node) => node.clientHeight)).toBeGreaterThan(200)
@@ -436,6 +452,16 @@ for (const viewport of [
     await expect(region.getByRole('button')).toHaveCount(1)
     await source.click()
     await expect(source).toHaveAttribute('aria-pressed', 'true')
+    await wizard.getByRole('button', { name: 'Selected only' }).click()
+    await search.fill('')
+    await expect(region.getByRole('button')).toHaveCount(1)
+    const category = wizard.getByRole('combobox', { name: 'Sourcebook category' })
+    await category.selectOption('supplement')
+    await expect(wizard.getByText('No books match these filters.')).toBeVisible()
+    await category.selectOption('other')
+    await expect(source).toHaveAttribute('aria-pressed', 'true')
+    await category.selectOption('all')
+    await wizard.getByRole('button', { name: 'Selected only' }).click()
     await search.fill('missing source')
     await expect(wizard.getByRole('status')).toHaveText('No sources match your search.')
     await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
@@ -497,6 +523,11 @@ test('creates a complete character and persists it across a full reload', async 
     await expect(dialog.getByText('E2E Created Hero')).toBeVisible()
     await expect(dialog.getByText('Acolyte', { exact: true })).toBeVisible()
     await expect(dialog.getByText('5e Legacy (2014)', { exact: true })).toBeVisible()
+    await expect(
+      dialog.getByText(
+        'No additional sourcebooks selected. Core rules for this edition are included.',
+      ),
+    ).toBeVisible()
     await dialog.getByRole('button', { name: 'Create' }).click()
     await expect(dialog).toBeHidden()
     await expect(page).toHaveURL(/\/$/)
@@ -520,16 +551,22 @@ test('revised background bonuses update review, starting HP, and the saved chara
 }, info) => {
   const gameData: GameData = {
     ...CHARACTER_CREATION_GAME_DATA,
-    races: CHARACTER_CREATION_GAME_DATA.races.map((race) => ({
-      ...race,
-      source: 'XPHB',
-      edition: 'one',
-    })),
-    classes: CHARACTER_CREATION_GAME_DATA.classes.map((cls) => ({
-      ...cls,
-      source: 'XPHB',
-      edition: 'one',
-    })),
+    races: [
+      ...CHARACTER_CREATION_GAME_DATA.races.map((race) => ({
+        ...race,
+        source: 'XPHB',
+        edition: 'one',
+      })),
+      { name: 'Aasimar', source: 'XPHB', edition: 'one', size: ['M'], speed: 30 },
+    ],
+    classes: [
+      ...CHARACTER_CREATION_GAME_DATA.classes.map((cls) => ({
+        ...cls,
+        source: 'XPHB',
+        edition: 'one',
+      })),
+      { name: 'Barbarian', source: 'XPHB', edition: 'one', hd: { faces: 12, number: 1 } },
+    ],
     backgrounds: CHARACTER_CREATION_GAME_DATA.backgrounds.map((background) => ({
       ...background,
       source: 'XPHB',
@@ -559,6 +596,21 @@ test('revised background bonuses update review, starting HP, and the saved chara
   ]) {
     await next.click()
     await expect(dialog.getByRole('heading', { name: title, exact: true })).toBeVisible()
+    if (title === 'Choose a race') {
+      await expect(dialog.getByRole('button', { name: /^Aasimar\s+XPHB/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(dialog.getByText('Ability Scores', { exact: true })).toHaveCount(1)
+      await dialog.getByRole('button', { name: /^Human\s+XPHB/ }).click()
+    }
+    if (title === 'Choose a class') {
+      await expect(dialog.getByRole('button', { name: /^Barbarian\s+XPHB/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await dialog.getByRole('button', { name: /^Fighter\s+XPHB/ }).click()
+    }
   }
   await expect(dialog.getByText('Magic Initiate (Cleric)', { exact: true })).toBeVisible()
   await dialog.screenshot({ path: info.outputPath('background.png') })

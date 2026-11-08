@@ -1,6 +1,7 @@
 import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { RacialAbilityChoiceSummary } from '@/components/character/RacialAbilityChoiceSummary'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Progress } from '@/components/ui/progress'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
@@ -22,11 +23,7 @@ import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import {
-  formatAbilityBonus,
-  formatAbilityChoice,
-  formatRacialAbilityPatterns,
-} from '@/lib/calculations/abilityScoreDisplay'
+import { formatAbilityBonus, formatAbilityChoice } from '@/lib/calculations/abilityScoreDisplay'
 import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
@@ -396,9 +393,7 @@ export function BuildAbilityScoresPage() {
                             <h3 className="text-sm font-semibold text-foreground">
                               Racial bonuses
                             </h3>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {formatRacialAbilityPatterns(raceAsiData)}
-                            </p>
+                            <RacialAbilityChoiceSummary choices={raceAsiData.choices} />
                           </div>
                           {isLineageRaceAsiFallback && (
                             <fieldset

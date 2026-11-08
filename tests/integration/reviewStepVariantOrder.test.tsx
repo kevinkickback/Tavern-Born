@@ -93,7 +93,9 @@ describe('Wizard rule controls', () => {
       (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true)
-    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
+    expect(screen.queryByText('Unavailable with selected content')).toBeNull()
+    const unavailable = screen.getByRole('group', { name: 'Any-Race Subclasses' })
+    expect(unavailable.getAttribute('tabindex')).toBe('0')
   })
 
   test('enables a content-specific rule when its matching record is available', () => {

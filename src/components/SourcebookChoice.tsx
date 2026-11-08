@@ -1,4 +1,4 @@
-import { BookOpen } from '@phosphor-icons/react'
+import { BookOpen, Check } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 
@@ -9,7 +9,7 @@ interface SourcebookChoiceProps {
   onClick: () => void
   className?: string
   wrapName?: boolean
-  row?: boolean
+  showSelection?: boolean
 }
 
 export function SourcebookChoice({
@@ -19,7 +19,7 @@ export function SourcebookChoice({
   onClick,
   className,
   wrapName = false,
-  row = false,
+  showSelection = false,
 }: SourcebookChoiceProps) {
   return (
     <button
@@ -29,26 +29,35 @@ export function SourcebookChoice({
       disabled={!compatibility.compatible}
       title={compatibility.reason}
       className={cn(
-        'flex gap-2 text-left text-sm',
-        row ? 'w-full items-center px-2 py-2' : 'items-start rounded-md border px-3 py-2.5',
+        'flex items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm',
+        showSelection && 'bg-workspace-canvas',
         className,
         !compatibility.compatible &&
           'cursor-not-allowed opacity-50 hover:border-border hover:text-muted-foreground',
         selected
-          ? row
-            ? 'bg-primary/5 text-foreground'
-            : 'border-accent bg-accent/10 text-foreground'
+          ? 'border-accent bg-accent/10 text-foreground'
           : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
-        row && 'hover:bg-surface-hover',
       )}
     >
-      <BookOpen
-        className={cn(
-          'h-4 w-4 shrink-0 mt-0.5',
-          selected ? 'text-primary' : 'text-muted-foreground',
-        )}
-      />
-      <div className={cn('min-w-0', (wrapName || row) && 'flex-1')}>
+      {showSelection ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'mt-0.5 grid size-4 shrink-0 place-items-center rounded-sm border border-border-strong',
+            selected && 'border-primary bg-primary text-primary-foreground',
+          )}
+        >
+          {selected && <Check className="size-3" weight="bold" />}
+        </span>
+      ) : (
+        <BookOpen
+          className={cn(
+            'mt-0.5 size-4 shrink-0',
+            selected ? 'text-primary' : 'text-muted-foreground',
+          )}
+        />
+      )}
+      <div className={cn('min-w-0', wrapName && 'flex-1')}>
         <div className={cn('font-semibold', wrapName ? 'break-words' : 'truncate')}>
           {source.name}
         </div>
@@ -60,14 +69,6 @@ export function SourcebookChoice({
           <div className="mt-0.5 text-[11px] text-warning">{compatibility.reason}</div>
         )}
       </div>
-      {row && compatibility.compatible && (
-        <span
-          aria-hidden="true"
-          className={cn('shrink-0 text-xs', selected && 'font-semibold text-primary')}
-        >
-          {selected ? '✓ Selected' : 'Available'}
-        </span>
-      )}
     </button>
   )
 }

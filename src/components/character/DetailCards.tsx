@@ -16,7 +16,7 @@ export function CreatorEntityDetails({
   children: ReactNode
 }) {
   return (
-    <div className="@container flex min-w-0 flex-col border-t border-border pt-4 md:min-h-0 md:overflow-hidden md:border-t-0 md:border-l md:pt-0 md:pl-6">
+    <div className="@container flex min-w-0 flex-col rounded-lg border border-border bg-workspace-canvas p-4 md:min-h-0 md:overflow-hidden sm:px-5">
       {entity ? (
         <>
           <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-2">

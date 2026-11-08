@@ -1,6 +1,7 @@
 import { Warning } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
@@ -21,6 +22,7 @@ import {
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
+import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 import type { CharacterWizardData, WizardStepId } from '../types'
 
@@ -33,6 +35,22 @@ interface ReviewStepProps {
   onEditStep?: (step: WizardStepId) => void
 }
 
+function EditButton({ label, onEdit }: { label: string; onEdit?: () => void }) {
+  return (
+    onEdit && (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={`Edit ${label.toLowerCase()}`}
+        onClick={onEdit}
+      >
+        Edit
+      </Button>
+    )
+  )
+}
+
 function ReviewRow({
   label,
   children,
@@ -43,22 +61,10 @@ function ReviewRow({
   onEdit?: () => void
 }) {
   return (
-    <div className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-border py-1.5">
-      <div className="min-w-0 space-y-0.5">
-        <h3 className="text-sm font-semibold leading-tight">{label}</h3>
-        <div className="break-words text-xs leading-relaxed text-muted-foreground">{children}</div>
-      </div>
-      {onEdit && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label={`Edit ${label.toLowerCase()}`}
-          onClick={onEdit}
-        >
-          Edit
-        </Button>
-      )}
+    <div className="flex min-h-10 items-center gap-3 py-1.5">
+      <span className="w-20 shrink-0 text-xs text-muted-foreground">{label}</span>
+      <div className="min-w-0 flex-1 break-words text-sm font-semibold">{children}</div>
+      <EditButton label={label} onEdit={onEdit} />
     </div>
   )
 }
@@ -162,75 +168,130 @@ export function ReviewStep({
         </Alert>
       )}
 
-      <div className="border-t border-border">
-        <ReviewRow label="Identity" onEdit={onEditStep && (() => onEditStep('basics'))}>
-          <span className="font-medium text-foreground">{data.name || 'Unnamed character'}</span>
-          {' · Level 1'}
-          {data.playerName && ` · Player: ${data.playerName}`}
-        </ReviewRow>
-        <ReviewRow label="Rules" onEdit={onEditStep && (() => onEditStep('rules'))}>
-          <p>{data.originSystem ? getOriginSystemLabel(data.originSystem) : 'Not set'}</p>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-            {variantRuleRows.map(({ label, enabled, available }) => (
-              <span key={label}>
-                <span>{label}</span>{' '}
-                <strong>{enabled ? (available ? 'On' : 'Inactive') : 'Off'}</strong>
-              </span>
-            ))}
-          </div>
-        </ReviewRow>
-        <ReviewRow label="Sourcebooks" onEdit={onEditStep && (() => onEditStep('content'))}>
-          {hasRestrictedSources
-            ? allowedSourceDisplay.join(' · ')
-            : 'No content filter selected. All loaded content is currently available.'}
-        </ReviewRow>
-        <ReviewRow label="Race" onEdit={onEditStep && (() => onEditStep('race'))}>
-          <p>{getRaceDisplayName(data.race, data.subrace) || 'Not set'}</p>
-          <p className="text-xs">
-            {[
-              data.raceSource,
-              sizeValue,
-              speedValue,
-              darkvision ? `Darkvision ${darkvision} ft` : 'No darkvision',
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+      <section className="grid overflow-hidden rounded-lg border border-border bg-workspace-canvas md:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+        <div className="flex flex-col justify-center p-4 sm:p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Character snapshot
           </p>
-        </ReviewRow>
-        <ReviewRow label="Class" onEdit={onEditStep && (() => onEditStep('class'))}>
-          {data.class || 'Not set'}
-        </ReviewRow>
-        <ReviewRow label="Background" onEdit={onEditStep && (() => onEditStep('background'))}>
-          {data.background || 'Not set'}
-        </ReviewRow>
-        <ReviewRow label="Ability Scores" onEdit={onEditStep && (() => onEditStep('abilities'))}>
-          <p className="capitalize">{data.abilityScoreMethod?.replace(/-/g, ' ') || 'Not set'}</p>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+          <h3 className="mt-2 break-words text-2xl font-semibold">
+            {data.name || 'Unnamed character'}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Level 1{data.playerName && ` · Player: ${data.playerName}`}
+          </p>
+          <div className="mt-2 self-start">
+            <EditButton label="Identity" onEdit={onEditStep && (() => onEditStep('basics'))} />
+          </div>
+        </div>
+        <div className="min-w-0 divide-y divide-border border-t border-border bg-workspace-pane px-4 py-2 md:border-t-0 md:border-l">
+          <ReviewRow label="Race" onEdit={onEditStep && (() => onEditStep('race'))}>
+            <p>{getRaceDisplayName(data.race, data.subrace) || 'Not set'}</p>
+            <p className="text-xs font-normal text-muted-foreground">
+              {[
+                data.raceSource,
+                sizeValue,
+                speedValue,
+                darkvision ? `Darkvision ${darkvision} ft` : 'No darkvision',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          </ReviewRow>
+          <ReviewRow label="Class" onEdit={onEditStep && (() => onEditStep('class'))}>
+            {data.class || 'Not set'}
+          </ReviewRow>
+          <ReviewRow label="Background" onEdit={onEditStep && (() => onEditStep('background'))}>
+            {data.background || 'Not set'}
+          </ReviewRow>
+          <ReviewRow label="Ruleset">
+            {data.originSystem ? getOriginSystemLabel(data.originSystem) : 'Not set'}
+          </ReviewRow>
+        </div>
+      </section>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <section className="min-w-0 rounded-lg border border-border bg-workspace-canvas p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold">Ability Scores</h3>
+              <Badge variant="secondary" className="capitalize">
+                {data.abilityScoreMethod?.replace(/-/g, ' ') || 'Not set'}
+              </Badge>
+            </div>
+            <EditButton
+              label="Ability scores"
+              onEdit={onEditStep && (() => onEditStep('abilities'))}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6">
             {ABILITY_NAMES.map((ability) => {
               const base = data.abilityScores?.[ability] ?? 8
               const bonus = abilityBonuses[ability] ?? 0
               const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
+              const mod = getAbilityModifier(total)
               return (
                 <div
                   key={ability}
-                  className="flex flex-wrap items-baseline gap-x-1 text-xs tabular-nums"
+                  className="rounded-md border border-border bg-workspace-pane p-2 text-center tabular-nums"
                 >
-                  <span className="font-semibold text-foreground">
-                    {ABILITY_ABBREVIATIONS[ability]} {total}
-                  </span>
-                  <span>({formatModifier(getAbilityModifier(total))})</span>
+                  <div className="text-xs font-semibold text-muted-foreground">
+                    {ABILITY_ABBREVIATIONS[ability]}
+                  </div>
+                  <div className="font-mono text-xl font-bold">{total}</div>
+                  <div
+                    className={cn(
+                      'text-xs font-semibold',
+                      mod >= 0 ? 'text-success-foreground' : 'text-destructive',
+                    )}
+                  >
+                    {formatModifier(mod)}
+                  </div>
                   {bonus !== 0 && (
-                    <span className="text-success-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {base}+{bonus}
                       {base + bonus > total && ' (capped)'}
-                    </span>
+                    </div>
                   )}
                 </div>
               )
             })}
           </div>
-        </ReviewRow>
+        </section>
+        <section className="min-w-0 rounded-lg border border-border bg-workspace-canvas p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Variant Rules</h3>
+            <EditButton label="Rules" onEdit={onEditStep && (() => onEditStep('rules'))} />
+          </div>
+          <div className="divide-y divide-border">
+            {variantRuleRows.map(({ label, enabled, available }) => (
+              <div key={label} className="flex items-center justify-between gap-3 py-1.5 text-xs">
+                <span>{label}</span>
+                <Badge variant={enabled && available ? 'secondary' : 'outline'}>
+                  {enabled ? (available ? 'On' : 'Inactive') : 'Off'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
+      <section className="rounded-lg border border-border bg-workspace-canvas p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Sourcebooks</h3>
+          <EditButton label="Sourcebooks" onEdit={onEditStep && (() => onEditStep('content'))} />
+        </div>
+        {hasRestrictedSources ? (
+          <div className="flex flex-wrap gap-1.5">
+            {allowedSourceDisplay.map((source) => (
+              <Badge key={source} variant="outline" className="whitespace-normal">
+                {source}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No additional sourcebooks selected. Core rules for this edition are included.
+          </p>
+        )}
+      </section>
     </div>
   )
 }

@@ -386,7 +386,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           className={cn(
             'min-h-0 min-w-0 flex-1',
             stepId !== 'basics' && 'flex flex-col p-4 sm:px-6 lg:py-6',
-            stepId === 'content' ? 'overflow-hidden' : 'overflow-y-auto',
+            stepId === 'content' ? 'overflow-hidden max-lg:py-3' : 'overflow-y-auto',
           )}
         >
           {validationError && invalidFields.size === 0 && (

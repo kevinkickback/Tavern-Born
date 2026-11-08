@@ -18,7 +18,7 @@ export function RulesStep({
 }) {
   const configuredSources = data.allowedSources || []
   return (
-    <div className="@container space-y-4">
+    <div className="@container space-y-7 sm:space-y-9">
       <section className="space-y-3">
         <div
           className={cn(

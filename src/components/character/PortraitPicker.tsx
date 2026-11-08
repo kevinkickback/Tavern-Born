@@ -290,7 +290,12 @@ export function PortraitPicker({
     </section>
   )
   const library = (
-    <section className={cn('flex w-full flex-col overflow-hidden', !isCreator && 'h-full')}>
+    <section
+      className={cn(
+        'flex w-full flex-col overflow-hidden',
+        isCreator ? 'md:min-h-32 md:flex-1' : 'h-full',
+      )}
+    >
       <WorkspacePaneHeader
         title={isCreator ? 'Portrait Library' : 'Portrait library'}
         icon={isCreator ? undefined : <Images className="size-4 text-primary" weight="duotone" />}
@@ -309,7 +314,7 @@ export function PortraitPicker({
           className={cn(
             'grid flex-1 content-start overflow-y-auto pr-1',
             isCreator
-              ? 'max-h-[38vh] grid-cols-4 gap-2 [&>*]:aspect-[7/6]'
+              ? 'auto-rows-max grid-cols-4 gap-2 md:min-h-0 [&>*]:aspect-[7/6]'
               : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
           )}
         >
@@ -381,9 +386,9 @@ export function PortraitPicker({
   return (
     <>
       {isCreator ? (
-        <div className="grid min-h-full md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <div className="min-w-0 space-y-4 p-4 sm:p-6">
-            {identity}
+        <div className="grid min-h-full md:h-full md:min-h-[31rem] md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-4 p-4 sm:p-6 md:min-h-0">
+            <div className="shrink-0">{identity}</div>
             {library}
           </div>
           <aside className="min-w-0 border-t border-border bg-workspace-canvas p-4 sm:p-6 md:border-t-0 md:border-l">

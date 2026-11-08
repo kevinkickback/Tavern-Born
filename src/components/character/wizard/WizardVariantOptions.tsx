@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import type { StepProps } from './types'
 
@@ -44,46 +45,66 @@ export function WizardVariantOptions({
   const baseId = useId()
 
   return (
-    <div className="divide-y divide-border border-y border-border">
-      {RULE_OPTIONS.map(({ key, label, description }) => {
-        const id = baseId + key
-        const detailsId = `${id}-details`
-        const lockedByRuleset = key === 'preferNewerPrintings' && data.originSystem === '2024'
-        const checked = lockedByRuleset || data.variantRules[key]
-        const available = key === 'averageHitPoints' || contentAvailability[key]
-        return (
-          <div key={key} className="flex items-center justify-between gap-5 min-h-13 py-2.5">
-            <div className="min-w-0">
-              <Label htmlFor={id} className="text-sm font-semibold">
-                {label}
-              </Label>
-              <div
-                id={detailsId}
-                className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground"
-              >
-                <p>{description}</p>
-                {lockedByRuleset ? (
-                  <p className="font-medium">Always on for 2024 characters</p>
-                ) : !available ? (
-                  <p className="font-medium">
-                    {checked ? 'Currently inactive' : 'Unavailable with selected content'}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+    <TooltipProvider>
+      <div className="divide-y divide-border border-y border-border">
+        {RULE_OPTIONS.map(({ key, label, description }) => {
+          const id = baseId + key
+          const detailsId = `${id}-details`
+          const lockedByRuleset = key === 'preferNewerPrintings' && data.originSystem === '2024'
+          const checked = lockedByRuleset || data.variantRules[key]
+          const available = key === 'averageHitPoints' || contentAvailability[key]
+          const unavailable = !lockedByRuleset && !available && !checked
+          const control = (
             <Switch
               id={id}
               aria-describedby={detailsId}
               checked={checked}
-              disabled={lockedByRuleset || (!available && !checked)}
+              disabled={lockedByRuleset || unavailable}
               onCheckedChange={(checked) =>
                 onChange({ variantRules: { ...data.variantRules, [key]: checked } })
               }
-              className="mt-0.5 shrink-0"
+              className={unavailable ? 'pointer-events-none' : 'shrink-0'}
             />
-          </div>
-        )
-      })}
-    </div>
+          )
+          return (
+            <div key={key} className="flex items-center justify-between gap-5 min-h-13 py-2.5">
+              <div className="min-w-0">
+                <Label htmlFor={id} className="text-sm font-semibold">
+                  {label}
+                </Label>
+                <div
+                  id={detailsId}
+                  className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground"
+                >
+                  <p>{description}</p>
+                  {lockedByRuleset ? (
+                    <p className="font-medium">Always on for 2024 characters</p>
+                  ) : !available && checked ? (
+                    <p className="font-medium">Currently inactive</p>
+                  ) : null}
+                </div>
+              </div>
+              {unavailable ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <fieldset
+                      // biome-ignore lint/a11y/noNoninteractiveTabindex: Disabled switches need a keyboard target for their tooltip.
+                      tabIndex={0}
+                      aria-label={label}
+                      className="inline-flex shrink-0 rounded-full focus-visible:outline-ring"
+                    >
+                      {control}
+                    </fieldset>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">Unavailable with selected content</TooltipContent>
+                </Tooltip>
+              ) : (
+                control
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </TooltipProvider>
   )
 }
