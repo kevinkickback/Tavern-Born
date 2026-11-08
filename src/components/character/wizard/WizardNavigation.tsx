@@ -31,15 +31,15 @@ export function WizardNavigation({
     <nav
       ref={track}
       aria-label="Character creation progress"
-      className="relative overflow-x-auto px-4 py-2.5 sm:px-6"
+      className="relative overflow-x-auto px-2 py-2.5 lg:px-6"
     >
-      <ol className="mx-auto flex w-full min-w-max max-w-4xl items-center">
+      <ol className="mx-auto grid w-full min-w-[52rem] max-w-5xl grid-cols-8 items-center">
         {steps.map((step, index) => {
           const position = index + 1
           const isCurrent = currentStep === position
           const isCompleted = completedThrough >= position
           const chipClass = cn(
-            'inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-xs leading-none',
+            'inline-flex h-6 w-[6.25rem] shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border px-1 text-xs leading-none',
             isCurrent
               ? 'border-foreground/55 bg-surface-raised font-semibold text-foreground'
               : isCompleted
@@ -59,10 +59,17 @@ export function WizardNavigation({
           return (
             <li
               key={step.id}
-              className="flex items-center not-last:flex-1"
+              className="flex min-w-0 items-center"
               data-step={position}
               aria-current={isCurrent ? 'step' : undefined}
             >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'h-px flex-1',
+                  index > 0 && (completedThrough >= index ? 'bg-success/50' : 'bg-border-strong'),
+                )}
+              />
               {position < currentStep ? (
                 <button
                   type="button"
@@ -76,15 +83,13 @@ export function WizardNavigation({
               ) : (
                 <span className={chipClass}>{status}</span>
               )}
-              {position < steps.length && (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'h-px min-w-3 flex-1',
-                    isCompleted ? 'bg-success/50' : 'bg-border-strong',
-                  )}
-                />
-              )}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'h-px flex-1',
+                  position < steps.length && (isCompleted ? 'bg-success/50' : 'bg-border-strong'),
+                )}
+              />
             </li>
           )
         })}

@@ -16,6 +16,7 @@ interface CharacterCardFrameProps {
   transform?: PortraitTransform
   cardSize?: number
   portraitTransition?: boolean
+  portraitOnly?: boolean
   actions?: ReactNode
 }
 
@@ -31,6 +32,7 @@ export function CharacterCardFrame({
   transform,
   cardSize = 360,
   portraitTransition = false,
+  portraitOnly = false,
   actions,
 }: CharacterCardFrameProps) {
   const sizeVariant = cardSize <= 300 ? 'small' : cardSize <= 380 ? 'medium' : 'large'
@@ -38,22 +40,33 @@ export function CharacterCardFrame({
   const isMedium = sizeVariant === 'medium'
   const detailIconClass = cn('text-primary', isSmall ? 'size-3.5' : 'size-4')
 
+  const portrait = image ? (
+    <img
+      src={resolvePortraitSrc(image)}
+      alt={imageAlt}
+      className={cn(
+        'pointer-events-none absolute h-full w-full max-w-none select-none',
+        portraitOnly
+          ? 'inset-0 object-cover object-[center_32%]'
+          : 'left-1/2 top-1/2 object-contain',
+      )}
+      style={
+        portraitOnly
+          ? undefined
+          : {
+              transform: getPortraitCssTransform(transform),
+              ...(portraitTransition ? { transition: 'transform 0.2s ease-out' } : {}),
+            }
+      }
+    />
+  ) : (
+    <div className="absolute inset-0 bg-gradient-to-br from-muted to-background" />
+  )
+  if (portraitOnly) return portrait
+
   return (
     <>
-      {image ? (
-        <img
-          src={resolvePortraitSrc(image)}
-          alt={imageAlt}
-          className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none select-none object-contain"
-          style={{
-            transform: getPortraitCssTransform(transform),
-            ...(portraitTransition ? { transition: 'transform 0.2s ease-out' } : {}),
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-background" />
-      )}
-
+      {portrait}
       <div className="absolute inset-y-0 right-0 w-[84%] bg-gradient-to-l from-card/98 via-card/75 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-[64%] bg-gradient-to-l from-card/99 via-card/88 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-[30%] bg-gradient-to-l from-card via-card/99 to-transparent" />

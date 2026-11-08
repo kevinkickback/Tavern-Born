@@ -1,6 +1,7 @@
-import { Eye, EyeSlash, Warning } from '@phosphor-icons/react'
+import { Warning } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
@@ -20,9 +21,8 @@ import {
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
-import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
-import type { CharacterWizardData } from '../types'
+import type { CharacterWizardData, WizardStepId } from '../types'
 
 interface ReviewStepProps {
   data: CharacterWizardData
@@ -30,23 +30,35 @@ interface ReviewStepProps {
   sources: SourceBook[]
   backgroundAbilityData?: BackgroundAbilityData
   variantRuleAvailability?: VariantRuleContentAvailability
+  onEditStep?: (step: WizardStepId) => void
 }
 
-function InfoRow({ label, value, warn }: { label: string; value?: string; warn?: boolean }) {
+function ReviewRow({
+  label,
+  children,
+  onEdit,
+}: {
+  label: string
+  children: ReactNode
+  onEdit?: () => void
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-1.5 border-b border-border/50 last:border-0">
-      <span className={cn('text-xs text-muted-foreground shrink-0', warn && 'text-destructive')}>
-        {label}
-        {warn && <Warning className="inline ml-1 h-3 w-3" />}
-      </span>
-      <span
-        className={cn(
-          'text-sm font-semibold text-right truncate',
-          !value && 'text-muted-foreground italic font-normal',
-        )}
-      >
-        {value || 'Not set'}
-      </span>
+    <div className="flex min-h-[3.25rem] items-center justify-between gap-3 border-b border-border py-1.5">
+      <div className="min-w-0 space-y-0.5">
+        <h3 className="text-sm font-semibold leading-tight">{label}</h3>
+        <div className="break-words text-xs leading-relaxed text-muted-foreground">{children}</div>
+      </div>
+      {onEdit && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-label={`Edit ${label.toLowerCase()}`}
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
+      )}
     </div>
   )
 }
@@ -57,6 +69,7 @@ export function ReviewStep({
   sources,
   backgroundAbilityData,
   variantRuleAvailability,
+  onEditStep,
 }: ReviewStepProps) {
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
@@ -109,7 +122,7 @@ export function ReviewStep({
       )
     : []
 
-  const hasDarkvision = displayRace?.darkvision !== undefined && displayRace.darkvision > 0
+  const darkvision = displayRace?.darkvision
 
   const speedValue = getSpeedDisplay(displayRace)
   const sizeValue = displayRace?.size?.join(', ') || 'Not specified'
@@ -149,160 +162,74 @@ export function ReviewStep({
         </Alert>
       )}
 
-      <div>
-        <div className="space-y-4">
-          <section className="rounded-lg border border-border bg-workspace-pane p-4">
-            <h3 className="break-words text-xl font-semibold">
-              {data.name || 'Unnamed character'}
-            </h3>
-            <p className="mt-1 text-xs text-muted-foreground">Level 1</p>
-            <div className="mt-3 grid gap-x-8 sm:grid-cols-2">
-              <div>
-                <InfoRow
-                  label="Race"
-                  value={getRaceDisplayName(data.race, data.subrace)}
-                  warn={!data.race}
-                />
-                <InfoRow label="Class" value={data.class} warn={!data.class} />
-                <InfoRow label="Background" value={data.background} warn={!data.background} />
-                <InfoRow
-                  label="Ruleset"
-                  value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
-                  warn={!data.originSystem}
-                />
-              </div>
-              <div>
-                <InfoRow label="Size" value={sizeValue} />
-                <InfoRow label="Speed" value={speedValue} />
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
-                  <span className="text-xs text-muted-foreground">Darkvision</span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 text-xs font-semibold',
-                      hasDarkvision ? 'text-success' : 'text-muted-foreground',
-                    )}
-                  >
-                    {hasDarkvision ? (
-                      <Eye className="h-3.5 w-3.5" />
-                    ) : (
-                      <EyeSlash className="h-3.5 w-3.5" />
-                    )}
-                    {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
+      <div className="border-t border-border">
+        <ReviewRow label="Identity" onEdit={onEditStep && (() => onEditStep('basics'))}>
+          <span className="font-medium text-foreground">{data.name || 'Unnamed character'}</span>
+          {' · Level 1'}
+          {data.playerName && ` · Player: ${data.playerName}`}
+        </ReviewRow>
+        <ReviewRow label="Rules" onEdit={onEditStep && (() => onEditStep('rules'))}>
+          <p>{data.originSystem ? getOriginSystemLabel(data.originSystem) : 'Not set'}</p>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            {variantRuleRows.map(({ label, enabled, available }) => (
+              <span key={label}>
+                <span>{label}</span>{' '}
+                <strong>{enabled ? (available ? 'On' : 'Inactive') : 'Off'}</strong>
+              </span>
+            ))}
+          </div>
+        </ReviewRow>
+        <ReviewRow label="Sourcebooks" onEdit={onEditStep && (() => onEditStep('content'))}>
+          {hasRestrictedSources
+            ? allowedSourceDisplay.join(' · ')
+            : 'No content filter selected. All loaded content is currently available.'}
+        </ReviewRow>
+        <ReviewRow label="Race" onEdit={onEditStep && (() => onEditStep('race'))}>
+          <p>{getRaceDisplayName(data.race, data.subrace) || 'Not set'}</p>
+          <p className="text-xs">
+            {[
+              data.raceSource,
+              sizeValue,
+              speedValue,
+              darkvision ? `Darkvision ${darkvision} ft` : 'No darkvision',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </ReviewRow>
+        <ReviewRow label="Class" onEdit={onEditStep && (() => onEditStep('class'))}>
+          {data.class || 'Not set'}
+        </ReviewRow>
+        <ReviewRow label="Background" onEdit={onEditStep && (() => onEditStep('background'))}>
+          {data.background || 'Not set'}
+        </ReviewRow>
+        <ReviewRow label="Ability Scores" onEdit={onEditStep && (() => onEditStep('abilities'))}>
+          <p className="capitalize">{data.abilityScoreMethod?.replace(/-/g, ' ') || 'Not set'}</p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            {ABILITY_NAMES.map((ability) => {
+              const base = data.abilityScores?.[ability] ?? 8
+              const bonus = abilityBonuses[ability] ?? 0
+              const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
+              return (
+                <div
+                  key={ability}
+                  className="flex flex-wrap items-baseline gap-x-1 text-xs tabular-nums"
+                >
+                  <span className="font-semibold text-foreground">
+                    {ABILITY_ABBREVIATIONS[ability]} {total}
                   </span>
+                  <span>({formatModifier(getAbilityModifier(total))})</span>
+                  {bonus !== 0 && (
+                    <span className="text-success-foreground">
+                      {base}+{bonus}
+                      {base + bonus > total && ' (capped)'}
+                    </span>
+                  )}
                 </div>
-                <InfoRow label="Race Source" value={data.raceSource} />
-              </div>
-            </div>
-          </section>
-
-          <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold">Ability Scores</h4>
-                </div>
-                <Badge variant="secondary" className="font-mono">
-                  Method: {data.abilityScoreMethod?.replace(/-/g, ' ') || 'unset'}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 xl:grid-cols-3 gap-2">
-                {ABILITY_NAMES.map((ability) => {
-                  const base = (data.abilityScores?.[ability] as number | undefined) ?? 8
-                  const bonus = abilityBonuses[ability] ?? 0
-                  const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
-                  const mod = getAbilityModifier(total)
-                  return (
-                    <div
-                      key={ability}
-                      className="border rounded-lg bg-card/60 border-border flex flex-col items-center justify-center gap-0.5 p-2"
-                    >
-                      <div className="text-xs font-semibold text-primary uppercase">
-                        {ABILITY_ABBREVIATIONS[ability]}
-                      </div>
-                      <div className="text-2xl font-bold font-mono leading-none">{total}</div>
-                      {bonus !== 0 && (
-                        <div className="text-xs font-semibold leading-none text-success-foreground">
-                          {base}+{bonus}
-                          {base + bonus > total && ' (capped)'}
-                        </div>
-                      )}
-                      <div
-                        className={cn(
-                          'text-sm font-semibold',
-                          mod >= 0 ? 'text-success-foreground' : 'text-destructive',
-                        )}
-                      >
-                        {formatModifier(mod)}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold">Variant Rules</h4>
-              </div>
-              <div className="space-y-1">
-                {variantRuleRows.map((row) => {
-                  const inactive = Boolean(row.enabled) && !row.available
-                  return (
-                    <div
-                      key={row.label}
-                      className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0"
-                    >
-                      <span className="text-xs text-muted-foreground">{row.label}</span>
-                      <Badge
-                        variant={row.enabled && !inactive ? 'default' : 'outline'}
-                        className={cn(
-                          'text-[11px]',
-                          row.enabled && !inactive && 'bg-accent text-accent-foreground',
-                        )}
-                      >
-                        {inactive ? 'Inactive' : row.enabled ? 'On' : 'Off'}
-                      </Badge>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+              )
+            })}
           </div>
-
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold">Additional Content</h4>
-              {hasRestrictedSources && (
-                <Badge variant="secondary" className="font-mono">
-                  {allowedSources.length}
-                </Badge>
-              )}
-            </div>
-
-            {hasRestrictedSources ? (
-              <div className="flex flex-wrap gap-2">
-                {allowedSourceDisplay.map((sourceLine) => {
-                  const [abbr, ...rest] = sourceLine.split(' - ')
-                  return (
-                    <div
-                      key={sourceLine}
-                      className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-2.5 py-1"
-                    >
-                      <span className="text-xs font-semibold font-mono">{abbr}</span>
-                      {rest.length > 0 && (
-                        <span className="text-xs text-muted-foreground">{rest.join(' - ')}</span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground">
-                No content filter selected. All loaded content is currently available.
-              </div>
-            )}
-          </div>
-        </div>
+        </ReviewRow>
       </div>
     </div>
   )

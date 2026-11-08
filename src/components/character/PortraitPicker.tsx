@@ -54,6 +54,7 @@ export function PortraitPicker({
   const selectionVersionRef = useRef(0)
   const mountedRef = useRef(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
+  const [adjustingPortrait, setAdjustingPortrait] = useState(false)
   const [libraryCollapsed, setLibraryCollapsed] = useState(false)
   const [previewWidth, setPreviewWidth] = useState<number | null>(null)
   const [savedPortraits, setSavedPortraits] = useState<SavedPortrait[]>([])
@@ -259,15 +260,14 @@ export function PortraitPicker({
         icon={isCreator ? undefined : <Image className="size-4 text-primary" weight="duotone" />}
         className={cn(
           !isCreator && collapsible && 'pr-20',
-          isCreator &&
-            'h-auto border-0 bg-transparent px-0 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
+          isCreator && 'h-auto border-0 bg-transparent px-0',
         )}
       />
       <div
         data-slot="portrait-preview-content"
         className={cn(
           'grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4',
-          isCreator ? 'px-0 pt-4' : 'p-4',
+          isCreator ? 'gap-3 px-0 pt-3' : 'p-4',
           libraryCollapsed
             ? 'grid-rows-[minmax(0,1fr)_auto] overflow-hidden'
             : 'content-start grid-rows-[auto_auto] overflow-y-auto',
@@ -283,12 +283,21 @@ export function PortraitPicker({
           lastModified={lastModified}
           transform={t}
           fit={libraryCollapsed ? 'contain' : 'width'}
-          className={isCreator ? 'mx-auto max-w-lg' : undefined}
+          portraitOnly={isCreator && !adjustingPortrait}
           onWidthChange={setPreviewWidth}
         />
 
+        {isCreator && (
+          <div>
+            <h3 className="break-words text-lg font-semibold">{name || 'Unnamed Character'}</h3>
+            <p className="text-sm text-muted-foreground">Level {level ?? 1} · Draft</p>
+          </div>
+        )}
         {isCreator ? (
-          <details className="border-t border-border pt-2">
+          <details
+            className="border-t border-border pt-2"
+            onToggle={(event) => setAdjustingPortrait(event.currentTarget.open)}
+          >
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
               Adjust portrait
             </summary>
@@ -301,7 +310,7 @@ export function PortraitPicker({
     </section>
   )
   const library = (
-    <section className="flex h-full w-full flex-col overflow-hidden">
+    <section className={cn('flex w-full flex-col overflow-hidden', !isCreator && 'h-full')}>
       <WorkspacePaneHeader
         title={isCreator ? 'Portrait Library' : 'Portrait library'}
         icon={isCreator ? undefined : <Images className="size-4 text-primary" weight="duotone" />}
@@ -320,7 +329,7 @@ export function PortraitPicker({
           className={cn(
             'grid flex-1 content-start overflow-y-auto pr-1',
             isCreator
-              ? 'min-h-0 max-h-[42vh] auto-rows-max grid-cols-[repeat(auto-fill,minmax(min(100%,6.5rem),1fr))] gap-2 @min-[55rem]:[@media(min-height:850px)]:max-h-[52vh] @min-[55rem]:[@media(min-height:850px)]:grid-cols-4'
+              ? 'max-h-[38vh] grid-cols-4 gap-2 [&>*]:aspect-[7/6]'
               : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
           )}
         >
@@ -392,16 +401,14 @@ export function PortraitPicker({
   return (
     <>
       {isCreator ? (
-        <div className="@container">
-          <div className="grid gap-5 @min-[45rem]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] @min-[45rem]:gap-6">
-            <div className="min-w-0 space-y-5">
-              {identity}
-              <div className="border-t border-border pt-4">{library}</div>
-            </div>
-            <div className="min-w-0 rounded-lg border border-border bg-workspace-pane p-4 @min-[45rem]:self-start @min-[45rem]:p-5">
-              {preview}
-            </div>
+        <div className="grid min-h-full md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-4 p-4 sm:p-6">
+            {identity}
+            {library}
           </div>
+          <aside className="min-w-0 border-t border-border bg-workspace-pane p-4 sm:p-6 md:border-t-0 md:border-l">
+            {preview}
+          </aside>
         </div>
       ) : (
         <SplitPane

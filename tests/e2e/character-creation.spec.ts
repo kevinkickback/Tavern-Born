@@ -72,6 +72,24 @@ test('outside clicks retain wizard input and portalled choices remain usable', a
   await expect(dialog.getByText('Step 2 of 8').first()).toBeVisible()
   const progress = dialog.getByRole('navigation', { name: 'Character creation progress' })
   await expect(progress.locator('[aria-current=step]')).toHaveText('Rules')
+  const positions = await progress.getByRole('listitem').evaluateAll((items) =>
+    items.map((item) => {
+      const chip = item.querySelector(':scope > :nth-child(2)')
+      if (!chip) throw new Error('Missing progress chip')
+      const bounds = chip.getBoundingClientRect()
+      return bounds.x + bounds.width / 2
+    }),
+  )
+  const intervals = positions.slice(1).map((position, index) => position - positions[index])
+  expect(Math.max(...intervals) - Math.min(...intervals)).toBeLessThan(1)
+  const widths = await progress
+    .getByRole('listitem')
+    .evaluateAll((items) =>
+      items.map(
+        (item) => item.querySelector(':scope > :nth-child(2)')?.getBoundingClientRect().width ?? 0,
+      ),
+    )
+  expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(1)
   await expect(progress.getByRole('button', { name: 'Basics, completed' })).toBeVisible()
   await expect(progress.getByRole('button', { name: 'Sourcebooks' })).toHaveCount(0)
 
@@ -271,13 +289,20 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   const originalHeight = await modalHeight()
   expect(originalHeight).toBeGreaterThan(850)
   const library = dialog.getByRole('button', { name: 'Upload' }).locator('..')
-  expect(await library.evaluate((element) => element.clientHeight)).toBeGreaterThan(500)
+  expect(
+    await library.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(' ').length,
+    ),
+  ).toBe(4)
+  await expect(library.getByRole('button', { name: 'Upload' })).toBeInViewport()
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
   const adjustPortrait = dialog.getByText('Adjust portrait', { exact: true })
   const zoom = dialog.getByRole('slider', { name: 'Zoom' })
   await expect(zoom).toBeHidden()
+  await expect(dialog.locator('[data-slot=portrait-card-preview]')).not.toContainText('Level 1')
   await adjustPortrait.click()
   await expect(zoom).toBeVisible()
+  await expect(dialog.locator('[data-slot=portrait-card-preview]')).toContainText('Level 1')
   await adjustPortrait.click()
   await expect(zoom).toBeHidden()
   await dialog.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
@@ -361,7 +386,7 @@ for (const viewport of [
         }),
       )
     for (const tile of portraitTiles) {
-      expect(Math.abs(tile.width - tile.height)).toBeLessThan(2)
+      expect(Math.abs(tile.width / tile.height - 7 / 6)).toBeLessThan(0.025)
     }
     await wizard.screenshot({ animations: 'disabled', path: info.outputPath('basics.png') })
     if (viewport.width === 900) {
@@ -484,7 +509,7 @@ test('creates a complete character and persists it across a full reload', async 
 
 test('revised background bonuses update review, starting HP, and the saved character', async ({
   page,
-}) => {
+}, info) => {
   const gameData: GameData = {
     ...CHARACTER_CREATION_GAME_DATA,
     races: CHARACTER_CREATION_GAME_DATA.races.map((race) => ({
@@ -528,6 +553,7 @@ test('revised background bonuses update review, starting HP, and the saved chara
     await expect(dialog.getByRole('heading', { name: title, exact: true })).toBeVisible()
   }
   await expect(dialog.getByText('Magic Initiate (Cleric)', { exact: true })).toBeVisible()
+  await dialog.screenshot({ path: info.outputPath('background.png') })
   await next.click()
   await dialog.getByRole('tab', { name: 'Standard Array' }).click()
   await dialog.getByRole('combobox', { name: 'constitution base score' }).click()
@@ -544,6 +570,7 @@ test('revised background bonuses update review, starting HP, and the saved chara
     '',
   )
   await page.getByRole('option', { name: '+1 CON', exact: true }).click()
+  await dialog.screenshot({ path: info.outputPath('ability-scores.png') })
   await dialog.getByRole('tab', { name: 'Custom' }).click()
   await dialog.getByRole('spinbutton', { name: 'constitution base score' }).fill('30')
   await expect(
@@ -551,7 +578,12 @@ test('revised background bonuses update review, starting HP, and the saved chara
   ).toContainText('Total 30')
   await next.click()
   await expect(dialog.getByText('30+1 (capped)', { exact: true })).toBeVisible()
-  await dialog.getByRole('button', { name: 'Back', exact: true }).click()
+  await dialog.screenshot({ path: info.outputPath('review.png') })
+  await dialog.getByRole('button', { name: 'Edit ability scores', exact: true }).click()
+  await expect(dialog.getByRole('heading', { name: 'Set ability scores' })).toBeFocused()
+  await expect(dialog.getByRole('spinbutton', { name: 'constitution base score' })).toHaveValue(
+    '30',
+  )
   await dialog.getByRole('tab', { name: 'Standard Array' }).click()
   await dialog.getByRole('combobox', { name: 'constitution base score' }).click()
   await page.getByRole('option', { name: '13', exact: true }).click()

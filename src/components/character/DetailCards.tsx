@@ -19,8 +19,8 @@ export function CreatorEntityDetails({
     <div className="@container flex min-w-0 flex-col border-t border-border pt-4 md:min-h-0 md:overflow-hidden md:border-t-0 md:border-l md:pt-0 md:pl-6">
       {entity ? (
         <>
-          <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3">
-            <h3 className="break-words font-display text-2xl font-bold">
+          <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-2">
+            <h3 className="break-words text-2xl font-semibold tracking-tight">
               {entity.name}
               {subtitle && <span className="ml-1.5 text-primary">({subtitle})</span>}
             </h3>
@@ -51,7 +51,7 @@ export function DetailSection({
   empty?: boolean
 }) {
   return (
-    <div className="min-w-0 border-y border-border bg-workspace-pane px-3 py-2.5">
+    <div className="min-w-0 bg-workspace-pane px-3 py-2.5">
       <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{label}</h3>
       <p className={cn('text-sm', empty && 'text-muted-foreground')}>{children}</p>
     </div>
@@ -68,8 +68,8 @@ export function DetailHtmlSection({
   recursiveLookup?: RecursiveLookup
 }) {
   return (
-    <div className="min-w-0 border-y border-border bg-workspace-pane px-3 py-2.5">
-      <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{label}</h3>
+    <div className="grid gap-1 border-b border-border py-2 @sm:grid-cols-[minmax(8rem,1fr)_2fr]">
+      <h3 className="text-sm font-semibold">{label}</h3>
       {html ? (
         <GameContent
           entry={html}

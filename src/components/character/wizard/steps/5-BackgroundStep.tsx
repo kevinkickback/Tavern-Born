@@ -114,7 +114,7 @@ export function BackgroundStep({
   const originFeats = parseFeatGrantBlocks(originBackground?.feats)
 
   return (
-    <div className="grid min-w-0 gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
+    <div className="grid min-w-0 gap-5 md:min-h-0 md:flex-1 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
       <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
         <div className="shrink-0 pb-3">
           <div className="flex items-center gap-2 mb-2">
@@ -167,7 +167,7 @@ export function BackgroundStep({
                   }
                   aria-pressed={isSelected}
                   className={cn(
-                    'w-full text-left px-3 py-2 rounded-md transition-all text-sm border',
+                    'w-full text-left px-3 py-2.5 rounded-md transition-colors text-sm border',
                     isSelected
                       ? 'border-primary/50 bg-primary/10 text-foreground'
                       : 'bg-workspace-pane hover:bg-surface-hover border-transparent',
@@ -189,11 +189,6 @@ export function BackgroundStep({
         {selectedBackground && (
           <>
             <div className="max-w-[72ch] space-y-1.5">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  Background Overview
-                </span>
-              </div>
               {summary ? (
                 <GameContent
                   entry={summary}
@@ -207,7 +202,7 @@ export function BackgroundStep({
               )}
             </div>
 
-            <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
               <DetailSection label="Skill Proficiencies" empty={skillProficiencies === 'None'}>
                 {skillProficiencies}
               </DetailSection>
@@ -223,18 +218,19 @@ export function BackgroundStep({
             </div>
 
             {(abilityPatterns.length > 0 || originFeats.length > 0) && (
-              <div className="grid gap-3 @md:grid-cols-2">
+              <div className="space-y-3">
                 {abilityPatterns.length > 0 && (
-                  <DetailSection label="Ability Score Bonuses">
-                    {abilityPatterns.join(' or ')}
-                  </DetailSection>
+                  <section className="space-y-1.5">
+                    <h4 className="text-sm font-semibold">Ability Score Bonuses</h4>
+                    <p className="border-l-2 border-border bg-workspace-pane px-3 py-2 text-sm text-muted-foreground">
+                      {abilityPatterns.join(' or ')}
+                    </p>
+                  </section>
                 )}
                 {originFeats.length > 0 && (
-                  <section className="min-w-0 border-y border-border bg-workspace-pane px-3 py-2.5">
-                    <h4 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                      Origin Feat
-                    </h4>
-                    <ul className="space-y-1 text-sm">
+                  <section className="space-y-1.5">
+                    <h4 className="text-sm font-semibold">Origin Feat</h4>
+                    <ul className="divide-y divide-border border-y border-border text-sm [&>li]:py-2">
                       {originFeats.map((feat, index) => (
                         <li key={JSON.stringify([feat, index])}>
                           {feat.type === 'fixed' ? (

@@ -150,7 +150,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   const raceSummary = getRaceSummary(displayRace)
 
   return (
-    <div className="grid min-w-0 gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
+    <div className="grid min-w-0 gap-5 md:min-h-0 md:flex-1 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
       {/* Left: Race list */}
       <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
         <div className="shrink-0 pb-3">
@@ -195,7 +195,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                   onClick={() => handleSelectRace(race)}
                   aria-pressed={isSelected}
                   className={cn(
-                    'w-full text-left px-3 py-2 rounded-md transition-all text-sm',
+                    'w-full text-left px-3 py-2.5 rounded-md transition-colors text-sm',
                     isSelected
                       ? 'border border-primary/50 bg-primary/10 text-foreground'
                       : 'bg-workspace-pane hover:bg-surface-hover border border-transparent',
@@ -232,12 +232,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
           <>
             {raceSummary && (
               <div className="max-w-[72ch] space-y-1.5">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Race Overview
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{raceSummary}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{raceSummary}</p>
               </div>
             )}
 

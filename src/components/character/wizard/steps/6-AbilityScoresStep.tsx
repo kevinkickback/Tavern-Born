@@ -95,7 +95,7 @@ function RaceAsiBonuses({
   }
 
   return (
-    <section className="mt-5 flex flex-col gap-3 border-y border-border bg-workspace-pane p-4">
+    <section className="flex flex-col gap-3 border-y border-border bg-workspace-pane p-4">
       <div>
         <h3 className="text-sm font-semibold">Racial Bonuses</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -190,7 +190,7 @@ function BackgroundAsiBonuses({
   const patterns = formatBackgroundAbilityPatterns(abilityData)
 
   return (
-    <section className="mt-5 space-y-3 border-y border-border bg-workspace-pane p-4">
+    <section className="space-y-3 border-y border-border bg-workspace-pane p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Background Bonuses</h3>
@@ -270,73 +270,60 @@ function PointBuyPanel({
   scores,
   abilityBonuses,
   setScore,
+  remaining,
 }: {
   scores: Record<AbilityName, number>
   abilityBonuses: Partial<Record<AbilityName, number>>
   setScore: (a: AbilityName, v: number) => void
+  remaining: number
 }) {
-  const pointsUsed = ABILITY_NAMES.reduce((sum, ab) => sum + (POINT_BUY_COSTS[scores[ab]] ?? 0), 0)
-  const remaining = POINT_BUY_BUDGET - pointsUsed
-  const budgetPct = Math.min(100, (pointsUsed / POINT_BUY_BUDGET) * 100)
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="shrink-0 rounded-lg border border-border bg-surface-raised/45 px-4 py-3">
-        <div className="mb-2 flex justify-between text-sm font-semibold">
-          <span className="text-muted-foreground">Point Buy Budget</span>
-          <span className={cn(remaining < 0 && 'text-destructive font-bold')}>
-            {remaining} of {POINT_BUY_BUDGET} points remaining
-          </span>
-        </div>
-        <Progress aria-label="Point buy budget used" value={budgetPct} className="h-2.5" />
-      </div>
-      <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
-        {ABILITY_NAMES.map((ability) => {
-          const score = scores[ability] ?? POINT_BUY_MIN
-          const costNow = POINT_BUY_COSTS[score] ?? 0
-          const costNext = POINT_BUY_COSTS[score + 1] ?? 999
-          const canDecrease = score > POINT_BUY_MIN
-          const canIncrease = score < POINT_BUY_MAX && remaining >= costNext - costNow
-          return (
-            <AbilityScoreCard
-              key={ability}
-              ability={ability}
-              score={score}
-              bonus={abilityBonuses[ability]}
-              variant="wizard"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    'h-8 w-8 p-0 text-base font-bold',
-                    !canDecrease && 'opacity-35 cursor-not-allowed',
-                  )}
-                  aria-label={`Decrease ${ability}`}
-                  disabled={!canDecrease}
-                  onClick={() => setScore(ability, score - 1)}
-                >
-                  −
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    'h-8 w-8 p-0 text-base font-bold',
-                    !canIncrease && 'opacity-35 cursor-not-allowed',
-                  )}
-                  aria-label={`Increase ${ability}`}
-                  disabled={!canIncrease}
-                  onClick={() => setScore(ability, score + 1)}
-                >
-                  +
-                </Button>
-              </div>
-            </AbilityScoreCard>
-          )
-        })}
-      </div>
+    <div className="grid grid-cols-2 gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
+      {ABILITY_NAMES.map((ability) => {
+        const score = scores[ability] ?? POINT_BUY_MIN
+        const costNow = POINT_BUY_COSTS[score] ?? 0
+        const costNext = POINT_BUY_COSTS[score + 1] ?? 999
+        const canDecrease = score > POINT_BUY_MIN
+        const canIncrease = score < POINT_BUY_MAX && remaining >= costNext - costNow
+        return (
+          <AbilityScoreCard
+            key={ability}
+            ability={ability}
+            score={score}
+            bonus={abilityBonuses[ability]}
+            variant="wizard"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  'h-8 w-8 p-0 text-base font-bold',
+                  !canDecrease && 'opacity-35 cursor-not-allowed',
+                )}
+                aria-label={`Decrease ${ability}`}
+                disabled={!canDecrease}
+                onClick={() => setScore(ability, score - 1)}
+              >
+                −
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  'h-8 w-8 p-0 text-base font-bold',
+                  !canIncrease && 'opacity-35 cursor-not-allowed',
+                )}
+                aria-label={`Increase ${ability}`}
+                disabled={!canIncrease}
+                onClick={() => setScore(ability, score + 1)}
+              >
+                +
+              </Button>
+            </div>
+          </AbilityScoreCard>
+        )
+      })}
     </div>
   )
 }
@@ -489,6 +476,11 @@ export function AbilityScoresStep({
         )
       : {}
 
+  const pointsUsed = ABILITY_NAMES.reduce(
+    (sum, ability) => sum + (POINT_BUY_COSTS[scores[ability]] ?? 0),
+    0,
+  )
+  const remaining = POINT_BUY_BUDGET - pointsUsed
   const setAllScores = (next: Partial<Record<AbilityName, number>>) => {
     onChange({ abilityScores: next as Record<string, number> })
   }
@@ -502,32 +494,63 @@ export function AbilityScoresStep({
       <Tabs
         value={method}
         onValueChange={(value) => onChange({ abilityScoreMethod: value })}
-        className="gap-0"
+        className="gap-3"
       >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border">
-          <div>
-            <h3 className="text-sm font-semibold">Ability score method</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {methods.find((option) => option.value === method)?.description}
-            </p>
-          </div>
-          <TabsList className="h-10 self-end rounded-none border-0 bg-transparent p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList className="h-auto flex-wrap justify-start gap-1.5 bg-transparent p-0">
             {methods.map(({ value, label }) => (
               <TabsTrigger
                 key={value}
                 value={value}
-                className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                className="rounded-md border border-border bg-workspace-pane px-3 py-1.5 data-[state=active]:border-primary/50 data-[state=active]:bg-primary/10"
               >
                 {label}
               </TabsTrigger>
             ))}
           </TabsList>
           <Button variant="ghost" size="sm" onClick={() => setAllScores(fallbackScores)}>
-            Reset scores
+            Reset base scores
           </Button>
         </div>
+        <p className="text-sm text-muted-foreground">
+          {methods.find((option) => option.value === method)?.description}
+        </p>
+        {method === 'point-buy' && (
+          <div>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-sm">
+              <strong className={cn(remaining < 0 && 'text-destructive')}>
+                {remaining} of {POINT_BUY_BUDGET} points remaining
+              </strong>
+              <span className="text-xs text-muted-foreground">{pointsUsed} points used</span>
+            </div>
+            <Progress
+              aria-label="Point buy budget used"
+              value={Math.min(100, (pointsUsed / POINT_BUY_BUDGET) * 100)}
+              className="h-2"
+            />
+          </div>
+        )}
+        {showRaceOriginBonuses ? (
+          <RaceAsiBonuses
+            data={data}
+            onChange={onChange}
+            raceAsiData={raceAsiData}
+            isLineageRaceAsiFallback={isLineageRaceAsiFallback}
+          />
+        ) : backgroundAbilityData ? (
+          <BackgroundAsiBonuses
+            data={data}
+            onChange={onChange}
+            abilityData={backgroundAbilityData}
+          />
+        ) : null}
         <TabsContent value="point-buy" className="flex min-h-0 flex-col">
-          <PointBuyPanel scores={scores} abilityBonuses={abilityBonuses} setScore={setScore} />
+          <PointBuyPanel
+            scores={scores}
+            abilityBonuses={abilityBonuses}
+            setScore={setScore}
+            remaining={remaining}
+          />
         </TabsContent>
         <TabsContent value="standard-array" className="flex min-h-0 flex-col">
           <StandardArrayPanel
@@ -540,16 +563,6 @@ export function AbilityScoresStep({
           <CustomPanel scores={scores} abilityBonuses={abilityBonuses} setScore={setScore} />
         </TabsContent>
       </Tabs>
-      {showRaceOriginBonuses ? (
-        <RaceAsiBonuses
-          data={data}
-          onChange={onChange}
-          raceAsiData={raceAsiData}
-          isLineageRaceAsiFallback={isLineageRaceAsiFallback}
-        />
-      ) : backgroundAbilityData ? (
-        <BackgroundAsiBonuses data={data} onChange={onChange} abilityData={backgroundAbilityData} />
-      ) : null}
     </div>
   )
 }

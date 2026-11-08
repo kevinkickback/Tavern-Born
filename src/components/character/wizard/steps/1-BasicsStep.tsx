@@ -1,4 +1,4 @@
-import { useCallback, useId } from 'react'
+import { type ReactNode, useCallback, useId } from 'react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,12 +15,16 @@ import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 import type { StepProps } from '../types'
 
-export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepProps) {
+export function BasicsStep({
+  data,
+  onChange,
+  intro,
+  invalidFields = new Set(),
+}: StepProps & { intro?: ReactNode }) {
   const characterNameId = useId()
   const playerNameId = useId()
   const ageId = useId()
   const genderId = useId()
-  const identityHeadingId = useId()
 
   const hasError = (field: string) => invalidFields.has(field)
 
@@ -42,12 +46,10 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
   )
 
   const identity = (
-    <section aria-labelledby={identityHeadingId}>
-      <h3 id={identityHeadingId} className="text-lg font-semibold">
-        Identity
-      </h3>
-      <div className="mt-3 grid grid-cols-2 gap-3.5 @min-[32rem]:grid-cols-4 @min-[64rem]:grid-cols-6">
-        <div className="col-span-2 min-w-0 space-y-2 @min-[32rem]:col-span-2">
+    <div>
+      {intro}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="col-span-2 min-w-0 space-y-1.5">
           <Label htmlFor={characterNameId}>Character Name</Label>
           <Input
             id={characterNameId}
@@ -59,7 +61,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
             )}
           />
         </div>
-        <div className="col-span-2 min-w-0 space-y-2 @min-[32rem]:col-span-2">
+        <div className="col-span-2 min-w-0 space-y-1.5">
           <Label htmlFor={playerNameId}>Player Name</Label>
           <Input
             id={playerNameId}
@@ -106,7 +108,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
           </Select>
         </div>
       </div>
-    </section>
+    </div>
   )
 
   return (

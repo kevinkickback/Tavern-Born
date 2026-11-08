@@ -52,10 +52,7 @@ export function WizardVariantOptions({
         const checked = lockedByRuleset || data.variantRules[key]
         const available = key === 'averageHitPoints' || contentAvailability[key]
         return (
-          <div
-            key={key}
-            className="flex items-center justify-between gap-5 py-[clamp(0.75rem,2dvh,1.375rem)]"
-          >
+          <div key={key} className="flex items-center justify-between gap-5 min-h-13 py-2.5">
             <div className="min-w-0">
               <Label htmlFor={id} className="text-sm font-semibold">
                 {label}

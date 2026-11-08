@@ -14,6 +14,7 @@ export interface WizardStep {
   id: WizardStepId
   label: string
   title: string
+  section: string
   description: string
   icon: React.ElementType
 }

@@ -14,6 +14,7 @@ import type { WizardStep } from './types'
 export const WIZARD_STEPS: WizardStep[] = [
   {
     id: 'basics',
+    section: 'Identity',
     label: 'Basics',
     title: 'Character details',
     description: 'Add the name and details you want on your character sheet.',
@@ -21,6 +22,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'rules',
+    section: 'Campaign rules',
     label: 'Rules',
     title: 'Choose a ruleset',
     description: 'Set the edition and rules your character will use.',
@@ -28,6 +30,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'content',
+    section: 'Available options',
     label: 'Sourcebooks',
     title: 'Choose sourcebooks',
     description: 'Include the books your table allows for this character.',
@@ -35,6 +38,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'race',
+    section: 'Character build',
     label: 'Race',
     title: 'Choose a race',
     description: 'Compare traits, movement, and other benefits.',
@@ -42,6 +46,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'class',
+    section: 'Character build',
     label: 'Class',
     title: 'Choose a class',
     description: 'Compare hit dice, training, spellcasting, and class features.',
@@ -49,6 +54,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'background',
+    section: 'Character build',
     label: 'Background',
     title: 'Choose a background',
     description: 'See what your character’s life before adventuring grants them.',
@@ -56,6 +62,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'abilities',
+    section: 'Character build',
     label: 'Ability Scores',
     title: 'Set ability scores',
     description: 'Set your base scores and check how bonuses affect your modifiers.',
@@ -63,6 +70,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'review',
+    section: 'Final check',
     label: 'Review',
     title: 'Review your character',
     description: 'Check your choices before creating your level 1 character.',

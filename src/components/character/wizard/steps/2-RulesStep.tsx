@@ -18,15 +18,8 @@ export function RulesStep({
 }) {
   const configuredSources = data.allowedSources || []
   return (
-    <div className="@container space-y-6">
+    <div className="@container space-y-4">
       <section className="space-y-3">
-        <div>
-          <h3 className="text-lg font-semibold">Ruleset</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Choose the edition for this character.
-          </p>
-        </div>
-
         <div
           className={cn(
             'grid gap-3 @min-[32rem]:grid-cols-2',
@@ -70,7 +63,7 @@ export function RulesStep({
                   })
                 }
                 className={cn(
-                  'flex items-start gap-3 rounded-md border border-border px-4 py-4 text-left transition-colors motion-reduce:transition-none',
+                  'flex items-start gap-2.5 rounded-md border border-border px-3 py-3 text-left transition-colors motion-reduce:transition-none',
                   selected ? 'border-primary/50 bg-surface-selected' : 'hover:bg-surface-hover',
                 )}
               >
@@ -102,18 +95,15 @@ export function RulesStep({
       </section>
 
       <section className="space-y-3">
-        <div>
-          <h3 className="text-lg font-semibold">Rule Options</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Some options depend on the books you choose in Sourcebooks. You can return here after
-            choosing them.
-          </p>
-        </div>
+        <h3 className="text-base font-semibold">Rule Options</h3>
         <WizardVariantOptions
           data={data}
           onChange={onChange}
           contentAvailability={variantRuleAvailability}
         />
+        <p className="border-l-2 border-border bg-surface-raised/50 px-3 py-2 text-xs text-muted-foreground">
+          Some options depend on your sourcebooks. You can revisit Rules after choosing them.
+        </p>
       </section>
     </div>
   )

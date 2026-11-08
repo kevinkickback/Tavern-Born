@@ -7,7 +7,12 @@ import {
   normalizeAllowedSources,
   normalizeSelectableAllowedSources,
 } from '@/lib/sourceCompatibility'
-import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
+import {
+  getImplicitSource,
+  IMPLICIT_SOURCES,
+  SOURCE_PRESETS,
+  type SourcePreset,
+} from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
@@ -27,6 +32,11 @@ export function ContentStep({
   const displaySources = selectableSources.filter(
     (source) => !IMPLICIT_SOURCES.has(source.abbreviation),
   )
+  const coreSource = data.originSystem
+    ? selectableSources.find(
+        (source) => source.abbreviation === getImplicitSource(data.originSystem || '2014'),
+      )
+    : undefined
   const configuredSources = data.allowedSources || []
   const allowedSources = data.originSystem
     ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
@@ -117,9 +127,36 @@ export function ContentStep({
   const sourceWarning =
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
+  const includedSource = coreSource && (
+    <div className="flex items-center justify-between gap-3 border-y border-border px-2 py-2 text-sm">
+      <span className="font-semibold">{coreSource.name}</span>
+      <span className="text-xs text-muted-foreground">Included</span>
+    </div>
+  )
+
   return (
     <section className="@container flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
+      {!isBundledSrd && displaySources.length > 0 && (
+        <div className="relative mb-1.5 shrink-0">
+          <Input
+            aria-label="Search sources"
+            placeholder="Search by name or abbreviation…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pr-16"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute inset-y-0 right-3 text-xs text-primary"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+      <div className="mb-1.5 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold">Additional Content</h3>
           {!isBundledSrd && allowedSources.length > 0 && (
@@ -132,7 +169,7 @@ export function ContentStep({
           )}
         </div>
         {!isBundledSrd && (
-          <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
+          <div className="flex flex-wrap gap-1.5">
             {[
               ...SOURCE_PRESETS.map((preset) => ({
                 key: preset.id,
@@ -148,26 +185,24 @@ export function ContentStep({
                 onClick: selectNoneSources,
                 active: false,
               },
-            ].map((action, index, allActions) => (
-              <div key={action.key} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={action.onClick}
-                  className={cn(
-                    'font-medium text-primary hover:underline',
-                    action.active && 'underline',
-                  )}
-                  title={action.title}
-                >
-                  {action.label}
-                </button>
-                {index < allActions.length - 1 && <span className="text-muted-foreground">|</span>}
-              </div>
+            ].map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                aria-pressed={action.active}
+                onClick={action.onClick}
+                className={cn(
+                  'rounded-md border border-border bg-workspace-pane px-2.5 py-1 text-xs hover:bg-surface-hover',
+                  action.active && 'border-primary/50 bg-primary/10 text-primary',
+                )}
+                title={action.title}
+              >
+                {action.label}
+              </button>
             ))}
           </div>
         )}
       </div>
-
       {isBundledSrd ? (
         <div className="px-5 py-6 text-center">
           <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
@@ -177,21 +212,77 @@ export function ContentStep({
           </p>
         </div>
       ) : displaySources.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
-          No additional content is available. To add sourcebooks, open Settings → Game Data.
-        </div>
+        <>
+          {includedSource}
+          <p className="py-4 text-sm text-muted-foreground">
+            No additional content is available. To add sourcebooks, open Settings → Game Data.
+          </p>
+        </>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          {query &&
+            !displaySources.some(
+              (source) =>
+                source.name.toLowerCase().includes(query) ||
+                source.abbreviation.toLowerCase().includes(query),
+            ) && (
+              <p role="status" className="py-6 text-sm text-muted-foreground">
+                No sources match your search.
+              </p>
+            )}
+          <section
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
+            tabIndex={0}
+            aria-label="Additional Content"
+            className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {!query && includedSource}
+            {groupOrder.map((group) => {
+              const groupSources = sourcesByGroup[group]?.filter(
+                (source) =>
+                  !query ||
+                  source.name.toLowerCase().includes(query) ||
+                  source.abbreviation.toLowerCase().includes(query),
+              )
+              if (!groupSources || groupSources.length === 0) return null
+
+              return (
+                <div key={group} className="space-y-1.5">
+                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {groupLabels[group] ?? group}
+                  </h5>
+                  <div className="divide-y divide-border border-y border-border">
+                    {groupSources.map((source) => {
+                      const compatibility = data.originSystem
+                        ? getSourceCompatibility(source, data.originSystem)
+                        : { compatible: true }
+                      return (
+                        <SourcebookChoice
+                          key={source.abbreviation}
+                          source={source}
+                          selected={allowedSources.includes(source.abbreviation)}
+                          compatibility={compatibility}
+                          onClick={() => toggleSource(source.abbreviation)}
+                          row
+                          wrapName
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </section>
           <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
             <div
-              className="grid rounded-md bg-surface-raised/50"
+              className="grid border-l-2 border-border bg-surface-raised/50"
               aria-live="polite"
               aria-atomic="true"
             >
               <p
                 aria-hidden={hasNonPresetSourcesSelected}
                 className={cn(
-                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-2 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-muted-foreground transition-opacity duration-200 motion-reduce:transition-none',
                   hasNonPresetSourcesSelected && 'opacity-0',
                 )}
               >
@@ -201,7 +292,7 @@ export function ContentStep({
               <p
                 aria-hidden={!hasNonPresetSourcesSelected}
                 className={cn(
-                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-2 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                  'col-start-1 row-start-1 flex items-start gap-2 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
                   !hasNonPresetSourcesSelected && 'opacity-0',
                 )}
               >
@@ -219,76 +310,6 @@ export function ContentStep({
               </p>
             )}
           </div>
-          <div className="relative shrink-0">
-            <Input
-              aria-label="Search sources"
-              placeholder="Search by name or abbreviation…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="pr-16"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute inset-y-0 right-3 text-xs text-primary"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          {query &&
-            !displaySources.some(
-              (source) =>
-                source.name.toLowerCase().includes(query) ||
-                source.abbreviation.toLowerCase().includes(query),
-            ) && (
-              <p role="status" className="py-6 text-sm text-muted-foreground">
-                No sources match your search.
-              </p>
-            )}
-          <section
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
-            tabIndex={0}
-            aria-label="Additional Content"
-            className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {groupOrder.map((group) => {
-              const groupSources = sourcesByGroup[group]?.filter(
-                (source) =>
-                  !query ||
-                  source.name.toLowerCase().includes(query) ||
-                  source.abbreviation.toLowerCase().includes(query),
-              )
-              if (!groupSources || groupSources.length === 0) return null
-
-              return (
-                <div key={group} className="space-y-1.5">
-                  <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {groupLabels[group] ?? group}
-                  </h5>
-                  <div className="grid gap-2 @min-[420px]:grid-cols-2 @min-[820px]:grid-cols-3">
-                    {groupSources.map((source) => {
-                      const compatibility = data.originSystem
-                        ? getSourceCompatibility(source, data.originSystem)
-                        : { compatible: true }
-                      return (
-                        <SourcebookChoice
-                          key={source.abbreviation}
-                          source={source}
-                          selected={allowedSources.includes(source.abbreviation)}
-                          compatibility={compatibility}
-                          onClick={() => toggleSource(source.abbreviation)}
-                          className="transition-all"
-                          wrapName
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </section>
         </div>
       )}
     </section>
