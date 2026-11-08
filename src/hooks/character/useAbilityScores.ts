@@ -1,28 +1,8 @@
 import { useCallback, useMemo } from 'react'
-import {
-  ABILITY_NAMES,
-  type AbilityName,
-  formatModifier,
-  getValidPointBuyScores,
-} from '@/lib/calculations/abilityScores'
-import { getAbilityModifier, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
+import type { AbilityName } from '@/types/character'
 
-/**
- * Derived ability score state for the active character.
- * Replaces manual modifier calculations scattered across components.
- */
-export interface AbilityScoreState {
-  scores: Record<AbilityName, number>
-  modifiers: Record<AbilityName, number>
-  modifierStrings: Record<AbilityName, string>
-  validPointBuyScores: number[]
-  setScore: (ability: AbilityName, score: number) => void
-  setAllScores: (scores: Partial<Record<AbilityName, number>>) => void
-  resetScores: (base?: number) => void
-}
-
-export function useAbilityScores(): AbilityScoreState {
+export function useAbilityScores() {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
@@ -37,26 +17,6 @@ export function useAbilityScores(): AbilityScoreState {
       charisma: raw?.charisma ?? 8,
     }
   }, [activeCharacter?.abilityScores])
-
-  const modifiers = useMemo(
-    () =>
-      Object.fromEntries(ABILITY_NAMES.map((a) => [a, getAbilityModifier(scores[a])])) as Record<
-        AbilityName,
-        number
-      >,
-    [scores],
-  )
-
-  const modifierStrings = useMemo(
-    () =>
-      Object.fromEntries(ABILITY_NAMES.map((a) => [a, formatModifier(modifiers[a])])) as Record<
-        AbilityName,
-        string
-      >,
-    [modifiers],
-  )
-
-  const validPointBuyScores = useMemo(() => getValidPointBuyScores(), [])
 
   const setScore = useCallback(
     (ability: AbilityName, score: number) => {
@@ -78,26 +38,5 @@ export function useAbilityScores(): AbilityScoreState {
     [activeCharacter, updateCharacter, scores],
   )
 
-  const resetScores = useCallback(
-    (base = POINT_BUY_MIN) => {
-      if (!activeCharacter) return
-      updateCharacter(activeCharacter.id, {
-        abilityScores: Object.fromEntries(ABILITY_NAMES.map((a) => [a, base])) as Record<
-          AbilityName,
-          number
-        >,
-      })
-    },
-    [activeCharacter, updateCharacter],
-  )
-
-  return {
-    scores,
-    modifiers,
-    modifierStrings,
-    validPointBuyScores,
-    setScore,
-    setAllScores,
-    resetScores,
-  }
+  return { scores, setScore, setAllScores }
 }

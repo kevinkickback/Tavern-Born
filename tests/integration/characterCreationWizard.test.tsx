@@ -60,21 +60,12 @@ describe('character creation and proficiencies validation', () => {
     })
   })
 
-  test('wizard rules validation requires an origin system selection', async () => {
-    const { validateStep } = await import('@/components/character/wizard/validation')
-
-    const result = validateStep(
-      'rules',
-      {
-        ...INITIAL_CHARACTER_DATA,
-        originSystem: '',
-        allowedSources: ['PHB'],
-      },
-      undefined,
-    )
-
-    expect(result.valid).toBe(false)
-    expect(result.fields).toContain('originSystem')
+  test('wizard rules schema rejects a malformed origin system', async () => {
+    const { wizardRulesSchema } = await import('@/types/characterSchema')
+    expect(wizardRulesSchema.safeParse(INITIAL_CHARACTER_DATA).success).toBe(true)
+    expect(
+      wizardRulesSchema.safeParse({ ...INITIAL_CHARACTER_DATA, originSystem: '' }).success,
+    ).toBe(false)
   })
 
   test('createNewCharacter with class proficiencies produces valid character with string proficiencies', async () => {

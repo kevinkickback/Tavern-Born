@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import {
   getBackgroundAbilityData,
   isBackgroundAbilitySelectionComplete,
@@ -66,7 +67,7 @@ const STEP_COMPONENTS = {
   review: ReviewStep,
 } satisfies Record<WizardStepId, unknown>
 
-function getDefaultAbilityScoresForMethod(method: string): Record<string, number> {
+function getDefaultAbilityScoresForMethod(method: AbilityScoreMethod): AbilityScores {
   if (method === 'standard-array') return makeDefaultStandardArrayAssignment()
   if (method === 'custom') return makeDefaultAbilityScores(ABILITY_SCORE_MIN)
   return makeDefaultAbilityScores(POINT_BUY_MIN)
@@ -112,7 +113,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const discardOrigin = useRef<HTMLElement | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
-  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
   const { isPending: isCreating, run: runCreation } = useAsyncAction()
   const wizardData = useWizardGameData({
     allowedSources: characterData.allowedSources,
@@ -123,7 +123,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     if (!gameData) return false
     const effectiveSources = getEffectiveSources(
       characterData.allowedSources ?? [],
-      characterData.originSystem || '2014',
+      characterData.originSystem,
       wizardData.sources,
     )
     return hasAvailableReprintPair(gameData, effectiveSources)
@@ -139,7 +139,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     if (!open || wizardData.sources.length === 0) return
     setCharacterData((previous) => {
       if ('allowedSources' in originalValues.current) return previous
-      const ruleset = previous.originSystem || '2014'
+      const ruleset = previous.originSystem
       const selected = normalizeSelectableAllowedSources(
         previous.allowedSources,
         ruleset,
@@ -169,7 +169,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     setCompletedThrough(0)
     setCharacterData(INITIAL_CHARACTER_DATA)
     setValidationError(null)
-    setInvalidFields(new Set())
     onOpenChange(false)
   }
 
@@ -195,7 +194,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     source: characterData.backgroundSource,
   })
   const backgroundAbilityData = getBackgroundAbilityData(
-    normalizeBackgroundForOriginSystem(background, characterData.originSystem || '2014'),
+    normalizeBackgroundForOriginSystem(background, characterData.originSystem),
   )
   const backgroundBlockIndex = characterData.backgroundAsi?.blockIndex ?? 0
   const backgroundBlock = backgroundAbilityData.blocks[backgroundBlockIndex]
@@ -220,16 +219,14 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           {
             initial: {
               name: characterData.name,
-              originSystem: characterData.originSystem as '2014' | '2024',
+              originSystem: characterData.originSystem,
               portrait: characterData.portrait,
               portraitTransform: characterData.portraitTransform,
               allowedSources: characterData.allowedSources,
-              abilityScores: characterData.abilityScores as unknown as AbilityScores,
+              abilityScores: characterData.abilityScores,
               variantRules: {
                 ...characterData.variantRules,
-                abilityScoreMethod:
-                  (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
-                  'standard-array',
+                abilityScoreMethod: characterData.abilityScoreMethod,
               },
               details: {
                 playerName: characterData.playerName,
@@ -272,7 +269,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     const validation = validateStep(stepId, characterData, wizardData)
     if (!validation.valid) {
       setValidationError(validation.error || 'Please complete this step')
-      if (validation.fields) setInvalidFields(new Set(validation.fields))
       return
     }
     if (
@@ -289,7 +285,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
       return
     }
     setValidationError(null)
-    setInvalidFields(new Set())
     if (currentStep < WIZARD_STEPS.length) {
       setCompletedThrough(Math.max(completedThrough, currentStep))
       setCurrentStep(currentStep + 1)
@@ -299,16 +294,12 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const revisitStep = (step: number) => {
     if (isCreating || step < 1 || step >= currentStep) return
     setValidationError(null)
-    setInvalidFields(new Set())
     setCurrentStep(step)
   }
 
   const updateCharacterData = (updates: Partial<CharacterWizardData>) => {
     const normalizedUpdates = { ...updates }
-    if (
-      typeof normalizedUpdates.abilityScoreMethod === 'string' &&
-      !normalizedUpdates.abilityScores
-    ) {
+    if (normalizedUpdates.abilityScoreMethod !== undefined && !normalizedUpdates.abilityScores) {
       normalizedUpdates.abilityScores = getDefaultAbilityScoresForMethod(
         normalizedUpdates.abilityScoreMethod,
       )
@@ -349,11 +340,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     }
     setCharacterData((previous) => ({ ...previous, ...normalizedUpdates }))
     setValidationError(null)
-    const nextInvalidFields = new Set(invalidFields)
-    Object.keys(normalizedUpdates).forEach((key) => {
-      nextInvalidFields.delete(key)
-    })
-    setInvalidFields(nextInvalidFields)
   }
 
   const raceResolution = wizardData.resolveRace({
@@ -414,7 +400,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             stepId === 'content' ? 'overflow-hidden max-lg:py-3' : 'overflow-y-auto',
           )}
         >
-          {validationError && invalidFields.size === 0 && (
+          {validationError && stepId !== 'basics' && (
             <Alert variant="destructive" className="mb-4 shrink-0">
               <Warning className="size-4" />
               <AlertDescription>{validationError}</AlertDescription>
@@ -427,7 +413,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
               renderIntro={renderIntro}
               data={fixedBackgroundAsi ? { ...characterData, backgroundAsi } : characterData}
               onChange={updateCharacterData}
-              invalidFields={invalidFields}
+              nameError={stepId === 'basics' ? validationError : null}
               isBundledSrd={isBundledSrd}
               races={wizardData.races}
               recursiveLookup={wizardData.recursiveLookup}

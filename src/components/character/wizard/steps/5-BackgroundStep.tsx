@@ -104,10 +104,7 @@ export function BackgroundStep({
     ? getBackgroundFeatureBlock(selectedBackground.entries ?? [])
     : null
   const featureEntries = backgroundFeature?.entries ?? []
-  const originBackground = normalizeBackgroundForOriginSystem(
-    selectedBackground,
-    data.originSystem || '2014',
-  )
+  const originBackground = normalizeBackgroundForOriginSystem(selectedBackground, data.originSystem)
   const abilityPatterns = formatBackgroundAbilityPatterns(
     getBackgroundAbilityData(originBackground),
   )

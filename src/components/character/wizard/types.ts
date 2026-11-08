@@ -1,4 +1,5 @@
-import type { OriginSystem, PortraitTransform } from '@/types/character'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
+import type { AbilityScores, OriginSystem, PortraitTransform } from '@/types/character'
 
 export type WizardStepId =
   | 'basics'
@@ -32,9 +33,9 @@ export interface CharacterWizardData {
   classSource: string
   background: string
   backgroundSource: string
-  originSystem: OriginSystem | ''
-  abilityScoreMethod: string
-  abilityScores: Record<string, number>
+  originSystem: OriginSystem
+  abilityScoreMethod: AbilityScoreMethod
+  abilityScores: AbilityScores
   portrait: string
   portraitTransform: PortraitTransform
   allowedSources: string[]
@@ -52,11 +53,9 @@ export interface CharacterWizardData {
 export interface ValidationResult {
   valid: boolean
   error?: string
-  fields?: string[]
 }
 
 export interface StepProps {
   data: CharacterWizardData
   onChange: (updates: Partial<CharacterWizardData>) => void
-  invalidFields?: Set<string>
 }

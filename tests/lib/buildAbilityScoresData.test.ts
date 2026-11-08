@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import { buildRacialBonuses } from '@/lib/calculations/abilityScores'
 import { updateRaceAsiChoices } from '@/lib/calculations/originAbilityChoices'
 import {
-  buildRacialBonuses,
   buildSkillDetailsMap,
   buildSkillSourceTags,
   formatTitleCase,

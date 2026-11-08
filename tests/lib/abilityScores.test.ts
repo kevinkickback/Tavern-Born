@@ -1,17 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildRacialBonuses,
-  calculatePointBuyTotal,
   formatModifier,
   getAbilityModifierForCharacter,
   getAbilityScore,
   getAllAbilityModifiers,
   getRaceAbilityData,
-  getRemainingPointBuy,
   getTotalAbilityScore,
-  getValidPointBuyScores,
   hasUnresolvedRaceAbilityChoices,
-  isValidPointBuyScore,
   isValidStandardArrayAssignment,
   makeDefaultAbilityScores,
   makeEmptyAbilityBonuses,
@@ -93,23 +89,6 @@ describe('abilityScores', () => {
     const all = getAllAbilityModifiers(scores, bonuses)
     expect(all.dexterity).toBe(2)
     expect(all.strength).toBe(0)
-  })
-
-  test('point-buy helpers compute totals and validity', () => {
-    const scores = {
-      strength: 15,
-      dexterity: 14,
-      constitution: 13,
-      intelligence: 12,
-      wisdom: 10,
-      charisma: 8,
-    }
-
-    expect(calculatePointBuyTotal(scores)).toBe(27)
-    expect(getRemainingPointBuy(scores, 27)).toBe(0)
-    expect(getValidPointBuyScores()).toEqual([8, 9, 10, 11, 12, 13, 14, 15])
-    expect(isValidPointBuyScore(15)).toBe(true)
-    expect(isValidPointBuyScore(16)).toBe(false)
   })
 
   test('standard array assignment rejects duplicates and unknown values', () => {

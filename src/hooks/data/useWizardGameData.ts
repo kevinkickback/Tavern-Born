@@ -25,7 +25,7 @@ import { useBackgroundLookup, useClassLookup, useRaceLookup, useSpellLookup } fr
 
 interface WizardGameDataParams {
   allowedSources?: string[]
-  originSystem?: '2014' | '2024' | ''
+  originSystem?: '2014' | '2024'
   preferNewerPrintings?: boolean
 }
 

@@ -10,22 +10,15 @@ export function RulesStep({
   data,
   onChange,
   sources = [],
-  invalidFields,
   variantRuleAvailability,
 }: StepProps & {
   sources?: SourceBook[]
   variantRuleAvailability?: VariantRuleContentAvailability
 }) {
-  const configuredSources = data.allowedSources || []
   return (
     <div className="@container space-y-7 sm:space-y-9">
       <section className="space-y-3">
-        <div
-          className={cn(
-            'grid gap-3 @min-[32rem]:grid-cols-2',
-            invalidFields?.has('originSystem') && 'rounded-lg ring-1 ring-destructive',
-          )}
-        >
+        <div className="grid gap-3 @min-[32rem]:grid-cols-2">
           {[
             {
               value: '2014' as const,
@@ -48,7 +41,7 @@ export function RulesStep({
                   onChange({
                     originSystem: option.value,
                     allowedSources: normalizeSelectableAllowedSources(
-                      configuredSources,
+                      data.allowedSources,
                       option.value,
                       sources,
                     ),
@@ -89,9 +82,6 @@ export function RulesStep({
             )
           })}
         </div>
-        {invalidFields?.has('originSystem') && (
-          <p className="text-xs text-destructive">Please select a ruleset to continue.</p>
-        )}
       </section>
 
       <section className="space-y-3">

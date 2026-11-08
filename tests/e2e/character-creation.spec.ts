@@ -518,6 +518,9 @@ test('creates a complete character and persists it across a full reload', async 
   const dialog = page.getByRole('dialog', { name: 'Create New Character' })
 
   await test.step('complete required wizard selections', async () => {
+    await dialog.getByRole('button', { name: 'Next' }).click()
+    await expect(dialog.getByLabel('Character Name')).toHaveAttribute('aria-invalid', 'true')
+    await expect(dialog.getByText('Character name is required', { exact: true })).toBeVisible()
     await dialog.getByLabel('Character Name').fill('E2E Created Hero')
     await dialog.getByRole('button', { name: 'Next' }).click()
 

@@ -19,14 +19,12 @@ export function BasicsStep({
   data,
   onChange,
   intro,
-  invalidFields = new Set(),
-}: StepProps & { intro?: ReactNode }) {
+  nameError,
+}: StepProps & { intro?: ReactNode; nameError?: string | null }) {
   const characterNameId = useId()
   const playerNameId = useId()
   const ageId = useId()
   const genderId = useId()
-
-  const hasError = (field: string) => invalidFields.has(field)
 
   const handlePortraitChange = useCallback(
     (p: string | null) => {
@@ -53,13 +51,20 @@ export function BasicsStep({
           <Label htmlFor={characterNameId}>Character Name</Label>
           <Input
             id={characterNameId}
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? `${characterNameId}-error` : undefined}
             value={data.name}
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Enter character name"
             className={cn(
-              hasError('name') && 'border-destructive focus-visible:ring-destructive animate-shake',
+              nameError && 'border-destructive focus-visible:ring-destructive animate-shake',
             )}
           />
+          {nameError && (
+            <p id={`${characterNameId}-error`} className="text-xs text-destructive">
+              {nameError}
+            </p>
+          )}
         </div>
         <div className="col-span-2 min-w-0 space-y-1.5">
           <Label htmlFor={playerNameId}>Player Name</Label>

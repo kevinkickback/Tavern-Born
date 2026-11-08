@@ -9,9 +9,6 @@ import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MAX,
   getAbilityModifier,
-  getPointBuyCost,
-  POINT_BUY_COSTS,
-  POINT_BUY_MAX,
   POINT_BUY_MIN,
   STANDARD_ARRAY,
 } from './gameRules'
@@ -97,24 +94,6 @@ export function getAllAbilityModifiers(
   return Object.fromEntries(
     ABILITY_NAMES.map((a) => [a, getAbilityModifierForCharacter(a, scores, bonuses)]),
   ) as Record<AbilityName, number>
-}
-
-export function calculatePointBuyTotal(scores: Partial<AbilityScores>): number {
-  return Object.values(scores).reduce((sum: number, s) => sum + getPointBuyCost(s as number), 0)
-}
-
-export function getRemainingPointBuy(scores: Partial<AbilityScores>, budget: number): number {
-  return budget - calculatePointBuyTotal(scores)
-}
-
-export function getValidPointBuyScores(): number[] {
-  return Object.keys(POINT_BUY_COSTS)
-    .map(Number)
-    .sort((a, b) => a - b)
-}
-
-export function isValidPointBuyScore(score: number): boolean {
-  return score >= POINT_BUY_MIN && score <= POINT_BUY_MAX
 }
 
 /**

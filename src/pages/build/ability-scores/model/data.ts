@@ -1,5 +1,3 @@
-export { buildRacialBonuses } from '@/lib/calculations/abilityScores'
-
 export interface SkillDetail {
   name: string
   entries: unknown[]

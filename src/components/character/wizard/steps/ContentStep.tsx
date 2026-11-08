@@ -41,8 +41,8 @@ export function ContentStep({
   )
   const query = hasAdditionalSources ? search.trim().toLowerCase() : ''
   const filterSelected = hasAdditionalSources && selectedOnly
-  const includedCore = data.originSystem ? getImplicitSource(data.originSystem) : undefined
-  if (includedCore && displaySources.some((source) => source.abbreviation === includedCore)) {
+  const includedCore = getImplicitSource(data.originSystem)
+  if (displaySources.some((source) => source.abbreviation === includedCore)) {
     const otherEdition = data.originSystem === '2024' ? '2014' : '2024'
     const otherCore = getImplicitSource(otherEdition)
     if (!displaySources.some((source) => source.abbreviation === otherCore)) {
@@ -56,10 +56,11 @@ export function ContentStep({
       })
     }
   }
-  const configuredSources = data.allowedSources || []
-  const allowedSources = data.originSystem
-    ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
-    : configuredSources
+  const allowedSources = normalizeSelectableAllowedSources(
+    data.allowedSources,
+    data.originSystem,
+    sources,
+  )
   const selected = new Set(allowedSources)
   const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
@@ -113,15 +114,12 @@ export function ContentStep({
     if (IMPLICIT_SOURCES.has(sourceAbbr)) return
     const source =
       selectableSources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
-    if (data.originSystem && !getSourceCompatibility(source, data.originSystem).compatible) return
+    if (!getSourceCompatibility(source, data.originSystem).compatible) return
     const currentSources = allowedSources
     const nextSources = currentSources.includes(sourceAbbr)
       ? currentSources.filter((source) => source !== sourceAbbr)
       : [...currentSources, sourceAbbr]
-    const normalizedSources = data.originSystem
-      ? normalizeAllowedSources(nextSources, data.originSystem, sources)
-      : nextSources
-    onChange({ allowedSources: normalizedSources })
+    onChange({ allowedSources: normalizeAllowedSources(nextSources, data.originSystem, sources) })
   }
 
   const applySourcePreset = (preset: SourcePreset) => {
@@ -129,9 +127,7 @@ export function ContentStep({
       availableSourceSet.has(abbreviation),
     )
     onChange({
-      allowedSources: data.originSystem
-        ? normalizeAllowedSources(presetSources, data.originSystem, sources)
-        : presetSources,
+      allowedSources: normalizeAllowedSources(presetSources, data.originSystem, sources),
     })
   }
 
@@ -139,9 +135,11 @@ export function ContentStep({
     const availablePresetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
     )
-    const presetSources = data.originSystem
-      ? normalizeSelectableAllowedSources(availablePresetSources, data.originSystem, sources)
-      : availablePresetSources
+    const presetSources = normalizeSelectableAllowedSources(
+      availablePresetSources,
+      data.originSystem,
+      sources,
+    )
     if (presetSources.length === 0 || presetSources.length !== allowedSources.length) {
       return false
     }
@@ -293,11 +291,7 @@ export function ContentStep({
                       source={source}
                       selected={selected.has(source.abbreviation)}
                       required={source.abbreviation === includedCore}
-                      compatibility={
-                        data.originSystem
-                          ? getSourceCompatibility(source, data.originSystem)
-                          : { compatible: !IMPLICIT_SOURCES.has(source.abbreviation) }
-                      }
+                      compatibility={getSourceCompatibility(source, data.originSystem)}
                       onClick={() => toggleSource(source.abbreviation)}
                       showSelection
                       wrapName

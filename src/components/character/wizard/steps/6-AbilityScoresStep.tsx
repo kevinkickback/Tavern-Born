@@ -4,37 +4,24 @@ import {
 } from '@/components/character/AbilityBonusPanels'
 import {
   AbilityScoreEditor,
-  type AbilityScoreMethod,
   AbilityScoreMethodTabs,
 } from '@/components/character/AbilityScoreEditor'
 import { Tabs } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import {
   type AbilityName,
   type BackgroundAbilityData,
-  buildBackgroundBonuses,
-  buildRacialBonuses,
-  getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
-  makeDefaultAbilityScores,
-  makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
-import {
-  normalizeRaceSelectionForOriginSystem,
-  usesRaceOriginBenefits,
-} from '@/lib/calculations/originSystem'
-import type { StepProps } from '../types'
+import { projectDraftAbilityBonuses } from '../projectDraftAbilityBonuses'
+import type { CharacterWizardData, StepProps } from '../types'
 
 interface AbilityScoresStepProps extends StepProps {
   raceResolution: ResolvedRaceReference
   backgroundAbilityData?: BackgroundAbilityData
 }
-
-const DEFAULT_STANDARD_SCORES = makeDefaultStandardArrayAssignment()
-const DEFAULT_POINT_BUY_SCORES = makeDefaultAbilityScores(POINT_BUY_MIN)
-const DEFAULT_CUSTOM_SCORES = makeDefaultAbilityScores(ABILITY_SCORE_MIN)
 
 export function AbilityScoresStep({
   data,
@@ -42,59 +29,28 @@ export function AbilityScoresStep({
   raceResolution,
   backgroundAbilityData,
 }: AbilityScoresStepProps) {
-  const method = (data.abilityScoreMethod || 'point-buy') as AbilityScoreMethod
+  const method = data.abilityScoreMethod
   const { blockIndex = 0, choices = [] } = data.backgroundAsi ?? {}
   const backgroundBlock = backgroundAbilityData?.blocks[blockIndex]
   const fixedBackgroundAssignment = isFixedBackgroundAbilityBlock(backgroundBlock)
-  const showRaceOriginBonuses = usesRaceOriginBenefits(
-    (data.originSystem || '2014') as '2014' | '2024',
-  )
-  const fallbackScores =
-    method === 'standard-array'
-      ? DEFAULT_STANDARD_SCORES
-      : method === 'custom'
-        ? DEFAULT_CUSTOM_SCORES
-        : DEFAULT_POINT_BUY_SCORES
-  const scores = (data.abilityScores ?? fallbackScores) as Record<AbilityName, number>
-
-  const raceObj = raceResolution.parentRace
-  const subraceObj = raceResolution.subraceData
-  const normalizedSelection = normalizeRaceSelectionForOriginSystem(
-    raceObj,
-    subraceObj,
-    (data.originSystem || '2014') as '2014' | '2024',
-  )
-  const raceAsiData = getRaceAbilityData(
-    normalizedSelection.race,
-    normalizedSelection.subrace,
-    (data.raceAsiBlockIndex ?? 0) as 0 | 1,
-  )
+  const { abilityBonuses, raceAsiData, raceSelection, showRaceOriginBonuses } =
+    projectDraftAbilityBonuses(data, raceResolution, backgroundAbilityData)
   const isLineageRaceAsiFallback =
-    showRaceOriginBonuses &&
-    hasFlexibleRaceOriginAsi(normalizedSelection.race, normalizedSelection.subrace)
-  const abilityBonuses = showRaceOriginBonuses
-    ? buildRacialBonuses(raceAsiData, data.raceAsiChoices ?? [])
-    : backgroundAbilityData && data.backgroundAsi
-      ? buildBackgroundBonuses(
-          backgroundAbilityData,
-          data.backgroundAsi.blockIndex,
-          data.backgroundAsi.choices,
-        )
-      : {}
+    showRaceOriginBonuses && hasFlexibleRaceOriginAsi(raceSelection.race, raceSelection.subrace)
 
-  const setAllScores = (next: Record<AbilityName, number>) => {
+  const setAllScores = (next: CharacterWizardData['abilityScores']) => {
     onChange({ abilityScores: next })
   }
 
   const setScore = (ability: AbilityName, value: number) => {
-    onChange({ abilityScores: { ...scores, [ability]: value } })
+    onChange({ abilityScores: { ...data.abilityScores, [ability]: value } })
   }
 
   return (
     <div className="@container flex w-full flex-col">
       <Tabs
         value={method}
-        onValueChange={(value) => onChange({ abilityScoreMethod: value })}
+        onValueChange={(value) => onChange({ abilityScoreMethod: value as AbilityScoreMethod })}
         className="gap-3"
       >
         <div className="h-10 min-w-0">
@@ -102,7 +58,7 @@ export function AbilityScoresStep({
         </div>
         <AbilityScoreEditor
           method={method}
-          scores={scores}
+          scores={data.abilityScores}
           bonuses={abilityBonuses}
           setScore={setScore}
           setAllScores={setAllScores}
@@ -110,8 +66,8 @@ export function AbilityScoresStep({
         {showRaceOriginBonuses ? (
           <RacialAbilityBonusPanel
             data={raceAsiData}
-            selections={data.raceAsiChoices ?? []}
-            distribution={data.raceAsiBlockIndex ?? 0}
+            selections={data.raceAsiChoices}
+            distribution={data.raceAsiBlockIndex}
             onDistributionChange={
               isLineageRaceAsiFallback
                 ? (value) => onChange({ raceAsiBlockIndex: value, raceAsiChoices: [] })

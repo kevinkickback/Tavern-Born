@@ -11,16 +11,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import {
   ABILITY_NAMES,
   type AbilityName,
-  calculatePointBuyTotal,
   isValidStandardArrayAssignment,
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
+  calculatePointBuyTotal,
   POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
   POINT_BUY_MAX,
@@ -28,9 +29,6 @@ import {
   STANDARD_ARRAY,
 } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
-import type { VariantRules } from '@/types/character'
-
-export type AbilityScoreMethod = NonNullable<VariantRules['abilityScoreMethod']>
 
 const METHODS = [
   { value: 'point-buy', label: 'Point Buy', icon: Coins },

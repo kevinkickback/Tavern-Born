@@ -9,7 +9,7 @@ import {
   Users,
 } from '@phosphor-icons/react'
 import { DEFAULT_PORTRAIT_TRANSFORM, PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
-import type { WizardStep } from './types'
+import type { CharacterWizardData, WizardStep } from './types'
 
 export const WIZARD_STEPS: WizardStep[] = [
   {
@@ -78,7 +78,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
 ]
 
-export const INITIAL_CHARACTER_DATA = {
+export const INITIAL_CHARACTER_DATA: CharacterWizardData = {
   name: '',
   playerName: '',
   age: null,
@@ -91,7 +91,7 @@ export const INITIAL_CHARACTER_DATA = {
   classSource: '',
   background: '',
   backgroundSource: '',
-  originSystem: '2014' as const,
+  originSystem: '2014',
   abilityScoreMethod: 'point-buy',
   abilityScores: {
     strength: 8,
@@ -103,9 +103,9 @@ export const INITIAL_CHARACTER_DATA = {
   },
   portrait: PLACEHOLDER_PORTRAITS[0] ?? '',
   portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
-  allowedSources: [] as string[],
-  raceAsiChoices: [] as string[][],
-  raceAsiBlockIndex: 0 as 0 | 1,
+  allowedSources: [],
+  raceAsiChoices: [],
+  raceAsiBlockIndex: 0,
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: true,

@@ -7,7 +7,6 @@ import {
 } from '@/components/character/AbilityBonusPanels'
 import {
   AbilityScoreEditor,
-  type AbilityScoreMethod,
   AbilityScoreMethodTabs,
 } from '@/components/character/AbilityScoreEditor'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -23,6 +22,7 @@ import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import { type AbilityName, hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
 import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 import {

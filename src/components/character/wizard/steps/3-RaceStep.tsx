@@ -109,7 +109,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     selectedRace,
     selectedSubrace,
-    (data.originSystem || '2014') as '2014' | '2024',
+    data.originSystem,
   )
   const displayRace =
     normalizedSelection.race && normalizedSelection.subrace
@@ -136,11 +136,11 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     })
   }
 
-  const showsRaceBonuses = usesRaceOriginBenefits(data.originSystem || '2014')
+  const showsRaceBonuses = usesRaceOriginBenefits(data.originSystem)
   const asi = showsRaceBonuses
     ? getAsiDisplay(
         normalizedSelection.race,
-        data.raceAsiBlockIndex ?? 0,
+        data.raceAsiBlockIndex,
         data.raceAsiChoices,
         normalizedSelection.subrace,
       )
