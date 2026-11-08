@@ -253,7 +253,7 @@ export function PortraitPicker({
     </div>
   )
   const preview = (
-    <section className="flex h-full w-full flex-col overflow-hidden">
+    <section className={cn('flex w-full flex-col overflow-hidden', !isCreator && 'h-full')}>
       <WorkspacePaneHeader
         title={isCreator ? 'Portrait Preview' : 'Card preview'}
         icon={isCreator ? undefined : <Image className="size-4 text-primary" weight="duotone" />}
@@ -283,7 +283,7 @@ export function PortraitPicker({
           lastModified={lastModified}
           transform={t}
           fit={libraryCollapsed ? 'contain' : 'width'}
-          className={isCreator ? 'mx-auto max-w-80' : undefined}
+          className={isCreator ? 'max-w-sm' : undefined}
           onWidthChange={setPreviewWidth}
         />
 
@@ -320,7 +320,7 @@ export function PortraitPicker({
           className={cn(
             'grid flex-1 content-start overflow-y-auto pr-1',
             isCreator
-              ? 'max-h-80 auto-rows-max grid-cols-[repeat(auto-fill,minmax(4.75rem,1fr))] gap-2'
+              ? 'min-h-0 max-h-[65vh] auto-rows-max grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2 @min-[38rem]:max-h-none'
               : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
           )}
         >
@@ -392,13 +392,13 @@ export function PortraitPicker({
   return (
     <>
       {isCreator ? (
-        <div className="@container">
-          <div className="grid gap-x-5 gap-y-5 @min-[32.5rem]:grid-cols-2 @min-[46.875rem]:grid-cols-[minmax(0,0.95fr)_minmax(0,1.13fr)_minmax(0,1.3fr)]">
-            <div className="min-w-0">{identity}</div>
-            <div className="min-w-0 @min-[32.5rem]:border-l @min-[32.5rem]:border-border @min-[32.5rem]:pl-5">
-              {preview}
+        <div className="@container h-full">
+          <div className="grid gap-6 @min-[38rem]:h-full @min-[38rem]:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <div className="min-w-0 space-y-5 @min-[38rem]:min-h-0 @min-[38rem]:overflow-y-auto @min-[38rem]:pr-3">
+              {identity}
+              <div className="border-t border-border pt-4">{preview}</div>
             </div>
-            <div className="min-w-0 border-t border-border pt-4 @min-[32.5rem]:col-span-2 @min-[46.875rem]:col-span-1 @min-[46.875rem]:border-t-0 @min-[46.875rem]:border-l @min-[46.875rem]:pt-0 @min-[46.875rem]:pl-5">
+            <div className="min-h-0 min-w-0 border-t border-border pt-4 @min-[38rem]:border-t-0 @min-[38rem]:border-l @min-[38rem]:pt-0 @min-[38rem]:pl-6">
               {library}
             </div>
           </div>

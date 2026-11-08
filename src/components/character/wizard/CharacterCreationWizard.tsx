@@ -309,7 +309,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}
         aria-busy={isCreating}
-        data-fit-step={stepId === 'basics' || stepId === 'rules' ? true : undefined}
         className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane"
       >
         <DialogTitle className="sr-only">Create New Character</DialogTitle>

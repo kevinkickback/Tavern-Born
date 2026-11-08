@@ -138,11 +138,7 @@
     max-width: 80rem !important;
     width: 95vw !important;
     height: 92vh !important;
-    max-height: min(92vh, 61.25rem) !important;
-  }
-
-  .character-wizard-modal[data-fit-step] {
-    height: fit-content !important;
+    max-height: 61.25rem !important;
   }
 
   .page-header-band {
