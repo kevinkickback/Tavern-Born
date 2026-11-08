@@ -1,4 +1,4 @@
-import { BookOpen, Eye, EyeSlash, Sparkle, Warning } from '@phosphor-icons/react'
+import { Eye, EyeSlash, Warning } from '@phosphor-icons/react'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -195,7 +195,6 @@ export function ReviewStep({
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Sparkle className="h-4 w-4 text-primary" weight="fill" />
                   <h4 className="text-sm font-semibold">Ability Scores</h4>
                 </div>
                 <Badge variant="secondary" className="font-mono">
@@ -238,7 +237,6 @@ export function ReviewStep({
 
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Sparkle className="h-4 w-4 text-primary" weight="fill" />
                 <h4 className="text-sm font-semibold">Variant Rules</h4>
               </div>
               <div className="space-y-1">
@@ -268,7 +266,6 @@ export function ReviewStep({
 
           <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary" weight="fill" />
               <h4 className="text-sm font-semibold">Additional Content</h4>
               {hasRestrictedSources && (
                 <Badge variant="secondary" className="font-mono">

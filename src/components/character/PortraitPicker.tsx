@@ -256,7 +256,7 @@ export function PortraitPicker({
     <section className="flex h-full w-full flex-col overflow-hidden">
       <WorkspacePaneHeader
         title={isCreator ? 'Portrait Preview' : 'Card preview'}
-        icon={<Image className="size-4 text-primary" weight="duotone" />}
+        icon={isCreator ? undefined : <Image className="size-4 text-primary" weight="duotone" />}
         className={cn(
           !isCreator && collapsible && 'pr-20',
           isCreator &&
@@ -303,8 +303,8 @@ export function PortraitPicker({
   const library = (
     <section className="flex h-full w-full flex-col overflow-hidden">
       <WorkspacePaneHeader
-        title="Portrait library"
-        icon={<Images className="size-4 text-primary" weight="duotone" />}
+        title={isCreator ? 'Portrait Library' : 'Portrait library'}
+        icon={isCreator ? undefined : <Images className="size-4 text-primary" weight="duotone" />}
         className={cn(
           !isCreator && collapsible && 'pr-20',
           isCreator &&

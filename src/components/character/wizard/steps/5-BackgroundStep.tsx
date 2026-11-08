@@ -1,4 +1,4 @@
-import { BookOpen, MagnifyingGlass, Shield, Toolbox, X } from '@phosphor-icons/react'
+import { BookOpen, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
@@ -106,7 +106,6 @@ export function BackgroundStep({
       <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Backgrounds
               <span className="text-muted-foreground font-normal ml-1">
@@ -194,7 +193,6 @@ export function BackgroundStep({
             <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Background Overview
                   </span>
@@ -213,25 +211,16 @@ export function BackgroundStep({
               </div>
 
               <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
-                <DetailSection
-                  icon={Shield}
-                  label="Skill Proficiencies"
-                  empty={skillProficiencies === 'None'}
-                >
+                <DetailSection label="Skill Proficiencies" empty={skillProficiencies === 'None'}>
                   {skillProficiencies}
                 </DetailSection>
                 <DetailSection
-                  icon={BookOpen}
                   label="Language Proficiencies"
                   empty={languageProficiencies === 'None'}
                 >
                   {languageProficiencies}
                 </DetailSection>
-                <DetailSection
-                  icon={Toolbox}
-                  label="Tool Proficiencies"
-                  empty={toolProficiencies === 'None'}
-                >
+                <DetailSection label="Tool Proficiencies" empty={toolProficiencies === 'None'}>
                   {toolProficiencies}
                 </DetailSection>
               </div>
@@ -239,7 +228,6 @@ export function BackgroundStep({
               {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
                 <div className="rounded-lg border border-border bg-card p-4 space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Details
                     </span>

@@ -250,6 +250,7 @@ test('empty source selection survives refresh under discard confirmation', async
 test('Source guidance stays visible while the full-width book list scrolls', async ({
   page,
 }, info) => {
+  await page.setViewportSize({ width: 1280, height: 1000 })
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-character-creation', {
     ...GAME_DATA_WITH_MANY_SOURCES,
@@ -261,6 +262,8 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Create New Character' })
   await dialog.getByLabel('Character Name').fill('Warning Test')
+  const modalHeight = () => dialog.evaluate((element) => element.clientHeight)
+  expect(await modalHeight()).toBeLessThan(600)
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
   const adjustPortrait = dialog.getByText('Adjust portrait', { exact: true })
   const zoom = dialog.getByRole('slider', { name: 'Zoom' })
@@ -280,9 +283,11 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   const averageHitPoints = dialog.getByRole('switch', { name: 'Average Hit Points' })
   await averageHitPoints.click()
   await expect(dialog.getByText('Ability Score Generation')).toHaveCount(0)
+  expect(await modalHeight()).toBeLessThan(600)
   await dialog.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
   await dialog.getByRole('button', { name: 'Next' }).click()
   await expect(dialog.getByRole('switch')).toHaveCount(0)
+  expect(await modalHeight()).toBeGreaterThan(850)
   const sourceScroller = dialog.getByRole('region', { name: 'Additional Content' })
   await expect(sourceScroller).toBeVisible()
   await expect

@@ -1,4 +1,4 @@
-import { BookOpen, ChartBar, Eye, MagnifyingGlass, Shield, Users, X } from '@phosphor-icons/react'
+import { BookOpen, MagnifyingGlass, Users, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
@@ -155,7 +155,6 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Races
               <span className="text-muted-foreground font-normal ml-1">
@@ -253,7 +252,6 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               {raceSummary && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Race Overview
                     </span>
@@ -327,7 +325,6 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               {/* Ability Scores */}
               <div className="rounded-lg border border-border bg-card p-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <ChartBar className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Ability Scores
                   </span>
@@ -350,24 +347,19 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
 
               {/* Info sections — always shown */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <DetailSection icon={BookOpen} label="Languages" empty={!languages}>
+                <DetailSection label="Languages" empty={!languages}>
                   {languages || 'None'}
                 </DetailSection>
 
-                <DetailSection
-                  icon={BookOpen}
-                  label="Skill Proficiencies"
-                  empty={skills.length === 0}
-                >
+                <DetailSection label="Skill Proficiencies" empty={skills.length === 0}>
                   {skills.length > 0 ? skills.join(', ') : 'None'}
                 </DetailSection>
 
-                <DetailSection icon={Shield} label="Resistances" empty={resistances === '—'}>
+                <DetailSection label="Resistances" empty={resistances === '—'}>
                   {resistances === '—' ? 'None' : resistances}
                 </DetailSection>
 
                 <DetailSection
-                  icon={Shield}
                   label="Immunities"
                   empty={immunities === '—' && conditionImmunities === '—'}
                 >
@@ -385,7 +377,6 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
               {/* Traits */}
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <Eye className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Racial Traits
                   </span>

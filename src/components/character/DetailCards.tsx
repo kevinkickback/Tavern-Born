@@ -1,47 +1,36 @@
-import type { Icon } from '@phosphor-icons/react'
 import { GameContent } from '@/components/editor/GameContent'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 
 export function DetailSection({
-  icon: Icon,
   label,
   children,
   empty,
 }: {
-  icon: Icon
   label: string
   children: React.ReactNode
   empty?: boolean
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
-      </div>
+      <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{label}</h3>
       <p className={cn('text-sm', empty && 'text-muted-foreground')}>{children}</p>
     </div>
   )
 }
 
 export function DetailHtmlSection({
-  icon: Icon,
   label,
   html,
   recursiveLookup,
 }: {
-  icon: Icon
   label: string
   html: string | null
   recursiveLookup?: RecursiveLookup
 }) {
   return (
     <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
-      </div>
+      <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{label}</h3>
       {html ? (
         <GameContent
           entry={html}

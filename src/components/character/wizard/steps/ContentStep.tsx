@@ -121,7 +121,6 @@ export function ContentStep({
     <section className="@container flex h-full min-h-0 min-w-0 flex-col">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" weight="fill" />
           <h3 className="text-lg font-semibold">Additional Content</h3>
           {!isBundledSrd && allowedSources.length > 0 && (
             <span

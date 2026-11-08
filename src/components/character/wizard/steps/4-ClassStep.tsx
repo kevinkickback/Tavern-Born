@@ -1,13 +1,4 @@
-import {
-  BookOpen,
-  ChartBar,
-  MagicWand,
-  MagnifyingGlass,
-  Shield,
-  Sword,
-  Toolbox,
-  X,
-} from '@phosphor-icons/react'
+import { BookOpen, MagicWand, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import {
@@ -82,7 +73,6 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
       <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <MagicWand className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Classes
               <span className="text-muted-foreground font-normal ml-1">
@@ -168,7 +158,6 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
               {classSummary && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Class Overview
                     </span>
@@ -187,30 +176,23 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
                   </span>
                 </div>
 
-                <DetailSection icon={ChartBar} label="Saving Throws">
-                  {savingThrows}
-                </DetailSection>
+                <DetailSection label="Saving Throws">{savingThrows}</DetailSection>
 
-                <DetailSection icon={MagicWand} label="Spellcasting Stat">
-                  {spellcastingStat}
-                </DetailSection>
+                <DetailSection label="Spellcasting Stat">{spellcastingStat}</DetailSection>
               </div>
 
               <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
                 <DetailHtmlSection
-                  icon={Shield}
                   label="Armor Proficiencies"
                   html={armorHtml}
                   recursiveLookup={recursiveLookup}
                 />
                 <DetailHtmlSection
-                  icon={Sword}
                   label="Weapon Proficiencies"
                   html={weaponsHtml}
                   recursiveLookup={recursiveLookup}
                 />
                 <DetailHtmlSection
-                  icon={Toolbox}
                   label="Tool Proficiencies"
                   html={toolsHtml}
                   recursiveLookup={recursiveLookup}
@@ -220,7 +202,6 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
               {classFeatures.length > 0 && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-3">
-                    <MagicWand className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Signature Features
                     </span>
