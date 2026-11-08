@@ -636,6 +636,52 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
+  const draconicDisciple = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Draconic Disciple' ||
+      feature.className !== 'Monk' ||
+      feature.classSource !== 'PHB' ||
+      feature.subclassShortName !== 'Ascendant Dragon' ||
+      feature.source !== 'FTD' ||
+      feature.subclassSource !== 'FTD'
+    )
+      return []
+    const target = identity(feature)
+    const clauses =
+      feature.entries?.flatMap((entry) =>
+        entry?.type === 'list' && Array.isArray(entry.items)
+          ? entry.items.filter((item) => item?.type === 'item' && item.name === 'Tongue of Dragons')
+          : [],
+      ) ?? []
+    const clause = clauses[0]?.entry
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature._copy ||
+      clauses.length !== 1 ||
+      typeof clause !== 'string' ||
+      !/^You learn to speak, read, and write \{@language [^{}|]+\} or one other language of your choice\.$/.test(
+        clause,
+      )
+    )
+      fail('Unsupported Draconic Disciple language clause')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [{ domain: 'languages', count: 1, excludeExisting: true }],
+      },
+    ]
+  })
   return [
     ...paired,
     ...simpleSkills,
@@ -644,6 +690,7 @@ export function deriveSubclassProficiencyRules(
     ...skillOrLanguage,
     ...knightlyEnvoy,
     ...archerLore,
+    ...draconicDisciple,
   ].sort((a, b) => a.target.localeCompare(b.target))
 }
 

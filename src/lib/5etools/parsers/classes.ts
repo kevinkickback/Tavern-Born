@@ -511,6 +511,7 @@ function auditNativeSubclassCopies(
           isRevisedZealotResourceSource(target) ||
           isDirectBarbarianRitualTarget(target) ||
           isDirectFighterRuleTarget(target) ||
+          isDirectMonkSpellTarget(target) ||
           isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
@@ -543,7 +544,7 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
       subclassRecords,
       auditInheritedBarbarianRoots(
         subclassRecords,
-        auditInheritedFighterRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+        auditInheritedSubclassRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
       ),
     ),
     records,
@@ -634,6 +635,7 @@ export function parseClassFeatures(data: unknown): unknown[] {
 }
 
 import {
-  auditInheritedFighterRoots,
+  auditInheritedSubclassRoots,
   isDirectFighterRuleTarget,
+  isDirectMonkSpellTarget,
 } from '@/lib/5etools/nativeSubclassFeatureSource'

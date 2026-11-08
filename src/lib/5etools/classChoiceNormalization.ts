@@ -373,7 +373,11 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
       maximumPerEvent: /\b(?:change|replace) (?:one|a|an)\b/i.test(searchableText) ? 1 : 'all',
     }
   }
-  if (/\beach time you learn a new [^.]+, you can also replace one\b/i.test(searchableText))
+  if (
+    /\b(?:each time|whenever) you learn a new [^.]+, you can also replace one\b/i.test(
+      searchableText,
+    )
+  )
     return { cadence: 'choice-gain', maximumPerEvent: 1 }
   return { cadence: 'never' }
 }
@@ -643,13 +647,22 @@ function normalizeFeatureOptionChoices(
 }
 
 /** These prose-only producers qualify structured subclass progression pools. */
+interface SourceProgressionOptions {
+  options: NormalizedChoiceOptionReference[]
+  feature?: ChoiceFeatureReference
+  replacement?: NormalizedCharacterChoice['replacement']
+  filter?: NormalizedChoiceOptionFilter
+  counts?: readonly number[]
+  fixedOptions?: NormalizedCharacterChoice['fixedOptions']
+}
+
 function getFighterProgressionOptions(
   progression: OptFeatureProg,
   owner: ChoiceOwner,
   subclass: Subclass5e | undefined,
   level: number,
   count: number,
-) {
+): SourceProgressionOptions | undefined {
   if (owner.type !== 'subclass' || owner.name !== 'Fighter') return undefined
   const featureType = progression.featureType?.length === 1 ? progression.featureType[0] : undefined
   const rune = owner.subclassName === 'Rune Knight' && featureType === 'RN'
@@ -721,6 +734,96 @@ function getFighterProgressionOptions(
   }
 }
 
+function getMonkDisciplineProgression(
+  progression: OptFeatureProg,
+  owner: ChoiceOwner,
+  subclass: Subclass5e | undefined,
+  level: number,
+  counts: readonly number[],
+): SourceProgressionOptions | undefined {
+  if (
+    owner.type !== 'subclass' ||
+    owner.name !== 'Monk' ||
+    owner.source !== 'PHB' ||
+    owner.subclassSource !== 'PHB' ||
+    owner.subclassName !== 'Way of the Four Elements' ||
+    progression.featureType?.length !== 1 ||
+    progression.featureType[0] !== 'ED'
+  )
+    return undefined
+  const unavailable = { options: [] }
+  if (!subclass || subclass.sourceIdentityConflict || '_copy' in subclass) return unavailable
+  const discipline = getNativeSubclassIntroFeature(owner, subclass, level, progression.name)
+  const training = getNativeSubclassIntroFeature(owner, subclass, level, 'Disciple of the Elements')
+  if (!discipline?.feature || !training?.feature) return unavailable
+  const blocks: Record<string, unknown>[] = []
+  collectOptionBlocks(discipline.entries, blocks)
+  const [block] = blocks
+  if (blocks.length !== 1 || block.count !== counts[level - 1] || !Array.isArray(block.entries))
+    return unavailable
+
+  const keyOf = (option: NormalizedChoiceOptionReference) =>
+    [option.name.toLowerCase(), option.source?.toLowerCase()].join('|')
+  const options = new Map<string, NormalizedChoiceOptionReference>()
+  const required = new Set<string>()
+  for (const row of block.entries) {
+    const record = asRecord(row)
+    const option = getOptionReference(row, subclass.source)
+    if (!record || option?.entityType !== 'optionalFeature' || options.has(keyOf(option)))
+      return unavailable
+    const caption = typeof record.name === 'string' ? record.name : ''
+    const minimum = / \((\d+)(?:st|nd|rd|th) Level Required\)$/.exec(caption)?.[1]
+    if (minimum && (Number(minimum) < level || Number(minimum) > LEVEL_COUNT)) return unavailable
+    const key = keyOf(option)
+    options.set(key, { ...option, ...(minimum && { minimumClassLevel: Number(minimum) }) })
+    if (asRecord(record.data)?.isRequiredOption === true) required.add(key)
+  }
+  const fixedOptions: NonNullable<NormalizedCharacterChoice['fixedOptions']>[number][] = []
+  for (const [gain, refs] of Object.entries(progression.required ?? {})) {
+    const gainLevel = Number(gain)
+    if (
+      String(gainLevel) !== gain ||
+      !Number.isInteger(gainLevel) ||
+      gainLevel < level ||
+      gainLevel > LEVEL_COUNT ||
+      !Array.isArray(refs) ||
+      !refs.length
+    )
+      return unavailable
+    for (const uid of refs) {
+      if (typeof uid !== 'string') return unavailable
+      const option = parseNamedEntityReference(uid, 'optionalFeature', subclass.source)
+      const key = option && keyOf(option)
+      const target = key && options.get(key)
+      if (!key || !target || !required.delete(key) || gainLevel < (target.minimumClassLevel ?? 1))
+        return unavailable
+      fixedOptions.push({ level: gainLevel, option: target })
+      options.delete(key)
+    }
+  }
+  if (required.size || !fixedOptions.length) return unavailable
+  const selectable = counts.map(
+    (count, index) => count - fixedOptions.filter((row) => row.level <= index + 1).length,
+  )
+  if (
+    selectable[level - 1] < 1 ||
+    selectable.some((count, index) => count < 0 || count < (selectable[index - 1] ?? 0))
+  )
+    return unavailable
+  const feature = {
+    ...decodeSubclassFeatureReference(discipline.target.slice('subclass-feature|'.length)),
+    name: discipline.feature.name,
+    feature: discipline.feature,
+  }
+  const replacement = inferReplacement(
+    getFeatureText({
+      ...decodeSubclassFeatureReference(training.target.slice('subclass-feature|'.length)),
+      feature: training.feature,
+    }),
+  )
+  return { options: [...options.values()], feature, replacement, counts: selectable, fixedOptions }
+}
+
 function normalizeOptionalFeatureProgressions(
   progressions: readonly OptFeatureProg[],
   refs: readonly ChoiceFeatureReference[],
@@ -735,14 +838,16 @@ function normalizeOptionalFeatureProgressions(
     const counts = normalizeProgression(progression.progression)
     const levelIndex = counts.findIndex((count) => count > 0)
     if (levelIndex < 0) return []
-    const maximumSelections = Math.max(...counts)
-    const scoped = getFighterProgressionOptions(
-      progression,
-      owner,
-      subclass,
-      levelIndex + 1,
-      counts[levelIndex],
-    )
+    const scoped =
+      getFighterProgressionOptions(
+        progression,
+        owner,
+        subclass,
+        levelIndex + 1,
+        counts[levelIndex],
+      ) ?? getMonkDisciplineProgression(progression, owner, subclass, levelIndex + 1, counts)
+    const earnedCounts = scoped?.counts ?? counts
+    const maximumSelections = Math.max(...earnedCounts)
     const featureRef =
       scoped?.feature ??
       refs.find(
@@ -785,14 +890,16 @@ function normalizeOptionalFeatureProgressions(
         kind: categories.length > 0 ? ('feat' as const) : ('optional-feature' as const),
         owner: {
           ...owner,
+          ...(scoped?.fixedOptions && subclass && { subclassShortName: subclass.shortName }),
           featureName: featureRef?.name ?? progression.name,
           featureSource: featureRef?.source ?? owner.source,
         },
         level: levelIndex + 1,
         minimumSelections: maximumSelections,
         maximumSelections,
-        selectionCountByLevel: counts,
+        selectionCountByLevel: earnedCounts,
         options: scoped?.options ?? [],
+        ...(scoped?.fixedOptions && { fixedOptions: scoped.fixedOptions }),
         optionFilter: scoped
           ? scoped.filter
           : categories.length > 0
@@ -1261,9 +1368,9 @@ export function getProgressiveChoiceGainCount(choice: NormalizedCharacterChoice,
     choice.kind !== 'optional-feature' ||
     choice.source.kind !== 'optional-feature-progression' ||
     choice.repeatable ||
-    choice.optionFilter?.entityType !== 'optionalFeature' ||
+    (!choice.fixedOptions?.length && choice.optionFilter?.entityType !== 'optionalFeature') ||
     // Invocations have a dedicated editor for dependent choices and cantrip targets.
-    choice.optionFilter.featureTypes?.some((type) => type === 'EI') ||
+    choice.optionFilter?.featureTypes?.some((type) => type === 'EI') ||
     !counts.some((count) => count > getRequiredChoiceSelectionCount(choice, choice.level)) ||
     !counts.every((count, index) => Number.isInteger(count) && count >= (counts[index - 1] ?? 0))
   )

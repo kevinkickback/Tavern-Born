@@ -1,6 +1,75 @@
 {
   "features": [
     {
+      "target": "class-feature|diamond soul|monk|phb|14|phb",
+      "name": "Diamond Soul",
+      "className": "Monk",
+      "classSource": "PHB",
+      "level": 14,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": [
+          "strength",
+          "dexterity",
+          "constitution",
+          "intelligence",
+          "wisdom",
+          "charisma"
+        ]
+      },
+      "bundledMetadataDigest": "142dfe4c001b29c04749af2244a06fdbf02a4cdf1d346e1049588e816c98d1d6",
+      "digest": "f4875586bda555e96ebe2e872229d5275652e6449a3f280f27edb9c25a8d6d1d",
+      "metadataDigest": "91c020c877a6b311d02417366b6a6e07b8f5c7b0cc945574f9b54f22df01e199",
+      "fields": [
+        "className",
+        "classSource",
+        "consumes",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ]
+    },
+    {
+      "target": "class-feature|disciplined survivor|monk|xphb|14|xphb",
+      "name": "Disciplined Survivor",
+      "className": "Monk",
+      "classSource": "XPHB",
+      "level": 14,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": [
+          "strength",
+          "dexterity",
+          "constitution",
+          "intelligence",
+          "wisdom",
+          "charisma"
+        ]
+      },
+      "bundledMetadataDigest": "29dafed8afc98e13a863b14be08f30d2de0bd05b5aa37b14eb7ce53ecf325904",
+      "digest": "c93a99553f244d9a123b3f11370c1c82b87c2ea837692162e344fd6bb70b6d9d",
+      "metadataDigest": "e94d07777e46a6c184f48aa361cf9c482a48d7d6cbbcf72d082655e3c9f23dbd",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "consumes",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52"
+      ]
+    },
+    {
       "target": "class-feature|druidic|druid|phb|1|phb",
       "name": "Druidic",
       "className": "Druid",
@@ -376,6 +445,40 @@
       ]
     },
     {
+      "target": "subclass-feature|bonus proficiencies|monk|phb|drunken master|xge|3|xge",
+      "name": "Bonus Proficiencies",
+      "className": "Monk",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["performance"],
+        "tools": ["brewer's supplies"]
+      },
+      "trainingTool": {
+        "name": "brewer's supplies",
+        "source": "PHB",
+        "reprint": "XPHB"
+      },
+      "subclassGainPosition": "first",
+      "digest": "ab468afac7031a64333f6e382835a1a14250a2930e052ed1696d2570b701dadf",
+      "metadataDigest": "c28fb3c6cccb165bf7863ceb3146d53e00c35d6e5c580cddcc93fe483126232e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiency|cleric|phb|death|dmg|1|dmg",
       "name": "Bonus Proficiency",
       "className": "Cleric",
@@ -632,6 +735,73 @@
       ]
     },
     {
+      "target": "subclass-feature|implements of mercy|monk|phb|mercy|tce|3|tce",
+      "name": "Implements of Mercy",
+      "className": "Monk",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["insight", "medicine"],
+        "tools": ["herbalism kit"]
+      },
+      "trainingTool": {
+        "name": "herbalism kit",
+        "source": "PHB",
+        "reprint": "XPHB"
+      },
+      "subclassGainPosition": "first",
+      "digest": "c925cea2da9d7ef0f32545f50208da0749d916bb71ef98bfff2439b64c4a38e2",
+      "metadataDigest": "21fd5dd0fd0236d2c42eea2b22841fbbf243f382234fee58bb7b32850d12e009",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|implements of mercy|monk|xphb|mercy|xphb|3|xphb",
+      "name": "Implements of Mercy",
+      "className": "Monk",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["insight", "medicine"],
+        "tools": ["herbalism kit"]
+      },
+      "trainingTool": {
+        "name": "herbalism kit",
+        "source": "XPHB"
+      },
+      "subclassGainPosition": "first",
+      "digest": "dfccf13b4eb79f43909f224f4bc0e7a42b0eb7742d232c513ee4def64b1af524",
+      "metadataDigest": "7559431c23ad860e2f92ed33ee45366d989a090bb95d531a788f397b80ba3b73",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb",
       "name": "Martial Training",
       "className": "Bard",
@@ -828,6 +998,22 @@
       "rawDeclaration": "Druidic|Druid|XPHB|1",
       "declarationDigest": "d110c608d13d6776924cb8056a1b9b1bca1daae9ff10a6c391cbf38e9a644bf1",
       "ordinal": 0
+    },
+    {
+      "owner": ["monk", "phb"],
+      "target": "class-feature|diamond soul|monk|phb|14|phb",
+      "level": 14,
+      "rawDeclaration": "Diamond Soul|Monk||14",
+      "declarationDigest": "2ab1fda051d1a4db4d0fa371643a4bb86750f4a91e264c20202748dfa3dd7d13",
+      "ordinal": 24
+    },
+    {
+      "owner": ["monk", "xphb"],
+      "target": "class-feature|disciplined survivor|monk|xphb|14|xphb",
+      "level": 14,
+      "rawDeclaration": "Disciplined Survivor|Monk|XPHB|14",
+      "declarationDigest": "302f030a9284673a1e6e23c2ee3080e41fd6094012f3a446af66d5caa9dddb4a",
+      "ordinal": 21
     },
     {
       "owner": ["rogue", "phb"],

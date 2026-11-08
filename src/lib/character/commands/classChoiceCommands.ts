@@ -962,6 +962,8 @@ function resolveProgressiveChoiceGainEdit(
       throw new RangeError('Remove choices in invalid or overfilled slots before making new picks.')
     const current = eligible.get(key)
     if (!current) throw new RangeError('Choose an option from the current source.')
+    if ((current.minimumClassLevel ?? 1) > level)
+      throw new RangeError('Choose an option whose prerequisites were met at this gain.')
     if (current.prerequisite) {
       prerequisiteSnapshot ??= buildPrerequisiteSnapshot({
         character,
@@ -1266,6 +1268,22 @@ export function applyClassChoiceSelectionCommand(
   ) {
     return { classChoiceSelections: character.classChoiceSelections }
   }
+  const minimumLevelByKey =
+    !gain && choice.fixedOptions?.length
+      ? new Map(
+          resolveClassChoiceOptions(
+            choice,
+            createClassChoiceCatalogs(authority?.catalogs),
+            existingSelection?.selected,
+            owner.levels,
+            character,
+          ).flatMap((option) =>
+            isClassChoiceOptionEligible(option) && option.minimumClassLevel !== undefined
+              ? [[getClassChoiceOptionKey(option.reference), option.minimumClassLevel] as const]
+              : [],
+          ),
+        )
+      : undefined
   let slotLevels = gain
     ? []
     : assignProgressionSlotLevels(
@@ -1278,6 +1296,7 @@ export function applyClassChoiceSelectionCommand(
         selected.map(getClassChoiceOptionKey),
         getClassChoiceSlotLevels(choice).slice(0, requiredCount),
         choice.level,
+        minimumLevelByKey,
       )
   if (choice.kind === 'psionic') {
     const prior = existingSelection?.selected ?? []

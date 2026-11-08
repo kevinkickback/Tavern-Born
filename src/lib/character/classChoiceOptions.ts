@@ -219,6 +219,7 @@ export interface ClassChoiceOptionView {
   sourceGroup?: { group: string }
   bladePactDraftKey?: string
   unavailableReason?: string
+  minimumClassLevel?: number
 }
 
 type ClassChoiceOptionPresentation =
@@ -720,6 +721,85 @@ function resolveExplicitOption(
       }
 }
 
+function resolveProgressionOption(
+  choice: NormalizedCharacterChoice,
+  option: NormalizedChoiceOptionReference,
+  catalogs: ClassChoiceCatalogs,
+  saved: readonly CharacterClassChoiceOption[],
+  classLevel: number,
+  tables: Map<string, FeatureTableDefinition | undefined>,
+): ClassChoiceOptionView {
+  const view = resolveExplicitOption(option, catalogs, 'eligible', tables)
+  if (!choice.fixedOptions?.length || view.availability !== 'eligible') return view
+  const requirements = view.prerequisite ?? []
+  const [rule] = requirements
+  const level = rule?.level
+  const qualifiedLevel =
+    requirements.length === 1 &&
+    Object.keys(rule).length === 1 &&
+    level &&
+    typeof level === 'object' &&
+    normalized(level.class?.name) === normalized(choice.owner.name) &&
+    (!level.class?.source || normalized(level.class.source) === normalized(choice.owner.source)) &&
+    !!choice.owner.subclassShortName &&
+    normalized(level.subclass?.name) === normalized(choice.owner.subclassShortName) &&
+    (!level.subclass?.source ||
+      normalized(level.subclass.source) === normalized(choice.owner.subclassSource)) &&
+    Number.isInteger(level.level) &&
+    level.level >= choice.level &&
+    level.level <= 20
+      ? level.level
+      : undefined
+  const minimumClassLevel =
+    requirements.length === 0
+      ? (option.minimumClassLevel ?? choice.level)
+      : option.minimumClassLevel === undefined || option.minimumClassLevel === qualifiedLevel
+        ? qualifiedLevel
+        : undefined
+  const previous = saved.find(
+    (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option),
+  )
+  const eligible =
+    minimumClassLevel !== undefined &&
+    minimumClassLevel <= classLevel &&
+    (!previous || minimumClassLevel <= previous.slotLevel)
+  return {
+    ...view,
+    prerequisite: undefined,
+    minimumClassLevel,
+    availability: eligible ? 'eligible' : 'retained',
+    ...(!eligible && {
+      unavailableReason:
+        minimumClassLevel === undefined
+          ? 'The current discipline prerequisite could not be verified.'
+          : `Requires ${choice.owner.name} level ${minimumClassLevel} when learned.`,
+    }),
+  }
+}
+
+export function getEarnedFixedClassChoiceOptions(
+  choice: NormalizedCharacterChoice,
+  catalogs: ClassChoiceFeatureCatalogs,
+  classLevel: number,
+) {
+  return (choice.fixedOptions ?? []).flatMap(({ level, option }) => {
+    if (level > classLevel) return []
+    const matches = catalogs.optionalFeatures?.filter(
+      (row) =>
+        getClassChoiceOptionKey({ ...row, entityType: 'optionalFeature' }) ===
+        getClassChoiceOptionKey(option),
+    )
+    const feature = matches?.[0]
+    return matches?.length === 1 &&
+      feature?.entries?.length &&
+      feature.featureType?.includes('ED') &&
+      !('sourceIdentityConflict' in feature && feature.sourceIdentityConflict) &&
+      !feature.prerequisite?.length
+      ? [{ level, option, name: feature.name, source: feature.source, entries: feature.entries }]
+      : []
+  })
+}
+
 /** Resolves one normalized choice against filtered catalogs without source-specific option lists. */
 export function resolveClassChoiceOptions(
   choice: NormalizedCharacterChoice,
@@ -746,6 +826,7 @@ export function resolveClassChoiceOptions(
       optionalFeatures: catalogs.optionalFeatures.filter((option) => {
         if (
           !option.source ||
+          (choice.fixedOptions?.length && !option.featureType?.includes('ED')) ||
           ('sourceIdentityConflict' in option && option.sourceIdentityConflict === true)
         )
           return false
@@ -912,8 +993,12 @@ export function resolveClassChoiceOptions(
   if (choice.options.length > 0 && !filter?.requiresMastery) {
     resolved.push(
       ...choice.options
-        .filter((option) => (option.minimumClassLevel ?? 1) <= classLevel)
-        .map((option) => resolveExplicitOption(option, catalogs, 'eligible', tableDefinitions)),
+        .filter(
+          (option) => choice.fixedOptions?.length || (option.minimumClassLevel ?? 1) <= classLevel,
+        )
+        .map((option) =>
+          resolveProgressionOption(choice, option, catalogs, saved, classLevel, tableDefinitions),
+        ),
     )
   }
   if (currentFilter) {

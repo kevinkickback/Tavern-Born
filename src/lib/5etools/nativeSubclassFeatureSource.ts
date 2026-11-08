@@ -33,36 +33,69 @@ export function isDirectFighterRuleTarget(target: string | undefined) {
   return className === 'fighter' && (name === subclass || directFighterRules.has(name))
 }
 
-const sameFighterSubclass = (row: Record<string, unknown>, base: Record<string, unknown>) =>
+const directMonkSpellRules = new Set([
+  'way of the four elements',
+  'disciple of the elements',
+  'elemental disciplines',
+  'way of shadow',
+  'warrior of shadow',
+  'shadow arts',
+  'darkness',
+  'shadowy figments',
+  'searing arc strike',
+  'tranquility',
+  'warrior of the elements',
+  'manipulate elements',
+  'darkvision',
+  'ascendant aspect',
+  'aspect of the wyrm',
+  'breath of the dragon',
+  'wings unfurled',
+  'wholeness of body',
+  'flurry of healing and harm',
+  'hand of ultimate mercy',
+])
+
+export function isDirectMonkSpellTarget(target: string | undefined) {
+  const [, name, className] = target?.split('|') ?? []
+  return className === 'monk' && directMonkSpellRules.has(name)
+}
+
+const sameSubclass = (row: Record<string, unknown>, base: Record<string, unknown>) =>
   typeof row.name === 'string' &&
   row.name === base.name &&
   row.shortName === base.shortName &&
   row.source === base.source &&
-  row.className === 'Fighter' &&
-  base.className === 'Fighter'
+  row.className === base.className
 
-export function isInheritedFighterSubclass(row: Record<string, unknown>) {
+export function isInheritedClassicSubclass(row: Record<string, unknown>) {
   const copy = record(row._copy)
   return (
     row.classSource === 'XPHB' &&
     copy.classSource === 'PHB' &&
-    sameFighterSubclass(row, copy) &&
+    sameSubclass(row, copy) &&
     !('_mod' in copy)
   )
 }
 
-export function auditInheritedFighterRoots(
+export function isInheritedFighterSubclass(row: Record<string, unknown>) {
+  return row.className === 'Fighter' && isInheritedClassicSubclass(row)
+}
+
+export function auditInheritedSubclassRoots(
   raw: readonly Record<string, unknown>[],
   materialized: readonly Record<string, unknown>[],
 ) {
   return materialized.map((row, index) => {
     const authored = raw[index]
-    if (row.className !== 'Fighter' || row.classSource !== 'XPHB' || !('_copy' in authored))
-      return row
-    const origins = raw.filter(
-      (base) => base.classSource === 'PHB' && sameFighterSubclass(row, base),
+    if (
+      (row.className !== 'Fighter' && row.className !== 'Monk') ||
+      row.classSource !== 'XPHB' ||
+      !('_copy' in authored)
     )
-    return isInheritedFighterSubclass(row) &&
+      return row
+    const origins = raw.filter((base) => base.classSource === 'PHB' && sameSubclass(row, base))
+    return isInheritedClassicSubclass(row) &&
       ![
         'subclassFeatures',
         'additionalSpells',

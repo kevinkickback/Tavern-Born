@@ -142,7 +142,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "48838a6a69f3e5f024718ec5f89608169b4281af5a7e035622be3ac624791abd"
+      "sha256": "ef13bd38a8aa5307c57e397e4f5fe40d8481e5d3c0e7ee8c0742d7679a2a26dd"
     },
     {
       "file": "src/types/actions.ts",
@@ -162,7 +162,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "4c28ea761558e8e7bc9768ad709c0c4113e7987158e5d8ac9666b1f05ce6c5d4"
+      "sha256": "c753eb8baf898dce3bc86b566c901f21984f1c1d48993a809831650601760113"
     },
     {
       "file": "src/types/effects.ts",

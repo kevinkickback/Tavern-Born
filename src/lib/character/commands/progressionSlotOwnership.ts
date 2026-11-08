@@ -9,6 +9,7 @@ export function assignProgressionSlotLevels(
   selectedKeys: readonly string[],
   availableSlotLevels: readonly number[],
   fallbackLevel: number,
+  minimumLevelByKey?: ReadonlyMap<string, number>,
 ): number[] {
   const remainingSlotLevels = [...availableSlotLevels]
   const existingLevelsByKey = new Map<string, number[]>()
@@ -35,5 +36,15 @@ export function assignProgressionSlotLevels(
     return undefined
   })
 
-  return assigned.map((level) => level ?? remainingSlotLevels.shift() ?? fallbackLevel)
+  return assigned.map((level, index) => {
+    if (level !== undefined) return level
+    if (!minimumLevelByKey) return remainingSlotLevels.shift() ?? fallbackLevel
+    const minimum = minimumLevelByKey.get(selectedKeys[index])
+    const position = remainingSlotLevels.findIndex(
+      (slot) => minimum !== undefined && slot >= minimum,
+    )
+    if (position < 0)
+      throw new RangeError('Choose an option whose prerequisites were met at this gain.')
+    return remainingSlotLevels.splice(position, 1)[0]
+  })
 }

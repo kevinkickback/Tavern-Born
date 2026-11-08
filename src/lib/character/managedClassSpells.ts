@@ -27,6 +27,7 @@ import {
   getClassCastingGainAuthority,
   getClassCastingLevelAccess,
 } from '@/lib/5etools/classCastingSource'
+import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClericArcanaSpellChoices,
   getClericArcanaSpellRule,
@@ -42,6 +43,8 @@ import {
   isRevisedInheritedOathOwner,
 } from '@/lib/5etools/legacyPaladinOathSpells'
 import { getLegacySorcererSpec } from '@/lib/5etools/legacySorcererSubclassRules'
+import { getCurrentMonkBaseRules, getEmptyBodySpell } from '@/lib/5etools/monkBaseRules'
+import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
 import {
   ELDRITCH_HEX_TARGET,
   getCurrentStepsOfTheFey,
@@ -94,6 +97,7 @@ import {
   CONTACT_PATRON_TARGET,
   getDirectClassPreparedSpellGrants,
 } from './directClassPreparedSpells'
+import { getEffectiveClassChoiceFeatureRoutes } from './effectiveClassChoiceFeatures'
 import {
   getManagedClassSpellOwnerEntry,
   isManagedClassSpellProfile,
@@ -627,6 +631,9 @@ export function projectManagedClassSpellState(
       (entry) =>
         isRevisedInheritedOathOwner(entry) ||
         isRevisedAncestralGuardian(entry) ||
+        (norm(entry.name) === 'monk' &&
+          norm(entry.source) === 'xphb' &&
+          norm(entry.subclass) === 'way of the sun soul') ||
         (norm(entry.name) === 'fighter' &&
           norm(entry.source) === 'xphb' &&
           norm(entry.subclass) === 'psi warrior' &&
@@ -730,6 +737,25 @@ export function projectManagedClassSpellState(
     ),
   }
   const fixedClassSpellStatuses: ClassFixedSpellStatus[] = []
+  const emptyBody = getEmptyBodySpell(getCurrentMonkBaseRules(character, context?.catalogs))
+  if (emptyBody) {
+    const rank = visibleSpellLevels.get(getSpellReferenceKey(emptyBody.reference)) ?? 0
+    fixedClassSpellStatuses.push({
+      ...emptyBody,
+      owner: ['class', 'monk', 'phb'],
+      prepared: false,
+      active: rank > 0,
+    })
+  }
+  const disciplineRoutes =
+    character.classProgression.some(
+      (row) => norm(row.name) === 'monk' && norm(row.subclass) === 'way of the four elements',
+    ) && context?.catalogs
+      ? getEffectiveClassChoiceFeatureRoutes(character, context.catalogs, {
+          effectiveAbilityScores: context.abilityScores,
+          effectiveSpellProfiles: context.independentSpellProfiles,
+        }).selectedOptions
+      : []
   const isRevisedWarlock = (entry: CharacterClassEntry) =>
     norm(entry.name) === 'warlock' && norm(entry.source) === 'xphb'
   const warlocks = character.classProgression.filter(isRevisedWarlock)
@@ -765,7 +791,20 @@ export function projectManagedClassSpellState(
       spells: visibleSpellLevels,
       character,
     })
-    for (const grant of grants ?? []) {
+    const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
+      if (
+        !choice.fixedOptions?.length ||
+        !findClassReference(entry, [{ name: selection.className, source: selection.classSource }])
+      )
+        return []
+      const candidates = context?.catalogs?.optionalFeatures?.filter(
+        (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
+      )
+      return candidates?.length === 1
+        ? (getElementalDisciplineSpells(candidates[0], option.slotLevel, choice, classes) ?? [])
+        : []
+    })
+    for (const grant of [...(grants ?? []), ...disciplines]) {
       if (grant.mode === 'expanded') continue
       const castOnly = grant.mode === 'cast-only'
       const active = hasCurrentSubclassSpellGrant(

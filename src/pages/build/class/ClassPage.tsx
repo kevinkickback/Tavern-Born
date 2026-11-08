@@ -491,6 +491,7 @@ export function BuildClassPage() {
         sourceSubclass,
         classChoiceController.choices,
         viewingClassLevel,
+        classChoiceCatalogs,
       ),
     [
       allClassFeatures,
@@ -499,6 +500,7 @@ export function BuildClassPage() {
       sourceSubclass,
       classChoiceController.choices,
       viewingClassLevel,
+      classChoiceCatalogs,
     ],
   )
   const levelsToShow = useMemo(

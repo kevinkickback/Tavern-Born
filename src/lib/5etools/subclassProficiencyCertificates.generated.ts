@@ -43,450 +43,686 @@ const s40 = '27f1f3b2e22022f4a24f7ed468d3dece559ccd125ac29a91057c46daf48a1337'
 const s41 = 'subclass-feature|bonus proficiencies|cleric|phb|twilight|tce|1|tce'
 const s42 = 'subclass-feature|bonus proficiencies|cleric|phb|war|phb|1|phb'
 const s43 = 'subclass-feature|bonus proficiencies|cleric|phb|zeal (psa)|psa|1|psa'
-const s44 = 'subclass-feature|bonus proficiency|cleric|phb|death|dmg|1|dmg'
-const s45 = 'subclass-feature|bonus proficiency|cleric|phb|forge|xge|1|xge'
-const s46 = 'subclass-feature|bonus proficiency|cleric|phb|nature|phb|1|phb'
-const s47 = '10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4'
-const s48 = 'subclass-feature|bonus proficiency|cleric|phb|solidarity (psa)|psa|1|psa'
-const s49 = '0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235'
-const s50 = 'subclass-feature|bonus proficiency|cleric|phb|strength (psa)|psa|1|psa'
-const s51 = 'subclass-feature|bonus proficiency|fighter|phb|cavalier|xge|3|xge'
-const s52 = 'subclass-feature|bonus proficiency|fighter|phb|samurai|xge|3|xge'
-const s53 = 'subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw'
-const s54 = 'subclass-feature|college of lore|bard|phb|lore|phb|3|phb'
-const s55 = '84dcd5b85acb0e5451287cd05ddd05baaff1a764113b43a3ccffc3d2373ce960'
-const s56 = '7cdc2f1c77551071a60aea0ec353e5f1dfc08d4e9bb4adc58a659a0bacd98909'
-const s57 = '466c3ffc9084b6010f522d6b8060173bdd8f8a1821b0c5c36b1a657cd1319bfb'
-const s58 = 'd91e2f479a2fb9f8fce35c0dace07d174af191325bbc32b00589f57b6bea4f27'
-const s59 = '0e6975bdd8e42a84fe6c79e70dcb5eb305a2dc9970ce01f554a73450012cbb1a'
-const s60 = 'subclass-feature|cutting words|bard|phb|lore|phb|3|phb'
-const s61 = 'subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb'
-const s62 = '1fc4f635848641f066eec175235e1fbd9f0d3102515e73d4df3b2bee6be462f8'
-const s63 = '58221e9e016a64984ec2e68469b2f8a200fb714e125839c264207a12641e2b22'
-const s64 = 'd9ed0447f28acea81f2bf56d94eb50ab8cdffff28cb7b0aef6bffb2abac7ad38'
-const s65 = 'f793c0b20ff280837d8595e080cb766054c33929d662ff7fb60be32cf619a0c3'
-const s66 = 'subclass-feature|cutting words|bard|xphb|lore|xphb|3|xphb'
-const s67 = 'subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof'
-const s68 = 'subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb'
-const s69 = 'subclass-feature|death domain|cleric|phb|death|dmg|1|dmg'
-const s70 = 'c0cc2628ef749aa88a1f6c1b9fa55576f431f7ca4e64874743a900e375f3d035'
-const s71 = 'c562cc082bbe1877466714d32184c0665360f9bb3955842fa70ceac6152ea0f2'
-const s72 = '926ae85e445cea5c0c1fa12cc3be2e1ede0437ea5d028eda733b976b389f379f'
-const s73 = '7faabf90347bd69c8eada94b5dd9434b88157046eaf5c47bde35a69245042374'
-const s74 = '49cdac1971de02e964694bef6cd9dfa420754cfa65308a9b95197fbc15f44f57'
-const s75 = 'subclass-feature|reaper|cleric|phb|death|dmg|1|dmg'
-const s76 = 'subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb'
-const s77 = '27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe'
-const s78 = 'dbfc20007026c570e4740fb8a5fcba790b25753b0f5c19ae7fb219bd74e61934'
-const s79 = 'd266021360c3c3e2dc8080a4de241bfd05265f86bc081230d4cbdab51c2d5664'
-const s80 = 'subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb'
-const s81 = '1aef7ce8cdfa4d09a8788a1eb3895b838006d80e71bc779ba08e92a02a046b05'
-const s82 = 'subclass-feature|draconic resilience|sorcerer|phb|draconic|phb|1|phb'
-const s83 = 'c489967504c449fe0fbc8a65e0cf1fbe487d91681dd2a73ab34f570c491c9ab3'
-const s84 = 'acd007fd3650f8c30f6ea31e258207af176d43e118c5ce40944e683da0372cac'
-const s85 = '5d0858832228d1c6db4ee4e01c1edf85c995a3d286c040766473f119ad6d45c2'
-const s86 = 'subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge'
-const s87 = 'subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au'
-const s88 = 'subclass-feature|forge domain|cleric|phb|forge|xge|1|xge'
-const s89 = '764bdcbcf5ca138ae4b910ef215120744a026e292a679cd4d2f848777c8048cb'
-const s90 = '6360edbbaa02807615a36931d646034e69c8c93e871503c5d3c52d7d4afd3d96'
-const s91 = '49f291e7f5440d498fbbba01eeba250cba49ecf45f7ad12e7de2dae6a38ab9b7'
-const s92 = '5edfd3bcc4d4fc69e329b617e0cbfe5152fa5a0e78e76eaf8d33f1ef930ad74f'
-const s93 = '562043d9227941bb48b94153de89c873188e080ea7fd5fed02f46cba25e0aa06'
-const s94 = '9155e42293e7a6d4a510882300d875889f6e8706ce29c49f137418e32de752ca'
-const s95 = 'subclass-feature|blessing of the forge|cleric|phb|forge|xge|1|xge'
-const s96 = "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
-const s97 = 'subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg'
-const s98 = 'subclass-feature|implement of peace|cleric|phb|peace|tce|1|tce'
-const s99 = 'subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa'
-const s100 = 'd3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f'
-const s101 = 'ea65113b57b3f04cd9e1a13e81df2d1af6c33a6afad52b56a7635b94cd990b9d'
-const s102 = '06e9bb466dcf1d0d734cfa0dd921795e0c8abd526f3fd13d7a88a1fc02bf5c43'
-const s103 = '194c9b8814a8fc287223907aa55e56e8d2ef158ecc37a6881db582b9a271adc3'
-const s104 = 'cd98dfbc4a46347d20c7217a7192ffb47fcf61bb949bf7c43e4026325ac8c51d'
-const s105 = 'subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb'
-const s106 = '433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65'
-const s107 = '49edd2a987b63ca3ab5da6fd241c0a8bff0cc4d3d41d592240336e1e435de93f'
-const s108 = '636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32'
-const s109 = 'ac47cc6ff4d8e7d34892a35d4f3db9f21e05a5d345d15b759587f500dc15a19c'
-const s110 = '55b5d4814afcfa53c5ea90cd2d698c0b55a736d26d577d13ddfb31fadc4c1e38'
-const s111 = 'subclass-feature|nature domain|cleric|phb|nature|phb|1|phb'
-const s112 = '0d7c4eb4b87260dcaf4f18e83c2b648d3a253154664613334645282beabaa4a9'
-const s113 = '33d1d39d363b22e8ffdd09b57ceb256a201ed6258b0e38de16fff3adf7621714'
-const s114 = '84064da355e93ee3e7470761708e8cc7fb6aae7877ef2962254948de17f3cde5'
-const s115 = '481a360c1b10ef78de837c1a1b1db7a1b72e8edecc2c5fed76bf13221520f228'
-const s116 = 'f75f0bda444bf7060764a2f1b360270728c0159fa01bd09e9c420d243dbd83ab'
-const s117 = 'subclass-feature|order domain|cleric|phb|order|tce|1|tce'
-const s118 = '342db9bde88761626435a043b97df816267f80de57bc39f8b7cace3fb8bf8256'
-const s119 = '0018d127dacd1054c38ff57b78adc2880d839d3c8c949a6632c093a972cdeb52'
-const s120 = 'f8a1fc0ae15fcc31fcecb34fbc994382dac5a1a4b0c4909b03d552ed0c7f7057'
-const s121 = 'd18e23eceb8eae702981d1f6f2915609cd45157eb890395fd131a927c7649923'
-const s122 = '006631e13dd65cff6c850f6f2a7fdd102e922fb0c6db91e04eff14aacb52d40b'
-const s123 = '402b4378a1b4f5c89da32bd3057976cc43f5e239295d8e592bcce01d7856e6b1'
-const s124 = '5e4d5243b0420c043259fe019e1ef6d4c13e7f80c0cca8ea5e512fec8dfe3554'
-const s125 = 'subclass-feature|voice of authority|cleric|phb|order|tce|1|tce'
-const s126 = 'subclass-feature|peace domain|cleric|phb|peace|tce|1|tce'
-const s127 = '446282ba55e44a25af870e482a221f01f7c7f12f74d989c558ed0540f13e3576'
-const s128 = '6b92358c91e1fe5c8dafd36bdb185e8ebab124a9439b3bb50ed1e9e34da304e7'
-const s129 = 'd4eab2171e02126fac9498cc22ed54b222419e8b3234ec870977c9a32c97dbc3'
-const s130 = '80871bef626b68f5bb0fb056586c06ff3c74d2a70fdc4c86c0e15d77f1b5136f'
-const s131 = 'aaf62cded3eeeaad476e60448a3c37a2a8d8894a0ed040aa5f4f08f15176e1fa'
-const s132 = 'ba714f3adbd076e1036eb12adbfaecad65e8fbdac5fbdb23d9f90900c62495cf'
-const s133 = '233e8e725607917f9c900b8ba003a465349d069d8a952dc52797d34732a8987f'
-const s134 = 'subclass-feature|emboldening bond|cleric|phb|peace|tce|1|tce'
-const s135 = 'subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag'
-const s136 = 'subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce'
-const s137 = 'subclass-feature|survivalist|rogue|phb|scout|xge|3|xge'
-const s138 = 'subclass-feature|solidarity domain (psa)|cleric|phb|solidarity (psa)|psa|1|psa'
-const s139 = '4be285846f30fd862c32f8f0d8d8ffd9c23f8f11a3d2a3b0302240c8212534f5'
-const s140 = 'e415c873fa6cd9dd8761210f84be280346195d140dd095b7191d23da77974325'
-const s141 = '830d8809850aa7bd7db13f4910d0b0b939e925eaa49de1278bdf8f1eac5d4ba3'
-const s142 = 'd8ca84d907ec680c7c0c520f230ebb9c93d60eace2a5a00c57bf1ef312b2a808'
-const s143 = 'ccebecbe8b34124fce7e30b4da799c1285f6f7236cb8f849676b3786c919d947'
-const s144 = '759944ea8acfc7577ef69fd73e542c828462160c3b20b54bbd1d680546b3c842'
-const s145 = "subclass-feature|solidarity's action|cleric|phb|solidarity (psa)|psa|1|psa"
-const s146 = 'subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge'
-const s147 = '5c31a91c606068b377a4277581af9d6a685c68d6e800120e521be08af0d17d09'
-const s148 = 'aa71c6e0bdf77378190d2ec071e80303245d3d003ecdf3a0db1b11c297229d0b'
-const s149 = '9cd846a623a39437c1da2eb7a0b57f8432f5a89e7295e1e738e8c21339581304'
-const s150 = '77f8f9f7a1390626138e8ba3de398eaa4add36557d56420c223b6d76529c44d0'
-const s151 = 'subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge'
-const s152 = 'f20a7ad7239b57877e9d1b329d92d8a0cc5840e1ecccc573bfa9b4f762cbb158'
-const s153 = 'subclass-feature|tempestuous magic|sorcerer|phb|storm|xge|1|xge'
-const s154 = 'subclass-feature|strength domain (psa)|cleric|phb|strength (psa)|psa|1|psa'
-const s155 = '2b41c017bdfea0e5200cc56f76822d9d2fd7472491adbbdb68e6cf90b2e3fd4c'
-const s156 = '8b7bda43f56bd1fa5809a911870f9f442985722cdcdaf757b5261db1fa8cb4ac'
-const s157 = 'a8f0e4190bc5be45d65f2bf2db36c0fd2ee3d2f55f4f0a010358520cd786a0f7'
-const s158 = 'd1072cbf80eabd2cc89f06aa98073d49cbb8bca8c5aafc9885bb1a03bd07a454'
-const s159 = 'ce38def6775e1483260e6727c56ed409b86f543bd32435a4eedfd7a2deabbf17'
-const s160 = '7ec8c69426376bb2aacf256661ade55b043eaeaa77628f7c8d7af65f74d60a03'
-const s161 = 'subclass-feature|tempest domain|cleric|phb|tempest|phb|1|phb'
-const s162 = '7c633bcdf5b935a27911c0f78122ed06ca1efa3b6b638c546196be474f09c2cd'
-const s163 = 'b0a8ae7e6ae633a3430e1daa66a39a12082bc9e9c9040b5a37b678e255535279'
-const s164 = 'e5fefc192584b6a6c255fb409d9344ca69d1a3f38075d391c6050374f517fdf4'
-const s165 = '31667f73ae8d86a269e8b4b7c4f1bba4509ee57bd39a68992efb75943408928d'
-const s166 = '20f86e5c836b2f9539c195378e45c10a27e352113f158d437693efdb5a994f83'
-const s167 = 'subclass-feature|wrath of the storm|cleric|phb|tempest|phb|1|phb'
-const s168 = 'subclass-feature|twilight domain|cleric|phb|twilight|tce|1|tce'
-const s169 = 'fc100abfcdf4654f2fe9b66f3f832101029bd2777980bd9f4135c9f9098e93e8'
-const s170 = 'ef03ef24fc6b82ec934db515b23d3c2bf687ce036e868c22b52b5591b28ade2b'
-const s171 = 'c7fa7f09cc60b65215572ebcacdcd06ea2ef198578e7c2591ed418ba5fcb5d3c'
-const s172 = '8439330f411444fc70bb26a8d5812cf8169095ec8cccc6490f6bf918f23d9892'
-const s173 = '9583dd8467a6370ba70371c7ad8139366c862871aea6acfb9a6c452df2cf4589'
-const s174 = '28947b9cb09c384c10d505f26d1a220825202ca4b89857bc74be96517661ba7b'
-const s175 = '8362fc77008de400b06778103eeb72959401aa41de34c8150ac4921697cd8d3b'
-const s176 = 'subclass-feature|eyes of night|cleric|phb|twilight|tce|1|tce'
-const s177 = 'f4ff6a74ce26958bfea9085dbf3420f4d37161aa26a97d6678c4a9a5330c0f4d'
-const s178 = 'subclass-feature|vigilant blessing|cleric|phb|twilight|tce|1|tce'
-const s179 = 'subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof'
-const s180 = 'subclass-feature|war domain|cleric|phb|war|phb|1|phb'
-const s181 = '27b2c40c161eade1fe22c24c554b40af3fe783b83f7bb5f8dd95a2df66b355ea'
-const s182 = 'b76a53952e2b6070f49be05697006cd077460a1635f0af9dee9ca2676914893e'
-const s183 = '9ff9353b1bf73b21ba03e6b0f8ec801277bf89ce6d0aae313c723c48c1affe86'
-const s184 = 'e004bef06eaf51e5aa1a740fb25db2418e318fd3d4d14d25604d2c54a0238afa'
-const s185 = '6639857ca5b19650175707d285ef06bf22b01c56983178d6c0c046a915d0106a'
-const s186 = 'subclass-feature|war priest|cleric|phb|war|phb|1|phb'
-const s187 = 'subclass-feature|zeal domain (psa)|cleric|phb|zeal (psa)|psa|1|psa'
-const s188 = '9314f9cebf30b874f48ef4d3178aff0306f51401c922ef02ea0e36c179c6fc8d'
-const s189 = '1c73a3e0e5413430a4c46fe89710c7b6e4c8e2be0e5e575f857025ebadf27578'
-const s190 = '2f8cf8118f9c0e973dcec56a45fc44cfb987d0b585b87ecc58cdfb88fdee88f9'
-const s191 = '2f64a5a9300170a49691cb23f5543293e1618f6d2df8f6c50ec71bfd5debb931'
-const s192 = '82c55aa9315aaaf2ff2df369c34a4280fa2c02d89e7ee0e9b84eaa09fffcc981'
-const s193 = '7e61c2dff71e9e750423e4a46f89b87c4e726bd50b48c91463e97f5f8647d6d8'
-const s194 = 'subclass-feature|priest of zeal|cleric|phb|zeal (psa)|psa|1|psa'
-const s195 = 'barbarian'
-const s196 = 'phb'
-const s197 = 'path of the giant'
-const s198 = 'bgg'
-const s199 = 'Giant'
-const s200 = '4cd9c42be5be0ee87e992a14c8ee7fc55f70938912e3fa4e51621d825fc8d77e'
-const s201 = 'additionalSpells'
-const s202 = 'edition'
-const s203 = 'hasFluffImages'
-const s204 = 'shortName'
-const s205 = 'spellcastingAbility'
-const s206 = 'subclassFeatures'
-const s207 = 'Path of the Giant|Barbarian||Giant|BGG|3'
-const s208 = 'Elemental Cleaver|Barbarian||Giant|BGG|6'
-const s209 = 'Mighty Impel|Barbarian||Giant|BGG|10'
-const s210 = 'Demiurgic Colossus|Barbarian||Giant|BGG|14'
-const s211 = 'Giant Power|Barbarian||Giant|BGG|3'
-const s212 = 'xphb'
-const s213 = '_copy'
-const s214 = 'fluff'
-const s215 = 'bard'
-const s216 = 'college of lore'
-const s217 = 'Lore'
-const s218 = 'de4377ab926377dff938383fad05101f28f785ae8d930a982c2427a677dda7f5'
-const s219 = 'reprintedAs'
-const s220 = 'College of Lore|Bard||Lore||3'
-const s221 = 'Additional Magical Secrets|Bard||Lore||6'
-const s222 = 'Peerless Skill|Bard||Lore||14'
-const s223 = 'Bonus Proficiencies|Bard||Lore||3'
-const s224 = 'college of swords'
-const s225 = 'xge'
-const s226 = 'Swords'
-const s227 = 'f920f9b45e102c021d88cd46042303cb997b27429fa031610070cd0a327c6a65'
-const s228 = 'optionalfeatureProgression'
-const s229 = 'College of Swords|Bard||Swords|XGE|3'
-const s230 = 'Extra Attack|Bard||Swords|XGE|6'
-const s231 = "Master's Flourish|Bard||Swords|XGE|14"
-const s232 = 'Bonus Proficiencies|Bard||Swords|XGE|3'
-const s233 = 'college of valor'
-const s234 = 'Valor'
-const s235 = '46f79844b37efbd330f8bcdbf5cb9a24b8a19beb62ae8ef8d8ad32b3fa3f980a'
-const s236 = 'College of Valor|Bard||Valor||3'
-const s237 = 'Extra Attack|Bard||Valor||6'
-const s238 = 'Battle Magic|Bard||Valor||14'
-const s239 = 'Bonus Proficiencies|Bard||Valor||3'
-const s240 = 'College of Lore|Bard|XPHB|Lore|XPHB|3'
-const s241 = 'Magical Discoveries|Bard|XPHB|Lore|XPHB|6'
-const s242 = 'Peerless Skill|Bard|XPHB|Lore|XPHB|14'
-const s243 = 'Bonus Proficiencies|Bard|XPHB|Lore|XPHB|3'
-const s244 = 'College of Spirits|Bard|XPHB|Spirits|RHW|3|RHW'
-const s245 = 'frhof'
-const s246 = 'College of the Moon|Bard|XPHB|Moon|FRHoF|3|FRHoF'
-const s247 = 'College of Valor|Bard|XPHB|Valor|XPHB|3'
-const s248 = 'cleric'
-const s249 = 'arcana domain'
-const s250 = 'scag'
-const s251 = 'Arcana'
-const s252 = 'd04aaea4626573de030486c0b624e557d248b0a9bf9d017c122624810a799503'
-const s253 = 'Arcana Domain|Cleric||Arcana|SCAG|1'
-const s254 = 'Spell Breaker|Cleric||Arcana|SCAG|6'
-const s255 = 'Arcane Mastery|Cleric||Arcana|SCAG|17'
-const s256 = 'Arcane Initiate|Cleric||Arcana|SCAG|1'
-const s257 = 'death domain'
-const s258 = 'dmg'
-const s259 = 'Death'
-const s260 = 'ce6885ea98bd8fa28df5c51bf01b20c6b8487cb9a13877afc86e8d468dd04c2e'
-const s261 = 'Death Domain|Cleric||Death|DMG|1'
-const s262 = 'Inescapable Destruction|Cleric||Death|DMG|6'
-const s263 = 'Improved Reaper|Cleric||Death|DMG|17'
-const s264 = 'Bonus Proficiency|Cleric||Death|DMG|1'
-const s265 = 'forge domain'
-const s266 = 'Forge'
-const s267 = '4fe3a2d9692b3c4ed08274032f3d2dab90fbd6658f023aea9c51d01547ddc186'
-const s268 = 'hasFluff'
-const s269 = 'Forge Domain|Cleric||Forge|XGE|1'
-const s270 = 'Soul of the Forge|Cleric||Forge|XGE|6'
-const s271 = 'Saint of Forge and Fire|Cleric||Forge|XGE|17'
-const s272 = 'Bonus Proficiency|Cleric||Forge|XGE|1'
-const s273 = 'knowledge domain (psa)'
-const s274 = 'psa'
-const s275 = 'Knowledge (PSA)'
-const s276 = '0f6cd3345ce9601380eafb87079cd9f6dabded350cb57bdb297ed10f41f15d32'
-const s277 = 'isReprinted'
-const s278 = 'Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1'
-const s279 = 'Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2'
-const s280 = 'Channel Divinity: Read Thoughts|Cleric||Knowledge||6'
-const s281 = 'Potent Spellcasting|Cleric||Knowledge||8'
-const s282 = 'Blessed Strikes|Cleric||Knowledge||8|TCE'
-const s283 = 'Visions of the Past|Cleric||Knowledge||17'
-const s284 = 'Knowledge Domain|Cleric||Knowledge||1'
-const s285 = 'Blessings of Knowledge|Cleric||Knowledge||1'
-const s286 = 'knowledge domain'
-const s287 = 'Knowledge'
-const s288 = '12fc5dfdb6287f5bc6b69c59b4d287af203f5ce1e52b908d5c41ad42ba4cc122'
-const s289 = 'nature domain'
-const s290 = 'Nature'
-const s291 = 'bdde9364f85c618c68c046382d5b91cef45ba0fd4730c2a80712bd17e560fb50'
-const s292 = 'Nature Domain|Cleric||Nature||1'
-const s293 = 'Dampen Elements|Cleric||Nature||6'
-const s294 = 'Master of Nature|Cleric||Nature||17'
-const s295 = 'Acolyte of Nature|Cleric||Nature||1'
-const s296 = 'Bonus Proficiency|Cleric||Nature||1'
-const s297 = 'order domain'
-const s298 = 'tce'
-const s299 = 'Order'
-const s300 = '0cac187bc230f68ad5b978a3b6940f40b8b41095f2d7f8b7b5410a2e5d51d3ad'
-const s301 = 'Order Domain|Cleric||Order|TCE|1'
-const s302 = 'Embodiment of the Law|Cleric||Order|TCE|6'
-const s303 = "Order's Wrath|Cleric||Order|TCE|17"
-const s304 = 'Bonus Proficiencies|Cleric||Order|TCE|1'
-const s305 = 'peace domain'
-const s306 = 'Peace'
-const s307 = '3ebc24784e3667b2cb6af76562a0277ac92e5bb33ca57a8fe9a911e4920e91c0'
-const s308 = 'Peace Domain|Cleric||Peace|TCE|1'
-const s309 = 'Protective Bond|Cleric||Peace|TCE|6'
-const s310 = 'Expansive Bond|Cleric||Peace|TCE|17'
-const s311 = 'Implement of Peace|Cleric||Peace|TCE|1'
-const s312 = 'solidarity domain (psa)'
-const s313 = 'Solidarity (PSA)'
-const s314 = '57c1647a42ee0abf5f6db015764242760eae2816d2fc861f269343ff5fa5b79c'
-const s315 = 'Solidarity Domain (PSA)|Cleric||Solidarity (PSA)|PSA|1'
-const s316 = "Oketra's Blessing|Cleric||Solidarity (PSA)|PSA|6"
-const s317 = 'Supreme Healing|Cleric||Solidarity (PSA)|PSA|17'
-const s318 = 'Bonus Proficiency|Cleric||Solidarity (PSA)|PSA|1'
-const s319 = 'strength domain (psa)'
-const s320 = 'Strength (PSA)'
-const s321 = 'fa2730d4a333eb5de820af31228c466256984364a3a46aee6cf2d26fe94fb953'
-const s322 = 'Strength Domain (PSA)|Cleric||Strength (PSA)|PSA|1'
-const s323 = "Rhonas's Blessing|Cleric||Strength (PSA)|PSA|6"
-const s324 = 'Avatar of Battle|Cleric||Strength (PSA)|PSA|17'
-const s325 = 'Acolyte of Strength|Cleric||Strength (PSA)|PSA|1'
-const s326 = 'Bonus Proficiency|Cleric||Strength (PSA)|PSA|1'
-const s327 = 'tempest domain'
-const s328 = 'Tempest'
-const s329 = 'd620f017d8b24ddf4d4f923fabccb91399e1e786121ad668394389dce4175ab4'
-const s330 = 'Tempest Domain|Cleric||Tempest||1'
-const s331 = 'Thunderbolt Strike|Cleric||Tempest||6'
-const s332 = 'Stormborn|Cleric||Tempest||17'
-const s333 = 'Bonus Proficiencies|Cleric||Tempest||1'
-const s334 = 'twilight domain'
-const s335 = 'Twilight'
-const s336 = '787a4332b7f4529b7cda3055202e067c6236cf9e927e277bffac671de2afee5c'
-const s337 = 'Twilight Domain|Cleric||Twilight|TCE|1'
-const s338 = 'Steps of Night|Cleric||Twilight|TCE|6'
-const s339 = 'Twilight Shroud|Cleric||Twilight|TCE|17'
-const s340 = 'Bonus Proficiencies|Cleric||Twilight|TCE|1'
-const s341 = 'war domain'
-const s342 = 'War'
-const s343 = '5deb0d6d794f6f8232c7ad5d588e0b83766abdcd56182152cca218287a035619'
-const s344 = 'War Domain|Cleric||War||1'
-const s345 = "Channel Divinity: War God's Blessing|Cleric||War||6"
-const s346 = 'Avatar of Battle|Cleric||War||17'
-const s347 = 'Bonus Proficiencies|Cleric||War||1'
-const s348 = 'zeal domain (psa)'
-const s349 = 'Zeal (PSA)'
-const s350 = 'aff051831d44f01c1923b9a1d78f45a641665fb1a8dfa8b9b28b60c71cb11f41'
-const s351 = 'Zeal Domain (PSA)|Cleric||Zeal (PSA)|PSA|1'
-const s352 = 'Resounding Strike|Cleric||Zeal (PSA)|PSA|6'
-const s353 = 'Blaze of Glory|Cleric||Zeal (PSA)|PSA|17'
-const s354 = 'Bonus Proficiencies|Cleric||Zeal (PSA)|PSA|1'
-const s355 = 'Arcana Domain|Cleric|XPHB|Arcana|AU|3|AU'
-const s356 = 'Arcana Domain|Cleric|XPHB|Arcana|SCAG|3'
-const s357 = 'Death Domain|Cleric|XPHB|Death|DMG|3'
-const s358 = 'Forge Domain|Cleric|XPHB|Forge|XGE|3'
-const s359 = 'Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3'
-const s360 = 'Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3'
-const s361 = 'Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF'
-const s362 = 'Unfettered Mind|Cleric|XPHB|Knowledge|FRHoF|6|FRHoF'
-const s363 = 'Knowledge Domain|Cleric|XPHB|Knowledge||3'
-const s364 = 'Nature Domain|Cleric|XPHB|Nature||3'
-const s365 = 'Order Domain|Cleric|XPHB|Order|TCE|3'
-const s366 = 'Peace Domain|Cleric|XPHB|Peace|TCE|3'
-const s367 = 'Solidarity Domain (PSA)|Cleric|XPHB|Solidarity (PSA)|PSA|3'
-const s368 = 'Strength Domain (PSA)|Cleric|XPHB|Strength (PSA)|PSA|3'
-const s369 = 'Tempest Domain|Cleric|XPHB|Tempest||3'
-const s370 = 'Twilight Domain|Cleric|XPHB|Twilight|TCE|3'
-const s371 = 'War Domain|Cleric|XPHB|War||3'
-const s372 = 'Zeal Domain (PSA)|Cleric|XPHB|Zeal (PSA)|PSA|3'
-const s373 = 'fighter'
-const s374 = 'arcane archer'
-const s375 = 'Arcane Archer'
-const s376 = 'e63c4d2f3802293770729e1abcd1c3f0b957759386615e3b91bf7a3c50e0993e'
-const s377 = 'Arcane Archer|Fighter||Arcane Archer|XGE|3'
-const s378 = 'Magic Arrow|Fighter||Arcane Archer|XGE|7'
-const s379 = 'Curving Shot|Fighter||Arcane Archer|XGE|7'
-const s380 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|7'
-const s381 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|10'
-const s382 = 'Ever-Ready Shot|Fighter||Arcane Archer|XGE|15'
-const s383 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|15'
-const s384 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|18'
-const s385 = 'Arcane Archer Lore|Fighter||Arcane Archer|XGE|3'
-const s386 = 'battle master'
-const s387 = 'Battle Master'
-const s388 = '3d1876bafcb4d697870f598ec17e64f22321a266f47f7bf1a66f63002ad5ab36'
-const s389 = 'Battle Master|Fighter||Battle Master||3'
-const s390 = 'Additional Maneuvers|Fighter||Battle Master||7'
-const s391 = 'Additional Superiority Die|Fighter||Battle Master||7'
-const s392 = 'Know Your Enemy|Fighter||Battle Master||7'
-const s393 = 'Additional Maneuvers|Fighter||Battle Master||10'
-const s394 = 'Improved Combat Superiority (d10)|Fighter||Battle Master||10'
-const s395 = 'Additional Maneuvers|Fighter||Battle Master||15'
-const s396 = 'Additional Superiority Die|Fighter||Battle Master||15'
-const s397 = 'Relentless|Fighter||Battle Master||15'
-const s398 = 'Improved Combat Superiority (d12)|Fighter||Battle Master||18'
-const s399 = 'Student of War|Fighter||Battle Master||3'
-const s400 = 'cavalier'
-const s401 = 'Cavalier'
-const s402 = 'd62e2b8e7f51937b512bbef0fb77a633eccba884e8bb568511985cebc8c1721c'
-const s403 = 'Cavalier|Fighter||Cavalier|XGE|3'
-const s404 = 'Warding Maneuver|Fighter||Cavalier|XGE|7'
-const s405 = 'Hold the Line|Fighter||Cavalier|XGE|10'
-const s406 = 'Ferocious Charger|Fighter||Cavalier|XGE|15'
-const s407 = 'Vigilant Defender|Fighter||Cavalier|XGE|18'
-const s408 = 'Bonus Proficiency|Fighter||Cavalier|XGE|3'
-const s409 = 'purple dragon knight (banneret)'
-const s410 = 'Purple Dragon Knight (Banneret)'
-const s411 = '596d505316ec3cc2126de15d5be9593ee7c98fd464f9994b3bbf1823570d6c72'
-const s412 = 'Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3'
-const s413 = 'Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7'
-const s414 = 'Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|10'
-const s415 = 'Bulwark|Fighter||Purple Dragon Knight (Banneret)|SCAG|15'
-const s416 = 'Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|18'
-const s417 = 'rune knight'
-const s418 = 'Rune Knight'
-const s419 = 'b129b6460a2d5707cf1b1d115b5a1c7b5be3cad6bbb75fc309837056dc3a8cd1'
-const s420 = 'Rune Knight|Fighter||Rune Knight|TCE|3'
-const s421 = 'Runic Shield|Fighter||Rune Knight|TCE|7'
-const s422 = 'Additional Rune Known|Fighter||Rune Knight|TCE|7'
-const s423 = 'Great Stature|Fighter||Rune Knight|TCE|10'
-const s424 = 'Additional Rune Known|Fighter||Rune Knight|TCE|10'
-const s425 = 'Master of Runes|Fighter||Rune Knight|TCE|15'
-const s426 = 'Additional Rune Known|Fighter||Rune Knight|TCE|15'
-const s427 = 'Runic Juggernaut|Fighter||Rune Knight|TCE|18'
-const s428 = 'Rune Carver|Fighter||Rune Knight|TCE|3'
-const s429 = 'samurai'
-const s430 = 'Samurai'
-const s431 = '479ff6e9134adb7a27965c32c8710930dbab13f44cd7c50c776a13d895c7352a'
-const s432 = 'Samurai|Fighter||Samurai|XGE|3'
-const s433 = 'Elegant Courtier|Fighter||Samurai|XGE|7'
-const s434 = 'Tireless Spirit|Fighter||Samurai|XGE|10'
-const s435 = 'Rapid Strike|Fighter||Samurai|XGE|15'
-const s436 = 'Strength before Death|Fighter||Samurai|XGE|18'
-const s437 = 'Bonus Proficiency|Fighter||Samurai|XGE|3'
-const s438 = 'Arcane Archer|Fighter|XPHB|Arcane Archer|AU|3|AU'
-const s439 = 'Banneret|Fighter|XPHB|Banneret|FRHoF|3|FRHoF'
-const s440 = 'Battle Master|Fighter|XPHB|Battle Master|XPHB|3'
-const s441 = 'Oath of the Noble Genies|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF'
-const s442 = 'rogue'
-const s443 = 'scout'
-const s444 = 'Scout'
-const s445 = 'c529fc63e3fe48a7106b8889d9c31fc8751c9a35e5e9ff9cbc15f7c4b87b1cd0'
-const s446 = 'Scout|Rogue||Scout|XGE|3'
-const s447 = 'Superior Mobility|Rogue||Scout|XGE|9'
-const s448 = 'Ambush Master|Rogue||Scout|XGE|13'
-const s449 = 'Sudden Strike|Rogue||Scout|XGE|17'
-const s450 = 'Survivalist|Rogue||Scout|XGE|3'
-const s451 = 'sorcerer'
-const s452 = 'draconic bloodline'
-const s453 = 'Draconic'
-const s454 = '1dbcce46c2b8cda1a5201700ce1792e5fea7f71b38ff1774b2acb268973d1531'
-const s455 = 'Draconic Bloodline|Sorcerer||Draconic||1'
-const s456 = 'Elemental Affinity|Sorcerer||Draconic||6'
-const s457 = 'Dragon Wings|Sorcerer||Draconic||14'
-const s458 = 'Draconic Presence|Sorcerer||Draconic||18'
-const s459 = 'Dragon Ancestor|Sorcerer||Draconic||1'
-const s460 = 'storm sorcery'
-const s461 = 'Storm'
-const s462 = '2db0cb3aeb0e6d915b1bef4955432d5972586f16a177615bf500f77cbb82745e'
-const s463 = 'Storm Sorcery|Sorcerer||Storm|XGE|1'
-const s464 = 'Heart of the Storm|Sorcerer||Storm|XGE|6'
-const s465 = 'Storm Guide|Sorcerer||Storm|XGE|6'
-const s466 = "Storm's Fury|Sorcerer||Storm|XGE|14"
-const s467 = 'Wind Soul|Sorcerer||Storm|XGE|18'
-const s468 = 'Wind Speaker|Sorcerer||Storm|XGE|1'
-const s469 = 'Draconic Bloodline|Sorcerer|XPHB|Draconic||3'
-const s470 = 'Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3'
-const s471 = 'Enchanter|Wizard|XPHB|Enchanter|AU|3|AU'
-const s472 = 'subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb'
-const s473 = 'basicRules'
-const s474 = 'subclass-feature|life domain|cleric|phb|life|phb|1|phb'
-const s475 = 'b8dd721119af4e5370db981248717de0d94099fa249ee36066794e59b1149bca'
-const s476 = '01fb9b1d289a173230b8bfb5e9027390133564f5d289ae4c6e777232ebf1a120'
-const s477 = '277e5a6f349b2aab3365839e00635db038975a08068e4b17cb8154ce45029e2e'
-const s478 = '37c389e84482af804ee654463d5532a7193a3f201829db31b778a1d39aea6a87'
-const s479 = 'subclass-feature|disciple of life|cleric|phb|life|phb|1|phb'
-const s480 = 'life domain'
-const s481 = 'Life'
-const s482 = 'Life Domain|Cleric||Life||1'
-const s483 = 'Channel Divinity: Preserve Life|Cleric||Life||2'
-const s484 = 'Blessed Healer|Cleric||Life||6'
-const s485 = 'Divine Strike|Cleric||Life||8'
-const s486 = 'Supreme Healing|Cleric||Life||17'
-const s487 = 'Bonus Proficiency|Cleric||Life||1'
+const s44 = 'subclass-feature|bonus proficiencies|monk|phb|drunken master|xge|3|xge'
+const s45 = 'subclass-feature|bonus proficiency|cleric|phb|death|dmg|1|dmg'
+const s46 = 'subclass-feature|bonus proficiency|cleric|phb|forge|xge|1|xge'
+const s47 = 'subclass-feature|bonus proficiency|cleric|phb|nature|phb|1|phb'
+const s48 = '10e57a32318d54dfff9585879066b76dca5f4fd18432d9420f33f6fc4fbcfca4'
+const s49 = 'subclass-feature|bonus proficiency|cleric|phb|solidarity (psa)|psa|1|psa'
+const s50 = '0304e2bb832fbcbd35697d52218ce3a0edffbfd8ee95b634980f559e8cc5d235'
+const s51 = 'subclass-feature|bonus proficiency|cleric|phb|strength (psa)|psa|1|psa'
+const s52 = 'subclass-feature|bonus proficiency|fighter|phb|cavalier|xge|3|xge'
+const s53 = 'subclass-feature|bonus proficiency|fighter|phb|samurai|xge|3|xge'
+const s54 = 'subclass-feature|channeler|bard|xphb|spirits|rhw|3|rhw'
+const s55 = 'subclass-feature|college of lore|bard|phb|lore|phb|3|phb'
+const s56 = '84dcd5b85acb0e5451287cd05ddd05baaff1a764113b43a3ccffc3d2373ce960'
+const s57 = '7cdc2f1c77551071a60aea0ec353e5f1dfc08d4e9bb4adc58a659a0bacd98909'
+const s58 = '466c3ffc9084b6010f522d6b8060173bdd8f8a1821b0c5c36b1a657cd1319bfb'
+const s59 = 'd91e2f479a2fb9f8fce35c0dace07d174af191325bbc32b00589f57b6bea4f27'
+const s60 = '0e6975bdd8e42a84fe6c79e70dcb5eb305a2dc9970ce01f554a73450012cbb1a'
+const s61 = 'subclass-feature|cutting words|bard|phb|lore|phb|3|phb'
+const s62 = 'subclass-feature|college of lore|bard|xphb|lore|xphb|3|xphb'
+const s63 = '1fc4f635848641f066eec175235e1fbd9f0d3102515e73d4df3b2bee6be462f8'
+const s64 = '58221e9e016a64984ec2e68469b2f8a200fb714e125839c264207a12641e2b22'
+const s65 = 'd9ed0447f28acea81f2bf56d94eb50ab8cdffff28cb7b0aef6bffb2abac7ad38'
+const s66 = 'f793c0b20ff280837d8595e080cb766054c33929d662ff7fb60be32cf619a0c3'
+const s67 = 'subclass-feature|cutting words|bard|xphb|lore|xphb|3|xphb'
+const s68 = 'subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof'
+const s69 = 'subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb'
+const s70 = 'subclass-feature|death domain|cleric|phb|death|dmg|1|dmg'
+const s71 = 'c0cc2628ef749aa88a1f6c1b9fa55576f431f7ca4e64874743a900e375f3d035'
+const s72 = 'c562cc082bbe1877466714d32184c0665360f9bb3955842fa70ceac6152ea0f2'
+const s73 = '926ae85e445cea5c0c1fa12cc3be2e1ede0437ea5d028eda733b976b389f379f'
+const s74 = '7faabf90347bd69c8eada94b5dd9434b88157046eaf5c47bde35a69245042374'
+const s75 = '49cdac1971de02e964694bef6cd9dfa420754cfa65308a9b95197fbc15f44f57'
+const s76 = 'subclass-feature|reaper|cleric|phb|death|dmg|1|dmg'
+const s77 = 'subclass-feature|draconic bloodline|sorcerer|phb|draconic|phb|1|phb'
+const s78 = '27ab9fa526ec84201958c6543118f08cb5f4e664fd8de794869680d24a430fbe'
+const s79 = 'dbfc20007026c570e4740fb8a5fcba790b25753b0f5c19ae7fb219bd74e61934'
+const s80 = 'd266021360c3c3e2dc8080a4de241bfd05265f86bc081230d4cbdab51c2d5664'
+const s81 = 'subclass-feature|dragon ancestor|sorcerer|phb|draconic|phb|1|phb'
+const s82 = '1aef7ce8cdfa4d09a8788a1eb3895b838006d80e71bc779ba08e92a02a046b05'
+const s83 = 'subclass-feature|draconic resilience|sorcerer|phb|draconic|phb|1|phb'
+const s84 = 'subclass-feature|draconic disciple|monk|phb|ascendant dragon|ftd|3|ftd'
+const s85 = 'c489967504c449fe0fbc8a65e0cf1fbe487d91681dd2a73ab34f570c491c9ab3'
+const s86 = 'acd007fd3650f8c30f6ea31e258207af176d43e118c5ce40944e683da0372cac'
+const s87 = '5d0858832228d1c6db4ee4e01c1edf85c995a3d286c040766473f119ad6d45c2'
+const s88 = 'subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge'
+const s89 = 'subclass-feature|enchanting conversationalist|wizard|xphb|enchanter|au|3|au'
+const s90 = 'subclass-feature|forge domain|cleric|phb|forge|xge|1|xge'
+const s91 = '764bdcbcf5ca138ae4b910ef215120744a026e292a679cd4d2f848777c8048cb'
+const s92 = '6360edbbaa02807615a36931d646034e69c8c93e871503c5d3c52d7d4afd3d96'
+const s93 = '49f291e7f5440d498fbbba01eeba250cba49ecf45f7ad12e7de2dae6a38ab9b7'
+const s94 = '5edfd3bcc4d4fc69e329b617e0cbfe5152fa5a0e78e76eaf8d33f1ef930ad74f'
+const s95 = '562043d9227941bb48b94153de89c873188e080ea7fd5fed02f46cba25e0aa06'
+const s96 = '9155e42293e7a6d4a510882300d875889f6e8706ce29c49f137418e32de752ca'
+const s97 = 'subclass-feature|blessing of the forge|cleric|phb|forge|xge|1|xge'
+const s98 = "subclass-feature|genie's splendor|paladin|xphb|noble genies|frhof|3|frhof"
+const s99 = 'subclass-feature|giant power|barbarian|phb|giant|bgg|3|bgg'
+const s100 = 'subclass-feature|implement of peace|cleric|phb|peace|tce|1|tce'
+const s101 = 'subclass-feature|implements of mercy|monk|phb|mercy|tce|3|tce'
+const s102 = 'subclass-feature|implements of mercy|monk|xphb|mercy|xphb|3|xphb'
+const s103 = 'subclass-feature|knowledge domain (psa)|cleric|phb|knowledge (psa)|psa|1|psa'
+const s104 = 'd3d0761f1989ba15db1b2c2c4cc3f79d34448e8f43fcad9e88548f820590997f'
+const s105 = 'ea65113b57b3f04cd9e1a13e81df2d1af6c33a6afad52b56a7635b94cd990b9d'
+const s106 = '06e9bb466dcf1d0d734cfa0dd921795e0c8abd526f3fd13d7a88a1fc02bf5c43'
+const s107 = '194c9b8814a8fc287223907aa55e56e8d2ef158ecc37a6881db582b9a271adc3'
+const s108 = 'cd98dfbc4a46347d20c7217a7192ffb47fcf61bb949bf7c43e4026325ac8c51d'
+const s109 = 'subclass-feature|knowledge domain|cleric|phb|knowledge|phb|1|phb'
+const s110 = '433ff39dc5c13de40c4f41cc6708c5a865e5483b4fc97cee14ac9337e9a37c65'
+const s111 = '49edd2a987b63ca3ab5da6fd241c0a8bff0cc4d3d41d592240336e1e435de93f'
+const s112 = '636d08061755e3f535464f9fe438463b7f97bb7f4010170820986bf2523e7d32'
+const s113 = 'ac47cc6ff4d8e7d34892a35d4f3db9f21e05a5d345d15b759587f500dc15a19c'
+const s114 = '55b5d4814afcfa53c5ea90cd2d698c0b55a736d26d577d13ddfb31fadc4c1e38'
+const s115 = 'subclass-feature|nature domain|cleric|phb|nature|phb|1|phb'
+const s116 = '0d7c4eb4b87260dcaf4f18e83c2b648d3a253154664613334645282beabaa4a9'
+const s117 = '33d1d39d363b22e8ffdd09b57ceb256a201ed6258b0e38de16fff3adf7621714'
+const s118 = '84064da355e93ee3e7470761708e8cc7fb6aae7877ef2962254948de17f3cde5'
+const s119 = '481a360c1b10ef78de837c1a1b1db7a1b72e8edecc2c5fed76bf13221520f228'
+const s120 = 'f75f0bda444bf7060764a2f1b360270728c0159fa01bd09e9c420d243dbd83ab'
+const s121 = 'subclass-feature|order domain|cleric|phb|order|tce|1|tce'
+const s122 = '342db9bde88761626435a043b97df816267f80de57bc39f8b7cace3fb8bf8256'
+const s123 = '0018d127dacd1054c38ff57b78adc2880d839d3c8c949a6632c093a972cdeb52'
+const s124 = 'f8a1fc0ae15fcc31fcecb34fbc994382dac5a1a4b0c4909b03d552ed0c7f7057'
+const s125 = 'd18e23eceb8eae702981d1f6f2915609cd45157eb890395fd131a927c7649923'
+const s126 = '006631e13dd65cff6c850f6f2a7fdd102e922fb0c6db91e04eff14aacb52d40b'
+const s127 = '402b4378a1b4f5c89da32bd3057976cc43f5e239295d8e592bcce01d7856e6b1'
+const s128 = '5e4d5243b0420c043259fe019e1ef6d4c13e7f80c0cca8ea5e512fec8dfe3554'
+const s129 = 'subclass-feature|voice of authority|cleric|phb|order|tce|1|tce'
+const s130 = 'subclass-feature|peace domain|cleric|phb|peace|tce|1|tce'
+const s131 = '446282ba55e44a25af870e482a221f01f7c7f12f74d989c558ed0540f13e3576'
+const s132 = '6b92358c91e1fe5c8dafd36bdb185e8ebab124a9439b3bb50ed1e9e34da304e7'
+const s133 = 'd4eab2171e02126fac9498cc22ed54b222419e8b3234ec870977c9a32c97dbc3'
+const s134 = '80871bef626b68f5bb0fb056586c06ff3c74d2a70fdc4c86c0e15d77f1b5136f'
+const s135 = 'aaf62cded3eeeaad476e60448a3c37a2a8d8894a0ed040aa5f4f08f15176e1fa'
+const s136 = 'ba714f3adbd076e1036eb12adbfaecad65e8fbdac5fbdb23d9f90900c62495cf'
+const s137 = '233e8e725607917f9c900b8ba003a465349d069d8a952dc52797d34732a8987f'
+const s138 = 'subclass-feature|emboldening bond|cleric|phb|peace|tce|1|tce'
+const s139 = 'subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag'
+const s140 = 'subclass-feature|rune carver|fighter|phb|rune knight|tce|3|tce'
+const s141 = 'subclass-feature|survivalist|rogue|phb|scout|xge|3|xge'
+const s142 = 'subclass-feature|solidarity domain (psa)|cleric|phb|solidarity (psa)|psa|1|psa'
+const s143 = '4be285846f30fd862c32f8f0d8d8ffd9c23f8f11a3d2a3b0302240c8212534f5'
+const s144 = 'e415c873fa6cd9dd8761210f84be280346195d140dd095b7191d23da77974325'
+const s145 = '830d8809850aa7bd7db13f4910d0b0b939e925eaa49de1278bdf8f1eac5d4ba3'
+const s146 = 'd8ca84d907ec680c7c0c520f230ebb9c93d60eace2a5a00c57bf1ef312b2a808'
+const s147 = 'ccebecbe8b34124fce7e30b4da799c1285f6f7236cb8f849676b3786c919d947'
+const s148 = '759944ea8acfc7577ef69fd73e542c828462160c3b20b54bbd1d680546b3c842'
+const s149 = "subclass-feature|solidarity's action|cleric|phb|solidarity (psa)|psa|1|psa"
+const s150 = 'subclass-feature|storm sorcery|sorcerer|phb|storm|xge|1|xge'
+const s151 = '5c31a91c606068b377a4277581af9d6a685c68d6e800120e521be08af0d17d09'
+const s152 = 'aa71c6e0bdf77378190d2ec071e80303245d3d003ecdf3a0db1b11c297229d0b'
+const s153 = '9cd846a623a39437c1da2eb7a0b57f8432f5a89e7295e1e738e8c21339581304'
+const s154 = '77f8f9f7a1390626138e8ba3de398eaa4add36557d56420c223b6d76529c44d0'
+const s155 = 'subclass-feature|wind speaker|sorcerer|phb|storm|xge|1|xge'
+const s156 = 'f20a7ad7239b57877e9d1b329d92d8a0cc5840e1ecccc573bfa9b4f762cbb158'
+const s157 = 'subclass-feature|tempestuous magic|sorcerer|phb|storm|xge|1|xge'
+const s158 = 'subclass-feature|strength domain (psa)|cleric|phb|strength (psa)|psa|1|psa'
+const s159 = '2b41c017bdfea0e5200cc56f76822d9d2fd7472491adbbdb68e6cf90b2e3fd4c'
+const s160 = '8b7bda43f56bd1fa5809a911870f9f442985722cdcdaf757b5261db1fa8cb4ac'
+const s161 = 'a8f0e4190bc5be45d65f2bf2db36c0fd2ee3d2f55f4f0a010358520cd786a0f7'
+const s162 = 'd1072cbf80eabd2cc89f06aa98073d49cbb8bca8c5aafc9885bb1a03bd07a454'
+const s163 = 'ce38def6775e1483260e6727c56ed409b86f543bd32435a4eedfd7a2deabbf17'
+const s164 = '7ec8c69426376bb2aacf256661ade55b043eaeaa77628f7c8d7af65f74d60a03'
+const s165 = 'subclass-feature|tempest domain|cleric|phb|tempest|phb|1|phb'
+const s166 = '7c633bcdf5b935a27911c0f78122ed06ca1efa3b6b638c546196be474f09c2cd'
+const s167 = 'b0a8ae7e6ae633a3430e1daa66a39a12082bc9e9c9040b5a37b678e255535279'
+const s168 = 'e5fefc192584b6a6c255fb409d9344ca69d1a3f38075d391c6050374f517fdf4'
+const s169 = '31667f73ae8d86a269e8b4b7c4f1bba4509ee57bd39a68992efb75943408928d'
+const s170 = '20f86e5c836b2f9539c195378e45c10a27e352113f158d437693efdb5a994f83'
+const s171 = 'subclass-feature|wrath of the storm|cleric|phb|tempest|phb|1|phb'
+const s172 = 'subclass-feature|twilight domain|cleric|phb|twilight|tce|1|tce'
+const s173 = 'fc100abfcdf4654f2fe9b66f3f832101029bd2777980bd9f4135c9f9098e93e8'
+const s174 = 'ef03ef24fc6b82ec934db515b23d3c2bf687ce036e868c22b52b5591b28ade2b'
+const s175 = 'c7fa7f09cc60b65215572ebcacdcd06ea2ef198578e7c2591ed418ba5fcb5d3c'
+const s176 = '8439330f411444fc70bb26a8d5812cf8169095ec8cccc6490f6bf918f23d9892'
+const s177 = '9583dd8467a6370ba70371c7ad8139366c862871aea6acfb9a6c452df2cf4589'
+const s178 = '28947b9cb09c384c10d505f26d1a220825202ca4b89857bc74be96517661ba7b'
+const s179 = '8362fc77008de400b06778103eeb72959401aa41de34c8150ac4921697cd8d3b'
+const s180 = 'subclass-feature|eyes of night|cleric|phb|twilight|tce|1|tce'
+const s181 = 'f4ff6a74ce26958bfea9085dbf3420f4d37161aa26a97d6678c4a9a5330c0f4d'
+const s182 = 'subclass-feature|vigilant blessing|cleric|phb|twilight|tce|1|tce'
+const s183 = 'subclass-feature|unfettered mind|cleric|xphb|knowledge|frhof|6|frhof'
+const s184 = 'subclass-feature|war domain|cleric|phb|war|phb|1|phb'
+const s185 = '27b2c40c161eade1fe22c24c554b40af3fe783b83f7bb5f8dd95a2df66b355ea'
+const s186 = 'b76a53952e2b6070f49be05697006cd077460a1635f0af9dee9ca2676914893e'
+const s187 = '9ff9353b1bf73b21ba03e6b0f8ec801277bf89ce6d0aae313c723c48c1affe86'
+const s188 = 'e004bef06eaf51e5aa1a740fb25db2418e318fd3d4d14d25604d2c54a0238afa'
+const s189 = '6639857ca5b19650175707d285ef06bf22b01c56983178d6c0c046a915d0106a'
+const s190 = 'subclass-feature|war priest|cleric|phb|war|phb|1|phb'
+const s191 = 'subclass-feature|zeal domain (psa)|cleric|phb|zeal (psa)|psa|1|psa'
+const s192 = '9314f9cebf30b874f48ef4d3178aff0306f51401c922ef02ea0e36c179c6fc8d'
+const s193 = '1c73a3e0e5413430a4c46fe89710c7b6e4c8e2be0e5e575f857025ebadf27578'
+const s194 = '2f8cf8118f9c0e973dcec56a45fc44cfb987d0b585b87ecc58cdfb88fdee88f9'
+const s195 = '2f64a5a9300170a49691cb23f5543293e1618f6d2df8f6c50ec71bfd5debb931'
+const s196 = '82c55aa9315aaaf2ff2df369c34a4280fa2c02d89e7ee0e9b84eaa09fffcc981'
+const s197 = '7e61c2dff71e9e750423e4a46f89b87c4e726bd50b48c91463e97f5f8647d6d8'
+const s198 = 'subclass-feature|priest of zeal|cleric|phb|zeal (psa)|psa|1|psa'
+const s199 = 'barbarian'
+const s200 = 'phb'
+const s201 = 'path of the giant'
+const s202 = 'bgg'
+const s203 = 'Giant'
+const s204 = '4cd9c42be5be0ee87e992a14c8ee7fc55f70938912e3fa4e51621d825fc8d77e'
+const s205 = 'additionalSpells'
+const s206 = 'edition'
+const s207 = 'hasFluffImages'
+const s208 = 'shortName'
+const s209 = 'spellcastingAbility'
+const s210 = 'subclassFeatures'
+const s211 = 'Path of the Giant|Barbarian||Giant|BGG|3'
+const s212 = 'Elemental Cleaver|Barbarian||Giant|BGG|6'
+const s213 = 'Mighty Impel|Barbarian||Giant|BGG|10'
+const s214 = 'Demiurgic Colossus|Barbarian||Giant|BGG|14'
+const s215 = 'Giant Power|Barbarian||Giant|BGG|3'
+const s216 = 'xphb'
+const s217 = '_copy'
+const s218 = 'fluff'
+const s219 = 'bard'
+const s220 = 'college of lore'
+const s221 = 'Lore'
+const s222 = 'de4377ab926377dff938383fad05101f28f785ae8d930a982c2427a677dda7f5'
+const s223 = 'reprintedAs'
+const s224 = 'College of Lore|Bard||Lore||3'
+const s225 = 'Additional Magical Secrets|Bard||Lore||6'
+const s226 = 'Peerless Skill|Bard||Lore||14'
+const s227 = 'Bonus Proficiencies|Bard||Lore||3'
+const s228 = 'college of swords'
+const s229 = 'xge'
+const s230 = 'Swords'
+const s231 = 'f920f9b45e102c021d88cd46042303cb997b27429fa031610070cd0a327c6a65'
+const s232 = 'optionalfeatureProgression'
+const s233 = 'College of Swords|Bard||Swords|XGE|3'
+const s234 = 'Extra Attack|Bard||Swords|XGE|6'
+const s235 = "Master's Flourish|Bard||Swords|XGE|14"
+const s236 = 'Bonus Proficiencies|Bard||Swords|XGE|3'
+const s237 = 'college of valor'
+const s238 = 'Valor'
+const s239 = '46f79844b37efbd330f8bcdbf5cb9a24b8a19beb62ae8ef8d8ad32b3fa3f980a'
+const s240 = 'College of Valor|Bard||Valor||3'
+const s241 = 'Extra Attack|Bard||Valor||6'
+const s242 = 'Battle Magic|Bard||Valor||14'
+const s243 = 'Bonus Proficiencies|Bard||Valor||3'
+const s244 = 'College of Lore|Bard|XPHB|Lore|XPHB|3'
+const s245 = 'Magical Discoveries|Bard|XPHB|Lore|XPHB|6'
+const s246 = 'Peerless Skill|Bard|XPHB|Lore|XPHB|14'
+const s247 = 'Bonus Proficiencies|Bard|XPHB|Lore|XPHB|3'
+const s248 = 'College of Spirits|Bard|XPHB|Spirits|RHW|3|RHW'
+const s249 = 'frhof'
+const s250 = 'College of the Moon|Bard|XPHB|Moon|FRHoF|3|FRHoF'
+const s251 = 'College of Valor|Bard|XPHB|Valor|XPHB|3'
+const s252 = 'cleric'
+const s253 = 'arcana domain'
+const s254 = 'scag'
+const s255 = 'Arcana'
+const s256 = 'd04aaea4626573de030486c0b624e557d248b0a9bf9d017c122624810a799503'
+const s257 = 'Arcana Domain|Cleric||Arcana|SCAG|1'
+const s258 = 'Spell Breaker|Cleric||Arcana|SCAG|6'
+const s259 = 'Arcane Mastery|Cleric||Arcana|SCAG|17'
+const s260 = 'Arcane Initiate|Cleric||Arcana|SCAG|1'
+const s261 = 'death domain'
+const s262 = 'dmg'
+const s263 = 'Death'
+const s264 = 'ce6885ea98bd8fa28df5c51bf01b20c6b8487cb9a13877afc86e8d468dd04c2e'
+const s265 = 'Death Domain|Cleric||Death|DMG|1'
+const s266 = 'Inescapable Destruction|Cleric||Death|DMG|6'
+const s267 = 'Improved Reaper|Cleric||Death|DMG|17'
+const s268 = 'Bonus Proficiency|Cleric||Death|DMG|1'
+const s269 = 'forge domain'
+const s270 = 'Forge'
+const s271 = '4fe3a2d9692b3c4ed08274032f3d2dab90fbd6658f023aea9c51d01547ddc186'
+const s272 = 'hasFluff'
+const s273 = 'Forge Domain|Cleric||Forge|XGE|1'
+const s274 = 'Soul of the Forge|Cleric||Forge|XGE|6'
+const s275 = 'Saint of Forge and Fire|Cleric||Forge|XGE|17'
+const s276 = 'Bonus Proficiency|Cleric||Forge|XGE|1'
+const s277 = 'knowledge domain (psa)'
+const s278 = 'psa'
+const s279 = 'Knowledge (PSA)'
+const s280 = '0f6cd3345ce9601380eafb87079cd9f6dabded350cb57bdb297ed10f41f15d32'
+const s281 = 'isReprinted'
+const s282 = 'Knowledge Domain (PSA)|Cleric||Knowledge (PSA)|PSA|1'
+const s283 = 'Channel Divinity: Knowledge of the Ages|Cleric||Knowledge||2'
+const s284 = 'Channel Divinity: Read Thoughts|Cleric||Knowledge||6'
+const s285 = 'Potent Spellcasting|Cleric||Knowledge||8'
+const s286 = 'Blessed Strikes|Cleric||Knowledge||8|TCE'
+const s287 = 'Visions of the Past|Cleric||Knowledge||17'
+const s288 = 'Knowledge Domain|Cleric||Knowledge||1'
+const s289 = 'Blessings of Knowledge|Cleric||Knowledge||1'
+const s290 = 'knowledge domain'
+const s291 = 'Knowledge'
+const s292 = '12fc5dfdb6287f5bc6b69c59b4d287af203f5ce1e52b908d5c41ad42ba4cc122'
+const s293 = 'nature domain'
+const s294 = 'Nature'
+const s295 = 'bdde9364f85c618c68c046382d5b91cef45ba0fd4730c2a80712bd17e560fb50'
+const s296 = 'Nature Domain|Cleric||Nature||1'
+const s297 = 'Dampen Elements|Cleric||Nature||6'
+const s298 = 'Master of Nature|Cleric||Nature||17'
+const s299 = 'Acolyte of Nature|Cleric||Nature||1'
+const s300 = 'Bonus Proficiency|Cleric||Nature||1'
+const s301 = 'order domain'
+const s302 = 'tce'
+const s303 = 'Order'
+const s304 = '0cac187bc230f68ad5b978a3b6940f40b8b41095f2d7f8b7b5410a2e5d51d3ad'
+const s305 = 'Order Domain|Cleric||Order|TCE|1'
+const s306 = 'Embodiment of the Law|Cleric||Order|TCE|6'
+const s307 = "Order's Wrath|Cleric||Order|TCE|17"
+const s308 = 'Bonus Proficiencies|Cleric||Order|TCE|1'
+const s309 = 'peace domain'
+const s310 = 'Peace'
+const s311 = '3ebc24784e3667b2cb6af76562a0277ac92e5bb33ca57a8fe9a911e4920e91c0'
+const s312 = 'Peace Domain|Cleric||Peace|TCE|1'
+const s313 = 'Protective Bond|Cleric||Peace|TCE|6'
+const s314 = 'Expansive Bond|Cleric||Peace|TCE|17'
+const s315 = 'Implement of Peace|Cleric||Peace|TCE|1'
+const s316 = 'solidarity domain (psa)'
+const s317 = 'Solidarity (PSA)'
+const s318 = '57c1647a42ee0abf5f6db015764242760eae2816d2fc861f269343ff5fa5b79c'
+const s319 = 'Solidarity Domain (PSA)|Cleric||Solidarity (PSA)|PSA|1'
+const s320 = "Oketra's Blessing|Cleric||Solidarity (PSA)|PSA|6"
+const s321 = 'Supreme Healing|Cleric||Solidarity (PSA)|PSA|17'
+const s322 = 'Bonus Proficiency|Cleric||Solidarity (PSA)|PSA|1'
+const s323 = 'strength domain (psa)'
+const s324 = 'Strength (PSA)'
+const s325 = 'fa2730d4a333eb5de820af31228c466256984364a3a46aee6cf2d26fe94fb953'
+const s326 = 'Strength Domain (PSA)|Cleric||Strength (PSA)|PSA|1'
+const s327 = "Rhonas's Blessing|Cleric||Strength (PSA)|PSA|6"
+const s328 = 'Avatar of Battle|Cleric||Strength (PSA)|PSA|17'
+const s329 = 'Acolyte of Strength|Cleric||Strength (PSA)|PSA|1'
+const s330 = 'Bonus Proficiency|Cleric||Strength (PSA)|PSA|1'
+const s331 = 'tempest domain'
+const s332 = 'Tempest'
+const s333 = 'd620f017d8b24ddf4d4f923fabccb91399e1e786121ad668394389dce4175ab4'
+const s334 = 'Tempest Domain|Cleric||Tempest||1'
+const s335 = 'Thunderbolt Strike|Cleric||Tempest||6'
+const s336 = 'Stormborn|Cleric||Tempest||17'
+const s337 = 'Bonus Proficiencies|Cleric||Tempest||1'
+const s338 = 'twilight domain'
+const s339 = 'Twilight'
+const s340 = '787a4332b7f4529b7cda3055202e067c6236cf9e927e277bffac671de2afee5c'
+const s341 = 'Twilight Domain|Cleric||Twilight|TCE|1'
+const s342 = 'Steps of Night|Cleric||Twilight|TCE|6'
+const s343 = 'Twilight Shroud|Cleric||Twilight|TCE|17'
+const s344 = 'Bonus Proficiencies|Cleric||Twilight|TCE|1'
+const s345 = 'war domain'
+const s346 = 'War'
+const s347 = '5deb0d6d794f6f8232c7ad5d588e0b83766abdcd56182152cca218287a035619'
+const s348 = 'War Domain|Cleric||War||1'
+const s349 = "Channel Divinity: War God's Blessing|Cleric||War||6"
+const s350 = 'Avatar of Battle|Cleric||War||17'
+const s351 = 'Bonus Proficiencies|Cleric||War||1'
+const s352 = 'zeal domain (psa)'
+const s353 = 'Zeal (PSA)'
+const s354 = 'aff051831d44f01c1923b9a1d78f45a641665fb1a8dfa8b9b28b60c71cb11f41'
+const s355 = 'Zeal Domain (PSA)|Cleric||Zeal (PSA)|PSA|1'
+const s356 = 'Resounding Strike|Cleric||Zeal (PSA)|PSA|6'
+const s357 = 'Blaze of Glory|Cleric||Zeal (PSA)|PSA|17'
+const s358 = 'Bonus Proficiencies|Cleric||Zeal (PSA)|PSA|1'
+const s359 = 'Arcana Domain|Cleric|XPHB|Arcana|AU|3|AU'
+const s360 = 'Arcana Domain|Cleric|XPHB|Arcana|SCAG|3'
+const s361 = 'Death Domain|Cleric|XPHB|Death|DMG|3'
+const s362 = 'Forge Domain|Cleric|XPHB|Forge|XGE|3'
+const s363 = 'Knowledge Domain (PSA)|Cleric|XPHB|Knowledge (PSA)|PSA|3'
+const s364 = 'Channel Divinity: Knowledge of the Ages|Cleric|XPHB|Knowledge||3'
+const s365 = 'Knowledge Domain|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF'
+const s366 = 'Unfettered Mind|Cleric|XPHB|Knowledge|FRHoF|6|FRHoF'
+const s367 = 'Knowledge Domain|Cleric|XPHB|Knowledge||3'
+const s368 = 'Nature Domain|Cleric|XPHB|Nature||3'
+const s369 = 'Order Domain|Cleric|XPHB|Order|TCE|3'
+const s370 = 'Peace Domain|Cleric|XPHB|Peace|TCE|3'
+const s371 = 'Solidarity Domain (PSA)|Cleric|XPHB|Solidarity (PSA)|PSA|3'
+const s372 = 'Strength Domain (PSA)|Cleric|XPHB|Strength (PSA)|PSA|3'
+const s373 = 'Tempest Domain|Cleric|XPHB|Tempest||3'
+const s374 = 'Twilight Domain|Cleric|XPHB|Twilight|TCE|3'
+const s375 = 'War Domain|Cleric|XPHB|War||3'
+const s376 = 'Zeal Domain (PSA)|Cleric|XPHB|Zeal (PSA)|PSA|3'
+const s377 = 'fighter'
+const s378 = 'arcane archer'
+const s379 = 'Arcane Archer'
+const s380 = 'e63c4d2f3802293770729e1abcd1c3f0b957759386615e3b91bf7a3c50e0993e'
+const s381 = 'Arcane Archer|Fighter||Arcane Archer|XGE|3'
+const s382 = 'Magic Arrow|Fighter||Arcane Archer|XGE|7'
+const s383 = 'Curving Shot|Fighter||Arcane Archer|XGE|7'
+const s384 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|7'
+const s385 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|10'
+const s386 = 'Ever-Ready Shot|Fighter||Arcane Archer|XGE|15'
+const s387 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|15'
+const s388 = 'Additional Arcane Shot Option|Fighter||Arcane Archer|XGE|18'
+const s389 = 'Arcane Archer Lore|Fighter||Arcane Archer|XGE|3'
+const s390 = 'battle master'
+const s391 = 'Battle Master'
+const s392 = '3d1876bafcb4d697870f598ec17e64f22321a266f47f7bf1a66f63002ad5ab36'
+const s393 = 'Battle Master|Fighter||Battle Master||3'
+const s394 = 'Additional Maneuvers|Fighter||Battle Master||7'
+const s395 = 'Additional Superiority Die|Fighter||Battle Master||7'
+const s396 = 'Know Your Enemy|Fighter||Battle Master||7'
+const s397 = 'Additional Maneuvers|Fighter||Battle Master||10'
+const s398 = 'Improved Combat Superiority (d10)|Fighter||Battle Master||10'
+const s399 = 'Additional Maneuvers|Fighter||Battle Master||15'
+const s400 = 'Additional Superiority Die|Fighter||Battle Master||15'
+const s401 = 'Relentless|Fighter||Battle Master||15'
+const s402 = 'Improved Combat Superiority (d12)|Fighter||Battle Master||18'
+const s403 = 'Student of War|Fighter||Battle Master||3'
+const s404 = 'cavalier'
+const s405 = 'Cavalier'
+const s406 = 'd62e2b8e7f51937b512bbef0fb77a633eccba884e8bb568511985cebc8c1721c'
+const s407 = 'Cavalier|Fighter||Cavalier|XGE|3'
+const s408 = 'Warding Maneuver|Fighter||Cavalier|XGE|7'
+const s409 = 'Hold the Line|Fighter||Cavalier|XGE|10'
+const s410 = 'Ferocious Charger|Fighter||Cavalier|XGE|15'
+const s411 = 'Vigilant Defender|Fighter||Cavalier|XGE|18'
+const s412 = 'Bonus Proficiency|Fighter||Cavalier|XGE|3'
+const s413 = 'purple dragon knight (banneret)'
+const s414 = 'Purple Dragon Knight (Banneret)'
+const s415 = '596d505316ec3cc2126de15d5be9593ee7c98fd464f9994b3bbf1823570d6c72'
+const s416 = 'Purple Dragon Knight (Banneret)|Fighter||Purple Dragon Knight (Banneret)|SCAG|3'
+const s417 = 'Royal Envoy|Fighter||Purple Dragon Knight (Banneret)|SCAG|7'
+const s418 = 'Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|10'
+const s419 = 'Bulwark|Fighter||Purple Dragon Knight (Banneret)|SCAG|15'
+const s420 = 'Inspiring Surge|Fighter||Purple Dragon Knight (Banneret)|SCAG|18'
+const s421 = 'rune knight'
+const s422 = 'Rune Knight'
+const s423 = 'b129b6460a2d5707cf1b1d115b5a1c7b5be3cad6bbb75fc309837056dc3a8cd1'
+const s424 = 'Rune Knight|Fighter||Rune Knight|TCE|3'
+const s425 = 'Runic Shield|Fighter||Rune Knight|TCE|7'
+const s426 = 'Additional Rune Known|Fighter||Rune Knight|TCE|7'
+const s427 = 'Great Stature|Fighter||Rune Knight|TCE|10'
+const s428 = 'Additional Rune Known|Fighter||Rune Knight|TCE|10'
+const s429 = 'Master of Runes|Fighter||Rune Knight|TCE|15'
+const s430 = 'Additional Rune Known|Fighter||Rune Knight|TCE|15'
+const s431 = 'Runic Juggernaut|Fighter||Rune Knight|TCE|18'
+const s432 = 'Rune Carver|Fighter||Rune Knight|TCE|3'
+const s433 = 'samurai'
+const s434 = 'Samurai'
+const s435 = '479ff6e9134adb7a27965c32c8710930dbab13f44cd7c50c776a13d895c7352a'
+const s436 = 'Samurai|Fighter||Samurai|XGE|3'
+const s437 = 'Elegant Courtier|Fighter||Samurai|XGE|7'
+const s438 = 'Tireless Spirit|Fighter||Samurai|XGE|10'
+const s439 = 'Rapid Strike|Fighter||Samurai|XGE|15'
+const s440 = 'Strength before Death|Fighter||Samurai|XGE|18'
+const s441 = 'Bonus Proficiency|Fighter||Samurai|XGE|3'
+const s442 = 'Arcane Archer|Fighter|XPHB|Arcane Archer|AU|3|AU'
+const s443 = 'Banneret|Fighter|XPHB|Banneret|FRHoF|3|FRHoF'
+const s444 = 'Battle Master|Fighter|XPHB|Battle Master|XPHB|3'
+const s445 = 'monk'
+const s446 = 'way of mercy'
+const s447 = 'Mercy'
+const s448 = '580469ae30f750031a86cccc60c8849b93b74af3c4ae429988d6b4ff5a0a3656'
+const s449 = 'Way of Mercy|Monk||Mercy|TCE|3'
+const s450 = "Physician's Touch|Monk||Mercy|TCE|6"
+const s451 = 'Flurry of Healing and Harm|Monk||Mercy|TCE|11'
+const s452 = 'Hand of Ultimate Mercy|Monk||Mercy|TCE|17'
+const s453 = 'Implements of Mercy|Monk||Mercy|TCE|3'
+const s454 = 'way of the ascendant dragon'
+const s455 = 'ftd'
+const s456 = 'Ascendant Dragon'
+const s457 = '8b2246e72ff5bca43c85c05385f6faddb6bfb48bb9ccb6ea7ba28f0fc20ba447'
+const s458 = 'Way of the Ascendant Dragon|Monk||Ascendant Dragon|FTD|3'
+const s459 = 'Wings Unfurled|Monk||Ascendant Dragon|FTD|6'
+const s460 = 'Aspect of the Wyrm|Monk||Ascendant Dragon|FTD|11'
+const s461 = 'Ascendant Aspect|Monk||Ascendant Dragon|FTD|17'
+const s462 = 'Draconic Disciple|Monk||Ascendant Dragon|FTD|3'
+const s463 = 'way of the drunken master'
+const s464 = 'Drunken Master'
+const s465 = '90ba6cfad2b1015ff7d755137e01a1706fec109337a8098ecb49c911393a634f'
+const s466 = 'Way of the Drunken Master|Monk||Drunken Master|XGE|3'
+const s467 = 'Tipsy Sway|Monk||Drunken Master|XGE|6'
+const s468 = "Drunkard's Luck|Monk||Drunken Master|XGE|11"
+const s469 = 'Intoxicated Frenzy|Monk||Drunken Master|XGE|17'
+const s470 = 'Bonus Proficiencies|Monk||Drunken Master|XGE|3'
+const s471 = 'Warrior of Mercy|Monk|XPHB|Mercy|XPHB|3'
+const s472 = 'Oath of the Noble Genies|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF'
+const s473 = 'rogue'
+const s474 = 'scout'
+const s475 = 'Scout'
+const s476 = 'c529fc63e3fe48a7106b8889d9c31fc8751c9a35e5e9ff9cbc15f7c4b87b1cd0'
+const s477 = 'Scout|Rogue||Scout|XGE|3'
+const s478 = 'Superior Mobility|Rogue||Scout|XGE|9'
+const s479 = 'Ambush Master|Rogue||Scout|XGE|13'
+const s480 = 'Sudden Strike|Rogue||Scout|XGE|17'
+const s481 = 'Survivalist|Rogue||Scout|XGE|3'
+const s482 = 'sorcerer'
+const s483 = 'draconic bloodline'
+const s484 = 'Draconic'
+const s485 = '1dbcce46c2b8cda1a5201700ce1792e5fea7f71b38ff1774b2acb268973d1531'
+const s486 = 'Draconic Bloodline|Sorcerer||Draconic||1'
+const s487 = 'Elemental Affinity|Sorcerer||Draconic||6'
+const s488 = 'Dragon Wings|Sorcerer||Draconic||14'
+const s489 = 'Draconic Presence|Sorcerer||Draconic||18'
+const s490 = 'Dragon Ancestor|Sorcerer||Draconic||1'
+const s491 = 'storm sorcery'
+const s492 = 'Storm'
+const s493 = '2db0cb3aeb0e6d915b1bef4955432d5972586f16a177615bf500f77cbb82745e'
+const s494 = 'Storm Sorcery|Sorcerer||Storm|XGE|1'
+const s495 = 'Heart of the Storm|Sorcerer||Storm|XGE|6'
+const s496 = 'Storm Guide|Sorcerer||Storm|XGE|6'
+const s497 = "Storm's Fury|Sorcerer||Storm|XGE|14"
+const s498 = 'Wind Soul|Sorcerer||Storm|XGE|18'
+const s499 = 'Wind Speaker|Sorcerer||Storm|XGE|1'
+const s500 = 'Draconic Bloodline|Sorcerer|XPHB|Draconic||3'
+const s501 = 'Storm Sorcery|Sorcerer|XPHB|Storm|XGE|3'
+const s502 = 'Enchanter|Wizard|XPHB|Enchanter|AU|3|AU'
+const s503 = 'subclass-feature|bonus proficiency|cleric|phb|life|phb|1|phb'
+const s504 = 'basicRules'
+const s505 = 'subclass-feature|life domain|cleric|phb|life|phb|1|phb'
+const s506 = 'b8dd721119af4e5370db981248717de0d94099fa249ee36066794e59b1149bca'
+const s507 = '01fb9b1d289a173230b8bfb5e9027390133564f5d289ae4c6e777232ebf1a120'
+const s508 = '277e5a6f349b2aab3365839e00635db038975a08068e4b17cb8154ce45029e2e'
+const s509 = '37c389e84482af804ee654463d5532a7193a3f201829db31b778a1d39aea6a87'
+const s510 = 'subclass-feature|disciple of life|cleric|phb|life|phb|1|phb'
+const s511 = 'life domain'
+const s512 = 'Life'
+const s513 = 'Life Domain|Cleric||Life||1'
+const s514 = 'Channel Divinity: Preserve Life|Cleric||Life||2'
+const s515 = 'Blessed Healer|Cleric||Life||6'
+const s516 = 'Divine Strike|Cleric||Life||8'
+const s517 = 'Supreme Healing|Cleric||Life||17'
+const s518 = 'Bonus Proficiency|Cleric||Life||1'
+const a0 = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+const a1 = [s1, s2, s3, s5, s6, s7, s8, s9, s10]
+const a2 = [
+  { digest: s14 },
+  { digest: s15 },
+  { digest: s16 },
+  { digest: s17 },
+  { digest: s18, reference: s19 },
+]
+const a3 = [s1, s2, s3, s5, s6, s8, s9, s10]
+const a4 = [s1, s2, s3, s4, s5, s6, s8, s9, s10]
+const a5 = [s1, s2, s3, s4, s5, s6, s7, s8, s29, s9, s10]
+const a6 = [{ digest: s30 }]
+const a7 = [{ digest: s36 }]
+const a8 = [{ digest: s40 }]
+const a9 = [{ digest: s48 }]
+const a10 = [{ digest: s50 }]
+const a11 = [s1, s2, s3, s5, s6, s7, s8, s29, s9, s10]
+const a12 = [
+  { digest: s56 },
+  { digest: s57 },
+  { digest: s58 },
+  { digest: s59, reference: s28 },
+  { digest: s60, reference: s61 },
+]
+const a13 = [
+  { digest: s63 },
+  { digest: s64 },
+  { digest: s65, reference: s33 },
+  { digest: s66, reference: s67 },
+]
+const a14 = [
+  { digest: s72 },
+  { digest: s16 },
+  { digest: s73 },
+  { digest: s74, reference: s45 },
+  { digest: s75, reference: s76 },
+]
+const a15 = [{ digest: s79 }, { digest: s80, reference: s81 }, { digest: s82, reference: s83 }]
+const a16 = [{ digest: s85 }, { digest: s86 }, { digest: s87 }]
+const a17 = [
+  { digest: s92 },
+  { digest: s93 },
+  { digest: s94 },
+  { digest: s95, reference: s46 },
+  { digest: s96, reference: s97 },
+]
+const a18 = [
+  { digest: s105 },
+  { digest: s106 },
+  { digest: s107 },
+  { digest: s108, reference: s109 },
+]
+const a19 = [{ digest: s111 }, { digest: s112 }, { digest: s113 }, { digest: s114, reference: s26 }]
+const a20 = [
+  { digest: s117 },
+  { digest: s112 },
+  { digest: s118 },
+  { digest: s119, reference: s0 },
+  { digest: s120, reference: s47 },
+]
+const a21 = [
+  { digest: s123 },
+  { digest: s124 },
+  { digest: s125 },
+  { digest: s112 },
+  { digest: s126 },
+  { digest: s127, reference: s37 },
+  { digest: s128, reference: s129 },
+]
+const a22 = [
+  { digest: s132 },
+  { digest: s133 },
+  { digest: s134 },
+  { digest: s135 },
+  { digest: s136, reference: s100 },
+  { digest: s137, reference: s138 },
+]
+const a23 = [
+  { digest: s144 },
+  { digest: s145 },
+  { digest: s93 },
+  { digest: s146 },
+  { digest: s147, reference: s49 },
+  { digest: s148, reference: s149 },
+]
+const a24 = [
+  { digest: s152 },
+  { digest: s153 },
+  { digest: s154, reference: s155 },
+  { digest: s156, reference: s157 },
+]
+const a25 = [
+  { digest: s160 },
+  { digest: s161 },
+  { digest: s93 },
+  { digest: s162 },
+  { digest: s163, reference: s11 },
+  { digest: s164, reference: s51 },
+]
+const a26 = [
+  { digest: s167 },
+  { digest: s112 },
+  { digest: s168 },
+  { digest: s169, reference: s39 },
+  { digest: s170, reference: s171 },
+]
+const a27 = [
+  { digest: s174 },
+  { digest: s175 },
+  { digest: s176 },
+  { digest: s177 },
+  { digest: s178, reference: s41 },
+  { digest: s179, reference: s180 },
+  { digest: s181, reference: s182 },
+]
+const a28 = [
+  { digest: s186 },
+  { digest: s93 },
+  { digest: s187 },
+  { digest: s188, reference: s42 },
+  { digest: s189, reference: s190 },
+]
+const a29 = [
+  { digest: s193 },
+  { digest: s194 },
+  { digest: s93 },
+  { digest: s195 },
+  { digest: s196, reference: s43 },
+  { digest: s197, reference: s198 },
+]
+const a30 = [s211, s212, s213, s214]
+const a31 = [s211, s215]
+const a32 = [{ target: s99, refs: a31, level: 3 }]
+const a33 = [s224, s225, s226]
+const a34 = [s224, s227]
+const a35 = [{ target: s28, refs: a34, level: 3 }]
+const a36 = [s1, s2, s206, s207, s6, s232, s7, s208, s8, s210]
+const a37 = [s233, s234, s235]
+const a38 = [s233, s236]
+const a39 = [{ target: s31, refs: a38, level: 3 }]
+const a40 = [s240, s241, s242]
+const a41 = [s240, s243]
+const a42 = [{ target: s32, refs: a41, level: 3 }]
+const a43 = [s244, s245, s246]
+const a44 = [s244, s247]
+const a45 = [{ target: s33, refs: a44, level: 3 }]
+const a46 = [s205, s1, s2, s206, s207, s6, s7, s208, s8, s210]
+const a47 = [s217, s1, s2, s206, s218, s207, s6, s232, s7, s208, s8, s210]
+const a48 = [s1, s2, s206, s207, s6, s7, s208, s8, s210]
+const a49 = [s205, s1, s2, s206, s6, s7, s223, s208, s8, s210]
+const a50 = [s205, s1, s2, s206, s6, s7, s208, s8, s210]
+const a51 = [s205, s1, s2, s206, s272, s207, s6, s208, s8, s210]
+const a52 = [s217, s205, s1, s2, s206, s218, s207, s6, s7, s208, s8, s210]
+const a53 = [s217, s205, s1, s2, s206, s6, s7, s223, s208, s8, s210]
+const a54 = [s217, s205, s1, s2, s206, s6, s7, s208, s8, s210]
+const a55 = [s381, s382, s383, s384, s385, s386, s387, s388]
+const a56 = [s381, s389]
+const a57 = [{ target: s21, refs: a56, level: 3 }]
+const a58 = [s393, s394, s395, s396, s397, s398, s399, s400, s401, s402]
+const a59 = [s393, s403]
+const a60 = [{ target: s24, refs: a59, level: 3 }]
+const a61 = [s407, s408, s409, s410, s411]
+const a62 = [s407, s412]
+const a63 = [{ target: s52, refs: a62, level: 3 }]
+const a64 = [s1, s2, s206, s207, s6, s7, s223, s208, s8, s210]
+const a65 = [s416, s417, s418, s419, s420]
+const a66 = [{ target: s139, refs: [s417], level: 7 }]
+const a67 = [s424, s425, s426, s427, s428, s429, s430, s431]
+const a68 = [s424, s432]
+const a69 = [{ target: s140, refs: a68, level: 3 }]
+const a70 = [s436, s437, s438, s439, s440]
+const a71 = [s436, s441]
+const a72 = [
+  { target: s53, refs: a71, level: 3 },
+  { target: s88, refs: [s437], level: 7 },
+]
+const a73 = [s217, s1, s2, s206, s207, s6, s7, s208, s8, s210]
+const a74 = [s217, s1, s2, s206, s218, s207, s6, s7, s223, s208, s8, s210]
+const a75 = [s449, s450, s451, s452]
+const a76 = [s449, s453]
+const a77 = [{ target: s101, refs: a76, level: 3 }]
+const a78 = [s458, s459, s460, s461]
+const a79 = [s458, s462]
+const a80 = [{ target: s84, refs: a79, level: 3 }]
+const a81 = [s466, s467, s468, s469]
+const a82 = [s466, s470]
+const a83 = [{ target: s44, refs: a82, level: 3 }]
+const a84 = [s477, s478, s479, s480]
+const a85 = [{ target: s141, refs: [s477, s481], level: 3 }]
+const a86 = [s486, s487, s488, s489]
+const a87 = [s486, s490]
+const a88 = [{ target: s81, refs: a87, level: 1 }]
+const a89 = [
+  { digest: s506 },
+  { digest: s112 },
+  { digest: s507 },
+  { digest: s508, reference: s503 },
+  { digest: s509, reference: s510 },
+]
+const a90 = [s513, s518]
+const a91 = [{ target: s503, refs: a90, level: 1 }]
+const a92 = [s1, s2, s3, s4, s5, s6, s8, s29, s9, s10]
+const a93 = [s1, s2, s3, s5, s6, s8, s29, s9, s10]
+const a94 = [s205, s1, s2, s206, s6, s208, s8, s29, s210]
 
 const registry = {
   features: [
@@ -494,7 +730,7 @@ const registry = {
       target: s0,
       rawDigest: 'db19a889a69ea7ab8194d220dff20f321f0a02582468db803a1278ede10f43d5',
       metadataDigest: '109b5e53374700d2a862293e34a27b51452db57d221bfe54a7eaa48f057de117',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: 'a333dc9b77f5dfb06f7ce040f476bf0263109e41d5c39b104b42cb0a170aea70' }],
       copies: [],
     },
@@ -502,7 +738,7 @@ const registry = {
       target: s11,
       rawDigest: 'aede81c219a623acb7b8d52ff43e03ea06bddfdd37e67be9f82f3215387675b0',
       metadataDigest: 'd797b9295531086aacf4d8f2cd267935c441e23c614daac9c0d477c802212dd2',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: '8016ac673ade8b69f3ef6b76464bc136ff2732129528f1339bbfdcec77d6f135' }],
       copies: [],
     },
@@ -510,21 +746,15 @@ const registry = {
       target: s12,
       rawDigest: s13,
       metadataDigest: 'c7ec0a40be722647d5f8a2b5b9bb5bda2dca4874b49ce316286b33fa3b648b77',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s14 },
-        { digest: s15 },
-        { digest: s16 },
-        { digest: s17 },
-        { digest: s18, reference: s19 },
-      ],
+      fields: a1,
+      entries: a2,
       copies: [],
     },
     {
       target: 'subclass-feature|arcana domain|cleric|xphb|arcana|au|3|au',
       rawDigest: 'e906f29cf14cacd16ebca35c0abdeda0a83bcf89ca54ed4735f3486f0bd32e2b',
       metadataDigest: '045163f8beca43fce31f808d04a0fd92c181425a9921b14e3ce947bb4597b224',
-      fields: [s1, s2, s3, s5, s6, s8, s9, s10],
+      fields: a3,
       entries: [
         { digest: '37d378c5e2f3219562eec52bce0470172d19b4d79201ab20d9f6f9468242deb9' },
         { digest: 'c2a6659d2b6d02fce13abf9ccd02822f54b29e236cc7b29f76d05a0262f8ee52' },
@@ -548,21 +778,15 @@ const registry = {
       target: 'subclass-feature|arcana domain|cleric|xphb|arcana|scag|3|scag',
       rawDigest: 'fafa83863ab2822f1821dc1f6e3c3140e2b68450ffef470cdd7874de9e019e1d',
       metadataDigest: 'af2fb4b1f77e9c73bfc7be5ae3ccc466d122500d99b1dd788b3843e697f95d19',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s14 },
-        { digest: s15 },
-        { digest: s16 },
-        { digest: s17 },
-        { digest: s18, reference: s19 },
-      ],
+      fields: a1,
+      entries: a2,
       copies: [{ target: s12, digest: s13 }],
     },
     {
       target: s21,
       rawDigest: '0d68c3a290912895b51c3f0cbb574fc8a75a865cdf74c6b87990fb09c9e1a406',
       metadataDigest: '7d18812415179fe65e16910966afb89940d573f049a23428b864889ac58b6c00',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: '81647085d4d9f2112fcddaf7f5099709a4538ae540371ff723488ce033666be4' }],
       copies: [],
     },
@@ -570,7 +794,7 @@ const registry = {
       target: s22,
       rawDigest: 'f41080ab75c72d793fd0213f0a503b268ce5e77f4687ab47e90d7e86635cd7e0',
       metadataDigest: '1a8c2ab01c8be788863af574e6608097b7d8fa41a8410f8988fcb5329e5bc81a',
-      fields: [s1, s2, s3, s4, s5, s6, s8, s9, s10],
+      fields: a4,
       entries: [
         { digest: '90c6ea2fd3a01c3f4117818bc4ceb1439f22e33cb218666d1ffe0ac696fe4616' },
         { digest: '586ec0c0a1690bfed83d06e3de244d330123495153ffb209938df10cdc80fb22' },
@@ -581,7 +805,7 @@ const registry = {
       target: 'subclass-feature|arcane archer|fighter|phb|arcane archer|xge|3|xge',
       rawDigest: 'cf4fd3d84d03a78c588bbbb6308a76eecdcd83c0b3a8dc20ee0ee496baaa9f00',
       metadataDigest: 'ecc9722572def52df49906b909afa993361e2f458406bfd7264bb9e8d41ecbeb',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '7ffef8ee310422072329d0540c88fe0e965df946a8df0b6da92c52cc4118be79' },
         {
@@ -603,7 +827,7 @@ const registry = {
       target: 'subclass-feature|arcane archer|fighter|xphb|arcane archer|au|3|au',
       rawDigest: '4e6b4b6b3226212e760fbd6b1f5cd9aef9af365155c0cb10c89ccdb3ac9361e6',
       metadataDigest: 'bcbfa916d3212135490bb1de826a85ca29bcf731c35516eeacd571a49921c049',
-      fields: [s1, s2, s3, s5, s6, s8, s9, s10],
+      fields: a3,
       entries: [
         { digest: 'c65da9ec70b31fcb1b2f901a935f33f60f34192b5ab94a6825fe13678aae9bc6' },
         { digest: '50253eaf55a47c6a25a8c284690f8f482b15eca0b0162df6bb776e734f75cfd1' },
@@ -626,7 +850,7 @@ const registry = {
       target: s19,
       rawDigest: '818b3467d652023cbb931bf9b4de9d012be0280f7410fa7a7c6602e4d1205fb1',
       metadataDigest: '12bcc2bbca09c184899916d86d9c0e656afc6c62e611e9ea8654cb9ff092437c',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: '0787b6fbfddec98cd53ac175bb1850859bd36889d312c8f72edb0423ca39b0da' }],
       copies: [],
     },
@@ -634,7 +858,7 @@ const registry = {
       target: 'subclass-feature|banneret|fighter|xphb|banneret|frhof|3|frhof',
       rawDigest: 'e3b5b69f343cd8cef9606c117dabd01de2e78a7e88bcdd102d120a8371f3f8e9',
       metadataDigest: '367e533a6a4e7e1ebceae61353e1f46933ed4dc18d6b3b9c4b85335bd15aeac0',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '912dcf901bea72e70682c192af1066cbdf38bd148649de52afb4f4fac840603a' },
         { digest: '6c2b10171f894c9a865053420d397ed0daba5a243bd444817018ed12413563a7' },
@@ -654,7 +878,7 @@ const registry = {
       target: 'subclass-feature|battle master|fighter|phb|battle master|phb|3|phb',
       rawDigest: '79b014cfd7b1e91bfb874a8f7ff9a97f35582533173f9f1d0e68db1c542c842d',
       metadataDigest: '5bbf416da409239492b31897ad34141c97772df17aae15a44b6d732974b3640b',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '3a82cc2e57db1c6177acf95760a138b4f51b3e5407f59792b25b731ac1ff52d8' },
         {
@@ -680,7 +904,7 @@ const registry = {
       target: 'subclass-feature|battle master|fighter|xphb|battle master|xphb|3|xphb',
       rawDigest: '4d988bb3146ea1e28ad5f409b63f419e38222191a5cbbf6b8b3f792bd67e928e',
       metadataDigest: '551030b4e82fc0a529e8aea1cffb875ca6c8297a8fa47c35c98ce91c284e4d70',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'b01a67f020bbbd5ae645b4d3bcfbe6f94dfe7e81bae608aeb74986d52ad5a5fa' },
         { digest: '96b744674d8b6b13a45b71259e2b1009638e695be6a2e6a7a9f17dda3556dcc8' },
@@ -703,7 +927,7 @@ const registry = {
       target: s26,
       rawDigest: '4db4967712cc75915612f2d256a9f8e5b46ea2f8b521530656d2fb2631be81b0',
       metadataDigest: 'b4d307316bb57da9eb1fbfaa4d74bb8e94f292c0f0503017f5568dd035cbaf56',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: '2840ed16f3e69fd42d289e45707ba19469138463dc8e973512613ab2494de497' },
         { digest: 'a6cc42fd124ebb644d4287a78eafae6675eb0afa86ac0f66e3988da14523a8d1' },
@@ -714,7 +938,7 @@ const registry = {
       target: s27,
       rawDigest: 'fc36619e423cd1a6beb22d78bd5080b51d278d9d40ba44ec60781f1af39615c6',
       metadataDigest: 'e75979136c0ae22e4cf7b81e8cf2e9beeb4298827c2f8f370a04bc240726e303',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [{ digest: 'e8937ea4c46344d4aee61a91d59a336620b176c9573ac62b2d74a519c5eb9ce9' }],
       copies: [],
     },
@@ -722,15 +946,15 @@ const registry = {
       target: s28,
       rawDigest: '085a8fa92b66b35ab72f62b5158170e537a3ebc23558ca6b5ead9c05ac8b2766',
       metadataDigest: '607d8ba9cfe609b61d9006a3871a43f08e49797b3f47095913658f7b4d6f94e5',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s29, s9, s10],
-      entries: [{ digest: s30 }],
+      fields: a5,
+      entries: a6,
       copies: [],
     },
     {
       target: s31,
       rawDigest: '0cbaf1c85911e944024384f380c4530a48928f416db4523b4ff4f887ca43ec39',
       metadataDigest: '62c077ee00dcd945babaaa8a2aac134d1875d5a17cd44e9bd35a0e89fc586f27',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: 'a55eb0284d5d0dfa48fabb802a55416dafd257920d64e15123487926f74e208b' },
         { digest: '622cc5b98a2e5a89d459a7e4ec4c780a1243bd37e132cc63834d411b7ad9efbc' },
@@ -741,7 +965,7 @@ const registry = {
       target: s32,
       rawDigest: '52c5484fee175b0118ddd8c8bfcf48dc9622467e78eca77e2b41a455acbd30d5',
       metadataDigest: 'f368d8dcef7f7d2eb1a58806e02e92dfa69def7103bb0926d91c7a59a95e7723',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: 'ad073a13ddb561483fbabe6593a8575963658bb0fef6545e50618b69b5dbce90' }],
       copies: [],
     },
@@ -750,7 +974,7 @@ const registry = {
       rawDigest: 'c83e8e7466f7c564d982b3f618dc39ef75a054240e787861898223d42a97eee9',
       metadataDigest: 'bf055aa1a1280304b4a01f85572d5bba302a3741689debc6ba13bc4d0bf764e4',
       fields: [s34, s1, s2, s3, s4, s5, s6, s7, s8, s35, s9, s10],
-      entries: [{ digest: s36 }],
+      entries: a7,
       copies: [],
     },
     {
@@ -765,15 +989,15 @@ const registry = {
       target: s39,
       rawDigest: '996e840cee4587f1500c29038f7e54e001dba66064ab0dfd5908452e08e44fa0',
       metadataDigest: '145cc89803adac797515d306d70be40ce015bdca3939afdd85a8a413dcfb81c7',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s40 }],
+      fields: a0,
+      entries: a8,
       copies: [],
     },
     {
       target: s41,
       rawDigest: 'b9270197ba9fc8f9400fead82ef12e342268071f73d8e1cfd8a1fbd7b73061eb',
       metadataDigest: '9b21da143d7b753c2c6e6e20f3f4c79f3715be5582fb53ce29b11ab401f1d105',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: '00984992ed737a4bfe8c6f21ec81021c1e5ac1a4e33a7a424386feb71ca748cd' },
         { digest: 'd492fa456f0979e6c5e6832cb3f8404c5a73a65a7235cbf645c4674179923d50' },
@@ -784,71 +1008,79 @@ const registry = {
       target: s42,
       rawDigest: '5745f93fbc2778c9bc916b5f43bda9419fb5b383d3a601989922bb40dc4698f1',
       metadataDigest: '8250d03d1a4323b45b48173cd289e8da10f79fadcb2ceda9c65d9cd03cb68eff',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s40 }],
+      fields: a0,
+      entries: a8,
       copies: [],
     },
     {
       target: s43,
       rawDigest: '970272e2695b2effaba8d6cc3901088a19c5406f0c80c4d8926eb87979755973',
       metadataDigest: '3be7b8b5b18d4bba55e63012795c2dacbbeadafd323264f2c7b7f3c7931297a3',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s40 }],
+      fields: a0,
+      entries: a8,
       copies: [],
     },
     {
       target: s44,
-      rawDigest: 'ee349d3631163b66f6490329b1e52fe3cf9a9201198dd2e02e088f4a7d497810',
-      metadataDigest: '64b5ffaeafd36f3e2a9ba56802003fb8dc4f6fe0e9f5588dce649011243cd721',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: '9b922e8c3cd04cc219682e2a52ebdc5f7717f5700f2a7e7a7277f2c45f49c803' }],
+      rawDigest: '72dc228b1b13b5b18a1845325f4e88521e4d26eea8c5df021e0e59c7aca0c69a',
+      metadataDigest: 'c28fb3c6cccb165bf7863ceb3146d53e00c35d6e5c580cddcc93fe483126232e',
+      fields: a0,
+      entries: [{ digest: 'ab468afac7031a64333f6e382835a1a14250a2930e052ed1696d2570b701dadf' }],
       copies: [],
     },
     {
       target: s45,
-      rawDigest: 'e4df3d587a23b5c10141567bc14b937ee4cf4ffed7ff7d8259e853ce0ddaa484',
-      metadataDigest: 'a4fb84e61976867f26944e2b95ab9344cb83aae21f2841b43299b7729e00fa0e',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: '7a6e43269e3a9554ef011b4051e4623f2d2396b620830dc6459dc9391c3b052d' }],
+      rawDigest: 'ee349d3631163b66f6490329b1e52fe3cf9a9201198dd2e02e088f4a7d497810',
+      metadataDigest: '64b5ffaeafd36f3e2a9ba56802003fb8dc4f6fe0e9f5588dce649011243cd721',
+      fields: a0,
+      entries: [{ digest: '9b922e8c3cd04cc219682e2a52ebdc5f7717f5700f2a7e7a7277f2c45f49c803' }],
       copies: [],
     },
     {
       target: s46,
+      rawDigest: 'e4df3d587a23b5c10141567bc14b937ee4cf4ffed7ff7d8259e853ce0ddaa484',
+      metadataDigest: 'a4fb84e61976867f26944e2b95ab9344cb83aae21f2841b43299b7729e00fa0e',
+      fields: a0,
+      entries: [{ digest: '7a6e43269e3a9554ef011b4051e4623f2d2396b620830dc6459dc9391c3b052d' }],
+      copies: [],
+    },
+    {
+      target: s47,
       rawDigest: '595deed02e8fb8e75b90f4d212fbc91ac567caac22bba647043cb95f116903c8',
       metadataDigest: 'ddfc8247ea0367633c1551325b9fce96c5eb002b647405166f9ef467580af57e',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s47 }],
+      fields: a0,
+      entries: a9,
       copies: [],
     },
     {
-      target: s48,
+      target: s49,
       rawDigest: '6a58763f3c43a72797d28e2823ce2ed1212fbe9d032c55eb16290206e846ff92',
       metadataDigest: '2c6e37c78442a1fb5bde73eddd08a45b4fb23699c2248f5851a603c67a82d75a',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s49 }],
-      copies: [],
-    },
-    {
-      target: s50,
-      rawDigest: '43d8e565e89c0bbc96febd14492772cb7fd9d1113a4d826fa0acba18c05c4cc1',
-      metadataDigest: '5e8a95f46d42fc7d590a07b7eddab93163dbbe85fe51d5f1aa8167e3bfadf92e',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: s47 }],
+      fields: a0,
+      entries: a10,
       copies: [],
     },
     {
       target: s51,
-      rawDigest: '1a974d47ea32b25ae84f21b57accc3d3d911264a58de969d2567a710b4acb5ee',
-      metadataDigest: '2f736f57a1cf5600f10e43bea1023d04510f1e9a5f236699e13baa3d4e915184',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
-      entries: [{ digest: 'bd6da4bb8ce703988da6c6038ea102a8dab5d9e75c4fbce1326acd93affe05e1' }],
+      rawDigest: '43d8e565e89c0bbc96febd14492772cb7fd9d1113a4d826fa0acba18c05c4cc1',
+      metadataDigest: '5e8a95f46d42fc7d590a07b7eddab93163dbbe85fe51d5f1aa8167e3bfadf92e',
+      fields: a0,
+      entries: a9,
       copies: [],
     },
     {
       target: s52,
+      rawDigest: '1a974d47ea32b25ae84f21b57accc3d3d911264a58de969d2567a710b4acb5ee',
+      metadataDigest: '2f736f57a1cf5600f10e43bea1023d04510f1e9a5f236699e13baa3d4e915184',
+      fields: a0,
+      entries: [{ digest: 'bd6da4bb8ce703988da6c6038ea102a8dab5d9e75c4fbce1326acd93affe05e1' }],
+      copies: [],
+    },
+    {
+      target: s53,
       rawDigest: 'ce162cb52dc0fc15a2211e4d67331806ad673d3f3e09b74fecc19075ae98e4ef',
       metadataDigest: '58048cd4ca9df82e733a131ebbbb84d88db24f52c1761899bd09e7983adc9152',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: '04f1b8dba77fccf657eb2872019fb1c49c3c52396350de9db3cc98a950b043c5' }],
       copies: [],
     },
@@ -856,12 +1088,12 @@ const registry = {
       target: 'subclass-feature|cavalier|fighter|phb|cavalier|xge|3|xge',
       rawDigest: '5cbe55132e0498c2da6e6f11bb1d42a6287f21c9ae5eea3c58aa5de0f4891cc9',
       metadataDigest: 'fb47f132898d04aca2b33bf700a5bf27dd3f73a61be37a4a553166040a516ad8',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '8213da31aeb8bc29d547234949423014a1a3f0d7006499af0048475d57623cb9' },
         {
           digest: '476d7262b21668695da2b2119cac0eb4e16f4bcc5748ac5131a44d97398158b3',
-          reference: s51,
+          reference: s52,
         },
         {
           digest: '5e2af0a25e44564e85b6d538239b4ef795eb60aed00c3d673f394084725c7bc6',
@@ -875,10 +1107,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s53,
+      target: s54,
       rawDigest: '84a9e899f69155898066d4ef8859e6bbca3676d4c4a3d9eca835bc4d1c62b50b',
       metadataDigest: '4831b3bf86da5ca1d1634cd80bc5df7b61e5195cba4606ea52acb8da0b5bd100',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '15e97b4cca346d265e39d5f370b413ece05f7991339d0c71914e5a7eaf96ed0e' },
         { digest: 'c486554b32360642e335895d33ee8b675f4fea406a2af1362aa066146e9f4c4b' },
@@ -887,43 +1119,32 @@ const registry = {
       copies: [],
     },
     {
-      target: s54,
+      target: s55,
       rawDigest: '2972b4b6c297f7e64ff4d3121f5bd32cff609d7e17bee8430564aa39c68434f4',
       metadataDigest: '9901b8d031b8e495d7254591c72736c258465017c2a45b3d2559da6ef6e2f419',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s29, s9, s10],
-      entries: [
-        { digest: s55 },
-        { digest: s56 },
-        { digest: s57 },
-        { digest: s58, reference: s28 },
-        { digest: s59, reference: s60 },
-      ],
+      fields: a11,
+      entries: a12,
       copies: [],
     },
     {
-      target: s61,
+      target: s62,
       rawDigest: 'b5a879ae1a7d081b6cf9b0a28581dc88f1310b3cf67b263fc27d8e19e6a1874d',
       metadataDigest: 'ec54c16a392eea19c7e2ed65c9ab5f3a692886c621939f35d78f1541dd7acc4a',
       fields: [s34, s1, s2, s3, s5, s6, s7, s8, s35, s9, s10],
-      entries: [
-        { digest: s62 },
-        { digest: s63 },
-        { digest: s64, reference: s33 },
-        { digest: s65, reference: s66 },
-      ],
+      entries: a13,
       copies: [],
     },
     {
       target: 'subclass-feature|college of spirits|bard|xphb|spirits|rhw|3|rhw',
       rawDigest: '75b8bc34572108584708f10e6e2eb947942f228b164999e2c5583c3c62decc8d',
       metadataDigest: 'b40edb7da25dcc5111ec1431a06b0438d82e3dbb10e89ecce89b9617954c4c2e',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'c862ca179d2bdc0a0ebb0e43fba5901220be8521ff2568399e0a038778b0c3d8' },
         { digest: '26a046ac7613ab5042ce32a9de2da83764d4bd130a6ffb79d3838c95dc22e761' },
         {
           digest: '4c480be18b07a937d486cca51df96bc31c851882aa3f68c2cd25e1409ec49057',
-          reference: s53,
+          reference: s54,
         },
         {
           digest: '9da059e02e2bdbd32d3d75fbba4a61f8cceff66a7ef2dc7c85c0dd5658138b00',
@@ -936,7 +1157,7 @@ const registry = {
       target: 'subclass-feature|college of swords|bard|phb|swords|xge|3|xge',
       rawDigest: '2a8b5754678c983c82cca4d100682f1d99054a543e05f075b4a8a09e0f0f400d',
       metadataDigest: 'f977a52fc7c68e413266e2b8620c85a447daeaf3787e9cb50ee85d38128aa961',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '937b58447b676f0bcb0dceddcd2f1d766e278dc9eb60f8cb5aa82ab3ebdbd0c6' },
         { digest: '00eb4de329892ce8b530b40986306f98df9ba579488540d60dd5aef90222102d' },
@@ -960,7 +1181,7 @@ const registry = {
       target: 'subclass-feature|college of the moon|bard|xphb|moon|frhof|3|frhof',
       rawDigest: '8a51f062ab4c0447b8eab11812a383a380be567f9f3c42f4af85862dce2f7b10',
       metadataDigest: '5574413a2f0dc0b4e278c72fb97f896f1821ca811f7d77e67a1823e9be2d7049',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '47b63de97a64a97a7c011ca97b50afabc3196460db6e8c54acc452fb32658c39' },
         { digest: 'f89354d95b8679ddf0bf47597aee142c9f6959cdf7d35f2352ce0afa5a2844bb' },
@@ -970,7 +1191,7 @@ const registry = {
         },
         {
           digest: '89d59b14cf41a148ff5efb4ec1fc52ac784fd1a1bc77df24a8be58244fbf83ef',
-          reference: s67,
+          reference: s68,
         },
       ],
       copies: [],
@@ -979,7 +1200,7 @@ const registry = {
       target: 'subclass-feature|college of valor|bard|phb|valor|phb|3|phb',
       rawDigest: '11dcc3d0cf1c42ff2e0258d775f89dff5b126ad2879fff4add089d56a00b63a3',
       metadataDigest: '82472dbcc8b4e503fb32dd49cf96c0cf1e5e128ec8de7b4158c2fb2766220f52',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'd8a0abf203b1d698af140dc245be95ffc542d169f90d063947828244aa6f7f1c' },
         {
@@ -997,7 +1218,7 @@ const registry = {
       target: 'subclass-feature|college of valor|bard|xphb|valor|xphb|3|xphb',
       rawDigest: 'b1dcb4c2ef13ca50eac97f05bab38f1f4010a2c8c680af27b3dbbf3fe12e488b',
       metadataDigest: '61036fd55e33aa915404edbf860f3d2a1714e015a62ab7f22b4539429c2c1426',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'eb95dd62d324740cd13519e7c4ccb4cb47a36dab8685d783f8e6b5f0625f48c3' },
         { digest: '39a30807b939a3ad8339e071749382009404d71864891642fe8cabc134ab09c7' },
@@ -1007,68 +1228,68 @@ const registry = {
         },
         {
           digest: 'e4f5087755eaa0e3c36849455cb69130c2574be4f1de4d475fe978b6c9113d8f',
-          reference: s68,
+          reference: s69,
         },
       ],
       copies: [],
     },
     {
-      target: s69,
-      rawDigest: s70,
+      target: s70,
+      rawDigest: s71,
       metadataDigest: '319348aa83d5cf9419fbcc8589eb23de3e4dee9f0ea0574ca391a09196b03a23',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s71 },
-        { digest: s16 },
-        { digest: s72 },
-        { digest: s73, reference: s44 },
-        { digest: s74, reference: s75 },
-      ],
+      fields: a1,
+      entries: a14,
       copies: [],
     },
     {
       target: 'subclass-feature|death domain|cleric|xphb|death|dmg|3|dmg',
       rawDigest: 'a5444decbca09c56782f031bdb884c8c6b368b98dc2d03f20a531d6fc975cbb5',
       metadataDigest: '92a26f57b0eed8074f7c4e2b4d1a532170914e47f91fca1e9de85a19b3f1f9e7',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s71 },
-        { digest: s16 },
-        { digest: s72 },
-        { digest: s73, reference: s44 },
-        { digest: s74, reference: s75 },
-      ],
-      copies: [{ target: s69, digest: s70 }],
+      fields: a1,
+      entries: a14,
+      copies: [{ target: s70, digest: s71 }],
     },
     {
-      target: s76,
-      rawDigest: s77,
+      target: s77,
+      rawDigest: s78,
       metadataDigest: '2242821534576c6a4aca9a85cd103dc873c137a2c59bbd2df1306e4b72948cc7',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s29, s9, s10],
-      entries: [{ digest: s78 }, { digest: s79, reference: s80 }, { digest: s81, reference: s82 }],
+      fields: a11,
+      entries: a15,
       copies: [],
     },
     {
       target: 'subclass-feature|draconic bloodline|sorcerer|xphb|draconic|phb|3|phb',
       rawDigest: '6f9bc9228d0de86a4109d339e51678860b6d492be9180ca79b7557bff42a69c1',
       metadataDigest: 'a4ae92f64fa002a47fafcdcd8005f5dbbbbee75deced65b7760e18e168b68ac8',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s29, s9, s10],
-      entries: [{ digest: s78 }, { digest: s79, reference: s80 }, { digest: s81, reference: s82 }],
-      copies: [{ target: s76, digest: s77 }],
+      fields: a11,
+      entries: a15,
+      copies: [{ target: s77, digest: s78 }],
     },
     {
-      target: s80,
-      rawDigest: 'd168b1de924f637854294706f141566283bb7c0ab2db8396dfaa8dcab16dbe3e',
-      metadataDigest: '479c9bea237f63d3a5f972a0e93d61c66f721b3f41e41665c2873f35d2adb356',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s29, s9, s10],
-      entries: [{ digest: s83 }, { digest: s84 }, { digest: s85 }],
+      target: s84,
+      rawDigest: '6a9764ad5662fcffe3f65af110e31c66b750d20c986239d90dc485ea870c6450',
+      metadataDigest: 'a6e24000ae149a04d0d23185bcd84b1a8cdcdc68f6e75a86e15bc85c6d5c168d',
+      fields: a0,
+      entries: [
+        { digest: 'a0c97bbb7c40bd17994d242d5131eba654754c6874508be01273b851a89296db' },
+        { digest: '4d3aa652e2be4f15a1f7d5c249776915c72b5dee208a61cedf6b8b1f8da1a678' },
+        { digest: '568430856958c6c1bb5396e83c0561e652c58eace9575b6b926f7a1032ac294e' },
+      ],
       copies: [],
     },
     {
-      target: s86,
+      target: s81,
+      rawDigest: 'd168b1de924f637854294706f141566283bb7c0ab2db8396dfaa8dcab16dbe3e',
+      metadataDigest: '479c9bea237f63d3a5f972a0e93d61c66f721b3f41e41665c2873f35d2adb356',
+      fields: a5,
+      entries: a16,
+      copies: [],
+    },
+    {
+      target: s88,
       rawDigest: 'f6d6deedbc4bcd2a561cd4dad5bcfd3b9e5655b7110c8ac6a10fd70a74e1baef',
       metadataDigest: 'c19b7926fc81d664485233aef76a91a5a58d96fcb0ef8a2fc8cf6ea06617459f',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: 'd7ce6c07d4479f7af86fc4e51a8153ea95e1ac285a677ed48f0e873aa38029f5' },
         { digest: '7b20b68c13745c5049243a20e36719dfaf62b16eec396c9c0c2a0ff003317ea9' },
@@ -1079,13 +1300,13 @@ const registry = {
       target: 'subclass-feature|enchanter|wizard|xphb|enchanter|au|3|au',
       rawDigest: '1efd67cc566b517bbe271b57ec7e7e39aeef95f1437ea000d8c79de202869a12',
       metadataDigest: '2a6bdabca5fc08da2b606fddc5955d0a177a01122e56bd5b0d156f2522d5f9af',
-      fields: [s1, s2, s3, s5, s6, s8, s9, s10],
+      fields: a3,
       entries: [
         { digest: '22316cf2348e0a56c8be1ce852fbf43152cd964c25d1d60fc86e2e6ac5518c23' },
         { digest: '896e1b1fc8136d50de115a81b3426ff2a04721ec51583086700949a71087e021' },
         {
           digest: 'b144522f1ba829670de6889f3d65c8e64f7b3049ee36024377c4841e3258e080',
-          reference: s87,
+          reference: s89,
         },
         {
           digest: '95adb673cab9fe1f7fc4004b19daf1d4e1231c6576f3e124f3ddd58c32a01c01',
@@ -1099,10 +1320,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s87,
+      target: s89,
       rawDigest: '9941db2510ec9f26878126c4380cf5378a793277da4373beafa62179b230b002',
       metadataDigest: '4bb736588ca84540e229f4da3e598070b1eab894116d0be92714e89051734e64',
-      fields: [s1, s2, s3, s4, s5, s6, s8, s9, s10],
+      fields: a4,
       entries: [
         { digest: 'e444c75630a8f527cb98bc1367e31f0a6c169003af365d1b5ab3846e2242a12b' },
         { digest: '08b469688d6a76994a2b5c0d7b5a096dcd5a79d42cef8de941884f36f24aeca3' },
@@ -1110,38 +1331,26 @@ const registry = {
       copies: [],
     },
     {
-      target: s88,
-      rawDigest: s89,
+      target: s90,
+      rawDigest: s91,
       metadataDigest: '1eaf02a451974ec6088ec5cd9d8db8d5f7395d559d97a07599df1cfc492fb07b',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s90 },
-        { digest: s91 },
-        { digest: s92 },
-        { digest: s93, reference: s45 },
-        { digest: s94, reference: s95 },
-      ],
+      fields: a1,
+      entries: a17,
       copies: [],
     },
     {
       target: 'subclass-feature|forge domain|cleric|xphb|forge|xge|3|xge',
       rawDigest: 'a6ee0d2ba548914b4f3b44c4e6612624c664f05ee8f63e197367cec82d21de3d',
       metadataDigest: 'ceb2e43fc5c50933170190b7561587934a8595ae7edead65f85b35a80cbcca12',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s90 },
-        { digest: s91 },
-        { digest: s92 },
-        { digest: s93, reference: s45 },
-        { digest: s94, reference: s95 },
-      ],
-      copies: [{ target: s88, digest: s89 }],
+      fields: a1,
+      entries: a17,
+      copies: [{ target: s90, digest: s91 }],
     },
     {
-      target: s96,
+      target: s98,
       rawDigest: '30856a888b81fc0f35b2b35c522bc6e7b6f009f781a716784d7fdfa33e6bc6ac',
       metadataDigest: '0ec91db8975e229dbd36b5868403cbe71d2265498e9c8583dd3439e06c2d18c9',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '0b84ebb9ed6308fc27a5d0f845868af6c58de227ab572a931a9a4610840d2397' },
         { digest: 'c2e87b7e21957f13f2e70f0d5cd53605fc1508dffac7edb603d1b925800b6711' },
@@ -1149,10 +1358,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s97,
+      target: s99,
       rawDigest: '6cf8c55a5878d3e6bbb1c72cd6b23183c6b18791cc686f7c48100b0073731a63',
       metadataDigest: '014b47783385c461c3a38a0a4670e4b9910cba3dc07401a789e61840cfffd371',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '20c3ad630a9b2de2b9785de108a27644b9d1defe80e1fc5e70e9036578a49250' },
         { digest: 'ed1db355a3f28891d4afa73b31e951078e0e56d65276e093aa6788ac5706484b' },
@@ -1160,10 +1369,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s98,
+      target: s100,
       rawDigest: '6a25350e352f4a161adab186eecdec2c01ac3610b4239f8b4b063d5d20bac5eb',
       metadataDigest: 'ea624da5eb74133344392780edf8d04b7030683857e46bffe1f275891ffc2539',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: '12c04ca891c5eefba07b5005e175a67d746f39f9709f6e8c016883b3e132cadd' },
         { digest: '4b2b56f3ca40433750b023b6ee382309baeb25bca5c1c643a431b763f81a92b5' },
@@ -1171,10 +1380,31 @@ const registry = {
       copies: [],
     },
     {
+      target: s101,
+      rawDigest: '3c526e2134e5cdd57619661950c6467bfa0c3b8166fbe57c2fda3c0fe20019c2',
+      metadataDigest: '21fd5dd0fd0236d2c42eea2b22841fbbf243f382234fee58bb7b32850d12e009',
+      fields: a0,
+      entries: [
+        { digest: 'c5cd8833147c88ab949cd44cebaafae46c8ad726dbaee34f9e153f0255e529e7' },
+        { digest: 'cd5710c5177c93aa96cc52456eda2a8b4039c75bf73de16a9accce6bbf7258fe' },
+        { digest: '4fb27c4b79b8608067eea60a85b10df17d83d24ba85cda1676c11d5328908b2e' },
+        { digest: '72562fee6f5446f27177d6d6230328fc34e8b976bb3a4be09081857f56400dc0' },
+      ],
+      copies: [],
+    },
+    {
+      target: s102,
+      rawDigest: '090b3ecb9ff06bb39959fb7c8c4ca9950b85e4cbca061cfee9fa6c04985ad6c6',
+      metadataDigest: '7559431c23ad860e2f92ed33ee45366d989a090bb95d531a788f397b80ba3b73',
+      fields: a0,
+      entries: [{ digest: 'dfccf13b4eb79f43909f224f4bc0e7a42b0eb7742d232c513ee4def64b1af524' }],
+      copies: [],
+    },
+    {
       target: s23,
       rawDigest: '35b899fc7e78c8e5ab5b191f5b8cf6e035fedf3c35e3012730414bc414c522fd',
       metadataDigest: '870dad6b96d72c1f54357e211e2e839b043ed5f8b91c79387d7816bfd45a15ee',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'a435086bb05326286fbd69f17a85fe48e43a46ad676a968c98efe1bd5dd48259' },
         { digest: 'b0b0789bc0e6b3774394eba2adcaf748d3b90be3aff18022ce848114712b2520' },
@@ -1183,49 +1413,34 @@ const registry = {
       copies: [],
     },
     {
-      target: s99,
-      rawDigest: s100,
+      target: s103,
+      rawDigest: s104,
       metadataDigest: '9920b8bad34d257c6a6d427ef61e96ec36c982086bf734876291934691987925',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s101 },
-        { digest: s102 },
-        { digest: s103 },
-        { digest: s104, reference: s105 },
-      ],
+      fields: a1,
+      entries: a18,
       copies: [],
     },
     {
       target: 'subclass-feature|knowledge domain (psa)|cleric|xphb|knowledge (psa)|psa|3|psa',
       rawDigest: 'b59d7341d0044e96be6fb44c47b1bfb62a56720d818626970a836a287ed55910',
       metadataDigest: 'ed11af6c0dd2e336a6b30e03b26ecd1742a2245083343c50a10407f2b4c521d3',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s101 },
-        { digest: s102 },
-        { digest: s103 },
-        { digest: s104, reference: s105 },
-      ],
-      copies: [{ target: s99, digest: s100 }],
+      fields: a1,
+      entries: a18,
+      copies: [{ target: s103, digest: s104 }],
     },
     {
-      target: s105,
-      rawDigest: s106,
+      target: s109,
+      rawDigest: s110,
       metadataDigest: '19713df0bdc97690e9c6b33a8621b31a10e2c026b84d72a6e82d192ecc8e91dc',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s107 },
-        { digest: s108 },
-        { digest: s109 },
-        { digest: s110, reference: s26 },
-      ],
+      fields: a1,
+      entries: a19,
       copies: [],
     },
     {
       target: 'subclass-feature|knowledge domain|cleric|xphb|knowledge|frhof|3|frhof',
       rawDigest: 'bd003b0298863f0cf23b9083631e86407c2b0c0eac7726af18e2218eb15bb047',
       metadataDigest: '983eb750a3fef289fbec85c7459d973ae0d56a0d1d814cc9c259160619b19345',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '9daefe6f94127ec0d1cb9e09bdd50680a6611ef303c8d3ba2b785969d30a1129' },
         { digest: 'e0df7e9a0de0f9e95b38c34213a13b12babdc2fde9d8a4cd4be9f8b3d16428b3' },
@@ -1249,20 +1464,15 @@ const registry = {
       target: 'subclass-feature|knowledge domain|cleric|xphb|knowledge|phb|3|phb',
       rawDigest: '44caba490a65232e344b16f23e7493a61f3640d89028af1413176cb387dd677a',
       metadataDigest: '4830bc90ad8ebfa1374f62d299515b5b470b8ff6febc1cd3c0b3d55e0dfba2c5',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s107 },
-        { digest: s108 },
-        { digest: s109 },
-        { digest: s110, reference: s26 },
-      ],
-      copies: [{ target: s105, digest: s106 }],
+      fields: a1,
+      entries: a19,
+      copies: [{ target: s109, digest: s110 }],
     },
     {
-      target: s68,
+      target: s69,
       rawDigest: '0e0e0a1c03af97fc02b3c234cba7656fd9a11f447e246d891638543ea834973d',
       metadataDigest: 'bac61bb45786ba1421fffa3f579e374ceaf93cabd4750ec888a9b97a73ca850e',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: '9d9b73b00f80dcccebc8713d7ef7cdf82b128341462151eb42f8787e4ec45f45' },
         { digest: '2bd9a88f2c7b1ac5a920f5209cae54b1d943332312078e0ada4d7f3c6f1fb557' },
@@ -1270,38 +1480,26 @@ const registry = {
       copies: [],
     },
     {
-      target: s111,
-      rawDigest: s112,
+      target: s115,
+      rawDigest: s116,
       metadataDigest: '8114317563edb8214516261aec3431b2860b6496e4b4c39fd335975de3d914d1',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s113 },
-        { digest: s108 },
-        { digest: s114 },
-        { digest: s115, reference: s0 },
-        { digest: s116, reference: s46 },
-      ],
+      fields: a1,
+      entries: a20,
       copies: [],
     },
     {
       target: 'subclass-feature|nature domain|cleric|xphb|nature|phb|3|phb',
       rawDigest: 'fb7c5aae883d83c63c260889e951ee41d523f2a4ac9cbac439fa0d1c36661730',
       metadataDigest: '976d7663e92f83ffc3c3988c6fa2114f6b56b43c710138df0bb8c1a07ae1ceb8',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s113 },
-        { digest: s108 },
-        { digest: s114 },
-        { digest: s115, reference: s0 },
-        { digest: s116, reference: s46 },
-      ],
-      copies: [{ target: s111, digest: s112 }],
+      fields: a1,
+      entries: a20,
+      copies: [{ target: s115, digest: s116 }],
     },
     {
       target: 'subclass-feature|oath of the noble genies|paladin|xphb|noble genies|frhof|3|frhof',
       rawDigest: 'e8e55ac9cdf41458143eca4381e1082d4c3bee27d566c92ce12c4dceb1a04223',
       metadataDigest: '7a2b89311b5e76debc8f8836525154f56c8d4f14bc3e6f6908a94c74bd372687',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'f57e01d2399f3658315287e5024284d351261a4ddd971313931e84716ac3dd0f' },
         { digest: '35d9c8bcaefce6e8e6558113a9c963e460159360acdbb2fc924d6c20237f6674' },
@@ -1317,53 +1515,37 @@ const registry = {
         },
         {
           digest: '8ca134657501f4b68f6f566714b49673f06b8d0fac99f35a966637ff60f2c971',
-          reference: s96,
+          reference: s98,
         },
       ],
       copies: [],
     },
     {
-      target: s117,
-      rawDigest: s118,
+      target: s121,
+      rawDigest: s122,
       metadataDigest: 'd9387eff3ed83d087312b22293e96172074f890468e36ccb3ca041fcde8f3d3c',
       fields: [s1, s2, s3, s5, s6, s38, s7, s8, s9, s10],
-      entries: [
-        { digest: s119 },
-        { digest: s120 },
-        { digest: s121 },
-        { digest: s108 },
-        { digest: s122 },
-        { digest: s123, reference: s37 },
-        { digest: s124, reference: s125 },
-      ],
+      entries: a21,
       copies: [],
     },
     {
       target: 'subclass-feature|order domain|cleric|xphb|order|tce|3|tce',
       rawDigest: '6698b379a3a2d44b4c1d36b7150f8decdc9b767a1487b459147d2fc9b423c3a4',
       metadataDigest: '2073cc85ae814eb8193f2fd098a37b606950591c4021924ec68cc160d14b404e',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s119 },
-        { digest: s120 },
-        { digest: s121 },
-        { digest: s108 },
-        { digest: s122 },
-        { digest: s123, reference: s37 },
-        { digest: s124, reference: s125 },
-      ],
-      copies: [{ target: s117, digest: s118 }],
+      fields: a1,
+      entries: a21,
+      copies: [{ target: s121, digest: s122 }],
     },
     {
       target: 'subclass-feature|path of the giant|barbarian|phb|giant|bgg|3|bgg',
       rawDigest: 'da60f172039a6c552fbe8a5d068b70bbc0a9bded210d54f1409c6209299f878e',
       metadataDigest: '258ca193c6c96121e3989c0392e4800ac8702a866f1a73b76c5d3de112c05dca',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '04a5bebb9dc3e17d75b09374434168a6771bc0ee76007cb2bff5a9154d6d4528' },
         {
           digest: '95f4f568970acc5c7c6bea7f459aa8b7fceebca0b706493c18e292d14f2af553',
-          reference: s97,
+          reference: s99,
         },
         {
           digest: '4e39c37d7d9cd86dd6d077c1169a76c843dc9091333d9982c5e4e22cdf2d9be8',
@@ -1373,40 +1555,26 @@ const registry = {
       copies: [],
     },
     {
-      target: s126,
-      rawDigest: s127,
+      target: s130,
+      rawDigest: s131,
       metadataDigest: 'b198878b8f77045b6ecbc50a1356ad05ba3aadd0f17ba70167363bb0e34b652a',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s128 },
-        { digest: s129 },
-        { digest: s130 },
-        { digest: s131 },
-        { digest: s132, reference: s98 },
-        { digest: s133, reference: s134 },
-      ],
+      fields: a1,
+      entries: a22,
       copies: [],
     },
     {
       target: 'subclass-feature|peace domain|cleric|xphb|peace|tce|3|tce',
       rawDigest: 'bb6649e7c42a962ec9c12371aa4a0123459073ccd85742a5582ef3e3e562a1a2',
       metadataDigest: '72917de3b2d4161ce46ab986bf89d43b550ed02dc6304b7d946bb145dd3128ed',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s128 },
-        { digest: s129 },
-        { digest: s130 },
-        { digest: s131 },
-        { digest: s132, reference: s98 },
-        { digest: s133, reference: s134 },
-      ],
-      copies: [{ target: s126, digest: s127 }],
+      fields: a1,
+      entries: a22,
+      copies: [{ target: s130, digest: s131 }],
     },
     {
-      target: s67,
+      target: s68,
       rawDigest: '5ae6e3c180b432b38fd5dad7bc5d593fb2802aae383e6e0fa2a79c463516ae52',
       metadataDigest: '2b7585b9c1e7d323b7d50fd9ec0a19b4ff754d6cbc49f668a827d75b328f74a6',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'bbbbe85044b50414ef8de8799313282ae33c66cd7d5b430a41330b9d792d5296' },
         { digest: '29572f32a171f0ddda22febc02e43b6b71f34543574ae8409a465dddff317e58' },
@@ -1418,7 +1586,7 @@ const registry = {
         'subclass-feature|purple dragon knight (banneret)|fighter|phb|purple dragon knight (banneret)|scag|3|scag',
       rawDigest: 'c8de21c80bda120ce3bb9bc2db7bdaaf221277d16d6f201b988f0da367c4c071',
       metadataDigest: '64c691b7b1fdba1197966c3a396b72e07d6b5751dee31d993c5e7b25be091897',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'c1b134ec4a290cae897c9e7d49c75dc90282eb7efab7b7d4a3f802d59fd2fd70' },
         { digest: 'c83fc60c2bf689f990e2f2b771135dc1ff9f6f1e8be7aeba56889b03d431a1be' },
@@ -1437,10 +1605,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s135,
+      target: s139,
       rawDigest: '6015480e9b30dff93d0a44c21082ae6b04501878d87338e7b8d190948c4a7442',
       metadataDigest: '1f67b77a9948b3633e7c0799defd24869f1ff105ea6a71863151f6de2294878b',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: 'a73cb75dd138b656c6a23ceed0c50bb7b10f22f1f54259a3353678264910910e' },
         { digest: '4018cc05869cc6eee67449ee113654cbc1e0a25afb67b33e0b52ff699d5e87cb' },
@@ -1449,10 +1617,10 @@ const registry = {
       copies: [],
     },
     {
-      target: s136,
+      target: s140,
       rawDigest: '367ace053b00979326d0d219a03a4ced4c24b5c7f9dbfafbeba7f147a7c386e8',
       metadataDigest: 'ee3997d7275357ee35f4689fddfb0ad377c3aad9a507a21ebb138221315cf8ab',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: 'bdc81ad589cf2bdeae2d3d7386084b3403fd6a1b2245c10fcb61c4eb19009215' },
         { digest: 'b499285184a4cc8a90f927b0383c5bd65328d9209bded1e08b2bb233d1e8dea2' },
@@ -1467,7 +1635,7 @@ const registry = {
       target: 'subclass-feature|rune knight|fighter|phb|rune knight|tce|3|tce',
       rawDigest: '2b0e14dca180427495eb152555ec7a99f5ba8a574303cac491c7831fa482ede7',
       metadataDigest: '5866e823469ee5cbdbe7dc5054ccad914ad725690070d552f0198584fd311738',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '8750c6d5f98cea7a3bb3f92d253b9cbc631ef1c272eae6891a0917e69af784c3' },
         {
@@ -1476,7 +1644,7 @@ const registry = {
         },
         {
           digest: '95c80fedd9b5fa0a768f5aeb49440fc81bdaca23867b25d02259e8083b09af81',
-          reference: s136,
+          reference: s140,
         },
         {
           digest: 'e55dceff8bff4063112a4d9fbebedafb36b270d8f05b3bd6eb9e9fed04bf9bc5',
@@ -1489,12 +1657,12 @@ const registry = {
       target: 'subclass-feature|samurai|fighter|phb|samurai|xge|3|xge',
       rawDigest: 'a1512770d7aae605126472d8545ea20526f32bee8f93c663691a8334a1187916',
       metadataDigest: '2e26ca90153e2cafbc4d2fd5a0e720cb59f7e7b2f12a0158e1edb10b37860978',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: 'dfbc5f40412466d9e2576be3eda7990c01e921750765f400bd8aec52e7b65405' },
         {
           digest: 'a0c83b1ce99fbbca047e0e2f410022c3876f28195f8da24edea0ead5f8dfe2cc',
-          reference: s52,
+          reference: s53,
         },
         {
           digest: '465b8e6a7a23ef1aa3ce724fa5f79c680ff71d67448d6dd49c756be49469145e',
@@ -1507,7 +1675,7 @@ const registry = {
       target: 'subclass-feature|scout|rogue|phb|scout|xge|3|xge',
       rawDigest: '320d8128f56d9c5428afc3fafa4d39ed8480a8279102237b6027ac56251b60cf',
       metadataDigest: 'b5220b76e0e0c8557fc43fcec11fa8faef3da13740e515821e1bf10024f169f2',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
+      fields: a1,
       entries: [
         { digest: '741d4dedde5e01859f0d9d33448798b0faaebaf3048d0ad173e4cfe60779554b' },
         {
@@ -1516,102 +1684,64 @@ const registry = {
         },
         {
           digest: 'c1b0ee90e8b0b31a380b4a707f9dcd35f04a58c3f58ee60810c7c23f0e25a562',
-          reference: s137,
+          reference: s141,
         },
       ],
       copies: [],
     },
     {
-      target: s138,
-      rawDigest: s139,
+      target: s142,
+      rawDigest: s143,
       metadataDigest: '085fe96081f0cf509955c5368d58853353aa0dbb486ef783aa4294d1af498682',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s140 },
-        { digest: s141 },
-        { digest: s91 },
-        { digest: s142 },
-        { digest: s143, reference: s48 },
-        { digest: s144, reference: s145 },
-      ],
+      fields: a1,
+      entries: a23,
       copies: [],
     },
     {
       target: 'subclass-feature|solidarity domain (psa)|cleric|xphb|solidarity (psa)|psa|3|psa',
       rawDigest: '20950645bf9b6b8d5869f9961e07ab2ea0580f89921104630dc6d71767b8d14a',
       metadataDigest: '7a270309bd38b5bf57c4189dba3604a7b172e068fa1b094adf4024c558c75c01',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s140 },
-        { digest: s141 },
-        { digest: s91 },
-        { digest: s142 },
-        { digest: s143, reference: s48 },
-        { digest: s144, reference: s145 },
-      ],
-      copies: [{ target: s138, digest: s139 }],
+      fields: a1,
+      entries: a23,
+      copies: [{ target: s142, digest: s143 }],
     },
     {
-      target: s146,
-      rawDigest: s147,
+      target: s150,
+      rawDigest: s151,
       metadataDigest: 'baa40aa631a5c63a77389837bcbf131a034ad14c86f268f0e6b8bb1423fde955',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s148 },
-        { digest: s149 },
-        { digest: s150, reference: s151 },
-        { digest: s152, reference: s153 },
-      ],
+      fields: a1,
+      entries: a24,
       copies: [],
     },
     {
       target: 'subclass-feature|storm sorcery|sorcerer|xphb|storm|xge|3|xge',
       rawDigest: '3b6bb74ea5154368990a10832965aacb02e62d2db9ef6f54342648973a6b7ed1',
       metadataDigest: '44234e8e2a24318e036d9896bd3a95bb5fc8168440f77b1192e3b6ce1c3eddb2',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s148 },
-        { digest: s149 },
-        { digest: s150, reference: s151 },
-        { digest: s152, reference: s153 },
-      ],
-      copies: [{ target: s146, digest: s147 }],
+      fields: a1,
+      entries: a24,
+      copies: [{ target: s150, digest: s151 }],
     },
     {
-      target: s154,
-      rawDigest: s155,
+      target: s158,
+      rawDigest: s159,
       metadataDigest: '98a535a840adbea2e8b04afdc3388f85d22655677500fb7fa9594cf1c8f01b8f',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s156 },
-        { digest: s157 },
-        { digest: s91 },
-        { digest: s158 },
-        { digest: s159, reference: s11 },
-        { digest: s160, reference: s50 },
-      ],
+      fields: a1,
+      entries: a25,
       copies: [],
     },
     {
       target: 'subclass-feature|strength domain (psa)|cleric|xphb|strength (psa)|psa|3|psa',
       rawDigest: 'f4f33e1dde537d0f830c66affa033934d8d40f49f3b870383b111ea9c7e77d2f',
       metadataDigest: 'fba8adcc923fbc7ecf656f57bc43263f1c60ccf4b1406ca8820b72e2a38fa90c',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s156 },
-        { digest: s157 },
-        { digest: s91 },
-        { digest: s158 },
-        { digest: s159, reference: s11 },
-        { digest: s160, reference: s50 },
-      ],
-      copies: [{ target: s154, digest: s155 }],
+      fields: a1,
+      entries: a25,
+      copies: [{ target: s158, digest: s159 }],
     },
     {
       target: s20,
       rawDigest: '574eaa70ce69ac614b140b4b344c49da0348c10185c08199f5cd2867e149cc32',
       metadataDigest: '7bc7b5c1e3749f47b7dad8dbfa4d356a4703bdaaf8ff411c9e95ecbb3583e6fa',
-      fields: [s1, s2, s3, s4, s5, s6, s8, s9, s10],
+      fields: a4,
       entries: [
         { digest: '580dbc9ce31e722d4ff47d067b56a0bbafbbb3981988c74dccc21aad210530b1' },
         { digest: 'ada7f847bf2c849f220dcc665e4cc17ef95b3cb9a57c4cdfe4c00f4254828874' },
@@ -1623,7 +1753,7 @@ const registry = {
       target: s24,
       rawDigest: '9a3e41b1a85d0806907a1226f48adebe9cf59a5e214bcbe8de37e039dded0069',
       metadataDigest: 'c30ec67a8fc4bc0875873ba21d613e21d17e80aad2ebcb5f3cd65abf4340dae8',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: 'ec4cf6bc561065a72d583d9b1019ff2dc2793dd5aa45b8688cadda5a1e68d7c0' }],
       copies: [],
     },
@@ -1631,83 +1761,55 @@ const registry = {
       target: s25,
       rawDigest: '844beaa791150716ef6e762adb47c94b3cc26e71aaeaf7a7ab51d0f0b8dca9a5',
       metadataDigest: '7f4ac7a41c96c89606aa3a5bfde28fe6a23a0105636c3e56b4ee4dfd4f5d6f46',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: 'e13eb6af681bb178c6d5146574ee67adb6f8111990a15291c2eed739ef030569' }],
       copies: [],
     },
     {
-      target: s137,
+      target: s141,
       rawDigest: 'a3e87be35b17b5e577f6389aee5b51a1e89ba4e551e8fc86a2d726b1e175b170',
       metadataDigest: 'da2ffa5b6f53be26583efcd612a1178117a3d4e24b9e6d5070cc44d5bbcbbf5d',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: 'd03490da6f2e74df8779efac42d6b62bdd6ad86a1bde9a8fdfd7baec79030226' }],
       copies: [],
     },
     {
-      target: s161,
-      rawDigest: s162,
+      target: s165,
+      rawDigest: s166,
       metadataDigest: 'dcca0a547f2d4ed4af074dfa2d3ac9e16ae5a23ddea410cbfb90dbca145ceca8',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s163 },
-        { digest: s108 },
-        { digest: s164 },
-        { digest: s165, reference: s39 },
-        { digest: s166, reference: s167 },
-      ],
+      fields: a1,
+      entries: a26,
       copies: [],
     },
     {
       target: 'subclass-feature|tempest domain|cleric|xphb|tempest|phb|3|phb',
       rawDigest: '718a3e6749f538d48c5f543a13127a29ff2c2fa134ce65f570371ebb820b5f16',
       metadataDigest: 'db2e2d8009bcbc7a9ddbfe20d73929e26104479ab60f6f6a8ee07a7c14752dae',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s163 },
-        { digest: s108 },
-        { digest: s164 },
-        { digest: s165, reference: s39 },
-        { digest: s166, reference: s167 },
-      ],
-      copies: [{ target: s161, digest: s162 }],
+      fields: a1,
+      entries: a26,
+      copies: [{ target: s165, digest: s166 }],
     },
     {
-      target: s168,
-      rawDigest: s169,
+      target: s172,
+      rawDigest: s173,
       metadataDigest: 'cd697c33620154b21ef2a749110325acf752f016c509642ec00c0d8f95594462',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s170 },
-        { digest: s171 },
-        { digest: s172 },
-        { digest: s173 },
-        { digest: s174, reference: s41 },
-        { digest: s175, reference: s176 },
-        { digest: s177, reference: s178 },
-      ],
+      fields: a1,
+      entries: a27,
       copies: [],
     },
     {
       target: 'subclass-feature|twilight domain|cleric|xphb|twilight|tce|3|tce',
       rawDigest: '9a418c05d23287f06d0ba45226793fed9747cc8e2cde47a73a47f5c0bfde2e51',
       metadataDigest: '79ed59ee9eb5de93cd0e77600bb825206b5aad09c7ce673f63d5a406d2f35cba',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s170 },
-        { digest: s171 },
-        { digest: s172 },
-        { digest: s173 },
-        { digest: s174, reference: s41 },
-        { digest: s175, reference: s176 },
-        { digest: s177, reference: s178 },
-      ],
-      copies: [{ target: s168, digest: s169 }],
+      fields: a1,
+      entries: a27,
+      copies: [{ target: s172, digest: s173 }],
     },
     {
-      target: s179,
+      target: s183,
       rawDigest: '1829f08ea232df7ed0d27499b8c6421d0ca78da41edd531c8919fb02ebe1eba1',
       metadataDigest: '92e67d7e2df37fb5c72ce438a00cc6d4040e68e43d9f92d804d9005e58d76461',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [
         { digest: '98815ea6662966cb608fb0028317ece9fc6c359488343261a32309c20f80bd35' },
         { digest: '8107431f4737a48fd621de663a56137d3d9a00b76a582b97d889e1a1777e1f1c' },
@@ -1715,1011 +1817,1149 @@ const registry = {
       copies: [],
     },
     {
-      target: s180,
-      rawDigest: s181,
+      target: s184,
+      rawDigest: s185,
       metadataDigest: 'c0995a57c226d07160ceedcd0cef34dab715f4e54a5cb904d5a404cbd3bfc0b1',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s182 },
-        { digest: s91 },
-        { digest: s183 },
-        { digest: s184, reference: s42 },
-        { digest: s185, reference: s186 },
-      ],
+      fields: a1,
+      entries: a28,
       copies: [],
     },
     {
       target: 'subclass-feature|war domain|cleric|xphb|war|phb|3|phb',
       rawDigest: 'ff768c1929ce0339dc6b3e385824a29e56aeeb0f4241126e5cc02958629d53ed',
       metadataDigest: '68dc23b2814f9504db5c9310c87c4a2adc3891a25a48401264a766408c2c38b0',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s182 },
-        { digest: s91 },
-        { digest: s183 },
-        { digest: s184, reference: s42 },
-        { digest: s185, reference: s186 },
-      ],
-      copies: [{ target: s180, digest: s181 }],
+      fields: a1,
+      entries: a28,
+      copies: [{ target: s184, digest: s185 }],
     },
     {
-      target: s151,
+      target: 'subclass-feature|warrior of mercy|monk|xphb|mercy|xphb|3|xphb',
+      rawDigest: 'c934e8040b01f8ae5ed475d062651cbf16f6d9276c3caa66cdb56e45c53066cb',
+      metadataDigest: 'ec4aa0f2fad92d16b1522107b874a93ae56ab6fbe9d79df43d3b1ce028f9c018',
+      fields: a1,
+      entries: [
+        { digest: '50b6e1a2d8b87662ee4f18ed2621a9900653c9aa1e661eee4e73bf1f83d55a9e' },
+        { digest: 'e6dea2cfd96592dce0324fb19f03148d3bb43ad65d2d99ab9b0519d4ab9f137b' },
+        {
+          digest: '6ccc493ea4451faedb76b4f3946a25fd6add6714b543b8e8600e38e0fd686c74',
+          reference: 'subclass-feature|hand of harm|monk|xphb|mercy|xphb|3|xphb',
+        },
+        {
+          digest: '04a3590a80ef0abe5b5f352be06340b721df820fb70056ade8935bdfdfc226f3',
+          reference: 'subclass-feature|hand of healing|monk|xphb|mercy|xphb|3|xphb',
+        },
+        {
+          digest: '11cb3c8a74e97aa535c9baa622f59728b521415ae43623373cdea472ccf2c874',
+          reference: s102,
+        },
+      ],
+      copies: [],
+    },
+    {
+      target: 'subclass-feature|way of mercy|monk|phb|mercy|tce|3|tce',
+      rawDigest: '891c626d9b867bec0bdc9f401eb702f1d3b4ea1970e55d97926e11afdfa2415f',
+      metadataDigest: 'efc7c9054abec8e7d63d88324af7a72aef27e5df869dc1532a915cee677f9155',
+      fields: a1,
+      entries: [
+        { digest: 'de376fd8cebe91008c38c5d7e65ba77bab0feb16375012b0329e3eceb370309e' },
+        { digest: 'f6e820a701fe51d3ab4f54d1a88800b5ff3ad4a8beeac3039638ed4b86277857' },
+        { digest: 'c4adc714058e6d31b834edfdad97a4ebb50cdb445d59a10b34597571bce4e615' },
+        {
+          digest: '899e5144956123282a845fbc0cb8f838a486d9da8ab6800582ebaf5b76dd2a91',
+          reference: s101,
+        },
+        {
+          digest: 'f1a8524b335aa43cb4075009dd7de3f08ec0265e03336938f1b13586a9c251ab',
+          reference: 'subclass-feature|hand of healing|monk|phb|mercy|tce|3|tce',
+        },
+        {
+          digest: '124ad3c8f61a5d443227cd957eda0f463c1d85ed900d117b531b89dd750aa8b9',
+          reference: 'subclass-feature|hand of harm|monk|phb|mercy|tce|3|tce',
+        },
+      ],
+      copies: [],
+    },
+    {
+      target: 'subclass-feature|way of the ascendant dragon|monk|phb|ascendant dragon|ftd|3|ftd',
+      rawDigest: '135784585acc3b3fad60f85a5272c430498c311a397880b40966c667aae48252',
+      metadataDigest: '5d1340031eb4ca519aed523378dc365117bd1bc54ca4f8557052de8ee72258d5',
+      fields: a1,
+      entries: [
+        { digest: '668bbb4b25705ba29005c44eb7d0ca4711fa386aeb3dace93defd87da4b01e0f' },
+        { digest: 'a20ad35a392e5e71591a0585a6b824ef1934572ebd785333ee7d501e13f58685' },
+        { digest: 'e43fc22c314d64dd0cb42df9df2a7dc7d738da70c8db5c28170bf656c4f7a460' },
+        {
+          digest: 'e52c99e042e4372fe367fd2894da9223409916d7b06768669b65af3398081678',
+          reference: s84,
+        },
+        {
+          digest: '312b6a59827bd12bd39bec69178fd735805c70c4b3dc61d37377ee6ccb2fcb22',
+          reference: 'subclass-feature|breath of the dragon|monk|phb|ascendant dragon|ftd|3|ftd',
+        },
+      ],
+      copies: [],
+    },
+    {
+      target: 'subclass-feature|way of the drunken master|monk|phb|drunken master|xge|3|xge',
+      rawDigest: '4ddf9cea100545b05c79068dd0742fcb78d5d4fd6f937aa512c9cc2af347eb87',
+      metadataDigest: 'ab3ba045c068bfe455c7b79a4d75d0a55fa2cc36a6d9c9bdc389bb0c0f100193',
+      fields: a1,
+      entries: [
+        { digest: '5179a324871cde5498432e410e88030192b42c224d0c1aaa554da526dee9774f' },
+        { digest: 'a76b98d721baf8c5800be54b9253f60c324dbff89858738e11866beb2da8a8c9' },
+        {
+          digest: '871d2f8fd3a6be6f6ff069ccff7630da0d7258ab59516b0aa72a75b046329d0f',
+          reference: s44,
+        },
+        {
+          digest: 'f46fb8148da00d7f292d0efb8cb0a5c9fd0f6b15edcde30759ed361f88247455',
+          reference: 'subclass-feature|drunken technique|monk|phb|drunken master|xge|3|xge',
+        },
+      ],
+      copies: [],
+    },
+    {
+      target: s155,
       rawDigest: '67e5b63f08f674acfee41d650e70b6233e878d25b668f0727b1dc67182503024',
       metadataDigest: 'b15defc4c4e0a81204946f4e162b3b9d539efc222657c753a234e7a76f8ba570',
-      fields: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10],
+      fields: a0,
       entries: [{ digest: '14469546d676a5cb2672d938a273a9f6125e1ad47482b9f11297082bbd57bd0f' }],
       copies: [],
     },
     {
-      target: s187,
-      rawDigest: s188,
+      target: s191,
+      rawDigest: s192,
       metadataDigest: '0c0c9443d04770cdab511f12f5ea147ad2b0ac432fbecaca647a348b3a3da56b',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s189 },
-        { digest: s190 },
-        { digest: s91 },
-        { digest: s191 },
-        { digest: s192, reference: s43 },
-        { digest: s193, reference: s194 },
-      ],
+      fields: a1,
+      entries: a29,
       copies: [],
     },
     {
       target: 'subclass-feature|zeal domain (psa)|cleric|xphb|zeal (psa)|psa|3|psa',
       rawDigest: 'f899a521908ba4635747ed1ba13a1251fcf2a76560a704db658a4b90d872497e',
       metadataDigest: '6f7a257ecba8b16a9f8e709fd8e4c05d92c000a483f115bdba91243b4ceafb5b',
-      fields: [s1, s2, s3, s5, s6, s7, s8, s9, s10],
-      entries: [
-        { digest: s189 },
-        { digest: s190 },
-        { digest: s91 },
-        { digest: s191 },
-        { digest: s192, reference: s43 },
-        { digest: s193, reference: s194 },
-      ],
-      copies: [{ target: s187, digest: s188 }],
+      fields: a1,
+      entries: a29,
+      copies: [{ target: s191, digest: s192 }],
     },
   ],
   roots: [
     {
-      owner: [s195, s196, s197, s198],
-      shortName: s199,
-      rawDigest: s200,
+      owner: [s199, s200, s201, s202],
+      shortName: s203,
+      rawDigest: s204,
       metadataDigest: '5c786e2037669d03f222ea38a5b3989d4fcc996717b01cbfcda9b5fcac1338f2',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s205, s206],
+      fields: [s205, s1, s2, s206, s207, s6, s7, s208, s8, s209, s210],
       copies: [],
-      declarations: [s207, s208, s209, s210],
-      intro: s207,
-      paths: [{ target: s97, refs: [s207, s211], level: 3 }],
+      declarations: a30,
+      intro: s211,
+      paths: a32,
     },
     {
-      owner: [s195, s212, s197, s198],
-      shortName: s199,
+      owner: [s199, s216, s201, s202],
+      shortName: s203,
       rawDigest: '819c7e80e00072867b41f1cb612ce5afe9d2f97e1feab3bcb25f422bd8df7a6f',
       metadataDigest: '43e4a9abb5e98cfc73cb2e9a584bd40251d017f5f019a3322bbeffadf4e0a6a6',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s205, s206],
-      copies: [{ key: 'Path of the Giant|BGG|Giant|Barbarian|PHB', digest: s200 }],
-      declarations: [s207, s208, s209, s210],
-      intro: s207,
-      paths: [{ target: s97, refs: [s207, s211], level: 3 }],
+      fields: [s217, s205, s1, s2, s206, s218, s207, s6, s7, s208, s8, s209, s210],
+      copies: [{ key: 'Path of the Giant|BGG|Giant|Barbarian|PHB', digest: s204 }],
+      declarations: a30,
+      intro: s211,
+      paths: a32,
     },
     {
-      owner: [s215, s196, s216, s196],
-      shortName: s217,
-      rawDigest: s218,
+      owner: [s219, s200, s220, s200],
+      shortName: s221,
+      rawDigest: s222,
       metadataDigest: '93b6e150a1387b58602603cd91b9e36d0cb3beb262d5c4a270db988b9268cca7',
-      fields: [s201, s1, s2, s202, s6, s7, s219, s204, s8, s29, s206],
+      fields: [s205, s1, s2, s206, s6, s7, s223, s208, s8, s29, s210],
       copies: [],
-      declarations: [s220, s221, s222],
-      intro: s220,
-      paths: [{ target: s28, refs: [s220, s223], level: 3 }],
+      declarations: a33,
+      intro: s224,
+      paths: a35,
     },
     {
-      owner: [s215, s196, s224, s225],
-      shortName: s226,
-      rawDigest: s227,
+      owner: [s219, s200, s228, s229],
+      shortName: s230,
+      rawDigest: s231,
       metadataDigest: '565141e995d67c71bf92d0ac88fc746ae10156f89345421fb97a4d687b1697c3',
-      fields: [s1, s2, s202, s203, s6, s228, s7, s204, s8, s206],
+      fields: a36,
       copies: [],
-      declarations: [s229, s230, s231],
-      intro: s229,
-      paths: [{ target: s31, refs: [s229, s232], level: 3 }],
+      declarations: a37,
+      intro: s233,
+      paths: a39,
     },
     {
-      owner: [s215, s196, s233, s196],
-      shortName: s234,
-      rawDigest: s235,
+      owner: [s219, s200, s237, s200],
+      shortName: s238,
+      rawDigest: s239,
       metadataDigest: '3b5a8a56bf26d9d17895b2a512d25d3acb781fea7e2b2a60dd0a093ce9fd354a',
-      fields: [s1, s2, s202, s6, s7, s219, s204, s8, s206],
+      fields: [s1, s2, s206, s6, s7, s223, s208, s8, s210],
       copies: [],
-      declarations: [s236, s237, s238],
-      intro: s236,
-      paths: [{ target: s32, refs: [s236, s239], level: 3 }],
+      declarations: a40,
+      intro: s240,
+      paths: a42,
     },
     {
-      owner: [s215, s212, s216, s196],
-      shortName: s217,
+      owner: [s219, s216, s220, s200],
+      shortName: s221,
       rawDigest: '3993b83e2e38798153462492df3f06bb8007b24a3fac66b0d92a94c93840ccdb',
       metadataDigest: 'f0d744f54c321999ddb7ed2e20eaa8df9915c6dee415598e08d4a2016787a94d',
-      fields: [s213, s201, s1, s2, s202, s6, s7, s219, s204, s8, s29, s206],
-      copies: [{ key: 'College of Lore|PHB|Lore|Bard|PHB', digest: s218 }],
-      declarations: [s220, s221, s222],
-      intro: s220,
-      paths: [{ target: s28, refs: [s220, s223], level: 3 }],
+      fields: [s217, s205, s1, s2, s206, s6, s7, s223, s208, s8, s29, s210],
+      copies: [{ key: 'College of Lore|PHB|Lore|Bard|PHB', digest: s222 }],
+      declarations: a33,
+      intro: s224,
+      paths: a35,
     },
     {
-      owner: [s215, s212, s216, s212],
-      shortName: s217,
+      owner: [s219, s216, s220, s216],
+      shortName: s221,
       rawDigest: 'd6a563f480831c833018a70e1eb1289f13d5e1884b27d1330b37373ab0531a83',
       metadataDigest: '9352b2ff610487906dab958c81b4f17fb593b5e1f6019505dd500345979a342e',
-      fields: [s201, s34, s1, s2, s202, s203, s6, s7, s204, s8, s35, s206],
+      fields: [s205, s34, s1, s2, s206, s207, s6, s7, s208, s8, s35, s210],
       copies: [],
-      declarations: [s240, s241, s242],
-      intro: s240,
-      paths: [{ target: s33, refs: [s240, s243], level: 3 }],
+      declarations: a43,
+      intro: s244,
+      paths: a45,
     },
     {
-      owner: [s215, s212, 'college of spirits', 'rhw'],
+      owner: [s219, s216, 'college of spirits', 'rhw'],
       shortName: 'Spirits',
       rawDigest: 'c8101c5dbde1da418bc217d87ff9edb82a006588f511ec88bf9ac65d392a4a7c',
       metadataDigest: '3a3c9d5e30b9a74a6d70a043a1da9e2d298fe5633eabaad69f55e450c987aaf4',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s244,
+        s248,
         'Empowered Channeling|Bard|XPHB|Spirits|RHW|6|RHW',
         'Mystical Connection|Bard|XPHB|Spirits|RHW|14|RHW',
       ],
-      intro: s244,
-      paths: [{ target: s53, refs: [s244, 'Channeler|Bard|XPHB|Spirits|RHW|3|RHW'], level: 3 }],
+      intro: s248,
+      paths: [{ target: s54, refs: [s248, 'Channeler|Bard|XPHB|Spirits|RHW|3|RHW'], level: 3 }],
     },
     {
-      owner: [s215, s212, s224, s225],
-      shortName: s226,
+      owner: [s219, s216, s228, s229],
+      shortName: s230,
       rawDigest: '2903aaedaf5c59c023f823b9805b7a5e088bcc12b23f08be1c1749fa10a24d11',
       metadataDigest: '24338202b17b9600eda1ee386692a48ccc0915efe4481847a65f6663f8fc4c14',
-      fields: [s213, s1, s2, s202, s214, s203, s6, s228, s7, s204, s8, s206],
-      copies: [{ key: 'College of Swords|XGE|Swords|Bard|PHB', digest: s227 }],
-      declarations: [s229, s230, s231],
-      intro: s229,
-      paths: [{ target: s31, refs: [s229, s232], level: 3 }],
+      fields: a47,
+      copies: [{ key: 'College of Swords|XGE|Swords|Bard|PHB', digest: s231 }],
+      declarations: a37,
+      intro: s233,
+      paths: a39,
     },
     {
-      owner: [s215, s212, 'college of the moon', s245],
+      owner: [s219, s216, 'college of the moon', s249],
       shortName: 'Moon',
       rawDigest: '8e98ea2f1f51997fa22c7fb4693dc0e1f0535df86ea4f6af050c71da258a6025',
       metadataDigest: 'f365b489048f8c48ba5a838c2d0ad66236393b1b34a35e91982e064be3cf66a8',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s246,
+        s250,
         'Blessing of Moonlight|Bard|XPHB|Moon|FRHoF|6|FRHoF',
         "Eventide's Splendor|Bard|XPHB|Moon|FRHoF|14|FRHoF",
       ],
-      intro: s246,
-      paths: [{ target: s67, refs: [s246, 'Primal Lore|Bard|XPHB|Moon|FRHoF|3|FRHoF'], level: 3 }],
+      intro: s250,
+      paths: [{ target: s68, refs: [s250, 'Primal Lore|Bard|XPHB|Moon|FRHoF|3|FRHoF'], level: 3 }],
     },
     {
-      owner: [s215, s212, s233, s196],
-      shortName: s234,
+      owner: [s219, s216, s237, s200],
+      shortName: s238,
       rawDigest: '300eb181e1443fc062f4f3cc02e9f89114a983427c467fc54f44335fb1562436',
       metadataDigest: '0ecc8adccee088702613bbd9f389fa36ced65e5a98a681ea5b27b1b0074d8de6',
-      fields: [s213, s1, s2, s202, s6, s7, s219, s204, s8, s206],
-      copies: [{ key: 'College of Valor|PHB|Valor|Bard|PHB', digest: s235 }],
-      declarations: [s236, s237, s238],
-      intro: s236,
-      paths: [{ target: s32, refs: [s236, s239], level: 3 }],
+      fields: [s217, s1, s2, s206, s6, s7, s223, s208, s8, s210],
+      copies: [{ key: 'College of Valor|PHB|Valor|Bard|PHB', digest: s239 }],
+      declarations: a40,
+      intro: s240,
+      paths: a42,
     },
     {
-      owner: [s215, s212, s233, s212],
-      shortName: s234,
+      owner: [s219, s216, s237, s216],
+      shortName: s238,
       rawDigest: '1267372af9e552906b5e6d3fbc28351c1d35ca7e64e0d3f4709c269cc724aaef',
       metadataDigest: 'b71d2b26f7fe4e315547f959c2171ab43b0aa8ed7f5bf5f6ad12da7f22cccc12',
-      fields: [s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a48,
       copies: [],
       declarations: [
-        s247,
+        s251,
         'Extra Attack|Bard|XPHB|Valor|XPHB|6',
         'Battle Magic|Bard|XPHB|Valor|XPHB|14',
       ],
-      intro: s247,
-      paths: [{ target: s68, refs: [s247, 'Martial Training|Bard|XPHB|Valor|XPHB|3'], level: 3 }],
+      intro: s251,
+      paths: [{ target: s69, refs: [s251, 'Martial Training|Bard|XPHB|Valor|XPHB|3'], level: 3 }],
     },
     {
-      owner: [s248, s196, s249, s250],
-      shortName: s251,
-      rawDigest: s252,
+      owner: [s252, s200, s253, s254],
+      shortName: s255,
+      rawDigest: s256,
       metadataDigest: 'a5620a58d994b64847f6c8e78cd721dfb865602a3459e405abf05a01875337ca',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s219, s204, s8, s206],
+      fields: [s205, s1, s2, s206, s207, s6, s7, s223, s208, s8, s210],
       copies: [],
       declarations: [
-        s253,
+        s257,
         'Channel Divinity: Arcane Abjuration|Cleric||Arcana|SCAG|2',
-        s254,
+        s258,
         'Potent Spellcasting|Cleric||Arcana|SCAG|8',
         'Blessed Strikes|Cleric||Arcana|SCAG|8|TCE',
-        s255,
+        s259,
       ],
-      intro: s253,
-      paths: [{ target: s19, refs: [s253, s256], level: 1 }],
+      intro: s257,
+      paths: [{ target: s19, refs: [s257, s260], level: 1 }],
     },
     {
-      owner: [s248, s196, s257, s258],
-      shortName: s259,
-      rawDigest: s260,
+      owner: [s252, s200, s261, s262],
+      shortName: s263,
+      rawDigest: s264,
       metadataDigest: '3cc3dbbb7204d38f6e0a8db1196326505953a249dea5917264c1d4330fbf7308',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s261,
+        s265,
         'Channel Divinity: Touch of Death|Cleric||Death|DMG|2',
-        s262,
+        s266,
         'Divine Strike|Cleric||Death|DMG|8',
         'Blessed Strikes|Cleric||Death|DMG|8|TCE',
-        s263,
+        s267,
       ],
-      intro: s261,
-      paths: [{ target: s44, refs: [s261, s264], level: 1 }],
+      intro: s265,
+      paths: [{ target: s45, refs: [s265, s268], level: 1 }],
     },
     {
-      owner: [s248, s196, s265, s225],
-      shortName: s266,
-      rawDigest: s267,
+      owner: [s252, s200, s269, s229],
+      shortName: s270,
+      rawDigest: s271,
       metadataDigest: '49c6cb25b252aaf880cced3cbc01da6e15262874b7892f6649d1cb76bfa082a1',
-      fields: [s201, s1, s2, s202, s268, s203, s6, s7, s204, s8, s206],
+      fields: [s205, s1, s2, s206, s272, s207, s6, s7, s208, s8, s210],
       copies: [],
       declarations: [
-        s269,
+        s273,
         "Channel Divinity: Artisan's Blessing|Cleric||Forge|XGE|2",
-        s270,
+        s274,
         'Divine Strike|Cleric||Forge|XGE|8',
         'Blessed Strikes|Cleric||Forge|XGE|8|TCE',
-        s271,
+        s275,
       ],
-      intro: s269,
-      paths: [{ target: s45, refs: [s269, s272], level: 1 }],
+      intro: s273,
+      paths: [{ target: s46, refs: [s273, s276], level: 1 }],
     },
     {
-      owner: [s248, s196, s273, s274],
-      shortName: s275,
-      rawDigest: s276,
+      owner: [s252, s200, s277, s278],
+      shortName: s279,
+      rawDigest: s280,
       metadataDigest: '8924567153f49ea39b2abce41efadd9f927a3a14ee40f0c991cc433d170e1601',
-      fields: [s201, s1, s2, s202, s203, s277, s6, s7, s204, s8, s206],
+      fields: [s205, s1, s2, s206, s207, s281, s6, s7, s208, s8, s210],
       copies: [],
-      declarations: [s278, s279, s280, s281, s282, s283],
-      intro: s278,
-      paths: [{ target: s26, refs: [s278, s284, s285], level: 1 }],
+      declarations: [s282, s283, s284, s285, s286, s287],
+      intro: s282,
+      paths: [{ target: s26, refs: [s282, s288, s289], level: 1 }],
     },
     {
-      owner: [s248, s196, s286, s196],
-      shortName: s287,
-      rawDigest: s288,
+      owner: [s252, s200, s290, s200],
+      shortName: s291,
+      rawDigest: s292,
       metadataDigest: '92a77061e3c28084ff14d0edcf7c0376fba184d95c292b07b67047a1bec133a4',
-      fields: [s201, s1, s2, s202, s6, s7, s219, s204, s8, s206],
+      fields: a49,
       copies: [],
-      declarations: [s284, s279, s280, s281, s282, s283],
-      intro: s284,
-      paths: [{ target: s26, refs: [s284, s285], level: 1 }],
+      declarations: [s288, s283, s284, s285, s286, s287],
+      intro: s288,
+      paths: [{ target: s26, refs: [s288, s289], level: 1 }],
     },
     {
-      owner: [s248, s196, s289, s196],
-      shortName: s290,
-      rawDigest: s291,
+      owner: [s252, s200, s293, s200],
+      shortName: s294,
+      rawDigest: s295,
       metadataDigest: '1dfd5a7a066d4081bf803af281560eb6805de02ad7518c6a187ab22774f392b6',
-      fields: [s201, s1, s2, s202, s6, s7, s204, s8, s206],
+      fields: a50,
       copies: [],
       declarations: [
-        s292,
+        s296,
         'Channel Divinity: Charm Animals and Plants|Cleric||Nature||2',
-        s293,
+        s297,
         'Divine Strike|Cleric||Nature||8',
         'Blessed Strikes|Cleric||Nature||8|TCE',
-        s294,
+        s298,
       ],
-      intro: s292,
+      intro: s296,
       paths: [
-        { target: s0, refs: [s292, s295], level: 1 },
-        { target: s46, refs: [s292, s296], level: 1 },
+        { target: s0, refs: [s296, s299], level: 1 },
+        { target: s47, refs: [s296, s300], level: 1 },
       ],
     },
     {
-      owner: [s248, s196, s297, s298],
-      shortName: s299,
-      rawDigest: s300,
+      owner: [s252, s200, s301, s302],
+      shortName: s303,
+      rawDigest: s304,
       metadataDigest: 'f16f3645b6f5048d93207e3fedd3883d6e29ab750b213c3e8403a0e00007bbf1',
-      fields: [s201, s1, s2, s202, s203, s6, s38, s7, s204, s8, s206],
+      fields: [s205, s1, s2, s206, s207, s6, s38, s7, s208, s8, s210],
       copies: [],
       declarations: [
-        s301,
+        s305,
         "Channel Divinity: Order's Demand|Cleric||Order|TCE|2",
-        s302,
+        s306,
         'Divine Strike|Cleric||Order|TCE|8',
         'Blessed Strikes|Cleric||Order|TCE|8|TCE',
-        s303,
+        s307,
       ],
-      intro: s301,
-      paths: [{ target: s37, refs: [s301, s304], level: 1 }],
+      intro: s305,
+      paths: [{ target: s37, refs: [s305, s308], level: 1 }],
     },
     {
-      owner: [s248, s196, s305, s298],
-      shortName: s306,
-      rawDigest: s307,
+      owner: [s252, s200, s309, s302],
+      shortName: s310,
+      rawDigest: s311,
       metadataDigest: 'ca1a66bdb8654264e787bb67df8821ea94b1aa5c90e62e4b2774ee710bce5d50',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s308,
+        s312,
         'Channel Divinity: Balm of Peace|Cleric||Peace|TCE|2',
-        s309,
+        s313,
         'Potent Spellcasting|Cleric||Peace|TCE|8',
         'Blessed Strikes|Cleric||Peace|TCE|8|TCE',
-        s310,
+        s314,
       ],
-      intro: s308,
-      paths: [{ target: s98, refs: [s308, s311], level: 1 }],
+      intro: s312,
+      paths: [{ target: s100, refs: [s312, s315], level: 1 }],
     },
     {
-      owner: [s248, s196, s312, s274],
-      shortName: s313,
-      rawDigest: s314,
+      owner: [s252, s200, s316, s278],
+      shortName: s317,
+      rawDigest: s318,
       metadataDigest: 'e2b46f6945a829fd26e6df4254e54acb4e30cf94a025c6c2bfe31176b5acf4dc',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s315,
+        s319,
         'Channel Divinity: Preserve Life|Cleric||Solidarity (PSA)|PSA|2',
-        s316,
+        s320,
         'Divine Strike|Cleric||Solidarity (PSA)|PSA|8',
         'Blessed Strikes|Cleric||Solidarity (PSA)|PSA|8|TCE',
-        s317,
+        s321,
       ],
-      intro: s315,
-      paths: [{ target: s48, refs: [s315, s318], level: 1 }],
+      intro: s319,
+      paths: [{ target: s49, refs: [s319, s322], level: 1 }],
     },
     {
-      owner: [s248, s196, s319, s274],
-      shortName: s320,
-      rawDigest: s321,
+      owner: [s252, s200, s323, s278],
+      shortName: s324,
+      rawDigest: s325,
       metadataDigest: '8c0858ec5800b8d98696f1baac4f2dc505a49672fea50ae673bb6bc250c947dc',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s322,
+        s326,
         'Channel Divinity: Feat of Strength|Cleric||Strength (PSA)|PSA|2',
-        s323,
+        s327,
         'Divine Strike|Cleric||Strength (PSA)|PSA|8',
         'Blessed Strikes|Cleric||Strength (PSA)|PSA|8|TCE',
-        s324,
+        s328,
       ],
-      intro: s322,
+      intro: s326,
       paths: [
-        { target: s11, refs: [s322, s325], level: 1 },
-        { target: s50, refs: [s322, s326], level: 1 },
+        { target: s11, refs: [s326, s329], level: 1 },
+        { target: s51, refs: [s326, s330], level: 1 },
       ],
     },
     {
-      owner: [s248, s196, s327, s196],
-      shortName: s328,
-      rawDigest: s329,
+      owner: [s252, s200, s331, s200],
+      shortName: s332,
+      rawDigest: s333,
       metadataDigest: 'b3c694a177e186ae7b9a7ffeb194a7da493be8662431b6dd9d84a0f752169af2',
-      fields: [s201, s1, s2, s202, s6, s7, s204, s8, s206],
+      fields: a50,
       copies: [],
       declarations: [
-        s330,
+        s334,
         'Channel Divinity: Destructive Wrath|Cleric||Tempest||2',
-        s331,
+        s335,
         'Divine Strike|Cleric||Tempest||8',
         'Blessed Strikes|Cleric||Tempest||8|TCE',
-        s332,
+        s336,
       ],
-      intro: s330,
-      paths: [{ target: s39, refs: [s330, s333], level: 1 }],
+      intro: s334,
+      paths: [{ target: s39, refs: [s334, s337], level: 1 }],
     },
     {
-      owner: [s248, s196, s334, s298],
-      shortName: s335,
-      rawDigest: s336,
+      owner: [s252, s200, s338, s302],
+      shortName: s339,
+      rawDigest: s340,
       metadataDigest: '6b67696fa484e412d10978492d67627af988a8aa5113edc52bcbdd1d682825db',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s337,
+        s341,
         'Channel Divinity: Twilight Sanctuary|Cleric||Twilight|TCE|2',
-        s338,
+        s342,
         'Divine Strike|Cleric||Twilight|TCE|8',
         'Blessed Strikes|Cleric||Twilight|TCE|8|TCE',
-        s339,
+        s343,
       ],
-      intro: s337,
-      paths: [{ target: s41, refs: [s337, s340], level: 1 }],
+      intro: s341,
+      paths: [{ target: s41, refs: [s341, s344], level: 1 }],
     },
     {
-      owner: [s248, s196, s341, s196],
-      shortName: s342,
-      rawDigest: s343,
+      owner: [s252, s200, s345, s200],
+      shortName: s346,
+      rawDigest: s347,
       metadataDigest: '0d1b5cd7296f2605d5c432f3d349b0972740dc270edd03698a5e8d601ef393f3',
-      fields: [s201, s1, s2, s202, s6, s7, s219, s204, s8, s206],
+      fields: a49,
       copies: [],
       declarations: [
-        s344,
+        s348,
         'Channel Divinity: Guided Strike|Cleric||War||2',
-        s345,
+        s349,
         'Divine Strike|Cleric||War||8',
         'Blessed Strikes|Cleric||War||8|TCE',
-        s346,
+        s350,
       ],
-      intro: s344,
-      paths: [{ target: s42, refs: [s344, s347], level: 1 }],
+      intro: s348,
+      paths: [{ target: s42, refs: [s348, s351], level: 1 }],
     },
     {
-      owner: [s248, s196, s348, s274],
-      shortName: s349,
-      rawDigest: s350,
+      owner: [s252, s200, s352, s278],
+      shortName: s353,
+      rawDigest: s354,
       metadataDigest: '7812312c95ba8446ac0cc32a9e84c6ce74cc7150985ff9757d886f1f9ac27472',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [],
-      declarations: [
-        s351,
-        'Channel Divinity: Consuming Fervor|Cleric||Zeal (PSA)|PSA|2',
-        s352,
-        'Divine Strike|Cleric||Zeal (PSA)|PSA|8',
-        'Blessed Strikes|Cleric||Zeal (PSA)|PSA|8|TCE',
-        s353,
-      ],
-      intro: s351,
-      paths: [{ target: s43, refs: [s351, s354], level: 1 }],
-    },
-    {
-      owner: [s248, s212, s249, 'au'],
-      shortName: s251,
-      rawDigest: '710ae3f3b495d03ae87cfe3077608839b68b0d678b8e43c83b94b51aef6ae22e',
-      metadataDigest: 'cbd66a688427b0bf6f3a5a04e61ffe268aa2e07fb6e3c492f3204258c095903d',
-      fields: [s201, s1, s2, s202, s268, s203, s6, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
         s355,
+        'Channel Divinity: Consuming Fervor|Cleric||Zeal (PSA)|PSA|2',
+        s356,
+        'Divine Strike|Cleric||Zeal (PSA)|PSA|8',
+        'Blessed Strikes|Cleric||Zeal (PSA)|PSA|8|TCE',
+        s357,
+      ],
+      intro: s355,
+      paths: [{ target: s43, refs: [s355, s358], level: 1 }],
+    },
+    {
+      owner: [s252, s216, s253, 'au'],
+      shortName: s255,
+      rawDigest: '710ae3f3b495d03ae87cfe3077608839b68b0d678b8e43c83b94b51aef6ae22e',
+      metadataDigest: 'cbd66a688427b0bf6f3a5a04e61ffe268aa2e07fb6e3c492f3204258c095903d',
+      fields: a51,
+      copies: [],
+      declarations: [
+        s359,
         'Dispelling Recovery|Cleric|XPHB|Arcana|AU|6|AU',
         'Magical Mastery|Cleric|XPHB|Arcana|AU|17|AU',
       ],
-      intro: s355,
+      intro: s359,
       paths: [
-        { target: s20, refs: [s355, 'Student of Arcana|Cleric|XPHB|Arcana|AU|3|AU'], level: 3 },
+        { target: s20, refs: [s359, 'Student of Arcana|Cleric|XPHB|Arcana|AU|3|AU'], level: 3 },
       ],
     },
     {
-      owner: [s248, s212, s249, s250],
-      shortName: s251,
+      owner: [s252, s216, s253, s254],
+      shortName: s255,
       rawDigest: '16c0e61929e6eb52542f8c9ee13f141b446360ed956d32e563fd416a0b024e24',
       metadataDigest: '4789838eca07a1586b53464b57c8f704ea6b80afc2d0e6755fd7b27b0d0a796c',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s219, s204, s8, s206],
-      copies: [{ key: 'Arcana Domain|SCAG|Arcana|Cleric|PHB', digest: s252 }],
+      fields: [s217, s205, s1, s2, s206, s218, s207, s6, s7, s223, s208, s8, s210],
+      copies: [{ key: 'Arcana Domain|SCAG|Arcana|Cleric|PHB', digest: s256 }],
       declarations: [
-        s356,
+        s360,
         'Channel Divinity: Arcane Abjuration|Cleric|XPHB|Arcana|SCAG|3',
-        s254,
-        s255,
+        s258,
+        s259,
       ],
-      intro: s356,
-      paths: [{ target: s19, refs: [s356, s256], level: 3 }],
+      intro: s360,
+      paths: [{ target: s19, refs: [s360, s260], level: 3 }],
     },
     {
-      owner: [s248, s212, s257, s258],
-      shortName: s259,
+      owner: [s252, s216, s261, s262],
+      shortName: s263,
       rawDigest: 'e811fabe2b6fbdfd361a10df1d66ed6c05f317c5d0991b16872b020c08e25b9f',
       metadataDigest: 'e81a1d1a7b63113effd248a924b6aa0041bc9ebb494f91798b4b0c6136f87baa',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Death Domain|DMG|Death|Cleric|PHB', digest: s260 }],
-      declarations: [s357, 'Channel Divinity: Touch of Death|Cleric|XPHB|Death|DMG|3', s262, s263],
-      intro: s357,
-      paths: [{ target: s44, refs: [s357, s264], level: 3 }],
+      fields: a52,
+      copies: [{ key: 'Death Domain|DMG|Death|Cleric|PHB', digest: s264 }],
+      declarations: [s361, 'Channel Divinity: Touch of Death|Cleric|XPHB|Death|DMG|3', s266, s267],
+      intro: s361,
+      paths: [{ target: s45, refs: [s361, s268], level: 3 }],
     },
     {
-      owner: [s248, s212, s265, s225],
-      shortName: s266,
+      owner: [s252, s216, s269, s229],
+      shortName: s270,
       rawDigest: '17c24675ffbda9ddb4967cd026479529c98c5f34a0cce2a5222092028e370308',
       metadataDigest: '0a49e1707cdb99f0b603acfebca1cb58c30cb340c8b5ab567cc6ced3d9614c51',
-      fields: [s213, s201, s1, s2, s202, s214, s268, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Forge Domain|XGE|Forge|Cleric|PHB', digest: s267 }],
+      fields: [s217, s205, s1, s2, s206, s218, s272, s207, s6, s7, s208, s8, s210],
+      copies: [{ key: 'Forge Domain|XGE|Forge|Cleric|PHB', digest: s271 }],
       declarations: [
-        s358,
+        s362,
         "Channel Divinity: Artisan's Blessing|Cleric|XPHB|Forge|XGE|3",
-        s270,
-        s271,
+        s274,
+        s275,
       ],
-      intro: s358,
-      paths: [{ target: s45, refs: [s358, s272], level: 3 }],
+      intro: s362,
+      paths: [{ target: s46, refs: [s362, s276], level: 3 }],
     },
     {
-      owner: [s248, s212, s273, s274],
-      shortName: s275,
+      owner: [s252, s216, s277, s278],
+      shortName: s279,
       rawDigest: '398c42be1e4e662fa042c7e52ffefdfbf182a6da17fbdf39e16d7a800d1b4f4b',
       metadataDigest: '541523546f2dcdd4d80b9bdac41d8e675cedebd44eff4e0012912ff816813765',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s277, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Knowledge Domain (PSA)|PSA|Knowledge (PSA)|Cleric|PHB', digest: s276 }],
-      declarations: [s359, s360, s280, s283],
-      intro: s359,
-      paths: [{ target: s26, refs: [s359, s284, s285], level: 3 }],
+      fields: [s217, s205, s1, s2, s206, s218, s207, s281, s6, s7, s208, s8, s210],
+      copies: [{ key: 'Knowledge Domain (PSA)|PSA|Knowledge (PSA)|Cleric|PHB', digest: s280 }],
+      declarations: [s363, s364, s284, s287],
+      intro: s363,
+      paths: [{ target: s26, refs: [s363, s288, s289], level: 3 }],
     },
     {
-      owner: [s248, s212, s286, s245],
-      shortName: s287,
+      owner: [s252, s216, s290, s249],
+      shortName: s291,
       rawDigest: 'eecf44a3092e5e5cc7b48dfde99fa57b8d4bff533546528c88746191c92f5313',
       metadataDigest: '562e1da31326bcf996aa3bf07cc7b93bcc512b3c45b1012ac495964fd97b5cf9',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
-      declarations: [s361, s362, 'Divine Foreknowledge|Cleric|XPHB|Knowledge|FRHoF|17|FRHoF'],
-      intro: s361,
+      declarations: [s365, s366, 'Divine Foreknowledge|Cleric|XPHB|Knowledge|FRHoF|17|FRHoF'],
+      intro: s365,
       paths: [
         {
           target: s27,
-          refs: [s361, 'Blessings of Knowledge|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF'],
+          refs: [s365, 'Blessings of Knowledge|Cleric|XPHB|Knowledge|FRHoF|3|FRHoF'],
           level: 3,
         },
-        { target: s179, refs: [s362], level: 6 },
+        { target: s183, refs: [s366], level: 6 },
       ],
     },
     {
-      owner: [s248, s212, s286, s196],
-      shortName: s287,
+      owner: [s252, s216, s290, s200],
+      shortName: s291,
       rawDigest: '5b5f3b7459ca1505b80301ca924bffbce7ae014edc48cd21856ef1155e1cbc62',
       metadataDigest: '61f95e197a24ee7300b9918b88036abd4c5a9009841d32818c2665beaf02c5a8',
-      fields: [s213, s201, s1, s2, s202, s6, s7, s219, s204, s8, s206],
-      copies: [{ key: 'Knowledge Domain|PHB|Knowledge|Cleric|PHB', digest: s288 }],
-      declarations: [s363, s360, s280, s283],
-      intro: s363,
-      paths: [{ target: s26, refs: [s363, s285], level: 3 }],
+      fields: a53,
+      copies: [{ key: 'Knowledge Domain|PHB|Knowledge|Cleric|PHB', digest: s292 }],
+      declarations: [s367, s364, s284, s287],
+      intro: s367,
+      paths: [{ target: s26, refs: [s367, s289], level: 3 }],
     },
     {
-      owner: [s248, s212, s289, s196],
-      shortName: s290,
+      owner: [s252, s216, s293, s200],
+      shortName: s294,
       rawDigest: '9636595bc21bc50addb97811bf96056cef85b1b475f878fa5391fc9523a62e26',
       metadataDigest: '92ca878e03887a85b849610cdd99bdedd88493bd88a811e3734ac5840e3f830a',
-      fields: [s213, s201, s1, s2, s202, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Nature Domain|PHB|Nature|Cleric|PHB', digest: s291 }],
-      declarations: [
-        s364,
-        'Channel Divinity: Charm Animals and Plants|Cleric|XPHB|Nature||3',
-        s293,
-        s294,
-      ],
-      intro: s364,
-      paths: [
-        { target: s0, refs: [s364, s295], level: 3 },
-        { target: s46, refs: [s364, s296], level: 3 },
-      ],
-    },
-    {
-      owner: [s248, s212, s297, s298],
-      shortName: s299,
-      rawDigest: '6b30c213993bfcd43da38297ac012c8e0fd85e5b08763a2ff91d4d46f754d8dd',
-      metadataDigest: '7d0fa5cd60e262b1468c55b59beb893a220b85452f429185429b20e73326b340',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s38, s7, s204, s8, s206],
-      copies: [{ key: 'Order Domain|TCE|Order|Cleric|PHB', digest: s300 }],
-      declarations: [s365, "Channel Divinity: Order's Demand|Cleric|XPHB|Order|TCE|3", s302, s303],
-      intro: s365,
-      paths: [{ target: s37, refs: [s365, s304], level: 3 }],
-    },
-    {
-      owner: [s248, s212, s305, s298],
-      shortName: s306,
-      rawDigest: '2f1bc5631b2dfb7b8740073a864665811b415dc9d8d336363184aba98bf9ff08',
-      metadataDigest: '4981b266d3d11762d7f20707e8cf0a7cd9b52d675ef0c431d98381f6673b872a',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Peace Domain|TCE|Peace|Cleric|PHB', digest: s307 }],
-      declarations: [s366, 'Channel Divinity: Balm of Peace|Cleric|XPHB|Peace|TCE|3', s309, s310],
-      intro: s366,
-      paths: [{ target: s98, refs: [s366, s311], level: 3 }],
-    },
-    {
-      owner: [s248, s212, s312, s274],
-      shortName: s313,
-      rawDigest: '312f235dad6233322cc8cb16a66090cdbfc1d6ee7a8d8379cad31aa32f8ba686',
-      metadataDigest: '9bf91afcd3fb59f27ee231e02b28952706c21ce66c796efbfe407570f51c01b0',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Solidarity Domain (PSA)|PSA|Solidarity (PSA)|Cleric|PHB', digest: s314 }],
-      declarations: [
-        s367,
-        'Channel Divinity: Preserve Life|Cleric|XPHB|Solidarity (PSA)|PSA|3',
-        s316,
-        s317,
-      ],
-      intro: s367,
-      paths: [{ target: s48, refs: [s367, s318], level: 3 }],
-    },
-    {
-      owner: [s248, s212, s319, s274],
-      shortName: s320,
-      rawDigest: '7a262d5e7f221c2abb11f93a277bc498acc15bc4bd2f23d419237d881a565a5f',
-      metadataDigest: '9496f994d4d571440d21a4000d679ef34bc0d9941da19c2b8d57e021500de240',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Strength Domain (PSA)|PSA|Strength (PSA)|Cleric|PHB', digest: s321 }],
+      fields: a54,
+      copies: [{ key: 'Nature Domain|PHB|Nature|Cleric|PHB', digest: s295 }],
       declarations: [
         s368,
-        'Channel Divinity: Feat of Strength|Cleric|XPHB|Strength (PSA)|PSA|3',
-        s323,
-        s324,
+        'Channel Divinity: Charm Animals and Plants|Cleric|XPHB|Nature||3',
+        s297,
+        s298,
       ],
       intro: s368,
       paths: [
-        { target: s11, refs: [s368, s325], level: 3 },
-        { target: s50, refs: [s368, s326], level: 3 },
+        { target: s0, refs: [s368, s299], level: 3 },
+        { target: s47, refs: [s368, s300], level: 3 },
       ],
     },
     {
-      owner: [s248, s212, s327, s196],
-      shortName: s328,
-      rawDigest: '819d57f2220a076eb893250916e2040d8b8fd2cba92b9ef1f525c080ada5c2f0',
-      metadataDigest: '2faa3c7085fd89f7b3b709917a53f61625f4fa60bbb6ac61af689da75c2fe4a2',
-      fields: [s213, s201, s1, s2, s202, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Tempest Domain|PHB|Tempest|Cleric|PHB', digest: s329 }],
-      declarations: [
-        s369,
-        'Channel Divinity: Destructive Wrath|Cleric|XPHB|Tempest||3',
-        s331,
-        s332,
-      ],
+      owner: [s252, s216, s301, s302],
+      shortName: s303,
+      rawDigest: '6b30c213993bfcd43da38297ac012c8e0fd85e5b08763a2ff91d4d46f754d8dd',
+      metadataDigest: '7d0fa5cd60e262b1468c55b59beb893a220b85452f429185429b20e73326b340',
+      fields: [s217, s205, s1, s2, s206, s218, s207, s6, s38, s7, s208, s8, s210],
+      copies: [{ key: 'Order Domain|TCE|Order|Cleric|PHB', digest: s304 }],
+      declarations: [s369, "Channel Divinity: Order's Demand|Cleric|XPHB|Order|TCE|3", s306, s307],
       intro: s369,
-      paths: [{ target: s39, refs: [s369, s333], level: 3 }],
+      paths: [{ target: s37, refs: [s369, s308], level: 3 }],
     },
     {
-      owner: [s248, s212, s334, s298],
-      shortName: s335,
-      rawDigest: 'fcaec9f7309076e37f72ad46470b31e64a4ee06c974708e249c4be8a6311db7a',
-      metadataDigest: '12f3e5dff39062a1b189f4a8a1249ac92fd9c92b7a7e5c4c1eba1ad4364bacbd',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Twilight Domain|TCE|Twilight|Cleric|PHB', digest: s336 }],
-      declarations: [
-        s370,
-        'Channel Divinity: Twilight Sanctuary|Cleric|XPHB|Twilight|TCE|3',
-        s338,
-        s339,
-      ],
+      owner: [s252, s216, s309, s302],
+      shortName: s310,
+      rawDigest: '2f1bc5631b2dfb7b8740073a864665811b415dc9d8d336363184aba98bf9ff08',
+      metadataDigest: '4981b266d3d11762d7f20707e8cf0a7cd9b52d675ef0c431d98381f6673b872a',
+      fields: a52,
+      copies: [{ key: 'Peace Domain|TCE|Peace|Cleric|PHB', digest: s311 }],
+      declarations: [s370, 'Channel Divinity: Balm of Peace|Cleric|XPHB|Peace|TCE|3', s313, s314],
       intro: s370,
-      paths: [{ target: s41, refs: [s370, s340], level: 3 }],
+      paths: [{ target: s100, refs: [s370, s315], level: 3 }],
     },
     {
-      owner: [s248, s212, s341, s196],
-      shortName: s342,
-      rawDigest: 'caea5cd0292264fa21cb8e88da4d8e1c3845794af79677047c1559c2743a3594',
-      metadataDigest: '2eb90ed6ce70b528ff03716da4d00d135dbf855d966b01821d6794ec81790d62',
-      fields: [s213, s201, s1, s2, s202, s6, s7, s219, s204, s8, s206],
-      copies: [{ key: 'War Domain|PHB|War|Cleric|PHB', digest: s343 }],
-      declarations: [s371, 'Channel Divinity: Guided Strike|Cleric|XPHB|War||3', s345, s346],
+      owner: [s252, s216, s316, s278],
+      shortName: s317,
+      rawDigest: '312f235dad6233322cc8cb16a66090cdbfc1d6ee7a8d8379cad31aa32f8ba686',
+      metadataDigest: '9bf91afcd3fb59f27ee231e02b28952706c21ce66c796efbfe407570f51c01b0',
+      fields: a52,
+      copies: [{ key: 'Solidarity Domain (PSA)|PSA|Solidarity (PSA)|Cleric|PHB', digest: s318 }],
+      declarations: [
+        s371,
+        'Channel Divinity: Preserve Life|Cleric|XPHB|Solidarity (PSA)|PSA|3',
+        s320,
+        s321,
+      ],
       intro: s371,
-      paths: [{ target: s42, refs: [s371, s347], level: 3 }],
+      paths: [{ target: s49, refs: [s371, s322], level: 3 }],
     },
     {
-      owner: [s248, s212, s348, s274],
-      shortName: s349,
-      rawDigest: '480ceaebec0056857937b1066c50498b3d0033d98e2f02eee3f84de891c5d548',
-      metadataDigest: '141c575c922ee68527cf2fd7077f67689c441bff6e8f54e3782c2c3a25190010',
-      fields: [s213, s201, s1, s2, s202, s214, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Zeal Domain (PSA)|PSA|Zeal (PSA)|Cleric|PHB', digest: s350 }],
+      owner: [s252, s216, s323, s278],
+      shortName: s324,
+      rawDigest: '7a262d5e7f221c2abb11f93a277bc498acc15bc4bd2f23d419237d881a565a5f',
+      metadataDigest: '9496f994d4d571440d21a4000d679ef34bc0d9941da19c2b8d57e021500de240',
+      fields: a52,
+      copies: [{ key: 'Strength Domain (PSA)|PSA|Strength (PSA)|Cleric|PHB', digest: s325 }],
       declarations: [
         s372,
-        'Channel Divinity: Consuming Fervor|Cleric|XPHB|Zeal (PSA)|PSA|3',
-        s352,
-        s353,
+        'Channel Divinity: Feat of Strength|Cleric|XPHB|Strength (PSA)|PSA|3',
+        s327,
+        s328,
       ],
       intro: s372,
-      paths: [{ target: s43, refs: [s372, s354], level: 3 }],
-    },
-    {
-      owner: [s373, s196, s374, s225],
-      shortName: s375,
-      rawDigest: s376,
-      metadataDigest: 'bac4d2b04a174aec34b800b49190113da390974c4323278052f521de50b0782c',
-      fields: [s201, s1, s2, s202, s268, s203, s6, s228, s7, s219, s204, s8, s206],
-      copies: [],
-      declarations: [s377, s378, s379, s380, s381, s382, s383, s384],
-      intro: s377,
-      paths: [{ target: s21, refs: [s377, s385], level: 3 }],
-    },
-    {
-      owner: [s373, s196, s386, s196],
-      shortName: s387,
-      rawDigest: s388,
-      metadataDigest: 'a5557d998270747a51b81d39dae8484186d502a6154ccf08476317c89e5d8604',
-      fields: [s1, s2, s202, s203, s6, s228, s7, s219, s204, s8, s206],
-      copies: [],
-      declarations: [s389, s390, s391, s392, s393, s394, s395, s396, s397, s398],
-      intro: s389,
-      paths: [{ target: s24, refs: [s389, s399], level: 3 }],
-    },
-    {
-      owner: [s373, s196, s400, s225],
-      shortName: s401,
-      rawDigest: s402,
-      metadataDigest: '500fb200fd915c0037beeadad0c74ce0a71ca90d0a443ed9a50a9b9515059c53',
-      fields: [s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [],
-      declarations: [s403, s404, s405, s406, s407],
-      intro: s403,
-      paths: [{ target: s51, refs: [s403, s408], level: 3 }],
-    },
-    {
-      owner: [s373, s196, s409, s250],
-      shortName: s410,
-      rawDigest: s411,
-      metadataDigest: '7299278623ff0159e3c0084a086414063538fc8f9cb7ecd081e1d62c5c659bea',
-      fields: [s1, s2, s202, s203, s6, s7, s219, s204, s8, s206],
-      copies: [],
-      declarations: [s412, s413, s414, s415, s416],
-      intro: s412,
-      paths: [{ target: s135, refs: [s413], level: 7 }],
-    },
-    {
-      owner: [s373, s196, s417, s298],
-      shortName: s418,
-      rawDigest: s419,
-      metadataDigest: 'cdfca143336b11c455c8ec1594684163e90a609a821a5bdd70deeb13f9e211e8',
-      fields: [s1, s2, s202, s203, s6, s228, s7, s204, s8, s206],
-      copies: [],
-      declarations: [s420, s421, s422, s423, s424, s425, s426, s427],
-      intro: s420,
-      paths: [{ target: s136, refs: [s420, s428], level: 3 }],
-    },
-    {
-      owner: [s373, s196, s429, s225],
-      shortName: s430,
-      rawDigest: s431,
-      metadataDigest: '96cb9fb5fc55fadaf044bddc6acd16d9a76bdd857475e36f8b6745c5e00a095e',
-      fields: [s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [],
-      declarations: [s432, s433, s434, s435, s436],
-      intro: s432,
       paths: [
-        { target: s52, refs: [s432, s437], level: 3 },
-        { target: s86, refs: [s433], level: 7 },
+        { target: s11, refs: [s372, s329], level: 3 },
+        { target: s51, refs: [s372, s330], level: 3 },
       ],
     },
     {
-      owner: [s373, s212, s374, 'au'],
-      shortName: s375,
+      owner: [s252, s216, s331, s200],
+      shortName: s332,
+      rawDigest: '819d57f2220a076eb893250916e2040d8b8fd2cba92b9ef1f525c080ada5c2f0',
+      metadataDigest: '2faa3c7085fd89f7b3b709917a53f61625f4fa60bbb6ac61af689da75c2fe4a2',
+      fields: a54,
+      copies: [{ key: 'Tempest Domain|PHB|Tempest|Cleric|PHB', digest: s333 }],
+      declarations: [
+        s373,
+        'Channel Divinity: Destructive Wrath|Cleric|XPHB|Tempest||3',
+        s335,
+        s336,
+      ],
+      intro: s373,
+      paths: [{ target: s39, refs: [s373, s337], level: 3 }],
+    },
+    {
+      owner: [s252, s216, s338, s302],
+      shortName: s339,
+      rawDigest: 'fcaec9f7309076e37f72ad46470b31e64a4ee06c974708e249c4be8a6311db7a',
+      metadataDigest: '12f3e5dff39062a1b189f4a8a1249ac92fd9c92b7a7e5c4c1eba1ad4364bacbd',
+      fields: a52,
+      copies: [{ key: 'Twilight Domain|TCE|Twilight|Cleric|PHB', digest: s340 }],
+      declarations: [
+        s374,
+        'Channel Divinity: Twilight Sanctuary|Cleric|XPHB|Twilight|TCE|3',
+        s342,
+        s343,
+      ],
+      intro: s374,
+      paths: [{ target: s41, refs: [s374, s344], level: 3 }],
+    },
+    {
+      owner: [s252, s216, s345, s200],
+      shortName: s346,
+      rawDigest: 'caea5cd0292264fa21cb8e88da4d8e1c3845794af79677047c1559c2743a3594',
+      metadataDigest: '2eb90ed6ce70b528ff03716da4d00d135dbf855d966b01821d6794ec81790d62',
+      fields: a53,
+      copies: [{ key: 'War Domain|PHB|War|Cleric|PHB', digest: s347 }],
+      declarations: [s375, 'Channel Divinity: Guided Strike|Cleric|XPHB|War||3', s349, s350],
+      intro: s375,
+      paths: [{ target: s42, refs: [s375, s351], level: 3 }],
+    },
+    {
+      owner: [s252, s216, s352, s278],
+      shortName: s353,
+      rawDigest: '480ceaebec0056857937b1066c50498b3d0033d98e2f02eee3f84de891c5d548',
+      metadataDigest: '141c575c922ee68527cf2fd7077f67689c441bff6e8f54e3782c2c3a25190010',
+      fields: a52,
+      copies: [{ key: 'Zeal Domain (PSA)|PSA|Zeal (PSA)|Cleric|PHB', digest: s354 }],
+      declarations: [
+        s376,
+        'Channel Divinity: Consuming Fervor|Cleric|XPHB|Zeal (PSA)|PSA|3',
+        s356,
+        s357,
+      ],
+      intro: s376,
+      paths: [{ target: s43, refs: [s376, s358], level: 3 }],
+    },
+    {
+      owner: [s377, s200, s378, s229],
+      shortName: s379,
+      rawDigest: s380,
+      metadataDigest: 'bac4d2b04a174aec34b800b49190113da390974c4323278052f521de50b0782c',
+      fields: [s205, s1, s2, s206, s272, s207, s6, s232, s7, s223, s208, s8, s210],
+      copies: [],
+      declarations: a55,
+      intro: s381,
+      paths: a57,
+    },
+    {
+      owner: [s377, s200, s390, s200],
+      shortName: s391,
+      rawDigest: s392,
+      metadataDigest: 'a5557d998270747a51b81d39dae8484186d502a6154ccf08476317c89e5d8604',
+      fields: [s1, s2, s206, s207, s6, s232, s7, s223, s208, s8, s210],
+      copies: [],
+      declarations: a58,
+      intro: s393,
+      paths: a60,
+    },
+    {
+      owner: [s377, s200, s404, s229],
+      shortName: s405,
+      rawDigest: s406,
+      metadataDigest: '500fb200fd915c0037beeadad0c74ce0a71ca90d0a443ed9a50a9b9515059c53',
+      fields: a48,
+      copies: [],
+      declarations: a61,
+      intro: s407,
+      paths: a63,
+    },
+    {
+      owner: [s377, s200, s413, s254],
+      shortName: s414,
+      rawDigest: s415,
+      metadataDigest: '7299278623ff0159e3c0084a086414063538fc8f9cb7ecd081e1d62c5c659bea',
+      fields: a64,
+      copies: [],
+      declarations: a65,
+      intro: s416,
+      paths: a66,
+    },
+    {
+      owner: [s377, s200, s421, s302],
+      shortName: s422,
+      rawDigest: s423,
+      metadataDigest: 'cdfca143336b11c455c8ec1594684163e90a609a821a5bdd70deeb13f9e211e8',
+      fields: a36,
+      copies: [],
+      declarations: a67,
+      intro: s424,
+      paths: a69,
+    },
+    {
+      owner: [s377, s200, s433, s229],
+      shortName: s434,
+      rawDigest: s435,
+      metadataDigest: '96cb9fb5fc55fadaf044bddc6acd16d9a76bdd857475e36f8b6745c5e00a095e',
+      fields: a48,
+      copies: [],
+      declarations: a70,
+      intro: s436,
+      paths: a72,
+    },
+    {
+      owner: [s377, s216, s378, 'au'],
+      shortName: s379,
       rawDigest: 'd122c160b834784c10986d17ad2d92ceb08a89bb23be72c15d1380e65aa03ccb',
       metadataDigest: 'ed145da4ceac6192a440471a3e3f1d8d3655822ce8c05ae9bb2a8c10ed510dbc',
-      fields: [s201, s1, s2, s202, s268, s203, s6, s228, s204, s8, s205, s206],
+      fields: [s205, s1, s2, s206, s272, s207, s6, s232, s208, s8, s209, s210],
       copies: [],
       declarations: [
-        s438,
+        s442,
         'Curving Shot|Fighter|XPHB|Arcane Archer|AU|7|AU',
         'Magical Ammunition|Fighter|XPHB|Arcane Archer|AU|7|AU',
         'Ever-Ready Shot|Fighter|XPHB|Arcane Archer|AU|10|AU',
         'Indomitable Teleport|Fighter|XPHB|Arcane Archer|AU|15|AU',
         'Masterful Shots|Fighter|XPHB|Arcane Archer|AU|18|AU',
       ],
-      intro: s438,
+      intro: s442,
       paths: [
         {
           target: s22,
-          refs: [s438, 'Arcane Archer Lore|Fighter|XPHB|Arcane Archer|AU|3|AU'],
+          refs: [s442, 'Arcane Archer Lore|Fighter|XPHB|Arcane Archer|AU|3|AU'],
           level: 3,
         },
       ],
     },
     {
-      owner: [s373, s212, s374, s225],
-      shortName: s375,
+      owner: [s377, s216, s378, s229],
+      shortName: s379,
       rawDigest: 'e7598452b98208cbb6432d16459a000357ad41eeffb8caadcc781000c3761297',
       metadataDigest: 'a8bf791af83dda8b45d641df70b7c155a392ff09b8bf4c5eecfbb3e1094d0dae',
-      fields: [s213, s201, s1, s2, s202, s268, s203, s6, s228, s7, s219, s204, s8, s206],
-      copies: [{ key: 'Arcane Archer|XGE|Arcane Archer|Fighter|PHB', digest: s376 }],
-      declarations: [s377, s378, s379, s380, s381, s382, s383, s384],
-      intro: s377,
-      paths: [{ target: s21, refs: [s377, s385], level: 3 }],
+      fields: [s217, s205, s1, s2, s206, s272, s207, s6, s232, s7, s223, s208, s8, s210],
+      copies: [{ key: 'Arcane Archer|XGE|Arcane Archer|Fighter|PHB', digest: s380 }],
+      declarations: a55,
+      intro: s381,
+      paths: a57,
     },
     {
-      owner: [s373, s212, 'banneret', s245],
+      owner: [s377, s216, 'banneret', s249],
       shortName: 'Banneret',
       rawDigest: 'b829aad6d9c894b6ca2e09c76246988275b192a10ce50b94a0600ad896de536a',
       metadataDigest: '554fed1e43ee5ac69330bd3b7b73ecc742b6b6fc21aa09dee5cecba02558939b',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s439,
+        s443,
         'Team Tactics|Fighter|XPHB|Banneret|FRHoF|7|FRHoF',
         'Rallying Surge|Fighter|XPHB|Banneret|FRHoF|10|FRHoF',
         'Shared Resilience|Fighter|XPHB|Banneret|FRHoF|15|FRHoF',
         'Inspiring Commander|Fighter|XPHB|Banneret|FRHoF|18|FRHoF',
       ],
-      intro: s439,
+      intro: s443,
       paths: [
         {
           target: s23,
-          refs: [s439, 'Knightly Envoy|Fighter|XPHB|Banneret|FRHoF|3|FRHoF'],
+          refs: [s443, 'Knightly Envoy|Fighter|XPHB|Banneret|FRHoF|3|FRHoF'],
           level: 3,
         },
       ],
     },
     {
-      owner: [s373, s212, s386, s196],
-      shortName: s387,
+      owner: [s377, s216, s390, s200],
+      shortName: s391,
       rawDigest: '793b8aaa00cc6a687706658759bcf887476419d23ab97ab1c9f698515192e031',
       metadataDigest: 'cc35006039024033ebb196599f3ca70d6959d80e4c5f0ecc063b5ceb589a7f88',
-      fields: [s213, s1, s2, s202, s203, s6, s228, s7, s219, s204, s8, s206],
-      copies: [{ key: 'Battle Master|PHB|Battle Master|Fighter|PHB', digest: s388 }],
-      declarations: [s389, s390, s391, s392, s393, s394, s395, s396, s397, s398],
-      intro: s389,
-      paths: [{ target: s24, refs: [s389, s399], level: 3 }],
+      fields: [s217, s1, s2, s206, s207, s6, s232, s7, s223, s208, s8, s210],
+      copies: [{ key: 'Battle Master|PHB|Battle Master|Fighter|PHB', digest: s392 }],
+      declarations: a58,
+      intro: s393,
+      paths: a60,
     },
     {
-      owner: [s373, s212, s386, s212],
-      shortName: s387,
+      owner: [s377, s216, s390, s216],
+      shortName: s391,
       rawDigest: '6d2122292c9570b7f56ea223e56cf546d0bf8be4856cfce96ae9734edd6f9ba6',
       metadataDigest: '4b104da581da931af8eeb9d03e2453fabb2442376eeb07202b160290efaff4d7',
-      fields: [s1, s2, s202, s203, s6, s228, s7, s204, s8, s206],
+      fields: a36,
       copies: [],
       declarations: [
-        s440,
+        s444,
         'Know Your Enemy|Fighter|XPHB|Battle Master|XPHB|7',
         'Improved Combat Superiority|Fighter|XPHB|Battle Master|XPHB|10',
         'Relentless|Fighter|XPHB|Battle Master|XPHB|15',
         'Ultimate Combat Superiority|Fighter|XPHB|Battle Master|XPHB|18',
       ],
-      intro: s440,
+      intro: s444,
       paths: [
-        { target: s25, refs: [s440, 'Student of War|Fighter|XPHB|Battle Master|XPHB|3'], level: 3 },
+        { target: s25, refs: [s444, 'Student of War|Fighter|XPHB|Battle Master|XPHB|3'], level: 3 },
       ],
     },
     {
-      owner: [s373, s212, s400, s225],
-      shortName: s401,
+      owner: [s377, s216, s404, s229],
+      shortName: s405,
       rawDigest: '0a42570e1d06e33aca6586c993ccc79f09686765a91f94148af8dd04fe1d2fd9',
       metadataDigest: '0c499de240c2efc6e2db78606a9682fad8bff77fb7d58e66a4b0a6bc9806c75c',
-      fields: [s213, s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Cavalier|XGE|Cavalier|Fighter|PHB', digest: s402 }],
-      declarations: [s403, s404, s405, s406, s407],
-      intro: s403,
-      paths: [{ target: s51, refs: [s403, s408], level: 3 }],
+      fields: a73,
+      copies: [{ key: 'Cavalier|XGE|Cavalier|Fighter|PHB', digest: s406 }],
+      declarations: a61,
+      intro: s407,
+      paths: a63,
     },
     {
-      owner: [s373, s212, s409, s250],
-      shortName: s410,
+      owner: [s377, s216, s413, s254],
+      shortName: s414,
       rawDigest: 'cff6903ae42019f6178a811649713e97df1f3337bf13e952a78c1ced80f52e17',
       metadataDigest: '81deb89b778cd5d02204c220289f005a1ad55149cce91d7a53f681f77101b998',
-      fields: [s213, s1, s2, s202, s214, s203, s6, s7, s219, s204, s8, s206],
+      fields: a74,
       copies: [
         {
           key: 'Purple Dragon Knight (Banneret)|SCAG|Purple Dragon Knight (Banneret)|Fighter|PHB',
-          digest: s411,
+          digest: s415,
         },
       ],
-      declarations: [s412, s413, s414, s415, s416],
-      intro: s412,
-      paths: [{ target: s135, refs: [s413], level: 7 }],
+      declarations: a65,
+      intro: s416,
+      paths: a66,
     },
     {
-      owner: [s373, s212, s417, s298],
-      shortName: s418,
+      owner: [s377, s216, s421, s302],
+      shortName: s422,
       rawDigest: '5077b7d4b3665b8e76c05202b358ab97f1c788ff45bfe945953f4dd5dcbd54e8',
       metadataDigest: 'ff3ddc725d3f16984b505b36a10b0d752312eeeafdaf076f618674b31cc813e7',
-      fields: [s213, s1, s2, s202, s214, s203, s6, s228, s7, s204, s8, s206],
-      copies: [{ key: 'Rune Knight|TCE|Rune Knight|Fighter|PHB', digest: s419 }],
-      declarations: [s420, s421, s422, s423, s424, s425, s426, s427],
-      intro: s420,
-      paths: [{ target: s136, refs: [s420, s428], level: 3 }],
+      fields: a47,
+      copies: [{ key: 'Rune Knight|TCE|Rune Knight|Fighter|PHB', digest: s423 }],
+      declarations: a67,
+      intro: s424,
+      paths: a69,
     },
     {
-      owner: [s373, s212, s429, s225],
-      shortName: s430,
+      owner: [s377, s216, s433, s229],
+      shortName: s434,
       rawDigest: '8905a4594f27b82cd52b520623b90bc892b0b1f008e6c1d6cfc2d3e2115bdfa6',
       metadataDigest: '578039ac39eaa9bd55dea925baf48412ac82cacc74e1d4e51a999d68c405b221',
-      fields: [s213, s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Samurai|XGE|Samurai|Fighter|PHB', digest: s431 }],
-      declarations: [s432, s433, s434, s435, s436],
-      intro: s432,
+      fields: a73,
+      copies: [{ key: 'Samurai|XGE|Samurai|Fighter|PHB', digest: s435 }],
+      declarations: a70,
+      intro: s436,
+      paths: a72,
+    },
+    {
+      owner: [s445, s200, s446, s302],
+      shortName: s447,
+      rawDigest: s448,
+      metadataDigest: '6cf0e7bb5d0d05b5ea15388adecd8e827b6b0e776b3672087570896511b11bf3',
+      fields: a64,
+      copies: [],
+      declarations: a75,
+      intro: s449,
+      paths: a77,
+    },
+    {
+      owner: [s445, s200, s454, s455],
+      shortName: s456,
+      rawDigest: s457,
+      metadataDigest: '35089989ebc6b3b2f2f366b02b101c7dcaf4dcd83f65c50430a0fa76f0564fd5',
+      fields: a48,
+      copies: [],
+      declarations: a78,
+      intro: s458,
+      paths: a80,
+    },
+    {
+      owner: [s445, s200, s463, s229],
+      shortName: s464,
+      rawDigest: s465,
+      metadataDigest: '0065b0da18a5aeb16cf6946bd44f749ecd86a9be76b0daf31d1c29d42eac204d',
+      fields: a48,
+      copies: [],
+      declarations: a81,
+      intro: s466,
+      paths: a83,
+    },
+    {
+      owner: [s445, s216, 'warrior of mercy', s216],
+      shortName: s447,
+      rawDigest: 'ae341c0a79780acaa5ef0752f027b9af647a3037a3743eb0d911aeab850e218e',
+      metadataDigest: 'db9dae728dadcb1645d3c48935810f5054cf50159053b02d7cb6230654a09bc5',
+      fields: a48,
+      copies: [],
+      declarations: [
+        s471,
+        "Physician's Touch|Monk|XPHB|Mercy|XPHB|6",
+        'Flurry of Healing and Harm|Monk|XPHB|Mercy|XPHB|11',
+        'Hand of Ultimate Mercy|Monk|XPHB|Mercy|XPHB|17',
+      ],
+      intro: s471,
       paths: [
-        { target: s52, refs: [s432, s437], level: 3 },
-        { target: s86, refs: [s433], level: 7 },
+        { target: s102, refs: [s471, 'Implements of Mercy|Monk|XPHB|Mercy|XPHB|3'], level: 3 },
       ],
     },
     {
-      owner: ['paladin', s212, 'oath of the noble genies', s245],
+      owner: [s445, s216, s446, s302],
+      shortName: s447,
+      rawDigest: 'ee0c4c9b77f933d94346aee74885b1ae240fdf263b115cbcd5e27ced0b31c056',
+      metadataDigest: '7b8fbb802c3301f749855086ea764df7d5d9926bfa1f36e3f3e99c3cb0fc8f52',
+      fields: a74,
+      copies: [{ key: 'Way of Mercy|TCE|Mercy|Monk|PHB', digest: s448 }],
+      declarations: a75,
+      intro: s449,
+      paths: a77,
+    },
+    {
+      owner: [s445, s216, s454, s455],
+      shortName: s456,
+      rawDigest: 'bd54eb73836b9a803ef896bbe3d492b0544c518bdf7356e7ea805ab471732e9b',
+      metadataDigest: 'f8ff05ca77b1f27d7ea591e049f6f92a6ce184c1dbeeea4ef12b53118af0e210',
+      fields: [s217, s1, s2, s206, s218, s207, s6, s7, s208, s8, s210],
+      copies: [{ key: 'Way of the Ascendant Dragon|FTD|Ascendant Dragon|Monk|PHB', digest: s457 }],
+      declarations: a78,
+      intro: s458,
+      paths: a80,
+    },
+    {
+      owner: [s445, s216, s463, s229],
+      shortName: s464,
+      rawDigest: 'c0119cbba3ecd0bd7aaf39ba0374f2790da5a57fe379322d20156a6771a09a9f',
+      metadataDigest: 'bcbcbd76418a00ff1f4acab9781abffc1fc22ec4263e989acc06e8a15d29481b',
+      fields: a73,
+      copies: [{ key: 'Way of the Drunken Master|XGE|Drunken Master|Monk|PHB', digest: s465 }],
+      declarations: a81,
+      intro: s466,
+      paths: a83,
+    },
+    {
+      owner: ['paladin', s216, 'oath of the noble genies', s249],
       shortName: 'Noble Genies',
       rawDigest: 'de854cdf641478448075544bb43027e6d5749defc4e4afc8536a5cc2c914b58c',
       metadataDigest: '3c443dc2371da77c6b1cf4203bdd9bda2079c5c634d0ca3e801ec9844ddc3878',
-      fields: [s201, s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a46,
       copies: [],
       declarations: [
-        s441,
+        s472,
         'Aura of Elemental Shielding|Paladin|XPHB|Noble Genies|FRHoF|7|FRHoF',
         'Elemental Rebuke|Paladin|XPHB|Noble Genies|FRHoF|15|FRHoF',
         'Noble Scion|Paladin|XPHB|Noble Genies|FRHoF|20|FRHoF',
       ],
-      intro: s441,
+      intro: s472,
       paths: [
         {
-          target: s96,
-          refs: [s441, "Genie's Splendor|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF"],
+          target: s98,
+          refs: [s472, "Genie's Splendor|Paladin|XPHB|Noble Genies|FRHoF|3|FRHoF"],
           level: 3,
         },
       ],
     },
     {
-      owner: [s442, s196, s443, s225],
-      shortName: s444,
-      rawDigest: s445,
+      owner: [s473, s200, s474, s229],
+      shortName: s475,
+      rawDigest: s476,
       metadataDigest: 'f2ca5b65e7ef656229e565c43cfe1b5cdcf24db94e81af9d0a5480b72f83e5fd',
-      fields: [s1, s2, s202, s203, s6, s7, s204, s8, s206],
+      fields: a48,
       copies: [],
-      declarations: [s446, s447, s448, s449],
-      intro: s446,
-      paths: [{ target: s137, refs: [s446, s450], level: 3 }],
+      declarations: a84,
+      intro: s477,
+      paths: a85,
     },
     {
-      owner: [s442, s212, s443, s225],
-      shortName: s444,
+      owner: [s473, s216, s474, s229],
+      shortName: s475,
       rawDigest: '13c5784150f33717c5ff557e79c676ae64af6dbc8ccb0572b68454eaa7640367',
       metadataDigest: 'df4bed1d234d642076a490cbe78c7487eae2e83c70f18fd36fd70e263ac3dcdd',
-      fields: [s213, s1, s2, s202, s203, s6, s7, s204, s8, s206],
-      copies: [{ key: 'Scout|XGE|Scout|Rogue|PHB', digest: s445 }],
-      declarations: [s446, s447, s448, s449],
-      intro: s446,
-      paths: [{ target: s137, refs: [s446, s450], level: 3 }],
+      fields: a73,
+      copies: [{ key: 'Scout|XGE|Scout|Rogue|PHB', digest: s476 }],
+      declarations: a84,
+      intro: s477,
+      paths: a85,
     },
     {
-      owner: [s451, s196, s452, s196],
-      shortName: s453,
-      rawDigest: s454,
+      owner: [s482, s200, s483, s200],
+      shortName: s484,
+      rawDigest: s485,
       metadataDigest: 'c14d29625b01405f5b5e59852467e02301a11f33ee9833c8b58341eef9fdf157',
-      fields: [s1, s2, s202, s6, s7, s219, s204, s8, s29, s206],
+      fields: [s1, s2, s206, s6, s7, s223, s208, s8, s29, s210],
       copies: [],
-      declarations: [s455, s456, s457, s458],
-      intro: s455,
-      paths: [{ target: s80, refs: [s455, s459], level: 1 }],
+      declarations: a86,
+      intro: s486,
+      paths: a88,
     },
     {
-      owner: [s451, s196, s460, s225],
-      shortName: s461,
-      rawDigest: s462,
+      owner: [s482, s200, s491, s229],
+      shortName: s492,
+      rawDigest: s493,
       metadataDigest: 'd7853af158a499f01bdd486a82151bf2fbca38c391e3d2fe56251c8b3a977e7d',
-      fields: [s1, s2, s202, s268, s203, s6, s38, s7, s204, s8, s206],
+      fields: [s1, s2, s206, s272, s207, s6, s38, s7, s208, s8, s210],
       copies: [],
-      declarations: [s463, s464, s465, s466, s467],
-      intro: s463,
-      paths: [{ target: s151, refs: [s463, s468], level: 1 }],
+      declarations: [s494, s495, s496, s497, s498],
+      intro: s494,
+      paths: [{ target: s155, refs: [s494, s499], level: 1 }],
     },
     {
-      owner: [s451, s212, s452, s196],
-      shortName: s453,
+      owner: [s482, s216, s483, s200],
+      shortName: s484,
       rawDigest: '43f37f7fd351e606dc8e75a33d75fe155557f5b9313d78f37d69f4e95e8a01e1',
       metadataDigest: '187c611c43fdf56b91ab691883dced82b9b01a1215adbbe6591f84b8286de274',
-      fields: [s213, s1, s2, s202, s6, s7, s219, s204, s8, s29, s206],
-      copies: [{ key: 'Draconic Bloodline|PHB|Draconic|Sorcerer|PHB', digest: s454 }],
-      declarations: [s469, s456, s457, s458],
-      intro: s469,
-      paths: [{ target: s80, refs: [s469, s459], level: 3 }],
+      fields: [s217, s1, s2, s206, s6, s7, s223, s208, s8, s29, s210],
+      copies: [{ key: 'Draconic Bloodline|PHB|Draconic|Sorcerer|PHB', digest: s485 }],
+      declarations: [s500, s487, s488, s489],
+      intro: s500,
+      paths: [{ target: s81, refs: [s500, s490], level: 3 }],
     },
     {
-      owner: [s451, s212, s460, s225],
-      shortName: s461,
+      owner: [s482, s216, s491, s229],
+      shortName: s492,
       rawDigest: 'b1fb03ca0adf69a5ba0c276792f15bb9a6240500d17441a3c641bdaeee9c6592',
       metadataDigest: '3a7340ae0ba243c08110f73932727663c06ff9d0d4d69d0f428ae10cfef0fa11',
-      fields: [s213, s1, s2, s202, s268, s203, s6, s38, s7, s204, s8, s206],
-      copies: [{ key: 'Storm Sorcery|XGE|Storm|Sorcerer|PHB', digest: s462 }],
-      declarations: [s470, s464, s465, s466, s467],
-      intro: s470,
-      paths: [{ target: s151, refs: [s470, s468], level: 3 }],
+      fields: [s217, s1, s2, s206, s272, s207, s6, s38, s7, s208, s8, s210],
+      copies: [{ key: 'Storm Sorcery|XGE|Storm|Sorcerer|PHB', digest: s493 }],
+      declarations: [s501, s495, s496, s497, s498],
+      intro: s501,
+      paths: [{ target: s155, refs: [s501, s499], level: 3 }],
     },
     {
-      owner: ['wizard', s212, 'enchanter', 'au'],
+      owner: ['wizard', s216, 'enchanter', 'au'],
       shortName: 'Enchanter',
       rawDigest: '7ad4c6e6966d2ff7ca001374675dfc331974dc1312fc69eeaf7e541f50cd5b1b',
       metadataDigest: '0d617c075a08aa52ebba5c26e3543c4e0b6695135e150f21665be6ea8b5a8902',
-      fields: [s201, s1, s2, s202, s268, s203, s6, s204, s8, s206],
+      fields: a51,
       copies: [],
       declarations: [
-        s471,
+        s502,
         'Split Enchantment|Wizard|XPHB|Enchanter|AU|6|AU',
         'Instinctive Charm|Wizard|XPHB|Enchanter|AU|10|AU',
         'Alter Memories|Wizard|XPHB|Enchanter|AU|14|AU',
       ],
-      intro: s471,
+      intro: s502,
       paths: [
         {
-          target: s87,
-          refs: [s471, 'Enchanting Conversationalist|Wizard|XPHB|Enchanter|AU|3|AU'],
+          target: s89,
+          refs: [s502, 'Enchanting Conversationalist|Wizard|XPHB|Enchanter|AU|3|AU'],
           level: 3,
         },
       ],
@@ -2729,115 +2969,99 @@ const registry = {
     {
       features: [
         {
-          target: s472,
+          target: s503,
           rawDigest: '2f7a0cb3c998ced94e390f93df0ce8e7bae7b713fbd5e69e40e362d2aed73ec5',
           metadataDigest: '8ea467b2c2dec3730861e16da5ad63ea648ce21d5594d52206422201a8418d46',
-          fields: [s473, s1, s2, s3, s4, s5, s6, s7, s8, s29, s9, s10],
-          entries: [{ digest: s49 }],
+          fields: [s504, s1, s2, s3, s4, s5, s6, s7, s8, s29, s9, s10],
+          entries: a10,
           copies: [],
         },
         {
-          target: s474,
+          target: s505,
           rawDigest: '13811cb8f2b721ba9b70581217d6df7a68184fb9e50e7a74fd20bab5d659a3f6',
           metadataDigest: '973516d6054977a97785b657163f9fd6e20c94bdb85d714d752af46163730f02',
-          fields: [s473, s1, s2, s3, s5, s6, s7, s8, s29, s9, s10],
-          entries: [
-            { digest: s475 },
-            { digest: s108 },
-            { digest: s476 },
-            { digest: s477, reference: s472 },
-            { digest: s478, reference: s479 },
-          ],
+          fields: [s504, s1, s2, s3, s5, s6, s7, s8, s29, s9, s10],
+          entries: a89,
           copies: [],
         },
       ],
       roots: [
         {
-          owner: [s248, s196, s480, s196],
-          shortName: s481,
+          owner: [s252, s200, s511, s200],
+          shortName: s512,
           rawDigest: '1e15ee65728d9b01cf593c1c7a29217d5e014cff3a2731826e10241774139122',
           metadataDigest: '69ca4072b0589b6604212c2f389f55f7441ebbd6650ec482135e49f07abda188',
-          fields: [s201, s473, s1, s2, s202, s6, s7, s219, s204, s8, s29, s206],
+          fields: [s205, s504, s1, s2, s206, s6, s7, s223, s208, s8, s29, s210],
           copies: [],
-          declarations: [s482, s483, s484, s485, 'Blessed Strikes|Cleric||Life||8|TCE', s486],
-          intro: s482,
-          paths: [{ target: s472, refs: [s482, s487], level: 1 }],
+          declarations: [s513, s514, s515, s516, 'Blessed Strikes|Cleric||Life||8|TCE', s517],
+          intro: s513,
+          paths: a91,
         },
       ],
     },
     {
       features: [
         {
-          target: s472,
+          target: s503,
           rawDigest: 'd603ec69b39565314751d0a37125ca1d056e9f2368f621e9605495bc1e589cc6',
           metadataDigest: 'b957a6f2e11edfa0644b84bd169871ee0b941941d88df0d69216d35f9e8ab805',
-          fields: [s1, s2, s3, s4, s5, s6, s8, s29, s9, s10],
-          entries: [{ digest: s49 }],
+          fields: a92,
+          entries: a10,
           copies: [],
         },
         {
-          target: s474,
+          target: s505,
           rawDigest: '39c258d4f93e7e32c197c5673463fa6f6fb05a033ac54378b66546bf5d3d7c8f',
           metadataDigest: '6db0af94bd3157fea9049aa270e662a9f007f3c688bd187c851afa7924c4b66a',
-          fields: [s1, s2, s3, s5, s6, s8, s29, s9, s10],
-          entries: [
-            { digest: s475 },
-            { digest: s108 },
-            { digest: s476 },
-            { digest: s477, reference: s472 },
-            { digest: s478, reference: s479 },
-          ],
+          fields: a93,
+          entries: a89,
           copies: [],
         },
       ],
       roots: [
         {
-          owner: [s248, s196, s480, s196],
-          shortName: s481,
+          owner: [s252, s200, s511, s200],
+          shortName: s512,
           rawDigest: 'd9e29d8b9ca46d83cce74f51e8af8221015cd80176394187ece0e286d0af04e7',
           metadataDigest: 'd9edf424302bf22205f6af9d310cdcbc608d1764aeb233c07411346fa2e090ef',
-          fields: [s201, s1, s2, s202, s6, s204, s8, s29, s206],
+          fields: a94,
           copies: [],
-          declarations: [s482, s483, s484, s485, s486],
-          intro: s482,
-          paths: [{ target: s472, refs: [s482, s487], level: 1 }],
+          declarations: [s513, s514, s515, s516, s517],
+          intro: s513,
+          paths: a91,
         },
       ],
     },
     {
       features: [
         {
-          target: s76,
+          target: s77,
           rawDigest: 'a984ef0236f2c62c5abb54bab32f41072c0477490042052f603348a8c0f677e6',
           metadataDigest: '9eb19cd40f7a5c4d31868fb38e9af4ddad890860573cf5e728eccbb4d20407a9',
-          fields: [s1, s2, s3, s5, s6, s8, s29, s9, s10],
-          entries: [
-            { digest: s78 },
-            { digest: s79, reference: s80 },
-            { digest: s81, reference: s82 },
-          ],
+          fields: a93,
+          entries: a15,
           copies: [],
         },
         {
-          target: s80,
+          target: s81,
           rawDigest: '12d71ce63084fb3a004bc82b0ed67a254e3f29d66e8551165cc0db489b6200e9',
           metadataDigest: 'deb051c35205fdd15ad1d3a7a0e937d4deff0cfd9bbe0eea79fa21bcd3d8b76a',
-          fields: [s1, s2, s3, s4, s5, s6, s8, s29, s9, s10],
-          entries: [{ digest: s83 }, { digest: s84 }, { digest: s85 }],
+          fields: a92,
+          entries: a16,
           copies: [],
         },
       ],
       roots: [
         {
-          owner: [s451, s196, s452, s196],
-          shortName: s453,
+          owner: [s482, s200, s483, s200],
+          shortName: s484,
           rawDigest: 'd7c3619438545320f7d82ddd2495759b1b65721f0d15e963cf7b78e5b21af22a',
           metadataDigest: '01f1ab6db8c7b84aed4784b024518fbe487d94ea3ee05820d1d6979ae3994e2c',
-          fields: [s1, s2, s202, s6, s204, s8, s29, s206],
+          fields: [s1, s2, s206, s6, s208, s8, s29, s210],
           copies: [],
-          declarations: [s455, s456, s457, s458],
-          intro: s455,
-          paths: [{ target: s80, refs: [s455, s459], level: 1 }],
+          declarations: a86,
+          intro: s486,
+          paths: a88,
         },
       ],
       fixedOnly: true,
@@ -2848,36 +3072,30 @@ const registry = {
           target: s28,
           rawDigest: 'c9281c5d9c4341fa619a0973938730c063fcc26d38d49b8d8be8af7676c09ae3',
           metadataDigest: '8cdda17e55feb081d53ac425843dd2607cee4227c046db3a4a03d7f42b9be674',
-          fields: [s1, s2, s3, s4, s5, s6, s8, s29, s9, s10],
-          entries: [{ digest: s30 }],
+          fields: a92,
+          entries: a6,
           copies: [],
         },
         {
-          target: s54,
+          target: s55,
           rawDigest: 'ffce4fb6144432c01f226c46739fe5eda0e386e22825734b8531574451fbc061',
           metadataDigest: '32d14b11e6bc572a41bd84da30b46b5b652f962c786d95f13b9d5fad934c83d5',
-          fields: [s1, s2, s3, s5, s6, s8, s29, s9, s10],
-          entries: [
-            { digest: s55 },
-            { digest: s56 },
-            { digest: s57 },
-            { digest: s58, reference: s28 },
-            { digest: s59, reference: s60 },
-          ],
+          fields: a93,
+          entries: a12,
           copies: [],
         },
       ],
       roots: [
         {
-          owner: [s215, s196, s216, s196],
-          shortName: s217,
+          owner: [s219, s200, s220, s200],
+          shortName: s221,
           rawDigest: '2da027ea94b518c8b912ebf17ca0ebcb68f586e2ed85014b7c2f4ece789a08c8',
           metadataDigest: '50648e30710b68d737a03f32e61d1bee512ea7bcad81d190c07de43c9f54fbb2',
-          fields: [s201, s1, s2, s202, s6, s204, s8, s29, s206],
+          fields: a94,
           copies: [],
-          declarations: [s220, s221, s222],
-          intro: s220,
-          paths: [{ target: s28, refs: [s220, s223], level: 3 }],
+          declarations: a33,
+          intro: s224,
+          paths: a35,
         },
       ],
     },
@@ -2888,34 +3106,29 @@ const registry = {
           rawDigest: 'e3aa7a9d68ecd841e5052b56b0db2fc96a1a01a65725f3e188753476867fadd2',
           metadataDigest: 'f8041c1a9b0d8891bedf8273608fca457fa72b5954bcc53685991fc917a1ada2',
           fields: [s1, s2, s3, s4, s5, s6, s8, s35, s9, s10],
-          entries: [{ digest: s36 }],
+          entries: a7,
           copies: [],
         },
         {
-          target: s61,
+          target: s62,
           rawDigest: '2284d5c00e32d249582b232fd801ac7b7509f145d4c64448740456c94cbb7e4c',
           metadataDigest: 'eaaf28c9f435d01e20332eaa51ba67e4f904c4d8b6b662b86b88ae7c22af8ce6',
           fields: [s1, s2, s3, s5, s6, s8, s35, s9, s10],
-          entries: [
-            { digest: s62 },
-            { digest: s63 },
-            { digest: s64, reference: s33 },
-            { digest: s65, reference: s66 },
-          ],
+          entries: a13,
           copies: [],
         },
       ],
       roots: [
         {
-          owner: [s215, s212, s216, s212],
-          shortName: s217,
+          owner: [s219, s216, s220, s216],
+          shortName: s221,
           rawDigest: 'fbdf1dd0d3f169f1c7ff64a854da75ee0e928e12f8e05125df9d3fe7734d2641',
           metadataDigest: '0bd773216411105618191076677c83a60da71200dce246baabfefd9087c18cbf',
-          fields: [s201, s1, s2, s202, s6, s204, s8, s35, s206],
+          fields: [s205, s1, s2, s206, s6, s208, s8, s35, s210],
           copies: [],
-          declarations: [s240, s241, s242],
-          intro: s240,
-          paths: [{ target: s33, refs: [s240, s243], level: 3 }],
+          declarations: a43,
+          intro: s244,
+          paths: a45,
         },
       ],
     },

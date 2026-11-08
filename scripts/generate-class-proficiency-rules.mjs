@@ -119,6 +119,7 @@ try {
     banneretLanguages,
   )
   const fixed = deriveFixedProficiencyRules(documents, {
+    toolDocuments: itemDocuments,
     materializeFeatures: preparation.materializeSubclassFeatureCopies,
     subclassIdentity: getSubclassFeatureIdentity,
     classIdentity: getClassFeatureIdentity,
@@ -399,7 +400,7 @@ try {
       ['node_modules/@biomejs/biome/bin/biome', 'format', '--stdin-file-path', file],
       {
         input: file.endsWith('.ts')
-          ? emitSharedRegistryModule(value, 'scripts/generate-class-proficiency-rules.mjs')
+          ? emitSharedRegistryModule(value, 'scripts/generate-class-proficiency-rules.mjs', true)
           : `${JSON.stringify(value, null, 2)}\n`,
         encoding: 'utf8',
         windowsHide: true,

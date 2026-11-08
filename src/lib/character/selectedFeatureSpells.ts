@@ -25,6 +25,7 @@ import {
   hasCurrentFeatureSpellSemantics,
 } from '@/lib/5etools/featureSpellSemantics'
 import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
+import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
 import { getCurrentNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
@@ -111,6 +112,19 @@ export function getSelectedFeatureCantripSetups(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
       const feature = candidates.length === 1 ? candidates[0] : undefined
+      const activeRoute = active.find((row) => row.selection === selection && row.option === option)
+      if (
+        option.entityType === 'optionalFeature' &&
+        feature &&
+        activeRoute?.choice.fixedOptions?.length &&
+        getElementalDisciplineSpells(
+          feature,
+          option.slotLevel,
+          activeRoute.choice,
+          catalogs?.classes,
+        )
+      )
+        return []
       if (
         getAtWillInvocationContract(selection, option, feature) &&
         !active.some(

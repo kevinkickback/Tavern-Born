@@ -43,6 +43,7 @@ import {
   getCurrentLunarSorcery,
   getLegacySorcererSpec,
 } from './legacySorcererSubclassRules'
+import { getMonkSubclassSpellGrants } from './monkSubclassRules'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
 import {
@@ -150,6 +151,12 @@ export function getEarnedSubclassSpellGrants(
   if (subclasses.length !== 1) return unavailable
   if (!land) {
     if (isArcaneArcherCantripOwner(entry)) return []
+    const monk = getMonkSubclassSpellGrants(classData, subclasses[0], classLevel)
+    if (monk)
+      return landContext?.character &&
+        !getSourceCompatibility(classData.source, landContext.character.originSystem).compatible
+        ? []
+        : monk
     const fighter =
       getFighterBanneretRitualGrants(classData, subclasses[0], classLevel) ??
       getPsiWarriorTelekineticGrants(classData, subclasses[0], classLevel)

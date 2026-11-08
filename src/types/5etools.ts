@@ -259,6 +259,7 @@ export interface OptFeatureProg {
   featureType?: string[]
   category?: string[]
   progression: number[] | Record<string, number>
+  required?: Record<string, string[]>
 }
 
 export interface OptionalFeatureLike {

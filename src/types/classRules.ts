@@ -83,6 +83,7 @@ export interface NormalizedCharacterChoice {
     source: string
     subclassName?: string
     subclassSource?: string
+    subclassShortName?: string
     featureName?: string
     featureSource?: string
   }
@@ -91,6 +92,7 @@ export interface NormalizedCharacterChoice {
   maximumSelections: number
   selectionCountByLevel: readonly number[]
   options: NormalizedChoiceOptionReference[]
+  fixedOptions?: readonly { level: number; option: NormalizedChoiceOptionReference }[]
   optionFilter?: NormalizedChoiceOptionFilter
   repeatable: boolean
   replacement: {

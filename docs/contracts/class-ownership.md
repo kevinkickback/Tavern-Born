@@ -117,6 +117,12 @@ the applicable picker, save and reopen, and sheet export without adding its name
 An adapter for ambiguous or prose-only rules should identify the exact producer and supply
 only the semantics the structured declaration leaves open.
 
+When a progression declares both automatic and elective options, show the automatic feature at
+its earned level and subtract it from the elective quota. Check level prerequisites against the
+saved gain. A later class level cannot make a pick retroactively eligible in an earlier slot.
+Classic Four Elements uses the source's required discipline and cumulative schedule this way.
+When its option record and the parent declaration both specify a prerequisite, they must agree.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.

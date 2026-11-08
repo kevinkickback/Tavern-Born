@@ -13,6 +13,7 @@ import { getClassChoiceFeatureId, getClassChoiceOptionKey } from './classChoiceI
 import {
   createClassChoiceCatalogs,
   getClassChoiceCandidates,
+  getEarnedFixedClassChoiceOptions,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
 import {
@@ -30,6 +31,7 @@ export type ClassFeatureDetailOrigin =
       choiceId: string
       earnedLevel: number
       optionKey: string
+      fixed?: true
     }
   | { kind: 'independent' }
 
@@ -40,6 +42,29 @@ export function resolveActiveClassChoiceDetail(
   origin: Extract<ClassFeatureDetailOrigin, { kind: 'choice' }>,
   prerequisites?: ClassChoicePrerequisiteContext,
 ) {
+  if (origin.fixed) {
+    const owners = character.classProgression.filter(
+      (row) =>
+        JSON.stringify(optionalClassOwner({ ...row, subclassName: row.subclass })) ===
+        JSON.stringify(origin.owner),
+    )
+    const owner = owners[0]
+    const cls = owner && findClassReference(owner, catalogs.classes ?? [])
+    if (owners.length !== 1 || !cls) return undefined
+    const choice = getClassChoiceCandidates(
+      cls,
+      getSelectedSubclassData(cls, owner),
+      catalogs,
+    ).find((row) => row.id === origin.choiceId)
+    return (
+      choice &&
+      getEarnedFixedClassChoiceOptions(choice, catalogs, owner.levels).find(
+        (row) =>
+          row.level === origin.earnedLevel &&
+          getClassChoiceOptionKey(row.option) === origin.optionKey,
+      )
+    )
+  }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs, prerequisites)
   if (!routes.choiceIds.has(origin.choiceId)) return undefined
   const selection = character.classChoiceSelections?.find(

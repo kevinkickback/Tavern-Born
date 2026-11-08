@@ -2,6 +2,22 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|warrior of mercy|monk|xphb|mercy|xphb|3|xphb",
+      "digest": "c934e8040b01f8ae5ed475d062651cbf16f6d9276c3caa66cdb56e45c53066cb"
+    },
+    {
+      "target": "subclass-feature|way of mercy|monk|phb|mercy|tce|3|tce",
+      "digest": "891c626d9b867bec0bdc9f401eb702f1d3b4ea1970e55d97926e11afdfa2415f"
+    },
+    {
+      "target": "subclass-feature|way of the ascendant dragon|monk|phb|ascendant dragon|ftd|3|ftd",
+      "digest": "135784585acc3b3fad60f85a5272c430498c311a397880b40966c667aae48252"
+    },
+    {
+      "target": "subclass-feature|way of the drunken master|monk|phb|drunken master|xge|3|xge",
+      "digest": "4ddf9cea100545b05c79068dd0742fcb78d5d4fd6f937aa512c9cc2af347eb87"
+    },
+    {
       "target": "subclass-feature|arcane archer|fighter|phb|arcane archer|xge|3|xge",
       "digest": "cf4fd3d84d03a78c588bbbb6308a76eecdcd83c0b3a8dc20ee0ee496baaa9f00"
     },

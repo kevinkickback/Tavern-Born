@@ -6,7 +6,7 @@ import {
   WORDS_OF_CREATION_TARGET,
 } from '@/lib/5etools/bardSpellSources'
 import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
-import { getClassResourceDefs } from '@/lib/5etools/classData'
+import { getClassResourceDefs, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   getClassFeatureIdentity,
   getSubclassFeatureIdentity,
@@ -34,6 +34,10 @@ import { getNativeWarlockPatronFeatureOwner } from '@/lib/5etools/warlockPatronF
 import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import {
+  getCharacterClassChoices,
+  getEarnedFixedClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -457,6 +461,7 @@ export function getClassStaticFeatureSummaries(
         name !== 'cleric' &&
         name !== 'druid' &&
         name !== 'fighter' &&
+        name !== 'monk' &&
         name !== 'paladin' &&
         name !== 'wizard' &&
         name !== 'warlock') ||
@@ -471,6 +476,41 @@ export function getClassStaticFeatureSummaries(
       return getSourceCompatibility(source, character.originSystem ?? '2014').compatible
         ? getClericStaticSummaries(character, cls, entry, catalogs, source)
         : []
+    if (name === 'monk') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+        if (
+          !ref.level ||
+          ref.level > entry.levels ||
+          ref.gainSubclassFeature ||
+          norm(ref.source) !== source ||
+          ['ability score improvement', 'epic boon'].includes(norm(ref.name))
+        )
+          return []
+        const target = getClassFeatureIdentity(ref)
+        const feature = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        return feature ? [feature] : []
+      })
+      const tradition = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      const fixed = getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, entry),
+        createOptionalClassFeatureActivity(character, catalogs),
+        catalogs,
+      ).flatMap((choice) => getEarnedFixedClassChoiceOptions(choice, catalogs, entry.levels))
+      return [
+        ...[...base, ...tradition].flatMap((feature) =>
+          featureSummary(feature).map((summary) => ({
+            ...summary,
+            replaces: savedClassLabel(character, entry, feature),
+          })),
+        ),
+        ...fixed.flatMap((feature) => featureSummary(feature)),
+      ]
+    }
     if (name === 'fighter') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
       const classic = source === 'phb'

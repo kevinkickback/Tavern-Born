@@ -445,7 +445,7 @@ export function useClassChoiceController({
           .map(getClassChoiceOptionKey),
   )
   const activeSavedOptions = optionsInGain
-  const allActiveOptionViews =
+  const allActiveOptionViews: ClassChoiceOptionView[] =
     activeRemovalOnly && activeSaved
       ? activeSaved.selection.selected.map((reference, index) => ({
           reference,
@@ -457,7 +457,7 @@ export function useClassChoiceController({
         ? (optionViewsByChoiceId.get(resolvedActiveChoice.id) ?? [])
         : []
   const activeOptionViews =
-    otherGainKeys.size || unplacedKeys.size
+    otherGainKeys.size || unplacedKeys.size || activeGainLevel !== undefined
       ? allActiveOptionViews
           .filter((view) => !otherGainKeys.has(getClassChoiceOptionKey(view.reference)))
           .map((view) =>
@@ -468,7 +468,14 @@ export function useClassChoiceController({
                   unavailableReason:
                     'Saved without a current earned slot. Remove it to make a new pick.',
                 }
-              : view,
+              : activeGainLevel !== undefined && (view.minimumClassLevel ?? 1) > activeGainLevel
+                ? {
+                    ...view,
+                    availability: 'retained' as const,
+                    unavailableReason:
+                      'Requires class level ' + view.minimumClassLevel + ' when learned.',
+                  }
+                : view,
           )
       : allActiveOptionViews
   const activeOptionKeys = new Set(
