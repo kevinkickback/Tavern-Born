@@ -91,7 +91,7 @@ export const INITIAL_CHARACTER_DATA = {
   classSource: '',
   background: '',
   backgroundSource: '',
-  originSystem: '' as const,
+  originSystem: '2014' as const,
   abilityScoreMethod: 'point-buy',
   abilityScores: {
     strength: 8,

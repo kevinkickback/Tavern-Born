@@ -48,7 +48,7 @@ describe('character creation and proficiencies validation', () => {
   })
 
   test('wizard defaults start at minimum scores for non-standard methods', () => {
-    expect(INITIAL_CHARACTER_DATA.originSystem).toBe('')
+    expect(INITIAL_CHARACTER_DATA.originSystem).toBe('2014')
     expect(INITIAL_CHARACTER_DATA.abilityScoreMethod).toBe('point-buy')
     expect(INITIAL_CHARACTER_DATA.abilityScores).toEqual({
       strength: 8,

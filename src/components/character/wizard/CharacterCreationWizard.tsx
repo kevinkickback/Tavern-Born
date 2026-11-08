@@ -1,5 +1,5 @@
 import { Warning } from '@phosphor-icons/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -29,7 +29,7 @@ import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSys
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
-import { getEffectiveSources } from '@/lib/sourceCompatibility'
+import { getEffectiveSources, normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -136,18 +136,28 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   })
 
   useEffect(() => {
-    if (!open) return
+    if (!open || wizardData.sources.length === 0) return
     setCharacterData((previous) => {
-      if ((previous.allowedSources?.length ?? 0) > 0 || 'allowedSources' in originalValues.current)
-        return previous
+      if ('allowedSources' in originalValues.current) return previous
+      const ruleset = previous.originSystem || '2014'
+      const selected = normalizeSelectableAllowedSources(
+        previous.allowedSources,
+        ruleset,
+        wizardData.sources,
+      )
       const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
-      if (!recommended) return previous
       const availableSources = new Set(wizardData.sources.map((source) => source.abbreviation))
       const allowedSources =
-        availableSources.size > 0
-          ? recommended.abbreviations.filter((source) => availableSources.has(source))
-          : recommended.abbreviations
-      return allowedSources.length > 0 ? { ...previous, allowedSources } : previous
+        selected.length > 0
+          ? selected
+          : normalizeSelectableAllowedSources(
+              recommended?.abbreviations.filter((source) => availableSources.has(source)) ?? [],
+              ruleset,
+              wizardData.sources,
+            )
+      return sameWizardValue(allowedSources, previous.allowedSources, true)
+        ? previous
+        : { ...previous, allowedSources }
     })
   }, [open, wizardData.sources])
 
@@ -353,22 +363,36 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     subraceSource: characterData.subraceSource,
   })
   const Step = stepId ? STEP_COMPONENTS[stepId] : undefined
-  const intro = activeStep && StepIcon && (
-    <div className="mb-3 shrink-0">
-      <p className="pl-[2.875rem] text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
-        {activeStep.section}
-      </p>
-      <h2 className="mt-1 flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/35 bg-primary/10 text-primary">
-          <StepIcon className="size-5" weight="duotone" aria-hidden="true" />
-        </span>
-        {activeStep.title}
-      </h2>
-      <DialogDescription className="mt-1 pl-[2.875rem] text-sm leading-relaxed text-muted-foreground">
-        {activeStep.description}
-      </DialogDescription>
-    </div>
-  )
+  const renderIntro = (titleAccessory?: ReactNode, actions?: ReactNode) =>
+    activeStep &&
+    StepIcon && (
+      <div
+        className={cn(
+          'flex shrink-0 flex-wrap items-center justify-between gap-x-5 gap-y-2',
+          stepId === 'content' ? 'mb-1' : 'mb-3',
+        )}
+      >
+        <div className="min-w-0">
+          <p className="pl-[2.875rem] text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            {activeStep.section}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/35 bg-primary/10 text-primary">
+                <StepIcon className="size-5" weight="duotone" aria-hidden="true" />
+              </span>
+              {activeStep.title}
+            </h2>
+            {titleAccessory}
+          </div>
+          <DialogDescription className="mt-1 pl-[2.875rem] text-sm leading-relaxed text-muted-foreground">
+            {activeStep.description}
+          </DialogDescription>
+        </div>
+        {actions}
+      </div>
+    )
+  const intro = stepId === 'content' ? null : renderIntro()
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -400,6 +424,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           {Step && (
             <Step
               intro={intro}
+              renderIntro={renderIntro}
               data={fixedBackgroundAsi ? { ...characterData, backgroundAsi } : characterData}
               onChange={updateCharacterData}
               invalidFields={invalidFields}

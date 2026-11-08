@@ -7,7 +7,6 @@ import {
   type AbilityScoreMethod,
   AbilityScoreMethodTabs,
 } from '@/components/character/AbilityScoreEditor'
-import { Button } from '@/components/ui/button'
 import { Tabs } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
@@ -98,13 +97,8 @@ export function AbilityScoresStep({
         onValueChange={(value) => onChange({ abilityScoreMethod: value })}
         className="gap-3"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="h-10 min-w-0">
-            <AbilityScoreMethodTabs />
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setAllScores(fallbackScores)}>
-            Reset base scores
-          </Button>
+        <div className="h-10 min-w-0">
+          <AbilityScoreMethodTabs />
         </div>
         <AbilityScoreEditor
           method={method}

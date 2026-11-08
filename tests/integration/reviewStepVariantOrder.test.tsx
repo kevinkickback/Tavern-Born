@@ -274,6 +274,6 @@ describe('Wizard rule controls', () => {
       'border',
     )
     expect(container.querySelector('[data-allowed-sources-count]')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Sourcebook presets' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Sourcebook presets' })).toBeNull()
   })
 })

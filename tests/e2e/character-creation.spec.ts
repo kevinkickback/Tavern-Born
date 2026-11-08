@@ -186,7 +186,6 @@ test('reverted source choices adopt late recommended defaults without losing dra
   await additionalSource.click()
   await wizard.getByRole('button', { name: 'Back' }).click()
   await wizard.getByRole('button', { name: 'Back' }).click()
-  await wizard.getByLabel('Character Name').fill('')
   await page.evaluate(async () => {
     const modulePath = '/src/store/gameDataStore.ts'
     const { useGameDataStore } = await import(modulePath)
@@ -205,7 +204,7 @@ test('reverted source choices adopt late recommended defaults without losing dra
   const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
   await expect(confirmation).toBeVisible()
   await confirmation.getByRole('button', { name: 'Keep editing' }).click()
-  await wizard.getByLabel('Character Name').fill('Restored late defaults')
+  await expect(wizard.getByLabel('Character Name')).toHaveValue('Temporary name')
   await wizard.getByRole('button', { name: 'Next' }).click()
   await wizard.getByRole('button', { name: 'Next' }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
@@ -232,8 +231,7 @@ test('empty source selection survives refresh under discard confirmation', async
   await wizard.getByRole('button', { name: /5e Legacy/ }).click()
   await wizard.getByRole('button', { name: 'Next' }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
-  await wizard.getByRole('button', { name: 'Sourcebook presets' }).click()
-  await page.getByRole('menuitem', { name: 'None', exact: true }).click()
+  await wizard.getByRole('button', { name: 'None', exact: true }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
   await wizard.getByRole('button', { name: 'Close' }).click()
   const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
@@ -372,8 +370,7 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await expect(optionalFeatures).toBeEnabled()
   await optionalFeatures.click()
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await dialog.getByRole('button', { name: 'Sourcebook presets' }).click()
-  await page.getByRole('menuitem', { name: 'None', exact: true }).click()
+  await dialog.getByRole('button', { name: 'None', exact: true }).click()
   await dialog.getByRole('button', { name: 'Back' }).click()
   await expect(optionalFeatures).toHaveAttribute('aria-checked', 'true')
   await expect(dialog.getByText('Currently inactive')).toBeVisible()
@@ -435,12 +432,11 @@ for (const viewport of [
     await wizard.getByRole('button', { name: /5e Legacy/ }).click()
     await wizard.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()
-    await wizard.getByRole('button', { name: 'Sourcebook presets' }).click()
-    await expect(page.getByRole('menuitem', { name: 'None', exact: true })).toHaveAttribute(
-      'aria-current',
+    const presets = wizard.getByRole('group', { name: 'Sourcebook presets' })
+    await expect(presets.getByRole('button', { name: 'None', exact: true })).toHaveAttribute(
+      'aria-pressed',
       'true',
     )
-    await page.keyboard.press('Escape')
     const search = wizard.getByRole('textbox', { name: 'Search sources' })
     const region = wizard.getByRole('region', { name: 'Additional Content' })
     expect(await region.evaluate((node) => node.clientHeight)).toBeGreaterThan(200)
@@ -457,7 +453,10 @@ for (const viewport of [
     await expect(region.getByRole('button')).toHaveCount(1)
     await source.click()
     await expect(source).toHaveAttribute('aria-pressed', 'true')
-    await wizard.getByRole('button', { name: 'Show selected sourcebooks' }).click()
+    const selectionFilter = wizard.getByRole('combobox', { name: 'Sourcebook selection filter' })
+    const title = wizard.getByRole('heading', { name: 'Choose sourcebooks', exact: true })
+    await expect(title.locator('..').getByText('1 selected')).toBeVisible()
+    await selectionFilter.selectOption('selected')
     await search.fill('')
     await expect(region.getByRole('button')).toHaveCount(1)
     const category = wizard.getByRole('combobox', { name: 'Sourcebook category' })
@@ -466,7 +465,7 @@ for (const viewport of [
     await category.selectOption('other')
     await expect(source).toHaveAttribute('aria-pressed', 'true')
     await category.selectOption('all')
-    await wizard.getByRole('button', { name: 'Show all sourcebooks' }).click()
+    await selectionFilter.selectOption('all')
     await search.fill('missing source')
     await expect(wizard.getByRole('status')).toHaveText('No sources match your search.')
     await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
@@ -492,7 +491,24 @@ test('creates a complete character and persists it across a full reload', async 
   await page.goto('/')
   await seedAppState(page, {
     sourcePath: 'e2e-character-create-seed',
-    gameData: CHARACTER_CREATION_GAME_DATA,
+    gameData: {
+      ...CHARACTER_CREATION_GAME_DATA,
+      sources: [
+        ...CHARACTER_CREATION_GAME_DATA.sources,
+        {
+          abbreviation: 'XGE',
+          name: 'Provenance-only preset source',
+          group: 'supplement',
+          hasCharacterOptions: false,
+        },
+        {
+          abbreviation: 'TCE',
+          name: 'Revised-only preset source',
+          group: 'supplement',
+          minimumRuleset: '2024',
+        },
+      ],
+    },
     characters: [],
   })
   await page.reload()
@@ -505,10 +521,29 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByLabel('Character Name').fill('E2E Created Hero')
     await dialog.getByRole('button', { name: 'Next' }).click()
 
-    await dialog.getByRole('button', { name: /5e Legacy/ }).click()
+    await expect(dialog.getByRole('button', { name: /5e Legacy/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await dialog.getByRole('button', { name: 'Next' }).click()
 
     await expect(dialog.getByRole('heading', { name: 'Choose sourcebooks' })).toBeVisible()
+    await page.evaluate(async () => {
+      const modulePath = '/src/store/gameDataStore.ts'
+      const { useGameDataStore } = await import(modulePath)
+      const gameData = useGameDataStore.getState().gameData
+      useGameDataStore.setState({
+        gameData: {
+          ...gameData,
+          sources: [
+            ...gameData.sources,
+            { abbreviation: 'LATE', name: 'Late catalog addition', group: 'other' },
+          ],
+        },
+      })
+    })
+    await expect(dialog.getByRole('button', { name: /Late catalog addition/ })).toBeVisible()
+    await expect(dialog.locator('[data-allowed-sources-count]')).toHaveCount(0)
     await dialog.getByRole('button', { name: 'Next' }).click()
     await dialog.getByRole('button', { name: /Human\s+PHB/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
@@ -520,6 +555,7 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByRole('button', { name: 'Next' }).click()
 
     await expect(dialog.getByRole('tab', { name: 'Point Buy' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Reset base scores' })).toHaveCount(0)
     await expect(dialog.getByText('27 of 27 points remaining')).toBeVisible()
     await dialog.getByRole('button', { name: 'Increase strength' }).click()
     await expect(dialog.getByText('26 of 27 points remaining')).toBeVisible()

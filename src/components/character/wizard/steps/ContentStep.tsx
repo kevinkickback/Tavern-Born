@@ -1,13 +1,7 @@
-import { BookOpen, CaretDown, Check, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { BookOpen, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
+import { type ReactNode, useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   getSourceCompatibility,
@@ -29,9 +23,11 @@ export function ContentStep({
   onChange,
   sources = [],
   isBundledSrd = false,
+  renderIntro,
 }: StepProps & {
   sources?: SourceBook[]
   isBundledSrd?: boolean
+  renderIntro?: (titleAccessory?: ReactNode, actions?: ReactNode) => ReactNode
 }) {
   const [search, setSearch] = useState('')
   const [requestedCategory, setCategory] = useState('all')
@@ -165,8 +161,45 @@ export function ContentStep({
   const sourceWarning =
     'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
 
+  const count = !isBundledSrd && allowedSources.length > 0 && (
+    <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+      <span data-allowed-sources-count>{allowedSources.length}</span> selected
+    </span>
+  )
+  const presets = !isBundledSrd && hasAdditionalSources && (
+    <fieldset
+      className="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+      aria-label="Sourcebook presets"
+    >
+      <span className="mr-1 text-xs text-muted-foreground">Presets</span>
+      {SOURCE_PRESETS.map((preset) => (
+        <Button
+          key={preset.id}
+          type="button"
+          size="sm"
+          variant={activePreset === preset.id ? 'secondary' : 'outline'}
+          aria-pressed={activePreset === preset.id}
+          title={preset.description}
+          onClick={() => applySourcePreset(preset)}
+        >
+          {preset.label}
+        </Button>
+      ))}
+      <Button
+        type="button"
+        size="sm"
+        variant={activePreset === 'none' ? 'secondary' : 'outline'}
+        aria-pressed={activePreset === 'none'}
+        onClick={() => onChange({ allowedSources: [] })}
+      >
+        None
+      </Button>
+    </fieldset>
+  )
+
   return (
     <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
+      {renderIntro ? renderIntro(count, presets) : presets}
       <div className="shrink-0 pb-1">
         {!isBundledSrd && hasAdditionalSources && (
           <div className="flex flex-wrap items-center gap-2">
@@ -207,51 +240,15 @@ export function ContentStep({
                   </option>
                 ))}
             </select>
-            <Button
-              type="button"
-              variant={filterSelected ? 'secondary' : 'outline'}
-              className="h-9"
-              aria-label={`${filterSelected ? 'Show all sourcebooks' : 'Show selected sourcebooks'} (${allowedSources.length} selected)`}
-              onClick={() => setSelectedOnly(!filterSelected)}
+            <select
+              aria-label="Sourcebook selection filter"
+              value={filterSelected ? 'selected' : 'all'}
+              onChange={(event) => setSelectedOnly(event.target.value === 'selected')}
+              className="h-9 max-w-full rounded-md border border-border bg-workspace-pane px-2 text-sm focus-visible:outline-ring"
             >
-              {filterSelected ? 'Show all · ' : ''}
-              <span data-allowed-sources-count={allowedSources.length > 0 ? '' : undefined}>
-                {allowedSources.length}
-              </span>{' '}
-              selected
-            </Button>
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9"
-                  aria-label="Sourcebook presets"
-                >
-                  Presets <CaretDown className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {SOURCE_PRESETS.map((preset) => (
-                  <DropdownMenuItem
-                    key={preset.id}
-                    title={preset.description}
-                    aria-current={activePreset === preset.id}
-                    onSelect={() => applySourcePreset(preset)}
-                  >
-                    {activePreset === preset.id && <Check aria-hidden="true" />}
-                    {preset.label}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuItem
-                  aria-current={activePreset === 'none'}
-                  onSelect={() => onChange({ allowedSources: [] })}
-                >
-                  {activePreset === 'none' && <Check aria-hidden="true" />}
-                  None
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <option value="all">Show all</option>
+              <option value="selected">Selected only</option>
+            </select>
           </div>
         )}
       </div>
