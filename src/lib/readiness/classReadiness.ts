@@ -25,6 +25,7 @@ import {
   getCharacterClassChoiceDiagnostics,
   getCharacterClassChoices,
   getClassChoiceOptionKey,
+  getEarnedFixedClassChoiceOptions,
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -326,6 +327,25 @@ export function validateClassChoices(
       const storedSelection = selections.get(choice.id)?.selected ?? []
       const choiceCatalogs =
         choice.owner.type === 'subclass' && !catalogs?.subclassTargets ? subclassCatalogs : catalogs
+      if (choiceCatalogs && choice.fixedOptions?.length) {
+        const earned = getEarnedFixedClassChoiceOptions(choice, choiceCatalogs, entry.levels)
+        const missing = choice.fixedOptions.find(
+          ({ level, option }) =>
+            level <= entry.levels &&
+            !earned.some((row) => row.option === option && row.level === level),
+        )
+        if (missing)
+          issues.push(
+            readinessIssue(
+              `class-choice-fixed:${choice.id}`,
+              'blocking',
+              'class',
+              `Restore ${missing.option.name}`,
+              'Restore the exact source for the discipline this feature grants automatically.',
+              classChoiceTarget(entry, missing.level, choice.id),
+            ),
+          )
+      }
       const fighterStyle = getFighterStylePair(choice.id)
       const calculationCatalogs = calculation.classChoices.catalogs
       const routeCatalogs =

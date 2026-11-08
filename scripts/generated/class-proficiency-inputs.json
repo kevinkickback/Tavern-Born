@@ -114,7 +114,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "6b3fc45d26c415bada493c3c112b2fcbeb13bc5202cbab99950e43fd71855c35"
+      "sha256": "8c55ef71361267af5e7a14108bc77d8e3444e655138a4698d6a6ba4030e35a9b"
     }
   ],
   "toolClassificationDependencies": [
@@ -162,11 +162,11 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "47a3e1491c1e9406f93af8429dfad17c0bccaff0f3e022b1f2c4f1fa677aea0c"
+      "sha256": "e563be2ce0baa9e91586b9637f3a09acfc457295ef65da3c482b12ee8de1e661"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
-      "sha256": "48827b3bd67b85bcd1edf7ce6766d6d9eaf836daf82d5bf6d062611f1557a4d3"
+      "sha256": "bf6809b28310684c62108b2193fae948f3d8e7346fcaed69e6d83c816096bbbe"
     },
     {
       "file": "src/lib/5etools/naturalExplorerSource.ts",

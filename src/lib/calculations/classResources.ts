@@ -8,6 +8,8 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { getFighterSubclassResources } from '@/lib/5etools/fighterSubclassResources'
 import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
+import { getCurrentMonkBaseRules, getMonkBaseResources } from '@/lib/5etools/monkBaseRules'
+import { getMonkSubclassResources } from '@/lib/5etools/monkSubclassRules'
 import {
   getCurrentNativeWarlockPatronRules,
   getNativeHealingLightOwner,
@@ -103,6 +105,7 @@ export function getCharacterClassResources(
   const stored = character.classResources ?? {}
   const healingDiceLimit = Math.max(1, options.charismaModifier)
   const proficiencyBonus = getProficiencyBonus(getTotalCharacterLevel(character))
+  const monk = getCurrentMonkBaseRules(character, catalogs)
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
@@ -112,6 +115,7 @@ export function getCharacterClassResources(
         : []
       : getClassResourceDefs(resolveClass(entry), level)
     const earned = [...definitions]
+    if (monk?.owner === entry) earned.push(...getMonkBaseResources(monk))
     const current = getCurrentResourceClass(character, entry, catalogs)
     if (
       catalogs &&
@@ -132,6 +136,13 @@ export function getCharacterClassResources(
         entry,
         catalogs?.classes,
         options.abilityModifiers,
+        proficiencyBonus,
+      ),
+      ...getMonkSubclassResources(
+        character,
+        entry,
+        catalogs?.classes,
+        options.abilityModifiers?.wisdom,
         proficiencyBonus,
       ),
     )

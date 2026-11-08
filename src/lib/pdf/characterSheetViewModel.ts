@@ -398,13 +398,13 @@ function buildFeatureSummaries(
     descriptions ? row.text : row.compactText
   const trailing = [
     ...(vm.optionalClassFeatureSummaries ?? []).map(format),
-    ...(vm.featureOptionSummaries ?? []).map(format),
     ...(vm.proficiencyCheckNotes ?? []).map((row) => row.text),
     ...(vm.managedSpellCastingSummaries ?? []),
   ]
   const render = (rows: typeof saved) =>
     [
       vm.classResourceSummary,
+      ...(vm.featureOptionSummaries ?? []).map(format),
       ...declared.map((row) =>
         row.actionId && actionsInNotes?.has(row.actionId) ? row.compactText : format(row),
       ),

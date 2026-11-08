@@ -360,6 +360,33 @@
     ]
   },
   {
+    "target": "subclass-feature|draconic disciple|monk|phb|ascendant dragon|ftd|3|ftd",
+    "digest": "1c1ac6527231bfe34d61a5f6343b1b6031965538a4c1fa0696a4109e1ac2261b",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "languages",
+        "count": 1,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge",
     "digest": "d0759e95ac0c9821915bae4040d7c6345aa9759f41a5c5f2d1748267a8fd799d",
     "fields": [

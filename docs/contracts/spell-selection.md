@@ -415,3 +415,11 @@ proficiency choices are independently sourced.
 Psi Warrior's classic Telekinetic Master grants a limited cast. The revised feature always
 prepares the spell and also describes its slot-free cast. The exact current spell schedule,
 feature text, and earned subclass boundary must agree.
+
+## Monk discipline and subclass spells
+
+Read Ki and Focus Point costs from the current spell schedule. Show these spells with their
+feature, cost, timing and component rules. They take no prepared spell or ordinary spell-slot
+capacity. Where the granting text also names a cost or spell printing, verify that it agrees
+with the schedule. The 2014 Open Hand rest effect and Empty Body's self-only Astral Projection
+also stay outside the prepared list. The creator keeps its existing manual resource controls.

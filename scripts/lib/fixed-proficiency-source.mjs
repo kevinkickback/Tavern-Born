@@ -47,6 +47,71 @@ function validateFeature(feature, fields, structured = false) {
     fail('Unsupported fixed proficiency producer')
 }
 
+function deriveMonkTraining(feature, itemDocuments) {
+  const mercy =
+    feature.name === 'Implements of Mercy' &&
+    feature.subclassShortName === 'Mercy' &&
+    (feature.classSource === 'PHB'
+      ? feature.source === 'TCE'
+      : feature.classSource === 'XPHB' && feature.source === 'XPHB')
+  const drunken =
+    feature.name === 'Bonus Proficiencies' &&
+    feature.subclassShortName === 'Drunken Master' &&
+    feature.classSource === 'PHB' &&
+    feature.source === 'XGE'
+  if (
+    feature.className !== 'Monk' ||
+    feature.source !== feature.subclassSource ||
+    (!mercy && !drunken)
+  )
+    return undefined
+  validateFeature(feature, SUBCLASS_FIELDS, mercy)
+  if (feature._copy) fail('Copied Monk training feature')
+  const classical = feature.classSource === 'PHB'
+  const clause = feature.entries[mercy && classical ? 1 : 0]
+  if (typeof clause !== 'string') fail('Missing Monk training grant')
+  const match = mercy
+    ? /^You gain proficiency in the (\{@skill [^{}]+\} and \{@skill [^{}]+\}) skills(?:, and you gain| and) proficiency with the \{@item ([^{}|]+)\|([^{}|]+)\}\.$/.exec(
+        clause,
+      )
+    : /^When you choose this tradition at (\d+)(?:st|nd|rd|th) level, you gain proficiency in the (\{@skill [^{}]+\}) skill if you don't already have it\. [^.]+\. You also gain proficiency with \{@item ([^{}|]+)\|([^{}|]+)\} if you don't already have it\.$/.exec(
+        clause,
+      )
+  const [tags, tool, printing] = match?.slice(mercy ? 1 : 2) ?? []
+  if (
+    !tags ||
+    printing.toUpperCase() !== feature.classSource ||
+    (!mercy && Number(match[1]) !== feature.level)
+  )
+    fail('Unsupported Monk training grant')
+  const skills = [...tags.matchAll(/\{@skill ([^|{}]+)(?:\|([^|{}]+))?\}/g)]
+  if (
+    skills.length !== (mercy ? 2 : 1) ||
+    skills.some((tag) => tag[2] !== (classical ? undefined : feature.classSource))
+  )
+    fail('Unsupported Monk skill source')
+  const toolName = tool.toLowerCase()
+  const records = itemDocuments.flatMap((doc) => [...(doc.item ?? []), ...(doc.baseitem ?? [])])
+  const matching = (source) =>
+    records.filter(
+      (item) =>
+        item.name?.toLowerCase() === toolName &&
+        item.source === source &&
+        ['AT', 'T'].includes(item.type?.split('|')[0]),
+    )
+  const originals = matching(feature.classSource)
+  if (originals.length !== 1) fail('Ambiguous Monk training tool')
+  const reprints = (originals[0].reprintedAs ?? []).filter(
+    (reference) => typeof reference === 'string' && reference.toLowerCase() === `${toolName}|xphb`,
+  )
+  const reprint =
+    classical && reprints.length === 1 && matching('XPHB').length === 1 ? 'XPHB' : undefined
+  return {
+    training: { skills: skills.map((tag) => tag[1].toLowerCase()), tools: [toolName] },
+    trainingTool: { name: toolName, source: feature.classSource, ...(reprint && { reprint }) },
+  }
+}
+
 function deriveDruidic(feature) {
   validateFeature(feature, [...FEATURE_FIELDS, 'srd', 'srd52', 'basicRules2024'])
   const classic = feature.source === 'PHB'
@@ -177,6 +242,16 @@ export function deriveFixedProficiencyRules(documents, api) {
   for (const document of documents) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
       const target = api.subclassIdentity(feature)
+      const monk = deriveMonkTraining(feature, api.toolDocuments)
+      if (monk) {
+        push(
+          feature,
+          'fixed-training',
+          { ...monk, subclassGainPosition: 'first' },
+          api.subclassIdentity,
+        )
+        continue
+      }
       if (
         feature.name === 'Arcane Archer Lore' &&
         feature.className === 'Fighter' &&
@@ -402,6 +477,46 @@ export function deriveFixedProficiencyRules(documents, api) {
       }
     }
     for (const feature of document.classFeature ?? []) {
+      if (
+        feature.className === 'Monk' &&
+        feature.classSource === feature.source &&
+        ((feature.source === 'PHB' && feature.name === 'Diamond Soul') ||
+          (feature.source === 'XPHB' && feature.name === 'Disciplined Survivor'))
+      ) {
+        validateFeature(feature, [...FEATURE_FIELDS, 'srd', 'srd52', 'basicRules2024', 'consumes'])
+        const clause = feature.entries[0]
+        const classic =
+          /^Beginning at (\d+)(?:st|nd|rd|th) level, your mastery of ki grants you proficiency in all saving throws\.$/.exec(
+            clause,
+          )
+        if (
+          feature.source === 'PHB'
+            ? Number(classic?.[1]) !== feature.level
+            : clause !==
+              'Your physical and mental discipline grant you proficiency in all saving throws.'
+        )
+          fail('Unsupported Monk saving throw grant')
+        const { page: _page, basicRules2024: _basic, ...bundled } = feature
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: {
+              savingThrows: [
+                'strength',
+                'dexterity',
+                'constitution',
+                'intelligence',
+                'wisdom',
+                'charisma',
+              ],
+            },
+            bundledMetadataDigest: api.digest(api.metadata(bundled)),
+          },
+          api.classIdentity,
+        )
+        continue
+      }
       const cant = deriveThievesCant(feature)
       const language = cant
         ? { languages: [cant.language] }
@@ -479,10 +594,20 @@ export function deriveFixedProficiencyRules(documents, api) {
         })
     }
     roots[0].classFeatures.forEach(scan)
-    const source =
-      feature.kind === 'fixed-languages' && feature.classSource === 'PHB' ? '' : feature.classSource
-    const rawDeclaration = `${feature.name}|${feature.className}|${source}|${feature.level}`
-    if (occurrences.length !== 1 || roots[0].classFeatures[occurrences[0]] !== rawDeclaration)
+    const omittedSource =
+      feature.classSource === 'PHB' &&
+      (feature.kind === 'fixed-languages' || feature.className === 'Monk')
+    const source = omittedSource ? '' : feature.classSource
+    const rawDeclaration = roots[0].classFeatures[occurrences[0]]
+    if (
+      occurrences.length !== 1 ||
+      (rawDeclaration !== `${feature.name}|${feature.className}|${source}|${feature.level}` &&
+        !(
+          feature.className === 'Monk' &&
+          rawDeclaration ===
+            `${feature.name}|${feature.className}|${feature.classSource}|${feature.level}`
+        ))
+    )
       fail('Unsupported or duplicate direct fixed declaration')
     directClasses.push({
       owner: [feature.className.toLowerCase(), feature.classSource.toLowerCase()],

@@ -145,7 +145,27 @@ export function grantFixedProficiencies(
           ]
     for (const { domain, names } of grants) {
       for (const name of names) {
-        if (domain === 'tools' && !tools.has(name)) continue
+        if (domain === 'tools') {
+          if (!tools.has(name)) continue
+          const tool = owner.rule.trainingTool
+          if (tool?.name === name) {
+            const exact = (source: string) =>
+              catalogs?.allConcreteTools?.filter(
+                (item) => item.source === source && getConcreteToolProficiencyName(item) === name,
+              ).length ?? 0
+            const declared = exact(tool.source)
+            if (
+              declared !== 1 &&
+              !(
+                declared === 0 &&
+                owner.owner[1] === 'xphb' &&
+                tool.reprint &&
+                exact(tool.reprint) === 1
+              )
+            )
+              continue
+          }
+        }
         if (
           domain === 'languages' &&
           owner.rule.languageSource &&

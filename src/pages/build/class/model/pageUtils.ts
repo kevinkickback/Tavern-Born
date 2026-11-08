@@ -25,6 +25,11 @@ import {
 } from '@/lib/5etools/psaKnowledgeFeatures'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
+import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
+import {
+  type ClassChoiceFeatureCatalogs,
+  getEarnedFixedClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { optionalClassOwner } from '@/lib/character/optionalClassFeatureIdentity'
 import type {
   ClassFeatureDisplay,
@@ -181,6 +186,7 @@ export function projectClassLevelFeatures(
   sourceSubclass: Subclass5e | undefined,
   choices: readonly NormalizedCharacterChoice[],
   classLevel: number,
+  catalogs?: ClassChoiceFeatureCatalogs,
 ) {
   if (
     !cls ||
@@ -258,6 +264,31 @@ export function projectClassLevelFeatures(
         : current
     result.set(level, [...classFeatures, ...displayed])
   }
+  if (catalogs)
+    for (const choice of choices) {
+      for (const { level, option, name, source, entries } of getEarnedFixedClassChoiceOptions(
+        choice,
+        catalogs,
+        classLevel,
+      )) {
+        result.set(level, [
+          ...(result.get(level) ?? []),
+          {
+            name,
+            source,
+            entries,
+            origin: {
+              kind: 'choice',
+              fixed: true,
+              owner: optionalClassOwner(choice.owner),
+              choiceId: choice.id,
+              earnedLevel: level,
+              optionKey: getClassChoiceOptionKey(option),
+            },
+          },
+        ])
+      }
+    }
   return result
 }
 

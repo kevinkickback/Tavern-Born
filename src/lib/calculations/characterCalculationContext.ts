@@ -23,6 +23,13 @@ import {
   resolveFeatReference,
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
+import {
+  getCurrentMonkBaseRules,
+  getMonkAbilityIncrease,
+  getMonkUnarmoredDefense,
+  getMonkUnarmoredMovement,
+} from '@/lib/5etools/monkBaseRules'
+import { deriveMonkSubclassSenses } from '@/lib/5etools/monkSubclassRules'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import {
@@ -293,7 +300,11 @@ export function deriveEffectiveAbilityScores(
   subrace?: Race5e,
   background?: Background5e,
   sourceEffects: readonly CharacterEffect[] = [],
-  primalChampionMaximum?: number,
+  intrinsicIncreases: readonly {
+    abilities: readonly AbilityName[]
+    amount: number
+    maximum: number
+  }[] = [],
 ): EffectiveAbilityScoreData {
   if (character) character = refreshRaceAbilityState(character, race, subrace)
   const base = character ? { ...character.abilityScores } : makeDefaultAbilityScores(8)
@@ -341,11 +352,11 @@ export function deriveEffectiveAbilityScores(
     asiBonuses,
     featBonuses,
   })
-  // Primal Champion changes the character's own scores. Item effects can still set them.
-  if (primalChampionMaximum !== undefined) {
-    for (const ability of ['strength', 'constitution'] as const) {
+  // Earned capstones change intrinsic scores. Item effects still resolve afterwards.
+  for (const increase of intrinsicIncreases) {
+    for (const ability of increase.abilities) {
       const score = total[ability]
-      total[ability] = Math.max(score, Math.min(primalChampionMaximum, score + 4))
+      total[ability] = Math.max(score, Math.min(increase.maximum, score + increase.amount))
     }
   }
 
@@ -548,13 +559,26 @@ export function createCharacterCalculationContext(
     )
   }
   const champion = getCurrentBarbarianJourneyFeature(character, choiceCatalogs, 'primal champion')
+  const monk = getCurrentMonkBaseRules(character, choiceCatalogs)
+  const monkIncrease = getMonkAbilityIncrease(monk)
   const abilityScores = deriveEffectiveAbilityScores(
     character,
     raceResolution.parentRace,
     raceResolution.subraceData,
     background,
     baseSourceEffects,
-    champion && (champion.source === 'phb' ? 24 : 25),
+    [
+      ...(champion
+        ? [
+            {
+              abilities: ['strength', 'constitution'] as const,
+              amount: 4,
+              maximum: champion.source === 'phb' ? 24 : 25,
+            },
+          ]
+        : []),
+      ...(monkIncrease ? [monkIncrease] : []),
+    ],
   )
   const managedSpells = projectManagedClassSpellState(
     character,
@@ -622,6 +646,8 @@ export function createCharacterCalculationContext(
         target.kind !== 'skill-modifier' || !fighterHalfProficiencySkills.has(target.skill),
     ),
     ...fighterEffects,
+    ...deriveMonkUnarmoredEffects(character, choiceCatalogs, monk, abilityScores.modifiers),
+    ...deriveMonkSubclassSenses(character, choiceCatalogs?.classes),
     ...deriveBarbarianPassiveEffects(
       character,
       choiceCatalogs,
@@ -937,6 +963,59 @@ function deriveBarbarianPassiveEffects(
       operation: { kind: 'multiply', value: 2 },
     })
   return results
+}
+
+function deriveMonkUnarmoredEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  monk: ReturnType<typeof getCurrentMonkBaseRules>,
+  modifiers: AbilityScores,
+): CharacterEffect[] {
+  if (!monk) return []
+  const { bodyArmor, shield } = getArmorEquipmentSlots(character.equipment ?? [])
+  if (bodyArmor || shield) return []
+  const defense = getMonkUnarmoredDefense(monk)
+  const earlierBarbarian =
+    monk.cls.source === 'PHB' &&
+    character.classProgression
+      .slice(0, character.classProgression.indexOf(monk.owner))
+      .some((entry) => findClassReference({ name: 'Barbarian', source: 'PHB' }, [entry])) &&
+    getCurrentBarbarianJourneyFeature(character, catalogs, 'unarmored defense')
+  const ac =
+    defense && !earlierBarbarian
+      ? unarmoredBaseEffect(
+          character.equipment,
+          defense.target,
+          {
+            kind: 'class',
+            name: defense.feature.name,
+            source: defense.feature.source,
+            entityId: defense.target,
+          },
+          defense.base + modifiers[defense.firstAbility] + modifiers[defense.secondAbility],
+          false,
+        )
+      : undefined
+  const movement = getMonkUnarmoredMovement(monk)
+  return [
+    ...(ac ? [ac] : []),
+    ...(movement
+      ? [
+          {
+            id: `${movement.target}:speed`,
+            label: movement.feature.name,
+            source: {
+              kind: 'class' as const,
+              name: movement.feature.name,
+              source: movement.feature.source,
+              entityId: movement.target,
+            },
+            target: { kind: 'speed' as const, mode: 'walk' },
+            operation: { kind: 'add' as const, value: movement.bonus },
+          },
+        ]
+      : []),
+  ]
 }
 
 function unarmoredBaseEffect(
