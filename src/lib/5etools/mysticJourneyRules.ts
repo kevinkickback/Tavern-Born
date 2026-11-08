@@ -13,14 +13,16 @@ import { mysticLimitedSubclassUses } from './mysticFeatureIdentity'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
 import { PSIONIC_CLASS_SOURCE } from './psionicIdentity'
 
+export const isMysticJourneyOwner = (owner: CharacterClassEntry) =>
+  norm(owner.name) === 'mystic' && norm(owner.source) === norm(PSIONIC_CLASS_SOURCE)
+
 export function getCurrentMysticRules(
   character: Character,
   owner: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
   if (
-    norm(owner.name) !== 'mystic' ||
-    norm(owner.source) !== norm(PSIONIC_CLASS_SOURCE) ||
+    !isMysticJourneyOwner(owner) ||
     !catalogs ||
     !getSourceCompatibility(owner.source, character.originSystem).compatible ||
     (character.allowedSources?.length &&

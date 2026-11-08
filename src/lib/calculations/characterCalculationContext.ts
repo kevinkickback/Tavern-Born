@@ -40,6 +40,7 @@ import {
   getCurrentMysticRules,
   getMysticBodyEffects,
   getMysticImmortalDurability,
+  isMysticJourneyOwner,
 } from '@/lib/5etools/mysticJourneyRules'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { getScionResistance } from '@/lib/5etools/rogueScion'
@@ -804,7 +805,7 @@ function deriveMysticPassiveEffects(
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   { dexterity, constitution }: AbilityScores,
 ): CharacterEffect[] {
-  const owner = character.classProgression.find((row) => row.name.toLowerCase() === 'mystic')
+  const owner = character.classProgression.find(isMysticJourneyOwner)
   const current = owner && getCurrentMysticRules(character, owner, catalogs)
   if (!current) return []
   const effects = getMysticBodyEffects(current)
