@@ -70,6 +70,7 @@ import {
 } from '@/lib/character/optionalClassFeatureActivity'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
+import { getRangerCompanion } from '@/lib/character/rangerCompanion'
 import { isBladeDependentInvocation } from '@/lib/character/warlockInvocationSource'
 import {
   getCharacterClassEntries,
@@ -662,6 +663,7 @@ function buildSpellRows(
       const spell = invocations[0]?.spell ?? resolveSpellReference(reference, spellsByKey)
       const castOnly = ordinaryKeys.has(key) ? undefined : castOnlyRules.get(key)
       const castingTime = castOnly?.castingTime ?? (spell ? formatCastingTime(spell.time) : '')
+      const duration = castOnly?.duration ?? (spell ? formatDuration(spell.duration) : '')
       const components =
         spell && !castOnly?.ignoresComponents
           ? formatComponents(
@@ -689,9 +691,9 @@ function buildSpellRows(
               !leveled.has(getSpellReferenceKey(reference))
             ? 'C'
             : '?',
-        castingTimeAndDuration: spell ? `${castingTime}; ${formatDuration(spell.duration)}` : '',
+        castingTimeAndDuration: spell ? `${castingTime}; ${duration}` : '',
         castingTime,
-        duration: spell ? formatDuration(spell.duration) : '',
+        duration,
         range: spell ? formatRange(spell.range) : '',
         components,
         castingNote,
@@ -824,6 +826,8 @@ export function createCharacterSheetViewModel(
         ]
       : [],
   )
+  const drake = getRangerCompanion(character, companionCatalogs)
+  if (drake) companions.push({ ...drake, classicRangerLevel: undefined })
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)

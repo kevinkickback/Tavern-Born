@@ -206,6 +206,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     armorClass: companionArmorClass,
     maxHp: companionMaxHp,
     speed: companionSpeed,
+    hitDice: companionHitDice,
   } = getCompanionSheetValues(viewModel, companion)
   const [racialTraits, racialOverflow] = splitRuledSection(
     [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
@@ -364,6 +365,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'P4.AScomp.Cnote.Left': companionStat
       ? [
           `${companion?.name} (${companion?.source ?? 'unknown source'})`,
+          ...(companionHitDice ? [`Hit Dice: ${companionHitDice}`] : []),
           ...(companionSummary?.armorClass && companionArmorClass !== companionSummary.armorClass
             ? [`Armor Class: ${companionSummary.armorClass}`]
             : []),

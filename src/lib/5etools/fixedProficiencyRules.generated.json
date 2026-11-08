@@ -802,6 +802,72 @@
       ]
     },
     {
+      "target": "subclass-feature|iron mind|ranger|phb|gloom stalker|xge|7|xge",
+      "name": "Iron Mind",
+      "className": "Ranger",
+      "classSource": "PHB",
+      "level": 7,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["wisdom"]
+      },
+      "subclassGainPosition": "at-level",
+      "fallback": {
+        "name": "wisdom",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      },
+      "digest": "3f08c0b6768af604581185852e011e4c1b17b75bcfb5b1415efe432c14484334",
+      "metadataDigest": "202cfc05ee189d3fbd09d4d00b376431f4f2d3b32c7de6ef7bc9b4c4c4442b5f",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|iron mind|ranger|xphb|gloom stalker|xphb|7|xphb",
+      "name": "Iron Mind",
+      "className": "Ranger",
+      "classSource": "XPHB",
+      "level": 7,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["wisdom"]
+      },
+      "subclassGainPosition": "at-level",
+      "fallback": {
+        "name": "wisdom",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      },
+      "digest": "36d6f946f7bb20794bc2dbe172a7bdeac30dec842b9a2f124f30f1adf79a25d6",
+      "metadataDigest": "e8c1e6cf411031980f0860388bf07a97feb8ebd1c24332c01fc9a67387cdc9fd",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|martial training|bard|xphb|valor|xphb|3|xphb",
       "name": "Martial Training",
       "className": "Bard",

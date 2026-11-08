@@ -387,6 +387,33 @@
     ]
   },
   {
+    "target": "subclass-feature|draconic gift|ranger|phb|drakewarden|ftd|3|ftd",
+    "digest": "fc8ccf5f103c9eacee2eaf9d686bb691b8f81a12a942436c28eef3d49ee5f762",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "languages",
+        "count": 1,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|elegant courtier|fighter|phb|samurai|xge|7|xge",
     "digest": "d0759e95ac0c9821915bae4040d7c6345aa9759f41a5c5f2d1748267a8fd799d",
     "fields": [
@@ -528,6 +555,62 @@
     ]
   },
   {
+    "target": "subclass-feature|iron mind|ranger|phb|gloom stalker|xge|7|xge",
+    "digest": "3f08c0b6768af604581185852e011e4c1b17b75bcfb5b1415efe432c14484334",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "proficiencyAtGain": "wisdom",
+    "subclassGainPosition": "at-level",
+    "domains": [
+      {
+        "domain": "savingThrows",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|iron mind|ranger|xphb|gloom stalker|xphb|7|xphb",
+    "digest": "36d6f946f7bb20794bc2dbe172a7bdeac30dec842b9a2f124f30f1adf79a25d6",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "proficiencyAtGain": "wisdom",
+    "subclassGainPosition": "at-level",
+    "domains": [
+      {
+        "domain": "savingThrows",
+        "count": 1,
+        "savingThrowPool": ["intelligence", "charisma"]
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|knightly envoy|fighter|xphb|banneret|frhof|3|frhof",
     "digest": "68a6f6d2232710503c2d7e1a7d1d70990bebbf2c20cc37c31f908d6cd0ebda7e",
     "optional": false,
@@ -635,6 +718,62 @@
           "cadence": "long-rest",
           "maximumPerEvent": 1
         }
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|otherworldly glamour|ranger|phb|fey wanderer|tce|3|tce",
+    "digest": "663d86f73dd62323be7aaa2dadb9f7149dd6724d03ff59cfb87834aa9a47661b",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["deception", "performance", "persuasion"],
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|otherworldly glamour|ranger|xphb|fey wanderer|xphb|3|xphb",
+    "digest": "91b3c5f6882d25edb8f92c23d5940cbfb958859e7ddaa9e6126740cb4630bf8b",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": ["deception", "performance", "persuasion"],
+        "excludeExisting": true
       }
     ]
   },

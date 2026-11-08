@@ -291,6 +291,49 @@ export function deriveFixedProficiencyRules(documents, api) {
         continue
       }
       if (
+        feature.name === 'Iron Mind' &&
+        feature.className === 'Ranger' &&
+        feature.subclassShortName === 'Gloom Stalker' &&
+        feature.subclassSource === feature.source &&
+        ((feature.classSource === 'PHB' && feature.source === 'XGE') ||
+          (feature.classSource === 'XPHB' && feature.source === 'XPHB'))
+      ) {
+        validateFeature(feature, SUBCLASS_FIELDS)
+        const line = feature.entries[0]
+        const opening =
+          feature.classSource === 'PHB'
+            ? /^By (\d+)(?:st|nd|rd|th) level, you have honed your ability to resist the mind-altering powers of your prey\. /.exec(
+                line,
+              )
+            : /^You have honed your ability to resist mind-altering powers\. /.exec(line)
+        const clause = opening && line.slice(opening[0].length)
+        const saves =
+          clause &&
+          /^You gain proficiency in (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throws\. If you already have this proficiency, you instead gain proficiency in (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) or (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throws \(your choice\)\.$/.exec(
+            clause,
+          )
+        if (
+          feature._copy ||
+          feature.entries.length !== 1 ||
+          !saves ||
+          (feature.classSource === 'PHB' && Number(opening[1]) !== feature.level) ||
+          new Set(saves.slice(1)).size !== 3
+        )
+          fail('Unsupported Iron Mind saving throw grant')
+        const [fixed, ...alternatives] = saves.slice(1).map((name) => name.toLowerCase())
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: { savingThrows: [fixed] },
+            subclassGainPosition: 'at-level',
+            fallback: { name: fixed, count: 1, savingThrowPool: alternatives },
+          },
+          api.subclassIdentity,
+        )
+        continue
+      }
+      if (
         feature.name === 'Elegant Courtier' &&
         feature.className === 'Fighter' &&
         feature.classSource === 'PHB' &&

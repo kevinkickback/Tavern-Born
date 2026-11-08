@@ -16,6 +16,7 @@ import {
   getNativeEldritchHexOwner,
 } from '@/lib/5etools/nativeWarlockPatronRules'
 import { decodeOptionalDeclaration } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { getCurrentRangerFeatures } from '@/lib/5etools/rangerFeatureSource'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm, stripItemTag } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
@@ -69,6 +70,7 @@ type ClassPreparedSpellGrant = ClassFixedSpellGrant & {
 function getRangerGrant(
   cls: Class5e,
   catalogs: ClassChoiceFeatureCatalogs,
+  character: Character,
 ): ClassPreparedSpellGrant | undefined {
   const projected = catalogs.classFeatures.filter(
     (row) => getClassFeatureIdentity(row) === favoredEnemy,
@@ -93,15 +95,24 @@ function getRangerGrant(
           firstLine,
         )?.[1]
       : undefined
-  if (reference && getSpellReferenceKey(reference) === huntersMark)
-    return {
-      owner: ['class', 'ranger', 'xphb'],
-      target: favoredEnemy,
-      featureName: feature.name,
-      level: 1,
-      reference,
-      spellLevel: 1,
-    }
+  if (!reference || getSpellReferenceKey(reference) !== huntersMark) return undefined
+  const capstone = getCurrentRangerFeatures(character, catalogs)?.base('Foe Slayer')
+  const die = capstone?.entries[0]
+  const change =
+    typeof die === 'string' &&
+    /^The damage die of your Hunter's Mark is a \{@damage (d[1-9]\d*)\} rather than a \{@damage d[1-9]\d*\}\.$/.exec(
+      die,
+    )
+  return {
+    owner: ['class', 'ranger', 'xphb'],
+    target: favoredEnemy,
+    featureName: feature.name,
+    level: 1,
+    reference,
+    spellLevel: 1,
+    ...(capstone?.entries.length === 1 &&
+      change && { castingNote: `Foe Slayer: Use a ${change[1]} for Hunter's Mark damage.` }),
+  }
 }
 
 function matchesPreparedSchedule(
@@ -293,7 +304,9 @@ export function getDirectClassPreparedSpellGrants(
     let grants: ClassPreparedSpellGrant[]
     if (findClassReference(ranger, [cls])) {
       const grant =
-        entry.levels >= 1 && Object.keys(schedule).length === 1 && getRangerGrant(cls, catalogs)
+        entry.levels >= 1 &&
+        Object.keys(schedule).length === 1 &&
+        getRangerGrant(cls, catalogs, character)
       grants = grant ? [grant] : []
     } else if (findClassReference(paladin, [cls])) {
       grants = paladinSpells.flatMap(([featureName, level, reference, spellLevel, digest]) => {

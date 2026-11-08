@@ -52,6 +52,12 @@ import {
   getNativeStepsOfTheFeyOwner,
   STEPS_OF_THE_FEY_SPELL,
 } from './nativeWarlockPatronRules'
+import {
+  applyFeyWandererSpellUpgrades,
+  getClassicRangerSubclassSpells,
+  getRangerEtherealStep,
+  getRevisedRangerSubclassSpells,
+} from './rangerSubclassSpells'
 import { parseSpellToken } from './spellTokens'
 import {
   getChosenWarlockSpellBlock,
@@ -148,8 +154,23 @@ export function getEarnedSubclassSpellGrants(
       norm(row.className) === norm(entry.name) &&
       norm(row.classSource) === norm(entry.source),
   )
-  if (subclasses.length !== 1) return unavailable
+  // Ranger's ordinary class spellcasting is independent of its subclass grants.
+  if (subclasses.length !== 1) return norm(entry.name) === 'ranger' ? [] : unavailable
   if (!land) {
+    const revisedRanger = getRevisedRangerSubclassSpells(classData, subclasses[0], classLevel)
+    if (revisedRanger)
+      return applyFeyWandererSpellUpgrades(classData, subclasses[0], classLevel, revisedRanger)
+    const classicRanger = getClassicRangerSubclassSpells(classData, subclasses[0], classLevel)
+    if (classicRanger) {
+      const grants = applyFeyWandererSpellUpgrades(
+        classData,
+        subclasses[0],
+        classLevel,
+        classicRanger,
+      )
+      const etherealStep = getRangerEtherealStep(classData, subclasses[0], classLevel)
+      return etherealStep ? [...grants, etherealStep] : grants
+    }
     if (isArcaneArcherCantripOwner(entry)) return []
     const monk = getMonkSubclassSpellGrants(classData, subclasses[0], classLevel)
     if (monk)

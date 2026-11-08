@@ -61,6 +61,43 @@ export function isDirectMonkSpellTarget(target: string | undefined) {
   return className === 'monk' && directMonkSpellRules.has(name)
 }
 
+const directRangerRules = new Set([
+  'dread ambusher',
+  'umbral sight',
+  'iron mind',
+  'otherworldly glamour',
+  'fey reinforcements',
+  'frigid explorer',
+  'hungering might',
+  'draconic gift',
+  'drake companion',
+  'bond of fang and scale',
+  "drake's breath",
+  'perfected bond',
+  'detect portal',
+  'ethereal step',
+  "hunter's sense",
+  "magic-user's nemesis",
+  'misty wanderer',
+  'writhing tide',
+  'swarming dispersal',
+  'fortifying soul',
+  'chilling retribution',
+  'frozen haunt',
+  'ancient might',
+])
+
+export function isDirectRangerRuleTarget(target: string | undefined) {
+  const [, name, className, , subclass] = target?.split('|') ?? []
+  return (
+    className === 'ranger' &&
+    (name === subclass ||
+      name === `${subclass} spells` ||
+      name === `${subclass} magic` ||
+      directRangerRules.has(name))
+  )
+}
+
 const sameSubclass = (row: Record<string, unknown>, base: Record<string, unknown>) =>
   typeof row.name === 'string' &&
   row.name === base.name &&
@@ -89,7 +126,7 @@ export function auditInheritedSubclassRoots(
   return materialized.map((row, index) => {
     const authored = raw[index]
     if (
-      (row.className !== 'Fighter' && row.className !== 'Monk') ||
+      (row.className !== 'Fighter' && row.className !== 'Monk' && row.className !== 'Ranger') ||
       row.classSource !== 'XPHB' ||
       !('_copy' in authored)
     )

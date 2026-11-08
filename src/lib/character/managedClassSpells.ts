@@ -51,6 +51,7 @@ import {
   STEPS_OF_THE_FEY_SPELL,
   STEPS_OF_THE_FEY_TARGET,
 } from '@/lib/5etools/nativeWarlockPatronRules'
+import { isRevisedInheritedRangerSpellOwner } from '@/lib/5etools/rangerSubclassSpells'
 import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
@@ -630,6 +631,7 @@ export function projectManagedClassSpellState(
     character.classProgression.some(
       (entry) =>
         isRevisedInheritedOathOwner(entry) ||
+        isRevisedInheritedRangerSpellOwner(entry) ||
         isRevisedAncestralGuardian(entry) ||
         (norm(entry.name) === 'monk' &&
           norm(entry.source) === 'xphb' &&

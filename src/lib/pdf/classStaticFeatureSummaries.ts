@@ -463,6 +463,7 @@ export function getClassStaticFeatureSummaries(
         name !== 'fighter' &&
         name !== 'monk' &&
         name !== 'paladin' &&
+        name !== 'ranger' &&
         name !== 'wizard' &&
         name !== 'warlock') ||
       (source !== 'phb' && source !== 'xphb') ||
@@ -510,6 +511,38 @@ export function getClassStaticFeatureSummaries(
         ),
         ...fixed.flatMap((feature) => featureSummary(feature)),
       ]
+    }
+    if (name === 'ranger') {
+      if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
+      const sheetRules = new Set([
+        'extra attack',
+        "land's stride",
+        'hide in plain sight',
+        'vanish',
+        'roving',
+        'tireless',
+        'relentless hunter',
+        "nature's veil",
+        'precise hunter',
+        'feral senses',
+        'foe slayer',
+      ])
+      const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+        if (!ref.level || ref.level > entry.levels || !sheetRules.has(norm(ref.name))) return []
+        const target = getClassFeatureIdentity(ref)
+        const current = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        return current ? [current] : []
+      })
+      const archetype = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      return [...base, ...archetype].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
     }
     if (name === 'fighter') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []

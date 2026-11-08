@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Monk journey measured 6,859,570 B renderer and 1,566,591 B initial after certificate compaction.
-  rendererCode: 6699 * KIB,
-  initialRendererScript: 1530 * KIB,
+  // Ranger journey measured 6,894,030 B renderer and 1,596,302 B initial with its new rules.
+  rendererCode: 6733 * KIB,
+  initialRendererScript: 1559 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -17,6 +17,8 @@ import {
   HEALING_LIGHT_RULE_DIGEST,
   HEALING_LIGHT_TARGET,
 } from '@/lib/5etools/nativeWarlockPatronRules'
+import { getCurrentRangerFeatures } from '@/lib/5etools/rangerFeatureSource'
+import { getRangerJourneyResources } from '@/lib/5etools/rangerResources'
 import {
   getCurrentNativeSorcerer,
   getSorcererResourceDefs,
@@ -106,6 +108,7 @@ export function getCharacterClassResources(
   const healingDiceLimit = Math.max(1, options.charismaModifier)
   const proficiencyBonus = getProficiencyBonus(getTotalCharacterLevel(character))
   const monk = getCurrentMonkBaseRules(character, catalogs)
+  const ranger = getCurrentRangerFeatures(character, catalogs)
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
@@ -116,6 +119,14 @@ export function getCharacterClassResources(
       : getClassResourceDefs(resolveClass(entry), level)
     const earned = [...definitions]
     if (monk?.owner === entry) earned.push(...getMonkBaseResources(monk))
+    if (ranger?.owner === entry)
+      earned.push(
+        ...getRangerJourneyResources(
+          ranger,
+          options.abilityModifiers?.wisdom ?? 0,
+          proficiencyBonus,
+        ),
+      )
     const current = getCurrentResourceClass(character, entry, catalogs)
     if (
       catalogs &&
