@@ -836,6 +836,34 @@
     ]
   },
   {
+    "target": "subclass-feature|reanimator's skill set|artificer|efa|reanimator|rhw|3|rhw",
+    "digest": "e6836cfcc3f5bdad3dc21e9cca2a736e732638078f7fbe4443a4df8671ebb94b",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "alchemist's supplies",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|royal envoy|fighter|phb|purple dragon knight (banneret)|scag|7|scag",
     "digest": "7efbc0948749d341cd93aead16290a279ed28ace770193f9e2dfcad9a9cedb5b",
     "fields": [
@@ -985,6 +1013,279 @@
         "domain": "skills",
         "count": 1,
         "skillPool": null,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tool proficiency|artificer|tce|alchemist|tce|3|tce",
+    "digest": "92c9cc63ebfedbebc0e47b5cb62d1722f013bd37428bfcc02514f4af983b0837",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "otherSources",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "alchemist's supplies",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tool proficiency|artificer|tce|artillerist|tce|3|tce",
+    "digest": "b0b8750c9d989b5b9c800c2dc6899b75392e059bdf32a03d924d941d73acb443",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "otherSources",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "woodcarver's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tool proficiency|artificer|tce|battle smith|tce|3|tce",
+    "digest": "1370f0c2dc2d8f5a690b4d900ccad7f076ca7d8411ebd32464fb5ee01e6cf979",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "otherSources",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "smith's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|efa|alchemist|efa|3|efa",
+    "digest": "6b3e1f1ae1fe3ef99c5016e87f7a716ad3ccd9f4d4b8a109f8176fee6f8013b9",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "alchemist's supplies",
+        "excludeExisting": true
+      },
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "herbalism kit",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|efa|armorer|efa|3|efa",
+    "digest": "59bee4a90a8281e57673fd541a3f79011a4b458f91e5cf0548ad130c9160127a",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "smith's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|efa|artillerist|efa|3|efa",
+    "digest": "5bb31797b6c5c778fa399aa07bd03f2aef7bb9f73c873db66a105c99e452f893",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "woodcarver's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|efa|battle smith|efa|3|efa",
+    "digest": "fcce48d446be03973ecfd8dccc30e9640c74323ad2fb7cdfb1ee3d556e660c6d",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "smith's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|efa|cartographer|efa|3|efa",
+    "digest": "e9009b0dac0081e4a9b7cfdcee4521c6259dc6267d94d9a8acdd6d72c2d9f6e6",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "calligrapher's supplies",
+        "excludeExisting": true
+      },
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "cartographer's tools",
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
+    "target": "subclass-feature|tools of the trade|artificer|tce|armorer|tce|3|tce",
+    "digest": "25c6092deb2a3bc8362eecf434d5301dd08cfe5f3cfa3d406782c79f423fea30",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "AT",
+        "trigger": "smith's tools",
         "excludeExisting": true
       }
     ]

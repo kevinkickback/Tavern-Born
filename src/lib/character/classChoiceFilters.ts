@@ -25,17 +25,16 @@ function getItemTypeLabels(
   item: Item5e,
   itemTypeByAbbr: Readonly<Record<string, string>>,
 ): string[] {
-  const rawTypes = Array.isArray(item.type) ? item.type : [item.type]
-  const typeCodes = rawTypes
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => value.split('|')[0]?.trim())
-    .filter((value): value is string => Boolean(value))
   const weaponCategory = normalized(item.weaponCategory)
+  const traits = getNormalizedItemTraits(item, itemTypeByAbbr)
   return [
-    ...typeCodes,
-    ...typeCodes.map((code) => itemTypeByAbbr[code.toUpperCase()]),
+    ...traits.typeCodes,
+    ...traits.typeCodes.map((code) => itemTypeByAbbr[code]),
     item.weaponCategory,
     weaponCategory ? `${weaponCategory} weapon` : undefined,
+    traits.isWondrous ? 'wondrous item' : undefined,
+    traits.isPotion ? 'potion' : undefined,
+    traits.isScroll ? 'scroll' : undefined,
   ]
     .filter((value): value is string => Boolean(value))
     .map(normalized)
@@ -132,16 +131,14 @@ export function matchesClassChoiceFilter(
   }
   if (
     filter.entityType === 'item' &&
-    !matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.itemTypes)
+    (filter.itemTypes?.length || filter.excludedItemTypes?.length)
   ) {
-    return false
-  }
-  if (
-    filter.entityType === 'item' &&
-    filter.excludedItemTypes?.length &&
-    matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.excludedItemTypes)
-  ) {
-    return false
+    const labels = getItemTypeLabels(entity as Item5e, itemTypeByAbbr)
+    if (
+      !matchesAny(labels, filter.itemTypes) ||
+      (filter.excludedItemTypes?.length && matchesAny(labels, filter.excludedItemTypes))
+    )
+      return false
   }
   if (
     filter.entityType === 'item' &&

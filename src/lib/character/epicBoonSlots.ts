@@ -7,6 +7,7 @@ import {
   getEpicBoonAdvancementReference,
   hasEpicBoonAdvancementReference,
   isEpicBoonAdvancement,
+  isRevisedEpicBoonOwner,
 } from '@/lib/5etools/epicBoonAdvancement'
 import { deriveFeatOptionSteps } from '@/lib/5etools/parsers/featOptions'
 import {
@@ -127,9 +128,10 @@ export function isRetiredEpicBoonChoice(
   choice: NormalizedCharacterChoice,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ): boolean {
-  if (choice.owner.type !== 'class' || normalizeKey(choice.owner.source) !== 'xphb') return false
+  if (choice.owner.type !== 'class') return false
   if (choice.id === choiceId(choice.owner) && currentDeclaration(choice.owner, catalogs))
     return true
+  if (normalizeKey(choice.owner.source) !== 'xphb') return false
 
   const target = getClassChoiceDeclaration(choice)?.target
   return (
@@ -273,16 +275,22 @@ export function getEpicBoonSlots(
   rawClasses: Readonly<Record<string, Class5e>> = {},
 ): EpicBoonSlot[] {
   return character.classProgression.flatMap((entry): EpicBoonSlot[] => {
-    if (entry.levels < EPIC_BOON_LEVEL || normalizeKey(entry.source ?? '') !== 'xphb') return []
+    if (entry.levels < EPIC_BOON_LEVEL || !entry.source) return []
     const owner = { name: entry.name, source: entry.source ?? '' }
+    const currentClasses =
+      catalogs?.classes?.filter((cls) => findClassReference(owner, [cls])) ?? []
+    const rawClass = findClassReference(owner, Object.values(rawClasses))
+    if (
+      !isRevisedEpicBoonOwner(owner) &&
+      !currentClasses.some(isRevisedEpicBoonOwner) &&
+      !(rawClass && isRevisedEpicBoonOwner(rawClass))
+    )
+      return []
     const current = currentDeclaration(owner, catalogs)
     const claims = getClaims(character, owner)
     const legacy = claims.legacySelections.length > 0 || claims.mirrors.length > 0
     const count = claims.ordinary.length + claims.increases.length + Number(legacy)
     if (!current && !legacy) {
-      const currentClasses =
-        catalogs?.classes?.filter((cls) => findClassReference(owner, [cls])) ?? []
-      const rawClass = findClassReference(owner, Object.values(rawClasses))
       const knownGain =
         currentClasses.some(hasEpicBoonAdvancementReference) ||
         !!(rawClass && hasEpicBoonAdvancementReference(rawClass))
@@ -463,6 +471,7 @@ type Replacement =
 
 interface SelectionAuthority {
   catalogs: ClassChoiceFeatureCatalogs
+  rawClasses?: Readonly<Record<string, Class5e>>
   feats: readonly Feat5e[]
   /** Calculated against the actor after removing the previous claim. */
   prerequisites: PrereqCharacterSnapshot
@@ -476,9 +485,18 @@ export function replaceEpicBoonSelection(
 ): Character {
   const { name: className, source: classSource } = slot.owner
   if (
-    normalizeKey(classSource) !== 'xphb' ||
     slot.choiceId !== choiceId(slot.owner) ||
     slot.claimSnapshot !== claimSnapshot(character, getClaims(character, slot.owner))
+  )
+    return character
+  if (
+    normalizeKey(classSource) !== 'xphb' &&
+    !getEpicBoonSlots(
+      character,
+      authority?.catalogs,
+      authority?.feats ?? [],
+      authority?.rawClasses,
+    ).some((current) => current.choiceId === slot.choiceId)
   )
     return character
   if (!replacement) return withoutEpicBoonSelection(character, slot.owner)

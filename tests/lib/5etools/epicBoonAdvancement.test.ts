@@ -78,17 +78,19 @@ test('bundled revised core classes retain one level-19 advancement', () => {
 })
 
 test.runIf(existsSync(join(configuredClassDir, 'index.json')))(
-  'configured revised core classes absorb the EB filter into their one advancement',
+  'configured revised core classes and Artificer each receive one level-19 advancement',
   () => {
     verifyCoreGains(configuredClassDir)
     const { classes } = parseClassDocument(
       JSON.parse(readFileSync(join(configuredClassDir, 'class-artificer.json'), 'utf8')),
     ) as { classes: Class5e[] }
     const artificer = classes.find((cls) => cls.name === 'Artificer' && cls.source === 'EFA')!
-    expect(getEpicBoonAdvancementReference(artificer.classFeatureRefs ?? [], artificer)).toBe(
-      undefined,
-    )
-    expect(artificer.normalizedRules?.asiLevels).toContain(19)
+    const gain = getEpicBoonAdvancementReference(artificer.classFeatureRefs ?? [], artificer)
+    expect(gain?.ref).toBe('Epic Boon|Artificer|EFA|19|EFA')
+    expect(gain?.feature && isEpicBoonAdvancement(gain.feature)).toBe(true)
+    expect(artificer.normalizedRules?.asiLevels.filter((level) => level === 19)).toEqual([19])
+    const classic = classes.find((cls) => cls.name === 'Artificer' && cls.source === 'TCE')!
+    expect(getEpicBoonAdvancementReference(classic.classFeatureRefs ?? [], classic)).toBeUndefined()
   },
 )
 

@@ -1,4 +1,5 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
+import { getArtificerClassResources } from '@/lib/5etools/artificerJourneyRules'
 import { hasCurrentWarriorOfTheGods } from '@/lib/5etools/barbarianJourneySources'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -119,6 +120,14 @@ export function getCharacterClassResources(
         : []
       : getClassResourceDefs(resolveClass(entry), level)
     const earned = [...definitions]
+    earned.push(
+      ...getArtificerClassResources(
+        character,
+        entry,
+        catalogs,
+        options.abilityModifiers?.intelligence,
+      ),
+    )
     if (monk?.owner === entry) earned.push(...getMonkBaseResources(monk))
     if (ranger?.owner === entry)
       earned.push(

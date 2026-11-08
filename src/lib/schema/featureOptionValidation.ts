@@ -6,7 +6,7 @@ import {
   getFeatureOptionKey,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
-import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
+import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import {
   isRevisedTargetedInvocation,
   REVISED_INVOCATION_POOL,
@@ -56,7 +56,7 @@ export function getInvalidFeatureOptionSelectionPaths(
       paths.push(['classChoiceSelections', index])
       continue
     }
-    const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
+    const configuration = getSubclassFeatureConfigurationRule(selection.choiceId)
     if (configuration && character.classProgression) {
       const owners = character.classProgression.filter(
         (entry) =>

@@ -353,6 +353,8 @@ try {
       'scripts/lib/subclass-proficiency-source.mjs',
     ].map((file) => ({ file, sha256: sha(fs.readFileSync(file)) })),
     toolClassificationDependencies: [
+      'scripts/lib/artificer-proficiency-source.mjs',
+      'scripts/lib/fixed-proficiency-source.mjs',
       'src/lib/calculations/itemClassification.ts',
       'src/lib/5etools/copyResolution.ts',
       'src/lib/5etools/concreteToolProficiencies.ts',

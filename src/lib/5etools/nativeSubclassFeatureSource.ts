@@ -129,6 +129,18 @@ export function isDirectRogueRuleTarget(target: string | undefined) {
   )
 }
 
+export function isDirectArtificerRuleTarget(target: string | undefined) {
+  const [, name, cls, source, subclass, printing] = target?.split('|') ?? []
+  return (
+    cls === 'artificer' &&
+    source === printing &&
+    ['tce', 'efa'].includes(source) &&
+    (subclass === 'armorer' ||
+      (subclass === 'alchemist' &&
+        ['alchemist', 'restorative reagents', 'chemical mastery'].includes(name)))
+  )
+}
+
 export function isInheritedClassicSubclass(row: Record<string, unknown>) {
   const copy = record(row._copy)
   return (

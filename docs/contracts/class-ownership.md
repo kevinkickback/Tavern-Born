@@ -137,6 +137,15 @@ the current spell and resistance from the same source table row. The revised Rog
 Cunning Strike and Devious Strikes use the same exact referenced rules in Class Details
 and sheet output. Strike options are chosen when attacking.
 
+Artificer item-plan gains read their quotas and eligible item tiers from the current progression
+and item tables. Classic infusions use the structured class-level prerequisite at the original
+selection slot. A Replicate Magic Item plan records the specific item it replicates. The same
+infusion can grant distinct plans for distinct items. Armorer reads the first-gain Armor Model
+options and Details from its printing. The sheet associates later Perfected Armor rules with the
+saved model. Details also describe the rules for changing the armor in play and replacing an
+existing infusion or plan on level-up. The creator records initial choices at their earning
+levels. Artificer attunement limits and capstone effects use the earned, current class rules.
+
 Reviewed Druid Circles print their current subclass rules at the levels that grant them.
 The source proof keeps the selected Circle and its class edition separate from the printing
 of a copied rule. Classic Circle of the Moon's forms print separately from base Wild Shape.

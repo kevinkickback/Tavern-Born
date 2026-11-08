@@ -35,7 +35,9 @@ export function isValidClassProficiencySelection(
   const domain = getClassProficiencyRuleDomain(rule, relation)
   const setup = selection.proficiencyAtGain
   const trigger =
-    (relation?.domain === 'skills' || relation?.domain === 'savingThrows') &&
+    (relation?.domain === 'skills' ||
+      relation?.domain === 'savingThrows' ||
+      relation?.domain === 'tools') &&
     (domain?.trigger ?? rule?.proficiencyAtGain)
   const historical = !!trigger
   const optional = relation && optionalClassProficiencyRule(relation.target)

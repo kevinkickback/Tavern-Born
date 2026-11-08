@@ -1,4 +1,5 @@
 import type { CharacterClassChoiceSelection } from '@/types/character'
+import { getArmorModelRule, isValidArmorModelSelection } from './artificerArmorModels'
 import { getLandChoiceRule, isValidLandSelection } from './circleOfTheLand'
 import {
   getDivineSoulConfigurationRule,
@@ -10,15 +11,17 @@ import {
   isValidWarlockPatronConfiguration,
 } from './warlockPatronConfigurations'
 
-export const getSubclassSpellConfigurationRule = (id: string) =>
+export const getSubclassFeatureConfigurationRule = (id: string) =>
   getLandChoiceRule(id) ??
   getWarlockPatronConfigurationRule(id) ??
   getDivineSoulConfigurationRule(id) ??
-  getScionConfigurationRule(id)
+  getScionConfigurationRule(id) ??
+  getArmorModelRule(id)
 
-export const isValidSubclassSpellConfigurationSelection = (row: CharacterClassChoiceSelection) =>
+export const isValidSubclassFeatureConfigurationSelection = (row: CharacterClassChoiceSelection) =>
   getLandChoiceRule(row.choiceId)
     ? isValidLandSelection(row)
     : isValidWarlockPatronConfiguration(row) ||
       isValidDivineSoulSelection(row) ||
-      isValidScionSelection(row)
+      isValidScionSelection(row) ||
+      isValidArmorModelSelection(row)

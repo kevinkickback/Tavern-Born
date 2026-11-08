@@ -1,4 +1,10 @@
 import {
+  ARMOR_MODEL_GROUP,
+  getArmorModelConfiguration,
+  resolveArmorModelOption,
+} from '@/lib/5etools/artificerArmorModels'
+import { readArtificerInfusionPlans } from '@/lib/5etools/artificerInfusionPlans'
+import {
   BLESSED_STRIKES_ID,
   getCurrentBlessedStrikes,
   isBlessedStrikesOption,
@@ -146,8 +152,8 @@ import {
   STORM_TARGETS,
   stormFeatureRef,
 } from '@/lib/5etools/stormAuraIdentity'
+import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
-import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   getRevisedInvocationCantripRule,
@@ -604,6 +610,8 @@ export function resolveFeatureOptionEntity(
     return resolveWarlockPatronConfigurationOption(option, catalogs.classes)
   if (target?.format === 'source-group' && isDivineSoulConfigurationGroup(target.group))
     return resolveDivineSoulConfigurationOption(option, catalogs.classes)
+  if (target?.format === 'source-group' && target.group === ARMOR_MODEL_GROUP)
+    return resolveArmorModelOption(option, catalogs.classes)
   if (target?.format === 'source-group' && target.group === SCION_GROUP)
     return resolveScionOption(option, catalogs.classes)
   if (target?.format === 'source-group')
@@ -701,11 +709,13 @@ function resolveExplicitOption(
                     ? 'Circle terrain'
                     : match.group === SCION_GROUP
                       ? 'Dread Allegiance'
-                      : isDivineSoulConfigurationGroup(String(match.group))
-                        ? 'Divine affinity'
-                        : isFavoredEnemyOption(option)
-                          ? 'Favored enemy'
-                          : 'Favored terrain'
+                      : match.group === ARMOR_MODEL_GROUP
+                        ? 'Armor Model'
+                        : isDivineSoulConfigurationGroup(String(match.group))
+                          ? 'Divine affinity'
+                          : isFavoredEnemyOption(option)
+                            ? 'Favored enemy'
+                            : 'Favored terrain'
               : 'Dragon ancestry'),
         ],
       },
@@ -787,6 +797,59 @@ function resolveProgressionOption(
   }
 }
 
+function withEarnedChoiceLevel(
+  choice: NormalizedCharacterChoice,
+  view: ClassChoiceOptionView,
+  level: number | undefined,
+  saved: readonly CharacterClassChoiceOption[],
+  classLevel: number,
+): ClassChoiceOptionView {
+  if (!isClassChoiceOptionEligible(view)) return view
+  const previous = saved.find(
+    (option) => getClassChoiceOptionKey(option) === getClassChoiceOptionKey(view.reference),
+  )
+  return {
+    ...view,
+    minimumClassLevel: level,
+    ...(level === undefined || level > (previous?.slotLevel ?? classLevel)
+      ? {
+          availability: 'retained',
+          unavailableReason:
+            level === undefined
+              ? 'The current source prerequisite could not be verified.'
+              : `Requires ${choice.owner.name} level ${level} when learned.`,
+        }
+      : {}),
+  }
+}
+
+function getInfusionLearningLevel(choice: NormalizedCharacterChoice, view: ClassChoiceOptionView) {
+  if (!view.prerequisite?.length) return choice.level
+  const levels = view.prerequisite.flatMap((rule) => {
+    if (
+      !rule ||
+      typeof rule !== 'object' ||
+      Array.isArray(rule) ||
+      Object.keys(rule).some((key) => key !== 'level' && key !== 'item')
+    )
+      return []
+    const level = rule.level
+    if (level === undefined) return [choice.level]
+    return !!level &&
+      typeof level === 'object' &&
+      !level.subclass &&
+      normalized(level.class?.name) === normalized(choice.owner.name) &&
+      (!level.class?.source ||
+        normalized(level.class.source) === normalized(choice.owner.source)) &&
+      Number.isInteger(level.level) &&
+      level.level >= choice.level &&
+      level.level <= 20
+      ? [level.level]
+      : []
+  })
+  return levels.length ? Math.min(...levels) : undefined
+}
+
 export function getEarnedFixedClassChoiceOptions(
   choice: NormalizedCharacterChoice,
   catalogs: ClassChoiceFeatureCatalogs,
@@ -819,7 +882,10 @@ export function resolveClassChoiceOptions(
   character?: Character,
   knownWarlockCantrips?: readonly Spell5e[],
 ): ClassChoiceOptionView[] {
-  if (getProgressiveChoiceGainCount(choice, choice.level) !== undefined) {
+  if (
+    choice.kind === 'optional-feature' &&
+    getProgressiveChoiceGainCount(choice, choice.level) !== undefined
+  ) {
     const keyOf = (option: OptionalFeatureLike) =>
       getClassChoiceOptionKey({
         entityType: 'optionalFeature',
@@ -954,7 +1020,7 @@ export function resolveClassChoiceOptions(
     isFeatureLiteralChoiceId(choice.id) &&
     !getRevisedHunterRule(choice.id) &&
     !getBarbarianPathChoice(choice.id) &&
-    !getSubclassSpellConfigurationRule(choice.id) &&
+    !getSubclassFeatureConfigurationRule(choice.id) &&
     choice.id !== REVISED_AFFINITY_ID &&
     (!literal ||
       !(enemy
@@ -1000,15 +1066,36 @@ export function resolveClassChoiceOptions(
       : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
+  const tableItems = choice.kind === 'item' && choice.source.kind === 'class-table'
+  const infusions =
+    choice.source.kind === 'optional-feature-progression' &&
+    filter?.featureTypes?.length === 1 &&
+    filter.featureTypes[0] === 'AI'
   if (choice.options.length > 0 && !filter?.requiresMastery) {
     resolved.push(
       ...choice.options
         .filter(
           (option) => choice.fixedOptions?.length || (option.minimumClassLevel ?? 1) <= classLevel,
         )
-        .map((option) =>
-          resolveProgressionOption(choice, option, catalogs, saved, classLevel, tableDefinitions),
-        ),
+        .map((option) => {
+          const view = resolveProgressionOption(
+            choice,
+            option,
+            catalogs,
+            saved,
+            classLevel,
+            tableDefinitions,
+          )
+          return tableItems
+            ? withEarnedChoiceLevel(
+                choice,
+                view,
+                option.minimumClassLevel ?? choice.level,
+                saved,
+                classLevel,
+              )
+            : view
+        }),
     )
   }
   if (currentFilter) {
@@ -1016,20 +1103,102 @@ export function resolveClassChoiceOptions(
       currentFilter.requiresMastery && currentFilter.requiresProficiency && character
         ? getCurrentWeaponProficiencies(character, catalogs.classes)
         : catalogs.weaponProficiencies
-    resolved.push(
-      ...getFilteredCatalog(currentFilter, catalogs)
-        .filter((entity) =>
-          matchesClassChoiceFilter(
-            entity,
-            currentFilter,
-            catalogs.itemPropertyByAbbr,
-            catalogs.itemTypeByAbbr,
-            weapons,
+    const tableIndexes = new Map(
+      tableItems
+        ? resolved.map(
+            (option, index) => [getClassChoiceOptionKey(option.reference), index] as const,
+          )
+        : [],
+    )
+    for (const entity of getFilteredCatalog(currentFilter, catalogs)) {
+      const matches = (candidate: NormalizedChoiceOptionFilter) =>
+        matchesClassChoiceFilter(
+          entity,
+          candidate,
+          catalogs.itemPropertyByAbbr,
+          catalogs.itemTypeByAbbr,
+          weapons,
+          classLevel,
+        )
+      if (!matches(currentFilter)) continue
+      const view = toView(currentFilter.entityType, entity, catalogs)
+      if (tableItems) {
+        const minimum = (candidate: NormalizedChoiceOptionFilter): number =>
+          Math.max(
+            candidate.minimumClassLevel ?? choice.level,
+            candidate.anyOf?.length
+              ? Math.min(...candidate.anyOf.filter(matches).map(minimum))
+              : choice.level,
+          )
+        const level = minimum(currentFilter)
+        const key = getClassChoiceOptionKey(view.reference)
+        const prior = tableIndexes.get(key)
+        if (prior !== undefined && (resolved[prior].minimumClassLevel ?? Infinity) <= level)
+          continue
+        const qualified = withEarnedChoiceLevel(choice, view, level, saved, classLevel)
+        if (prior !== undefined) resolved[prior] = qualified
+        else {
+          tableIndexes.set(key, resolved.length)
+          resolved.push(qualified)
+        }
+      } else if (infusions) {
+        if (normalized(view.reference.name) === 'replicate magic item') continue
+        resolved.push(
+          withEarnedChoiceLevel(
+            choice,
+            { ...view, prerequisite: undefined },
+            getInfusionLearningLevel(choice, view),
+            saved,
             classLevel,
           ),
         )
-        .map((entity) => toView(currentFilter.entityType, entity, catalogs)),
+      } else resolved.push(view)
+    }
+  }
+  if (infusions) {
+    const replicas = catalogs.optionalFeatures.filter(
+      (row) =>
+        normalized(row.name) === 'replicate magic item' &&
+        normalized(row.source) === normalized(choice.owner.source),
     )
+    const plan = replicas.length === 1 && readArtificerInfusionPlans(replicas[0], choice.level)
+    if (plan) {
+      const plans = new Map<string, ClassChoiceOptionView>()
+      const addPlan = (view: ClassChoiceOptionView, level: number) => {
+        const key = getClassChoiceOptionKey(view.reference)
+        if ((plans.get(key)?.minimumClassLevel ?? Infinity) <= level) return
+        plans.set(
+          key,
+          withEarnedChoiceLevel(
+            choice,
+            { ...view, displayLabel: `Replicate ${view.reference.name}` },
+            level,
+            saved,
+            classLevel,
+          ),
+        )
+      }
+      for (const option of plan.options) {
+        if ((option.minimumClassLevel ?? Infinity) > classLevel) continue
+        const view = resolveExplicitOption(option, catalogs)
+        if (isClassChoiceOptionEligible(view))
+          addPlan(view, option.minimumClassLevel ?? choice.level)
+      }
+      for (const item of getFilteredCatalog(plan.alternate, catalogs)) {
+        if (
+          matchesClassChoiceFilter(
+            item,
+            plan.alternate,
+            catalogs.itemPropertyByAbbr,
+            catalogs.itemTypeByAbbr,
+            catalogs.weaponProficiencies,
+            classLevel,
+          )
+        )
+          addPlan(toView('item', item, catalogs), choice.level)
+      }
+      resolved.push(...plans.values())
+    }
   }
 
   const poolSection = getOptionalClassPoolSection(choice)
@@ -1691,6 +1860,7 @@ export function getClassChoiceCandidates(
       getRevisedAffinitySetup(classData, subclass, catalogs),
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
       getScionConfiguration(classData, subclass, catalogs?.classes),
+      getArmorModelConfiguration(classData, subclass, catalogs?.classes),
     ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }

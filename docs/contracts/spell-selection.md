@@ -443,3 +443,12 @@ Feature casts appear in Spells, Actions and the sheet. When a feature changes a 
 casting time to a different action kind, Actions also keeps any independent ordinary cast.
 The sheet uses the feature timing for exclusive casts and the spell's ordinary ritual
 eligibility when an independent ordinary route exists.
+
+## Artificer specialty spells
+
+Revised Tinker's Magic grants the cantrip named by its current feature outside the ordinary
+cantrip quota. It appears at the feature's earned level and is excluded from elective picks.
+Always-prepared specialty spells follow the current subclass schedule. Alchemist's Restorative
+Reagents and Chemical Mastery are limited feature casts. The revised innate schedule must agree
+with the actual granting rule, including its recovery and focus requirements. These casts do not
+consume ordinary preparation or replace an independently prepared copy of the same spell.

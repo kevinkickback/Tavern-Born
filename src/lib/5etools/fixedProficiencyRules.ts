@@ -20,6 +20,7 @@ export interface FixedProficiencyRule {
   >
   trainingTool?: { name: string; source: string; reprint?: string }
   trainingTools?: readonly { name: string; source: string; reprint?: string }[]
+  trainingToolFallbacks?: readonly string[]
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string

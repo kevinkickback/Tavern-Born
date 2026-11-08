@@ -9,7 +9,12 @@ import type { NormalizedCharacterChoice } from '@/types/classRules'
 export function getHistoricalProficiencyRule(choiceId: string) {
   const relation = decodeClassProficiencyChoiceId(choiceId)
   const rule = relation && classProficiencyRule(relation.target)
-  if (relation?.domain !== 'skills' && relation?.domain !== 'savingThrows') return undefined
+  if (
+    relation?.domain !== 'skills' &&
+    relation?.domain !== 'savingThrows' &&
+    relation?.domain !== 'tools'
+  )
+    return undefined
   const domain = getClassProficiencyRuleDomain(rule, relation)
   const proficiencyAtGain = domain && (domain.trigger ?? rule?.proficiencyAtGain)
   return proficiencyAtGain ? { proficiencyAtGain } : undefined

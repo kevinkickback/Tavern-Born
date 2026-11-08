@@ -1,4 +1,9 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID } from '@/lib/5etools/archdruidSource'
+import { getChosenArmorModel } from '@/lib/5etools/artificerArmorModels'
+import {
+  getArtificerItemCapacity,
+  getCurrentArtificerRules,
+} from '@/lib/5etools/artificerJourneyRules'
 import {
   getCurrentBardJackOfAllTrades,
   getCurrentBardMagicalSecrets,
@@ -39,8 +44,12 @@ import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getClassChoiceFeatureId, getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
+  createClassChoiceCatalogs,
   getCharacterClassChoices,
+  getClassChoiceOptionKey,
   getEarnedFixedClassChoiceOptions,
+  isClassChoiceOptionEligible,
+  resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -253,6 +262,21 @@ function featureSummary(
 ) {
   const text = renderEntriesToText(entries)
   return feature && text ? [{ text: `${feature.name}: ${text}`, compactText: feature.name }] : []
+}
+
+function withoutArtificerPlanTables(entries: unknown[]): unknown[] {
+  return entries.flatMap((entry) => {
+    const row = record(entry)
+    if (
+      row.type === 'table' &&
+      typeof row.caption === 'string' &&
+      /^Magic Item Plans \(Artificer Level \d+\+\)$/.test(row.caption)
+    )
+      return []
+    return Array.isArray(row.entries)
+      ? [{ ...row, entries: withoutArtificerPlanTables(row.entries) }]
+      : [entry]
+  })
 }
 
 function getClassicHunterSelectedRules(
@@ -475,6 +499,54 @@ function getClericChannelDivinityOptions(
   })
 }
 
+function getArtificerPlanNames(
+  character: Character,
+  owner: CharacterClassEntry,
+  cls: Class5e,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  const activity = createOptionalClassFeatureActivity(character, catalogs)
+  const choices = getCharacterClassChoices(cls, undefined, activity, catalogs).filter(
+    (choice) =>
+      (choice.kind === 'item' && choice.source.kind === 'class-table') ||
+      (choice.kind === 'optional-feature' && choice.optionFilter?.featureTypes?.join() === 'AI'),
+  )
+  if (choices.length !== 1) return []
+  const [choice] = choices
+  const saved = character.classChoiceSelections?.filter(
+    (row) =>
+      !row.inactive &&
+      row.choiceId === choice.id &&
+      row.className === owner.name &&
+      row.classSource === owner.source &&
+      !row.subclassName &&
+      row.classLevel === choice.level,
+  )
+  if (saved?.length !== 1) return []
+  const selected = saved[0].selected.filter(
+    (option) => option.slotLevel >= choice.level && option.slotLevel <= owner.levels,
+  )
+  const options = resolveClassChoiceOptions(
+    choice,
+    createClassChoiceCatalogs(catalogs),
+    selected,
+    owner.levels,
+    character,
+  )
+  const available = new Map(
+    options
+      .filter(isClassChoiceOptionEligible)
+      .map((option) => [
+        getClassChoiceOptionKey(option.reference),
+        option.displayLabel ?? option.reference.name,
+      ]),
+  )
+  return selected.flatMap((option) => {
+    const name = available.get(getClassChoiceOptionKey(option))
+    return name ? [name] : []
+  })
+}
+
 /** Print-only rules which have a current, unambiguous declaration and an earned owner. */
 export function getClassStaticFeatureSummaries(
   character: Character,
@@ -541,6 +613,71 @@ export function getClassStaticFeatureSummaries(
     }
     const name = entry.name.trim().toLowerCase()
     const source = entry.source.trim().toLowerCase()
+    if (name === 'artificer') {
+      const current = getCurrentArtificerRules(character, catalogs)
+      if (!current || current.owner !== entry) return []
+      const { cls } = current
+      const capacity = getArtificerItemCapacity(current)
+      const plans = capacity ? getArtificerPlanNames(character, entry, cls, catalogs) : []
+      const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+        if (
+          !ref.level ||
+          ref.level > entry.levels ||
+          ref.gainSubclassFeature ||
+          ['ability score improvement', 'epic boon'].includes(norm(ref.name))
+        )
+          return []
+        const target = getClassFeatureIdentity(ref)
+        const feature = target && getCurrentDirectClassFeature(cls, catalogs, target)
+        if (!feature) return []
+        return [
+          {
+            ...feature,
+            entries:
+              capacity?.target === target
+                ? [
+                    ...withoutArtificerPlanTables(feature.entries ?? []),
+                    `Maximum active ${capacity.label.toLowerCase()}: ${capacity.amount}.`,
+                    ...(plans.length
+                      ? [
+                          `Known ${cls.edition === 'classic' ? 'infusions' : 'plans'}: ${plans.join(', ')}.`,
+                        ]
+                      : []),
+                  ]
+                : feature.entries,
+          },
+        ]
+      })
+      const specialty = getDeclaredSubclassStaticFeatures(cls, entry, catalogs, {
+        sourceDeclaredGains: true,
+        expandNestedRules: true,
+      })
+      const model =
+        entry.subclass === 'Armorer' && entry.subclassSource === cls.source
+          ? getChosenArmorModel(cls.source, catalogs.classes, character.classChoiceSelections)
+          : undefined
+      const specialistRules = specialty.map((feature) => {
+        if (!model || !feature.entries) return feature
+        if (feature.name === 'Armor Model') {
+          return { ...feature, entries: feature.entries.filter((row) => typeof row === 'string') }
+        }
+        if (feature.name !== 'Perfected Armor') return feature
+        return {
+          ...feature,
+          entries: feature.entries.filter((row) => {
+            const section = record(row)
+            const name = norm(typeof section.name === 'string' ? section.name : undefined)
+            return !model.alternatives.includes(name) || name === norm(model.name)
+          }),
+        }
+      })
+      return [...base, ...specialistRules].flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
+    }
     if (
       (name !== 'bard' &&
         name !== 'barbarian' &&

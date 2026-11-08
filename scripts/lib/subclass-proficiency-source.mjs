@@ -1,4 +1,8 @@
 // Closed development-time adapters for prose-only paired proficiency grants. Runtime uses certificates.
+import {
+  hasArtificerTrainingReferenceSources,
+  readArtificerTraining,
+} from './artificer-proficiency-source.mjs'
 import semanticCheckpoint from './subclass-proficiency-ancestor-semantics.json' with {
   type: 'json',
 }
@@ -798,8 +802,41 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
+  const artificerTools = features.flatMap((feature) => {
+    const training = readArtificerTraining(feature)
+    if (!training?.toolRefs?.length) return []
+    const target = identity(feature)
+    const allowed = hasArtificerTrainingReferenceSources(feature)
+      ? [...FEATURE_FIELDS, 'otherSources']
+      : FEATURE_FIELDS
+    if (!target || seen.has(target) || !only(feature, allowed) || feature._copy)
+      fail('Unsupported Artificer tool training choice')
+    const group = toolsFor(training.toolGroup, 'AT')
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: training.toolRefs.map((tool) => ({
+          domain: 'tools',
+          count: 1,
+          toolCategory: group.category,
+          trigger: tool.name,
+          excludeExisting: true,
+        })),
+      },
+    ]
+  })
   return [
     ...paired,
+    ...artificerTools,
     ...masterOfIntrigue,
     ...simpleSkills,
     ...giantPower,
@@ -819,7 +856,7 @@ export function deriveSubclassProficiencyCertificates(documents, rules, api) {
     only(row, [
       ...FEATURE_FIELDS,
       ...(api.sourceFields ?? []),
-      ...(orderSource(row) ? ['otherSources'] : []),
+      ...(orderSource(row) || hasArtificerTrainingReferenceSources(row) ? ['otherSources'] : []),
     ])
   const validateMetadata = (record, root = false) => {
     for (const field of ['srd', 'srd52', 'basicRules2024']) {

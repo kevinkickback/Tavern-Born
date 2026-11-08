@@ -1,3 +1,7 @@
+import {
+  hasArtificerTrainingReferenceSources,
+  readArtificerTraining,
+} from './artificer-proficiency-source.mjs'
 import { deriveThievesCant } from './class-proficiency-source.mjs'
 
 // Closed adapters for prose-only fixed grants. Names, owners and pools come from qualified source.
@@ -292,6 +296,35 @@ export function deriveFixedProficiencyRules(documents, api) {
       const target = api.subclassIdentity(feature)
       const monk = deriveMonkTraining(feature, api.toolDocuments)
       const rogue = deriveRogueToolTraining(feature, api.toolDocuments)
+      const artificer = readArtificerTraining(feature)
+      if (artificer) {
+        validateFeature(
+          feature,
+          [
+            ...SUBCLASS_FIELDS,
+            ...(hasArtificerTrainingReferenceSources(feature) ? ['otherSources'] : []),
+          ],
+          true,
+        )
+        if (feature._copy) fail('Copied Artificer training producer')
+        const { training, toolRefs } = artificer
+        push(
+          feature,
+          'fixed-training',
+          {
+            training,
+            subclassGainPosition: 'first',
+            ...(toolRefs?.length && {
+              trainingToolFallbacks: toolRefs.map((tool) => tool.name),
+              trainingTools: toolRefs.map(({ name, source }) =>
+                deriveTrainingTool(name, source, api.toolDocuments),
+              ),
+            }),
+          },
+          api.subclassIdentity,
+        )
+        continue
+      }
       if (rogue) {
         push(
           feature,

@@ -32,9 +32,9 @@ import {
   revisedHunterOwner,
 } from '@/lib/5etools/revisedHunterIdentity'
 import {
-  getSubclassSpellConfigurationRule,
-  isValidSubclassSpellConfigurationSelection,
-} from '@/lib/5etools/subclassSpellConfiguration'
+  getSubclassFeatureConfigurationRule,
+  isValidSubclassFeatureConfigurationSelection,
+} from '@/lib/5etools/subclassFeatureConfiguration'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
   isCurrentRevisedInvocationCantripPool,
@@ -360,12 +360,12 @@ export function getFeatureOptionSelectionStates(
           selection.choiceId === REVISED_AFFINITY_ID ||
           !!getBarbarianPathChoice(selection.choiceId) ||
           !!getRevisedHunterRule(selection.choiceId) ||
-          !!getSubclassSpellConfigurationRule(selection.choiceId)),
+          !!getSubclassFeatureConfigurationRule(selection.choiceId)),
     )
     .map((selection) => {
       const hunter = getRevisedHunterRule(selection.choiceId)
       const land = getLandChoiceRule(selection.choiceId)
-      const configuration = getSubclassSpellConfigurationRule(selection.choiceId)
+      const configuration = getSubclassFeatureConfigurationRule(selection.choiceId)
       const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
       const barbarianPathChoice = !!getBarbarianPathChoice(selection.choiceId)
       const usesSourceGroup = !!(hunter || configuration || revisedAffinity || barbarianPathChoice)
@@ -404,7 +404,7 @@ export function getFeatureOptionSelectionStates(
                 candidate.level <= owner.levels &&
                 (!hunter || isValidRevisedHunterSelection(selection)) &&
                 (!barbarianPathChoice || getSavedBarbarianPathOption(selection)) &&
-                (!configuration || isValidSubclassSpellConfigurationSelection(selection)) &&
+                (!configuration || isValidSubclassFeatureConfigurationSelection(selection)) &&
                 (!revisedAffinity ||
                   (getSavedAffinityDamageType(selection, character.classProgression) &&
                     isRevisedAffinitySourceEnabled(character))) &&

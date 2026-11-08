@@ -43,7 +43,6 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { RARITY_COLORS } from '@/lib/5etools/constants'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import {
   buildItemDetailFields,
@@ -98,6 +97,7 @@ export function EquipmentPage() {
     carryCapacity,
     isEncumbered,
     attunedCount,
+    attunementLimit,
     currency,
     totalCurrencyCopper,
     addManyFromGameData,
@@ -333,27 +333,27 @@ export function EquipmentPage() {
                     <p
                       className={cn(
                         'mt-2 font-mono text-base font-semibold',
-                        attunedCount >= MAX_ATTUNEMENT_SLOTS && 'text-destructive',
+                        attunedCount >= attunementLimit && 'text-destructive',
                       )}
                     >
-                      {attunedCount} / {MAX_ATTUNEMENT_SLOTS}
+                      {attunedCount} / {attunementLimit}
                     </p>
                     <div className="mt-2 flex gap-1.5">
-                      {(['first', 'second', 'third'] as const)
-                        .slice(0, MAX_ATTUNEMENT_SLOTS)
-                        .map((slot, index) => (
+                      {Array.from({ length: attunementLimit }, (_, index) => index + 1).map(
+                        (slot) => (
                           <span
                             key={slot}
                             className={cn(
                               'h-1.5 flex-1 rounded-full',
-                              index < attunedCount
-                                ? attunedCount >= MAX_ATTUNEMENT_SLOTS
+                              slot <= attunedCount
+                                ? attunedCount >= attunementLimit
                                   ? 'bg-destructive'
                                   : 'bg-violet-500'
                                 : 'bg-muted',
                             )}
                           />
-                        ))}
+                        ),
+                      )}
                     </div>
                   </div>
 
@@ -592,7 +592,7 @@ export function EquipmentPage() {
                                     aria-label={`Attune ${item.name}`}
                                     checked={item.attuned ?? false}
                                     onCheckedChange={() => toggleAttune(item.id)}
-                                    disabled={!item.attuned && attunedCount >= MAX_ATTUNEMENT_SLOTS}
+                                    disabled={!item.attuned && attunedCount >= attunementLimit}
                                   />
                                 ) : (
                                   <span className="text-xs text-muted-foreground/60">—</span>
