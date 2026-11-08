@@ -6,6 +6,7 @@ import {
   getArtificerAttunedSaveBonus,
   getArtificerAttunementLimit,
   getArtificerClassResources,
+  getArtificerItemCapacity,
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
 import { getProgressiveChoiceGainCount } from '@/lib/5etools/classChoiceNormalization'
@@ -103,6 +104,30 @@ test.skipIf(!existsSync(file)).each(['TCE', 'EFA'])(
     expect(reopened.classChoiceSelections?.[0]?.selected).toMatchObject([
       { name: 'Guardian', slotLevel: choice.level },
     ])
+  },
+)
+
+test.skipIf(!existsSync(file)).each([
+  ['TCE', 'one', 'Infused Items', 'infusions'],
+  ['EFA', 'classic', 'Magic Items', 'plans'],
+] as const)(
+  '%s capacity follows its exact feature and table with optional edition metadata',
+  (source, conflictingEdition, label, known) => {
+    const document = read(file)
+    const raw = document.class.find(
+      (row: Class5e) => row.name === 'Artificer' && row.source === source,
+    )
+    const character = actor(source, 6)
+    const capacity = () => {
+      const { catalogs } = load(document)
+      return getArtificerItemCapacity(getCurrentArtificerRules(character, catalogs)!)
+    }
+    const expected = capacity()
+    expect(expected).toMatchObject({ label, known, amount: 3 })
+    delete raw.edition
+    expect(capacity()).toEqual(expected)
+    raw.edition = conflictingEdition
+    expect(capacity()).toBeUndefined()
   },
 )
 

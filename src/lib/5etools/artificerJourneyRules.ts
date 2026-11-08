@@ -67,10 +67,28 @@ export function getCurrentArtificerRules(
 export function getArtificerItemCapacity(
   current: NonNullable<ReturnType<typeof getCurrentArtificerRules>>,
 ) {
-  const classic = current.cls.edition === 'classic'
-  const feature = current.feature(classic ? 'Infuse Item' : 'Replicate Magic Item')
-  if (!feature) return undefined
-  const label = classic ? 'Infused Items' : 'Magic Items'
+  const { cls } = current
+  const producer =
+    cls.source === 'TCE'
+      ? { edition: 'classic', name: 'Infuse Item', label: 'Infused Items', known: 'infusions' }
+      : cls.source === 'EFA'
+        ? { edition: 'one', name: 'Replicate Magic Item', label: 'Magic Items', known: 'plans' }
+        : undefined
+  if (!producer || (cls.edition !== undefined && cls.edition !== producer.edition)) return undefined
+  const { name, label, known } = producer
+  const feature = current.feature(name)
+  if (
+    !feature ||
+    feature.target !==
+      getClassFeatureIdentity({
+        name,
+        level: feature.level,
+        className: cls.name,
+        classSource: cls.source,
+        source: cls.source,
+      })
+  )
+    return undefined
   const columns = (current.cls.classTableGroups ?? []).flatMap((value) => {
     const group = record(value)
     if (!Array.isArray(group.colLabels) || !Array.isArray(group.rows)) return []
@@ -83,7 +101,7 @@ export function getArtificerItemCapacity(
   const row = rows[current.owner.levels - 1]
   const amount = Array.isArray(row) ? Number(row[index]) : NaN
   return Number.isInteger(amount) && amount > 0
-    ? { target: feature.target, label, amount }
+    ? { target: feature.target, label, amount, known }
     : undefined
 }
 

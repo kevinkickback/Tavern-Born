@@ -638,11 +638,7 @@ export function getClassStaticFeatureSummaries(
                 ? [
                     ...withoutArtificerPlanTables(feature.entries ?? []),
                     `Maximum active ${capacity.label.toLowerCase()}: ${capacity.amount}.`,
-                    ...(plans.length
-                      ? [
-                          `Known ${cls.edition === 'classic' ? 'infusions' : 'plans'}: ${plans.join(', ')}.`,
-                        ]
-                      : []),
+                    ...(plans.length ? [`Known ${capacity.known}: ${plans.join(', ')}.`] : []),
                   ]
                 : feature.entries,
           },
