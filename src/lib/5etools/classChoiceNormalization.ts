@@ -1377,7 +1377,8 @@ export function getProgressiveChoiceGainCount(choice: NormalizedCharacterChoice,
   const tableItems =
     choice.kind === 'item' &&
     choice.source.kind === 'class-table' &&
-    choice.optionFilter?.entityType === 'item'
+    choice.optionFilter?.entityType === 'item' &&
+    !choice.optionFilter.requiresMastery
   if (
     (!optionalFeatures && !tableItems) ||
     choice.repeatable ||

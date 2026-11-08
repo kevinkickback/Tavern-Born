@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { getAlchemistChemicalDefenses } from '@/lib/5etools/artificerAlchemistSpells'
@@ -24,6 +25,7 @@ import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/h
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getEpicBoonSlots } from '@/lib/character/epicBoonSlots'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
+import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
 import type { Class5e, ClassFeature, Item5e, OptionalFeatureLike } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 
@@ -66,6 +68,11 @@ test.skipIf(!existsSync(file)).each(['TCE', 'EFA'])(
     )!
     const current = actor(source, choice.level)
     Object.assign(current.classProgression[0], { subclass: specialty.name, subclassSource: source })
+    const withoutModel = getClassStaticFeatureSummaries(current, catalogs, false).find(
+      (row) => row.compactText === 'Armor Model',
+    )
+    expect(withoutModel?.text).toMatch(/choose one of the following armor models/i)
+    expect(withoutModel?.text).toMatch(/Lightning Launcher/i)
     const options = resolveClassChoiceOptions(
       choice,
       createClassChoiceCatalogs(catalogs),

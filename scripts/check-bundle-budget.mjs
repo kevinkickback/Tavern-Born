@@ -14,7 +14,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Artificer journey measured 6,977,302 B renderer and 1,670,824 B initial with its rule proofs.
+  // Artificer journey measured 6,977,502 B renderer and 1,670,869 B initial with its rule proofs.
   rendererCode: 6814 * KIB,
   initialRendererScript: 1632 * KIB,
   initialStylesheet: 185 * KIB,

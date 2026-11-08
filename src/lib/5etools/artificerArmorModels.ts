@@ -274,5 +274,5 @@ export function getChosenArmorModel(
     selectionsForGain.length === 1 && !saved.inactive && isValidArmorModelSelection(saved)
       ? setup.rows.find(({ name }) => norm(name) === norm(saved.selected[0].name))
       : undefined
-  return { name: model?.name, alternatives: setup.rows.map(({ name }) => norm(name)) }
+  return { name: model?.name, alternatives: setup.rows }
 }

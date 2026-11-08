@@ -659,15 +659,28 @@ export function getClassStaticFeatureSummaries(
       const specialistRules = specialty.map((feature) => {
         if (!model || !feature.entries) return feature
         if (feature.name === 'Armor Model') {
-          return { ...feature, entries: feature.entries.filter((row) => typeof row === 'string') }
+          const options = model.name
+            ? []
+            : model.alternatives.map(({ name, entries }) => ({
+                type: 'entries',
+                name,
+                entries,
+              }))
+          return {
+            ...feature,
+            entries: [...feature.entries.filter((row) => typeof row === 'string'), ...options],
+          }
         }
-        if (feature.name !== 'Perfected Armor') return feature
+        if (feature.name !== 'Perfected Armor' || !model.name) return feature
         return {
           ...feature,
           entries: feature.entries.filter((row) => {
             const section = record(row)
             const name = norm(typeof section.name === 'string' ? section.name : undefined)
-            return !model.alternatives.includes(name) || name === norm(model.name)
+            return (
+              !model.alternatives.some((option) => norm(option.name) === name) ||
+              name === norm(model.name)
+            )
           }),
         }
       })

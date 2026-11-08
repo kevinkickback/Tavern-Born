@@ -1066,7 +1066,10 @@ export function resolveClassChoiceOptions(
       : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
-  const tableItems = choice.kind === 'item' && choice.source.kind === 'class-table'
+  const tableItems =
+    choice.kind === 'item' &&
+    choice.source.kind === 'class-table' &&
+    !choice.optionFilter?.requiresMastery
   const infusions =
     choice.source.kind === 'optional-feature-progression' &&
     filter?.featureTypes?.length === 1 &&
