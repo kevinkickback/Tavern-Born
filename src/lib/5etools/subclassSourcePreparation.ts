@@ -33,11 +33,12 @@ export function materializeSubclassCopies(subclasses: readonly unknown[]): Sourc
 /** The same copy preparation feeds both parser audits and development-time certificates. */
 export function materializeSubclassFeatureCopies(
   records: SourceRecord[],
-  dependencies: SourceRecord[] = [],
+  loadDependencies?: () => SourceRecord[],
 ): SourceRecord[] {
   if (!records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) return records
+  const scope = loadDependencies ? [...records, ...loadDependencies()] : records
   const resolved = resolveCopiedRecords(
-    [...records, ...dependencies] as Array<SourceRecord & { name: string; source: string }>,
+    scope as Array<SourceRecord & { name: string; source: string }>,
     'subclassFeature',
   )
   if (resolved.diagnostics.length)
@@ -51,46 +52,36 @@ export function createIndexedSubclassFeatureResolver(
   documents: ReadonlyMap<string, unknown>,
 ): (file: string) => SourceRecord[] {
   const indexedFiles = object(index)
-  const prepared = new Map<string, SourceRecord[]>()
-  const active = new Set<string>()
+  const prepared = new Map<string, SourceRecord[] | null>()
 
   function resolve(file: string): SourceRecord[] {
     const existing = prepared.get(file)
     if (existing) return existing
-    if (active.has(file)) throw new Error(`Cyclic subclass-feature dependency: ${file}`)
+    if (existing === null) throw new Error(`Cyclic subclass-feature dependency: ${file}`)
 
     const document = object(documents.get(file))
     const records = asArray(document.subclassFeature).map(object)
     const dependencyIds = object(object(document._meta).dependencies).subclassFeature
-    if (
-      dependencyIds === undefined ||
-      !records.some((row) => Object.getOwnPropertyDescriptor(row, '_copy'))
-    ) {
-      const result = materializeSubclassFeatureCopies(records)
-      prepared.set(file, result)
-      return result
-    }
-    if (!Array.isArray(dependencyIds))
-      throw new Error(`Invalid subclass-feature dependencies: ${file}`)
-
-    active.add(file)
+    prepared.set(file, null)
     try {
-      const dependencyFiles = new Set<string>()
-      for (const id of dependencyIds) {
-        const path =
-          typeof id === 'string' && Object.getOwnPropertyDescriptor(indexedFiles, id)?.value
-        if (typeof path !== 'string' || !documents.has(path.trim()))
-          throw new Error(`Unavailable indexed subclass-feature dependency in ${file}`)
-        dependencyFiles.add(path.trim())
-      }
-      const result = materializeSubclassFeatureCopies(
-        records,
-        [...dependencyFiles].flatMap(resolve),
-      )
+      const result = materializeSubclassFeatureCopies(records, () => {
+        if (dependencyIds === undefined) return []
+        if (!Array.isArray(dependencyIds)) throw new Error(`Invalid class dependencies: ${file}`)
+        const dependencyFiles = new Set<string>()
+        for (const id of dependencyIds) {
+          const path =
+            typeof id === 'string' && Object.getOwnPropertyDescriptor(indexedFiles, id)?.value
+          if (typeof path !== 'string' || !documents.has(path.trim()))
+            throw new Error(`Unavailable class dependency in ${file}`)
+          dependencyFiles.add(path.trim())
+        }
+        return [...dependencyFiles].flatMap(resolve)
+      })
       prepared.set(file, result)
       return result
-    } finally {
-      active.delete(file)
+    } catch (error) {
+      prepared.delete(file)
+      throw error
     }
   }
 
