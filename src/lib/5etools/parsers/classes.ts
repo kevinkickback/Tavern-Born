@@ -563,7 +563,11 @@ function auditNativeSubclassCopies(
 }
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
-function prepareClassDocument(data: unknown, sourceId?: string): unknown {
+function prepareClassDocument(
+  data: unknown,
+  sourceId?: string,
+  preparedSubclassFeatures?: ParsedObject[],
+): unknown {
   if (Array.isArray(data)) return auditFixedLayerMultiplicity(data.map(asObject), 'classes')
   const obj = asObject(data)
   const records = asArray(obj.subclassFeature).map(asObject)
@@ -582,7 +586,10 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
     ),
     records,
   )
-  const materialized = auditPsionicFeatureSources(materializeSubclassFeatureCopies(records), true)
+  const materialized = auditPsionicFeatureSources(
+    preparedSubclassFeatures ?? materializeSubclassFeatureCopies(records),
+    true,
+  )
   const optionalClassFeatureSources = auditOptionalClassFeatureSources(data, origin, {
     subclasses: materializedSubclasses,
     subclassFeatures: materialized,
@@ -640,13 +647,14 @@ function prepareClassDocument(data: unknown, sourceId?: string): unknown {
 export function parseClassDocument(
   data: unknown,
   sourceId?: string,
+  preparedSubclassFeatures?: ParsedObject[],
 ): {
   classes: unknown[]
   classFeatures: unknown[]
   optionalClassFeatureSources: import('@/types/5etools').OptionalClassFeatureSourceProof[]
   classCastingSources: import('@/types/classCasting').ClassCastingSourceProof[]
 } {
-  const prepared = prepareClassDocument(data, sourceId)
+  const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures)
   return {
     classes: parsePreparedClasses(prepared),
     classFeatures: parsePreparedClassFeatures(prepared),

@@ -57,12 +57,18 @@ describe('5etools/dataLoader', () => {
     'bundled',
     'old external',
     'confirmed external',
+    'wrapped external',
   ] as const)('nested optional book is requested once only for a confirmed external capability: %s', async (mode) => {
     const fixture = JSON.parse(
       readFileSync('tests/fixtures/optionalClassSectionSources.json', 'utf8'),
     )
+    const confirmed = mode === 'confirmed external' || mode === 'wrapped external'
+    const book =
+      mode === 'wrapped external'
+        ? { bookData: [{ id: 'TCE', source: 'TCE', data: fixture.book.data }] }
+        : fixture.book
     const readJson = vi.fn(async (file: string) =>
-      file === 'books.json' ? fixture.books : file === 'book/book-tce.json' ? fixture.book : {},
+      file === 'books.json' ? fixture.books : file === 'book/book-tce.json' ? book : {},
     )
     const config =
       mode === 'bundled'
@@ -77,27 +83,127 @@ describe('5etools/dataLoader', () => {
             type: 'local' as const,
             path: 'C:\\data',
             isValid: true,
-            ...(mode === 'confirmed external'
-              ? { availableResources: ['books.json', 'book/book-tce.json'] }
-              : {}),
+            ...(confirmed ? { availableResources: ['books.json', 'book/book-tce.json'] } : {}),
           }
     const loaded = await new FiveEToolsDataLoader(config, {
       type: config.type,
       readJson,
     }).loadAllData()
     expect(readJson.mock.calls.filter(([file]) => file === 'book/book-tce.json')).toHaveLength(
-      mode === 'confirmed external' ? 1 : 0,
+      confirmed ? 1 : 0,
     )
-    expect(loaded.optionalClassSections).toHaveLength(mode === 'confirmed external' ? 13 : 0)
-    if (mode === 'confirmed external')
+    expect(loaded.optionalClassSections).toHaveLength(confirmed ? 13 : 0)
+    if (confirmed)
       expect(loaded.optionalClassSections!.every((row) => row.input && !row.diagnostic)).toBe(true)
   })
 
-  test('optional book failure records current unavailability without reusing old section bodies or rejecting ordinary content', async () => {
+  test.each([
+    'declared',
+    'undeclared',
+    'ambiguous',
+    'cycle',
+  ] as const)('loads subclass-feature copy parents only from the declared class index scope: %s', async (scenario) => {
+    const parent = {
+      name: 'Origin',
+      className: 'Sorcerer',
+      classSource: 'XPHB',
+      subclassShortName: 'Draconic',
+      subclassSource: 'XPHB',
+      level: 3,
+      source: 'XPHB',
+    }
+    const copy = {
+      ...parent,
+      className: 'Evoker',
+      classSource: 'WoW',
+      subclassSource: 'WoW',
+      source: 'WoW',
+    }
+    const documents: Record<string, unknown> = {
+      'class/index.json': {
+        evoker: 'class-evoker.json',
+        sorcerer: 'class-sorcerer.json',
+        alias: 'class-sorcerer.json',
+        ...(scenario === 'ambiguous' ? { second: 'class-other.json' } : {}),
+      },
+      'class/class-evoker.json': {
+        _meta: {
+          dependencies: {
+            subclassFeature:
+              scenario === 'undeclared'
+                ? []
+                : ['sorcerer', 'alias', ...(scenario === 'ambiguous' ? ['second'] : [])],
+          },
+        },
+        class: [{ name: 'Evoker', source: 'WoW' }],
+        subclass: [
+          {
+            name: 'Draconic',
+            shortName: 'Draconic',
+            className: 'Evoker',
+            classSource: 'WoW',
+            source: 'WoW',
+            subclassFeatures: ['Origin|Evoker|WoW|Draconic|WoW|3'],
+          },
+        ],
+        subclassFeature: [
+          {
+            ...copy,
+            _copy: { ...parent, _mod: { entries: { mode: 'appendArr', items: ['Evoker rule'] } } },
+          },
+        ],
+      },
+      'class/class-sorcerer.json':
+        scenario === 'cycle'
+          ? {
+              _meta: { dependencies: { subclassFeature: ['evoker'] } },
+              subclassFeature: [{ ...parent, _copy: copy }],
+            }
+          : { subclassFeature: [{ ...parent, entries: ['Sorcerer rule'] }] },
+      'class/class-other.json': { subclassFeature: [{ ...parent, entries: ['Conflicting rule'] }] },
+    }
+    const readJson = vi.fn(async (file: string) => documents[file] ?? {})
+    const onResourceFailure = vi.fn()
+    const data = await new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:/data', isValid: true, availableResources: ['class/index.json'] },
+      { type: 'local', readJson },
+    ).loadAllData({ onResourceFailure })
+
+    expect(
+      readJson.mock.calls.filter(([file]) => file === 'class/class-sorcerer.json'),
+    ).toHaveLength(1)
+    if (scenario === 'declared') {
+      expect(onResourceFailure).not.toHaveBeenCalled()
+      expect(data.classes[0]?.subclasses?.[0]?.subclassFeatureRefs).toEqual([
+        expect.objectContaining({
+          feature: expect.objectContaining({
+            className: 'Evoker',
+            source: 'WoW',
+            entries: ['Sorcerer rule', 'Evoker rule'],
+          }),
+        }),
+      ])
+      expect(documents['class/class-evoker.json']).toMatchObject({
+        subclassFeature: [{ _copy: parent }],
+      })
+    } else {
+      expect(data.classes).toEqual([])
+      expect(onResourceFailure).toHaveBeenCalledWith('class/class-evoker.json', { required: true })
+    }
+  })
+
+  test.each([
+    'unreachable',
+    'invalid',
+  ] as const)('optional book %s records current unavailability without rejecting ordinary content', async (status) => {
     const failure = vi.fn()
-    const readJson = vi.fn(async (file: string) => {
-      if (file === 'book/book-tce.json') throw Error('Unavailable book')
-      return { race: [{ name: 'Human', source: 'PHB' }] }
+    const readJson = vi.fn((file: string) => {
+      if (file === 'book/book-tce.json') {
+        return status === 'unreachable'
+          ? Promise.reject(new Error('Unavailable book'))
+          : Promise.resolve({ bookData: [{ id: 'PHB', source: 'PHB', data: [] }] })
+      }
+      return Promise.resolve({ race: [{ name: 'Human', source: 'PHB' }] })
     })
     const loaded = await new FiveEToolsDataLoader(
       {
@@ -111,7 +217,11 @@ describe('5etools/dataLoader', () => {
     expect(loaded.races).toHaveLength(1)
     expect(loaded.optionalClassSections).toHaveLength(13)
     expect(loaded.optionalClassSections!.every((row) => !row.input && !!row.diagnostic)).toBe(true)
-    expect(failure).toHaveBeenCalledWith('book/book-tce.json', { required: false })
+    if (status === 'unreachable') {
+      expect(failure).toHaveBeenCalledWith('book/book-tce.json', { required: false })
+    } else {
+      expect(failure).not.toHaveBeenCalled()
+    }
   })
 
   test('reads bundled resources through the restricted Electron bridge', async () => {

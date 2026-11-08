@@ -90,7 +90,9 @@ External validation recognizes the optional nested capability `book/book-tce.jso
 same authorized reader and bounded request pool; the Included SRD never requests it. Only a
 confirmed inventory entry permits the loader to fetch it, once per source load. Existing source
 configurations need revalidation before book-backed optional class features become available.
-Malformed optional support is diagnosed without rejecting otherwise valid ordinary content.
+Both the legacy `data` array envelope and the current singleton `bookData` envelope with exact
+`TCE` id and source feed the same section checks. Malformed optional support is diagnosed without
+rejecting otherwise valid ordinary content.
 
 `optionalClassSections` retains thirteen compact source-qualified sections and their exact book,
 chapter, class and optional-parent context, rather than the whole book. Independently reviewed
@@ -120,7 +122,7 @@ preserving prose, metadata, order and the requested path. Unattached nested clas
 require the exact current candidate collection. Empty current indexes remain authoritative.
 Winning owner/body identities replace their proof too, including absent or invalid incoming proof.
 Existing proficiency/body audits remain independent. Parsed cache57 retains these serializable
-records. Copies are materialized within their source document; replacing a different owner without
+records. Copies are materialized before composing layers; replacing a different owner without
 providing a winning consumed body does not re-materialize an omitted copied owner. The
 development semantic input is separate from ordinary generation; runtime rules retain
 compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification

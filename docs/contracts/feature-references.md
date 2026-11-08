@@ -87,8 +87,11 @@ targets. Local overrides, null removal and explicit upstream preservation rules 
 source data. Missing, invalid, ambiguous, cyclic or unsafe copies fail the required class resource;
 foreground loads and background refreshes cannot replace complete memory/cache with that partial result.
 Feature wildcard/template transformations are unsupported and fail explicitly. Existing explicit
-shared copy operations retain their supported semantics. External cross-file feature-copy dependencies
-and class-feature copies are outside this adapter's scope.
+shared copy operations retain their supported semantics. Indexed class documents can declare
+additional copy parents in `_meta.dependencies.subclassFeature` using keys from `class/index.json`.
+The loader reuses those indexed reads. A dependency resolves its own copies in its own scope, and
+only the requesting document's own rows enter its reference and rule audits. Class and class-feature
+copy dependencies are outside this adapter's scope.
 
 Copy materialization supplies source content, not prose-only mechanics or complete journey qualification.
 

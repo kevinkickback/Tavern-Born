@@ -73,6 +73,34 @@ describe('5etools/validator', () => {
     ])
   })
 
+  test.each([
+    ['current TCE', { bookData: [{ id: 'TCE', source: 'TCE', data: [] }] }, true],
+    ['foreign book', { bookData: [{ id: 'PHB', source: 'PHB', data: [] }] }, false],
+    [
+      'conflicting envelopes',
+      { data: [], bookData: [{ id: 'TCE', source: 'TCE', data: [] }] },
+      false,
+    ],
+  ])('validates the optional book envelope independently: %s', async (_label, book, valid) => {
+    globalThis.fetch = vi.fn((input: string | URL | Request) =>
+      String(input).endsWith('/data/book/book-tce.json')
+        ? makeJsonResponse(book)
+        : String(input).endsWith('/data/feats.json')
+          ? makeJsonResponse(payloadByFile['feats.json'])
+          : makeJsonResponse({}, false),
+    ) as unknown as typeof fetch
+    const result = await validateDataSource({
+      type: 'remote',
+      path: 'https://example.com',
+      isValid: false,
+    })
+    expect(result.isValid).toBe(true)
+    expect(result.foundResources).toEqual(
+      valid ? ['book/book-tce.json', 'feats.json'] : ['feats.json'],
+    )
+    expect(result.optionalSupportDiagnostics).toHaveLength(valid ? 0 : 1)
+  })
+
   test('rejects empty path', async () => {
     const result = await validateDataSource({
       type: 'remote',

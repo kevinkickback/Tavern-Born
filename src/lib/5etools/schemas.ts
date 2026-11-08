@@ -2,7 +2,19 @@ import { z } from 'zod'
 import type { PsionicMode5e } from '@/types/5etools'
 
 /** Optional nested support capability; exact section semantics are audited separately. */
-export const OptionalClassBookDataSchema = z.object({ data: z.array(z.unknown()) }).strict()
+export const OptionalClassBookDataSchema = z.union([
+  z.object({ data: z.array(z.unknown()) }).strict(),
+  z
+    .object({
+      bookData: z.tuple([
+        z
+          .object({ id: z.literal('TCE'), source: z.literal('TCE'), data: z.array(z.unknown()) })
+          .strict(),
+      ]),
+    })
+    .strict()
+    .transform(({ bookData: [{ data }] }) => ({ data })),
+])
 
 const PsionicCostSchema = z
   .object({

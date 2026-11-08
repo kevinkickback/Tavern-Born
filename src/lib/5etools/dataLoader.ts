@@ -60,9 +60,10 @@ import {
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
 import { createJsonResourceReader, type JsonResourceReader } from './resourceReader'
-import { CreatureDataSchema } from './schemas'
+import { CreatureDataSchema, OptionalClassBookDataSchema } from './schemas'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
+import { createIndexedSubclassFeatureResolver } from './subclassSourcePreparation'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -217,9 +218,12 @@ export class FiveEToolsDataLoader {
         loadedTopLevelResources += 1
 
         switch (resource.key) {
-          case 'optionalClassBook':
-            optionalClassBookData = data
+          case 'optionalClassBook': {
+            const book = OptionalClassBookDataSchema.safeParse(data)
+            // A readable but invalid book records current unavailability. Only read failures retain the old cache.
+            optionalClassBookData = book.success ? book.data : null
             break
+          }
           case 'books':
             booksData = data
             break
@@ -526,7 +530,7 @@ export class FiveEToolsDataLoader {
     const allClasses: GameData['classes'] = []
     const allClassFeatures: GameData['classFeatures'] = []
 
-    const classResults = await mapWithConcurrency(
+    const loadedClasses = await mapWithConcurrency(
       classFiles,
       DATA_FETCH_CONCURRENCY,
       async (classFile) => {
@@ -568,45 +572,64 @@ export class FiveEToolsDataLoader {
             richFluff.map((item) => [`${item.name}|${item.source}`, item]),
           )
 
-          const parsedDocument = parseClassDocument(classData, `class/${classFile.file}`)
-          const parsedClasses = this.filterByIndexedSource(
-            parsedDocument.classes as GameData['classes'],
-            classFile.source,
-          ).map((item) => {
-            const summary = fluffSummaryByKey.get(`${item.name}|${item.source}`)
-            const fluff = richFluffByKey.get(`${item.name}|${item.source}`)
-
-            return {
-              ...item,
-              ...(summary ? { fluffEntries: [summary] } : {}),
-              ...(fluff?.sections ? { classFluffSections: fluff.sections } : {}),
-              ...(fluff?.images ? { classFluffImages: fluff.images } : {}),
-            }
-          })
-          const parsedFeatures = this.filterByIndexedSource(
-            parsedDocument.classFeatures as GameData['classFeatures'],
-            classFile.source,
-          )
-
-          return {
-            classes: parsedClasses,
-            features: parsedFeatures,
-            optionalClassFeatureSources: parsedDocument.optionalClassFeatureSources,
-            classCastingSources: parsedDocument.classCastingSources,
-          }
+          return { classFile, classData, fluffSummaryByKey, richFluffByKey }
         } catch (error) {
           if (isAbortError(error)) throw error
-          console.warn(`Failed to load class file ${classFile.file}:`, error)
+          console.warn(`Failed to read class file ${classFile.file}:`, error)
           options?.onResourceFailure?.(`class/${classFile.file}`, { required: true })
-          return {
-            classes: [] as GameData['classes'],
-            features: [] as GameData['classFeatures'],
-            optionalClassFeatureSources: [] as NonNullable<GameData['optionalClassFeatureSources']>,
-            classCastingSources: [] as NonNullable<GameData['classCastingSources']>,
-          }
+          return undefined
         }
       },
     )
+
+    const documents = new Map(
+      loadedClasses.flatMap((loaded) =>
+        loaded ? [[loaded.classFile.file, loaded.classData] as const] : [],
+      ),
+    )
+    const prepareFeatures = createIndexedSubclassFeatureResolver(indexData, documents)
+    const classResults = loadedClasses.flatMap((loaded) => {
+      if (!loaded) return []
+      throwIfAborted(options?.signal)
+      const { classFile, classData, fluffSummaryByKey, richFluffByKey } = loaded
+      try {
+        const parsedDocument = parseClassDocument(
+          classData,
+          `class/${classFile.file}`,
+          prepareFeatures(classFile.file),
+        )
+        const parsedClasses = this.filterByIndexedSource(
+          parsedDocument.classes as GameData['classes'],
+          classFile.source,
+        ).map((item) => {
+          const summary = fluffSummaryByKey.get(`${item.name}|${item.source}`)
+          const fluff = richFluffByKey.get(`${item.name}|${item.source}`)
+
+          return {
+            ...item,
+            ...(summary ? { fluffEntries: [summary] } : {}),
+            ...(fluff?.sections ? { classFluffSections: fluff.sections } : {}),
+            ...(fluff?.images ? { classFluffImages: fluff.images } : {}),
+          }
+        })
+        return [
+          {
+            classes: parsedClasses,
+            features: this.filterByIndexedSource(
+              parsedDocument.classFeatures as GameData['classFeatures'],
+              classFile.source,
+            ),
+            optionalClassFeatureSources: parsedDocument.optionalClassFeatureSources,
+            classCastingSources: parsedDocument.classCastingSources,
+          },
+        ]
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        console.warn(`Failed to load class file ${classFile.file}:`, error)
+        options?.onResourceFailure?.(`class/${classFile.file}`, { required: true })
+        return []
+      }
+    })
 
     classResults.forEach((result) => {
       allClasses.push(...result.classes)

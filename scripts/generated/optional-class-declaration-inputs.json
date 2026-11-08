@@ -101,12 +101,24 @@
       "sha256": "2df8f3323a8a2b5cf6b90db1b526827490bee3162495f2ae98a82ebffbf47224"
     },
     {
+      "file": "src/lib/5etools/mysticFeatureIdentity.ts",
+      "sha256": "24da1bbfbb584373416e42551c59992675afcd5ee3ba1a0826248edf9941200e"
+    },
+    {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
       "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
       "sha256": "3e33b136ad37528115a18daf61175d2e8ecac1a8f66f5cedeef6135075c6a70d"
+    },
+    {
+      "file": "src/lib/5etools/parsers/shared.ts",
+      "sha256": "00555c6c887672f4abc0dd2ffb14a1bd7f8c8de7fb9f7e8709ae23fbade4901d"
+    },
+    {
+      "file": "src/lib/5etools/psionicIdentity.ts",
+      "sha256": "4b9b1e28678fc76a70e1daf25970170df695f7ef48a65761cda233c9ca2f3836"
     },
     {
       "file": "src/lib/5etools/rulesetMetadata.ts",
@@ -118,11 +130,11 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "b3bc8e1da66763ecc841441066cea31d2b33bd5173b16f7dd79bb2e004e291c2"
+      "sha256": "b4e6d88800300dd5b3553bcef745a97407cfa5fbb34b8e8e2af8fd4895ace0a1"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "21bad9f1eecff0a77ba3182cd440c57b2141f84c2fefb52432ae74664e091428"
+      "sha256": "615c234a5bc4da9fceef1ddead00a3b1ceea10cb69498266e125d3eb75a594b2"
     },
     {
       "file": "src/lib/calculations/abilityNames.ts",
@@ -158,7 +170,7 @@
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "59f91e3bd48448b0526a5f58a3e5dfe96717a123b4ddea53e314cb029c34ffa3"
+      "sha256": "5113ca247dd0b85856c34f1f0415bfd2d1aa168dec7a808119659a6ade798667"
     },
     {
       "file": "src/types/classRules.ts",
