@@ -17,6 +17,7 @@ import {
   makeEmptyAbilityBonuses,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
+import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 
 type TestRaceAbilityEntry =
   | Partial<Record<string, number>>
@@ -29,6 +30,27 @@ type TestRaceAbilityEntry =
     }
 
 describe('abilityScores', () => {
+  test('a background distribution is fixed only when every distinct ability receives the same bonus', () => {
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['constitution', 'wisdom', 'charisma'],
+        weights: [1, 1, 1],
+      }),
+    ).toBe(true)
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['constitution', 'wisdom'],
+        weights: [2, 1],
+      }),
+    ).toBe(false)
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['wisdom', 'wisdom'],
+        weights: [1, 1],
+      }),
+    ).toBe(false)
+  })
+
   test('default scores and empty bonuses create expected shape', () => {
     expect(makeDefaultAbilityScores()).toEqual({
       strength: 8,

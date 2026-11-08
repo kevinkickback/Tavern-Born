@@ -1,7 +1,13 @@
-import { BookOpen, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
+import { BookOpen, CaretDown, Check, Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   getSourceCompatibility,
@@ -133,10 +139,6 @@ export function ContentStep({
     })
   }
 
-  const selectNoneSources = () => {
-    onChange({ allowedSources: [] })
-  }
-
   const isPresetActive = (preset: SourcePreset) => {
     const availablePresetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
@@ -150,6 +152,8 @@ export function ContentStep({
     return presetSources.every((abbreviation) => allowedSources.includes(abbreviation))
   }
 
+  const activePreset =
+    allowedSources.length === 0 ? 'none' : (SOURCE_PRESETS.find(isPresetActive)?.id ?? 'custom')
   const presetSourceAbbreviations = new Set(
     SOURCE_PRESETS.flatMap((preset) => preset.abbreviations),
   )
@@ -163,48 +167,7 @@ export function ContentStep({
 
   return (
     <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
-      <div className="shrink-0 space-y-2 pb-1 max-lg:space-y-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">Additional Content</h3>
-            {!isBundledSrd && allowedSources.length > 0 && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                <span data-allowed-sources-count>{allowedSources.length}</span> selected
-              </span>
-            )}
-          </div>
-          {!isBundledSrd && hasAdditionalSources && (
-            <fieldset className="flex flex-wrap items-center gap-1" aria-label="Sourcebook presets">
-              <span className="mr-1 text-xs text-muted-foreground">Presets</span>
-              {SOURCE_PRESETS.map((preset) => {
-                const active = isPresetActive(preset)
-                return (
-                  <Button
-                    key={preset.id}
-                    type="button"
-                    aria-pressed={active}
-                    variant={active ? 'secondary' : 'ghost'}
-                    size="sm"
-                    title={preset.description}
-                    onClick={() => applySourcePreset(preset)}
-                  >
-                    {preset.label}
-                  </Button>
-                )
-              })}
-              <Button
-                type="button"
-                aria-pressed={allowedSources.length === 0}
-                variant={allowedSources.length === 0 ? 'secondary' : 'ghost'}
-                size="sm"
-                title="Clear all selected content"
-                onClick={selectNoneSources}
-              >
-                None
-              </Button>
-            </fieldset>
-          )}
-        </div>
+      <div className="shrink-0 pb-1">
         {!isBundledSrd && hasAdditionalSources && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-36 flex-1">
@@ -235,7 +198,7 @@ export function ContentStep({
               onChange={(event) => setCategory(event.target.value)}
               className="h-9 max-w-full rounded-md border border-border bg-workspace-pane px-2 text-sm focus-visible:outline-ring"
             >
-              <option value="all">All categories</option>
+              <option value="all">All sourcebooks</option>
               {groupOrder
                 .filter((group) => sourcesByGroup[group]?.length > 0)
                 .map((group) => (
@@ -246,13 +209,49 @@ export function ContentStep({
             </select>
             <Button
               type="button"
-              variant={selectedOnly ? 'secondary' : 'outline'}
-              size="sm"
-              aria-pressed={selectedOnly}
-              onClick={() => setSelectedOnly(!selectedOnly)}
+              variant={filterSelected ? 'secondary' : 'outline'}
+              className="h-9"
+              aria-label={`${filterSelected ? 'Show all sourcebooks' : 'Show selected sourcebooks'} (${allowedSources.length} selected)`}
+              onClick={() => setSelectedOnly(!filterSelected)}
             >
-              Selected only
+              {filterSelected ? 'Show all · ' : ''}
+              <span data-allowed-sources-count={allowedSources.length > 0 ? '' : undefined}>
+                {allowedSources.length}
+              </span>{' '}
+              selected
             </Button>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9"
+                  aria-label="Sourcebook presets"
+                >
+                  Presets <CaretDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {SOURCE_PRESETS.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.id}
+                    title={preset.description}
+                    aria-current={activePreset === preset.id}
+                    onSelect={() => applySourcePreset(preset)}
+                  >
+                    {activePreset === preset.id && <Check aria-hidden="true" />}
+                    {preset.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem
+                  aria-current={activePreset === 'none'}
+                  onSelect={() => onChange({ allowedSources: [] })}
+                >
+                  {activePreset === 'none' && <Check aria-hidden="true" />}
+                  None
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>

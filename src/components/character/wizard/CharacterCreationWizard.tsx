@@ -24,6 +24,7 @@ import {
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
+import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
@@ -186,7 +187,12 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const backgroundAbilityData = getBackgroundAbilityData(
     normalizeBackgroundForOriginSystem(background, characterData.originSystem || '2014'),
   )
-  const backgroundAsi = characterData.backgroundAsi
+  const backgroundBlockIndex = characterData.backgroundAsi?.blockIndex ?? 0
+  const backgroundBlock = backgroundAbilityData.blocks[backgroundBlockIndex]
+  const fixedBackgroundAsi = backgroundBlock && isFixedBackgroundAbilityBlock(backgroundBlock)
+  const backgroundAsi = fixedBackgroundAsi
+    ? { blockIndex: backgroundBlockIndex, choices: backgroundBlock.from }
+    : characterData.backgroundAsi
   const hasBackgroundAsiChoices = backgroundAsi?.choices.some(Boolean) ?? false
 
   const handleFinish = () =>
@@ -394,7 +400,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           {Step && (
             <Step
               intro={intro}
-              data={characterData}
+              data={fixedBackgroundAsi ? { ...characterData, backgroundAsi } : characterData}
               onChange={updateCharacterData}
               invalidFields={invalidFields}
               isBundledSrd={isBundledSrd}

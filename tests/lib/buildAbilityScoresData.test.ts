@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
+import { updateRaceAsiChoices } from '@/lib/calculations/originAbilityChoices'
 import {
   buildRacialBonuses,
   buildSkillDetailsMap,
   buildSkillSourceTags,
   formatTitleCase,
   selectSkillDetails,
-  updateRaceAsiChoices,
 } from '@/pages/build/ability-scores/model/data'
 
 describe('buildAbilityScoresData', () => {

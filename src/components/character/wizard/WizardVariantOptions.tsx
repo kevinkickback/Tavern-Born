@@ -54,6 +54,11 @@ export function WizardVariantOptions({
           const checked = lockedByRuleset || data.variantRules[key]
           const available = key === 'averageHitPoints' || contentAvailability[key]
           const unavailable = !lockedByRuleset && !available && !checked
+          const lockReason = lockedByRuleset
+            ? 'Always on for 2024 characters'
+            : unavailable
+              ? 'Unavailable with selected content'
+              : undefined
           const control = (
             <Switch
               id={id}
@@ -63,7 +68,7 @@ export function WizardVariantOptions({
               onCheckedChange={(checked) =>
                 onChange({ variantRules: { ...data.variantRules, [key]: checked } })
               }
-              className={unavailable ? 'pointer-events-none' : 'shrink-0'}
+              className={lockReason ? 'pointer-events-none' : 'shrink-0'}
             />
           )
           return (
@@ -77,14 +82,12 @@ export function WizardVariantOptions({
                   className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground"
                 >
                   <p>{description}</p>
-                  {lockedByRuleset ? (
-                    <p className="font-medium">Always on for 2024 characters</p>
-                  ) : !available && checked ? (
+                  {!lockedByRuleset && !available && checked && (
                     <p className="font-medium">Currently inactive</p>
-                  ) : null}
+                  )}
                 </div>
               </div>
-              {unavailable ? (
+              {lockReason ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <fieldset
@@ -96,7 +99,7 @@ export function WizardVariantOptions({
                       {control}
                     </fieldset>
                   </TooltipTrigger>
-                  <TooltipContent side="left">Unavailable with selected content</TooltipContent>
+                  <TooltipContent side="left">{lockReason}</TooltipContent>
                 </Tooltip>
               ) : (
                 control

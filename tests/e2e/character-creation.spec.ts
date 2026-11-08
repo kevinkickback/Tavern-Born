@@ -232,7 +232,8 @@ test('empty source selection survives refresh under discard confirmation', async
   await wizard.getByRole('button', { name: /5e Legacy/ }).click()
   await wizard.getByRole('button', { name: 'Next' }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
-  await wizard.getByRole('button', { name: 'None', exact: true }).click()
+  await wizard.getByRole('button', { name: 'Sourcebook presets' }).click()
+  await page.getByRole('menuitem', { name: 'None', exact: true }).click()
   await expect(wizard.locator('[data-allowed-sources-count]')).toHaveCount(0)
   await wizard.getByRole('button', { name: 'Close' }).click()
   const confirmation = page.getByRole('alertdialog', { name: 'Discard character creation?' })
@@ -371,7 +372,8 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await expect(optionalFeatures).toBeEnabled()
   await optionalFeatures.click()
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await dialog.getByRole('button', { name: 'None' }).click()
+  await dialog.getByRole('button', { name: 'Sourcebook presets' }).click()
+  await page.getByRole('menuitem', { name: 'None', exact: true }).click()
   await dialog.getByRole('button', { name: 'Back' }).click()
   await expect(optionalFeatures).toHaveAttribute('aria-checked', 'true')
   await expect(dialog.getByText('Currently inactive')).toBeVisible()
@@ -433,10 +435,12 @@ for (const viewport of [
     await wizard.getByRole('button', { name: /5e Legacy/ }).click()
     await wizard.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()
-    await expect(wizard.getByRole('button', { name: 'None', exact: true })).toHaveAttribute(
-      'aria-pressed',
+    await wizard.getByRole('button', { name: 'Sourcebook presets' }).click()
+    await expect(page.getByRole('menuitem', { name: 'None', exact: true })).toHaveAttribute(
+      'aria-current',
       'true',
     )
+    await page.keyboard.press('Escape')
     const search = wizard.getByRole('textbox', { name: 'Search sources' })
     const region = wizard.getByRole('region', { name: 'Additional Content' })
     expect(await region.evaluate((node) => node.clientHeight)).toBeGreaterThan(200)
@@ -453,7 +457,7 @@ for (const viewport of [
     await expect(region.getByRole('button')).toHaveCount(1)
     await source.click()
     await expect(source).toHaveAttribute('aria-pressed', 'true')
-    await wizard.getByRole('button', { name: 'Selected only' }).click()
+    await wizard.getByRole('button', { name: 'Show selected sourcebooks' }).click()
     await search.fill('')
     await expect(region.getByRole('button')).toHaveCount(1)
     const category = wizard.getByRole('combobox', { name: 'Sourcebook category' })
@@ -462,7 +466,7 @@ for (const viewport of [
     await category.selectOption('other')
     await expect(source).toHaveAttribute('aria-pressed', 'true')
     await category.selectOption('all')
-    await wizard.getByRole('button', { name: 'Selected only' }).click()
+    await wizard.getByRole('button', { name: 'Show all sourcebooks' }).click()
     await search.fill('missing source')
     await expect(wizard.getByRole('status')).toHaveText('No sources match your search.')
     await expect(wizard.locator('[data-allowed-sources-count]')).toHaveText('1')
@@ -504,7 +508,7 @@ test('creates a complete character and persists it across a full reload', async 
     await dialog.getByRole('button', { name: /5e Legacy/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
 
-    await expect(dialog.getByRole('heading', { name: 'Additional Content' })).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: 'Choose sourcebooks' })).toBeVisible()
     await dialog.getByRole('button', { name: 'Next' }).click()
     await dialog.getByRole('button', { name: /Human\s+PHB/ }).click()
     await dialog.getByRole('button', { name: 'Next' }).click()
@@ -595,7 +599,10 @@ test('revised background bonuses update review, starting HP, and the saved chara
       ...background,
       source: 'XPHB',
       edition: 'one',
-      ability: [{ choose: { weighted: { from: ['con', 'int', 'wis'], weights: [2, 1] } } }],
+      ability: [
+        { choose: { weighted: { from: ['con', 'int', 'wis'], weights: [2, 1] } } },
+        { choose: { weighted: { from: ['con', 'int', 'wis'], weights: [1, 1, 1] } } },
+      ],
       feats: [{ 'Magic Initiate; Cleric|XPHB': true }],
     })),
     sources: CHARACTER_CREATION_GAME_DATA.sources.map((source) => ({
@@ -642,18 +649,29 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await dialog.getByRole('tab', { name: 'Standard Array' }).click()
   await dialog.getByRole('combobox', { name: 'constitution base score' }).click()
   await page.getByRole('option', { name: '13', exact: true }).click()
-  await dialog.getByRole('combobox', { name: 'Background bonus 1 (+2)' }).click()
-  await page.getByRole('option', { name: '+2 INT', exact: true }).click()
+  await dialog.getByRole('button', { name: '+1 / +1 / +1', exact: true }).click()
+  const fixedBonusSlots = dialog.getByRole('combobox', {
+    name: /Background ability bonus \+1, choice/,
+  })
+  await expect(fixedBonusSlots).toHaveCount(3)
+  await expect(fixedBonusSlots.first()).toBeDisabled()
+  await expect(fixedBonusSlots.first()).toHaveText('CON')
+  await next.click()
+  await expect(dialog.getByText('13+1', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Back', exact: true }).click()
+  await dialog.getByRole('button', { name: '+2 / +1', exact: true }).click()
+  await dialog.getByRole('combobox', { name: 'Background ability bonus +2' }).click()
+  await page.getByRole('option', { name: 'INT', exact: true }).click()
   await next.click()
   await expect(
     dialog.getByText('Finish choosing background bonuses or clear them to assign them later.'),
   ).toBeVisible()
-  await dialog.getByRole('combobox', { name: 'Background bonus 2 (+1)' }).click()
-  await expect(page.getByRole('option', { name: '+1 INT', exact: true })).toHaveAttribute(
+  await dialog.getByRole('combobox', { name: 'Background ability bonus +1' }).click()
+  await expect(page.getByRole('option', { name: 'INT', exact: true })).toHaveAttribute(
     'data-disabled',
     '',
   )
-  await page.getByRole('option', { name: '+1 CON', exact: true }).click()
+  await page.getByRole('option', { name: 'CON', exact: true }).click()
   await dialog.screenshot({ path: info.outputPath('ability-scores.png') })
   await dialog.getByRole('tab', { name: 'Custom' }).click()
   await dialog.getByRole('spinbutton', { name: 'constitution base score' }).fill('30')

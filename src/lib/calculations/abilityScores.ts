@@ -250,7 +250,14 @@ type FlexibleRaceAbilitySource = {
   _tavernBornSuppressFlexibleAsi?: boolean
 }
 
-export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null): boolean {
+export function hasFlexibleRaceOriginAsi(
+  race?: FlexibleRaceAbilitySource | null,
+  subrace?:
+    | (FlexibleRaceAbilitySource & { _isVersion?: unknown; overwrite?: { ability?: boolean } })
+    | null,
+): boolean {
+  if (subrace?._isVersion !== true && subrace?.overwrite?.ability === true) return false
+  race = subrace?._isVersion === true ? subrace : race
   if (race?._tavernBornSuppressFlexibleAsi === true || (race?.ability?.length ?? 0) > 0) {
     return false
   }
@@ -354,9 +361,7 @@ export function getRaceAbilityData(
   const fixed: FixedAbilityBonus[] = []
   const choices: ChoosableAbilityBonus[] = []
   const flexibleSource = subrace?._isVersion === true ? 'subrace' : 'race'
-  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(
-    flexibleSource === 'subrace' ? subrace : race,
-  )
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race, subrace)
 
   function processEntries(entries: unknown[] | undefined, source: 'race' | 'subrace') {
     if (!entries) return
@@ -410,7 +415,7 @@ export function getRaceAbilityData(
   // Lineage races follow Tasha's ASI choice at character creation:
   // - block 0: +2 to one ability and +1 to a different ability
   // - block 1: +1 to three different abilities
-  if (usesTashasLineageAsi && !replacesParentAbility) {
+  if (usesTashasLineageAsi) {
     const allAbilities = [...ABILITY_NAMES] as AbilityName[]
     if (lineageAsiBlockIndex === 1) {
       choices.push({

@@ -20,7 +20,7 @@ async function createCharacter(page: Page, options: CharacterOptions) {
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: options.ruleset }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await expect(dialog.getByRole('heading', { name: 'Additional Content' })).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Choose sourcebooks' })).toBeVisible()
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: options.race }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()

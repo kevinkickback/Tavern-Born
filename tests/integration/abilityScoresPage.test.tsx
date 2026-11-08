@@ -224,7 +224,8 @@ describe('BuildAbilityScoresPage', () => {
     try {
       act(() => vi.advanceTimersByTime(48))
       expect(screen.getByTestId('race-ability-choices').className).toContain('animate-route-focus')
-      expect(screen.getByText('Choose 1 ability from STR, DEX (+2)')).toBeTruthy()
+      expect(screen.getByRole('combobox', { name: /Racial ability bonus \+2/ })).toBeTruthy()
+      expect(screen.queryByText(/Choose 1 ability from/)).toBeNull()
     } finally {
       view.unmount()
       vi.useRealTimers()

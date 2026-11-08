@@ -125,7 +125,8 @@ describe('Wizard rule controls', () => {
     ).toBe(false)
   })
 
-  test('explains that newer printings are always preferred for 2024 characters', () => {
+  test('explains the locked 2024 printing preference in its tooltip', async () => {
+    const user = userEvent.setup()
     render(
       <RulesStep
         data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
@@ -139,7 +140,9 @@ describe('Wizard rule controls', () => {
     }) as HTMLButtonElement
     expect(preferNewerPrintings.disabled).toBe(true)
     expect(preferNewerPrintings.getAttribute('data-state')).toBe('checked')
-    expect(screen.getByText('Always on for 2024 characters')).toBeTruthy()
+    expect(screen.queryByText('Always on for 2024 characters')).toBeNull()
+    await user.hover(screen.getByRole('group', { name: 'Prefer Newer Printings' }))
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Always on for 2024 characters')
   })
 
   test('allows a saved unavailable rule to be switched off', async () => {
@@ -271,6 +274,6 @@ describe('Wizard rule controls', () => {
       'border',
     )
     expect(container.querySelector('[data-allowed-sources-count]')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sourcebook presets' })).toBeNull()
   })
 })

@@ -246,7 +246,7 @@ async function createCharacter(
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: options.rulesetButton }).click()
   await dialog.getByRole('button', { name: 'Next' }).click()
-  await expect(dialog.getByRole('heading', { name: 'Additional Content' })).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Choose sourcebooks' })).toBeVisible()
   await dialog.getByRole('button', { name: 'Next' }).click()
   await dialog.getByRole('button', { name: new RegExp(`Human\\s+${options.raceSource}`) }).click()
   if (options.subrace) {
@@ -266,10 +266,7 @@ async function createCharacter(
   await dialog.getByRole('tab', { name: 'Standard Array' }).click()
 
   if (options.racialBonuses) {
-    const bonuses = dialog
-      .getByRole('heading', { name: 'Racial Bonuses' })
-      .locator('..')
-      .locator('..')
+    const bonuses = dialog.getByTestId('race-ability-choices')
     const selectors = bonuses.getByRole('combobox')
     for (const [index, ability] of options.racialBonuses.entries()) {
       await selectors.nth(index).click()
