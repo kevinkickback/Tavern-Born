@@ -106,6 +106,29 @@ const sameSubclass = (row: Record<string, unknown>, base: Record<string, unknown
   row.source === base.source &&
   row.className === base.className
 
+export function isDirectRogueRuleTarget(target: string | undefined) {
+  const [, name, cls, , subclass] = target?.split('|') ?? []
+  return (
+    cls === 'rogue' &&
+    (name === subclass ||
+      [
+        'voice of death',
+        'tokens of the departed',
+        'wails from the grave',
+        'dread allegiance',
+        'bloodthirst',
+        'dread incarnate',
+        'psionic power',
+        'psychic veil',
+        'rend mind',
+        'unerring eye',
+        'master duelist',
+        'superior mobility',
+        'rakish audacity',
+      ].includes(name))
+  )
+}
+
 export function isInheritedClassicSubclass(row: Record<string, unknown>) {
   const copy = record(row._copy)
   return (
@@ -127,7 +150,7 @@ export function auditInheritedSubclassRoots(
   return materialized.map((row, index) => {
     const authored = raw[index]
     if (
-      (row.className !== 'Fighter' && row.className !== 'Monk' && row.className !== 'Ranger') ||
+      !['Fighter', 'Monk', 'Ranger', 'Rogue'].includes(String(row.className)) ||
       row.classSource !== 'XPHB' ||
       !('_copy' in authored)
     )

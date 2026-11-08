@@ -513,6 +513,7 @@ function auditNativeSubclassCopies(
           isDirectFighterRuleTarget(target) ||
           isDirectMonkSpellTarget(target) ||
           isDirectRangerRuleTarget(target) ||
+          isDirectRogueRuleTarget(target) ||
           isGiantPowerSourceFeature(target) ||
           isNativeResilienceTarget(target) ||
           isSavantSpellbookSourceTarget(target) ||
@@ -640,4 +641,5 @@ import {
   isDirectFighterRuleTarget,
   isDirectMonkSpellTarget,
   isDirectRangerRuleTarget,
+  isDirectRogueRuleTarget,
 } from '@/lib/5etools/nativeSubclassFeatureSource'

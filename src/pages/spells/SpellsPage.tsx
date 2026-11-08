@@ -350,7 +350,9 @@ export function SpellsPage() {
           !cast.active ||
           !cast.castOnly ||
           !isFixedClassSpellProfile(cast, profile) ||
-          profile.spellsKnown.some((name) => spellIdentity(name) === spellIdentity(cast.reference))
+          [...profile.cantrips, ...profile.spellsKnown, ...profile.preparedSpells].some(
+            (name) => spellIdentity(name) === spellIdentity(cast.reference),
+          )
         )
           continue
         const spell = resolveSpellReferenceFromMap(cast.reference, spellByName)
@@ -360,7 +362,7 @@ export function SpellsPage() {
           profileLabel: getSpellProfileDisplayLabel(profile),
           name: cast.reference,
           level: spell.level,
-          kind: 'spell',
+          kind: spell.level === 0 ? 'cantrip' : 'spell',
           prepared: false,
           isFixed: true,
           castOnly: true,

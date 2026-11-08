@@ -9,6 +9,7 @@ import {
   inferRulesTextActionKind,
 } from '@/lib/calculations/actions'
 import { setProfileSpells } from '@/lib/character/commands/spellCommands'
+import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import type { Class5e, ClassFeature, Feat5e, Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
@@ -219,6 +220,60 @@ describe('character action projection', () => {
         inactiveReason: 'Not prepared',
       }),
     ])
+  })
+
+  test('exposes an earned feature cast without replacing the ordinary spell action', () => {
+    const character = makeCharacterFixture()
+    const spell = makeSpellFixture({
+      name: 'Augury',
+      source: 'XPHB',
+      level: 2,
+      time: [{ number: 1, unit: 'minute' }],
+    })
+    const status: ClassFixedSpellStatus = {
+      owner: ['subclass', 'rogue', 'xphb', 'phantom', 'rhw'],
+      target: 'spirit-query',
+      featureName: 'Spirit Query',
+      level: 9,
+      reference: 'Augury|XPHB',
+      active: true,
+      prepared: false,
+      castOnly: { castingTime: 'Magic Action' },
+      castingNote: 'Destroy a soul trinket to cast Augury.',
+    }
+    const lookup = buildSpellLookup([spell])
+    const cast = deriveSpellActions(character, lookup, {
+      effectiveSpellProfiles: [],
+      fixedClassSpellStatuses: [status],
+    })
+    expect(cast).toEqual([
+      expect.objectContaining({
+        name: 'Augury',
+        kind: 'action',
+        active: true,
+        description: expect.stringContaining('Destroy a soul trinket to cast Augury.'),
+      }),
+    ])
+    const [profile] = character.spells.spellProfiles
+    const profiles = [{ ...profile, preparedSpells: [status.reference] }]
+    const ordinary = deriveSpellActions(character, lookup, { effectiveSpellProfiles: profiles })
+    const both = deriveSpellActions(character, lookup, {
+      effectiveSpellProfiles: profiles,
+      fixedClassSpellStatuses: [status],
+    })
+    expect(ordinary).toEqual([
+      expect.objectContaining({ name: 'Augury', kind: 'special', active: true }),
+    ])
+    expect(both).toEqual([
+      expect.objectContaining({ id: ordinary[0].id, kind: 'special', active: true }),
+      cast[0],
+    ])
+    expect(
+      deriveSpellActions(character, lookup, {
+        effectiveSpellProfiles: [],
+        fixedClassSpellStatuses: [{ ...status, active: false }],
+      }),
+    ).toEqual([])
   })
 
   test('keeps a 2014 Warlock known spell active without preparing it', () => {

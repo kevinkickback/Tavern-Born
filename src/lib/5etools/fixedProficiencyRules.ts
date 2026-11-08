@@ -19,6 +19,7 @@ export interface FixedProficiencyRule {
     Partial<Record<'armor' | 'weapons' | 'tools' | 'skills' | 'savingThrows', readonly string[]>>
   >
   trainingTool?: { name: string; source: string; reprint?: string }
+  trainingTools?: readonly { name: string; source: string; reprint?: string }[]
   skills?: readonly string[]
   languages?: readonly string[]
   languageSource?: string

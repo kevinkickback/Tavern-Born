@@ -22,6 +22,18 @@
       "digest": "5d503b2cf043613ac29aebc633e74d30fdf4a06d0ccb3dfca49ef05cf2367a10"
     },
     {
+      "target": "subclass-feature|assassin|rogue|phb|assassin|phb|3|phb",
+      "digest": "2e0b6511ad39d09094eb4682ad3c2d6d6132082fa3ea739cb10887b578f77f43"
+    },
+    {
+      "target": "subclass-feature|assassin|rogue|xphb|assassin|xphb|3|xphb",
+      "digest": "4557fc9096bc8219255f74d839812fbeab6f105d87a5c39d593106a3f45a2275"
+    },
+    {
+      "target": "subclass-feature|mastermind|rogue|phb|mastermind|xge|3|xge",
+      "digest": "121da2abf7a7b2749ac595ce7ac8bea01cc98143351eaddf0924f9ec06bdecc7"
+    },
+    {
       "target": "subclass-feature|warrior of mercy|monk|xphb|mercy|xphb|3|xphb",
       "digest": "c934e8040b01f8ae5ed475d062651cbf16f6d9276c3caa66cdb56e45c53066cb"
     },

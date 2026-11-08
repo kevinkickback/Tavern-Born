@@ -701,7 +701,9 @@ function buildSpellRows(
           .filter(Boolean)
           .join('; '),
         concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
-        ritual: isRitualSpell(spell),
+        ritual: castOnly?.castingTime
+          ? /^Ritual(?: only)?$/i.test(castOnly.castingTime)
+          : isRitualSpell(spell),
         material:
           !castOnly?.ignoresComponents && !castOnly?.ignoresMaterial && !!spell?.components?.m,
       }

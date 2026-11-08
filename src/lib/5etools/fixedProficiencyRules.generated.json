@@ -122,6 +122,60 @@
       ]
     },
     {
+      "target": "class-feature|slippery mind|rogue|phb|15|phb",
+      "name": "Slippery Mind",
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 15,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["wisdom"]
+      },
+      "bundledMetadataDigest": "55b4baa29ebee1d210b3cdd4a606323842db244963e08180c80d8a9bdb0be1b0",
+      "digest": "700056d20c7195dba578ac69ae346fcfc207cb3b6a168af0015a42dc6252dc4b",
+      "metadataDigest": "73e053f39911c0292d71e6ffcf03dadaef5eb5e0da88aaf7a02863871bcf816b",
+      "fields": [
+        "basicRules",
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd"
+      ]
+    },
+    {
+      "target": "class-feature|slippery mind|rogue|xphb|15|xphb",
+      "name": "Slippery Mind",
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "level": 15,
+      "kind": "fixed-training",
+      "training": {
+        "savingThrows": ["wisdom", "charisma"]
+      },
+      "bundledMetadataDigest": "e2925afa0541f50e6108435bc2d070c30f620c3add8f7045b80c9d2dba06b762",
+      "digest": "e4d734dd9bd0487f848ac1e5c49822005feeec1eacf465e2ac7c5d77d279d3a6",
+      "metadataDigest": "b99379f822995d4b7c4e0b9c8a4e8adbf1c9367cafdf911a5bd6954cd1b1e185",
+      "fields": [
+        "basicRules2024",
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "page",
+        "source",
+        "srd52"
+      ]
+    },
+    {
       "target": "class-feature|thieves' cant|rogue|phb|1|phb",
       "name": "Thieves' Cant",
       "className": "Rogue",
@@ -240,6 +294,43 @@
         "featureOptionSourceConflict",
         "fixedProficiencySourceAudit",
         "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|assassin's tools|rogue|xphb|assassin|xphb|3|xphb",
+      "name": "Assassin's Tools",
+      "className": "Rogue",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["disguise kit", "poisoner's kit"]
+      },
+      "trainingTools": [
+        {
+          "name": "disguise kit",
+          "source": "XPHB"
+        },
+        {
+          "name": "poisoner's kit",
+          "source": "XPHB"
+        }
+      ],
+      "subclassGainPosition": "first",
+      "digest": "aba6a6278a22fc2c34606c586d10f5e67cbee71e02e2c3db0ab6e53e6aacc323",
+      "metadataDigest": "0ed052eecbd97f7984f43f6329cd3ffdf0aadb566e84c595b6640cb6c1e01541",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
         "level",
         "name",
         "page",
@@ -463,6 +554,46 @@
       "subclassGainPosition": "first",
       "digest": "ab468afac7031a64333f6e382835a1a14250a2930e052ed1696d2570b701dadf",
       "metadataDigest": "c28fb3c6cccb165bf7863ceb3146d53e00c35d6e5c580cddcc93fe483126232e",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
+      "target": "subclass-feature|bonus proficiencies|rogue|phb|assassin|phb|3|phb",
+      "name": "Bonus Proficiencies",
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["disguise kit", "poisoner's kit"]
+      },
+      "trainingTools": [
+        {
+          "name": "disguise kit",
+          "source": "PHB",
+          "reprint": "XPHB"
+        },
+        {
+          "name": "poisoner's kit",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "subclassGainPosition": "first",
+      "digest": "a8a1fc2e47a0a63b0bbb0dbd9e8ba291f3256e12ab5ab6a7435b3d840d01add3",
+      "metadataDigest": "c4ce2142f3fbf4cd452f532d8ba750df4bc3d209365987035c9682241108acdb",
       "fields": [
         "className",
         "classSource",
@@ -896,6 +1027,46 @@
       ]
     },
     {
+      "target": "subclass-feature|master of intrigue|rogue|phb|mastermind|xge|3|xge",
+      "name": "Master of Intrigue",
+      "className": "Rogue",
+      "classSource": "PHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "tools": ["disguise kit", "forgery kit"]
+      },
+      "trainingTools": [
+        {
+          "name": "disguise kit",
+          "source": "PHB",
+          "reprint": "XPHB"
+        },
+        {
+          "name": "forgery kit",
+          "source": "PHB",
+          "reprint": "XPHB"
+        }
+      ],
+      "subclassGainPosition": "first",
+      "digest": "a9e7eacab30d477445e348231894e9e8ad57fd91b66ee4a3a204c1d1c77a0804",
+      "metadataDigest": "74e4c9f1c9595fc63b0518bae28b8b0ead8c904c611d23a186ad559b42158cd2",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "header",
+        "level",
+        "name",
+        "page",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|primal lore|bard|xphb|moon|frhof|3|frhof",
       "name": "Primal Lore",
       "className": "Bard",
@@ -1090,12 +1261,28 @@
       "ordinal": 2
     },
     {
+      "owner": ["rogue", "phb"],
+      "target": "class-feature|slippery mind|rogue|phb|15|phb",
+      "level": 15,
+      "rawDeclaration": "Slippery Mind|Rogue||15",
+      "declarationDigest": "e7a74e6b9760187830c4a094a71cfd166a5351d9472e1a2c89997c61de084a01",
+      "ordinal": 17
+    },
+    {
       "owner": ["rogue", "xphb"],
       "target": "class-feature|thieves' cant|rogue|xphb|1|xphb",
       "level": 1,
       "rawDeclaration": "Thieves' Cant|Rogue|XPHB|1",
       "declarationDigest": "3c66eeb9ef95b6496f219a334647729e41a26015aebe2fbf94f16a5989cd4b8f",
       "ordinal": 2
+    },
+    {
+      "owner": ["rogue", "xphb"],
+      "target": "class-feature|slippery mind|rogue|xphb|15|xphb",
+      "level": 15,
+      "rawDeclaration": "Slippery Mind|Rogue|XPHB|15",
+      "declarationDigest": "6cec956a764d160640261f43e54ebc1df4d6a7f284e783d837823ea6882e759f",
+      "ordinal": 20
     }
   ],
   "toolNames": [

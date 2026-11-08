@@ -12,7 +12,7 @@ const wordCount = (word: string) => numberWords.indexOf(word) + 1
 const maxFromGain = (gain: number, max: number) =>
   Array.from({ length: 20 }, (_, index) => (index + 1 >= gain ? max : 0))
 
-function prose(entries: readonly unknown[]): string[] {
+export function classResourceProse(entries: readonly unknown[]): string[] {
   return entries.flatMap((entry) => {
     if (typeof entry === 'string')
       return [
@@ -24,18 +24,23 @@ function prose(entries: readonly unknown[]): string[] {
       ]
     const section = record(entry)
     return section.type === 'entries' && Array.isArray(section.entries)
-      ? prose(section.entries)
+      ? classResourceProse(section.entries)
       : []
   })
 }
 
-function readDiceRows(entries: readonly unknown[], gain: number) {
-  const tables = entries.map(record).filter((entry) => entry.caption === 'Psi Warrior Energy Dice')
+function readDiceRows(
+  entries: readonly unknown[],
+  gain: number,
+  caption: string,
+  levelColumn: string,
+) {
+  const tables = entries.map(record).filter((entry) => entry.caption === caption)
   const [table] = tables
   if (
     tables.length !== 1 ||
     table.type !== 'table' ||
-    JSON.stringify(table.colLabels) !== '["Fighter Level","Die Size","Number"]' ||
+    JSON.stringify(table.colLabels) !== JSON.stringify([levelColumn, 'Die Size', 'Number']) ||
     !Array.isArray(table.rows) ||
     !table.rows.length
   )
@@ -66,6 +71,51 @@ function readDiceRows(entries: readonly unknown[], gain: number) {
   })
 }
 
+export function readPsionicPowerResource(
+  source: string,
+  level: number,
+  entries: readonly unknown[],
+  proficiencyBonus: number,
+  revisedTable: { caption: string; levelColumn: string },
+): Omit<ClassResourceDef, 'id'> | undefined {
+  const text = classResourceProse(entries).join(' ')
+  if (source === 'XPHB') {
+    const maxPerLevel = readDiceRows(entries, level, revisedTable.caption, revisedTable.levelColumn)
+    return maxPerLevel &&
+      text.includes(
+        'You regain one of your expended Psionic Energy Dice when you finish a short rest, and you regain all of them when you finish a long rest.',
+      )
+      ? {
+          label: 'Psionic Energy Dice',
+          maxPerLevel,
+          restType: 'short',
+          recovery: { shortRest: 1, longRest: 'all' },
+        }
+      : undefined
+  }
+  const multiple =
+    /You have a number of these dice equal to (twice|three times) your proficiency bonus,/.exec(
+      text,
+    )
+  if (
+    !multiple ||
+    !text.includes(
+      'You regain all your expended Psionic Energy dice when you finish a long rest.',
+    ) ||
+    !text.includes(
+      "as a bonus action, you can regain one expended Psionic Energy die, but you can't do so again until you finish a short or long rest.",
+    )
+  )
+    return undefined
+  const maxPerLevel = maxFromGain(level, (multiple[1] === 'twice' ? 2 : 3) * proficiencyBonus)
+  return {
+    label: 'Psionic Energy Dice',
+    maxPerLevel,
+    restType: 'long',
+    usageText: 'As a Bonus Action, regain one expended die once per Short or Long Rest.',
+  }
+}
+
 function readResource(
   name: string,
   source: string,
@@ -74,44 +124,13 @@ function readResource(
   modifiers: AbilityScores | undefined,
   proficiencyBonus: number,
 ): Omit<ClassResourceDef, 'id'> | undefined {
-  const text = prose(entries).join(' ')
   if (name === 'Psionic Power') {
-    if (source === 'XPHB') {
-      const maxPerLevel = readDiceRows(entries, level)
-      return maxPerLevel &&
-        text.includes(
-          'You regain one of your expended Psionic Energy Dice when you finish a short rest, and you regain all of them when you finish a long rest.',
-        )
-        ? {
-            label: 'Psionic Energy Dice',
-            maxPerLevel,
-            restType: 'short',
-            recovery: { shortRest: 1, longRest: 'all' },
-          }
-        : undefined
-    }
-    const multiple =
-      /You have a number of these dice equal to (twice|three times) your proficiency bonus,/.exec(
-        text,
-      )
-    if (
-      !multiple ||
-      !text.includes(
-        'You regain all your expended Psionic Energy dice when you finish a long rest.',
-      ) ||
-      !text.includes(
-        "as a bonus action, you can regain one expended Psionic Energy die, but you can't do so again until you finish a short or long rest.",
-      )
-    )
-      return undefined
-    const maxPerLevel = maxFromGain(level, (multiple[1] === 'twice' ? 2 : 3) * proficiencyBonus)
-    return {
-      label: 'Psionic Energy Dice',
-      maxPerLevel,
-      restType: 'long',
-      usageText: 'As a Bonus Action, regain one expended die once per Short or Long Rest.',
-    }
+    return readPsionicPowerResource(source, level, entries, proficiencyBonus, {
+      caption: 'Psi Warrior Energy Dice',
+      levelColumn: 'Fighter Level',
+    })
   }
+  const text = classResourceProse(entries).join(' ')
   const ability =
     /a number of times equal to your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier \((?:a )?minimum of (once|twice)\)(?:, and you regain|\. You regain) all expended uses(?: of it)? when you finish a (short or long|long) rest\./.exec(
       text,

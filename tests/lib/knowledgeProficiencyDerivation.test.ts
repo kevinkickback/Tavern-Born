@@ -8,14 +8,14 @@ import { SUBCLASS_PROFICIENCY_CHECKPOINT } from '@/lib/5etools/subclassProficien
 import * as preparation from '@/lib/5etools/subclassSourcePreparation'
 import { getItemTypeCodes, isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import {
-  deriveArtisanToolPool,
   deriveSubclassProficiencyCertificates,
   deriveSubclassProficiencyRules,
+  deriveToolGroupPool,
 } from '../../scripts/lib/subclass-proficiency-source.mjs'
 import { knowledgeSources } from '../fixtures/knowledgeProficiencyFixtures'
 
 const classify = { types: getItemTypeCodes, selectable: isSelectableEquipmentItem }
-const tools = (uid: string) => deriveArtisanToolPool(uid, [knowledgeSources.items], classify)
+const tools = (uid: string) => deriveToolGroupPool(uid, [knowledgeSources.items], classify)
 const api = {
   materializeRoots: preparation.materializeSubclassCopies,
   materializeFeatures: preparation.materializeSubclassFeatureCopies,
@@ -91,7 +91,7 @@ test('generation rejects duplicate and qualified paired mechanics and ambiguous 
     if (mode === 'group') items.itemGroup.push(structuredClone(items.itemGroup[0]))
     if (mode === 'member') items.item.push(structuredClone(items.item[0]))
     if (mode === 'qualifier') items.itemGroup[0].eligibility = 'Only at night'
-    expect(() => deriveArtisanToolPool("Artisan's Tools|XPHB", [items], classify)).toThrow()
+    expect(() => deriveToolGroupPool("Artisan's Tools|XPHB", [items], classify)).toThrow()
   }
 })
 

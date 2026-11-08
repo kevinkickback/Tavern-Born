@@ -19,6 +19,7 @@ import {
 } from '@/lib/5etools/nativeWarlockPatronRules'
 import { getCurrentRangerFeatures } from '@/lib/5etools/rangerFeatureSource'
 import { getRangerJourneyResources } from '@/lib/5etools/rangerResources'
+import { getRogueJourneyResources } from '@/lib/5etools/rogueJourneyResources'
 import {
   getCurrentNativeSorcerer,
   getSorcererResourceDefs,
@@ -154,6 +155,13 @@ export function getCharacterClassResources(
         entry,
         catalogs?.classes,
         options.abilityModifiers?.wisdom,
+        proficiencyBonus,
+      ),
+      ...getRogueJourneyResources(
+        character,
+        entry,
+        catalogs,
+        options.abilityModifiers,
         proficiencyBonus,
       ),
     )

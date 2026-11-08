@@ -85,13 +85,13 @@ function checkCopy(record) {
     fail('Unsupported subclass proficiency copy directive')
 }
 
-export function deriveArtisanToolPool(uid, documents, classify) {
+export function deriveToolGroupPool(uid, documents, classify, category = 'AT') {
   const [name, source, ...extra] = uid.split('|')
   if (!name || !source || extra.length) fail('Tool group must be fully qualified')
   const groups = documents
     .flatMap((doc) => doc.itemGroup ?? [])
     .filter((row) => row.name === name && row.source === source)
-  if (groups.length !== 1) fail('Artisan tool group missing or ambiguous')
+  if (groups.length !== 1) fail('Tool group missing or ambiguous')
   const group = groups[0]
   if (
     !only(group, [
@@ -108,12 +108,12 @@ export function deriveArtisanToolPool(uid, documents, classify) {
       'rarity',
       'items',
     ]) ||
-    group.type !== (source === 'PHB' ? 'AT' : `AT|${source}`) ||
+    group.type !== (source === 'PHB' ? category : `${category}|${source}`) ||
     group.rarity !== 'none' ||
     !Array.isArray(group.items) ||
     !group.items.length
   )
-    fail('Unsupported artisan group shape')
+    fail('Unsupported tool group shape')
   const records = documents.flatMap((doc) => [...(doc.item ?? []), ...(doc.baseitem ?? [])])
   const names = group.items.map((uid) => {
     if (typeof uid !== 'string') fail('Malformed tool group member')
@@ -123,13 +123,13 @@ export function deriveArtisanToolPool(uid, documents, classify) {
     if (
       matches.length !== 1 ||
       !classify.selectable(matches[0]) ||
-      !classify.types(matches[0].type).includes('AT')
+      !classify.types(matches[0].type).includes(category)
     )
       fail('Missing, ambiguous or ineligible tool group member')
     return memberName.toLowerCase()
   })
   if (new Set(names).size !== names.length) fail('Duplicate tool group member')
-  return { names: names.sort(), category: 'AT', group, members: group.items }
+  return { names: names.sort(), category, group, members: group.items }
 }
 
 export function deriveSubclassProficiencyRules(
@@ -741,8 +741,66 @@ export function deriveSubclassProficiencyRules(
       },
     ]
   })
+  const masterOfIntrigue = features.flatMap((feature) => {
+    if (
+      feature.name !== 'Master of Intrigue' ||
+      feature.className !== 'Rogue' ||
+      feature.classSource !== 'PHB' ||
+      feature.subclassShortName !== 'Mastermind' ||
+      feature.source !== 'XGE' ||
+      feature.subclassSource !== 'XGE'
+    )
+      return []
+    const target = identity(feature)
+    const line = feature.entries?.[0]
+    const match =
+      typeof line === 'string' &&
+      /^When you choose this archetype at (\d+)(?:st|nd|rd|th) level, you gain proficiency with the \{@item [^{}]+\}, the \{@item [^{}]+\}, and (one|two) \{@item ([^{}|]+)\|([^{}|]+)\} of your choice\. You also learn (one|two) languages? of your choice\.$/.exec(
+        line,
+      )
+    if (
+      !target ||
+      seen.has(target) ||
+      !only(feature, FEATURE_FIELDS) ||
+      feature._copy ||
+      !match ||
+      Number(match[1]) !== feature.level ||
+      match[4].toUpperCase() !== 'PHB'
+    )
+      fail('Unsupported Master of Intrigue choice clause')
+    const title = match[3].replace(/\b\w/g, (letter) => letter.toUpperCase())
+    const group = toolsFor(`${title}|${match[4].toUpperCase()}`, 'GS')
+    const reprints = (group.group.reprintedAs ?? []).filter(
+      (reference) => typeof reference === 'string' && reference === `${group.group.name}|XPHB`,
+    )
+    if (reprints.length !== 1) fail('Master of Intrigue gaming set reprint is unavailable')
+    toolsFor(reprints[0], group.category)
+    seen.add(target)
+    return [
+      {
+        target,
+        digest: digest(feature.entries),
+        optional: false,
+        subclassGainPosition: 'first',
+        fields: [
+          ...Object.keys(feature),
+          'featureOptionSourceConflict',
+          'subclassProficiencySourceAudit',
+        ].sort(),
+        domains: [
+          {
+            domain: 'tools',
+            count: NUMBERS[match[2]],
+            toolCategory: group.category,
+          },
+          { domain: 'languages', count: NUMBERS[match[5]], excludeExisting: true },
+        ],
+      },
+    ]
+  })
   return [
     ...paired,
+    ...masterOfIntrigue,
     ...simpleSkills,
     ...giantPower,
     ...studentOfWar,

@@ -433,3 +433,13 @@ declaration and exact same-rank revised spell reprint. An inherited cantrip rema
 fixed grant. Later Fey Reinforcements and Misty Wanderer retain the earlier preparation or
 learned spell and expose their own casting rules when earned. Ethereal Step stays outside
 ordinary spell capacity and uses the source's shorter casting time and duration.
+
+## Rogue feature casts
+
+Scion's current deity table and innate schedule agree on each cantrip. The choice supplies
+the corresponding Intelligence cast and resistance. Phantom's Voice of Death and Spirit
+Query keep their feature casting abilities, resource requirements and recovery rules.
+Feature casts appear in Spells, Actions and the sheet. When a feature changes a spell's
+casting time to a different action kind, Actions also keeps any independent ordinary cast.
+The sheet uses the feature timing for exclusive casts and the spell's ordinary ritual
+eligibility when an independent ordinary route exists.

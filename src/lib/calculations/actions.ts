@@ -142,9 +142,9 @@ export function isActionSizedCharacterAction(action: CharacterAction): boolean {
 }
 
 function spellActionKind(unit: string | undefined): CharacterAction['kind'] {
-  if (unit === 'action') return 'action'
-  if (unit === 'bonus') return 'bonus-action'
-  if (unit === 'reaction') return 'reaction'
+  if (unit === 'action' || unit === 'Action' || unit === 'Magic Action') return 'action'
+  if (unit === 'bonus' || unit === 'Bonus Action') return 'bonus-action'
+  if (unit === 'reaction' || unit === 'Reaction') return 'reaction'
   return 'special'
 }
 
@@ -215,17 +215,20 @@ export function deriveSpellActions(
     )
   }
 
-  const spellStates = new Map<string, { reference: string; active: boolean }>()
+  const spellStates = new Map<
+    string,
+    { reference: string; active: boolean; featureKind?: CharacterAction['kind'] }
+  >()
   const spellKey = (reference: string) => {
     const spell = resolveSpellReference(reference, spellsByKey)
     return spell ? getSpellReferenceKey(spell.name, spell.source) : getSpellReferenceKey(reference)
   }
-  const addSpell = (reference: string, active: boolean) => {
+  const addSpell = (reference: string, active: boolean, featureKind?: CharacterAction['kind']) => {
     if (!getSpellNameKey(reference)) return
-    const key = spellKey(reference)
+    const key = featureKind ? `${spellKey(reference)}:feature:${featureKind}` : spellKey(reference)
     const existing = spellStates.get(key)
     if (existing) existing.active ||= active
-    else spellStates.set(key, { reference, active })
+    else spellStates.set(key, { reference, active, featureKind })
   }
   for (const profile of profiles) {
     const preparedKeys = new Set(
@@ -244,15 +247,24 @@ export function deriveSpellActions(
     }
     for (const reference of profile.preparedSpells) addSpell(reference, true)
   }
+  for (const status of options.fixedClassSpellStatuses ?? []) {
+    if (!status.active || !status.castOnly) continue
+    const spell = resolveSpellReference(status.reference, spellsByKey)
+    if (!spell) continue
+    const baseKind = spellActionKind(spell.time[0]?.unit)
+    const override = status.castOnly.castingTime
+    const kind = override ? spellActionKind(override) : baseKind
+    addSpell(status.reference, true, kind === baseKind ? undefined : kind)
+  }
 
-  return [...spellStates.values()].flatMap(({ reference, active }) => {
+  return [...spellStates.values()].flatMap(({ reference, active, featureKind }) => {
     const spell = resolveSpellReference(reference, spellsByKey)
     if (!spell) return []
     return [
       {
-        id: `spell:${encodeURIComponent(`${spell.name}|${spell.source}`)}`,
+        id: `spell:${encodeURIComponent(`${spell.name}|${spell.source}`)}${featureKind ? `:feature:${featureKind}` : ''}`,
         name: spell.name,
-        kind: spellActionKind(spell.time[0]?.unit),
+        kind: featureKind ?? spellActionKind(spell.time[0]?.unit),
         description: [
           ...getManagedSpellCastingNotes(options.managedClassSpellStatuses ?? [], reference),
           ...getFixedClassSpellCastingNotes(options.fixedClassSpellStatuses ?? [], reference),

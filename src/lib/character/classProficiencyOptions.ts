@@ -198,14 +198,21 @@ export function resolveClassProficiencyOptions(
         continue
       if (
         optionDomain === 'tools' &&
-        (!domain?.toolPool?.includes(name) ||
-          !hasProficiencyCatalogTarget(getProficiencyOption('tools', candidate.name), catalogs))
+        ((!domain?.toolCategory && !domain?.toolPool) ||
+          (domain.toolPool && !domain.toolPool.includes(name)) ||
+          !hasProficiencyCatalogTarget(reference, catalogs, undefined, domain.toolCategory))
       )
         continue
       views.set(key, {
         reference,
         availability: 'eligible',
-        entries: getProficiencyOptionEntries(reference, catalogs, domain?.languageSources) ?? [],
+        entries:
+          getProficiencyOptionEntries(
+            reference,
+            catalogs,
+            domain?.languageSources,
+            domain?.toolCategory,
+          ) ?? [],
       })
     }
   }

@@ -114,7 +114,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "492272f05b258678ebd915dd81d836ab24954a6dce4c89090ec09dd07aa3eaea"
+      "sha256": "299cc9dd5e3c129a0bd0c80db0e089f5e31058b9015866048f501c30e55a226a"
     }
   ],
   "toolClassificationDependencies": [
@@ -162,7 +162,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "a8e4391c77ccb519d3248ae5c0d690a00d3a2feed424c86a651e0fa0cc7baf90"
+      "sha256": "e6c02d51464aae7344806405d4320749c61037b7bd50b44f1a658db8e17697d9"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
@@ -193,7 +193,7 @@
     },
     {
       "file": "items.json",
-      "identity": "itemGroup:Artisan's Tools|XPHB",
+      "identity": "itemGroup:Artisan's Tools|XPHB:AT",
       "entriesDigest": "9d7e9b109b4a2ed8eaed47bb063732cdcd38a4793acd73e2ec87850df854ef9d",
       "memberIdentities": [
         "Alchemist's Supplies|XPHB",
@@ -217,7 +217,7 @@
     },
     {
       "file": "items.json",
-      "identity": "itemGroup:Artisan's Tools|PHB",
+      "identity": "itemGroup:Artisan's Tools|PHB:AT",
       "entriesDigest": "2a3dccb9e127858039259488169796a5234d11b06491e4e5f5b63d7945cfced4",
       "memberIdentities": [
         "Alchemist's Supplies|PHB",
@@ -237,6 +237,28 @@
         "Tinker's Tools|PHB",
         "Weaver's Tools|PHB",
         "Woodcarver's Tools|PHB"
+      ]
+    },
+    {
+      "file": "items.json",
+      "identity": "itemGroup:Gaming Set|PHB:GS",
+      "entriesDigest": "440d1fcfa20a6768915f185c57bdfb19b19db264564a62865c4f5a1242b7600e",
+      "memberIdentities": [
+        "Dice Set|PHB",
+        "Dragonchess Set|PHB",
+        "Playing Card Set|PHB",
+        "Three-Dragon Ante Set|PHB"
+      ]
+    },
+    {
+      "file": "items.json",
+      "identity": "itemGroup:Gaming Set|XPHB:GS",
+      "entriesDigest": "3059b3fdbe36294b96f24c0417a3203383a533e42ab41225ef319830868c1470",
+      "memberIdentities": [
+        "Dice Set|XPHB",
+        "Dragonchess Set|XPHB",
+        "Playing Cards|XPHB",
+        "Three-Dragon Ante Set|XPHB"
       ]
     }
   ]

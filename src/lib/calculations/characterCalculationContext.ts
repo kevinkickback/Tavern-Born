@@ -31,6 +31,7 @@ import {
 } from '@/lib/5etools/monkBaseRules'
 import { deriveMonkSubclassSenses } from '@/lib/5etools/monkSubclassRules'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
+import { getScionResistance } from '@/lib/5etools/rogueScion'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import {
   type AtWillInvocationSpellStatus,
@@ -123,6 +124,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
 } from './originSystem'
 import { deriveRangerPassiveEffects } from './rangerPassiveEffects'
+import { deriveRoguePassiveEffects } from './roguePassiveEffects'
 import { ALL_SKILLS } from './skills'
 
 type CoreRulesMetadata = (typeof CORE_RULES_METADATA)[keyof typeof CORE_RULES_METADATA] & {
@@ -647,6 +649,7 @@ export function createCharacterCalculationContext(
         target.kind !== 'skill-modifier' || !fighterHalfProficiencySkills.has(target.skill),
     ),
     ...fighterEffects,
+    ...getScionResistance(character, choiceCatalogs?.classes),
     ...deriveMonkUnarmoredEffects(character, choiceCatalogs, monk, abilityScores.modifiers),
     ...deriveMonkSubclassSenses(character, choiceCatalogs?.classes),
     ...deriveBarbarianPassiveEffects(
@@ -674,6 +677,14 @@ export function createCharacterCalculationContext(
   )
   const wildHeart = deriveWildHeartAspectEffect(character, choiceCatalogs, sourceEffects)
   if (wildHeart) sourceEffects.push(wildHeart)
+  sourceEffects.push(
+    ...deriveRoguePassiveEffects(
+      character,
+      choiceCatalogs?.classes,
+      abilityScores.modifiers.charisma,
+      sourceEffects,
+    ),
+  )
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 
   return {

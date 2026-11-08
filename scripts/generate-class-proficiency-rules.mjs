@@ -25,9 +25,9 @@ import subclassAncestorSemantics from './lib/subclass-proficiency-ancestor-seman
   type: 'json',
 }
 import {
-  deriveArtisanToolPool,
   deriveSubclassProficiencyCertificates,
   deriveSubclassProficiencyRules,
+  deriveToolGroupPool,
 } from './lib/subclass-proficiency-source.mjs'
 import toolCopySemantics from './lib/tool-proficiency-copy-semantics.json' with { type: 'json' }
 
@@ -98,16 +98,19 @@ try {
     '/src/lib/calculations/itemClassification.ts',
   )
   const tools = new Map()
-  const toolsFor = (uid) => {
-    if (!tools.has(uid))
+  const toolsFor = (uid, category = 'AT') => {
+    const key = `${uid}:${category}`
+    if (!tools.has(key))
       tools.set(
-        uid,
-        deriveArtisanToolPool(uid, itemDocuments, {
-          types: getItemTypeCodes,
-          selectable: isSelectableEquipmentItem,
-        }),
+        key,
+        deriveToolGroupPool(
+          uid,
+          itemDocuments,
+          { types: getItemTypeCodes, selectable: isSelectableEquipmentItem },
+          category,
+        ),
       )
-    return tools.get(uid)
+    return tools.get(key)
   }
   const subclassDerived = deriveSubclassProficiencyRules(
     documents.flatMap((document) =>

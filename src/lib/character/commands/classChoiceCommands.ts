@@ -55,6 +55,7 @@ import {
   REVISED_AFFINITY_ID,
 } from '@/lib/5etools/revisedElementalAffinity'
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
+import { SCION_GROUP } from '@/lib/5etools/rogueScion'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import { getSubclassSpellConfigurationRule } from '@/lib/5etools/subclassSpellConfiguration'
 import {
@@ -1080,6 +1081,7 @@ export function applyClassChoiceSelectionCommand(
       return (
         target?.format === 'source-group' &&
         (target.group === LAND_GROUP ||
+          target.group === SCION_GROUP ||
           isWarlockPatronConfigurationGroup(target.group) ||
           isDivineSoulConfigurationGroup(target.group))
       )

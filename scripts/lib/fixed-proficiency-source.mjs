@@ -47,6 +47,26 @@ function validateFeature(feature, fields, structured = false) {
     fail('Unsupported fixed proficiency producer')
 }
 
+function deriveTrainingTool(tool, source, itemDocuments) {
+  const name = tool.toLowerCase()
+  const records = itemDocuments.flatMap((doc) => [...(doc.item ?? []), ...(doc.baseitem ?? [])])
+  const matching = (printing) =>
+    records.filter(
+      (item) =>
+        item.name?.toLowerCase() === name &&
+        item.source === printing &&
+        ['AT', 'T'].includes(item.type?.split('|')[0]),
+    )
+  const originals = matching(source)
+  if (originals.length !== 1) fail('Ambiguous fixed training tool')
+  const reprints = (originals[0].reprintedAs ?? []).filter(
+    (reference) => typeof reference === 'string' && reference.toLowerCase() === `${name}|xphb`,
+  )
+  const reprint =
+    source === 'PHB' && reprints.length === 1 && matching('XPHB').length === 1 ? 'XPHB' : undefined
+  return { name, source, ...(reprint && { reprint }) }
+}
+
 function deriveMonkTraining(feature, itemDocuments) {
   const mercy =
     feature.name === 'Implements of Mercy' &&
@@ -90,26 +110,54 @@ function deriveMonkTraining(feature, itemDocuments) {
     skills.some((tag) => tag[2] !== (classical ? undefined : feature.classSource))
   )
     fail('Unsupported Monk skill source')
-  const toolName = tool.toLowerCase()
-  const records = itemDocuments.flatMap((doc) => [...(doc.item ?? []), ...(doc.baseitem ?? [])])
-  const matching = (source) =>
-    records.filter(
-      (item) =>
-        item.name?.toLowerCase() === toolName &&
-        item.source === source &&
-        ['AT', 'T'].includes(item.type?.split('|')[0]),
-    )
-  const originals = matching(feature.classSource)
-  if (originals.length !== 1) fail('Ambiguous Monk training tool')
-  const reprints = (originals[0].reprintedAs ?? []).filter(
-    (reference) => typeof reference === 'string' && reference.toLowerCase() === `${toolName}|xphb`,
-  )
-  const reprint =
-    classical && reprints.length === 1 && matching('XPHB').length === 1 ? 'XPHB' : undefined
+  const trainingTool = deriveTrainingTool(tool, feature.classSource, itemDocuments)
   return {
-    training: { skills: skills.map((tag) => tag[1].toLowerCase()), tools: [toolName] },
-    trainingTool: { name: toolName, source: feature.classSource, ...(reprint && { reprint }) },
+    training: { skills: skills.map((tag) => tag[1].toLowerCase()), tools: [trainingTool.name] },
+    trainingTool,
   }
+}
+
+function deriveRogueToolTraining(feature, itemDocuments) {
+  const revised =
+    feature.classSource === 'XPHB' &&
+    feature.source === 'XPHB' &&
+    feature.subclassShortName === 'Assassin' &&
+    feature.name === "Assassin's Tools"
+  const classic =
+    feature.classSource === 'PHB' &&
+    ((feature.source === 'PHB' &&
+      feature.subclassShortName === 'Assassin' &&
+      feature.name === 'Bonus Proficiencies') ||
+      (feature.source === 'XGE' &&
+        feature.subclassShortName === 'Mastermind' &&
+        feature.name === 'Master of Intrigue'))
+  if (
+    feature.className !== 'Rogue' ||
+    feature.source !== feature.subclassSource ||
+    !(revised || classic)
+  )
+    return undefined
+  validateFeature(feature, [...SUBCLASS_FIELDS, 'srd', 'srd52', 'basicRules2024'])
+  const line = feature.entries[0]
+  const clause = revised
+    ? /^You gain a (\{@item [^{}]+\}) and a (\{@item [^{}]+\}), and you have proficiency with them\.$/.exec(
+        line,
+      )
+    : /^When you choose this archetype at (\d+)(?:st|nd|rd|th) level, you gain proficiency with the (\{@item [^{}]+\})(?: and the |, the )(\{@item [^{}]+\})(?:\.|, and one \{@item [^{}]+\} of your choice\. You also learn \w+ languages? of your choice\.)$/.exec(
+        line,
+      )
+  if (!clause || feature._copy || (!revised && Number(clause[1]) !== feature.level))
+    fail('Unsupported Rogue tool training grant')
+  const source = revised ? 'XPHB' : 'PHB'
+  const trainingTools = clause.slice(revised ? 1 : 2).map((tag) => {
+    const match = /^\{@item ([^{}|]+)\|([^{}|]+)\}$/.exec(tag)
+    if (!match || match[2].toUpperCase() !== source)
+      fail('Unsupported Rogue training tool reference')
+    return deriveTrainingTool(match[1], source, itemDocuments)
+  })
+  if (new Set(trainingTools.map((row) => row.name)).size !== 2)
+    fail('Duplicate Rogue training tools')
+  return { training: { tools: trainingTools.map((row) => row.name) }, trainingTools }
 }
 
 function deriveDruidic(feature) {
@@ -243,6 +291,16 @@ export function deriveFixedProficiencyRules(documents, api) {
     for (const feature of api.materializeFeatures(document.subclassFeature ?? [])) {
       const target = api.subclassIdentity(feature)
       const monk = deriveMonkTraining(feature, api.toolDocuments)
+      const rogue = deriveRogueToolTraining(feature, api.toolDocuments)
+      if (rogue) {
+        push(
+          feature,
+          'fixed-training',
+          { ...rogue, subclassGainPosition: 'first' },
+          api.subclassIdentity,
+        )
+        continue
+      }
       if (monk) {
         push(
           feature,
@@ -521,6 +579,59 @@ export function deriveFixedProficiencyRules(documents, api) {
     }
     for (const feature of document.classFeature ?? []) {
       if (
+        feature.className === 'Rogue' &&
+        feature.name === 'Slippery Mind' &&
+        feature.classSource === feature.source &&
+        ['PHB', 'XPHB'].includes(feature.source)
+      ) {
+        validateFeature(feature, [
+          ...FEATURE_FIELDS,
+          'srd',
+          'srd52',
+          'basicRules',
+          'basicRules2024',
+        ])
+        const line = feature.entries[0]
+        const classical = feature.source === 'PHB'
+        const match = classical
+          ? /^By (\d+)(?:st|nd|rd|th) level, you have acquired greater mental strength\. You gain proficiency in ([A-Za-z]+) saving throws\.$/.exec(
+              line,
+            )
+          : /^Your cunning mind is exceptionally difficult to control\. You gain proficiency in ([A-Za-z]+) and ([A-Za-z]+) saving throws\.$/.exec(
+              line,
+            )
+        const saves = (match?.slice(classical ? 2 : 1) ?? []).map((name) => name.toLowerCase())
+        if (
+          !match ||
+          feature.entries.length !== 1 ||
+          (classical && Number(match[1]) !== feature.level) ||
+          new Set(saves).size !== saves.length ||
+          saves.some(
+            (name) =>
+              ![
+                'strength',
+                'dexterity',
+                'constitution',
+                'intelligence',
+                'wisdom',
+                'charisma',
+              ].includes(name),
+          )
+        )
+          fail('Unsupported Slippery Mind saving throw grant')
+        const { page: _page, basicRules: _basic, basicRules2024: _basic2024, ...bundled } = feature
+        push(
+          feature,
+          'fixed-training',
+          {
+            training: { savingThrows: saves },
+            bundledMetadataDigest: api.digest(api.metadata(bundled)),
+          },
+          api.classIdentity,
+        )
+        continue
+      }
+      if (
         feature.className === 'Monk' &&
         feature.classSource === feature.source &&
         ((feature.source === 'PHB' && feature.name === 'Diamond Soul') ||
@@ -639,14 +750,14 @@ export function deriveFixedProficiencyRules(documents, api) {
     roots[0].classFeatures.forEach(scan)
     const omittedSource =
       feature.classSource === 'PHB' &&
-      (feature.kind === 'fixed-languages' || feature.className === 'Monk')
+      (feature.kind === 'fixed-languages' || ['Monk', 'Rogue'].includes(feature.className))
     const source = omittedSource ? '' : feature.classSource
     const rawDeclaration = roots[0].classFeatures[occurrences[0]]
     if (
       occurrences.length !== 1 ||
       (rawDeclaration !== `${feature.name}|${feature.className}|${source}|${feature.level}` &&
         !(
-          feature.className === 'Monk' &&
+          ['Monk', 'Rogue'].includes(feature.className) &&
           rawDeclaration ===
             `${feature.name}|${feature.className}|${feature.classSource}|${feature.level}`
         ))

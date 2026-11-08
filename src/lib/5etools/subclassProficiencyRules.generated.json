@@ -722,6 +722,38 @@
     ]
   },
   {
+    "target": "subclass-feature|master of intrigue|rogue|phb|mastermind|xge|3|xge",
+    "digest": "a9e7eacab30d477445e348231894e9e8ad57fd91b66ee4a3a204c1d1c77a0804",
+    "optional": false,
+    "subclassGainPosition": "first",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "header",
+      "level",
+      "name",
+      "page",
+      "source",
+      "subclassProficiencySourceAudit",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "domains": [
+      {
+        "domain": "tools",
+        "count": 1,
+        "toolCategory": "GS"
+      },
+      {
+        "domain": "languages",
+        "count": 2,
+        "excludeExisting": true
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|otherworldly glamour|ranger|phb|fey wanderer|tce|3|tce",
     "digest": "663d86f73dd62323be7aaa2dadb9f7149dd6724d03ff59cfb87834aa9a47661b",
     "optional": false,

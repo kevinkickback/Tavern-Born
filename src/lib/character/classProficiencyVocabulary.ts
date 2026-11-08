@@ -36,6 +36,7 @@ export function hasProficiencyCatalogTarget(
     | Pick<ClassChoiceFeatureCatalogs, 'skills' | 'languages' | 'proficiencyTools'>
     | undefined,
   languageSources?: QualifiedLanguageSources,
+  toolCategory?: string,
 ) {
   const target = decodeProficiencyOption(option)
   if (!target) return false
@@ -61,7 +62,9 @@ export function hasProficiencyCatalogTarget(
       canonicalProficiencyName(value.name) === target.name &&
       (target.domain !== 'tools' ||
         (isSelectableEquipmentItem(value as ClassifiableItem) &&
-          getItemTypeCodes((value as ClassifiableItem).type).includes('AT'))),
+          getItemTypeCodes((value as ClassifiableItem).type).some((type) =>
+            toolCategory ? type === toolCategory : type === 'AT' || type === 'GS',
+          ))),
   )
 }
 
@@ -70,9 +73,11 @@ export function getProficiencyOptionEntries(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceFeatureCatalogs,
   languageSources?: QualifiedLanguageSources,
+  toolCategory?: string,
 ): unknown[] | undefined {
   const target = decodeProficiencyOption(option)
-  if (!target || !hasProficiencyCatalogTarget(option, catalogs, languageSources)) return undefined
+  if (!target || !hasProficiencyCatalogTarget(option, catalogs, languageSources, toolCategory))
+    return undefined
   if (target.domain === 'savingThrows')
     return ['Gain proficiency with the chosen ability’s saving throws.']
   const tool = target.proficiencyType === 'tool'
@@ -91,7 +96,10 @@ export function getProficiencyOptionEntries(
             typeof value === 'object' &&
             'name' in value &&
             typeof value.name === 'string' &&
-            canonicalProficiencyName(value.name) === target.name,
+            canonicalProficiencyName(value.name) === target.name &&
+            (target.domain !== 'tools' ||
+              !toolCategory ||
+              getItemTypeCodes((value as ClassifiableItem).type).includes(toolCategory)),
         )
   ) as { entries?: unknown[]; type?: string } | undefined
   return [
@@ -105,7 +113,7 @@ export function getProficiencyOptionEntries(
           `Double your proficiency bonus for checks using this proficient ${tool ? 'tool' : 'skill'}; expertise does not stack.`,
         ]
       : target.domain === 'tools'
-        ? ['Gain proficiency with the chosen artisan tool.']
+        ? ['Gain proficiency with the chosen tool.']
         : target.domain === 'skills'
           ? ['Gain proficiency with the chosen skill.']
           : [
