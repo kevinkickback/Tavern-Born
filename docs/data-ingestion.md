@@ -19,7 +19,9 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
 
 Local reads are capability-scoped to roots explicitly granted through the native picker. Browsing
-for a replacement gives that folder a temporary grant. Applying a validated source saves the grant.
+for a replacement gives that folder a temporary grant. A staged replacement retains its grant while
+awaiting review, including when leaving Settings. A new folder selection replaces the temporary
+grant. Applying a validated source saves the grant.
 Reads are canonicalized against symlinks and kept inside the exact selected root, limited
 to JSON below that root, and size-limited by Electron. Remote production sources are HTTPS. GitHub
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.

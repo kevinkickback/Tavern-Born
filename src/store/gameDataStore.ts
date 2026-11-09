@@ -47,6 +47,11 @@ interface CatalogRequest {
   prepared?: PreparedCatalog
   confirmed?: boolean
   session?: boolean
+  folderGrant?: string
+}
+
+function releaseFolderGrant(root: string | undefined) {
+  if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
 
 export function migrateGameDataPersistedState(persistedState: unknown): unknown {
@@ -126,7 +131,7 @@ interface GameDataState {
   lastAttemptAt: string | null
   catalogWarnings: string[]
   externalKeys: string[] | undefined
-  pendingCatalog: { candidate: PreparedCatalog; removals: string[] } | null
+  pendingCatalog: { candidate: PreparedCatalog; removals: string[]; folderGrant?: string } | null
   cacheStatus: CacheStatus
   remoteStartup: RemoteStartupStatus | null
   bundledUnavailable: boolean
@@ -161,6 +166,7 @@ interface GameDataState {
     request?: CatalogRequest,
   ) => Promise<CatalogResult>
   reconfigureRemoteStartup: () => void
+  invalidatePendingFolderSelection: () => void
   refreshGameData: () => Promise<void>
   restoreBundledData: () => Promise<boolean>
   clearGameData: () => Promise<void>
@@ -294,14 +300,22 @@ export const useGameDataStore = create<GameDataState>()(
         set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
       },
 
+      invalidatePendingFolderSelection: () => {
+        // Electron allows one temporary picker grant. A new selection replaces it.
+        if (get().pendingCatalog?.folderGrant) set({ pendingCatalog: null, catalogWarnings: [] })
+      },
+
       loadGameData: async (config, background) => {
         const result = await get().loadCatalog(config, background)
         return result.kind === 'applied' && result.changed
       },
 
       loadCatalog: async (config, background = false, request) => {
-        if (request?.confirmed && request.prepared !== get().pendingCatalog?.candidate)
+        const pending = get().pendingCatalog
+        if (request?.confirmed && request.prepared !== pending?.candidate)
           return { kind: 'superseded' }
+        const folderGrant = request?.confirmed ? pending?.folderGrant : request?.folderGrant
+        if (pending?.folderGrant !== folderGrant) releaseFolderGrant(pending?.folderGrant)
         const requestId = ++activeLoadRequestId
         cancelRemoteStartup()
         activeLoadController?.abort()
@@ -407,7 +421,7 @@ export const useGameDataStore = create<GameDataState>()(
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
             set({
-              pendingCatalog: { candidate, removals },
+              pendingCatalog: { candidate, removals, ...(folderGrant ? { folderGrant } : {}) },
               isLoading: false,
               isBackgroundRefreshing: false,
               loadProgress: null,
@@ -518,6 +532,7 @@ export const useGameDataStore = create<GameDataState>()(
           return { kind: 'rejected', message }
         } finally {
           clearTimeout(timeout)
+          if (folderGrant !== get().pendingCatalog?.folderGrant) releaseFolderGrant(folderGrant)
           if (activeLoadController === controller) {
             activeLoadController = null
           }
@@ -559,6 +574,7 @@ export const useGameDataStore = create<GameDataState>()(
         cancelRemoteStartup()
         activeLoadController?.abort()
         activeLoadController = null
+        releaseFolderGrant(get().pendingCatalog?.folderGrant)
         set({
           gameData: null,
           dataSourceConfig: null,

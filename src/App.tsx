@@ -22,6 +22,8 @@ import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 
+const TOAST_VIEWPORT_OFFSET = { bottom: '3rem' }
+
 const ChangelogModal = lazy(() =>
   import('@/components/updates/ChangelogModal').then(({ ChangelogModal }) => ({
     default: ChangelogModal,
@@ -244,7 +246,11 @@ function App() {
               </Routes>
             </Suspense>
           </AppLayout>
-          <Toaster position="bottom-right" />
+          <Toaster
+            position="bottom-right"
+            offset={TOAST_VIEWPORT_OFFSET}
+            mobileOffset={TOAST_VIEWPORT_OFFSET}
+          />
           <DataSourceStartupModal />
           <AppLoadingOverlay />
           <CloseConfirmDialog />

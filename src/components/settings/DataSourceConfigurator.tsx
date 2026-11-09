@@ -258,6 +258,7 @@ export function DataSourceConfigurator({
 
       const folderPath = await selectFolder()
       if (!folderPath) return
+      useGameDataStore.getState().invalidatePendingFolderSelection()
       if (requestId !== validationRequestRef.current) {
         discardFolder(folderPath)
         return
@@ -278,15 +279,30 @@ export function DataSourceConfigurator({
       toast.info('Save or discard your character changes before switching game data.')
       return
     }
-    const result = await loadCatalog(candidate.config, false, { prepared: candidate, confirmed })
-    if (result.kind === 'rejected') {
-      toast.error('Could not apply game data', { description: result.message })
-    } else if (result.kind === 'applied') {
-      toast.success('Additional content loaded')
+    const folderGrant =
+      candidate.config.type === 'local' && previewFolder.current === candidate.config.path
+        ? candidate.config.path
+        : undefined
+    if (folderGrant) {
+      previewFolder.current = null
+      setValidationStatus('idle')
+      setValidationResult(null)
+    }
+    const result = await loadCatalog(candidate.config, false, {
+      prepared: candidate,
+      confirmed,
+      ...(folderGrant ? { folderGrant } : {}),
+    })
+    if (result.kind === 'applied' || result.kind === 'staged') {
       setIsSelectingDataSource(false)
       setSourcePath('')
       setValidationStatus('idle')
       setValidationResult(null)
+    }
+    if (result.kind === 'rejected') {
+      toast.error('Could not apply game data', { description: result.message })
+    } else if (result.kind === 'applied') {
+      toast.success('Additional content loaded')
       onSourceLoaded?.()
     }
   }

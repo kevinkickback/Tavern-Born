@@ -25,6 +25,8 @@ vi.mock('sonner', () => ({
   },
 }))
 
+const loadCatalog = useGameDataStore.getState().loadCatalog
+
 describe('data source switching', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -41,6 +43,8 @@ describe('data source switching', () => {
       lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
       hasHydrated: true,
+      pendingCatalog: null,
+      loadCatalog,
     })
     useCharacterStore.setState({
       characters: [],
@@ -121,6 +125,91 @@ describe('data source switching', () => {
     expect(input(field).value).toBe(path)
     expect(prepareCatalogMock).not.toHaveBeenCalled()
     expect(useGameDataStore.getState().dataSourceConfig).toBe(config)
+  })
+
+  test.each([
+    'apply',
+    'replace',
+    'clear',
+  ] as const)('keeps a staged native folder authorized across navigation until %s', async (outcome) => {
+    const user = userEvent.setup()
+    const active = {
+      type: 'local' as const,
+      path: 'C:/Rules/Active',
+      isValid: true,
+      availableResources: ['class/index.json'],
+    }
+    const replacement = {
+      type: 'local' as const,
+      path: 'C:/Rules/Replacement',
+      isValid: true,
+      availableResources: ['spells/index.json'],
+    }
+    const anotherFolder = 'C:/Rules/Another'
+    let grant: string | null = null
+    let nextFolder = replacement.path
+    const selectFolder = vi.fn(() => {
+      grant = nextFolder
+      return Promise.resolve(nextFolder)
+    })
+    const discardLocalDataRoot = vi.fn((path: string) => {
+      if (grant === path) grant = null
+    })
+    const approveLocalDataRoot = vi.fn((path: string) =>
+      grant === path
+        ? Promise.resolve()
+        : Promise.reject(new Error('Select the data directory again.')),
+    )
+    vi.stubGlobal('electronAPI', { selectFolder, discardLocalDataRoot, approveLocalDataRoot })
+    const gameData = makeGameDataFixture({ classes: [makeClassFixture()] })
+    prepareCatalogMock.mockImplementation((config: DataSourceConfig) => {
+      const source = { ...replacement, path: config.path }
+      return Promise.resolve({
+        config: source,
+        identity: source,
+        data: makeGameDataFixture(),
+        keys: [],
+        warnings: [],
+      })
+    })
+    useGameDataStore.setState({ dataSourceConfig: active, gameData })
+    const chooseFolder = async () => {
+      await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+      await user.click(screen.getByRole('button', { name: 'Select Folder' }))
+      await screen.findByText('Compatible game data found')
+    }
+
+    const settings = render(<DataSourceConfigurator />)
+    await chooseFolder()
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
+    await screen.findByText('Game data update ready')
+    expect(approveLocalDataRoot).not.toHaveBeenCalled()
+    expect(useGameDataStore.getState().dataSourceConfig).toBe(active)
+
+    settings.unmount()
+    expect(grant).toBe(replacement.path)
+    render(<DataSourceConfigurator />)
+    if (outcome === 'apply') {
+      await user.click(screen.getByRole('button', { name: 'Apply game data update' }))
+      await waitFor(() =>
+        expect(useGameDataStore.getState().dataSourceConfig?.path).toBe(replacement.path),
+      )
+      expect(approveLocalDataRoot).toHaveBeenCalledWith(replacement.path)
+      expect(grant).toBeNull()
+    } else if (outcome === 'replace') {
+      nextFolder = anotherFolder
+      await chooseFolder()
+      expect(screen.queryByText('Game data update ready')).toBeNull()
+      expect(useGameDataStore.getState().dataSourceConfig).toBe(active)
+      expect(approveLocalDataRoot).not.toHaveBeenCalled()
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(grant).toBeNull()
+    } else {
+      await act(() => useGameDataStore.getState().clearGameData())
+      expect(screen.queryByText('Game data update ready')).toBeNull()
+      expect(grant).toBeNull()
+      expect(approveLocalDataRoot).not.toHaveBeenCalled()
+    }
   })
 
   test('adds external content without rewriting character identities', async () => {
