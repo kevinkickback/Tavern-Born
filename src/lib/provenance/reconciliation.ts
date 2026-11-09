@@ -1,5 +1,7 @@
 import type { EntityReference } from '@/lib/5etools/entityResolvers'
+import type { CharacterClassEntry } from '@/types/character'
 import { removeGrantsBySource, removeGrantsBySourceRef } from './ledger'
+import { normalizeOwnerIdentity } from './normalization'
 import type { ProvenanceLedger } from './types'
 
 /**
@@ -43,16 +45,32 @@ export function reconcileSubraceChange(
 
 /**
  * Reconcile ledger when a class selection changes.
- * Removes all grants from the old class and old subclass.
+ * Removes only the replaced class printing and its unshared subclass grants.
  */
 export function reconcileClassChange(
   ledger: ProvenanceLedger,
-  oldClassName: string | undefined,
-  oldSubclassName: string | undefined,
+  previous: CharacterClassEntry,
+  retained: readonly CharacterClassEntry[],
 ): ProvenanceLedger {
   let result = ledger
-  if (oldClassName) result = removeGrantsBySource(result, 'class', oldClassName)
-  if (oldSubclassName) result = removeGrantsBySource(result, 'subclass', oldSubclassName)
+  const norm = normalizeOwnerIdentity
+  const remove = (type: 'class' | 'subclass', name: string, source?: string) => {
+    result = removeGrantsBySourceRef(result, type, name, source, undefined, {
+      normalizeIdentity: true,
+    })
+  }
+  if (norm(previous.source)) remove('class', previous.name, previous.source)
+  // A historical tag without a source can only be assigned when the name is unambiguous.
+  if (!retained.some((row) => norm(row.name) === norm(previous.name)))
+    remove('class', previous.name)
+  if (!previous.subclass) return result
+  const retainedSubclass = retained.filter((row) => norm(row.subclass) === norm(previous.subclass))
+  if (
+    norm(previous.subclassSource) &&
+    !retainedSubclass.some((row) => norm(row.subclassSource) === norm(previous.subclassSource))
+  )
+    remove('subclass', previous.subclass, previous.subclassSource)
+  if (!retainedSubclass.length) remove('subclass', previous.subclass)
   return result
 }
 

@@ -50,12 +50,15 @@ export interface SubclassProficiencySourceAudit {
   package?: string
 }
 
-/** Exact production subclass copy lookup, distinct from its canonical selected-owner tuple. */
-export function getSubclassCopyLookupKey(value: Record<string, unknown>): string | undefined {
+export function getSubclassCopyIdentity(value: Record<string, unknown>): string[] | undefined {
   const fields = ['name', 'source', 'shortName', 'className', 'classSource']
-  return fields.every((field) => typeof value[field] === 'string' && value[field])
-    ? fields.map((field) => value[field]).join('|')
-    : undefined
+  const identity = fields.map((field) => value[field])
+  if (identity.every((part): part is string => typeof part === 'string' && !!part)) return identity
+}
+
+/** Preserve the lookup keys used by existing subclass proficiency certificates. */
+export function getSubclassCopyLookupKey(value: Record<string, unknown>): string | undefined {
+  return getSubclassCopyIdentity(value)?.join('|')
 }
 
 export const getSubclassProficiencyOwner = getSubclassOwnerIdentity

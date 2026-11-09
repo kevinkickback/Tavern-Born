@@ -1,11 +1,16 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { FIXED_PROFICIENCY_RULES } from '@/lib/5etools/fixedProficiencyRules'
-import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { parseClassDocument, parseClasses } from '@/lib/5etools/parsers/classes'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
+import {
+  createIndexedClassResolver,
+  createIndexedSubclassFeatureResolver,
+  createIndexedSubclassResolver,
+} from '@/lib/5etools/subclassSourcePreparation'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
@@ -299,13 +304,27 @@ test.skipIf(!existsSync(classDirectory))(
   'every available real class reference agrees with its encoded UID',
   () => {
     let resolved = 0
-    for (const file of readdirSync(classDirectory).filter((name) =>
-      /^class-.*\.json$/.test(name),
-    )) {
-      const payload = JSON.parse(readFileSync(join(classDirectory, file), 'utf8')) as {
-        classFeature?: ClassFeature[]
-      }
-      for (const cls of parseClasses(payload) as Class5e[]) {
+    const index = JSON.parse(readFileSync(join(classDirectory, 'index.json'), 'utf8')) as Record<
+      string,
+      string
+    >
+    const documents = new Map(
+      [...new Set(Object.values(index))].map((file) => [
+        file,
+        JSON.parse(readFileSync(join(classDirectory, file), 'utf8')) as {
+          classFeature?: ClassFeature[]
+        },
+      ]),
+    )
+    const prepareFeatures = createIndexedSubclassFeatureResolver(index, documents)
+    const prepareClasses = createIndexedClassResolver(index, documents)
+    const prepareSubclasses = createIndexedSubclassResolver(index, documents)
+    for (const [file, payload] of documents) {
+      const { classes } = parseClassDocument(payload, undefined, prepareFeatures(file), {
+        classes: prepareClasses(file),
+        subclasses: prepareSubclasses(file),
+      })
+      for (const cls of classes as Class5e[]) {
         for (const reference of cls.classFeatureRefs ?? []) {
           const [name, className, classSourcePart, levelPart, sourcePart] = reference.ref
             .split('|')

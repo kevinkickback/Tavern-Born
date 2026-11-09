@@ -63,7 +63,11 @@ import { createJsonResourceReader, type JsonResourceReader } from './resourceRea
 import { CreatureDataSchema, OptionalClassBookDataSchema } from './schemas'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
-import { createIndexedSubclassFeatureResolver } from './subclassSourcePreparation'
+import {
+  createIndexedClassResolver,
+  createIndexedSubclassFeatureResolver,
+  createIndexedSubclassResolver,
+} from './subclassSourcePreparation'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -610,6 +614,8 @@ export class FiveEToolsDataLoader {
     )
 
     const prepareFeatures = createIndexedSubclassFeatureResolver(indexData, documents)
+    const prepareClasses = createIndexedClassResolver(indexData, documents)
+    const prepareSubclasses = createIndexedSubclassResolver(indexData, documents)
     const optionalClassFeatureSources: NonNullable<GameData['optionalClassFeatureSources']> = []
     const classCastingSources: NonNullable<GameData['classCastingSources']> = []
     for (const loaded of loadedClasses) {
@@ -617,7 +623,12 @@ export class FiveEToolsDataLoader {
       throwIfAborted(options?.signal)
       const { file, classData, fluff } = loaded
       try {
-        const parsedDocument = parseClassDocument(classData, `class/${file}`, prepareFeatures(file))
+        const parsedDocument = parseClassDocument(
+          classData,
+          `class/${file}`,
+          prepareFeatures(file),
+          { classes: prepareClasses(file), subclasses: prepareSubclasses(file) },
+        )
         const fluffByKey = new Map(fluff.map((item) => [`${item.name}|${item.source}`, item]))
         const classes = parsedDocument.classes as GameData['classes']
         for (const item of classes) {

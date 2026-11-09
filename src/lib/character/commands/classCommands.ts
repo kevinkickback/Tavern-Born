@@ -10,7 +10,6 @@ import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSp
  * return a single result object for callers to apply.
  */
 
-import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import {
   assertStartingEquipmentSelections,
   getClassDefaultEquipmentBlocks,
@@ -48,7 +47,6 @@ import {
   addGrant,
   applyClassGrants,
   applyMulticlassGrants,
-  diffProficiencyGrants,
   makeSourceTag,
   reconcileClassChange,
   removeGrantsBySourceRef,
@@ -71,7 +69,7 @@ import {
   reconcileClassChoiceSelectionGrants,
   reconcileClassChoiceSelections,
 } from './classChoiceCommands'
-import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
+import { mergeClassToolProficiencies, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
@@ -364,18 +362,24 @@ function computeClassSelectionEffects(
     character.classProgression.find((entry) =>
       sameStartingReference(entry, character.initialClass),
     ) ?? getCharacterClassEntries(character)[0]
-  const oldClassName = primaryClassEntry?.name
-  const oldSubclassName = primaryClassEntry?.subclass
-
-  let provenanceUpdate = reconcileClassChange(ledger, oldClassName, oldSubclassName)
-  provenanceUpdate = applyClassGrants(cls, subclass, provenanceUpdate)
+  const retainedLedger = primaryClassEntry
+    ? reconcileClassChange(
+        ledger,
+        primaryClassEntry,
+        character.classProgression.filter((row) => row !== primaryClassEntry),
+      )
+    : ledger
+  let provenanceUpdate = applyClassGrants(cls, subclass, retainedLedger)
 
   let proficiencies = { ...character.proficiencies }
 
-  if (oldClassName) {
+  if (primaryClassEntry) {
     const domains = ['armor', 'weapons', 'tools', 'skills', 'savingThrows'] as const
     for (const domain of domains) {
-      const { toRemove } = diffProficiencyGrants(ledger, domain, 'class', oldClassName)
+      const retained = retainedLedger.proficiencies[domain]
+      const toRemove = Object.keys(ledger.proficiencies[domain]).filter(
+        (name) => !retained[name]?.length,
+      )
       if (toRemove.length === 0) continue
       if (domain === 'savingThrows') {
         proficiencies = {
@@ -394,14 +398,6 @@ function computeClassSelectionEffects(
   }
 
   const startingProficiencies = cls.startingProficiencies ?? {}
-  const toolsFromArray = (startingProficiencies.tools ?? [])
-    .filter((tool): tool is string => typeof tool === 'string')
-    .map(stripItemTag)
-    .filter((tool) => tool && !isNarrativeTool(tool))
-  const toolsFromBlocks = extractProficiencyBlockNames(
-    startingProficiencies.toolProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
 
   proficiencies = {
     ...proficiencies,
@@ -421,7 +417,7 @@ function computeClassSelectionEffects(
           .map(stripItemTag),
       ]),
     ],
-    tools: [...new Set([...proficiencies.tools, ...toolsFromArray, ...toolsFromBlocks])],
+    tools: mergeClassToolProficiencies(proficiencies.tools, startingProficiencies),
     savingThrows: [
       ...new Set([
         ...proficiencies.savingThrows,
@@ -1167,18 +1163,14 @@ export function addMulticlass(
     },
   ]
 
-  const gained = classEntity.multiclassing?.proficienciesGained
-  const fallback = classEntity.startingProficiencies ?? {}
-  const toolsFromBlocks = extractProficiencyBlockNames(gained?.toolProficiencies ?? [], {
-    includeAnyStandard: false,
-  })
+  const gained = classEntity.multiclassing?.proficienciesGained ?? {}
 
   const updatedProficiencies = {
     ...character.proficiencies,
     armor: [
       ...new Set([
         ...(character.proficiencies.armor ?? []),
-        ...(gained?.armor ?? fallback.armor ?? [])
+        ...(gained.armor ?? [])
           .filter((armor): armor is string => typeof armor === 'string')
           .map((armor) => stripItemTag(armor)),
       ]),
@@ -1186,25 +1178,17 @@ export function addMulticlass(
     weapons: [
       ...new Set([
         ...(character.proficiencies.weapons ?? []),
-        ...(gained?.weapons ?? [])
+        ...(gained.weapons ?? [])
           .filter((weapon): weapon is string => typeof weapon === 'string')
           .map((weapon) => stripItemTag(weapon)),
       ]),
     ],
-    tools: [
-      ...new Set([
-        ...(character.proficiencies.tools ?? []),
-        ...(gained?.tools ?? fallback.tools ?? [])
-          .filter((tool): tool is string => typeof tool === 'string')
-          .map((tool) => stripItemTag(tool)),
-        ...toolsFromBlocks,
-      ]),
-    ],
+    tools: mergeClassToolProficiencies(character.proficiencies.tools ?? [], gained),
     savingThrows: [...(character.proficiencies.savingThrows ?? [])],
     skills: [
       ...new Set([
         ...(character.proficiencies.skills ?? []),
-        ...(fallback.skills ?? []).filter((skill): skill is string => typeof skill === 'string'),
+        ...(gained.skills ?? []).filter((skill): skill is string => typeof skill === 'string'),
       ]),
     ],
   }

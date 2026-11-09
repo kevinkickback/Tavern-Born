@@ -258,7 +258,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
+      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
@@ -466,7 +466,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "116eadfe617106c4199b7a12fbdd31b3a70128d83cda284e97f6a02e43b74d15"
+      "sha256": "c99c67e97aac8bf9b977054eb6c3f76fecee7e0508009f47a11b98111e17e2de"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -598,7 +598,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "b4e6d88800300dd5b3553bcef745a97407cfa5fbb34b8e8e2af8fd4895ace0a1"
+      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
@@ -618,7 +618,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "19d5c430b24e7692310ba5f94c231f424bc44f6a60156821a6c500cfd260007e"
+      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
@@ -686,7 +686,7 @@
     },
     {
       "file": "src/lib/calculations/spellSlots.ts",
-      "sha256": "6faa1a9716ed8241c7ab80ebf0e87aafc457e61c84624a242d68cc56dce42649"
+      "sha256": "7c490012697c4d8b878eda8bb61daa6be1265be8caac057ad78fed2dffffd5b4"
     },
     {
       "file": "src/lib/calculations/spellUtils.ts",

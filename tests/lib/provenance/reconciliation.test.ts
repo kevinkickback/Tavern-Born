@@ -85,7 +85,11 @@ describe('provenance/reconciliation', () => {
     ledger = addGrant(ledger, 'savingThrows', 'intelligence', classTag)
     ledger = addGrant(ledger, 'features', 'sculpt spells', subclassTag)
 
-    const reconciled = reconcileClassChange(ledger, 'Wizard', 'Evocation')
+    const reconciled = reconcileClassChange(
+      ledger,
+      { name: 'Wizard', source: 'PHB', levels: 3, subclass: 'Evocation', subclassSource: 'PHB' },
+      [],
+    )
 
     expect(reconciled.proficiencies.savingThrows.intelligence).toBeUndefined()
     expect(reconciled.features['sculpt spells']).toBeUndefined()
@@ -162,7 +166,9 @@ describe('provenance/reconciliation', () => {
     ledger = addSpellGrant(ledger, 'Magic Missile', classTag)
     ledger = addSpellGrant(ledger, 'Cure Wounds', classTagCleric)
 
-    const reconciled = reconcileClassChange(ledger, 'Wizard', undefined)
+    const reconciled = reconcileClassChange(ledger, { name: 'Wizard', source: 'PHB', levels: 1 }, [
+      { name: 'Cleric', source: 'PHB', levels: 1 },
+    ])
 
     expect(reconciled.spells['magic missile']).toBeUndefined()
     expect(reconciled.spells['cure wounds']).toEqual([classTagCleric])

@@ -240,7 +240,7 @@ describe('casterProgressionToFull', () => {
     expect(casterProgressionToFull('1/2')).toBe('Half')
     expect(casterProgressionToFull('1/3')).toBe('One-Third')
     expect(casterProgressionToFull('pact')).toBe('Pact Magic')
-    expect(casterProgressionToFull('artificer')).toBe('Artificer')
+    expect(casterProgressionToFull('artificer')).toBe('Half')
     expect(casterProgressionToFull('none')).toBe('None')
   })
 

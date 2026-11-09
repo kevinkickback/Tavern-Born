@@ -563,10 +563,16 @@ function auditNativeSubclassCopies(
 }
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
+interface PreparedClassOwners {
+  classes: ParsedObject[]
+  subclasses: ParsedObject[]
+}
+
 function prepareClassDocument(
   data: unknown,
   sourceId?: string,
   preparedSubclassFeatures?: ParsedObject[],
+  preparedOwners?: PreparedClassOwners,
 ): unknown {
   if (Array.isArray(data)) return auditFixedLayerMultiplicity(data.map(asObject), 'classes')
   const obj = asObject(data)
@@ -581,7 +587,10 @@ function prepareClassDocument(
       subclassRecords,
       auditInheritedBarbarianRoots(
         subclassRecords,
-        auditInheritedSubclassRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+        auditInheritedSubclassRoots(
+          subclassRecords,
+          preparedOwners?.subclasses ?? materializeSubclassCopies(subclassRecords),
+        ),
       ),
     ),
     records,
@@ -608,8 +617,17 @@ function prepareClassDocument(
     ),
     origin,
   )
+  const auditedClasses = auditDirectFixedClassDeclarations(classRecords, origin)
   const classes = auditFixedLayerMultiplicity(
-    auditDirectFixedClassDeclarations(classRecords, origin),
+    auditedClasses.map((row, index) => {
+      const preparedClass = preparedOwners?.classes[index]
+      if (!preparedClass || !Object.getOwnPropertyDescriptor(classRecords[index], '_copy'))
+        return row
+      // The materialized class has inherited data. Direct declarations still use raw evidence.
+      return Object.getOwnPropertyDescriptor(row, 'fixedProficiencySourceAudit')
+        ? { ...preparedClass, fixedProficiencySourceAudit: row.fixedProficiencySourceAudit }
+        : preparedClass
+    }),
     'classes',
   )
   const subclass = auditSubclassProficiencyRoots(
@@ -648,13 +666,14 @@ export function parseClassDocument(
   data: unknown,
   sourceId?: string,
   preparedSubclassFeatures?: ParsedObject[],
+  preparedOwners?: PreparedClassOwners,
 ): {
   classes: unknown[]
   classFeatures: unknown[]
   optionalClassFeatureSources: import('@/types/5etools').OptionalClassFeatureSourceProof[]
   classCastingSources: import('@/types/classCasting').ClassCastingSourceProof[]
 } {
-  const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures)
+  const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures, preparedOwners)
   return {
     classes: parsePreparedClasses(prepared),
     classFeatures: parsePreparedClassFeatures(prepared),

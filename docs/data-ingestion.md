@@ -156,6 +156,14 @@ providing a winning consumed body does not re-materialize an omitted copied owne
 development semantic input is separate from ordinary generation; runtime rules retain
 compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification
 alone neither adopts a feature nor implements its conditional benefits, spell grants or events.
+
+The indexed class loader resolves class copies through declared internal and indexed dependencies.
+It preserves the selected class's name, source, and overrides. Indexed subclass roots resolve
+one level of copying against declared internal and indexed dependencies. The resulting features keep their original
+source-qualified references. Starting and multiclass proficiency grants belong to the selected
+class printing. Inherited features use their own source checks for class casting, optional features,
+and other automated choices.
+
 Shared feature digests canonicalize current input on every call. Only exact canonical strings and
 their SHA-256 values are reused in memory; source validity, ownership and multiplicity are always
 checked separately. Retention is bounded to 256 entries, 32,768 code units per signature and a

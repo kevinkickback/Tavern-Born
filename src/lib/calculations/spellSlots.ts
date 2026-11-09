@@ -12,7 +12,7 @@ const CASTER_PROGRESSION_TO_FULL: Readonly<Record<CasterProgression, string>> = 
   '1/2': 'Half',
   '1/3': 'One-Third',
   pact: 'Pact Magic',
-  artificer: 'Artificer',
+  artificer: 'Half',
   none: 'None',
 }
 
