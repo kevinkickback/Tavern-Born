@@ -65,40 +65,17 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     expect(bundledClassIcon.loaded).toBe(true)
     expect(bundledClassIcon.src).toMatch(/^file:.*\/assets\/images\/ui\/icons\/wizard\.svg$/i)
 
-    const rejectedPathMessage = await page.evaluate(async () => {
-      try {
-        await window.electronAPI.readLocalJson('relative.json')
-        return null
-      } catch (error) {
-        return error instanceof Error ? error.message : String(error)
-      }
+    const directFileReads = await page.evaluate(() => {
+      return ['readLocalJson', 'readBundledJson'].filter((key) =>
+        Reflect.has(window.electronAPI, key),
+      )
     })
-    expect(rejectedPathMessage).toContain('Path must be absolute')
-
-    const bundledBoundaryMessages = await page.evaluate(() => {
-      const readError = async (relativePath: string) => {
-        try {
-          await window.electronAPI.readBundledJson(relativePath)
-          return null
-        } catch (error) {
-          return error instanceof Error ? error.message : String(error)
-        }
-      }
-      return Promise.all([readError('../manifest.json'), readError('THIRD_PARTY_NOTICES.md')])
-    })
-    expect(bundledBoundaryMessages[0]).toContain('invalid segment')
-    expect(bundledBoundaryMessages[1]).toContain('Only bundled JSON files may be read')
+    expect(directFileReads).toEqual([])
 
     if (HAS_DEVELOPMENT_SRD) {
-      const bundledRuntime = await page.evaluate(async () => ({
-        manifest: await window.electronAPI.getBundledManifest(),
-        classIndex: await window.electronAPI.readBundledJson('class/index.json'),
-      }))
-      expect(bundledRuntime.manifest.packId).toBe('tavern-born-srd-core')
-      expect(bundledRuntime.manifest.packVersion).toBeTruthy()
-      expect(bundledRuntime.classIndex).toEqual(
-        expect.objectContaining({ wizard: expect.any(String) }),
-      )
+      const manifest = await page.evaluate(() => window.electronAPI.getBundledManifest())
+      expect(manifest.packId).toBe('tavern-born-srd-core')
+      expect(manifest.packVersion).toBeTruthy()
     }
   } finally {
     if (electronApp.process().exitCode === null) {

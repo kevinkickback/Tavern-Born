@@ -3,6 +3,7 @@
   "entry": [
     "src/main.tsx!",
     "electron/main.ts!",
+    "electron/catalogWorker.ts!",
     "electron/preload.ts!",
     "public/theme-init.js!",
     "scripts/**/*.{js,mjs,ts}",

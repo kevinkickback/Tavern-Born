@@ -1,4 +1,5 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
+import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
 import type { BundledSrdManifestSummary } from './bundledResources'
 import type { UpdateEventPayloads, UpdateSignal } from './updateEvents'
 
@@ -34,12 +35,15 @@ const electronAPI = {
   discardLocalDataRoot: (root: string): void => ipcRenderer.send('fs:discardDataRoot', root),
   approveLocalDataRoot: (root: string): Promise<void> =>
     ipcRenderer.invoke('fs:approveDataRoot', root),
-  readLocalJson: (filePath: string, root?: string): Promise<unknown> =>
-    ipcRenderer.invoke('fs:readJson', filePath, root),
-  readBundledJson: (relativePath: string): Promise<unknown> =>
-    ipcRenderer.invoke('resources:readBundledJson', relativePath),
   getBundledManifest: (): Promise<BundledSrdManifestSummary> =>
     ipcRenderer.invoke('resources:getBundledManifest'),
+  sendCatalogMessage: (message: CatalogRequestMessage): void =>
+    ipcRenderer.send('catalog:message', message),
+  onCatalogMessage: (callback: (message: CatalogWorkerMessage) => void): (() => void) => {
+    const listener = (_event: IpcRendererEvent, message: CatalogWorkerMessage) => callback(message)
+    ipcRenderer.on('catalog:event', listener)
+    return () => ipcRenderer.removeListener('catalog:event', listener)
+  },
   setUnsavedChanges: (value: boolean) => ipcRenderer.send('state:setUnsavedChanges', value),
   onConfirmClose: (callback: () => void) => onIpcEvent('app:confirmClose', callback),
   forceClose: () => ipcRenderer.send('app:forceClose'),

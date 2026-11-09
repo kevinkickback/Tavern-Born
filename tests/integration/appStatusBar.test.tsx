@@ -17,7 +17,7 @@ describe('application status bar', () => {
       activeCharacter: null,
     })
     useGameDataStore.setState({
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
       gameData: makeGameDataFixture(),
       sessionBundledSource: null,
       pendingCatalog: null,

@@ -14,7 +14,6 @@ const DataSourceConfigurator = lazy(() =>
   import('./DataSourceConfigurator').then((module) => ({ default: module.DataSourceConfigurator })),
 )
 
-const FORCE_KEY = 'tb:force-setup'
 const BUNDLED_INTRO_KEY = 'tb:bundled-srd-intro:v1'
 
 /**
@@ -24,8 +23,6 @@ const BUNDLED_INTRO_KEY = 'tb:bundled-srd-intro:v1'
  *  - Store has fully hydrated from IDB, and
  *  - an active bundled source has not been introduced yet, or
  *  - gameData is null after loading finishes.
- *
- * Can also be forced open via `localStorage.setItem('tb:force-setup', '1')` + reload.
  */
 export function DataSourceStartupModal() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
@@ -40,17 +37,14 @@ export function DataSourceStartupModal() {
     remoteStartup === 'unavailable' ||
     remoteStartup === 'loading-srd'
 
-  const [isForced] = useState(() => Boolean(localStorage.getItem(FORCE_KEY)))
   const [hasAcknowledgedBundledIntro, setHasAcknowledgedBundledIntro] = useState(() =>
     Boolean(localStorage.getItem(BUNDLED_INTRO_KEY)),
   )
   const [showExternalSetup, setShowExternalSetup] = useState(false)
   const [open, setOpen] = useState(false)
   const isBundledReady = Boolean(gameData && dataSourceConfig?.type === 'bundled')
-  const showBundledIntro =
-    !isForced && isBundledReady && !hasAcknowledgedBundledIntro && !showExternalSetup
+  const showBundledIntro = isBundledReady && !hasAcknowledgedBundledIntro && !showExternalSetup
   const needsSetup = !gameData && (!isLoading || remoteStartup === 'setup')
-  const shouldShowSelectorOnly = !isForced && (needsSetup || showExternalSetup)
 
   // Wait for both IDB hydration AND useDataInit to finish resolving the cache
   // status.  While cacheStatus is still 'unknown', the init hook is reading
@@ -60,12 +54,11 @@ export function DataSourceStartupModal() {
   useEffect(() => {
     if (!hasHydrated || overlayHasRecovery) return
     if (cacheStatus === 'unknown' && !error) return
-    setOpen(isForced || needsSetup || showBundledIntro || showExternalSetup)
+    setOpen(needsSetup || showBundledIntro || showExternalSetup)
   }, [
     hasHydrated,
     cacheStatus,
     error,
-    isForced,
     needsSetup,
     overlayHasRecovery,
     showBundledIntro,
@@ -93,15 +86,12 @@ export function DataSourceStartupModal() {
   const handleSourceLoaded = () => {
     acknowledgeBundledIntro()
     setShowExternalSetup(false)
-    if (!isForced) setOpen(false)
+    setOpen(false)
   }
 
   const handleOpenChange = (next: boolean) => {
-    if (!next && !isForced && (needsSetup || showBundledIntro || showExternalSetup)) {
+    if (!next && (needsSetup || showBundledIntro || showExternalSetup)) {
       return
-    }
-    if (!next && isForced) {
-      localStorage.removeItem(FORCE_KEY)
     }
     setOpen(next)
   }
@@ -113,10 +103,10 @@ export function DataSourceStartupModal() {
       <DialogContent
         className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&>button:last-child]:hidden"
         onPointerDownOutside={(e) => {
-          if (!gameData && !isLoading && !isForced) e.preventDefault()
+          if (!gameData && !isLoading) e.preventDefault()
         }}
         onEscapeKeyDown={(e) => {
-          if (!gameData && !isLoading && !isForced) e.preventDefault()
+          if (!gameData && !isLoading) e.preventDefault()
         }}
       >
         <DialogHeader className="shrink-0 gap-2 border-b border-border bg-surface-raised px-6 py-5">
@@ -126,13 +116,11 @@ export function DataSourceStartupModal() {
             </span>
             <div className="min-w-0">
               <DialogTitle className="text-lg">
-                {isForced
-                  ? 'Game Data Setup'
-                  : showBundledIntro
-                    ? 'Welcome to Tavern Born'
-                    : showExternalSetup
-                      ? 'Add Additional Content'
-                      : 'Choose Game Data'}
+                {showBundledIntro
+                  ? 'Welcome to Tavern Born'
+                  : showExternalSetup
+                    ? 'Add Additional Content'
+                    : 'Choose Game Data'}
               </DialogTitle>
               <p className="mt-1 text-xs text-muted-foreground">
                 {showBundledIntro
@@ -146,13 +134,11 @@ export function DataSourceStartupModal() {
           <DialogDescription
             className={showBundledIntro || showExternalSetup ? 'sr-only' : 'pt-1 leading-relaxed'}
           >
-            {isForced
-              ? 'Choose the game data Tavern Born should use. Close when done.'
-              : showBundledIntro
-                ? 'Tavern Born is ready to use with the included rules.'
-                : showExternalSetup
-                  ? 'Add compatible 5etools data from the web or your computer.'
-                  : 'Choose a compatible source to use while the Included SRD is unavailable.'}
+            {showBundledIntro
+              ? 'Tavern Born is ready to use with the included rules.'
+              : showExternalSetup
+                ? 'Add compatible 5etools data from the web or your computer.'
+                : 'Choose a compatible source to use while the Included SRD is unavailable.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -192,7 +178,7 @@ export function DataSourceStartupModal() {
               }
             >
               <DataSourceConfigurator
-                selectorOnly={shouldShowSelectorOnly}
+                selectorOnly={needsSetup || showExternalSetup}
                 showAdditionalContentGuidance={showExternalSetup}
                 onSourceLoaded={handleSourceLoaded}
                 onCancel={showExternalSetup ? handleReturnToBundledIntro : undefined}

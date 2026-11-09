@@ -276,6 +276,7 @@ export interface ContentLayerDependencyIssue {
 }
 
 export interface DataSourceStackLoaderOptions extends DataLoaderOptions {
+  baseReader?: import('./resourceReader').JsonResourceReader
   additionalReader?: import('./resourceReader').JsonResourceReader
   onLayerLoaded?: (role: 'base' | 'additional', data: GameData) => void
 }
@@ -642,6 +643,7 @@ export async function loadGameDataSourceStack(
   const base = await loadDataFromSource(
     stack.base,
     optionsForLayer(options, 'Included SRD', Boolean(stack.additional)),
+    options?.baseReader,
   )
   options?.onLayerLoaded?.('base', base)
   if (!stack.additional) return base

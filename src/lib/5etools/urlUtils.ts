@@ -179,28 +179,3 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
     return { kind: 'invalid', error: 'Invalid URL format' }
   }
 }
-
-async function testUrlWithBranch(
-  owner: string,
-  repo: string,
-  branch: string,
-  testFile: string,
-): Promise<boolean> {
-  try {
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/data/${testFile}`
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000),
-    })
-    return response.ok
-  } catch {
-    return false
-  }
-}
-
-export async function findCorrectBranch(owner: string, repo: string): Promise<string> {
-  for (const branch of ['main', 'master']) {
-    if (await testUrlWithBranch(owner, repo, branch, 'races.json')) return branch
-  }
-  return 'main'
-}

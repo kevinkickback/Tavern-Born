@@ -15,7 +15,7 @@ import {
 } from './contentLayers'
 import type { DataLoaderOptions } from './dataLoader'
 import { loadDataFromSource } from './dataLoader'
-import { createJsonResourceReader } from './resourceReader'
+import { createJsonResourceReader, type ReadSourceJson } from './resourceReader'
 import { resolveSourceRevision } from './sourceRevision'
 import { inspectCatalogResources } from './validator'
 
@@ -61,10 +61,11 @@ export async function prepareCatalog(
   base: GameDataSourceStack['base'] | undefined,
   signal: AbortSignal,
   onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
 ): Promise<PreparedCatalog> {
   onProgress?.(0, 0, 'Checking source')
-  const source = await resolveSourceRevision(config, signal)
-  const reader = createJsonResourceReader(source.readConfig)
+  const source = await resolveSourceRevision(config, signal, read)
+  const reader = createJsonResourceReader(source.readConfig, read)
   const scan = await settleOnAbort(
     inspectCatalogResources(reader, config.availableResources ?? [], signal),
     signal,
@@ -95,6 +96,7 @@ export async function prepareCatalog(
         { base, additional: admitted },
         {
           ...options,
+          baseReader: read ? createJsonResourceReader(base, read) : undefined,
           additionalReader: scan.reader,
           onLayerLoaded: (role, data) => {
             if (role === 'base' && !hasCatalogRecords(data))

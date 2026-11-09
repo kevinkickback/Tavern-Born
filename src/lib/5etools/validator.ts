@@ -1,11 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
-import type { DataSourceConfig } from '@/types/5etools'
-import {
-  createJsonResourceReader,
-  type JsonResourceReader,
-  ResourceHttpError,
-} from './resourceReader'
+import { type JsonResourceReader, ResourceHttpError } from './resourceReader'
 import {
   ActionDataSchema,
   BackgroundDataSchema,
@@ -22,20 +17,10 @@ import {
   RaceDataSchema,
   TrapHazardDataSchema,
 } from './schemas'
-import { findCorrectBranch, parseRemoteDataSourceUrl } from './urlUtils'
-
-interface ValidationResult {
-  isValid: boolean
-  error?: string
-  foundResources?: string[]
-  normalizedPath?: string
-  optionalSupportDiagnostics?: string[]
-}
 
 interface FileValidationConfig {
   name: string
-  schema?: ZodTypeAny
-  required?: boolean
+  schema: ZodTypeAny
   optionalSupport?: boolean
   collections?: string[]
 }
@@ -44,18 +29,17 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
   {
     name: 'book/book-tce.json',
     schema: OptionalClassBookDataSchema,
-    required: false,
     optionalSupport: true,
   },
   { name: 'books.json', schema: BookDataSchema },
   { name: 'adventures.json', schema: GenericDataSchema, collections: ['adventure'] },
   { name: 'races.json', schema: RaceDataSchema, collections: ['race', 'subrace'] },
-  { name: 'fluff-races.json', schema: GenericDataSchema, required: false },
-  { name: 'fluff-backgrounds.json', schema: GenericDataSchema, required: false },
+  { name: 'fluff-races.json', schema: GenericDataSchema },
+  { name: 'fluff-backgrounds.json', schema: GenericDataSchema },
   { name: 'class/index.json', schema: IndexSchema },
   { name: 'backgrounds.json', schema: BackgroundDataSchema },
   { name: 'spells/index.json', schema: IndexSchema },
-  { name: 'bestiary/index.json', schema: IndexSchema, required: false },
+  { name: 'bestiary/index.json', schema: IndexSchema },
   { name: 'generated/gendata-spell-source-lookup.json', schema: GenericDataSchema },
   { name: 'feats.json', schema: FeatDataSchema },
   { name: 'items.json', schema: ItemDataSchema, collections: ['item', 'itemGroup'] },
@@ -83,7 +67,7 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
     collections: ['magicvariant', 'variant'],
   },
   { name: 'optionalfeatures.json', schema: OptionalFeatureDataSchema },
-  { name: 'psionics.json', schema: PsionicDataSchema, required: false },
+  { name: 'psionics.json', schema: PsionicDataSchema },
   { name: 'variantrules.json', schema: GenericDataSchema, collections: ['variantrule'] },
   { name: 'trapshazards.json', schema: TrapHazardDataSchema },
   { name: 'rewards.json', schema: GenericDataSchema, collections: ['reward'] },
@@ -110,7 +94,7 @@ export async function inspectCatalogResources(
     try {
       const data = await readJson(file.name)
       const valid =
-        file.schema?.safeParse(data).success &&
+        file.schema.safeParse(data).success &&
         (!file.collections ||
           (() => {
             const rows = data as Record<string, unknown>
@@ -149,127 +133,5 @@ export async function inspectCatalogResources(
     resources,
     warnings: rows.flatMap((row) => (row.warning ? [row.warning] : [])),
     reader: { type: reader.type, readJson },
-  }
-}
-
-async function validateFile(
-  reader: JsonResourceReader,
-  file: FileValidationConfig,
-): Promise<'valid' | 'invalid' | 'unavailable'> {
-  try {
-    const data = await reader.readJson(file.name)
-    if (!data || typeof data !== 'object') return 'invalid'
-    if (!file.schema) return 'valid'
-    const result = file.schema.safeParse(data)
-    if (!result.success) {
-      console.warn(`Schema validation failed for ${file.name}:`, result.error)
-      return 'invalid'
-    }
-
-    return 'valid'
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    const isMalformedJson =
-      error instanceof SyntaxError ||
-      /(?:Unexpected (?:token|end)|Expected property|JSON\.parse|not valid JSON)/i.test(message)
-
-    if (isMalformedJson) {
-      console.warn(`Failed to validate ${file.name}:`, error)
-      return 'invalid'
-    }
-
-    // Missing files are normal for partial additional-content sources. They
-    // simply are not capabilities supplied by this source.
-    return 'unavailable'
-  }
-}
-
-export async function validateDataSource(config: DataSourceConfig): Promise<ValidationResult> {
-  try {
-    if (config.type !== 'bundled' && (!config.path || config.path.trim() === '')) {
-      return {
-        isValid: false,
-        error: 'Path cannot be empty',
-      }
-    }
-
-    let normalizedPath = config.path
-    let persistedPath = config.path
-    if (config.type === 'remote') {
-      const parsedUrl = parseRemoteDataSourceUrl(config.path)
-      if (parsedUrl.kind === 'invalid') {
-        return { isValid: false, error: parsedUrl.error }
-      }
-      normalizedPath = parsedUrl.normalizedUrl
-      if (parsedUrl.kind === 'github-repository' && parsedUrl.branch?.includes('/')) {
-        persistedPath = config.path.trim()
-      } else {
-        persistedPath = normalizedPath
-      }
-      if (parsedUrl.kind === 'github-repository' && !parsedUrl.branch) {
-        const correctBranch = await findCorrectBranch(parsedUrl.owner, parsedUrl.repo)
-        normalizedPath = `https://raw.githubusercontent.com/${parsedUrl.owner}/${parsedUrl.repo}/${correctBranch}`
-        persistedPath = normalizedPath
-      }
-    }
-
-    const reader = createJsonResourceReader({ ...config, path: normalizedPath })
-    const candidates = CANDIDATE_FILES.filter(
-      (file) =>
-        config.type !== 'bundled' || (!file.optionalSupport && file.name !== 'psionics.json'),
-    )
-    const results = await mapWithConcurrency(candidates, 6, async (file) => {
-      const status = await validateFile(reader, file)
-      return { name: file.name, status, optionalSupport: file.optionalSupport }
-    })
-
-    const foundResources = results.filter((result) => result.status === 'valid').map((r) => r.name)
-    const invalidResources = results
-      .filter((result) => result.status === 'invalid' && !result.optionalSupport)
-      .map((result) => result.name)
-
-    if (invalidResources.length > 0) {
-      return {
-        isValid: false,
-        error: `Invalid ${invalidResources.length === 1 ? 'file' : 'files'}: ${invalidResources.join(', ')}`,
-        foundResources,
-        normalizedPath: persistedPath,
-      }
-    }
-
-    if (foundResources.length === 0) {
-      return {
-        isValid: false,
-        error: 'No valid 5etools data files found at this location',
-        normalizedPath: persistedPath,
-      }
-    }
-
-    const requiredFileNames = CANDIDATE_FILES.filter((file) => file.required !== false).map(
-      (file) => file.name,
-    )
-    const missingRequired = requiredFileNames.filter((file) => !foundResources.includes(file))
-
-    if (config.type === 'bundled' && missingRequired.length > 0) {
-      return {
-        isValid: false,
-        error: `Missing required ${missingRequired.length === 1 ? 'file' : 'files'}: ${missingRequired.join(', ')}`,
-        normalizedPath: persistedPath,
-      }
-    }
-
-    return {
-      isValid: true,
-      foundResources,
-      normalizedPath: persistedPath,
-      optionalSupportDiagnostics: results
-        .filter((result) => result.optionalSupport && result.status === 'invalid')
-        .map((result) => `Optional class feature support is unavailable in ${result.name}.`),
-    }
-  } catch (error) {
-    return {
-      isValid: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
   }
 }
