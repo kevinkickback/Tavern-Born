@@ -79,6 +79,50 @@ describe('data source switching', () => {
     expect(discardLocalDataRoot).toHaveBeenCalledWith('/unused')
   })
 
+  test.each([
+    { type: 'local', path: 'C:/Rules/5etools', tab: 'This Computer', field: 'Folder' },
+    {
+      type: 'remote',
+      path: 'https://backup.example.test/rules',
+      tab: 'Online',
+      field: 'Web Address',
+    },
+  ] as const)('prefills the saved $type source when changing additional content', async ({
+    type,
+    path,
+    tab,
+    field,
+  }) => {
+    const user = userEvent.setup()
+    const config = { type, path, isValid: true }
+    useGameDataStore.setState({ dataSourceConfig: config, gameData: makeGameDataFixture() })
+    render(<DataSourceConfigurator />)
+
+    const change = () =>
+      user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+    const input = (name: string) => screen.getByRole('textbox', { name }) as HTMLInputElement
+    await change()
+    expect(screen.getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true')
+    expect(input(field).value).toBe(path)
+    expect(
+      (screen.getByRole('button', { name: 'Add Additional Content' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+
+    await user.click(
+      screen.getByRole('tab', { name: type === 'local' ? 'Online' : 'This Computer' }),
+    )
+    expect(input(type === 'local' ? 'Web Address' : 'Folder').value).toBe('')
+    await user.click(screen.getByRole('tab', { name: tab }))
+    expect(input(field).value).toBe(path)
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await change()
+    expect(input(field).value).toBe(path)
+    expect(prepareCatalogMock).not.toHaveBeenCalled()
+    expect(useGameDataStore.getState().dataSourceConfig).toBe(config)
+  })
+
   test('adds external content without rewriting character identities', async () => {
     const user = userEvent.setup()
     const bundledData = makeGameDataFixture({
@@ -146,6 +190,13 @@ describe('data source switching', () => {
 
     render(<DataSourceConfigurator />)
     await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
+    await user.click(screen.getByRole('tab', { name: 'This Computer' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
+    expect(screen.getByRole('tab', { name: 'This Computer' }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
+    await user.click(screen.getByRole('tab', { name: 'Online' }))
     await user.type(
       screen.getByRole('textbox', { name: 'Web Address' }),
       'https://backup.example.test/rules',

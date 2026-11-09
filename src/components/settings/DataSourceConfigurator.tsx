@@ -108,7 +108,9 @@ export function DataSourceConfigurator({
     discardFolder(previewFolder.current)
     previewFolder.current = null
     setSourceType(newType)
-    setSourcePath('')
+    setSourcePath(
+      hasActiveDataSource && dataSourceConfig.type === newType ? dataSourceConfig.path : '',
+    )
     setValidationStatus('idle')
     setIsValidating(false)
     setValidationResult(null)
@@ -574,6 +576,8 @@ export function DataSourceConfigurator({
               {!selectorOnly && hasActiveDataSource && !isSelectingDataSource && (
                 <Button
                   onClick={() => {
+                    if (dataSourceConfig.type !== 'bundled')
+                      handleSourceTypeChange(dataSourceConfig.type)
                     autoOpenedSelectorRef.current = false
                     setIsSelectingDataSource(true)
                   }}
