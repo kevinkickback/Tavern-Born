@@ -90,8 +90,8 @@ the normal root config. Ordinary local `test:coverage` remains a complete run wi
 Electron smoke requires a display on Linux. It skips local Windows builds 26200–26399 because of
 upstream Electron issue 52098 (`0x80000003` during sandboxed child initialization). Keep CI coverage;
 never use `--no-sandbox` to make this check pass. Remove the skip once the pinned runtime is fixed.
-Before an authorized release also run `test:e2e:release` and `check:release` under the
-[release procedure](releasing.md). `npm run lint` writes fixes; `npx biome ci .` is read-only.
+Before an authorized release, also run `npm run test:e2e:release` and `npm run check:release` locally.
+`npm run lint` writes fixes. `npx biome ci .` is read-only.
 
 ## Runtime reachability review
 

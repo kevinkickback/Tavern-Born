@@ -1,7 +1,6 @@
 # CI/CD workflow
 
-This guide owns validation and protected PR delivery. [Testing](testing-map.md) owns test selection;
-the [release procedure](releasing.md) owns separately authorized release operations.
+This guide covers validation and protected PR delivery. See [Testing](testing-map.md) for test selection.
 
 ## Branches and repository settings
 
@@ -95,5 +94,5 @@ after acceptance criteria and the actual merge are verified.
 
 ## Releasing a version
 
-Read the [release procedure](releasing.md) for version/changelog preparation, protected-main dispatch,
-the ten-asset draft, recovery and publication. Release authorization is separate from a PR or merge.
+Release authorization is separate from a PR or merge. The [release workflow](../.github/workflows/release.yml)
+validates the current protected main revision and builds a draft for maintainer review.

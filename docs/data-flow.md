@@ -103,4 +103,4 @@ separate promise to preserve released v1.x characters.
 checks run after startup and at the configured interval when enabled. Notifications offer download;
 completed installers require the update modal before relaunch. Portable builds do not auto-install.
 Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
-separately authorized [release procedure](releasing.md).
+separately authorized [release workflow](../.github/workflows/release.yml).

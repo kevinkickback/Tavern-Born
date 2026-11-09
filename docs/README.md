@@ -16,7 +16,7 @@ when placement or a new boundary is unclear. No task requires preloading every t
 | Components, controllers or selection lists | [React patterns](react-patterns.md) | [Workspaces](contracts/workspaces.md), [previews](contracts/rules-previews.md), [spell selection](contracts/spell-selection.md) |
 | PDF projection, fitting or forms | [PDF generation](pdf-generation.md) | [Template maintenance](../scripts/pdf-sources/README.md) |
 | Verification | [Testing](testing-map.md) | Relevant existing tests and their fixtures |
-| CI, PRs or packaging | [CI/CD](cicd-workflow.md) | [Release procedure](releasing.md), only for authorized release work |
+| CI, PRs or packaging | [CI/CD](cicd-workflow.md) | [Testing](testing-map.md#commands) |
 | Bundled content or artwork | [SRD pack](../resources/srd/core/README.md), [artwork](../build/README.md) | Retained provenance/notices and manifests |
 | Historical release behavior | [Changelog](changelog.md) | The relevant release section only |
 
