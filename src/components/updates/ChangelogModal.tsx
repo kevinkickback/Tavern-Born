@@ -1,4 +1,5 @@
 import { ArrowSquareOut, CircleNotch } from '@phosphor-icons/react'
+import { useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
@@ -34,6 +35,7 @@ export function ChangelogModal({
   onInstall,
   onOpenDownloadPage,
 }: ChangelogModalProps) {
+  const returnFocus = useRef<HTMLElement | null>(null)
   const handleOpenDownloadPage = async () => {
     try {
       await onOpenDownloadPage?.()
@@ -46,7 +48,14 @@ export function ChangelogModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-xs sm:max-w-md p-3 sm:p-6">
+      <DialogContent
+        className="w-full max-w-xs sm:max-w-md p-3 sm:p-6"
+        onOpenAutoFocus={() => {
+          const active = document.activeElement
+          returnFocus.current = active instanceof HTMLElement ? active : null
+        }}
+        onCloseAutoFocus={() => returnFocus.current?.focus()}
+      >
         <DialogHeader>
           <DialogTitle>
             {updateAvailable ? `Update Available — v${version}` : `Changelog — v${version}`}
@@ -90,7 +99,14 @@ export function ChangelogModal({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Skip
               </Button>
-              <Button onClick={onInstall}>Install Now</Button>
+              <Button
+                onClick={() => {
+                  returnFocus.current = null
+                  onInstall()
+                }}
+              >
+                Install Now
+              </Button>
             </>
           ) : updateAvailable && onOpenDownloadPage ? (
             <>

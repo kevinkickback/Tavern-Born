@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -291,7 +291,7 @@ describe('Rules Additional Content panel layout', () => {
     expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
   })
 
-  test('removes a previously saved provenance-only source selection', async () => {
+  test('hides provenance-only sources without changing the saved selection', () => {
     const character = makeCharacterFixture({ allowedSources: ['PHB', 'MM'] })
     useCharacterStore.setState({
       characters: [character],
@@ -301,9 +301,8 @@ describe('Rules Additional Content panel layout', () => {
 
     render(<SourcesPanel />)
 
-    await waitFor(() => {
-      expect(useCharacterStore.getState().activeCharacter?.allowedSources).toEqual(['PHB'])
-    })
+    expect(screen.queryByText('Monster Manual', { exact: true })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter?.allowedSources).toEqual(['PHB', 'MM'])
   })
 
   test('updates the source note when newer printings are preferred', async () => {

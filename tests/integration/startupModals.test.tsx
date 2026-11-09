@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { APP_INTERACTIVE_CONTENT_ID } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
+import { clearGameDataCache, readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
 import { useGameDataStore } from '@/store/gameDataStore'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/components/settings/DataSourceConfigurator', () => ({
   DataSourceConfigurator: ({ onCancel }: { onCancel?: () => void }) => (
@@ -45,6 +47,7 @@ function resetGameDataStore() {
     cacheStatus: 'unknown',
     remoteStartup: null,
     sessionBundledSource: null,
+    bundledUnavailable: false,
     hasHydrated: false,
   })
 }
@@ -70,7 +73,44 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText('Warming up the dice...')).toBeTruthy()
   })
 
-  test('cold remote failure keeps the startup overlay and recovery actions available', async () => {
+  test.each([
+    false,
+    true,
+  ])('metadata-only Included SRD reaches recovery (cached=%s)', async (cached) => {
+    const bundled = {
+      type: 'bundled' as const,
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const itemEntries = [{ name: 'Loose text', source: 'PHB', entriesTemplate: ['Shared text.'] }]
+    const readBundledJson = vi.fn((file: string) =>
+      Promise.resolve(file === 'items-base.json' ? { itemEntry: itemEntries } : {}),
+    )
+    vi.stubGlobal('electronAPI', {
+      getBundledManifest: () => Promise.resolve(bundled),
+      readBundledJson,
+    })
+    await clearGameDataCache(true)
+    try {
+      if (cached) await writeGameDataCache(makeGameDataFixture({ itemEntries }), bundled)
+      await useGameDataStore.getState().loadFromCache()
+      expect(readBundledJson).toHaveBeenCalledWith('items-base.json')
+      expect(useGameDataStore.getState()).toMatchObject({
+        gameData: null,
+        remoteStartup: 'unavailable',
+        bundledUnavailable: true,
+        error: 'The Included SRD could not be loaded.',
+      })
+      if (!cached) expect(await readGameDataCache()).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+      await clearGameDataCache(true)
+    }
+  })
+
+  test('startup recovery offers retry and source setup after both catalogs fail', async () => {
     const user = userEvent.setup()
     useGameDataStore.setState({ hasHydrated: true, remoteStartup: 'unavailable', error: 'Offline' })
     render(
@@ -80,7 +120,8 @@ describe('startup integration: loading overlay and startup modal', () => {
       </>,
     )
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Use Included SRD for this session' })).toBeTruthy()
+    expect(screen.getByText('Game data is unavailable.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Use Included SRD/ })).toBeNull()
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Change source' }))
     expect(await screen.findByRole('dialog', { name: 'Choose Game Data' })).toBeTruthy()
@@ -124,7 +165,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
   })
 
-  test('AppLoadingOverlay remains active while cached game data refreshes', () => {
+  test('AppLoadingOverlay releases cached data immediately during a background check', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: {
@@ -159,50 +200,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<AppLoadingOverlay />)
 
-    expect(screen.getByTestId('app-loading-overlay').getAttribute('data-phase')).toBe('loading')
-    expect(screen.getByText('Checking for game data updates…')).toBeTruthy()
-    expect(screen.queryByText('App is ready')).toBeNull()
-  })
-
-  test('AppLoadingOverlay reports background refresh resource progress', () => {
-    useGameDataStore.setState({
-      hasHydrated: true,
-      isLoading: false,
-      isBackgroundRefreshing: true,
-      cacheStatus: 'fresh',
-      loadProgress: {
-        current: 3,
-        total: 8,
-        resource: 'Additional Content: spells',
-      },
-    })
-
-    render(<AppLoadingOverlay />)
-
-    expect(screen.getByText('Checking Additional Content: spells for updates…')).toBeTruthy()
-    expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
-  })
-
-  test.each([
-    'Complete',
-    'Additional Content: Complete',
-  ])('AppLoadingOverlay reports a meaningful terminal refresh state for %s', (resource) => {
-    useGameDataStore.setState({
-      hasHydrated: true,
-      isLoading: false,
-      isBackgroundRefreshing: true,
-      cacheStatus: 'fresh',
-      loadProgress: {
-        current: 8,
-        total: 8,
-        resource,
-      },
-    })
-
-    render(<AppLoadingOverlay />)
-
-    expect(screen.getByText('Finalizing game data update…')).toBeTruthy()
-    expect(screen.queryByText(`Checking ${resource} for updates…`)).toBeNull()
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {
@@ -263,7 +261,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(document.getElementById(APP_INTERACTIVE_CONTENT_ID)?.hasAttribute('inert')).toBe(false)
   })
 
-  test('AppLoadingOverlay shows ready state when hydrated and idle', () => {
+  test('AppLoadingOverlay has no finish delay when hydrated and idle', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       isLoading: false,
@@ -272,7 +270,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     })
 
     render(<AppLoadingOverlay />)
-    expect(screen.getByText('App is ready')).toBeTruthy()
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
   })
 
   test('DataSourceStartupModal opens when hydrated with no data and not loading', async () => {

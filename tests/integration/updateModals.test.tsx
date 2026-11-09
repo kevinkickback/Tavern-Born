@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
@@ -32,6 +33,36 @@ describe('update modals', () => {
     expect(screen.queryByRole('button', { name: 'Install Now' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open Download Page' }))
     expect(onOpenDownloadPage).toHaveBeenCalledTimes(1)
+  })
+
+  test('returns keyboard focus to the update action when the changelog closes', async () => {
+    const user = userEvent.setup()
+    function UpdateAction() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            App update available
+          </button>
+          <ChangelogModal
+            open={open}
+            onOpenChange={setOpen}
+            version="2.0.0"
+            changelog="Release notes"
+            updateAvailable
+            onInstall={vi.fn()}
+          />
+        </>
+      )
+    }
+
+    render(<UpdateAction />)
+    const action = screen.getByRole('button', { name: 'App update available' })
+    action.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(action))
   })
 
   test('subscribes before downloading and surfaces an IPC start failure', async () => {

@@ -1,4 +1,5 @@
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
+import { asArray } from './parsers/shared'
 import { getSubclassCopyLookupKey } from './subclassProficiencyCertificates'
 
 type SourceRecord = Record<string, unknown>
@@ -30,13 +31,59 @@ export function materializeSubclassCopies(subclasses: readonly unknown[]): Sourc
 }
 
 /** The same copy preparation feeds both parser audits and development-time certificates. */
-export function materializeSubclassFeatureCopies(records: SourceRecord[]): SourceRecord[] {
+export function materializeSubclassFeatureCopies(
+  records: SourceRecord[],
+  loadDependencies?: () => SourceRecord[],
+): SourceRecord[] {
   if (!records.some((record) => Object.getOwnPropertyDescriptor(record, '_copy'))) return records
+  const scope = loadDependencies ? [...records, ...loadDependencies()] : records
   const resolved = resolveCopiedRecords(
-    records as Array<SourceRecord & { name: string; source: string }>,
+    scope as Array<SourceRecord & { name: string; source: string }>,
     'subclassFeature',
   )
   if (resolved.diagnostics.length)
     throw new CopyResolutionError(resolved.diagnostics, 'in subclass features')
-  return resolved.records
+  return resolved.records.slice(0, records.length)
+}
+
+/** Like upstream DataUtil.pLoadByMeta, dependency IDs resolve through the class index. */
+export function createIndexedSubclassFeatureResolver(
+  index: unknown,
+  documents: ReadonlyMap<string, unknown>,
+): (file: string) => SourceRecord[] {
+  const indexedFiles = object(index)
+  const prepared = new Map<string, SourceRecord[] | null>()
+
+  function resolve(file: string): SourceRecord[] {
+    const existing = prepared.get(file)
+    if (existing) return existing
+    if (existing === null) throw new Error(`Cyclic subclass-feature dependency: ${file}`)
+
+    const document = object(documents.get(file))
+    const records = asArray(document.subclassFeature).map(object)
+    const dependencyIds = object(object(document._meta).dependencies).subclassFeature
+    prepared.set(file, null)
+    try {
+      const result = materializeSubclassFeatureCopies(records, () => {
+        if (dependencyIds === undefined) return []
+        if (!Array.isArray(dependencyIds)) throw new Error(`Invalid class dependencies: ${file}`)
+        const dependencyFiles = new Set<string>()
+        for (const id of dependencyIds) {
+          const path =
+            typeof id === 'string' && Object.getOwnPropertyDescriptor(indexedFiles, id)?.value
+          if (typeof path !== 'string' || !documents.has(path.trim()))
+            throw new Error(`Unavailable class dependency in ${file}`)
+          dependencyFiles.add(path.trim())
+        }
+        return [...dependencyFiles].flatMap(resolve)
+      })
+      prepared.set(file, result)
+      return result
+    } catch (error) {
+      prepared.delete(file)
+      throw error
+    }
+  }
+
+  return resolve
 }

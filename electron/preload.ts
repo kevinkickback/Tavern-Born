@@ -31,8 +31,11 @@ const electronAPI = {
     node: process.versions.node,
   },
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
-  readLocalJson: (filePath: string): Promise<unknown> =>
-    ipcRenderer.invoke('fs:readJson', filePath),
+  discardLocalDataRoot: (root: string): void => ipcRenderer.send('fs:discardDataRoot', root),
+  approveLocalDataRoot: (root: string): Promise<void> =>
+    ipcRenderer.invoke('fs:approveDataRoot', root),
+  readLocalJson: (filePath: string, root?: string): Promise<unknown> =>
+    ipcRenderer.invoke('fs:readJson', filePath, root),
   readBundledJson: (relativePath: string): Promise<unknown> =>
     ipcRenderer.invoke('resources:readBundledJson', relativePath),
   getBundledManifest: (): Promise<BundledSrdManifestSummary> =>

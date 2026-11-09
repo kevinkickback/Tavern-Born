@@ -1,8 +1,12 @@
-import { createStore, del, get, set } from 'idb-keyval'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
+import { createStore, del, delMany, get, getMany, set } from 'idb-keyval'
 import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
+export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
+export const GAME_DATA_STORE_VERSION = 1
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 87
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
@@ -14,6 +18,7 @@ export interface GameDataCacheEntry {
   contentFingerprint?: string
   lastDataChangedAt?: string
   sourceSnapshot: DataSourceSnapshot
+  externalKeys?: string[]
 }
 
 interface SourceLayerSnapshot {
@@ -101,15 +106,6 @@ function createSourceSnapshot(
   }
 }
 
-function hashStringFnv1a(value: string): string {
-  let hash = 0x811c9dc5
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return (hash >>> 0).toString(16).padStart(8, '0')
-}
-
 export function computeGameDataFingerprint(data: GameData): string {
   // Exclude runtime-only lookups from fingerprint. Sort top-level keys before
   // serializing to guard against insertion-order differences across parser versions.
@@ -119,19 +115,42 @@ export function computeGameDataFingerprint(data: GameData): string {
   const sorted = Object.fromEntries(
     Object.entries(fingerprintData).sort(([a], [b]) => a.localeCompare(b)),
   )
-  return hashStringFnv1a(JSON.stringify(sorted))
+  return bytesToHex(sha256(utf8ToBytes(JSON.stringify(sorted))))
+}
+
+function usableCache(entry?: GameDataCacheEntry | null): GameDataCacheEntry | null {
+  return entry?.cacheSchemaVersion === GAME_DATA_CACHE_SCHEMA_VERSION &&
+    entry.sourceSnapshot &&
+    Array.isArray(entry.data?.classes) &&
+    Array.isArray(entry.data?.spells)
+    ? entry
+    : null
 }
 
 export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
   try {
-    const entry = (await get<GameDataCacheEntry>(CACHE_KEY)) ?? null
-    return entry?.cacheSchemaVersion === GAME_DATA_CACHE_SCHEMA_VERSION ? entry : null
+    return usableCache(await get<GameDataCacheEntry>(CACHE_KEY))
   } catch {
     return null
   }
 }
 
-function writeCacheBeforeAbort(entry: GameDataCacheEntry, signal: AbortSignal): Promise<void> {
+export async function readGameDataCachePair() {
+  const [cache, persisted] = await getMany([CACHE_KEY, GAME_DATA_SETTINGS_KEY])
+  const settings = persisted?.state as
+    | {
+        dataSourceConfig?: DataSourceConfig | null
+        lastUpdateCheckAt?: string | null
+      }
+    | undefined
+  return { cache: usableCache(cache), settings }
+}
+
+function writeCacheBeforeAbort(
+  entry: GameDataCacheEntry,
+  signal: AbortSignal,
+  config?: DataSourceConfig,
+): Promise<void> {
   // Use the same database and store as idb-keyval's default get/set/del.
   abortableCacheStore ??= createStore('keyval-store', 'keyval')
   let transactionAttached = false
@@ -160,7 +179,22 @@ function writeCacheBeforeAbort(entry: GameDataCacheEntry, signal: AbortSignal): 
       signal.addEventListener('abort', abort, { once: true })
       try {
         store.put(entry, CACHE_KEY)
+        if (config)
+          store.put(
+            {
+              version: GAME_DATA_STORE_VERSION,
+              state: {
+                dataSourceConfig: config,
+                lastLoadedAt: entry.cachedAt,
+                lastUpdateCheckAt: entry.cachedAt,
+                lastContentFingerprint: entry.contentFingerprint,
+                lastDataChangedAt: entry.lastDataChangedAt,
+              },
+            },
+            GAME_DATA_SETTINGS_KEY,
+          )
       } catch (error) {
+        transaction.abort()
         cleanup()
         reject(error)
       }
@@ -178,6 +212,8 @@ export async function writeGameDataCache(
     layerMetadata?: GameDataLayerCacheMetadataByRole
     signal?: AbortSignal
     beforeWrite?: () => void
+    config?: DataSourceConfig
+    externalKeys?: string[]
   },
 ): Promise<GameDataCacheEntry> {
   options?.signal?.throwIfAborted()
@@ -187,7 +223,9 @@ export async function writeGameDataCache(
   const previous = await (options?.signal ? settleOnAbort(existing, options.signal) : existing)
   const sameSource = previous !== null && isCacheForSource(previous, identity)
   const previousFingerprint = sameSource
-    ? (previous.contentFingerprint ?? computeGameDataFingerprint(previous.data))
+    ? previous.contentFingerprint?.length === 64
+      ? previous.contentFingerprint
+      : computeGameDataFingerprint(previous.data)
     : null
 
   let lastDataChangedAt: string
@@ -211,18 +249,25 @@ export async function writeGameDataCache(
     contentFingerprint,
     lastDataChangedAt,
     sourceSnapshot: createSourceSnapshot(identity, options?.layerMetadata),
+    externalKeys: options?.externalKeys,
   }
 
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
   options?.beforeWrite?.()
-  if (options?.signal) await writeCacheBeforeAbort(entry, options.signal)
+  if (options?.signal || options?.config)
+    await writeCacheBeforeAbort(
+      entry,
+      options.signal ?? new AbortController().signal,
+      options.config,
+    )
   else await set(CACHE_KEY, entry)
   return entry
 }
 
-export async function clearGameDataCache(): Promise<void> {
-  await del(CACHE_KEY)
+export async function clearGameDataCache(clearSettings = false): Promise<void> {
+  if (clearSettings) await delMany([CACHE_KEY, GAME_DATA_SETTINGS_KEY])
+  else await del(CACHE_KEY)
 }
 
 export function isCacheStale(cachedAt: string): boolean {

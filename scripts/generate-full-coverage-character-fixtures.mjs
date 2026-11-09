@@ -1698,7 +1698,7 @@ function buildCompanionFixture(baseFixture, edition) {
 
 /** Complete the source-owned setup added to the otherwise-complete 2024 export fixture. */
 function completeScholarFixture(fixture) {
-  const parsed = classPayloads.map(parseClassDocument)
+  const parsed = classPayloads.map((payload) => parseClassDocument(payload))
   const allowed = new Set(fixture.allowedSources)
   const currentClasses = DataFilter.filterClasses(
     parsed.flatMap((row) => row.classes),

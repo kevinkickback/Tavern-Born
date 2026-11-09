@@ -16,12 +16,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
 import { useDataInit } from '@/hooks/data/useDataInit'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
+
+const TOAST_VIEWPORT_OFFSET = { bottom: '3rem' }
+
+const ChangelogModal = lazy(() =>
+  import('@/components/updates/ChangelogModal').then(({ ChangelogModal }) => ({
+    default: ChangelogModal,
+  })),
+)
 
 const BuildAbilityScoresPage = lazy(() =>
   import('@/pages/build/ability-scores/AbilityScoresPage').then((module) => ({
@@ -159,7 +166,9 @@ function App() {
     isPortable: boolean
   } | null>(null)
   const [changelogOpen, setChangelogOpen] = useState(false)
-  const [progressOpen, setProgressOpen] = useState(false)
+  const [hasAppUpdate, setHasAppUpdate] = useState(false)
+  const [progressVersion, setProgressVersion] = useState<string | null>(null)
+  const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
 
   useLayoutEffect(() => {
     setAccentTheme(themeAccent)
@@ -180,21 +189,34 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!window.electronAPI?.onUpdateAvailable) return
-    return window.electronAPI.onUpdateAvailable((data) => {
+    const api = window.electronAPI
+    if (!api?.onUpdateAvailable) return
+    let updateToast: ReturnType<typeof toast.info> | undefined
+    const unsubscribeAvailable = api.onUpdateAvailable((data) => {
       setUpdateData(data)
-      toast.info(`Update v${data.version} available`, {
-        action: { label: 'View', onClick: () => setChangelogOpen(true) },
+      setHasAppUpdate(true)
+      if (updateToast !== undefined) toast.dismiss(updateToast)
+      updateToast = toast.info(`Update v${data.version} available`, {
+        action: { label: 'View', onClick: openAppUpdate },
         duration: 8000,
       })
     })
-  }, [])
+    const unsubscribeUnavailable = api.onUpdateNotAvailable?.(() => {
+      setHasAppUpdate(false)
+      if (updateToast !== undefined) toast.dismiss(updateToast)
+      updateToast = undefined
+    })
+    return () => {
+      unsubscribeAvailable()
+      unsubscribeUnavailable?.()
+    }
+  }, [openAppUpdate])
 
   return (
     <TooltipProvider delayDuration={300}>
       <RulesPreviewManager>
         <HashRouter>
-          <AppLayout>
+          <AppLayout onOpenAppUpdate={hasAppUpdate ? openAppUpdate : undefined}>
             <Suspense fallback={<RouteLoadingFallback />}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
@@ -224,51 +246,59 @@ function App() {
               </Routes>
             </Suspense>
           </AppLayout>
-          <Toaster position="bottom-right" />
+          <Toaster
+            position="bottom-right"
+            offset={TOAST_VIEWPORT_OFFSET}
+            mobileOffset={TOAST_VIEWPORT_OFFSET}
+          />
           <DataSourceStartupModal />
           <AppLoadingOverlay />
           <CloseConfirmDialog />
           {updateData && (
-            <ChangelogModal
-              open={changelogOpen}
-              onOpenChange={setChangelogOpen}
-              version={updateData.version}
-              changelog={updateData.changelog}
-              updateAvailable
-              onInstall={
-                updateData.isPortable
-                  ? undefined
-                  : () => {
-                      setChangelogOpen(false)
-                      setProgressOpen(true)
-                    }
-              }
-              onOpenDownloadPage={
-                updateData.isPortable
-                  ? async () => {
-                      try {
-                        const result = await window.electronAPI.openPortableUpdatePage()
-                        if (!result.success) {
-                          toast.error('Could not open the download page', {
-                            description: result.error ?? undefined,
-                          })
-                          return
-                        }
+            <Suspense fallback={null}>
+              <ChangelogModal
+                open={changelogOpen}
+                onOpenChange={setChangelogOpen}
+                version={updateData.version}
+                changelog={updateData.changelog}
+                updateAvailable
+                onInstall={
+                  updateData.isPortable
+                    ? undefined
+                    : () => {
                         setChangelogOpen(false)
-                      } catch (error) {
-                        toast.error('Could not open the download page', {
-                          description: error instanceof Error ? error.message : 'Unknown error',
-                        })
+                        setProgressVersion(updateData.version)
                       }
-                    }
-                  : undefined
-              }
-            />
+                }
+                onOpenDownloadPage={
+                  updateData.isPortable
+                    ? async () => {
+                        try {
+                          const result = await window.electronAPI.openPortableUpdatePage()
+                          if (!result.success) {
+                            toast.error('Could not open the download page', {
+                              description: result.error ?? undefined,
+                            })
+                            return
+                          }
+                          setChangelogOpen(false)
+                        } catch (error) {
+                          toast.error('Could not open the download page', {
+                            description: error instanceof Error ? error.message : 'Unknown error',
+                          })
+                        }
+                      }
+                    : undefined
+                }
+              />
+            </Suspense>
           )}
           <UpdateProgressModal
-            open={progressOpen}
-            version={updateData?.version ?? ''}
-            onOpenChange={setProgressOpen}
+            open={progressVersion !== null}
+            version={progressVersion ?? ''}
+            onOpenChange={(open) => {
+              if (!open) setProgressVersion(null)
+            }}
           />
         </HashRouter>
       </RulesPreviewManager>

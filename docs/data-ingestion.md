@@ -8,7 +8,7 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 
 | Stage | Owner | Contract |
 | --- | --- | --- |
-| Source validation | `validator.ts`, `urlUtils.ts`, Electron IPC | Accept bundled resources, authorized local folders, or valid HTTPS sources. |
+| Candidate preparation | catalogCandidate.ts, sourceRevision.ts, validator.ts | Inventory recognized resources and prepare one parsed catalog from an authorized folder or HTTPS root. |
 | Resource transport | `resourceReader.ts` | Read normalized relative JSON paths from bundled, local, or remote sources. |
 | Resource loading | `dataLoader.ts` | Load each known source independently with cancellation, timeouts, and bounded concurrency. |
 | Validation | `validator.ts`, `schemas.ts` | Reject invalid required shapes; report optional degradation. |
@@ -18,10 +18,23 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 | Filtering/resolution | `filters.ts`, `entityResolvers.ts` | Filter catalogs while preserving exact saved-reference fallback. |
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
 
-Local reads are capability-scoped to a native-picker root, canonicalized against symlinks, limited
+Local reads are capability-scoped to roots explicitly granted through the native picker. Browsing
+for a replacement gives that folder a temporary grant. A staged replacement retains its grant while
+awaiting review, including when leaving Settings. A new folder selection replaces the temporary
+grant. Applying a validated source saves the grant.
+Reads are canonicalized against symlinks and kept inside the exact selected root, limited
 to JSON below that root, and size-limited by Electron. Remote production sources are HTTPS. GitHub
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.
-GitHub repository release-page URLs are treated as links to that repository root.
+GitHub repository release-page URLs are treated as links to that repository root. The adapter
+resolves a branch or tag to one commit before reading data. Every GitHub resource in the check
+comes from that commit. A repository `/tree/<full-sha>` URL or raw URL with a full commit SHA
+works without GitHub API calls. The accepted commit is shown separately from the configured source.
+
+A personal HTTPS server can expose the same 5etools directory layout at any path, with the JSON
+under data/ and cross-origin reads enabled for the desktop app. It uses no GitHub API. Each
+resource is read once per candidate, including shared files referenced by more than one index
+entry. For a stable snapshot, publish a versioned directory or switch the server's content
+atomically. Local folders have the same per-attempt read guarantee.
 
 Bundled reads use a separate, read-only IPC capability. The renderer supplies only a normalized
 relative JSON path. Electron resolves managed data below `resources/srd/core/data` during
@@ -55,19 +68,25 @@ and printings remain separate. Live retained raw inputs rebuild children after l
 only finalized serializable catalogs enter the cache. External configuration retains its persisted
 shape; effective cache identity includes both base and external source.
 
-The external directory/URL validator inventories every recognized top-level resource it can validate.
-A partial source is accepted when it contains at least one valid supported family; readable malformed
-families are rejected rather than treated as absent. The inventory is persisted with the external
-configuration and becomes the layer's loading contract. Unlisted families are intentionally absent
-and fall back to the SRD. An inventoried family that later disappears is a required failure, and an
-indexed class or spell family still fails if one of its referenced files is missing. Adding a new
-top-level family requires reselecting/revalidating the source so the inventory change is explicit.
-An added class with unresolved class/subclass features or mechanically consumed feat, creature or
-optional-feature choices is rejected as an incomplete layer. The previously active catalog and
-cache remain unchanged. Item choices currently retain source-qualified selections without creating
-inventory or applying item effects; missing item-choice metadata is an optional capability/dependency
-diagnostic instead. The exact option stays unavailable until its metadata is restored. These gaps
-are not resource failures and do not block an otherwise complete load or background refresh.
+Each check inventories the recognized resources again, so new families appear without selecting
+the source again. A 404, 410 or missing local file means a family is absent. Partial sources can
+supply any supported subset with usable records. Each declared mechanical document must parse and
+its indexed files must contain the expected collection and printing. A named empty collection is
+valid and can produce a withdrawal preview. Class documents must include the exact parent of any
+subclass they supply so the parser can attach it. Transport, permission and
+schema errors fail the candidate rather than silently narrowing the catalog.
+
+Exact source and owner identities govern class and subclass ancestry, mechanically used choices
+and item or creature copy targets. The base can satisfy an exact dependency. Incomplete required
+dependencies keep the active catalog and cache intact. Item choice metadata can remain unavailable
+as a diagnostic because these choices retain references without creating inventory or applying effects.
+Fluff can degrade independently. A verified withdrawal shows the affected files or records in
+Settings before the candidate can replace the active catalog.
+The Included SRD must contain parsed rules or compendium records, including when it serves as
+the base of a layered candidate. Source labels and shared text alone cannot open a bundled catalog.
+Older catalogs without an external record inventory require one-time review, even if the composed
+catalog appears unchanged. The preview explains that it may omit withdrawals masked by Included
+SRD records. Applying the candidate records its external inventory for future checks.
 
 Future standalone add-ons should use the published 5etools homebrew document shape and a separate
 document adapter, not imitate a full data tree.
@@ -88,9 +107,11 @@ not read arbitrary files or construct legal metadata independently.
 
 External validation recognizes the optional nested capability `book/book-tce.json`. It uses the
 same authorized reader and bounded request pool; the Included SRD never requests it. Only a
-confirmed inventory entry permits the loader to fetch it, once per source load. Existing source
-configurations need revalidation before book-backed optional class features become available.
-Malformed optional support is diagnosed without rejecting otherwise valid ordinary content.
+confirmed inventory entry permits the loader to consume the read from this check. A check can
+discover book-backed optional class features that an older inventory lacked.
+Both the legacy `data` array envelope and the current singleton `bookData` envelope with exact
+`TCE` id and source feed the same section checks. Malformed optional support is diagnosed without
+rejecting otherwise valid ordinary content.
 
 `optionalClassSections` retains thirteen compact source-qualified sections and their exact book,
 chapter, class and optional-parent context, rather than the whole book. Independently reviewed
@@ -120,7 +141,7 @@ preserving prose, metadata, order and the requested path. Unattached nested clas
 require the exact current candidate collection. Empty current indexes remain authoritative.
 Winning owner/body identities replace their proof too, including absent or invalid incoming proof.
 Existing proficiency/body audits remain independent. Parsed cache57 retains these serializable
-records. Copies are materialized within their source document; replacing a different owner without
+records. Copies are materialized before composing layers; replacing a different owner without
 providing a winning consumed body does not re-materialize an omitted copied owner. The
 development semantic input is separate from ordinary generation; runtime rules retain
 compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification
@@ -168,27 +189,30 @@ representation. The generator checks both outputs and includes the runtime modul
   source inventories a bestiary index, its referenced files are loaded through the same bounded
   worker pool and retained as a creature catalog for character-option resolution; their sourcebooks
   are not thereby exposed as selectable character-content books. For an external partial layer,
-  every inventoried entity file and every file referenced by an inventoried index is required;
-  unlisted families are intentionally absent. Fluff/presentation data is optional.
-- Foreground loads reject required failures. Background refresh rejects any dropped resource so it
-  cannot replace a more complete cache.
+  inventoried indexes and their children are validated together. Absent top-level families are
+  permitted. Fluff and presentation data are optional.
+- Settings and startup share candidate validation. Verified removals require confirmation.
 - A remote source with no reachable top-level resources fails instead of producing an empty catalog.
 - A bundled source with no readable top-level resources also fails instead of producing an empty
   catalog.
 - Parser output and source ordering must be deterministic to avoid cache fingerprint churn.
 
-## Remote startup
+## Startup and update checks
 
-The startup overlay waits for a remote catalog check to settle. A single 15-second deadline covers
-the initial cache and manifest lookup, source loading, queued resources, and the IndexedDB cache
-transaction. Cancellation prevents a queued write from starting and aborts a pending transaction.
-Superseded attempts cannot publish late progress or replace the active catalog.
+Startup uses a compatible cache that matches the configured source and installed pack. Otherwise
+it opens the Included SRD automatically. A session fallback preserves the configured source and
+its last saved catalog. The overlay offers **Retry** and **Change source** if neither local
+catalog is usable. If the pack is unavailable, recovery can admit a valid standalone external
+catalog.
 
-When a schema-compatible cache matches the configured source stack, a failed check leaves that
-catalog active. With no matching cache, the overlay offers **Use Included SRD for this session** during
-the check. **Retry** appears after failure or timeout, alongside the fallback. The session fallback
-leaves the saved remote configuration and its cache intact. A later successful source check can
-replace the session catalog even when the remote fingerprint is unchanged.
+With automatic checks enabled, the configured source is checked after local game data becomes
+available. Settings shows the configured source, active catalog, most recent attempt, successful
+check and applied date, plus the relevant issue or optional warning. A changed catalog waits for
+**Apply game data update** in Settings. The previous catalog remains active during checks and
+review. The cache and accepted configuration are committed together after validation.
+
+The source compatibility workflow checks a pinned public mirror revision and the mirror's current
+default branch. It is scheduled and can run manually. Ordinary CI uses local fixtures.
 
 ## Parsing policy
 

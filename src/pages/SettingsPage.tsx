@@ -1,5 +1,6 @@
 import { Database, Gear, Info, Palette } from '@phosphor-icons/react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { AboutPanel } from '@/components/settings/AboutPanel'
 import { AppearancePanel } from '@/components/settings/AppearancePanel'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
@@ -25,6 +26,13 @@ function getActivePanel(panel: string | null): SettingsPanel {
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activePanel = getActivePanel(searchParams.get('section'))
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.hash === '#game-data-update') {
+      document.getElementById('game-data-update')?.focus()
+    }
+  }, [location])
 
   const setActivePanel = (panel: SettingsPanel) => {
     setSearchParams(panel === 'general' ? {} : { section: panel }, { replace: true })

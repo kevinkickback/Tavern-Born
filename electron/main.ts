@@ -1,4 +1,4 @@
-import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
@@ -48,7 +48,9 @@ const RENDERER_ROOT_URL = pathToFileURL(join(__dirname, '../dist') + sep).href
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
 let forceClose = false
-let localDataRootPath: string | null = null
+let localDataRoots = new Set<string>()
+let selectingLocalDataRoot = false
+let pendingLocalDataRoot: string | null = null
 let bundledManifestCache: {
   rootPath: string
   promise: Promise<BundledSrdManifestSummary>
@@ -84,28 +86,31 @@ function getLocalDataAuthPath(): string {
   return join(app.getPath('userData'), LOCAL_DATA_AUTH_FILE)
 }
 
-async function loadAuthorizedLocalDataRoot(): Promise<string | null> {
+async function loadAuthorizedLocalDataRoots(): Promise<Set<string>> {
   try {
-    const parsed = JSON.parse(await readFile(getLocalDataAuthPath(), 'utf-8')) as {
-      rootPath?: unknown
-    }
-    if (typeof parsed.rootPath !== 'string' || !isAbsolute(parsed.rootPath)) return null
-    return normalize(await realpath(parsed.rootPath))
+    const stored = JSON.parse(await readFile(getLocalDataAuthPath(), 'utf-8'))
+    const roots: unknown[] = Array.isArray(stored.rootPaths) ? stored.rootPaths : [stored.rootPath]
+    return new Set(
+      roots
+        .filter((path): path is string => typeof path === 'string' && isAbsolute(path))
+        .map(normalize),
+    )
   } catch {
-    return null
+    return new Set()
   }
 }
 
-async function authorizeLocalDataRoot(folderPath: string): Promise<string> {
-  const canonicalPath = normalize(await realpath(folderPath))
+async function approveLocalDataRoot(root: unknown): Promise<void> {
+  if (typeof root !== 'string') throw new Error('Invalid data directory')
+  if (localDataRoots.has(root)) return
+  if (root !== pendingLocalDataRoot) throw new Error('Select the data directory again.')
+  const roots = new Set([...localDataRoots, root])
+  const path = getLocalDataAuthPath()
   await mkdir(app.getPath('userData'), { recursive: true })
-  await writeFile(
-    getLocalDataAuthPath(),
-    JSON.stringify({ rootPath: canonicalPath }, null, 2),
-    'utf-8',
-  )
-  localDataRootPath = canonicalPath
-  return canonicalPath
+  const pendingPath = `${path}.tmp`
+  await writeFile(pendingPath, JSON.stringify({ rootPaths: [...roots] }), 'utf-8')
+  await rename(pendingPath, path)
+  localDataRoots = roots
 }
 
 function getBundledPackRoot(): string {
@@ -263,23 +268,37 @@ app.on('ready', async () => {
     callback(false)
   })
 
-  localDataRootPath = await loadAuthorizedLocalDataRoot()
+  localDataRoots = await loadAuthorizedLocalDataRoots()
   initAutoUpdater()
 
   ipcMain.handle('dialog:selectFolder', async (event) => {
     assertTrustedIpcSender(event)
-    const result = mainWindow
-      ? await dialog.showOpenDialog(mainWindow, {
-          properties: ['openDirectory'],
-        })
-      : await dialog.showOpenDialog({
-          properties: ['openDirectory'],
-        })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return authorizeLocalDataRoot(result.filePaths[0])
+    if (selectingLocalDataRoot) return null
+    selectingLocalDataRoot = true
+    try {
+      const result = mainWindow
+        ? await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory'],
+          })
+        : await dialog.showOpenDialog({
+            properties: ['openDirectory'],
+          })
+      if (result.canceled || result.filePaths.length === 0) return null
+      pendingLocalDataRoot = normalize(await realpath(result.filePaths[0]))
+      return pendingLocalDataRoot
+    } finally {
+      selectingLocalDataRoot = false
+    }
   })
 
-  ipcMain.handle('fs:readJson', async (event, filePath: unknown) => {
+  ipcMain.on('fs:discardDataRoot', (event, root: unknown) => {
+    if (isTrustedIpcSender(event) && root === pendingLocalDataRoot) pendingLocalDataRoot = null
+  })
+  ipcMain.handle('fs:approveDataRoot', (event, root: unknown) => {
+    assertTrustedIpcSender(event)
+    return approveLocalDataRoot(root)
+  })
+  ipcMain.handle('fs:readJson', async (event, filePath: unknown, root: unknown) => {
     assertTrustedIpcSender(event)
     if (typeof filePath !== 'string' || !isAbsolute(filePath)) {
       throw new Error('Path must be absolute')
@@ -288,13 +307,13 @@ app.on('ready', async () => {
       throw new Error('Only JSON files may be read')
     }
 
-    if (!localDataRootPath) {
-      throw new Error('No local data directory configured. Select a folder first.')
+    if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
+      throw new Error('Select the local data directory first.')
     }
-
-    const canonicalRoot = normalize(await realpath(localDataRootPath))
+    if (!isPathWithinRoot(root, normalize(filePath)))
+      throw new Error('Access denied: path is outside the configured data directory.')
     const canonicalTarget = normalize(await realpath(filePath))
-    if (!isPathWithinRoot(canonicalRoot, canonicalTarget)) {
+    if (!isPathWithinRoot(root, canonicalTarget)) {
       throw new Error('Access denied: path is outside the configured data directory.')
     }
 

@@ -23,7 +23,19 @@ vi.mock('electron', async () => {
 // Keep the real application subscription and dialog, without initializing unrelated data or pages.
 vi.mock('@/hooks/data/useDataInit', () => ({ useDataInit: () => {} }))
 vi.mock('@/components/layout/AppLayout', () => ({
-  AppLayout: ({ children }: PropsWithChildren) => <>{children}</>,
+  AppLayout: ({
+    children,
+    onOpenAppUpdate,
+  }: PropsWithChildren<{ onOpenAppUpdate?: () => void }>) => (
+    <>
+      {children}
+      {onOpenAppUpdate && (
+        <button type="button" onClick={onOpenAppUpdate}>
+          App update available
+        </button>
+      )}
+    </>
+  ),
 }))
 vi.mock('@/components/editor/RulesPreviewManager', () => ({
   RulesPreviewManager: ({ children }: PropsWithChildren) => <>{children}</>,
@@ -32,8 +44,26 @@ vi.mock('@/components/layout/AppLoadingOverlay', () => ({ AppLoadingOverlay: () 
 vi.mock('@/components/settings/DataSourceStartupModal', () => ({
   DataSourceStartupModal: () => null,
 }))
-vi.mock('@/components/updates/ChangelogModal', () => ({ ChangelogModal: () => null }))
-vi.mock('@/components/updates/UpdateProgressModal', () => ({ UpdateProgressModal: () => null }))
+vi.mock('@/components/updates/ChangelogModal', () => ({
+  ChangelogModal: ({
+    open,
+    version,
+    onInstall,
+  }: {
+    open: boolean
+    version: string
+    onInstall?: () => void
+  }) =>
+    open ? (
+      <button type="button" onClick={onInstall}>
+        Install {version}
+      </button>
+    ) : null,
+}))
+vi.mock('@/components/updates/UpdateProgressModal', () => ({
+  UpdateProgressModal: ({ open, version }: { open: boolean; version: string }) =>
+    open ? <p>Downloading {version}</p> : null,
+}))
 vi.mock('@/pages/HomePage', () => ({ RoutedHomePage: () => <div>Home page</div> }))
 
 const api = bridge.expose.mock.calls.find(([name]) => name === 'electronAPI')?.[1]
@@ -72,6 +102,32 @@ describe('close-confirmation preload and application lifecycle', () => {
     ipcRenderer.emit('update-available', nativeEvent, update)
 
     expect(callback.mock.calls).toEqual([[update]])
+  })
+
+  test('keeps an open app update and its download version independent of later checks', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const announce = (version: string) => {
+      ipcRenderer.emit('update-available', {}, { version, changelog: null, isPortable: false })
+    }
+
+    act(() => {
+      announce('0.7.0')
+    })
+    await user.click(screen.getByRole('button', { name: 'App update available' }))
+    const install = await screen.findByRole('button', { name: 'Install 0.7.0' })
+    act(() => {
+      ipcRenderer.emit('update-not-available', {})
+    })
+    expect(screen.queryByRole('button', { name: 'App update available' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Install 0.7.0' })).toBe(install)
+
+    await user.click(install)
+    act(() => {
+      announce('0.8.0')
+    })
+    expect(screen.getByText('Downloading 0.7.0')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'App update available' })).toBeTruthy()
   })
 
   test('delivers no event or payload and removes the exact wrapper', () => {
