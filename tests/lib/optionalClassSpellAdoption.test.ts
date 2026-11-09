@@ -26,6 +26,7 @@ import {
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, OptionalClassFeatureAdoption } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -138,7 +139,7 @@ describe('individually adopted class spell lists using existing selection actors
     expect(hasCurrentClassSpellListRoute(f.character, f.entry, spell, fixture.context)).toBe(false)
     expect(() => select(index, f.character)).toThrow()
     const adopted = adopt(f.character, f.adoption)
-    expect(adopted.schemaVersion).toBe(14)
+    expect(adopted.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
     expect(adopted.managedClassSpellChoices).toBeUndefined()
     expect(adopted.spells).toEqual(f.character.spells)
     expect(hasCurrentClassSpellListRoute(adopted, f.entry, spell, fixture.context)).toBe(true)

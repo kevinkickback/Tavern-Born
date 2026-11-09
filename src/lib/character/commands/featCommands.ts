@@ -771,7 +771,7 @@ function commitResolvedFeatOptions(
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
     const expertiseOnly = isKnownFeatExpertiseTarget(feat)
-    // Legacy/manual selections without ownership must survive a newly configured feat.
+    // Keep independently selected proficiencies when a feat adds the same benefit.
     for (const domain of expertiseOnly
       ? (['expertise'] as const)
       : (['skills', 'expertise'] as const)) {

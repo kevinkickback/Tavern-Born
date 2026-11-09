@@ -115,14 +115,15 @@ export function getFeatExpertiseOwners(character: Character, feats: readonly Fea
   }))
 }
 
-const ownedTag = (tag: SourceTag) => {
+export function isFeatExpertiseOptionGrant(tag: SourceTag): boolean {
+  const variant = tag.grantVariant ?? ''
   if (
     tag.sourceType !== 'feat' ||
     tag.grantType !== 'choice' ||
-    !/^(selection:|class:|choice:|fixed:)/.test(tag.grantVariant ?? '')
+    !/^(selection:|class:|choice:|fixed:)/.test(variant)
   )
     return false
-  if (!tag.grantVariant?.startsWith('fixed:'))
+  if (!variant.startsWith('fixed:'))
     return isKnownFeatExpertiseTarget({ name: tag.sourceName, source: tag.sourceRef })
   return FEAT_EXPERTISE_TARGETS.some((target) =>
     isSameGrantSource(
@@ -130,50 +131,48 @@ const ownedTag = (tag: SourceTag) => {
       getFeatOptionSourceTag({
         ...target,
         fixedGrant: true,
-        grantVariant: tag.grantVariant!.slice('fixed:'.length),
+        grantVariant: variant.slice('fixed:'.length),
       }),
     ),
   )
 }
 
-/** Strip cached Expertise and its old implicit skill grant, never a separate skill selection. */
+/** Strip derived Expertise so current rules can reapply eligible benefits. */
 export function stripFeatExpertiseGrants(character: Character, onlyOwnerId?: string): Character {
-  const owners = getFeatExpertiseOwners(character, [])
-  const proficiencies = { ...character.proficiencies }
   const ledger = character.provenance
-  const maps = { ...ledger.proficiencies }
-  for (const domain of ['skills', 'expertise'] as const) {
-    const original = ledger.proficiencies[domain] ?? {}
-    const removed = new Set<string>()
-    const values = Object.fromEntries(
-      Object.entries(original).flatMap(([name, tags]) => {
-        const retained = tags.filter((tag) => {
-          if (!ownedTag(tag)) return true
-          const owner = owners.find(
-            (row) =>
-              isSameGrantSource(tag, getFeatOptionSourceTag(row.target)) &&
-              normalizeKey(row.options?.expertiseSkill ?? '') === name,
-          )
-          if (onlyOwnerId && owner?.id !== onlyOwnerId) return true
-          if (
-            domain === 'skills' &&
-            (!owner || owner.options?.skills?.some((skill) => normalizeKey(skill) === name))
-          )
-            return true
-          removed.add(name)
-          return false
-        })
-        return retained.length ? [[name, retained]] : []
-      }),
-    )
-    if (domain !== 'expertise' || ledger.proficiencies.expertise || Object.keys(values).length)
-      maps[domain] = values
-    proficiencies[domain] = proficiencies[domain].filter(
-      (name) =>
-        !removed.has(normalizeKey(name)) || (maps[domain]?.[normalizeKey(name)]?.length ?? 0) > 0,
-    )
+  const original = ledger.proficiencies.expertise
+  if (!original) return character
+  const owner = onlyOwnerId
+    ? getFeatExpertiseOwners(character, []).find((row) => row.id === onlyOwnerId)
+    : undefined
+  if (onlyOwnerId && !owner) return character
+  const sourceTag = owner && getFeatOptionSourceTag(owner.target)
+  const selectedSkill = normalizeKey(owner?.options?.expertiseSkill ?? '')
+  const removed = new Set<string>()
+  const expertise = Object.fromEntries(
+    Object.entries(original).flatMap(([name, tags]) => {
+      const retained = tags.filter(
+        (tag) =>
+          !isFeatExpertiseOptionGrant(tag) ||
+          (sourceTag !== undefined &&
+            (selectedSkill !== name || !isSameGrantSource(tag, sourceTag))),
+      )
+      if (retained.length === tags.length) return [[name, tags]]
+      if (retained.length) return [[name, retained]]
+      removed.add(name)
+      return []
+    }),
+  )
+  return {
+    ...character,
+    proficiencies: {
+      ...character.proficiencies,
+      expertise: character.proficiencies.expertise.filter(
+        (name) => !removed.has(normalizeKey(name)),
+      ),
+    },
+    provenance: { ...ledger, proficiencies: { ...ledger.proficiencies, expertise } },
   }
-  return { ...character, proficiencies, provenance: { ...ledger, proficiencies: maps } }
 }
 
 /** Established intent survives overlap; no-existing-Expertise is checked when making a new pick. */
@@ -185,7 +184,7 @@ export function refreshFeatExpertiseState(
   if (
     !owners.length &&
     !Object.values(character.provenance.proficiencies.expertise ?? {}).some((tags) =>
-      tags.some(ownedTag),
+      tags.some(isFeatExpertiseOptionGrant),
     )
   )
     return character

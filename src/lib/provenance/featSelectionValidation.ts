@@ -6,6 +6,12 @@ import {
   isSourceQualifiedSpellReference,
 } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import {
+  getFeatOptionSourceTag,
+  isSameGrantSource,
+} from '@/lib/character/commands/featCommandIdentity'
+import { isFeatExpertiseOptionGrant } from '@/lib/character/featExpertiseSelections'
+import { getFeatSetupOwners } from '@/lib/character/featSetupOwners'
 import type { Character, FeatOptionSelections } from '@/types/character'
 import { getFeatSelectionKey, getSelectedFeatOwnerKey } from './featSelectionIdentity'
 import { normalizeKey } from './normalization'
@@ -72,9 +78,11 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
       }
       if (feat.options?.expertiseSkill) {
         const skill = normalizeKey(feat.options.expertiseSkill)
-        for (const domain of ['skills', 'expertise'] as const) {
-          // Intent can be suspended. Old coupled skill tags remain admissible only for
-          // this exact saved skill and owner; new Expertise never requires that tag.
+        const expertiseOnly = isKnownFeatExpertiseTarget(feat)
+        for (const domain of expertiseOnly
+          ? (['expertise'] as const)
+          : (['skills', 'expertise'] as const)) {
+          // Current Expertise intent can remain saved while its benefit is suspended.
           const applied = character.provenance.proficiencies[domain]?.[skill]?.some(
             (tag) =>
               tag.sourceType === 'feat' &&
@@ -83,7 +91,7 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
               getFeatSelectionKey({ name: tag.sourceName, source: tag.sourceRef }) ===
                 getFeatSelectionKey(feat),
           )
-          if (isKnownFeatExpertiseTarget(feat) && !applied) continue
+          if (expertiseOnly && !applied) continue
           add(domain, skill)
           if (!hasProficiency(domain, skill)) invalid.push([...path, 'options', 'expertiseSkill'])
         }
@@ -119,6 +127,7 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
     }
   }
 
+  let setupOwners: ReturnType<typeof getFeatSetupOwners> | undefined
   const inspect = (tag: SourceTag, domain: string, key: string, path: Path) => {
     const kind = tag.grantVariant
     const selected = kind?.startsWith('selection:')
@@ -142,6 +151,19 @@ export function getInvalidFeatSelectionPaths(character: Character): Path[] {
     if (!kind) {
       invalid.push(path)
       return
+    }
+    if (!selected && domain === 'skills' && isFeatExpertiseOptionGrant(tag)) {
+      setupOwners ??= getFeatSetupOwners(character, [])
+      if (
+        !setupOwners.some(
+          (owner) =>
+            isSameGrantSource(tag, getFeatOptionSourceTag(owner.target)) &&
+            owner.options?.skills?.some((skill) => normalizeKey(skill) === key),
+        )
+      ) {
+        invalid.push(path)
+        return
+      }
     }
     if (kind.startsWith('choice:')) {
       const choices = character.provenance.choices.filter(

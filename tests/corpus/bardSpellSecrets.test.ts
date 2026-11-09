@@ -28,7 +28,10 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
-import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import {
+  applyClassProgressionUpdate,
+  applyClassSelectionCommand,
+} from '@/lib/character/commands/classCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { applySkillProficiencyActionCommand } from '@/lib/character/commands/skillProficiencyCommands'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
@@ -270,12 +273,17 @@ test.each(
     })
     const context = (character: Character) =>
       createCharacterCalculationContext(character, lookups, raw)
-    const starting = makeCharacterFixture({
+    const draft = makeCharacterFixture({
       originSystem: classic ? '2014' : '2024',
       allowedSources: [source],
-      classProgression: [{ name: 'Bard', source, levels: 1 }],
+      classProgression: [],
     })
-    const startingChoice = context(starting).character.provenance.choices.find(
+    const bard = current.classes.find((entry) => entry.name === 'Bard' && entry.source === source)!
+    const starting = reopen(
+      draft,
+      applyClassSelectionCommand(draft, draft.provenance, bard, undefined, new Map()),
+    )
+    const startingChoice = starting.provenance.choices.find(
       (row) => row.sourceTag.sourceName === 'Bard' && row.domain === 'skills',
     )!
     expect(startingChoice).toMatchObject({ chooseCount: 3, selected: [] })

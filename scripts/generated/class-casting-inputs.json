@@ -819,7 +819,7 @@
     },
     {
       "file": "src/lib/provenance/types.ts",
-      "sha256": "e76a5c0454ddd4927fea15e27c484167d2e024f41998720b1d1e0dc318a709d9"
+      "sha256": "f84ce9a078cc29b4e0c39499431dc37eeb7c683ab5b756ac64b67df9d7c97737"
     },
     {
       "file": "src/lib/sourceCompatibility.ts",

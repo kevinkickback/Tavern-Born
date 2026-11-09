@@ -229,7 +229,7 @@ test('revised Rogue can use a suspended feat skill without losing retained inten
   expect(current.proficiencies.skills).toContain('stealth')
 })
 
-test('legacy coupled self-grant cannot authorize itself, remains admissible and clears without invented manual proficiency', () => {
+test('audited Expertise cannot supply an implicit skill proficiency in the current format', () => {
   const f = fixture()
   const owner = { name: feat.name, source: feat.source, selectionKind: 'bonus' as const }
   f.character.specialFeats![0].options = { expertiseSkill: 'stealth' }
@@ -240,14 +240,7 @@ test('legacy coupled self-grant cannot authorize itself, remains admissible and 
     'stealth',
     getFeatOptionSourceTag(owner),
   )
-  expect(characterPersistenceSchema.safeParse(f.character).success).toBe(true)
-  const currentModel = model(f)
-  expect(currentModel.effective.proficiencies.skills).not.toContain('stealth')
-  expect(currentModel.effective.proficiencies.expertise).toEqual([])
-  const bonus = currentModel.featOwners.find((row) => row.target.selectionKind === 'bonus')!
-  const cleared = choose(f, f.character, 'stealth', bonus.id, false)
-  expect(cleared.proficiencies.skills).not.toContain('stealth')
-  expect(cleared.provenance.proficiencies.skills.stealth).toBeUndefined()
+  expect(characterPersistenceSchema.safeParse(f.character).success).toBe(false)
 })
 
 test('fixed providers share one actual feat option allowance and retain it when one provider is removed', () => {
@@ -286,6 +279,30 @@ test('fixed providers share one actual feat option allowance and retain it when 
   expect(before.remaining).toBe(3)
   let current = choose(f, f.character, 'stealth', before.featOwners[0].id, true)
   expect(Object.values(current.fixedFeatOptions!)).toEqual([{ expertiseSkill: 'stealth' }])
+  const target = before.featOwners[0].target
+  const skillTag = getFeatOptionSourceTag(target)
+  const implicit = characterPersistenceSchema.safeParse({
+    ...current,
+    provenance: addGrant(current.provenance, 'skills', 'stealth', skillTag),
+  })
+  expect(implicit.success ? [] : implicit.error.issues.map(({ path }) => path)).toContainEqual([
+    'provenance',
+    'proficiencies',
+    'skills',
+    'stealth',
+    0,
+  ])
+  const explicit = commitFeatOptionsCommand(current, current.provenance, target, {
+    skills: ['stealth'],
+    expertiseSkill: 'stealth',
+  })
+  expect(
+    characterPersistenceSchema.safeParse({
+      ...current,
+      ...explicit.characterPatch,
+      provenance: explicit.provenanceUpdate,
+    }).success,
+  ).toBe(true)
   current = {
     ...current,
     provenance: {

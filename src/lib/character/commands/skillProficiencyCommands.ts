@@ -1,6 +1,5 @@
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceOptions'
-import { getStartingSkillChoiceLedger } from '@/lib/character/classProficiencySelections'
 import type { ExpertiseAuthority } from '@/lib/character/skillExpertiseChoices'
 import {
   getSkillProficiencyChoices,
@@ -57,15 +56,14 @@ export function applySkillProficiencyActionCommand(
   actionId: string,
   authority: ExpertiseAuthority,
 ): CharacterCommandResult {
-  const currentLedger = getStartingSkillChoiceLedger(character, ledger, authority.classes)
-  const model = getSkillProficiencyChoices(character, authority, currentLedger)
+  const model = getSkillProficiencyChoices(character, authority, ledger)
   const name = normalizeKey(skill)
   const action = model.actions[name]?.find((row) => row.id === actionId)
   if (!action) return { characterPatch: {}, provenanceUpdate: ledger }
   if (action.kind === 'ledger')
     return resolveProficiencyChoiceCommand(
       character,
-      currentLedger,
+      ledger,
       'skills',
       name,
       action.adding,

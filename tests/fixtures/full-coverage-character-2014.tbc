@@ -4108,7 +4108,7 @@
       "source": "PHB"
     }
   },
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "hitPoints": {
     "current": 121,
     "temporary": 17

@@ -214,7 +214,7 @@ on a write failure it leaves the prior library intact before the import result i
 
 ## Schema compatibility
 
-Current pre-release admission accepts exactly character format **14**, validates complete ownership
+Current pre-release admission accepts exactly character format **15**, validates complete ownership
 without loaded rules, and rejects incompatible/malformed records without conversion. Existing
 originals stay in durable exportable quarantine until acknowledged. The recovery dialog downloads
 one original as a `.tbc` file or all affected originals in one `.tbclib` file, preserving their JSON

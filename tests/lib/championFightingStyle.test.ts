@@ -271,18 +271,15 @@ test.each([
     expect(projectEffectiveClassChoiceFeatures(character).classFeatChoices).toEqual(
       character.classFeatChoices,
     )
-    const oldMirror = characterPersistenceSchema.parse({
+    expect(effective().classFeatChoices?.[0].feats[0].classLevel).toBe(base.level)
+    const withoutEarnedLevel = {
       ...character,
       classFeatChoices: character.classFeatChoices?.map((row) => ({
         ...row,
         feats: row.feats.map((feat) => ({ ...feat, classLevel: undefined })),
       })),
-    })
-    expect(
-      projectEffectiveClassChoiceFeatures(oldMirror, catalogs).classFeatChoices?.map(
-        (row) => row.id,
-      ),
-    ).toEqual([base.id])
+    }
+    expect(characterPersistenceSchema.safeParse(withoutEarnedLevel).success).toBe(false)
   } else
     expect(effective().features.filter((feature) => feature.name === 'Archery')).toHaveLength(1)
   const saved = character

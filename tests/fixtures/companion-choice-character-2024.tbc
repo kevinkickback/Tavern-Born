@@ -868,7 +868,7 @@
       "source": "XPHB"
     }
   },
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "hitPoints": {
     "current": 28,
     "temporary": 0

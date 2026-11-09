@@ -56,46 +56,20 @@ function makeActor() {
   })
 }
 
-function legacy(actor = makeActor()): Character {
-  actor = applyCharacterCommandResult(
-    actor,
-    replaceClassFeatSelectionsCommand(
-      actor,
-      actor.provenance,
-      {
-        choiceId,
-        className: owner.name,
-        classSource: owner.source,
-        progressionName: 'Epic Boon',
-        categories: ['EB'],
-        slotLevels: [19],
-      },
-      [boon],
+function withBoon(actor = makeActor()): Character {
+  const [slot] = getEpicBoonSlots(actor, catalogs, feats)
+  const selected = replaceEpicBoonSelection(actor, slot, { feat: boon }, authority(actor))
+  return characterPersistenceSchema.parse(
+    applyCharacterCommandResult(
+      selected,
+      commitFeatOptionsCommand(
+        selected,
+        selected.provenance,
+        { name: boon.name, source: boon.source, selectionKind: 'ordinary' },
+        { abilityScore: 'wisdom' },
+      ),
     ),
   )
-  actor = applyCharacterCommandResult(
-    actor,
-    commitFeatOptionsCommand(
-      actor,
-      actor.provenance,
-      { name: boon.name, source: boon.source, classFeatChoiceId: choiceId },
-      { abilityScore: 'wisdom' },
-    ),
-  )
-  return characterPersistenceSchema.parse({
-    ...actor,
-    classChoiceSelections: [
-      {
-        choiceId,
-        className: owner.name,
-        classSource: owner.source,
-        classLevel: 19,
-        label: 'Epic Boon',
-        kind: 'feat',
-        selected: [{ entityType: 'feat', name: boon.name, source: boon.source, slotLevel: 19 }],
-      },
-    ],
-  })
 }
 
 function calc(actor: Character, catalog = catalogs, currentFeats = feats) {
@@ -118,7 +92,61 @@ function slotIssues(actor: Character, calculated = calc(actor)) {
 }
 
 describe('revised Epic Boon advancement', () => {
-  test('one current ordinary choice or a matching older choice completes the slot', () => {
+  test('rejects a normalized choice, feat mirror or orphan grant in the current format', () => {
+    const actor = makeActor()
+    const mirror = applyCharacterCommandResult(
+      actor,
+      replaceClassFeatSelectionsCommand(
+        actor,
+        actor.provenance,
+        {
+          choiceId,
+          className: owner.name,
+          classSource: owner.source,
+          progressionName: 'Epic Boon',
+          categories: ['EB'],
+          slotLevels: [19],
+        },
+        [boon],
+      ),
+    )
+    const configured = applyCharacterCommandResult(
+      mirror,
+      commitFeatOptionsCommand(
+        mirror,
+        mirror.provenance,
+        { name: boon.name, source: boon.source, classFeatChoiceId: choiceId },
+        { abilityScore: 'wisdom' },
+      ),
+    )
+    const result = characterPersistenceSchema.safeParse({
+      ...configured,
+      classChoiceSelections: [
+        {
+          choiceId,
+          className: owner.name,
+          classSource: 'PHB',
+          classLevel: 19,
+          label: 'Epic Boon',
+          kind: 'feat',
+          selected: [{ entityType: 'feat', name: boon.name, source: boon.source, slotLevel: 19 }],
+        },
+      ],
+    })
+    expect(result.success ? [] : result.error.issues.map(({ path }) => path)).toEqual(
+      expect.arrayContaining([
+        ['classChoiceSelections', 0, 'choiceId'],
+        ['classFeatChoices', 0, 'id'],
+        ['provenance', 'feats', boon.name.toLowerCase(), 0, 'grantVariant'],
+        ['provenance', 'abilityBonuses', 0, 'sourceTag', 'grantVariant'],
+      ]),
+    )
+    expect(
+      characterPersistenceSchema.safeParse({ ...actor, provenance: configured.provenance }).success,
+    ).toBe(false)
+  })
+
+  test('an ordinary Boon completes its slot and replacement retracts its exact setup', () => {
     const empty = makeActor()
     const [slot] = getEpicBoonSlots(empty, catalogs, feats)
     expect(slot).toMatchObject({ state: 'empty', allowsAsi: true })
@@ -127,26 +155,27 @@ describe('revised Epic Boon advancement', () => {
       replaceEpicBoonSelection(empty, slot, { feat: alert }, authority(empty)),
     )
     expect(slotIssues(ordinary)).toEqual([])
-    const older = legacy()
-    const calculated = calc(older)
+    const saved = withBoon()
+    const calculated = calc(saved)
     expect(calculated.classChoices.epicBoonSlots).toEqual([
-      expect.objectContaining({ state: 'selected', legacy: true }),
+      expect.objectContaining({
+        state: 'selected',
+        feat: expect.objectContaining({ name: boon.name }),
+      }),
     ])
     expect(calculated.abilityScores.total.wisdom).toBe(19)
-    expect(slotIssues(older, calculated)).toEqual([])
+    expect(slotIssues(saved, calculated)).toEqual([])
     const [retained] = calculated.classChoices.epicBoonSlots
     const replaced = characterPersistenceSchema.parse(
-      replaceEpicBoonSelection(older, retained, { feat: alert }, authority(older)),
+      replaceEpicBoonSelection(saved, retained, { feat: alert }, authority(saved)),
     )
-    expect(replaced.classFeatChoices).toEqual([])
-    expect(replaced.classChoiceSelections).toEqual([])
     expect(replaced.feats.map(({ name }) => name)).toEqual(['Alert'])
     expect(calc(replaced).abilityScores.total.wisdom).toBe(18)
     expect(slotIssues(replaced)).toEqual([])
   })
 
   test('exact source withdrawal and simultaneous claims withhold only the affected effects', () => {
-    const actor = legacy()
+    const actor = withBoon()
     const snapshot = JSON.stringify(actor)
     const missing = calc(actor, { ...catalogs, classFeatures: [] })
     expect(missing.abilityScores.total.wisdom).toBe(18)
@@ -166,7 +195,7 @@ describe('revised Epic Boon advancement', () => {
       ...actor,
       asiChoices: [
         {
-          id: 'old-conflict',
+          id: 'conflict',
           className: 'Ranger',
           classSource: 'XPHB',
           level: 19,
@@ -191,12 +220,12 @@ describe('revised Epic Boon advancement', () => {
       replaceEpicBoonSelection(double, conflict, null),
     )
     expect(resolved.asiChoices?.map(({ id }) => id)).toEqual(['other-slot'])
-    expect(resolved.classFeatChoices).toEqual([])
+    expect(resolved.feats).toEqual([])
     expect(slotIssues(resolved)).toHaveLength(1)
   })
 
-  test('lost advancement and orphaned mirrors cannot remove an independent owner', () => {
-    let actor = legacy()
+  test('source withdrawal and level rollback preserve an independent bonus copy', () => {
+    let actor = withBoon()
     actor = applyCharacterCommandResult(
       actor,
       replaceBonusFeatSelectionsCommand(actor, actor.provenance, [boon]),
@@ -210,18 +239,16 @@ describe('revised Epic Boon advancement', () => {
         { abilityScore: 'strength' },
       ),
     )
-    const orphan = { ...actor, classFeatChoices: [] }
-    const unavailable = calc(orphan)
+    const unavailable = calc(actor, { ...catalogs, classFeatures: [] })
     expect(unavailable.abilityScores.total).toMatchObject({ strength: 11, wisdom: 18 })
-    expect(slotIssues(orphan, unavailable).map(({ title }) => title)).toEqual([
+    expect(slotIssues(actor, unavailable).map(({ title }) => title)).toEqual([
       'Restore or remove Epic Boon',
     ])
     const lower = characterPersistenceSchema.parse(
       applyCharacterCommandResult(actor, applyLevelDown(actor, actor.provenance, calc(actor))),
     )
     expect(lower.classProgression[0].levels).toBe(18)
-    expect(lower.classChoiceSelections).toEqual([])
-    expect(lower.classFeatChoices).toEqual([])
+    expect(lower.feats).toEqual([])
     expect(lower.specialFeats?.map((feat) => feat.name)).toEqual([boon.name])
     expect(calc(lower).abilityScores.total).toMatchObject({ strength: 11, wisdom: 18 })
     expect(slotIssues(lower)).toEqual([])
@@ -243,59 +270,19 @@ describe('revised Epic Boon advancement', () => {
     expect(replaceEpicBoonSelection(bonus, fresh, { feat: alert }, authority(bonus))).toBe(bonus)
   })
 
-  test('an ID collision cannot clear a saved row belonging to another printing', () => {
-    const actor = legacy()
-    const [selection] = actor.classChoiceSelections ?? []
-    const [mirror] = actor.classFeatChoices ?? []
-    const otherSelection = { ...selection, classSource: 'PHB' }
-    const otherMirror = {
-      ...mirror,
-      classSource: 'PHB',
-      feats: mirror.feats.map((feat) => ({ ...feat, classSource: 'PHB' })),
-    }
-    const mixed = characterPersistenceSchema.parse({
-      ...actor,
-      classChoiceSelections: [selection, otherSelection],
-      classFeatChoices: [mirror, otherMirror],
-    })
-    const calculated = calc(mixed)
-    expect(calculated.abilityScores.total.wisdom).toBe(18)
-    const [slot] = calculated.classChoices.epicBoonSlots
-    expect(slot.state).toBe('conflict')
-    const cleared = replaceEpicBoonSelection(mixed, slot, null)
-    expect(cleared.classChoiceSelections).toEqual([otherSelection])
-    expect(cleared.classFeatChoices).toEqual([otherMirror])
-    expect(calc(cleared).abilityScores.total.wisdom).toBe(18)
-  })
-
-  test('an inconsistent old bonus and an over-cap ASI remain recoverable without benefits', () => {
-    const actor = legacy()
-    const [mirror] = actor.classFeatChoices ?? []
-    const mismatched = characterPersistenceSchema.parse({
-      ...actor,
-      classFeatChoices: [
-        {
-          ...mirror,
-          feats: mirror.feats.map((feat) => ({ ...feat, options: { abilityScore: 'strength' } })),
-        },
-      ],
-    })
-    const mismatch = calc(mismatched)
-    expect(mismatch.classChoices.epicBoonSlots[0].state).toBe('unavailable')
-    expect(mismatch.abilityScores.total).toMatchObject({ strength: 10, wisdom: 18 })
-
+  test('a previously valid ASI suspends when current intrinsic scores exceed the cap', () => {
+    const base = makeActor()
+    const [slot] = getEpicBoonSlots(base, catalogs, feats)
+    const saved = replaceEpicBoonSelection(
+      base,
+      slot,
+      { abilityChanges: { wisdom: 2 }, before: base.abilityScores },
+      authority(base),
+    )
+    expect(calc(saved).abilityScores.total.wisdom).toBe(20)
     const overCap = characterPersistenceSchema.parse({
-      ...makeActor(),
-      abilityScores: { ...actor.abilityScores, wisdom: 19 },
-      asiChoices: [
-        {
-          id: 'old-epic-asi',
-          className: 'Ranger',
-          classSource: 'XPHB',
-          level: 19,
-          abilityChanges: { wisdom: 2 },
-        },
-      ],
+      ...saved,
+      abilityScores: { ...saved.abilityScores, wisdom: 19 },
     })
     const over = calc(overCap)
     expect(over.classChoices.epicBoonSlots[0].state).toBe('unavailable')

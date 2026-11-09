@@ -1,6 +1,6 @@
 # Character format and admission
 
-The app admits only `CURRENT_CHARACTER_SCHEMA_VERSION` (14). The strict schema verifies saved
+The app admits only `CURRENT_CHARACTER_SCHEMA_VERSION` (15). The strict schema verifies saved
 ownership before catalog data is available. It checks both directions between selections,
 materialized rows and provenance. A structurally valid save does not prove current eligibility.
 Earlier and newer formats are rejected without conversion. Incompatible originals stay in
@@ -16,6 +16,8 @@ durable exportable quarantine. The parsed catalog cache has its own version.
 - Class adoptions and specialized choices save the exact owner, target and gain. Missing adoption
   means unselected. Conflicting families, unknown roots and orphan rows reject. Recoverable
   intent stays separate from current benefit. [Class ownership](class-ownership.md)
+- A revised Epic Boon uses an ordinary feat or ASI at the earned slot. Starting-class skill
+  choices come from the ledger written at class selection.
 - Feats distinguish ordinary, bonus, fixed and configured choice owners. Configured choices need
   exact printings. Duplicate or orphan setup rejects even when the catalog is missing.
   [Feat ownership](feat-ownership.md)

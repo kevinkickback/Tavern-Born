@@ -61,10 +61,7 @@ import {
   getEffectiveOwnerProficiencyChoices,
   getOwnedSubclassSkillModifiers,
 } from '@/lib/character/classProficiencyAuthority'
-import {
-  getStartingSkillChoiceLedger,
-  resolveClassProficiencyState,
-} from '@/lib/character/classProficiencySelections'
+import { resolveClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
@@ -506,15 +503,6 @@ export function createCharacterCalculationContext(
       }
     }
   }
-  const proficiencyClasses =
-    primaryLookups.classChoiceClasses ?? Object.values(primaryLookups.classesByKey ?? {})
-  const startingSkillLedger = getStartingSkillChoiceLedger(
-    character,
-    character.provenance,
-    proficiencyClasses,
-  )
-  if (startingSkillLedger !== character.provenance)
-    character = { ...character, provenance: startingSkillLedger }
   const proficiencyState = resolveClassProficiencyState(character, {
     ...(primaryLookups.classChoiceFeatureCatalogs ?? { classFeatures: [], subclassFeatures: [] }),
     featExpertiseFeats:
@@ -554,8 +542,7 @@ export function createCharacterCalculationContext(
     ),
     ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]
-  // Old generic ASI saves could persist +2 from 19. Check the same capped
-  // allocation against the actor without that slot before using its benefits.
+  // Recheck the cap against current intrinsic scores before applying the slot's own bonus.
   for (const slot of epicBoonSlots) {
     if (!slot.asi) continue
     const withoutAsi = withoutEpicBoonSelection(character, slot.owner)
