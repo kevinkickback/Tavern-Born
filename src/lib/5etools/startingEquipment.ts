@@ -592,16 +592,24 @@ export interface ResolvedEquipmentBlock {
   options: Record<string, BackgroundStartingPackage>
 }
 
+export function getEquipmentBlockSelection(
+  block: ResolvedEquipmentBlock,
+  choices: readonly string[],
+): { optionKey: string; needsReselection: boolean } {
+  if (block.isFixed) return { optionKey: '_', needsReselection: false }
+  const selected = choices[block.index]?.toLowerCase()
+  if (selected && block.choiceKeys.includes(selected))
+    return { optionKey: selected, needsReselection: false }
+  return { optionKey: block.choiceKeys[0], needsReselection: Boolean(selected) }
+}
+
 /** Reuse the already-resolved view when deriving the selected UI package; do not rescan catalogs. */
 export function getSelectedEquipmentPackage(
   blocks: readonly ResolvedEquipmentBlock[],
   choices: readonly string[],
 ): BackgroundStartingPackage {
   const packages = blocks.map(
-    (block) =>
-      block.options[
-        block.isFixed ? '_' : (choices[block.index]?.toLowerCase() ?? block.choiceKeys[0])
-      ] ?? block.options[block.choiceKeys[0]],
+    (block) => block.options[getEquipmentBlockSelection(block, choices).optionKey],
   )
   const currency = emptyCurrency()
   for (const pkg of packages) addCurrency(currency, pkg.currency)

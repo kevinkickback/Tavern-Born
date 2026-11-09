@@ -7,7 +7,7 @@ import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from '
 
 async function openClass(page: Page) {
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  const accordion = page.getByRole('button', { name: 'Starting Equipment', exact: true })
+  const accordion = page.getByRole('button', { name: /^Starting Equipment/ })
   if ((await accordion.getAttribute('data-state')) === 'closed') await accordion.click()
 }
 async function openPicker(page: Page, role: 'Class' | 'Background', block = 1) {
@@ -313,9 +313,9 @@ test('@focused configured Sorcerer keeps each package, picker and result in its 
   await page.reload()
   await selectCharacterFromHome(page, character.name)
   await openClass(page)
-  const card = page
-    .getByRole('button', { name: 'Starting Equipment', exact: true })
-    .locator('xpath=ancestor::*[@data-slot="accordion-item"][1]')
+  const accordion = page.getByRole('button', { name: /^Starting Equipment/ })
+  const card = accordion.locator('xpath=ancestor::*[@data-slot="accordion-item"][1]')
+  await expect(accordion).toContainText('3 Choices')
   await expect(card.getByRole('group')).toHaveCount(3)
   const first = card.getByRole('group', {
     name: 'Class starting equipment choice 1 configuration',
@@ -324,11 +324,13 @@ test('@focused configured Sorcerer keeps each package, picker and result in its 
   await first.getByRole('tab', { name: 'Package B', exact: true }).click()
   await expect(first.getByText('Simple weapons', { exact: true })).toBeVisible()
   await expect(first.getByText('0 / 1 selected', { exact: true })).toBeVisible()
+  await expect(accordion).toContainText('1 pending choice')
   const dialog = await openPicker(page, 'Class')
   await pick(page, 'Club')
   await dialog.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(first.getByText('Club', { exact: true })).toBeVisible()
   await expect(first.getByText('1 / 1 selected', { exact: true })).toBeVisible()
+  await expect(accordion).toContainText('All choices made')
   const second = card.getByRole('group', {
     name: 'Class starting equipment choice 2 configuration',
     exact: true,

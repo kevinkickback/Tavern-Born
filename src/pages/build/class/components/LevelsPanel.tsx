@@ -1,4 +1,4 @@
-import { Check, Sword } from '@phosphor-icons/react'
+import { Sword } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import {
   Accordion,
@@ -67,9 +67,10 @@ import {
   type SpellGain,
 } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
+import { ClassChoiceStatusBadge, getClassChoiceStatus } from './ClassChoiceStatusBadge'
 import { BuildClassChoicesSection } from './ClassChoicesSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
-import { BuildClassEquipmentSection } from './EquipmentSection'
+import { BuildClassEquipmentAccordion } from './EquipmentSection'
 import {
   belongsToOptionalClassFeatures,
   getClassChoicePresentationTarget,
@@ -454,36 +455,19 @@ export function BuildClassLevelsPanel({
               className="space-y-2"
             >
               {viewingInitialClass && (
-                <AccordionItem
-                  value="starting-equipment"
-                  className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
-                >
-                  <AccordionTrigger className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Starting Equipment</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div
-                      ref={equipmentChoiceRef}
-                      className={cn(
-                        'px-3 pb-2 pt-3',
-                        equipmentChoiceHighlighted && 'animate-route-focus',
-                      )}
-                    >
-                      <BuildClassEquipmentSection
-                        viewingClassData={viewingClassData}
-                        blockChoices={classEquipmentBlockChoices}
-                        itemChoices={classEquipmentItemChoices}
-                        detailCollapsed={detailCollapsed}
-                        onBlockChoiceChange={onBlockChoiceChange}
-                        onItemChoiceChange={onItemChoiceChange}
-                        onSelectFeature={onSelectFeature}
-                        onExpandDetails={onExpandDetails}
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                <BuildClassEquipmentAccordion
+                  character={character}
+                  viewingClassData={viewingClassData}
+                  blockChoices={classEquipmentBlockChoices}
+                  itemChoices={classEquipmentItemChoices}
+                  detailCollapsed={detailCollapsed}
+                  onBlockChoiceChange={onBlockChoiceChange}
+                  onItemChoiceChange={onItemChoiceChange}
+                  onSelectFeature={onSelectFeature}
+                  onExpandDetails={onExpandDetails}
+                  choiceRef={equipmentChoiceRef}
+                  highlighted={equipmentChoiceHighlighted}
+                />
               )}
 
               {levelsToShow.map((lv) => {
@@ -568,7 +552,6 @@ export function BuildClassLevelsPanel({
                 const pendingSpellChoices = spellGain
                   ? Math.max(0, countSpellGainChoices(spellGain) - selectedSpellCount)
                   : 0
-                const spellChoiceComplete = pendingSpellChoices === 0
                 const normalizedPendingCount =
                   levelDiagnostics.length +
                   levelClassChoices.reduce((sum, choice) => {
@@ -593,13 +576,6 @@ export function BuildClassLevelsPanel({
                   (subclassChoiceComplete ? 0 : 1) +
                   pendingSpellChoices +
                   normalizedPendingCount
-                const normalizedChoicesComplete = normalizedPendingCount === 0
-                const allChoicesComplete =
-                  levelChoiceCount > 0 &&
-                  asiChoiceComplete &&
-                  subclassChoiceComplete &&
-                  spellChoiceComplete &&
-                  normalizedChoicesComplete
 
                 const optionalRows = optionalClassActivity
                   ? getVisibleOptionalClassFeatures({
@@ -749,7 +725,7 @@ export function BuildClassLevelsPanel({
                     className="overflow-hidden rounded-lg border border-border last:border-b data-[state=open]:border-primary/30 data-[state=open]:bg-surface-raised/40"
                   >
                     <AccordionTrigger
-                      aria-label={`Level ${lv}, ${totalCount} ${totalCount === 1 ? 'Feature' : 'Features'}${levelChoiceCount ? `, ${allChoicesComplete ? 'All choices made' : `${pendingChoiceCount} pending ${pendingChoiceCount === 1 ? 'choice' : 'choices'}`}` : ''}`}
+                      aria-label={`Level ${lv}, ${totalCount} ${totalCount === 1 ? 'Feature' : 'Features'}${levelChoiceCount ? `, ${getClassChoiceStatus(pendingChoiceCount)}` : ''}`}
                       className="px-3 text-sm hover:no-underline data-[state=open]:rounded-b-none data-[state=open]:bg-surface-raised"
                     >
                       <div className="flex flex-wrap items-center gap-2">
@@ -763,21 +739,7 @@ export function BuildClassLevelsPanel({
                           </Badge>
                         )}
                         {levelChoiceCount > 0 && (
-                          <Badge
-                            className={cn(
-                              'h-5 gap-1 px-1.5 text-xs pointer-events-none border',
-                              allChoicesComplete
-                                ? 'border-success/40 bg-success/15 text-success hover:bg-success/15'
-                                : 'border-warning/40 bg-warning/20 text-warning-foreground hover:bg-warning/20 dark:border-warning/30',
-                            )}
-                          >
-                            {allChoicesComplete ? (
-                              <Check className="h-3 w-3" weight="bold" />
-                            ) : null}
-                            {allChoicesComplete
-                              ? 'All choices made'
-                              : `${pendingChoiceCount} pending ${pendingChoiceCount === 1 ? 'choice' : 'choices'}`}
-                          </Badge>
+                          <ClassChoiceStatusBadge pending={pendingChoiceCount} />
                         )}
                       </div>
                     </AccordionTrigger>

@@ -63,9 +63,9 @@ Do not add a saved parent/child status mirror.
 
 The creator uses semantic step IDs for component and validation selection. Ordinal progress comes
 from the ordered step metadata. Rules owns the ruleset and variant options and defaults to 5e
-Legacy. Sourcebooks owns source selection. Search and filters change the visible list while
-presets, selected counts and option availability use the complete draft catalog. An empty selection
-of supplemental books is valid.
+Legacy. Sourcebooks owns draft source selection. The wizard and Rules → Additional Content share
+the sourcebook browser. Search and filters change the visible list while presets, selected counts
+and option availability use the complete catalog. An empty selection of supplemental books is valid.
 
 Create Character and Build share the ability score editor and origin bonus panels. The wizard
 adapts those controls to its draft and creates the character after Review. Build applies changes

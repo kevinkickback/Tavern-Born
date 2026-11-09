@@ -49,6 +49,12 @@ vi.mock('@/store/gameDataStore', () => {
           group: 'setting',
           minimumRuleset: '2024',
         },
+        {
+          name: 'World of Warcraft',
+          abbreviation: 'WOW',
+          group: 'setting',
+          minimumRuleset: '2024',
+        },
       ],
       races: dataSourceFixture.hasReprints
         ? [
@@ -107,6 +113,34 @@ describe('Rules Additional Content panel layout', () => {
     )
     expect(screen.queryByRole('button', { name: 'None' })).toBeNull()
     expect(useCharacterStore.getState().activeCharacter?.allowedSources).toEqual(['PHB', 'DMG'])
+  })
+
+  test('search and filters affect only the visible books while presets use the full catalog', async () => {
+    const character = makeCharacterFixture({ originSystem: '2024', allowedSources: ['XGE'] })
+    useCharacterStore.setState({ activeCharacter: character, activeCharacterId: character.id })
+    const user = userEvent.setup()
+    render(<SourcesPanel />)
+    const search = screen.getByRole('textbox', { name: 'Search sources' })
+    const category = screen.getByRole('combobox', { name: 'Sourcebook category' })
+    const selection = screen.getByRole('combobox', { name: 'Sourcebook selection filter' })
+    const selectedBooks = () => useCharacterStore.getState().activeCharacter?.allowedSources
+
+    await user.selectOptions(category, 'setting')
+    await user.type(search, ' wow ')
+    expect(screen.getByRole('button', { name: /World of Warcraft/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Forge of the Artificer/ })).toBeNull()
+    await user.selectOptions(selection, 'selected')
+    expect(screen.getByRole('status').textContent).toBe('No books match these filters.')
+    expect(selectedBooks()).toEqual(['XGE'])
+
+    await user.click(screen.getByRole('button', { name: 'Expanded' }))
+    expect(selectedBooks()).toEqual(['XGE', 'TCE', 'EFA', 'WOW'])
+    expect(
+      screen.getByRole('button', { name: /World of Warcraft/ }).getAttribute('aria-pressed'),
+    ).toBe('true')
+    await user.click(screen.getByRole('button', { name: 'Recommended' }))
+    expect(selectedBooks()).toEqual(['XGE', 'TCE'])
+    expect(screen.queryByRole('button', { name: /World of Warcraft/ })).toBeNull()
   })
 
   test.each([
@@ -228,7 +262,7 @@ describe('Rules Additional Content panel layout', () => {
     const { container } = render(<SourcesPanel />)
 
     const warning = screen.getByText('Source configuration notes').closest('aside')
-    const sourceGroup = screen.getByText('Supplements')
+    const sourceGroup = screen.getByRole('heading', { name: 'Supplements' })
     const allowedSourcesHeader = screen.getByText('Additional Content').closest('header')
     const selectedCount = container.querySelector('[data-allowed-sources-count]')
     const preferNewerToggle = screen.getByLabelText('Prefer Newer Printings')

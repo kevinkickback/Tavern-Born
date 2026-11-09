@@ -216,8 +216,8 @@ catalog is usable. If the pack is unavailable, recovery can admit a valid standa
 catalog.
 
 With automatic checks enabled, the configured source is checked after local game data becomes
-available. Settings shows the configured source, active catalog, most recent attempt, successful
-check and applied date, plus the relevant issue or optional warning. A changed catalog waits for
+available. Settings shows the configured location, when the content last changed, and when it was
+last successfully checked. Failures and optional warnings appear separately. A changed catalog waits for
 **Apply game data update** in Settings. The previous catalog remains active during checks and
 review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.

@@ -5,18 +5,20 @@ export interface SourcePreset {
   abbreviations: string[]
 }
 
+const RECOMMENDED_SOURCES = ['XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR']
+
 export const SOURCE_PRESETS: SourcePreset[] = [
   {
     id: 'recommended',
     label: 'Recommended',
     description: 'Popular player options compatible with both 2014 and 2024 editions.',
-    abbreviations: ['XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR'],
+    abbreviations: RECOMMENDED_SOURCES,
   },
   {
     id: 'expanded',
     label: 'Expanded',
-    description: 'Recommended sources plus setting-focused books with narrower use cases.',
-    abbreviations: ['XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR', 'GGR', 'SCC'],
+    description: 'Recommended sources plus more campaign settings supported by your ruleset.',
+    abbreviations: [...RECOMMENDED_SOURCES, 'GGR', 'SCC', 'EFA', 'FRHOF', 'WOW'],
   },
 ]
 

@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
@@ -62,6 +63,42 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test('marks a withdrawn package pending until the user explicitly chooses a replacement', async () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      initialClass: { name: 'Fighter', source: 'PHB' },
+    })
+    const props = makeProps({
+      character,
+      classProgression: character.classProgression,
+      selectedClassTab: 'Fighter|PHB',
+      viewingClass: 'Fighter',
+      viewingClassSource: 'PHB',
+      viewingClassLevel: 1,
+      viewingClassData: {
+        name: 'Fighter',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ a: [{ value: 100 }] }] },
+      },
+      classEquipmentBlockChoices: ['b'],
+    })
+    const { rerender } = render(<BuildClassLevelsPanel {...props} />)
+    const user = userEvent.setup()
+    const accordion = screen.getByRole('button', { name: /Starting Equipment.*1 pending choice/ })
+    await user.click(accordion)
+    const replacement = screen.getByRole('tab', { name: 'Package A' })
+    expect(replacement.getAttribute('aria-selected')).toBe('false')
+    expect(screen.getByText(/Your saved package is unavailable/)).toBeTruthy()
+    expect(props.onBlockChoiceChange).not.toHaveBeenCalled()
+
+    await user.click(replacement)
+    expect(props.onBlockChoiceChange).toHaveBeenCalledExactlyOnceWith(0, 'a')
+    rerender(<BuildClassLevelsPanel {...props} classEquipmentBlockChoices={['a']} />)
+    expect(
+      screen.getByRole('button', { name: /Starting Equipment.*All choices made/ }),
+    ).toBeTruthy()
+  })
+
   test('dormant saved spell intent stays editable while only active choices count toward completion', () => {
     const fixture = makeManagedClassSpellFixtures()
     const initial = makeCharacterFixture({

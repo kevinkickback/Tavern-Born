@@ -66,12 +66,10 @@ export function DataSourceConfigurator({
   const error = useGameDataStore((state) => state.error)
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
-  const cacheStatus = useGameDataStore((state) => state.cacheStatus)
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
   const loadCatalog = useGameDataStore((state) => state.loadCatalog)
   const pending = useGameDataStore((state) => state.pendingCatalog)
   const catalogWarnings = useGameDataStore((state) => state.catalogWarnings)
-  const lastAttemptAt = useGameDataStore((state) => state.lastAttemptAt)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
@@ -382,14 +380,6 @@ export function DataSourceConfigurator({
     return new Date(iso).toLocaleString()
   }
 
-  const getStatusLabel = () => {
-    if (usingSessionSrd) return 'Using Included SRD'
-    if (error) return 'Last check failed'
-    if (pending) return 'Update ready'
-    if (isBackgroundRefreshing) return 'Checking source'
-    return cacheStatus === 'fetched' ? 'Ready' : 'Using saved data'
-  }
-
   const getValidationBorderClass = () => {
     if (validationStatus === 'validating') return 'border-muted-foreground/50'
     if (validationStatus === 'valid') return 'border-success'
@@ -456,17 +446,8 @@ export function DataSourceConfigurator({
                     ]
                   : [
                       ['Location', dataSourceConfig.path],
-                      ['Content updated', formatDateTime(lastDataChangedAt)],
-                      ['Updates checked', formatDateTime(lastUpdateCheckAt)],
-                      ['Last refresh attempt this session', formatDateTime(lastAttemptAt)],
-                      ['Applied', formatDateTime(dataSourceConfig.lastLoaded ?? null)],
-                      [
-                        'Accepted revision',
-                        typeof dataSourceConfig.acceptedRevision === 'string'
-                          ? dataSourceConfig.acceptedRevision.slice(0, 12)
-                          : undefined,
-                      ],
-                      ['Status', getStatusLabel()],
+                      ['Last Updated', formatDateTime(lastDataChangedAt)],
+                      ['Last Checked', formatDateTime(lastUpdateCheckAt)],
                     ]
                 ).map(
                   ([label, value]) =>

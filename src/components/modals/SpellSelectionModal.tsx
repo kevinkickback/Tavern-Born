@@ -129,7 +129,7 @@ const SCHOOL_FILTER: FilterSection = {
   key: 'school',
   label: 'School',
   type: 'checkboxes',
-  columns: 2,
+  columns: 1,
   options: Object.entries(SPELL_SCHOOL_NAMES).map(([abbr, name]) => ({
     value: abbr,
     label: name,

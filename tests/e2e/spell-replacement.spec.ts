@@ -81,6 +81,16 @@ test('@focused Sorcerer edits retain acquisition limits and a later gain learns 
     .getByRole('button', { name: 'Change', exact: true })
     .click()
   const picker = page.getByRole('dialog', { name: 'Choose spell 1', exact: true })
+  const schoolLabel = picker.getByText('Transmutation', { exact: true })
+  const nextSchool = picker.getByRole('checkbox', { name: 'Evocation', exact: true })
+  await expect(schoolLabel).toBeVisible()
+  await expect(nextSchool).toBeVisible()
+  const labelBounds = (await schoolLabel.boundingBox())!
+  const checkboxBounds = (await nextSchool.boundingBox())!
+  expect(
+    labelBounds.x + labelBounds.width <= checkboxBounds.x ||
+      labelBounds.y + labelBounds.height <= checkboxBounds.y,
+  ).toBe(true)
   await picker.getByRole('textbox', { name: /Search/ }).fill('Hold Monster')
   await expect(picker.getByText('No results match your filters.')).toBeVisible()
   await picker.getByRole('switch', { name: 'Ignore class restrictions', exact: true }).click()
