@@ -46,7 +46,10 @@ describe('5etools resource readers', () => {
     })
 
     await expect(reader.readJson('class/index.json')).resolves.toEqual({ ok: true })
-    expect(readLocalJson).toHaveBeenCalledWith('C:\\5etools\\data\\class\\index.json')
+    expect(readLocalJson).toHaveBeenCalledWith(
+      'C:\\5etools\\data\\class\\index.json',
+      'C:\\5etools\\data',
+    )
   })
 
   test('reads bundled JSON without exposing a filesystem path', async () => {

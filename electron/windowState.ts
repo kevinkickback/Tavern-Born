@@ -4,8 +4,8 @@ import { app, type BrowserWindow, screen } from 'electron'
 
 const DEFAULT_WIDTH = 1400
 const DEFAULT_HEIGHT = 900
-export const MIN_WIDTH = 900
-export const MIN_HEIGHT = 700
+export const MIN_WIDTH = 1280
+export const MIN_HEIGHT = 720
 const SAVE_DEBOUNCE_MS = 250
 const MAX_WORKAREA_FRACTION = 0.9
 

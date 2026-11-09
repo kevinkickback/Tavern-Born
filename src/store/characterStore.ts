@@ -604,6 +604,8 @@ export const useCharacterStore = create<CharacterState>()(
 // Publish synchronously so an immediate Save captures the coherent relation; the
 // existing reconciliation queue preserves later edits and acknowledges durable writes.
 function reconcileActiveRuleState() {
+  // A session fallback can contain a reduced SRD version of an exact printing.
+  if (useGameDataStore.getState().sessionBundledSource) return
   const { activeCharacter, reconcileCharacter } = useCharacterStore.getState()
   if (!activeCharacter) return
   const resolution = resolveRaceReference(

@@ -466,7 +466,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "0d7c92b50fc5630282064bd78e7e7fb6994e32deb7dc07ffc1464e380473201e"
+      "sha256": "116eadfe617106c4199b7a12fbdd31b3a70128d83cda284e97f6a02e43b74d15"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -618,7 +618,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "21bad9f1eecff0a77ba3182cd440c57b2141f84c2fefb52432ae74664e091428"
+      "sha256": "19d5c430b24e7692310ba5f94c231f424bc44f6a60156821a6c500cfd260007e"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",

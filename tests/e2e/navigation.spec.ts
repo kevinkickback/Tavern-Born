@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test'
-import { seedAppState } from './helpers/startup'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { MINIMAL_GAME_DATA, seedAppState } from './helpers/startup'
 
 test('startup data source modal supports remote/local setup flow', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Choose Game Data' }).first()).toBeVisible()
   await seedAppState(page, {
     sourcePath: 'srd/core',
+    gameData: { ...MINIMAL_GAME_DATA, spells: [makeSpellFixture()] },
     dataSourceConfig: {
       type: 'bundled',
       path: 'srd/core',

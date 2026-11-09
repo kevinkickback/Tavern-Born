@@ -18,9 +18,12 @@ vi.mock('sonner', () => ({
 
 describe('data source refresh feedback', () => {
   beforeEach(() => {
-    const loadGameData = vi.fn(() => {
+    const loadCatalog = vi.fn(() => {
       useGameDataStore.setState({ error: 'Local directory is unavailable' })
-      return Promise.resolve(false)
+      return Promise.resolve({
+        kind: 'rejected' as const,
+        message: 'Local directory is unavailable',
+      })
     })
 
     useGameDataStore.setState({
@@ -37,7 +40,7 @@ describe('data source refresh feedback', () => {
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       lastUpdateCheckAt: '2026-01-01T00:00:00.000Z',
       cacheStatus: 'fresh',
-      loadGameData,
+      loadCatalog,
       restoreBundledData: defaultRestoreBundledData,
     })
   })
@@ -55,11 +58,11 @@ describe('data source refresh feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Failed to check for updates', {
+      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
         description: 'Local directory is unavailable',
       }),
     )
-    expect(toast.info).not.toHaveBeenCalledWith('Data is already up to date')
+    expect(toast.info).not.toHaveBeenCalledWith('Game data is up to date')
   })
 
   test.each([
@@ -72,16 +75,20 @@ describe('data source refresh feedback', () => {
     const result = new Promise<void>((resolve) => {
       finish = resolve
     })
-    const loadGameData = vi.fn(async () => {
+    const loadCatalog = vi.fn(async () => {
       useGameDataStore.setState({ isBackgroundRefreshing: true })
       await result
       useGameDataStore.setState({
         isBackgroundRefreshing: false,
         error: outcome === 'failed' ? 'Local directory is unavailable' : null,
       })
+      if (outcome === 'failed')
+        return { kind: 'rejected' as const, message: 'Local directory is unavailable' }
       return outcome === 'updated'
+        ? { kind: 'staged' as const }
+        : { kind: 'applied' as const, changed: false }
     })
-    useGameDataStore.setState({ loadGameData })
+    useGameDataStore.setState({ loadCatalog })
     render(<DataSourceConfigurator />)
 
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
@@ -93,17 +100,16 @@ describe('data source refresh feedback', () => {
       'motion-safe:animate-spin',
     )
     await user.click(checking)
-    expect(loadGameData).toHaveBeenCalledTimes(1)
+    expect(loadCatalog).toHaveBeenCalledTimes(1)
     await act(finish)
     expect(screen.getByRole('button', { name: 'Check for Updates' }).hasAttribute('disabled')).toBe(
       false,
     )
     if (outcome === 'updated')
-      expect(toast.success).toHaveBeenCalledWith('Game data updated successfully!')
-    if (outcome === 'unchanged')
-      expect(toast.info).toHaveBeenCalledWith('Data is already up to date')
+      expect(toast.info).toHaveBeenCalledWith('A game-data update is ready to review')
+    if (outcome === 'unchanged') expect(toast.info).toHaveBeenCalledWith('Game data is up to date')
     if (outcome === 'failed')
-      expect(toast.error).toHaveBeenCalledWith('Failed to check for updates', {
+      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
         description: 'Local directory is unavailable',
       })
   })
@@ -228,29 +234,11 @@ describe('data source refresh feedback', () => {
     expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
   })
 
-  test('offers bundled SRD as a fallback when no external source produced usable data', async () => {
-    const user = userEvent.setup()
-    const restoreBundledData = vi.fn(() => {
-      useGameDataStore.setState({ error: 'Bundled pack is unavailable' })
-      return Promise.resolve(false)
-    })
-    useGameDataStore.setState({
-      gameData: null,
-      dataSourceConfig: {
-        type: 'remote',
-        path: 'https://example.com/unavailable',
-        isValid: true,
-      },
-      restoreBundledData,
-    })
+  test('recovery shows source selection without an SRD choice prompt', () => {
+    useGameDataStore.setState({ gameData: null })
     render(<DataSourceConfigurator selectorOnly />)
-
-    await user.click(screen.getByRole('button', { name: 'Use Included SRD' }))
-
-    expect(restoreBundledData).toHaveBeenCalledTimes(1)
-    expect(toast.error).toHaveBeenCalledWith('Unable to load the included SRD', {
-      description: 'Bundled pack is unavailable',
-    })
+    expect(screen.getByRole('heading', { name: 'Choose Game Data' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Use Included SRD' })).toBeNull()
   })
 
   test('places first-run source guidance beside the selector controls', () => {
@@ -272,17 +260,5 @@ describe('data source refresh feedback', () => {
     expect(screen.getByRole('link', { name: '5etools community wiki' }).getAttribute('href')).toBe(
       'https://wiki.tercept.net/en/5eTools/InstallGuide#step-1-downloading-the-site',
     )
-  })
-
-  test('offers the bundled SRD from Settings when no source is active', () => {
-    useGameDataStore.setState({
-      gameData: null,
-      dataSourceConfig: null,
-    })
-
-    render(<DataSourceConfigurator />)
-
-    expect(screen.getByRole('button', { name: 'Use Included SRD' })).toBeTruthy()
-    expect(screen.getByText(/No game data is loaded/)).toBeTruthy()
   })
 })

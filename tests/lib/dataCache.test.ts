@@ -24,6 +24,7 @@ import {
   GAME_DATA_CACHE_SCHEMA_VERSION,
   isCacheForSource,
   readGameDataCache,
+  readGameDataCachePair,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 
@@ -129,6 +130,50 @@ describe('writeGameDataCache', () => {
     } finally {
       put.mockRestore()
       await idb.del('tb:game-data-cache')
+    }
+  })
+
+  test('a superseded activation keeps the accepted configuration and catalog together', async () => {
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    const old = await writeGameDataCache(makeGameData('Accepted'), config, { config })
+    const next = { ...config, path: 'https://backup.example.test' }
+    const controller = new AbortController()
+    const originalPut = IDBObjectStore.prototype.put
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put')
+    put.mockImplementation(function (this: IDBObjectStore, value, key) {
+      const request = originalPut.call(this, value, key)
+      if (key === 'game-data-storage') controller.abort(new Error('Superseded'))
+      return request
+    })
+    try {
+      await expect(
+        writeGameDataCache(makeGameData('Candidate'), next, {
+          config: next,
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow('Superseded')
+      expect(await idb.get('tb:game-data-cache')).toEqual(old)
+      expect(await idb.get('game-data-storage')).toMatchObject({
+        state: { dataSourceConfig: config },
+      })
+    } finally {
+      put.mockRestore()
+      await idb.delMany(['tb:game-data-cache', 'game-data-storage'])
+    }
+  })
+
+  test('reads the catalog and accepted revision from one storage snapshot', async () => {
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    try {
+      for (const acceptedRevision of ['1'.repeat(40), '2'.repeat(40)]) {
+        const source = { ...config, acceptedRevision }
+        await writeGameDataCache(makeGameData(acceptedRevision), source, { config: source })
+        const { cache, settings } = await readGameDataCachePair()
+        expect(settings?.dataSourceConfig).toEqual(source)
+        expect(cache?.data.races[0].name).toBe(acceptedRevision)
+      }
+    } finally {
+      await idb.delMany(['tb:game-data-cache', 'game-data-storage'])
     }
   })
 

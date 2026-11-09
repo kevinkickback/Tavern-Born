@@ -1,56 +1,62 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
-import {
-  type DataSourceStackLoaderOptions,
-  loadGameDataSourceStack,
-} from '@/lib/5etools/contentLayers'
+import type { PreparedCatalog } from '@/lib/5etools/catalogCandidate'
+import { externalCatalogKeys, hasCatalogRecords } from '@/lib/5etools/contentLayers'
+import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { loadDataFromSource } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { settleOnAbort } from '@/lib/abortable'
 import {
   clearGameDataCache,
   computeGameDataFingerprint,
-  type GameDataLayerCacheMetadataByRole,
+  GAME_DATA_SETTINGS_KEY,
+  GAME_DATA_STORE_VERSION,
   isCacheForSource,
   isCacheStale,
-  readGameDataCache,
+  readGameDataCachePair,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
-import type {
-  BundledDataSourceConfig,
-  DataSourceConfig,
-  GameData,
-  GameDataSourceStack,
-} from '@/types/5etools'
+import type { BundledDataSourceConfig, DataSourceConfig, GameData } from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
+let lastClearRequestId = 0
 let remoteStartupPreparation: AbortController | null = null
-let remoteStartupAttempt: AbortController | null = null
-let remoteStartupLoad: Promise<boolean> | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
-const GAME_DATA_STORE_VERSION = 1
-export const REMOTE_STARTUP_TIMEOUT_MS = 15_000
-const remoteTimeout = () =>
-  new DOMException('The game data source did not respond within 15 seconds.', 'TimeoutError')
+export const STARTUP_CATALOG_TIMEOUT_MS = 15_000
+export const INTERACTIVE_CATALOG_TIMEOUT_MS = 60_000
+const catalogTimeout = (timeoutMs: number) =>
+  new DOMException(
+    `The game data source did not respond within ${timeoutMs / 1000} seconds.`,
+    'TimeoutError',
+  )
 
-type RemoteStartupStatus =
-  | 'checking'
-  | 'committing'
-  | 'unavailable'
-  | 'cached'
-  | 'loaded'
-  | 'loading-srd'
-  | 'srd'
-  | 'setup'
+function cancelRemoteStartup() {
+  remoteStartupPreparation?.abort()
+  remoteStartupPreparation = null
+}
 
-interface StartupLoad {
-  signal: AbortSignal
-  beginCommit: () => void
-  sourceStack?: GameDataSourceStack | null
+type RemoteStartupStatus = 'checking' | 'unavailable' | 'loading-srd' | 'setup'
+
+type CatalogResult =
+  | { kind: 'applied'; changed: boolean }
+  | { kind: 'staged' | 'superseded' }
+  | { kind: 'rejected'; message: string }
+
+interface CatalogRequest {
+  stage?: boolean
+  prepared?: PreparedCatalog
+  confirmed?: boolean
+  session?: boolean
+  startup?: boolean
+  folderGrant?: string
+}
+
+function releaseFolderGrant(root: string | undefined) {
+  if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
 
 export function migrateGameDataPersistedState(persistedState: unknown): unknown {
@@ -95,42 +101,10 @@ function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {
   return operation
 }
 
-function getCatalogEntityCount(data: GameData): number {
-  return (
-    data.races.length +
-    data.classes.length +
-    data.backgrounds.length +
-    data.spells.length +
-    data.feats.length +
-    data.items.length +
-    data.itemsBase.length +
-    data.classFeatures.length +
-    (data.creatures?.length ?? 0) +
-    data.actions.length +
-    data.conditions.length +
-    data.deities.length +
-    data.skills.length +
-    data.senses.length +
-    data.languages.length +
-    data.optionalfeatures.length +
-    data.variantrules.length +
-    data.trapHazards.length +
-    data.rewards.length +
-    data.cultsBoons.length +
-    data.organizations.length
-  )
-}
-
 interface LoadProgress {
   current: number
   total: number
   resource: string
-}
-
-async function resolveSourceStack(config: DataSourceConfig): Promise<GameDataSourceStack | null> {
-  if (config.type === 'bundled') return null
-  const bundled = await resolveDefaultBundledSource()
-  return bundled ? { base: bundled, additional: config } : null
 }
 
 /** How the current gameData was sourced this session. */
@@ -138,7 +112,6 @@ export type CacheStatus =
   | 'unknown' // initial, before hydration
   | 'fresh' // loaded from cache, within 24 h, same source
   | 'stale' // loaded from cache, being refreshed in background
-  | 'offline' // loaded from cache, no source configured
   | 'remote-cache' // matching remote cache retained after a failed or timed-out startup check
   | 'session-srd' // Included SRD loaded into memory only
   | 'fetched' // freshly fetched from source this session
@@ -153,23 +126,26 @@ interface GameDataState {
   error: string | null
   lastLoadedAt: string | null
   lastDataChangedAt: string | null
-  /** FNV-1a hash of the last successfully loaded game data; survives cache clears. */
+  /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
   lastUpdateCheckAt: string | null
+  lastAttemptAt: string | null
+  catalogWarnings: string[]
+  externalKeys: string[] | undefined
+  pendingCatalog: {
+    candidate: PreparedCatalog
+    removals: string[]
+    incompleteRemovalPreview: boolean
+    folderGrant?: string
+  } | null
   cacheStatus: CacheStatus
   remoteStartup: RemoteStartupStatus | null
+  bundledUnavailable: boolean
   sessionBundledSource: BundledDataSourceConfig | null
   /** True once the Zustand persist middleware has read back from IDB. */
   hasHydrated: boolean
 
   setGameData: (data: GameData) => void
-  setCacheStatus: (status: CacheStatus) => void
-  setDataSourceConfig: (config: DataSourceConfig) => void
-  setLoading: (loading: boolean) => void
-  setLoadProgress: (progress: LoadProgress | null) => void
-  setError: (error: string | null) => void
-  setLastDataChangedAt: (iso: string | null) => void
-  setLastContentFingerprint: (fp: string | null) => void
   setHasHydrated: (v: boolean) => void
 
   /**
@@ -181,24 +157,22 @@ interface GameDataState {
    */
   loadFromCache: (opts?: {
     forceCheck?: boolean
-  }) => Promise<{ needsToast?: 'offline'; backgroundRefresh?: Promise<boolean> }>
+    retry?: boolean
+  }) => Promise<{ backgroundRefresh?: Promise<boolean> }>
 
   /**
    * Fetch data from `config`, write to IDB cache, and update the store. Resolves
    * true only when the content fingerprint changed. Pass `background = true`
    * to refresh without blocking or clearing the current data.
    */
-  loadGameData: (
+  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
+  loadCatalog: (
     config: DataSourceConfig,
     background?: boolean,
-    startup?: StartupLoad,
-  ) => Promise<boolean>
-  checkRemoteStartup: (
-    deadline?: number,
-    sourceStack?: GameDataSourceStack | null,
-  ) => Promise<boolean>
-  useBundledForSession: () => Promise<boolean>
+    request?: CatalogRequest,
+  ) => Promise<CatalogResult>
   reconfigureRemoteStartup: () => void
+  invalidatePendingFolderSelection: () => void
   refreshGameData: () => Promise<void>
   restoreBundledData: () => Promise<boolean>
   clearGameData: () => Promise<void>
@@ -217,8 +191,13 @@ export const useGameDataStore = create<GameDataState>()(
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
+      lastAttemptAt: null,
+      catalogWarnings: [],
+      externalKeys: undefined,
+      pendingCatalog: null,
       cacheStatus: 'unknown',
       remoteStartup: null,
+      bundledUnavailable: false,
       sessionBundledSource: null,
       hasHydrated: false,
 
@@ -226,268 +205,105 @@ export const useGameDataStore = create<GameDataState>()(
         set({
           gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
         }),
-      setCacheStatus: (status) => set({ cacheStatus: status }),
-      setDataSourceConfig: (config) => set({ dataSourceConfig: config }),
-      setLoading: (loading) => set({ isLoading: loading }),
-      setLoadProgress: (progress) => set({ loadProgress: progress }),
-      setError: (error) => set({ error }),
-      setLastDataChangedAt: (iso) => set({ lastDataChangedAt: iso }),
-      setLastContentFingerprint: (fp) => set({ lastContentFingerprint: fp }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       loadFromCache: async (opts) => {
-        const {
-          dataSourceConfig: savedSourceConfig,
-          lastUpdateCheckAt,
-          loadGameData,
-          setGameData,
-          setCacheStatus,
-          setLastDataChangedAt,
-          setLastContentFingerprint,
-        } = get()
-        const remoteDeadline =
-          savedSourceConfig?.type === 'remote'
-            ? performance.now() + REMOTE_STARTUP_TIMEOUT_MS
-            : undefined
-        if (remoteDeadline !== undefined && (remoteStartupPreparation || remoteStartupAttempt))
-          return {}
-        const cacheRead = readGameDataCache()
-        // The installed pack can change with an app update. Compare against its
-        // current manifest, not the version remembered by the previous installation.
-        const dataSourceConfig =
-          savedSourceConfig?.type === 'bundled'
-            ? ((await resolveDefaultBundledSource()) ?? savedSourceConfig)
-            : savedSourceConfig
-        const stack = dataSourceConfig ? resolveSourceStack(dataSourceConfig) : null
-        const controller = remoteDeadline === undefined ? undefined : new AbortController()
-        if (controller) remoteStartupPreparation = controller
-        const preflight = Promise.all([
-          cacheRead.then((cache) => {
-            if (
-              !cache &&
-              controller &&
-              remoteStartupPreparation === controller &&
-              get().dataSourceConfig === savedSourceConfig
-            ) {
-              set({ remoteStartup: 'checking', error: null })
-            }
-            return cache
-          }),
-          stack,
-        ])
-        const timer =
-          controller &&
-          setTimeout(() => controller.abort(remoteTimeout()), REMOTE_STARTUP_TIMEOUT_MS)
-        let resolved: Awaited<typeof preflight>
-        try {
-          resolved = await (controller ? settleOnAbort(preflight, controller.signal) : preflight)
-        } catch (error) {
-          if (!controller) throw error
-          if (
-            remoteStartupPreparation === controller &&
-            get().dataSourceConfig === savedSourceConfig
-          ) {
-            set({
-              remoteStartup: 'unavailable',
-              error: error instanceof Error ? error.message : null,
-            })
-          }
-          return {}
-        } finally {
-          clearTimeout(timer)
-          if (remoteStartupPreparation === controller) remoteStartupPreparation = null
-        }
-        if (controller && get().dataSourceConfig !== savedSourceConfig) return {}
-        const [cache, configuredStack] = resolved
-        const cacheIdentity = configuredStack ?? dataSourceConfig
-
-        if (!cache && !dataSourceConfig) {
-          const bundledSource = await resolveDefaultBundledSource()
-          if (bundledSource) {
-            await loadGameData(bundledSource)
-            return {}
-          }
-          setCacheStatus('unconfigured')
-          return {}
-        }
-
-        if (cache && dataSourceConfig) {
-          if (!cacheIdentity || !isCacheForSource(cache, cacheIdentity)) {
-            if (dataSourceConfig.type === 'remote') {
-              return {
-                backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack),
-              }
-            }
-            await loadGameData(dataSourceConfig)
-            return {}
-          }
-          if (dataSourceConfig.type !== 'bundled' && isCacheStale(cache.cachedAt)) {
-            setGameData(cache.data)
-            setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
-            setLastContentFingerprint(cache.contentFingerprint ?? null)
-            setCacheStatus('stale')
-            return {
-              backgroundRefresh:
-                dataSourceConfig.type === 'remote'
-                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
-                  : loadGameData(dataSourceConfig, true),
-            }
-          }
-          setGameData(cache.data)
-          setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
-          setLastContentFingerprint(cache.contentFingerprint ?? null)
-          setCacheStatus('fresh')
-          // Only verify source in background if we haven't checked recently (within 1 hour),
-          // unless forceCheck is set (e.g. auto-refresh on launch is enabled).
-          const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
-          const lastCheckedMs = lastUpdateCheckAt
-            ? new Date(lastUpdateCheckAt).getTime()
-            : Number.NaN
-          const checkedRecently =
-            Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
-          if (dataSourceConfig.type !== 'bundled' && (opts?.forceCheck || !checkedRecently)) {
-            return {
-              backgroundRefresh:
-                dataSourceConfig.type === 'remote'
-                  ? get().checkRemoteStartup(remoteDeadline, configuredStack)
-                  : loadGameData(dataSourceConfig, true),
-            }
-          }
-          return {}
-        }
-
-        if (cache && !dataSourceConfig) {
-          setGameData(cache.data)
-          setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
-          setLastContentFingerprint(cache.contentFingerprint ?? null)
-          setCacheStatus('offline')
-          return { needsToast: 'offline' }
-        }
-
-        if (!cache && dataSourceConfig) {
-          if (dataSourceConfig.type === 'remote') {
-            return { backgroundRefresh: get().checkRemoteStartup(remoteDeadline, configuredStack) }
-          }
-          await loadGameData(dataSourceConfig)
-          return {}
-        }
-
-        return {}
-      },
-
-      checkRemoteStartup: async (
-        deadline = performance.now() + REMOTE_STARTUP_TIMEOUT_MS,
-        sourceStack,
-      ) => {
-        const { dataSourceConfig: config, gameData, remoteStartup } = get()
-        if (
-          config?.type !== 'remote' ||
-          remoteStartupPreparation !== null ||
-          remoteStartupAttempt !== null ||
-          remoteStartup === 'committing' ||
-          remoteStartup === 'loading-srd'
-        )
-          return false
-        const attempt = new AbortController()
-        remoteStartupAttempt = attempt
-        const timeoutError = remoteTimeout()
-        const remaining = deadline - performance.now()
-        const timer = setTimeout(() => attempt.abort(timeoutError), Math.max(0, remaining))
-        if (remaining <= 0) attempt.abort(timeoutError)
-        set({ remoteStartup: 'checking' })
-        try {
-          remoteStartupLoad = get().loadGameData(config, Boolean(gameData), {
-            signal: attempt.signal,
-            sourceStack,
-            beginCommit: () => {
-              if (performance.now() >= deadline) attempt.abort(timeoutError)
-              attempt.signal.throwIfAborted()
-              set({ remoteStartup: 'committing' })
-            },
-          })
-          const changed = await remoteStartupLoad
-          if (remoteStartupAttempt !== attempt) return false
-          const current = get()
-          if (!current.error && current.cacheStatus === 'fetched') set({ remoteStartup: 'loaded' })
-          else if (gameData)
-            set({ remoteStartup: 'cached', cacheStatus: 'remote-cache', error: null })
-          else set({ remoteStartup: 'unavailable' })
-          return changed
-        } finally {
-          clearTimeout(timer)
-          if (remoteStartupAttempt === attempt) {
-            remoteStartupAttempt = null
-            remoteStartupLoad = null
-          }
-        }
-      },
-
-      useBundledForSession: async () => {
-        if (!get().gameData && get().remoteStartup === 'committing') {
-          remoteStartupAttempt?.abort()
-          // A transaction that already committed settles as success. Otherwise, wait for abort
-          // before starting the fallback so the two catalogs cannot both win.
-          await remoteStartupLoad
-        }
-        const { gameData, remoteStartup } = get()
-        if (gameData || (remoteStartup !== 'checking' && remoteStartup !== 'unavailable'))
-          return false
-        const requestId = ++activeLoadRequestId
-        remoteStartupPreparation?.abort()
-        remoteStartupPreparation = null
-        remoteStartupAttempt?.abort()
-        remoteStartupAttempt = null
-        remoteStartupLoad = null
-        activeLoadController?.abort()
+        if (remoteStartupPreparation || get().isLoading) return {}
         const controller = new AbortController()
-        activeLoadController = controller
-        set({
-          remoteStartup: 'loading-srd',
-          isLoading: true,
-          isBackgroundRefreshing: false,
-          loadProgress: null,
-          error: null,
-        })
-        try {
-          const bundled = await resolveDefaultBundledSource()
-          if (!bundled)
-            throw new Error('The Included SRD is unavailable in this copy of Tavern Born.')
-          const required = new Set<string>()
-          const data = await loadDataFromSource(bundled, {
-            signal: controller.signal,
-            onProgress: (current, total, resource) => {
-              if (requestId === activeLoadRequestId)
-                set({ loadProgress: { current, total, resource } })
-            },
-            onResourceFailure: (resource, failure) => {
-              if (failure.required) required.add(resource)
-            },
-          })
-          if (requestId !== activeLoadRequestId) return false
-          if (required.size || getCatalogEntityCount(data) === 0)
-            throw new Error('The Included SRD could not be loaded.')
-          get().setGameData(data)
+        remoteStartupPreparation = controller
+        const { signal } = controller
+        const startup = !opts?.retry
+        const timeoutMs = startup ? STARTUP_CATALOG_TIMEOUT_MS : INTERACTIVE_CATALOG_TIMEOUT_MS
+        const timer = setTimeout(() => controller.abort(catalogTimeout(timeoutMs)), timeoutMs)
+        const [pair, installed] = await Promise.all([
+          settleOnAbort(readGameDataCachePair(), signal).catch(() => null),
+          settleOnAbort(resolveDefaultBundledSource(), signal).catch(() => null),
+        ])
+        clearTimeout(timer)
+        if (remoteStartupPreparation !== controller) return {}
+        remoteStartupPreparation = null
+        const availableCache = pair?.cache
+        if (pair?.settings) {
+          const state = migrateGameDataPersistedState(pair.settings) as typeof pair.settings
           set({
-            remoteStartup: 'srd',
-            sessionBundledSource: bundled,
-            cacheStatus: 'session-srd',
-            isLoading: false,
-            loadProgress: null,
+            dataSourceConfig: state.dataSourceConfig ?? null,
+            lastUpdateCheckAt: state.lastUpdateCheckAt ?? null,
+          })
+        }
+        const { dataSourceConfig: config } = get()
+        const desktop = typeof window.electronAPI?.getBundledManifest === 'function'
+        set({ bundledUnavailable: desktop && !installed })
+        const external = config?.type === 'bundled' ? null : config
+        const identity = installed
+          ? external
+            ? { base: installed, additional: external }
+            : installed
+          : config?.type !== 'bundled' || !desktop
+            ? config
+            : null
+        if (
+          external &&
+          availableCache?.sourceSnapshot.type === external.type &&
+          availableCache.sourceSnapshot.path === external.path
+        ) {
+          set({ externalKeys: availableCache.externalKeys })
+        }
+        const openCache = (source: typeof identity) => {
+          if (!availableCache || !source || !isCacheForSource(availableCache, source)) return false
+          const { data, contentFingerprint, cachedAt, lastDataChangedAt, externalKeys } =
+            availableCache
+          if (availableCache.sourceSnapshot.type === 'bundled' && !hasCatalogRecords(data))
+            return false
+          set({
+            gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
+            lastDataChangedAt: lastDataChangedAt ?? cachedAt,
+            lastContentFingerprint:
+              contentFingerprint?.length === 64
+                ? contentFingerprint
+                : computeGameDataFingerprint(data),
+            externalKeys,
+            cacheStatus: isCacheStale(cachedAt) ? 'stale' : 'fresh',
+            remoteStartup: null,
+            error: null,
           })
           return true
-        } catch (error) {
-          if (requestId === activeLoadRequestId)
-            set({
-              remoteStartup: 'unavailable',
-              isLoading: false,
-              loadProgress: null,
-              error:
-                error instanceof Error ? error.message : 'The Included SRD could not be loaded.',
-            })
-          return false
-        } finally {
-          if (activeLoadController === controller) activeLoadController = null
         }
+        if (!openCache(identity)) {
+          if (installed) {
+            set({ remoteStartup: 'loading-srd' })
+            const result = await get().loadCatalog(installed, false, {
+              session: Boolean(external),
+              startup,
+            })
+            if (result.kind === 'superseded') return {}
+            if (result.kind === 'rejected') set({ bundledUnavailable: true })
+          }
+          if (!get().gameData && !openCache(external)) {
+            if (external && (opts?.retry || (opts?.forceCheck && !desktop && !installed))) {
+              set({ remoteStartup: 'checking' })
+              const result = await get().loadCatalog(external, false, { startup })
+              if (result.kind === 'staged')
+                set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
+              else if (result.kind === 'rejected') set({ remoteStartup: 'unavailable' })
+            } else if (config || desktop) {
+              set({
+                remoteStartup: 'unavailable',
+                bundledUnavailable: true,
+                error: get().error ?? 'The Included SRD could not be verified.',
+              })
+            } else set({ cacheStatus: 'unconfigured' })
+            return {}
+          }
+        }
+
+        if (external && opts?.forceCheck && get().gameData && get().dataSourceConfig === config) {
+          return {
+            backgroundRefresh: get()
+              .loadCatalog(external, true, { stage: true, startup })
+              .then((result) => result.kind === 'applied' && result.changed),
+          }
+        }
+        return {}
       },
 
       reconfigureRemoteStartup: () => {
@@ -497,41 +313,48 @@ export const useGameDataStore = create<GameDataState>()(
         set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
       },
 
-      loadGameData: async (config, background = false, startup) => {
+      invalidatePendingFolderSelection: () => {
+        // Electron allows one temporary picker grant. A new selection replaces it.
+        if (get().pendingCatalog?.folderGrant) set({ pendingCatalog: null, catalogWarnings: [] })
+      },
+
+      loadGameData: async (config, background) => {
+        const result = await get().loadCatalog(config, background)
+        return result.kind === 'applied' && result.changed
+      },
+
+      loadCatalog: async (config, background = false, request) => {
+        const pending = get().pendingCatalog
+        if (request?.confirmed && request.prepared !== pending?.candidate)
+          return { kind: 'superseded' }
+        const folderGrant = request?.confirmed ? pending?.folderGrant : request?.folderGrant
+        if (pending?.folderGrant !== folderGrant) releaseFolderGrant(pending?.folderGrant)
         const requestId = ++activeLoadRequestId
+        cancelRemoteStartup()
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
-        const signal = startup
-          ? AbortSignal.any([controller.signal, startup.signal])
-          : controller.signal
+        const timeoutMs = request?.startup
+          ? STARTUP_CATALOG_TIMEOUT_MS
+          : INTERACTIVE_CATALOG_TIMEOUT_MS
+        const timeout = setTimeout(() => controller.abort(catalogTimeout(timeoutMs)), timeoutMs)
+        const { signal } = controller
 
-        if (background) {
-          set({
-            isBackgroundRefreshing: true,
-            error: null,
-            loadProgress: null,
-          })
-        } else {
-          set({
-            isLoading: true,
-            error: null,
-            loadProgress: null,
-          })
-        }
+        set({
+          ...(config.type !== 'bundled' && !request?.prepared
+            ? { lastAttemptAt: new Date().toISOString() }
+            : {}),
+          pendingCatalog: null,
+          isLoading: !background,
+          isBackgroundRefreshing: background,
+          error: null,
+          loadProgress: null,
+        })
 
         try {
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
-          const stack =
-            startup?.sourceStack === undefined
-              ? resolveSourceStack(config)
-              : Promise.resolve(startup.sourceStack)
-          const sourceStack = await (startup ? settleOnAbort(stack, signal) : stack)
-          signal.throwIfAborted()
-          const cacheIdentity = sourceStack ?? config
-          const layerMetadata: GameDataLayerCacheMetadataByRole = {}
-          const loaderOptions: DataSourceStackLoaderOptions = {
+          const loaderOptions: DataLoaderOptions = {
             onProgress: (current, total, resource) => {
               if (requestId === activeLoadRequestId && !signal.aborted) {
                 set({ loadProgress: { current, total, resource } })
@@ -542,20 +365,23 @@ export const useGameDataStore = create<GameDataState>()(
               if (failure.required) failedRequiredResources.add(resource)
             },
             signal,
-            onLayerLoaded: (role, layerData) => {
-              if (signal.aborted) return
-              layerMetadata[role] = {
-                contentFingerprint: computeGameDataFingerprint(layerData),
-                entityCount: getCatalogEntityCount(layerData),
-              }
-            },
           }
-          const pending = sourceStack
-            ? loadGameDataSourceStack(sourceStack, loaderOptions)
-            : loadDataFromSource(config, loaderOptions)
-          const data = await (startup ? settleOnAbort(pending, signal) : pending)
+          let candidate = request?.prepared
+          if (!candidate && config.type !== 'bundled') {
+            const { prepareCatalog } = await import('@/lib/5etools/catalogCandidate')
+            const base = get().bundledUnavailable
+              ? null
+              : await settleOnAbort(resolveDefaultBundledSource(), signal)
+            candidate = await settleOnAbort(
+              prepareCatalog(config, base ?? undefined, signal, loaderOptions.onProgress),
+              signal,
+            )
+          }
+          const data =
+            candidate?.data ??
+            (await settleOnAbort(loadDataFromSource(config, loaderOptions), signal))
           signal.throwIfAborted()
-
+          await settleOnAbort(cacheMutationQueue, signal)
           const existingData = get().gameData
           if (background && failedResources.size > 0) {
             throw new Error(
@@ -570,20 +396,84 @@ export const useGameDataStore = create<GameDataState>()(
           if (
             background &&
             existingData &&
-            getCatalogEntityCount(existingData) > 0 &&
-            getCatalogEntityCount(data) === 0
+            hasCatalogRecords(existingData) &&
+            !(candidate?.keys.length || hasCatalogRecords(data))
           ) {
             throw new Error('Background refresh returned empty data; keeping existing cache')
           }
-          if (startup && getCatalogEntityCount(data) === 0)
-            throw new Error('The game data source returned an empty catalog.')
+          const cacheIdentity = candidate?.identity ?? config
+          const prior = get()
+          const priorSource = prior.dataSourceConfig
+          const hadExternal = priorSource && priorSource.type !== 'bundled'
+          const hasPriorExternalData =
+            hadExternal &&
+            (priorSource.lastLoaded || (prior.gameData && !prior.sessionBundledSource))
+          const incompleteRemovalPreview = Boolean(hasPriorExternalData && !prior.externalKeys)
+          const currentKeys = new Set(candidate?.keys)
+          const resources = candidate?.config.availableResources ?? []
+          const removedFiles = hadExternal
+            ? (priorSource.availableResources ?? []).filter(
+                (file) =>
+                  !file.startsWith('fluff-') &&
+                  file !== 'book/book-tce.json' &&
+                  !resources.includes(file),
+              )
+            : []
+          const removals = [...removedFiles]
+          if (candidate && hadExternal) {
+            if (prior.externalKeys) {
+              removals.push(...prior.externalKeys.filter((key) => !currentKeys.has(key)))
+            } else if (prior.gameData && !prior.sessionBundledSource) {
+              const keys = new Set(externalCatalogKeys(data))
+              removals.push(...externalCatalogKeys(prior.gameData).filter((key) => !keys.has(key)))
+            }
+          }
+          if (
+            candidate &&
+            !request?.confirmed &&
+            (removals.length ||
+              incompleteRemovalPreview ||
+              (request?.stage &&
+                (prior.sessionBundledSource ||
+                  computeGameDataFingerprint(data) !== prior.lastContentFingerprint)))
+          ) {
+            if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
+            set({
+              pendingCatalog: {
+                candidate,
+                removals,
+                incompleteRemovalPreview,
+                ...(folderGrant ? { folderGrant } : {}),
+              },
+              isLoading: false,
+              isBackgroundRefreshing: false,
+              loadProgress: null,
+              lastUpdateCheckAt: new Date().toISOString(),
+              catalogWarnings: candidate.warnings,
+            })
+            return { kind: 'staged' }
+          }
 
-          // Ignore stale results from superseded requests.
-          if (requestId !== activeLoadRequestId) {
-            return false
+          if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
+          if (config.type === 'bundled' && !hasCatalogRecords(data))
+            throw new Error('The Included SRD could not be loaded.')
+          if (request?.session && config.type === 'bundled') {
+            set({
+              gameData: data,
+              remoteStartup: null,
+              sessionBundledSource: config,
+              bundledUnavailable: false,
+              cacheStatus: 'session-srd',
+              isLoading: false,
+              loadProgress: null,
+            })
+            return { kind: 'applied', changed: true }
           }
 
           const now = new Date().toISOString()
+          const acceptedConfig = candidate
+            ? { ...candidate.config, acceptedRevision: candidate.revision, lastLoaded: now }
+            : { ...config, isValid: true, lastLoaded: now }
           // Persist parsed data to IDB cache so next launch is instant.
           // Pass the last known fingerprint so writeGameDataCache can detect
           // unchanged content even when the IDB cache was cleared.
@@ -591,71 +481,79 @@ export const useGameDataStore = create<GameDataState>()(
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
           let writeStarted = false
-          const mutation = enqueueCacheMutation(() => {
-            if (requestId !== activeLoadRequestId) return Promise.resolve(null)
+          const mutation = enqueueCacheMutation(async () => {
+            if (requestId !== activeLoadRequestId) return { kind: 'superseded' } as const
             signal.throwIfAborted()
+            if (config.type === 'local')
+              await settleOnAbort(
+                Promise.resolve(window.electronAPI?.approveLocalDataRoot?.(config.path)),
+                signal,
+              )
             writeStarted = true
-            return writeGameDataCache(data, cacheIdentity, {
+            const cacheEntry = await writeGameDataCache(data, cacheIdentity, {
               fingerprint: prevFingerprint,
               lastDataChangedAt: prevChangedAt,
-              ...(sourceStack ? { layerMetadata } : {}),
-              ...(startup ? { signal, beforeWrite: startup.beginCommit } : {}),
+              layerMetadata: candidate?.layerMetadata,
+              signal,
+              config: acceptedConfig,
+              externalKeys: candidate?.keys,
             })
-          })
-          const cacheEntry = await (startup
-            ? settleOnAbort(mutation, signal, () => !writeStarted)
-            : mutation)
+            if (requestId < lastClearRequestId) return { kind: 'superseded' } as const
 
-          // A clear or newer load may have started while the cache write was queued.
-          // The queued clear still runs after this write; do not restore stale state.
-          if (!cacheEntry || requestId !== activeLoadRequestId) {
-            return false
-          }
-          const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
-          const shouldHydrateMemory =
-            contentChanged || !hadGameData || get().sessionBundledSource !== null
-          set({
-            gameData: shouldHydrateMemory ? data : get().gameData,
-            dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
-            isLoading: false,
-            isBackgroundRefreshing: false,
-            loadProgress: null,
-            lastLoadedAt: now,
-            ...(contentChanged || !prevChangedAt
-              ? { lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now }
-              : {}),
-            lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
-            lastUpdateCheckAt: now,
-            cacheStatus: 'fetched',
-            sessionBundledSource: null,
+            // Publish a committed pair before the next queued operation can use it.
+            const contentChanged = cacheEntry.contentFingerprint !== prevFingerprint
+            const shouldHydrateMemory =
+              contentChanged || !hadGameData || get().sessionBundledSource !== null
+            set({
+              gameData: shouldHydrateMemory ? data : get().gameData,
+              dataSourceConfig: acceptedConfig,
+              externalKeys: candidate?.keys,
+              catalogWarnings: candidate?.warnings ?? [],
+              ...(requestId === activeLoadRequestId
+                ? { isLoading: false, isBackgroundRefreshing: false, loadProgress: null }
+                : {}),
+              lastLoadedAt: now,
+              lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
+              lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
+              lastUpdateCheckAt: now,
+              cacheStatus: 'fetched',
+              remoteStartup: null,
+              bundledUnavailable: config.type !== 'bundled' && get().bundledUnavailable,
+              sessionBundledSource: null,
+            })
+            return { kind: 'applied', changed: contentChanged } as const
           })
-          return contentChanged
+          return await settleOnAbort(mutation, signal, () => !writeStarted)
         } catch (error) {
           // Ignore stale request failures and intentional aborts.
           if (requestId !== activeLoadRequestId) {
-            return false
+            return { kind: 'superseded' }
           }
 
-          const isAbortError =
-            (error instanceof DOMException && error.name === 'AbortError') ||
-            (error instanceof Error && error.name === 'AbortError')
-          if (isAbortError) {
+          const failure = error instanceof DOMException || error instanceof Error ? error : null
+          if (failure?.name === 'AbortError') {
             set({
               isLoading: false,
               isBackgroundRefreshing: false,
               loadProgress: null,
             })
-            return false
+            return { kind: 'superseded' }
           }
 
+          const message = failure?.message ?? 'Failed to load game data'
           set({
-            error: error instanceof Error ? error.message : 'Failed to load game data',
+            error: message,
+            ...(request?.stage && get().gameData && !get().sessionBundledSource
+              ? { cacheStatus: 'remote-cache' as const }
+              : {}),
             isLoading: false,
             isBackgroundRefreshing: false,
             loadProgress: null,
           })
-          return false
+          return { kind: 'rejected', message }
         } finally {
+          clearTimeout(timeout)
+          if (folderGrant !== get().pendingCatalog?.folderGrant) releaseFolderGrant(folderGrant)
           if (activeLoadController === controller) {
             activeLoadController = null
           }
@@ -693,14 +591,11 @@ export const useGameDataStore = create<GameDataState>()(
       clearGameData: async () => {
         // Invalidate results even when the underlying operation (notably local IPC
         // reads or an IndexedDB write) cannot be cancelled by AbortController.
-        activeLoadRequestId += 1
-        remoteStartupAttempt?.abort()
-        remoteStartupAttempt = null
-        remoteStartupLoad = null
-        remoteStartupPreparation?.abort()
-        remoteStartupPreparation = null
+        lastClearRequestId = ++activeLoadRequestId
+        cancelRemoteStartup()
         activeLoadController?.abort()
         activeLoadController = null
+        releaseFolderGrant(get().pendingCatalog?.folderGrant)
         set({
           gameData: null,
           dataSourceConfig: null,
@@ -712,18 +607,26 @@ export const useGameDataStore = create<GameDataState>()(
           lastDataChangedAt: null,
           lastContentFingerprint: null,
           lastUpdateCheckAt: null,
+          lastAttemptAt: null,
+          catalogWarnings: [],
+          externalKeys: undefined,
+          pendingCatalog: null,
           cacheStatus: 'unconfigured',
           remoteStartup: null,
           sessionBundledSource: null,
         })
         // Serialize cache mutations so a write already in flight is always followed
         // by this deletion, while later user-initiated loads write after the clear.
-        await enqueueCacheMutation(clearGameDataCache)
+        await enqueueCacheMutation(() => clearGameDataCache(true))
       },
     }),
     {
-      name: 'game-data-storage',
-      storage: createIdbStorage(),
+      name: GAME_DATA_SETTINGS_KEY,
+      // The cache transaction owns the durable settings write.
+      storage: {
+        ...createIdbStorage({ allowUnreadable: true }),
+        setItem: () => Promise.resolve(),
+      },
       version: GAME_DATA_STORE_VERSION,
       migrate: migrateGameDataPersistedState,
       // Only persist the config — game data is cached separately in dataCache.ts.

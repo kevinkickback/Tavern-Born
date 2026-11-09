@@ -10,18 +10,22 @@ Entry points: useDataInit, gameDataStore, dataLoader and dataCache.
    local-storage colors before React paints and reconciles them after hydration.
 2. The immutable Included SRD is always the base. One authorized local folder or HTTPS root may
    add content; no external setup is required.
-3. A usable parsed cache supplies initial data. Required startup refresh keeps the startup overlay
-   active until success/failure; editing cannot begin against a catalog awaiting replacement.
-   Hydration, cache, connection and resource progress remain distinct. Later Settings refreshes are modeless.
-4. Each source loads independently. Composition overlays exact identities, rebuilds retained raw
-   families and lookup indexes, then publishes memory/cache atomically. Superseded work cannot commit.
-5. Required failures preserve the prior complete catalog/cache. Remove Additional Content admits
-   and loads the bundled catalog before removing external configuration; failure preserves both.
+3. A matching parsed cache supplies initial data. If it is unavailable, the app loads the Included
+   SRD automatically. The startup overlay waits for usable local data and offers recovery if that
+   fails. Automatic source checks respect the hydrated preference and run in the background.
+   Automatic startup catalog attempts have a 15-second limit. Manual source checks, validation,
+   and applying or restoring data allow up to 60 seconds per catalog attempt.
+4. Each candidate is checked as a unit. Composition overlays exact identities, rebuilds retained
+   raw families and creates lookup indexes. Changed background candidates and verified withdrawals
+   wait for explicit review. Applying a candidate writes the source settings and cache together
+   before publishing the accepted catalog in memory.
+5. Required failures preserve the prior complete catalog and cache. Remove Additional Content
+   loads the bundled catalog before removing the external configuration.
 
-A changed installed pack invalidates bundled-only caches even with external auto-refresh disabled.
-Layered identity includes the pack and external source; per-layer fingerprints/counts identify changes.
-lastUpdateCheckAt advances after a successful check, while lastDataChangedAt requires a changed
-content fingerprint. Missing optional lookup indexes are built once; supplied empty maps remain authoritative.
+A changed installed pack invalidates caches for the previous pack. Layered cache identity includes
+the installed pack and external source. The accepted GitHub revision, content digest and dates
+distinguish a source check from a catalog change. Missing optional lookup indexes are built once.
+Supplied empty maps remain authoritative.
 
 The external configurator loads on demand. In development, Electron disables persistent HTTP disk
 cache before Chromium startup to avoid stale Vite chunks, and Vite excludes .tmp from watching.

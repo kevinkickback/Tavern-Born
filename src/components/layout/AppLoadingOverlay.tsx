@@ -1,5 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
@@ -7,66 +6,24 @@ import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
 export function AppLoadingOverlay() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
-  const isBackgroundRefreshing = useGameDataStore((s) => s.isBackgroundRefreshing)
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
   const gameData = useGameDataStore((s) => s.gameData)
   const loadProgress = useGameDataStore((s) => s.loadProgress)
   const error = useGameDataStore((s) => s.error)
   const remoteStartup = useGameDataStore((s) => s.remoteStartup)
   const retryRemote = useGameDataStore((s) => s.loadFromCache)
-  const loadBundled = useGameDataStore((s) => s.useBundledForSession)
   const reconfigure = useGameDataStore((s) => s.reconfigureRemoteStartup)
-  const canUseBundled =
-    !gameData &&
-    (remoteStartup === 'checking' ||
-      remoteStartup === 'committing' ||
-      remoteStartup === 'unavailable')
 
   const shouldStayVisible =
-    remoteStartup === 'unavailable' ||
-    !hasHydrated ||
-    isLoading ||
-    isBackgroundRefreshing ||
-    (!gameData && cacheStatus === 'unknown' && !error)
-
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'fading' | 'hidden'>('loading')
+    remoteStartup !== 'setup' &&
+    (!hasHydrated ||
+      (!gameData &&
+        (isLoading || remoteStartup === 'unavailable' || (cacheStatus === 'unknown' && !error))))
   const overlayRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const statusId = useId()
 
-  useEffect(() => {
-    // This is a one-shot startup gate. Later user-initiated refreshes remain
-    // modeless and report progress through Settings and the app status bar.
-    if (phase === 'hidden') return
-    if (remoteStartup === 'setup') {
-      setPhase('hidden')
-      return
-    }
-
-    if (shouldStayVisible) {
-      // A refresh can begin immediately after cached data is restored. Keep the
-      // overlay in its loading phase instead of briefly announcing readiness.
-      if (phase === 'ready' || phase === 'fading') setPhase('loading')
-      return
-    }
-
-    if (phase === 'loading') {
-      setPhase('ready')
-      return
-    }
-
-    if (phase === 'ready') {
-      const timer = setTimeout(() => setPhase('fading'), 1200)
-      return () => clearTimeout(timer)
-    }
-
-    if (phase === 'fading') {
-      const timer = setTimeout(() => setPhase('hidden'), 500)
-      return () => clearTimeout(timer)
-    }
-  }, [shouldStayVisible, phase, remoteStartup])
-
-  const isBlocking = phase !== 'hidden' && remoteStartup !== 'setup'
+  const isBlocking = shouldStayVisible || Boolean(gameData && isLoading)
   useEffect(() => {
     const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
     if (!appContent) return
@@ -88,8 +45,6 @@ export function AppLoadingOverlay() {
 
   if (!isBlocking) return null
 
-  const isReady = !shouldStayVisible && (phase === 'ready' || phase === 'fading')
-  const isFading = !shouldStayVisible && phase === 'fading'
   const hasProgress = loadProgress !== null && loadProgress.total > 0
   const isProgressComplete =
     hasProgress &&
@@ -97,27 +52,14 @@ export function AppLoadingOverlay() {
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
-  if (isReady) {
-    statusLine =
-      remoteStartup === 'cached'
-        ? 'Online content is unavailable. Using saved game data.'
-        : remoteStartup === 'srd'
-          ? 'Using Included SRD for this session.'
-          : remoteStartup === 'loaded'
-            ? 'Online game data is ready.'
-            : 'App is ready'
-  } else if (remoteStartup === 'unavailable') {
-    statusLine = 'Online game data is unavailable.'
+  if (remoteStartup === 'unavailable') {
+    statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
     statusLine = 'Loading the Included SRD…'
   } else if (!hasHydrated) {
     statusLine = 'Warming up the dice...'
-  } else if (isBackgroundRefreshing) {
-    statusLine = isProgressComplete
-      ? 'Finalizing game data update…'
-      : hasProgress
-        ? `Checking ${loadProgress.resource} for updates…`
-        : 'Checking for game data updates…'
+  } else if (gameData) {
+    statusLine = 'Applying game data…'
   } else if (isLoading) {
     statusLine = isProgressComplete
       ? 'Finalizing game data…'
@@ -134,14 +76,13 @@ export function AppLoadingOverlay() {
     <div
       ref={overlayRef}
       data-testid="app-loading-overlay"
-      data-phase={phase}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={statusId}
-      aria-busy={!isReady && remoteStartup !== 'unavailable'}
+      aria-busy={remoteStartup !== 'unavailable'}
       tabIndex={-1}
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
     >
       <div className="mb-14 text-center select-none">
         <h1 id={titleId} className="font-display text-5xl font-bold tracking-wide text-foreground">
@@ -152,22 +93,16 @@ export function AppLoadingOverlay() {
         </p>
       </div>
       <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
-        {isReady ? (
-          <div className="flex items-center justify-center">
-            <CheckCircle2 className="h-6 w-6 animate-in zoom-in-50 text-primary" />
-          </div>
-        ) : (
-          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            {hasProgress ? (
-              <div
-                className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-                style={{ width: `${pct}%` }}
-              />
-            ) : (
-              <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
-            )}
-          </div>
-        )}
+        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          {hasProgress ? (
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+              style={{ width: `${pct}%` }}
+            />
+          ) : (
+            <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+          )}
+        </div>
         <div
           id={statusId}
           role="status"
@@ -176,7 +111,7 @@ export function AppLoadingOverlay() {
           className="flex items-center justify-center text-xs text-muted-foreground"
         >
           <span className="min-w-0 text-center leading-4">{statusLine}</span>
-          {!isReady && hasProgress && (
+          {hasProgress && (
             <span className="ml-3 shrink-0 tabular-nums">
               {loadProgress.current}&thinsp;/&thinsp;{loadProgress.total}
             </span>
@@ -184,19 +119,17 @@ export function AppLoadingOverlay() {
         </div>
       </div>
       {error && <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>}
-      {canUseBundled && (
+      {remoteStartup === 'unavailable' && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
-          {remoteStartup === 'unavailable' && (
-            <Button variant="outline" onClick={() => void retryRemote({ forceCheck: true })}>
-              Retry
-            </Button>
-          )}
-          <Button onClick={() => void loadBundled()}>Use Included SRD for this session</Button>
-          {remoteStartup === 'unavailable' && (
-            <Button variant="ghost" onClick={reconfigure}>
-              Change source
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => void retryRemote({ forceCheck: true, retry: true })}
+          >
+            Retry
+          </Button>
+          <Button variant="ghost" onClick={reconfigure}>
+            Change source
+          </Button>
         </div>
       )}
     </div>

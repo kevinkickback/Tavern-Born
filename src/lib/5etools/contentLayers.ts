@@ -276,6 +276,7 @@ export interface ContentLayerDependencyIssue {
 }
 
 export interface DataSourceStackLoaderOptions extends DataLoaderOptions {
+  additionalReader?: import('./resourceReader').JsonResourceReader
   onLayerLoaded?: (role: 'base' | 'additional', data: GameData) => void
 }
 
@@ -336,61 +337,18 @@ export function findLayerDependencyIssues(
         })
       }
     }
-    for (const [choiceIndex, choice] of (classData.normalizedRules?.choices ?? []).entries()) {
-      for (const [optionIndex, option] of choice.options.entries()) {
-        if (option.entityType === 'proficiency') {
-          if (!hasProficiencyCatalogTarget(option, featureCatalogs))
-            issues.push({
-              owner,
-              path: `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
-              reference: option.ref ?? option.name,
-            })
-          continue
-        }
-        const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
-        const featureOption =
-          option.entityType === 'classFeature' || option.entityType === 'subclassFeature'
-        const key = featureOption
-          ? getClassChoiceFeatureTarget(option)
-          : entityKey(option.name, option.source)
-        if (
-          option.entityType === 'featureOption'
-            ? resolveFeatureOptionEntity(
-                option,
-                scopeClassChoiceFeatureCatalogs(
-                  featureCatalogs,
-                  choice.owner.type === 'subclass'
-                    ? getFeatureOwnerKey(
-                        choice.owner.name,
-                        choice.owner.source,
-                        choice.owner.subclassName,
-                        choice.owner.subclassSource,
-                      )
-                    : undefined,
-                ),
-              )
-            : (featureOption || option.source?.trim()) &&
-              key &&
-              optionCatalogs[option.entityType].has(key)
-        ) {
-          continue
-        }
-        issues.push({
-          owner,
-          path: `normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
-          reference,
-          ...(option.entityType === 'item' ? { required: false } : {}),
-        })
-      }
-    }
-    for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
-      for (const [choiceIndex, choice] of (subclass.normalizedRules?.choices ?? []).entries()) {
+    const auditChoices = (
+      entry: Pick<Class5e, 'normalizedRules'>,
+      entryOwner: string,
+      prefix = '',
+    ) => {
+      for (const [choiceIndex, choice] of (entry.normalizedRules?.choices ?? []).entries()) {
         for (const [optionIndex, option] of choice.options.entries()) {
           if (option.entityType === 'proficiency') {
             if (!hasProficiencyCatalogTarget(option, featureCatalogs))
               issues.push({
-                owner: `${owner}/${subclass.name}|${subclass.source}`,
-                path: `subclasses[${subclassIndex}].normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+                owner: entryOwner,
+                path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
                 reference: option.ref ?? option.name,
               })
             continue
@@ -424,13 +382,21 @@ export function findLayerDependencyIssues(
             continue
           }
           issues.push({
-            owner: `${owner}/${subclass.name}|${subclass.source}`,
-            path: `subclasses[${subclassIndex}].normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+            owner: entryOwner,
+            path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
             reference,
             ...(option.entityType === 'item' ? { required: false } : {}),
           })
         }
       }
+    }
+    auditChoices(classData, owner)
+    for (const [index, subclass] of (classData.subclasses ?? []).entries()) {
+      auditChoices(
+        subclass,
+        `${owner}/${subclass.name}|${subclass.source}`,
+        `subclasses[${index}].`,
+      )
     }
   }
 
@@ -557,7 +523,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
 
   resolveComposedFeatureReferences(
     composed,
-    layers.map((layer) => ({ ...layer, classes: classLayers.get(layer)! })),
+    layers.map((layer) => ({ ...layer, classes: classLayers.get(layer) ?? layer.classes })),
   )
   // Race copies and versions must see the winning raw parents, including already-resolved copies.
   const rawRaces = layers.map(getLoadedRaceData).reduce(
@@ -683,6 +649,7 @@ export async function loadGameDataSourceStack(
   const additional = await loadDataFromSource(
     stack.additional,
     optionsForLayer(options, 'Additional content', true),
+    options?.additionalReader,
   )
   options?.onLayerLoaded?.('additional', additional)
   let composed: GameData
@@ -696,19 +663,90 @@ export async function loadGameDataSourceStack(
     }
     throw error
   }
+  assertLayerDependencies(composed, additional, options?.onResourceFailure)
+  return composed
+}
+
+export function assertLayerDependencies(
+  composed: GameData,
+  additional: GameData,
+  onFailure?: DataLoaderOptions['onResourceFailure'],
+) {
   // Optional item-choice metadata stays diagnostic; reporting a transport failure would
   // incorrectly hold every background refresh on the previous cache.
   const dependencyIssues = findLayerDependencyIssues(composed, additional).filter(
     (issue) => issue.required !== false,
   )
   if (dependencyIssues.length > 0) {
-    for (const issue of dependencyIssues) {
-      options?.onResourceFailure?.(`Additional content: ${issue.reference}`, { required: true })
-    }
+    for (const issue of dependencyIssues)
+      onFailure?.(`Additional content: ${issue.reference}`, { required: true })
     const firstIssue = dependencyIssues[0]
     throw new Error(
       `Additional content has ${dependencyIssues.length} unresolved required ${dependencyIssues.length === 1 ? 'reference' : 'references'}. ${firstIssue.owner} needs ${firstIssue.reference}.`,
     )
   }
-  return composed
+}
+
+const CATALOG_RECORD_COLLECTIONS = [
+  'races',
+  'classes',
+  'backgrounds',
+  'spells',
+  'feats',
+  'items',
+  'itemsBase',
+  'classFeatures',
+  'creatures',
+  'actions',
+  'conditions',
+  'deities',
+  'skills',
+  'senses',
+  'languages',
+  'optionalfeatures',
+  'variantrules',
+  'trapHazards',
+  'rewards',
+  'cultsBoons',
+  'organizations',
+] as const
+
+const EXTERNAL_RECORD_COLLECTIONS = [
+  ...CATALOG_RECORD_COLLECTIONS,
+  'itemProperties',
+  'itemTypes',
+  'itemMasteries',
+  'magicVariants',
+  'psionics',
+] as const
+
+export function hasCatalogRecords(data: GameData): boolean {
+  return CATALOG_RECORD_COLLECTIONS.some((family) => {
+    const records = data[family]
+    return Array.isArray(records) && records.length > 0
+  })
+}
+
+/** Compare the external layer itself so an SRD record cannot hide a withdrawn overlay. */
+export function externalCatalogKeys(data: GameData): string[] {
+  const keys = EXTERNAL_RECORD_COLLECTIONS.flatMap((family) => {
+    const identity = COLLECTION_IDENTITIES[family] ?? recordIdentity
+    return (data[family] ?? []).map((record) => `${family}: ${identity(record as never)}`)
+  })
+  for (const race of data.races) {
+    for (const subrace of race.subraces ?? [])
+      keys.push(`subrace: ${recordIdentity(race)}/${recordIdentity(subrace)}`)
+  }
+  for (const parent of data.classes) {
+    for (const subclass of parent.subclasses ?? []) {
+      const owner = `${recordIdentity(parent)}/${recordIdentity(subclass)}`
+      keys.push(`subclass: ${owner}`)
+      for (const ref of subclass.subclassFeatureRefs ?? [])
+        keys.push(`subclass feature: ${owner}/${ref.ref}`)
+    }
+  }
+  for (const section of data.optionalClassSections ?? []) {
+    if (section.input && !section.diagnostic) keys.push(`optional class feature: ${section.target}`)
+  }
+  return [...new Set(keys)].sort()
 }

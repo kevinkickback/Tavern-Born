@@ -84,7 +84,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
     }),
     {
       name: 'app-preferences-storage',
-      storage: createIdbStorage(),
+      storage: createIdbStorage({ allowUnreadable: true }),
       partialize: (state) => ({
         homeCardSize: state.homeCardSize,
         themeAccent: state.themeAccent,
