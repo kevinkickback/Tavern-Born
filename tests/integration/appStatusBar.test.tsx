@@ -136,6 +136,7 @@ describe('application status bar', () => {
         pendingCatalog: {
           candidate: { config, data, identity: config, keys: [], warnings: [] },
           removals: [],
+          incompleteRemovalPreview: true,
         },
       }),
     )
@@ -150,6 +151,7 @@ describe('application status bar', () => {
     expect(openAppUpdate).toHaveBeenCalledTimes(1)
     await user.click(dataUpdate)
     const heading = await screen.findByRole('heading', { name: 'Game data update ready' })
+    expect(screen.getByText(/Your saved catalog predates removal tracking/)).toBeTruthy()
     expect(heading.closest('section')).toBe(document.activeElement)
     expect(openAppUpdate).toHaveBeenCalledTimes(1)
 

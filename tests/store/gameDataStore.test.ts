@@ -236,6 +236,57 @@ describe('gameDataStore', () => {
     expect(useGameDataStore.getState().externalKeys).toEqual([])
   })
 
+  test.each([
+    { background: true, next: remote },
+    { background: false, next: { ...remote, path: 'https://replacement.example.test' } },
+  ])('legacy inventory requires one-time review of equal composed data ($background)', async ({
+    background,
+    next,
+  }) => {
+    const data = nonempty('Same name in the Included SRD')
+    const candidate = {
+      config: next,
+      identity: { base: bundled, additional: next },
+      data,
+      keys: ['feats: retained|phb'],
+      warnings: [],
+    }
+    useGameDataStore.setState({
+      gameData: data,
+      dataSourceConfig: remote,
+      lastContentFingerprint: 'layer-fingerprint',
+    })
+    const { loadCatalog } = useGameDataStore.getState()
+
+    expect(
+      await loadCatalog(next, background, { prepared: candidate, stage: background }),
+    ).toMatchObject({ kind: 'staged' })
+    expect(useGameDataStore.getState().pendingCatalog).toMatchObject({
+      candidate,
+      removals: [],
+      incompleteRemovalPreview: true,
+    })
+    expect(useGameDataStore.getState().dataSourceConfig).toBe(remote)
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+
+    writeGameDataCacheMock.mockResolvedValueOnce({
+      contentFingerprint: 'layer-fingerprint',
+      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+    })
+    expect(await loadCatalog(next, false, { prepared: candidate, confirmed: true })).toMatchObject({
+      kind: 'applied',
+    })
+    expect(writeGameDataCacheMock).toHaveBeenCalledWith(
+      data,
+      candidate.identity,
+      expect.objectContaining({ externalKeys: candidate.keys }),
+    )
+    expect(await loadCatalog(next, true, { prepared: candidate, stage: true })).toMatchObject({
+      kind: 'applied',
+    })
+    expect(useGameDataStore.getState().pendingCatalog).toBeNull()
+  })
+
   test('an acknowledged write stays active when a newer attempt fails', async () => {
     const data = nonempty('Committed race')
     const commit = deferred<{ lastDataChangedAt: string; contentFingerprint: string }>()

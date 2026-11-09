@@ -131,7 +131,12 @@ interface GameDataState {
   lastAttemptAt: string | null
   catalogWarnings: string[]
   externalKeys: string[] | undefined
-  pendingCatalog: { candidate: PreparedCatalog; removals: string[]; folderGrant?: string } | null
+  pendingCatalog: {
+    candidate: PreparedCatalog
+    removals: string[]
+    incompleteRemovalPreview: boolean
+    folderGrant?: string
+  } | null
   cacheStatus: CacheStatus
   remoteStartup: RemoteStartupStatus | null
   bundledUnavailable: boolean
@@ -392,6 +397,10 @@ export const useGameDataStore = create<GameDataState>()(
           const prior = get()
           const priorSource = prior.dataSourceConfig
           const hadExternal = priorSource && priorSource.type !== 'bundled'
+          const hasPriorExternalData =
+            hadExternal &&
+            (priorSource.lastLoaded || (prior.gameData && !prior.sessionBundledSource))
+          const incompleteRemovalPreview = Boolean(hasPriorExternalData && !prior.externalKeys)
           const currentKeys = new Set(candidate?.keys)
           const resources = candidate?.config.availableResources ?? []
           const removedFiles = hadExternal
@@ -415,13 +424,19 @@ export const useGameDataStore = create<GameDataState>()(
             candidate &&
             !request?.confirmed &&
             (removals.length ||
+              incompleteRemovalPreview ||
               (request?.stage &&
                 (prior.sessionBundledSource ||
                   computeGameDataFingerprint(data) !== prior.lastContentFingerprint)))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
             set({
-              pendingCatalog: { candidate, removals, ...(folderGrant ? { folderGrant } : {}) },
+              pendingCatalog: {
+                candidate,
+                removals,
+                incompleteRemovalPreview,
+                ...(folderGrant ? { folderGrant } : {}),
+              },
               isLoading: false,
               isBackgroundRefreshing: false,
               loadProgress: null,

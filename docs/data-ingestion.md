@@ -27,8 +27,8 @@ to JSON below that root, and size-limited by Electron. Remote production sources
 URLs are normalized to a data root; ambiguous slash-containing refs require an explicit `ref`.
 GitHub repository release-page URLs are treated as links to that repository root. The adapter
 resolves a branch or tag to one commit before reading data. Every GitHub resource in the check
-comes from that commit. A full commit URL works without GitHub API calls. The accepted commit is
-shown separately from the configured source.
+comes from that commit. A repository `/tree/<full-sha>` URL or raw URL with a full commit SHA
+works without GitHub API calls. The accepted commit is shown separately from the configured source.
 
 A personal HTTPS server can expose the same 5etools directory layout at any path, with the JSON
 under data/ and cross-origin reads enabled for the desktop app. It uses no GitHub API. Each
@@ -82,6 +82,9 @@ dependencies keep the active catalog and cache intact. Item choice metadata can 
 as a diagnostic because these choices retain references without creating inventory or applying effects.
 Fluff can degrade independently. A verified withdrawal shows the affected files or records in
 Settings before the candidate can replace the active catalog.
+Older catalogs without an external record inventory require one-time review, even if the composed
+catalog appears unchanged. The preview explains that it may omit withdrawals masked by Included
+SRD records. Applying the candidate records its external inventory for future checks.
 
 Future standalone add-ons should use the published 5etools homebrew document shape and a separate
 document adapter, not imitate a full data tree.

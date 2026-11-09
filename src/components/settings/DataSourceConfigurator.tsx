@@ -439,9 +439,14 @@ export function DataSourceConfigurator({
                       ['Location', dataSourceConfig.path],
                       ['Content updated', formatDateTime(lastDataChangedAt)],
                       ['Updates checked', formatDateTime(lastUpdateCheckAt)],
-                      ['Last attempted', formatDateTime(lastAttemptAt)],
+                      ['Last refresh attempt this session', formatDateTime(lastAttemptAt)],
                       ['Applied', formatDateTime(dataSourceConfig.lastLoaded ?? null)],
-                      ['Accepted revision', dataSourceConfig.acceptedRevision?.slice(0, 12)],
+                      [
+                        'Accepted revision',
+                        typeof dataSourceConfig.acceptedRevision === 'string'
+                          ? dataSourceConfig.acceptedRevision.slice(0, 12)
+                          : undefined,
+                      ],
                       ['Status', getStatusLabel()],
                     ]
                 ).map(
@@ -669,6 +674,11 @@ export function DataSourceConfigurator({
         >
           {pending.candidate.revision && (
             <p className="text-sm">Revision {pending.candidate.revision.slice(0, 12)}</p>
+          )}
+          {pending.incompleteRemovalPreview && (
+            <p className="text-sm">
+              Your saved catalog predates removal tracking. This preview may omit some removals.
+            </p>
           )}
           {!!pending.removals.length && (
             <details className="text-sm">
