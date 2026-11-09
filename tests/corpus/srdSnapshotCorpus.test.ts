@@ -220,7 +220,7 @@ describe('committed bundled SRD corpus', () => {
         'Underdark',
       ])
     }
-    expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{8}$/)
+    expect(computeGameDataFingerprint(gameData)).toMatch(/^[a-f0-9]{64}$/)
     expect(gameData.classes.some((entry) => entry.source === 'PHB')).toBe(true)
     expect(gameData.classes.some((entry) => entry.source === 'XPHB')).toBe(true)
     expect(gameData.spells).toEqual(

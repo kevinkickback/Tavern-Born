@@ -1,5 +1,5 @@
 import { BookOpen, Books, Database, Warning } from '@phosphor-icons/react'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
@@ -90,17 +90,6 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     if (!character) return allowedSources
     return resolveEffectiveSources(allowedSources, character.originSystem, sources)
   }, [allowedSources, character, sources])
-
-  useEffect(() => {
-    if (!character || isSessionSrd) return
-    if (
-      configuredSources.length === allowedSources.length &&
-      configuredSources.every((source, index) => source === allowedSources[index])
-    ) {
-      return
-    }
-    updateCharacter(character.id, { allowedSources })
-  }, [allowedSources, character, configuredSources, isSessionSrd, updateCharacter])
 
   const sourcesByGroup = useMemo(
     () =>
@@ -201,7 +190,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     if (!getSourceCompatibility(source, character.originSystem).compatible) return
     const isRemoving = allowedSources.includes(abbr)
     const next = normalizeAllowedSources(
-      isRemoving ? allowedSources.filter((s) => s !== abbr) : [...allowedSources, abbr],
+      isRemoving ? configuredSources.filter((s) => s !== abbr) : [...configuredSources, abbr],
       character.originSystem,
       sources,
     )

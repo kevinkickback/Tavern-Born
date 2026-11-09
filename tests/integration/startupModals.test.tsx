@@ -125,7 +125,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
   })
 
-  test('AppLoadingOverlay remains active while cached game data refreshes', () => {
+  test('AppLoadingOverlay releases cached data immediately during a background check', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: {
@@ -160,50 +160,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<AppLoadingOverlay />)
 
-    expect(screen.getByTestId('app-loading-overlay').getAttribute('data-phase')).toBe('loading')
-    expect(screen.getByText('Checking for game data updates…')).toBeTruthy()
-    expect(screen.queryByText('App is ready')).toBeNull()
-  })
-
-  test('AppLoadingOverlay reports background refresh resource progress', () => {
-    useGameDataStore.setState({
-      hasHydrated: true,
-      isLoading: false,
-      isBackgroundRefreshing: true,
-      cacheStatus: 'fresh',
-      loadProgress: {
-        current: 3,
-        total: 8,
-        resource: 'Additional Content: spells',
-      },
-    })
-
-    render(<AppLoadingOverlay />)
-
-    expect(screen.getByText('Checking Additional Content: spells for updates…')).toBeTruthy()
-    expect(screen.getByText(/3\s*\/\s*8/)).toBeTruthy()
-  })
-
-  test.each([
-    'Complete',
-    'Additional Content: Complete',
-  ])('AppLoadingOverlay reports a meaningful terminal refresh state for %s', (resource) => {
-    useGameDataStore.setState({
-      hasHydrated: true,
-      isLoading: false,
-      isBackgroundRefreshing: true,
-      cacheStatus: 'fresh',
-      loadProgress: {
-        current: 8,
-        total: 8,
-        resource,
-      },
-    })
-
-    render(<AppLoadingOverlay />)
-
-    expect(screen.getByText('Finalizing game data update…')).toBeTruthy()
-    expect(screen.queryByText(`Checking ${resource} for updates…`)).toBeNull()
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {
@@ -264,7 +221,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(document.getElementById(APP_INTERACTIVE_CONTENT_ID)?.hasAttribute('inert')).toBe(false)
   })
 
-  test('AppLoadingOverlay shows ready state when hydrated and idle', () => {
+  test('AppLoadingOverlay has no finish delay when hydrated and idle', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       isLoading: false,
@@ -273,7 +230,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     })
 
     render(<AppLoadingOverlay />)
-    expect(screen.getByText('App is ready')).toBeTruthy()
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
   })
 
   test('DataSourceStartupModal opens when hydrated with no data and not loading', async () => {

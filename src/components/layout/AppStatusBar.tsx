@@ -26,7 +26,7 @@ function getDataStatus(
   progress: { current: number; total: number; resource: string } | null,
   sourceDescription: string | null,
 ): DataStatusPresentation {
-  if (error) {
+  if (error && cacheStatus !== 'session-srd' && cacheStatus !== 'remote-cache') {
     return {
       label: 'Game data issue',
       detail: error,
@@ -46,7 +46,7 @@ function getDataStatus(
     }
   }
 
-  if (isBackgroundRefreshing || cacheStatus === 'stale') {
+  if (isBackgroundRefreshing) {
     return {
       label: 'Refreshing game data',
       detail: 'Cached data remains available while the source is refreshed',
@@ -59,7 +59,7 @@ function getDataStatus(
   if (cacheStatus === 'session-srd') {
     return {
       label: 'Using Included SRD this session',
-      detail: 'The configured online source will be available to retry in Settings.',
+      detail: 'Check the configured source in Settings.',
       icon: CloudSlash,
       tone: 'text-warning-foreground',
     }
@@ -68,16 +68,7 @@ function getDataStatus(
   if (cacheStatus === 'remote-cache') {
     return {
       label: 'Using saved game data',
-      detail: 'The online source could not be checked. The last saved game data is available.',
-      icon: CloudSlash,
-      tone: 'text-warning-foreground',
-    }
-  }
-
-  if (cacheStatus === 'offline') {
-    return {
-      label: 'Using cached game data',
-      detail: 'Saved game data remains available, but its source is no longer configured',
+      detail: 'The source check failed. See Settings for details.',
       icon: CloudSlash,
       tone: 'text-warning-foreground',
     }

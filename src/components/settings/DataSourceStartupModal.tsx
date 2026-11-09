@@ -37,7 +37,6 @@ export function DataSourceStartupModal() {
   const remoteStartup = useGameDataStore((s) => s.remoteStartup)
   const overlayHasRecovery =
     remoteStartup === 'checking' ||
-    remoteStartup === 'committing' ||
     remoteStartup === 'unavailable' ||
     remoteStartup === 'loading-srd'
 
@@ -153,9 +152,7 @@ export function DataSourceStartupModal() {
                 ? 'Tavern Born is ready to use with the included rules.'
                 : showExternalSetup
                   ? 'Add compatible 5etools data from the web or your computer.'
-                  : remoteStartup === 'setup'
-                    ? 'The saved online source is unavailable. Choose another source or load the Included SRD.'
-                    : 'The Included SRD could not be loaded. Try it again or add compatible 5etools data.'}
+                  : 'Choose a compatible source to use while the Included SRD is unavailable.'}
           </DialogDescription>
         </DialogHeader>
 

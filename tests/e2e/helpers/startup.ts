@@ -52,12 +52,7 @@ export async function seedAppState(
 ) {
   // Let the app finish hydrating its persisted stores before replacing them.
   // Otherwise the first render can write its older in-memory state over this seed.
-  const loadingOverlay = page.getByTestId('app-loading-overlay')
-  if ((await loadingOverlay.count()) > 0) {
-    await expect(loadingOverlay).toHaveAttribute('data-phase', /ready|fading/, {
-      timeout: 10_000,
-    })
-  }
+  await expect(page.getByTestId('app-loading-overlay')).toBeHidden({ timeout: 10_000 })
 
   const now = new Date().toISOString()
   // Persist source data, not runtime Maps serialized as plain objects by page.evaluate.

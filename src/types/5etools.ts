@@ -614,6 +614,7 @@ type ExternalDataSourceConfig = DataSourceConfigBase & {
   type: 'local' | 'remote'
   /** Top-level resources confirmed during source validation. Missing unlisted families are absent. */
   availableResources?: string[]
+  acceptedRevision?: string
 }
 
 export type BundledDataSourceConfig = DataSourceConfigBase & {

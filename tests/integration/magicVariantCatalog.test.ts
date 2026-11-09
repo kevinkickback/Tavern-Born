@@ -81,8 +81,12 @@ describe('raw template cache and concrete character persistence', () => {
     vi.stubGlobal('electronAPI', {
       getBundledManifest: async () => ({ packId: 'tavern-born-srd-core', packVersion: 'test' }),
       readBundledJson: async () => ({}),
-      readLocalJson: async (path: string) =>
-        structuredClone(payloads[path.slice('/additional/'.length)] ?? {}),
+      readLocalJson: (path: string) => {
+        const file = path.slice('/additional/'.length)
+        if (file.startsWith('class/fluff-')) return {}
+        if (!(file in payloads)) throw new Error('ENOENT')
+        return structuredClone(payloads[file])
+      },
     })
     const additional: DataSourceConfig = {
       type: 'local',
@@ -217,7 +221,21 @@ describe('raw template cache and concrete character persistence', () => {
       payloads['items.json'] = {
         item: source ? [{ name: '+1 Shield', source, type: 'S', rarity: 'uncommon' }] : [],
       }
-      await useGameDataStore.getState().loadGameData(additional, true)
+      const result = await useGameDataStore.getState().loadCatalog(additional, true)
+      if (result.kind === 'staged') {
+        const pending = useGameDataStore.getState().pendingCatalog!
+        expect(pending.removals.length).toBeGreaterThan(0)
+        expect(
+          (
+            await useGameDataStore.getState().loadCatalog(additional, false, {
+              prepared: pending.candidate,
+              confirmed: true,
+            })
+          ).kind,
+        ).toBe('applied')
+      } else {
+        expect(result.kind).toBe('applied')
+      }
       expect(useGameDataStore.getState().error).toBeNull()
       expect(isClassChoiceOptionEligible(option(useGameDataStore.getState().gameData!))).toBe(
         source === 'XDMG',

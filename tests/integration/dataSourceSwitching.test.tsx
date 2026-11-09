@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
@@ -8,13 +8,13 @@ import type { DataSourceConfig } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-const { validateDataSourceMock } = vi.hoisted(() => ({
-  validateDataSourceMock: vi.fn(),
+const { prepareCatalogMock } = vi.hoisted(() => ({
+  prepareCatalogMock: vi.fn(),
 }))
 
-vi.mock(import('@/lib/5etools/validator'), async (importOriginal) => ({
+vi.mock(import('@/lib/5etools/catalogCandidate'), async (importOriginal) => ({
   ...(await importOriginal()),
-  validateDataSource: validateDataSourceMock,
+  prepareCatalog: prepareCatalogMock,
 }))
 
 vi.mock('sonner', () => ({
@@ -28,11 +28,6 @@ vi.mock('sonner', () => ({
 describe('data source switching', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    validateDataSourceMock.mockResolvedValue({
-      isValid: true,
-      normalizedPath: 'https://raw.githubusercontent.com/example/rules/main/data',
-      foundResources: ['class/index.json'],
-    })
     useGameDataStore.setState({
       gameData: null,
       dataSourceConfig: null,
@@ -59,6 +54,29 @@ describe('data source switching', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
+  })
+
+  test('ignores and releases a folder selected after switching away from the local tab', async () => {
+    const user = userEvent.setup()
+    let choose!: (value: string) => void
+    const selectFolder = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          choose = resolve
+        }),
+    )
+    const discardLocalDataRoot = vi.fn()
+    vi.stubGlobal('electronAPI', { selectFolder, discardLocalDataRoot })
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.click(screen.getByRole('tab', { name: 'This Computer' }))
+    await user.click(screen.getByRole('button', { name: 'Select Folder' }))
+    await user.click(screen.getByRole('tab', { name: 'Online' }))
+    await act(async () => choose('/unused'))
+    expect((screen.getByRole('textbox', { name: 'Web Address' }) as HTMLInputElement).value).toBe(
+      '',
+    )
+    expect(prepareCatalogMock).not.toHaveBeenCalled()
+    expect(discardLocalDataRoot).toHaveBeenCalledWith('/unused')
   })
 
   test('adds external content without rewriting character identities', async () => {
@@ -91,20 +109,34 @@ describe('data source switching', () => {
       backgroundSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
-    const loadGameData = vi.fn((config: DataSourceConfig) => {
+    const preparedConfig = {
+      type: 'remote' as const,
+      path: 'https://backup.example.test/rules',
+      isValid: true,
+      availableResources: ['class/index.json'],
+    }
+    const candidate = {
+      config: preparedConfig,
+      identity: { base: bundledConfig, additional: preparedConfig },
+      data: layeredData,
+      keys: [],
+      warnings: [],
+    }
+    prepareCatalogMock.mockResolvedValue(candidate)
+    const loadCatalog = vi.fn((config: DataSourceConfig) => {
       useGameDataStore.setState({
         gameData: layeredData,
         dataSourceConfig: { ...config, isValid: true },
         error: null,
         cacheStatus: 'fetched',
       })
-      return Promise.resolve(true)
+      return Promise.resolve({ kind: 'applied' as const, changed: true })
     })
     useGameDataStore.setState({
       gameData: bundledData,
       dataSourceConfig: bundledConfig,
       cacheStatus: 'fetched',
-      loadGameData,
+      loadCatalog,
     })
     useCharacterStore.setState({
       characters: [character],
@@ -116,9 +148,9 @@ describe('data source switching', () => {
     await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
     await user.type(
       screen.getByRole('textbox', { name: 'Web Address' }),
-      'https://github.com/example/rules',
+      'https://backup.example.test/rules',
     )
-    await waitFor(() => expect(validateDataSourceMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(prepareCatalogMock).toHaveBeenCalledTimes(1))
     await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
 
     await waitFor(() => expect(screen.getByText('Online Additional Content')).toBeTruthy())
@@ -129,11 +161,9 @@ describe('data source switching', () => {
       'Wizard|XPHB',
       'Artificer|TCE',
     ])
-    expect(loadGameData).toHaveBeenCalledWith({
-      type: 'remote',
-      path: 'https://raw.githubusercontent.com/example/rules/main/data',
-      isValid: true,
-      availableResources: ['class/index.json'],
+    expect(loadCatalog).toHaveBeenCalledWith(preparedConfig, false, {
+      prepared: candidate,
+      confirmed: false,
     })
 
     const characterState = useCharacterStore.getState()

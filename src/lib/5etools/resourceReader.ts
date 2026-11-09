@@ -8,6 +8,15 @@ export interface JsonResourceReader {
   readJson(relativePath: string, signal?: AbortSignal): Promise<unknown>
 }
 
+export class ResourceHttpError extends Error {
+  constructor(
+    readonly status: number,
+    path: string,
+  ) {
+    super(`HTTP ${status} for ${path}`)
+  }
+}
+
 function normalizeJsonResourcePath(relativePath: string): string {
   const normalized = relativePath.trim()
   const segments = normalized.split('/')
@@ -58,7 +67,7 @@ function createTimedSignal(parentSignal?: AbortSignal): {
 
 export function buildRemoteResourceUrl(baseUrl: string, relativePath: string): string {
   const normalizedPath = normalizeJsonResourcePath(relativePath)
-  return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath}`
+  return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath.split('/').map(encodeURIComponent).join('/')}`
 }
 
 function createBundledReader(): JsonResourceReader {
@@ -86,7 +95,7 @@ function createLocalReader(basePath: string): JsonResourceReader {
       const separator = basePath.includes('\\') ? '\\' : '/'
       const separatorPrefix = basePath.endsWith(separator) ? '' : separator
       const fullPath = `${basePath}${separatorPrefix}${normalizedPath.split('/').join(separator)}`
-      const result = await readLocalJson(fullPath)
+      const result = await readLocalJson(fullPath, basePath)
       throwIfAborted(signal)
       return result
     },
@@ -108,7 +117,7 @@ function createRemoteReader(path: string): JsonResourceReader {
           signal: timedSignal.signal,
         })
         if (!response.ok) {
-          throw new Error(`Failed to fetch ${normalizedPath}: ${response.statusText}`)
+          throw new ResourceHttpError(response.status, normalizedPath)
         }
         return await response.json()
       } finally {

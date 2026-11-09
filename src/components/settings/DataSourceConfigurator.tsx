@@ -27,15 +27,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
+import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+import { type PreparedCatalog, prepareCatalog } from '@/lib/5etools/catalogCandidate'
 import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
-import { validateDataSource } from '@/lib/5etools/validator'
+import { settleOnAbort } from '@/lib/abortable'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
@@ -48,6 +49,9 @@ type DataSourceConfiguratorProps = {
   onCancel?: () => void
 }
 
+function discardFolder(root: string | null) {
+  if (root) window.electronAPI?.discardLocalDataRoot?.(root)
+}
 export function isValidatableRemoteUrl(value: string): boolean {
   return parseRemoteDataSourceUrl(value).kind !== 'invalid'
 }
@@ -62,13 +66,16 @@ export function DataSourceConfigurator({
   const gameData = useGameDataStore((state) => state.gameData)
   const isLoading = useGameDataStore((state) => state.isLoading)
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
-  const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
-  const loadGameData = useGameDataStore((state) => state.loadGameData)
+  const loadCatalog = useGameDataStore((state) => state.loadCatalog)
+  const pending = useGameDataStore((state) => state.pendingCatalog)
+  const catalogWarnings = useGameDataStore((state) => state.catalogWarnings)
+  const lastAttemptAt = useGameDataStore((state) => state.lastAttemptAt)
+  const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
   const autoRefreshGameData = useAppPreferencesStore((state) => state.autoRefreshGameData)
@@ -86,24 +93,27 @@ export function DataSourceConfigurator({
   const remotePathId = useId()
   const localPathId = useId()
   const [validationResult, setValidationResult] = useState<{
-    isValid: boolean
     error?: string
-    foundResources?: string[]
-    normalizedPath?: string
-    optionalSupportDiagnostics?: string[]
+    candidate?: PreparedCatalog
+    basis?: typeof dataSourceConfig
   } | null>(null)
+  const validationController = useRef<AbortController | null>(null)
   const autoOpenedSelectorRef = useRef(!hasActiveDataSource)
 
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const validationRequestRef = useRef(0)
+  const previewFolder = useRef<string | null>(null)
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
+    discardFolder(previewFolder.current)
+    previewFolder.current = null
     setSourceType(newType)
     setSourcePath('')
     setValidationStatus('idle')
     setIsValidating(false)
     setValidationResult(null)
     validationRequestRef.current += 1
+    validationController.current?.abort()
     if (validationTimeoutRef.current) {
       clearTimeout(validationTimeoutRef.current)
     }
@@ -111,6 +121,9 @@ export function DataSourceConfigurator({
 
   useEffect(() => {
     return () => {
+      validationRequestRef.current += 1
+      validationController.current?.abort()
+      discardFolder(previewFolder.current)
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current)
       }
@@ -169,28 +182,32 @@ export function DataSourceConfigurator({
     setValidationStatus('validating')
     setIsValidating(true)
 
+    validationController.current?.abort()
+    const controller = new AbortController()
+    validationController.current = controller
+    const basis = useGameDataStore.getState().dataSourceConfig
     try {
-      const result = await validateDataSource({
-        type,
-        path,
-        isValid: false,
-      })
-
-      if (requestId !== validationRequestRef.current) return
-
-      setValidationResult(result)
-      setValidationStatus(result.isValid ? 'valid' : 'invalid')
-
-      if (!result.isValid) {
-        toast.error('Game data check failed', {
-          description: result.error,
-        })
-      }
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)])
+      const base = useGameDataStore.getState().bundledUnavailable
+        ? null
+        : await settleOnAbort(resolveDefaultBundledSource(), signal)
+      const candidate = await prepareCatalog(
+        {
+          ...(basis?.type === type && basis.path === path ? basis : null),
+          type,
+          path,
+          isValid: false,
+        },
+        base ?? undefined,
+        signal,
+      )
+      if (requestId !== validationRequestRef.current || controller.signal.aborted) return
+      setValidationResult({ candidate, basis })
+      setValidationStatus('valid')
     } catch (error) {
-      if (requestId !== validationRequestRef.current) return
+      if (requestId !== validationRequestRef.current || controller.signal.aborted) return
 
       setValidationResult({
-        isValid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       setValidationStatus('invalid')
@@ -204,6 +221,7 @@ export function DataSourceConfigurator({
 
   const handleUrlChange = (value: string) => {
     validationRequestRef.current += 1
+    validationController.current?.abort()
     setSourcePath(value)
     setValidationStatus('idle')
     setIsValidating(false)
@@ -228,6 +246,7 @@ export function DataSourceConfigurator({
   }
 
   const handleSelectFolder = async () => {
+    const requestId = validationRequestRef.current
     try {
       const selectFolder = window.electronAPI?.selectFolder
       if (!selectFolder) {
@@ -237,71 +256,63 @@ export function DataSourceConfigurator({
 
       const folderPath = await selectFolder()
       if (!folderPath) return
-
+      if (requestId !== validationRequestRef.current) {
+        discardFolder(folderPath)
+        return
+      }
+      previewFolder.current = folderPath
       setSourcePath(folderPath)
       performValidation(folderPath, 'local')
     } catch (error) {
+      if (requestId !== validationRequestRef.current) return
       toast.error('Failed to select folder', {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }
   }
 
-  const handleSaveConfig = async () => {
-    try {
-      const pathToUse = validationResult?.normalizedPath || sourcePath
-
-      await loadGameData({
-        type: sourceType,
-        path: pathToUse,
-        isValid: true,
-        availableResources: validationResult?.foundResources,
-      })
-
-      const { gameData: loadedGameData, error: loadError } = useGameDataStore.getState()
-      if (loadError || !loadedGameData) {
-        throw new Error(loadError || 'Game data failed to load')
-      }
-
-      toast.success('Additional content added', {
-        description: 'Additional rules and character options were added to the Included SRD.',
-      })
+  const applyCandidate = async (candidate: PreparedCatalog, confirmed = false) => {
+    if (useCharacterStore.getState().hasUnsavedChanges()) {
+      toast.info('Save or discard your character changes before switching game data.')
+      return
+    }
+    const result = await loadCatalog(candidate.config, false, { prepared: candidate, confirmed })
+    if (result.kind === 'rejected') {
+      toast.error('Could not apply game data', { description: result.message })
+    } else if (result.kind === 'applied') {
+      toast.success('Additional content loaded')
       setIsSelectingDataSource(false)
       setSourcePath('')
       setValidationStatus('idle')
       setValidationResult(null)
       onSourceLoaded?.()
-    } catch (error) {
-      toast.error('Failed to load game data', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
     }
+  }
+
+  const handleSaveConfig = async () => {
+    const candidate = validationResult?.candidate
+    if (!candidate) return
+    if (validationResult.basis !== useGameDataStore.getState().dataSourceConfig) {
+      await performValidation(sourcePath, sourceType)
+      return
+    }
+    await applyCandidate(candidate)
   }
 
   const handleRefresh = async () => {
     const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
-    const previousChangedAt = lastDataChangedAt
-    try {
-      const contentChanged = await loadGameData(dataSourceConfig, true)
-      const { error: loadError } = useGameDataStore.getState()
-      if (loadError) {
-        toast.error('Failed to check for updates', { description: loadError })
-        return
-      }
-
-      const newChangedAt = useGameDataStore.getState().lastDataChangedAt
-      if (contentChanged || newChangedAt !== previousChangedAt) {
-        toast.success('Game data updated successfully!')
-      } else {
-        toast.info('Data is already up to date')
-      }
-    } catch (_error) {
-      toast.error('Failed to check for updates')
-    }
+    const result = await loadCatalog(dataSourceConfig, true, { stage: true })
+    if (result.kind === 'rejected')
+      toast.error('Update could not be applied', { description: result.message })
+    else if (result.kind === 'staged') toast.info('A game-data update is ready to review')
+    else if (result.kind === 'applied') toast.info('Game data is up to date')
   }
-
   const handleRestoreBundled = async () => {
+    if (useCharacterStore.getState().hasUnsavedChanges()) {
+      toast.info('Save or discard your character changes before switching game data.')
+      return
+    }
     try {
       const restored = await restoreBundledData()
       if (!restored) {
@@ -327,11 +338,6 @@ export function DataSourceConfigurator({
     }
   }
 
-  const getProgressPercent = () => {
-    if (!loadProgress) return 0
-    return Math.round((loadProgress.current / loadProgress.total) * 100)
-  }
-
   const isValidSource = validationStatus === 'valid'
 
   const formatDateTime = (iso: string | null) => {
@@ -340,11 +346,11 @@ export function DataSourceConfigurator({
   }
 
   const getStatusLabel = () => {
-    if (error) return 'Error'
-    if (cacheStatus === 'fresh' || cacheStatus === 'fetched') {
-      return 'Up to date'
-    }
-    return 'Outdated'
+    if (usingSessionSrd) return 'Using Included SRD'
+    if (error) return 'Last check failed'
+    if (pending) return 'Update ready'
+    if (isBackgroundRefreshing) return 'Checking source'
+    return cacheStatus === 'fetched' ? 'Ready' : 'Using saved data'
   }
 
   const getValidationBorderClass = () => {
@@ -404,59 +410,35 @@ export function DataSourceConfigurator({
                 </span>
               </div>
 
-              {dataSourceConfig.type === 'bundled' ? (
-                <>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">SRD versions:</span>
-                    <span className="text-xs">{bundledSrdVersions}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Character rules:</span>
-                    <span className="text-xs">2014 and 2024</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Internet:</span>
-                    <span className="text-xs">Not required</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Location:</span>
-                    <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Content updated:</span>
-                    <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Updates checked:</span>
-                    <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">Status:</span>
-                    <span className="text-xs">{getStatusLabel()}</span>
-                  </div>
-                </>
-              )}
+              <dl>
+                {(dataSourceConfig.type === 'bundled'
+                  ? [
+                      ['SRD versions', bundledSrdVersions],
+                      ['Character rules', '2014 and 2024'],
+                      ['Internet', 'Not required'],
+                    ]
+                  : [
+                      ['Location', dataSourceConfig.path],
+                      ['Content updated', formatDateTime(lastDataChangedAt)],
+                      ['Updates checked', formatDateTime(lastUpdateCheckAt)],
+                      ['Last attempted', formatDateTime(lastAttemptAt)],
+                      ['Applied', formatDateTime(dataSourceConfig.lastLoaded ?? null)],
+                      ['Accepted revision', dataSourceConfig.acceptedRevision?.slice(0, 12)],
+                      ['Status', getStatusLabel()],
+                    ]
+                ).map(
+                  ([label, value]) =>
+                    value && (
+                      <div key={label} className="flex gap-2 break-all text-xs">
+                        <dt className="min-w-24 text-muted-foreground">{label}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ),
+                )}
+              </dl>
             </div>
           ) : (
             <>
-              {!selectorOnly && !hasActiveDataSource && (
-                <div className="relative space-y-3 rounded-md border border-border bg-workspace-pane p-4">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="size-[1.125rem] text-muted-foreground" />
-                    <span className="text-sm font-medium">No Game Data</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    No game data is loaded. Use the Included SRD or add compatible 5etools data
-                    below.
-                  </p>
-                </div>
-              )}
-
-              {!selectorOnly && <Separator />}
-
               <Tabs
                 value={sourceType}
                 onValueChange={(v) => handleSourceTypeChange(v as 'local' | 'remote')}
@@ -482,6 +464,13 @@ export function DataSourceConfigurator({
                         value={sourcePath}
                         onChange={(e) => handleUrlChange(e.target.value)}
                         placeholder="https://example.com/game-data"
+                        onBlur={() => {
+                          const result = parseRemoteDataSourceUrl(sourcePath)
+                          if (sourcePath.trim() && result.kind === 'invalid') {
+                            setValidationStatus('invalid')
+                            setValidationResult({ error: result.error })
+                          }
+                        }}
                         disabled={isLoading}
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
@@ -501,20 +490,6 @@ export function DataSourceConfigurator({
                         </div>
                       )}
                     </div>
-                    {validationStatus === 'validating' && (
-                      <p className="text-sm text-muted-foreground">Checking compatibility...</p>
-                    )}
-                    {validationStatus === 'valid' && (
-                      <p className="text-sm text-success">✓ Compatible game data found</p>
-                    )}
-                    {validationStatus === 'invalid' && validationResult?.error && (
-                      <p className="text-sm text-destructive">✗ {validationResult.error}</p>
-                    )}
-                    {validationStatus === 'idle' && (
-                      <p className="text-sm text-muted-foreground">
-                        Enter a web address containing compatible 5etools JSON data.
-                      </p>
-                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="local" className="space-y-4 mt-4">
@@ -539,30 +514,23 @@ export function DataSourceConfigurator({
                         {isValidating ? 'Selecting...' : 'Select Folder'}
                       </Button>
                     </div>
-                    {validationStatus === 'validating' && (
-                      <p className="text-sm text-muted-foreground">Checking compatibility...</p>
-                    )}
-                    {validationStatus === 'valid' && (
-                      <p className="text-sm text-success">✓ Compatible game data found</p>
-                    )}
-                    {validationStatus === 'invalid' && validationResult?.error && (
-                      <p className="text-sm text-destructive">✗ {validationResult.error}</p>
-                    )}
-                    {validationStatus === 'idle' && (
-                      <p className="text-sm text-muted-foreground">
-                        Choose a folder containing compatible 5etools JSON data.
-                      </p>
-                    )}
                   </div>
                 </TabsContent>
               </Tabs>
-              {validationStatus === 'valid' &&
-                !!validationResult?.optionalSupportDiagnostics?.length && (
-                  <p className="text-sm text-warning">
-                    Some optional class features are unavailable in this source. Other compatible
-                    content can still be used.
-                  </p>
+              <div aria-live="polite">
+                {validationStatus === 'validating' && <p>Checking compatibility...</p>}
+                {validationStatus === 'valid' && (
+                  <p className="text-success">Compatible game data found</p>
                 )}
+                {validationResult?.error && (
+                  <p className="text-destructive">{validationResult.error}</p>
+                )}
+              </div>
+              {validationStatus === 'valid' && !!validationResult?.candidate?.warnings.length && (
+                <p className="text-sm text-warning">
+                  Some optional content is unavailable. {validationResult?.candidate?.warnings[0]}
+                </p>
+              )}
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
@@ -590,30 +558,16 @@ export function DataSourceConfigurator({
                 Back
               </Button>
             )}
-            {dataSourceConfig?.type !== 'bundled' &&
-              (!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
+            {hasActiveDataSource &&
+              dataSourceConfig.type !== 'bundled' &&
+              isSelectingDataSource && (
                 <Button
-                  onClick={() => {
-                    if (hasActiveDataSource) {
-                      setConfirmRevertOpen(true)
-                    } else {
-                      void handleRestoreBundled()
-                    }
-                  }}
-                  disabled={isLoading}
+                  onClick={() => setConfirmRevertOpen(true)}
+                  className="border-warning/50"
+                  disabled={isLoading || hasUnsavedChanges}
                   variant="outline"
-                  className={
-                    hasActiveDataSource
-                      ? 'gap-2 border-warning/50 bg-warning/10 text-warning-foreground hover:border-warning/70 hover:bg-warning/20 hover:text-warning-foreground'
-                      : 'gap-2'
-                  }
                 >
-                  {hasActiveDataSource ? (
-                    <Warning className="size-4" />
-                  ) : (
-                    <Database className="size-4" />
-                  )}
-                  {hasActiveDataSource ? 'Remove Additional Content' : 'Use Included SRD'}
+                  Remove Additional Content
                 </Button>
               )}
             <div className="flex gap-2 ml-auto">
@@ -636,10 +590,8 @@ export function DataSourceConfigurator({
               {!selectorOnly && hasActiveDataSource && isSelectingDataSource && (
                 <Button
                   onClick={() => {
+                    handleSourceTypeChange(sourceType)
                     setIsSelectingDataSource(false)
-                    setSourcePath('')
-                    setValidationStatus('idle')
-                    setValidationResult(null)
                   }}
                   disabled={isLoading}
                   variant="outline"
@@ -689,30 +641,48 @@ export function DataSourceConfigurator({
         </Section>
       )}
 
-      {isLoading && loadProgress && (
-        <div className="rounded-md border border-primary/50 bg-workspace-pane p-4">
-          <div className="flex items-center gap-3">
-            <div className="animate-pulse rounded-md bg-primary/10 p-2">
-              <Database className="size-5 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-semibold">Loading Game Data</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {loadProgress.resource} ({loadProgress.current} of {loadProgress.total})
-              </p>
-            </div>
-            <Badge variant="secondary" className="tabular-nums">
-              {getProgressPercent()}%
-            </Badge>
-          </div>
-          <Progress value={getProgressPercent()} className="mt-3 h-2" />
-        </div>
+      {pending && (
+        <Section title="Game data update ready">
+          {pending.candidate.revision && (
+            <p className="text-sm">Revision {pending.candidate.revision.slice(0, 12)}</p>
+          )}
+          {!!pending.removals.length && (
+            <details className="text-sm">
+              <summary>{pending.removals.length} entries or files will be removed</summary>
+              <ul className="max-h-48 overflow-y-auto">
+                {pending.removals.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <Button
+            disabled={hasUnsavedChanges || isLoading}
+            onClick={() => void applyCandidate(pending.candidate, true)}
+          >
+            Apply game data update
+          </Button>
+          {hasUnsavedChanges && (
+            <p className="text-sm">Save or discard your character changes before applying.</p>
+          )}
+        </Section>
       )}
-
+      {!!catalogWarnings.length && (
+        <details className="text-sm">
+          <summary>Some optional content is unavailable</summary>
+          <ul>
+            {catalogWarnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       {error && (
         <Alert variant="destructive">
           <Warning className="size-[1.125rem]" />
-          <AlertTitle>Loading Error</AlertTitle>
+          <AlertTitle>
+            {hasActiveDataSource ? 'Source check failed' : 'Game data unavailable'}
+          </AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

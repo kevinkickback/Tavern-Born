@@ -53,6 +53,7 @@ import {
   parseVariantRules,
 } from './parsers/index'
 import { parsePsionics } from './parsers/psionics'
+import { asArray, asObject } from './parsers/shared'
 import {
   associatePrimaryItemTypes,
   parsePrimaryItemTypes,
@@ -76,10 +77,13 @@ export interface DataLoaderOptions {
   signal?: AbortSignal
   /** A source stack retries copies after layering its catalogs. */
   deferCopyResolutionErrors?: boolean
+  /** Validate declared document shape before tolerant projection. */
+  strictCandidate?: boolean
 }
 
 interface DataResourceFailure {
   required: boolean
+  cause?: unknown
 }
 
 interface IndexedFileEntry {
@@ -126,7 +130,33 @@ function isAbortError(error: unknown): boolean {
 function reportIndexedFailure(file: string, error: unknown, options?: DataLoaderOptions): void {
   if (isAbortError(error)) throw error
   console.warn(`Failed to load ${file}:`, error)
-  options?.onResourceFailure?.(file, { required: true })
+  options?.onResourceFailure?.(file, {
+    required: true,
+    ...(options.strictCandidate ? { cause: error } : {}),
+  })
+}
+
+function hasCollection(data: unknown, keys: string[]): boolean {
+  const document = asObject(data)
+  const rows = Array.isArray(data)
+    ? [data]
+    : keys.filter((key) => key in document).map((key) => document[key])
+  return (
+    rows.length > 0 &&
+    rows.every(
+      (collection) =>
+        Array.isArray(collection) &&
+        collection.every((row) => {
+          const { name, source } = asObject(row)
+          return (
+            typeof name === 'string' &&
+            Boolean(name.trim()) &&
+            typeof source === 'string' &&
+            Boolean(source.trim())
+          )
+        }),
+    )
+  )
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -362,7 +392,10 @@ export class FiveEToolsDataLoader {
           this.sourceType === 'bundled' && resource.key === 'bestiaryIndex'
         if (!isUndistributedBundledBestiary) {
           console.warn(`Failed to load ${resource.file}:`, error)
-          options?.onResourceFailure?.(resource.file, { required: resource.required !== false })
+          options?.onResourceFailure?.(resource.file, {
+            required: resource.required !== false,
+            ...(options.strictCandidate ? { cause: error } : {}),
+          })
         }
       } finally {
         completedResources += 1
@@ -539,7 +572,28 @@ export class FiveEToolsDataLoader {
       async ({ file }) => {
         try {
           const classData = await this.loadResource(`class/${file}`, options?.signal)
+          if (
+            options?.strictCandidate &&
+            !hasCollection(classData, ['class', 'subclass', 'classFeature', 'subclassFeature'])
+          )
+            throw new SyntaxError('Expected a class or feature collection')
           let fluff: ReturnType<typeof parseClassFluff> = []
+          if (options?.strictCandidate) {
+            const { class: classes, subclass: subclasses } = asObject(classData)
+            const owners = new Set(
+              asArray(classes).map((row) => {
+                const { name, source } = asObject(row)
+                return `${name}|${source}`
+              }),
+            )
+            const orphan = asArray(subclasses)
+              .map(asObject)
+              .find((row) => !owners.has(`${row.className}|${row.classSource}`))
+            if (orphan)
+              throw new SyntaxError(
+                `Subclass ${orphan.name} requires ${orphan.className}|${orphan.classSource} in the same class document`,
+              )
+          }
           const fluffFile = `class/${file.replace(/^class-/, 'fluff-class-')}`
           try {
             fluff = parseClassFluff(await this.loadResource(fluffFile, options?.signal))
@@ -605,14 +659,16 @@ export class FiveEToolsDataLoader {
       async (spellFile) => {
         try {
           const spellData = await this.loadResource(`spells/${spellFile.file}`, options?.signal)
+          if (options?.strictCandidate && !hasCollection(spellData, ['spell']))
+            throw new SyntaxError('Expected a spell collection')
 
-          const parsedSpells = this.filterByIndexedSource(
-            parseSpells(spellData, {
-              sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
-              origin: `spells/${spellFile.file}`,
-            }) as GameData['spells'],
-            spellFile.source,
-          )
+          const spells = parseSpells(spellData, {
+            sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
+            origin: `spells/${spellFile.file}`,
+          }) as GameData['spells']
+          const parsedSpells = this.filterByIndexedSource(spells, spellFile.source)
+          if (options?.strictCandidate && spells.length && !parsedSpells.length)
+            throw new SyntaxError(`No spells match the indexed source ${spellFile.source}`)
           return parsedSpells
         } catch (error) {
           reportIndexedFailure(`spells/${spellFile.file}`, error, options)
@@ -643,7 +699,10 @@ export class FiveEToolsDataLoader {
           const data = CreatureDataSchema.parse(
             await this.loadResource(`bestiary/${creatureFile.file}`, options?.signal),
           )
-          return this.filterByIndexedSource(parseCreatures(data), creatureFile.source)
+          const parsed = this.filterByIndexedSource(parseCreatures(data), creatureFile.source)
+          if (options?.strictCandidate && data.monster.length && !parsed.length)
+            throw new SyntaxError(`No creatures match the indexed source ${creatureFile.source}`)
+          return parsed
         } catch (error) {
           reportIndexedFailure(`bestiary/${creatureFile.file}`, error, options)
           return [] as NonNullable<GameData['creatures']>
@@ -768,7 +827,8 @@ export class FiveEToolsDataLoader {
 export async function loadDataFromSource(
   config: DataSourceConfig,
   options?: DataLoaderOptions,
+  reader?: JsonResourceReader,
 ): Promise<GameData> {
-  const loader = new FiveEToolsDataLoader(config)
+  const loader = new FiveEToolsDataLoader(config, reader)
   return await loader.loadAllData(options)
 }

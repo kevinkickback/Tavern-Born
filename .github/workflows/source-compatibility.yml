@@ -1,0 +1,31 @@
+name: 5etools source compatibility
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 11 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  catalog:
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        source:
+          - 'https://github.com/5etools-mirror-3/5etools-src/tree/b9061583536101068b3a59d27e886d1fa664e366'
+          - 'https://github.com/5etools-mirror-3/5etools-src'
+    env:
+      TB_5ETOOLS_CANARY: ${{ matrix.source }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test -- tests/corpus/sourceCompatibilityCanary.test.ts
