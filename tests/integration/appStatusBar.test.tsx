@@ -1,6 +1,9 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppStatusBar } from '@/components/layout/AppStatusBar'
+import { SettingsPage } from '@/pages/SettingsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -17,6 +20,7 @@ describe('application status bar', () => {
       cacheStatus: 'fresh',
       gameData: makeGameDataFixture(),
       sessionBundledSource: null,
+      pendingCatalog: null,
       dataSourceConfig: { type: 'local', path: 'C:\\game-data', isValid: true },
       isLoading: false,
       isBackgroundRefreshing: false,
@@ -28,6 +32,7 @@ describe('application status bar', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   test.each(['local', 'remote'] as const)('labels %s content in the same status slot', (type) => {
@@ -106,6 +111,51 @@ describe('application status bar', () => {
     const status = screen.getByTestId('game-data-status')
     expect(status.textContent).toContain('Loading game data 3/12')
     expect(status.getAttribute('title')).toBe('spells.json')
+  })
+
+  test('keeps simultaneous update actions separate and takes game data to the pending review', async () => {
+    const user = userEvent.setup()
+    const openAppUpdate = vi.fn()
+    vi.stubGlobal('electronAPI', { getAppVersion: () => Promise.resolve('0.6.0') })
+    const data = makeGameDataFixture()
+    const config = { type: 'remote' as const, path: 'https://example.test', isValid: true }
+    render(
+      <MemoryRouter>
+        <AppStatusBar onOpenAppUpdate={openAppUpdate} />
+        <Routes>
+          <Route path="/" element={<p>Home</p>} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('link', { name: 'Game data update available' })).toBeNull()
+    await act(() =>
+      useGameDataStore.setState({
+        gameData: data,
+        dataSourceConfig: config,
+        pendingCatalog: {
+          candidate: { config, data, identity: config, keys: [], warnings: [] },
+          removals: [],
+        },
+      }),
+    )
+    const dataUpdate = screen.getByRole('link', { name: 'Game data update available' })
+    const appUpdate = screen.getByRole('button', { name: 'App update available' })
+    expect(dataUpdate.parentElement?.contains(screen.getByText('Additional Content Loaded'))).toBe(
+      true,
+    )
+    expect(appUpdate.parentElement?.contains(await screen.findByText('v0.6.0'))).toBe(true)
+
+    await user.click(appUpdate)
+    expect(openAppUpdate).toHaveBeenCalledTimes(1)
+    await user.click(dataUpdate)
+    const heading = await screen.findByRole('heading', { name: 'Game data update ready' })
+    expect(heading.closest('section')).toBe(document.activeElement)
+    expect(openAppUpdate).toHaveBeenCalledTimes(1)
+
+    await act(() => useGameDataStore.setState({ pendingCatalog: null }))
+    expect(screen.queryByRole('link', { name: 'Game data update available' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'App update available' })).toBe(appUpdate)
   })
 
   test('shows active-character save state', () => {

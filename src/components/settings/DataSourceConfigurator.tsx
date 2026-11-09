@@ -642,7 +642,11 @@ export function DataSourceConfigurator({
       )}
 
       {pending && (
-        <Section title="Game data update ready">
+        <Section
+          id={selectorOnly ? undefined : 'game-data-update'}
+          tabIndex={-1}
+          title="Game data update ready"
+        >
           {pending.candidate.revision && (
             <p className="text-sm">Revision {pending.candidate.revision.slice(0, 12)}</p>
           )}
