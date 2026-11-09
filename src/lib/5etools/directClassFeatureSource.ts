@@ -15,8 +15,10 @@ export function getCurrentDirectClassFeature(
   catalogs: ClassFeatureSourceCatalog,
   target: string,
   verify?: (feature: ClassFeature) => boolean,
+  options?: { includeDisplayOnly: true },
 ) {
   if (cls.sourceIdentityConflict || cls._copy) return undefined
+  const includeDisplayOnly = options?.includeDisplayOnly === true
   const declared = cls.classFeatures?.filter(
     (row) => (targetOf(row) ?? targetOf(optionalDeclarationObject(row).classFeature)) === target,
   )
@@ -26,8 +28,8 @@ export function getCurrentDirectClassFeature(
   if (
     typeof uid !== 'string' ||
     targetOf(uid) !== target ||
-    declarationRow.gainSubclassFeature ||
-    declarationRow.isClassFeatureVariant ||
+    (!includeDisplayOnly &&
+      (declarationRow.gainSubclassFeature || declarationRow.isClassFeatureVariant)) ||
     declarationRow.sourceIdentityConflict ||
     !exactOptionalDeclarationReference(declarationRow, uid, 'classFeature')
   )
@@ -40,10 +42,12 @@ export function getCurrentDirectClassFeature(
   if (
     !ref?.feature ||
     ref.feature.sourceIdentityConflict ||
-    ref.feature.isClassFeatureVariant ||
     refRow.sourceIdentityConflict ||
-    refRow.isClassFeatureVariant ||
-    ref.gainSubclassFeature ||
+    (!includeDisplayOnly &&
+      (ref.feature.isClassFeatureVariant ||
+        refRow.isClassFeatureVariant ||
+        ref.gainSubclassFeature)) ||
+    (ref.gainSubclassFeature === true) !== (declarationRow.gainSubclassFeature === true) ||
     targetOf(ref.ref) !== target ||
     !exactOptionalDeclarationReference(refRow, ref.ref, 'classFeature') ||
     getClassFeatureIdentity(ref.feature) !== target ||
@@ -56,7 +60,7 @@ export function getCurrentDirectClassFeature(
   const feature = rows?.length === 1 ? rows[0] : undefined
   return feature &&
     !feature.sourceIdentityConflict &&
-    !feature.isClassFeatureVariant &&
+    (includeDisplayOnly || !feature.isClassFeatureVariant) &&
     getClassFeatureIdentity(feature) === target &&
     (!verify || verify(feature))
     ? feature

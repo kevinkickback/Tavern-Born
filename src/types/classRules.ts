@@ -142,6 +142,8 @@ export interface ClassResourceRecovery {
 }
 
 export interface ClassResourceDef {
+  /** Exact source declaration required for a catalog-derived table resource. */
+  declarationTarget?: string
   id: string
   label: string
   maxPerLevel: readonly number[]

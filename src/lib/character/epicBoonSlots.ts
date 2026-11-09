@@ -2,6 +2,7 @@ import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   EPIC_BOON_LEVEL,
   getEpicBoonAdvancementReference,
@@ -79,21 +80,24 @@ function claimSnapshot(character: Character, claims: Claims): string {
 function currentDeclaration(
   owner: Owner,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
-): boolean {
+): string | undefined {
   const matches = catalogs?.classes?.filter((row) => findClassReference(owner, [row])) ?? []
   const cls = matches[0]
-  if (matches.length !== 1 || cls.sourceIdentityConflict) return false
+  if (!catalogs || matches.length !== 1 || cls.sourceIdentityConflict) return undefined
   const ref = getEpicBoonAdvancementReference(cls.classFeatureRefs ?? [], cls)
   const id = ref && getClassFeatureIdentity(ref)
-  if (!id || catalogs?.ambiguousClassFeatureTargets?.has(id)) return false
-  const candidates = catalogs?.classFeatureCandidates
+  if (!id || catalogs.ambiguousClassFeatureTargets?.has(id)) return undefined
+  if (ref && !findClassReference({ name: ref.className, source: ref.classSource }, [cls])) {
+    return getCurrentDirectClassFeature(cls, catalogs, id, isEpicBoonAdvancement) ? id : undefined
+  }
+  const candidates = catalogs.classFeatureCandidates
     ? (catalogs.classFeatureCandidates.get(id) ?? [])
-    : (catalogs?.classFeatures.filter((row) => getClassFeatureIdentity(row) === id) ?? [])
-  return (
-    candidates.length === 1 &&
+    : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === id)
+  return candidates.length === 1 &&
     getClassFeatureIdentity(candidates[0]) === id &&
     isEpicBoonAdvancement(candidates[0])
-  )
+    ? id
+    : undefined
 }
 
 export function isEpicBoonAdvancementChoice(
@@ -196,15 +200,21 @@ export function getEpicBoonSlots(
     const currentClasses =
       catalogs?.classes?.filter((cls) => findClassReference(owner, [cls])) ?? []
     const rawClass = findClassReference(owner, Object.values(rawClasses))
+    const claims = getClaims(character, owner)
+    const stored = [...claims.ordinary, ...claims.increases]
+    const hasTarget = stored.some((row) => !!row.epicBoonTarget)
     if (
       !isRevisedEpicBoonOwner(owner) &&
       !currentClasses.some(isRevisedEpicBoonOwner) &&
-      !(rawClass && isRevisedEpicBoonOwner(rawClass))
+      !(rawClass && isRevisedEpicBoonOwner(rawClass)) &&
+      !hasTarget
     )
       return []
-    const current = currentDeclaration(owner, catalogs)
-    const claims = getClaims(character, owner)
-    const count = claims.ordinary.length + claims.increases.length
+    const declarationTarget = currentDeclaration(owner, catalogs)
+    const current =
+      !!declarationTarget &&
+      stored.every((row) => !row.epicBoonTarget || row.epicBoonTarget === declarationTarget)
+    const count = stored.length
     if (!current) {
       const knownGain =
         currentClasses.some(hasEpicBoonAdvancementReference) ||
@@ -213,7 +223,7 @@ export function getEpicBoonSlots(
         !!catalogs?.classes &&
         count > 0 &&
         !currentClasses.some((cls) => getASILevelsFromClass(cls).includes(EPIC_BOON_LEVEL))
-      if (!knownGain && !lostSavedGain) return []
+      if (!knownGain && !lostSavedGain && !hasTarget) return []
     }
     const allowsAsi = current && hasAsiFeat(feats)
     const base = {
@@ -323,7 +333,9 @@ export function replaceEpicBoonSelection(
   )
     return character
   if (!replacement) return withoutEpicBoonSelection(character, slot.owner)
-  if (!authority || !currentDeclaration(slot.owner, authority.catalogs)) return character
+  const currentTarget = currentDeclaration(slot.owner, authority?.catalogs)
+  if (!authority || !currentTarget) return character
+  const epicBoonTarget = normalizeKey(classSource) === 'xphb' ? undefined : currentTarget
   const earned = getRevisedClassFeatSlot(
     character,
     { ...slot.owner, level: EPIC_BOON_LEVEL },
@@ -355,7 +367,7 @@ export function replaceEpicBoonSelection(
       cleared,
       replaceFeatSelectionsCommand(cleared, cleared.provenance, [
         ...cleared.feats,
-        { ...feat, className, classSource, classLevel: EPIC_BOON_LEVEL },
+        { ...feat, className, classSource, classLevel: EPIC_BOON_LEVEL, epicBoonTarget },
       ]),
     )
   }
@@ -370,6 +382,7 @@ export function replaceEpicBoonSelection(
       id: `asi-${className}-${classSource}-${EPIC_BOON_LEVEL}`,
       className,
       classSource,
+      epicBoonTarget,
       level: EPIC_BOON_LEVEL,
       abilityChanges: replacement.abilityChanges,
     },

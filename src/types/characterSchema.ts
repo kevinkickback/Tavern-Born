@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { findClassReference } from '@/lib/5etools/classReference'
+import { EPIC_BOON_LEVEL, isEpicBoonTarget } from '@/lib/5etools/epicBoonAdvancement'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
@@ -463,6 +465,7 @@ const featSchema = z.object({
   className: z.string().optional(),
   classSource: z.string().optional(),
   classLevel: z.number().int().min(1).optional(),
+  epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
 })
 
 const classFeatChoiceSchema = z
@@ -866,6 +869,7 @@ const spellProfileSchema = z
     cantrips: z.array(z.string()).default([]),
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),
+    dailyCastingTarget: z.string().min(1).optional(),
     alwaysPrepared: z.boolean().optional(),
   })
   .strict()
@@ -915,6 +919,7 @@ const asiChoiceSchema = z.object({
   level: z.number().int(),
   className: z.string(),
   classSource: z.string().min(1),
+  epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
@@ -1048,6 +1053,35 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    const invalidEpicBoon = (path: Array<string | number>) =>
+      ctx.addIssue({
+        code: 'custom',
+        path: [...path, 'epicBoonTarget'],
+        message: 'Invalid Epic Boon owner.',
+      })
+    const earnedEpicBoon = (name?: string, source?: string, level?: number) =>
+      !!name?.trim() &&
+      !!source?.trim() &&
+      level === EPIC_BOON_LEVEL &&
+      char.classProgression.filter(
+        (entry) => entry.levels >= level && findClassReference({ name, source }, [entry]),
+      ).length === 1
+    char.feats.forEach((feat, index) => {
+      if (feat.epicBoonTarget && !earnedEpicBoon(feat.className, feat.classSource, feat.classLevel))
+        invalidEpicBoon(['feats', index])
+    })
+    char.asiChoices?.forEach((asi, index) => {
+      if (asi.epicBoonTarget && !earnedEpicBoon(asi.className, asi.classSource, asi.level))
+        invalidEpicBoon(['asiChoices', index])
+    })
+    char.specialFeats?.forEach((feat, index) => {
+      if (feat.epicBoonTarget) invalidEpicBoon(['specialFeats', index])
+    })
+    char.classFeatChoices?.forEach((choice, index) => {
+      choice.feats.forEach((feat, featIndex) => {
+        if (feat.epicBoonTarget) invalidEpicBoon(['classFeatChoices', index, 'feats', featIndex])
+      })
+    })
     for (const path of getInvalidStartingEquipmentPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

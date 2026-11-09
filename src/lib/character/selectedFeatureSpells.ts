@@ -243,7 +243,10 @@ export function getSelectedFeatureCantripSetups(
       const entry = entries.length === 1 ? entries[0] : undefined
       if (!entry || entry.levels < setup.level)
         return deny('This feature spell choice is not earned by its class owner.')
-      const { rule, owner: castingOwner } = getClassSpellProfilePolicy(entry)
+      const { rule, owner: castingOwner } = getClassSpellProfilePolicy(
+        entry,
+        catalogs?.classCastingSources,
+      )
       const scoped =
         catalogs &&
         scopeClassChoiceFeatureCatalogs(

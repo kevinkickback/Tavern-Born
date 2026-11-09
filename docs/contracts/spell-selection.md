@@ -20,6 +20,11 @@ materialization. Retain exact unavailable picks and their revisions for recovery
 declaration cannot supply new capacity. Class, Spells, readiness and PDF use the same current
 casting projection. [Managed spell command tests](../../tests/lib/managedClassSpellCommands.test.ts)
 
+The loader discovers a class copy's eligible casting rules from its declared parent, exact
+feature roots and unchanged casting fields. The selected copy supplies its own spell routes.
+Other class fields, such as equipment and proficiencies, have separate authority. A renamed
+or replaced casting root needs its own supported rule.
+
 ## Mystic Arcanum setup
 
 Arcanum uses an independent `class-arcanum` domain. Each earned slot chooses its exact spell level.
@@ -50,6 +55,11 @@ level and list route. Optional list access is evaluated per owner. Loss of a tar
 route suspends only its contribution. Reduced capacity reports over-limit intent without deleting
 or reordering it. Exact withdrawal works offline and keeps other owners. Learning, daily
 preparation and rest events are separate.
+
+A catalog-discovered copy stores the exact daily declaration alongside prepared intent so a
+reopen can retain it while the source is unavailable. Existing daily profiles keep their
+previous identity. An address stored on the character only preserves intent. The catalog must
+verify it again before a preparation has an effect.
 
 ## Shared effective view
 

@@ -159,11 +159,11 @@
     },
     {
       "file": "scripts/lib/class-casting-semantics.json",
-      "sha256": "6ad86d8b62b8d8c48f63b5d701ee722017d1c0917f98f2e9183b941af78e0da4"
+      "sha256": "2ea3008ecae838aa7127a7e5e782841cadb48eb0d1bbce734f2566ce34b1da48"
     },
     {
       "file": "scripts/lib/class-casting-source.mjs",
-      "sha256": "6f262915d95ed01dc92f8077443c21828e08a4c42f0844bb088b52573f4ad549"
+      "sha256": "09c28ff57f8cf2af31fde14ec39538f319f02d837d1b69e8cb5f04d57e629b58"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
@@ -239,19 +239,19 @@
     },
     {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "3cf41c32184a44bf905c80d26094094d8c3ffff61cb2963af65ba66dc5e0eee8"
+      "sha256": "a2ead4b4c4a765c8cce8be1255a2f9887f6139633f7f3650c66db2085489d271"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "a2ed47a188e713c76dc1f909d5438aac40fb819d60c97112f40cc939aa83ae44"
+      "sha256": "67d7e47f05a5dd8506e7f5fb3d23a980fdec3ef344a6ab101660397bdbfd3965"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
-      "sha256": "c58628cb10953ccd8fe6076eaa7218851844db98bb4b945ef095f9c9ab2d8e50"
+      "sha256": "99462cdb9150bb781bf2cfde2f194a0a7ff86fe83e734393073dbe5298e425b3"
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "b01dcfbefe0a43f045d5bf3d8aca031317d9711db1558c8792522a31f1187d49"
+      "sha256": "3b5ba1ed0f004d195f4ef04dba753588061a34607c3e69713f1c2eb99bbf2739"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -259,7 +259,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "3c233774912455051fc31e3bf87cda7d863ec29c0a3f0028acc20ae528bfc57e"
+      "sha256": "754d3b1a2dfa06b09bd6b1aeab9785313f1336ecc5bdf38a7c35197589614a56"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -299,7 +299,7 @@
     },
     {
       "file": "src/lib/5etools/classRuleNormalization.ts",
-      "sha256": "88f244b14bc940a314a0e3d3b722923d60d58ad14329c41820f8ba7874bb9d68"
+      "sha256": "0173e10b103061a99d667bc21e737a3fc5fdde6ec0d44572cbf5211b1cb5bc28"
     },
     {
       "file": "src/lib/5etools/classSpellSlotTable.ts",
@@ -347,11 +347,11 @@
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
-      "sha256": "5608f8eff0e6e8d292e5b4a753db912e7bc976da8722cdb9596212c49b9f5298"
+      "sha256": "e07eb19d263f22fa8f0068c6a58288504cd3804c424675163e650696cac4a4d3"
     },
     {
       "file": "src/lib/5etools/directClassFeatureSource.ts",
-      "sha256": "816cc669c065aecb0534d93fd03deefe937fb2b7c98e499349702e769a3b6b83"
+      "sha256": "1e2071fe9a33633d29a9e2722c5b89dad6a56b6d39cb45303a13e40087a0133e"
     },
     {
       "file": "src/lib/5etools/directFixedProficiencySource.ts",
@@ -379,7 +379,7 @@
     },
     {
       "file": "src/lib/5etools/epicBoonAdvancement.ts",
-      "sha256": "34b07485301975240cc5c4f2c09fd7a1e3549594a0935079e923c46d9abbde2c"
+      "sha256": "efff0fca4972a4d737152cc4da60fa26e08028947f311728b31d266541afb27b"
     },
     {
       "file": "src/lib/5etools/favoredEnemyChoices.ts",
@@ -523,7 +523,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
+      "sha256": "14408fa00a8950867e0b0886e0d722ba8819616ed137ec7c54b0fc69408f64d3"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
@@ -847,7 +847,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "40c9483350278bebe748951006f981867684ff5e4f83522244fe463ec974b948"
+      "sha256": "415d75d3af10b98c464d23380dc85d6e7d59555fd5c6ddc7633a3d862652aec3"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -855,7 +855,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "c753eb8baf898dce3bc86b566c901f21984f1c1d48993a809831650601760113"
+      "sha256": "4e6eac32deb65309fbc10612b5b6838575c4f1bb02e6f5dbbcec248db128aed2"
     },
     {
       "file": "src/types/effects.ts",

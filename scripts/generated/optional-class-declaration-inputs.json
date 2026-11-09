@@ -106,7 +106,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
+      "sha256": "14408fa00a8950867e0b0886e0d722ba8819616ed137ec7c54b0fc69408f64d3"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
@@ -166,7 +166,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "40c9483350278bebe748951006f981867684ff5e4f83522244fe463ec974b948"
+      "sha256": "415d75d3af10b98c464d23380dc85d6e7d59555fd5c6ddc7633a3d862652aec3"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -174,7 +174,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "c753eb8baf898dce3bc86b566c901f21984f1c1d48993a809831650601760113"
+      "sha256": "4e6eac32deb65309fbc10612b5b6838575c4f1bb02e6f5dbbcec248db128aed2"
     },
     {
       "file": "src/types/effects.ts",

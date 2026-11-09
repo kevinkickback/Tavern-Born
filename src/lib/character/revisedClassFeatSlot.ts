@@ -97,7 +97,7 @@ function getEarnedSpellcasting(
     const castingEntry = subclass
       ? entry
       : { ...entry, subclass: undefined, subclassSource: undefined }
-    const { rule, owner } = getClassSpellProfilePolicy(castingEntry)
+    const { rule, owner } = getClassSpellProfilePolicy(castingEntry, catalogs.classCastingSources)
     const declaration = rule?.declaration
     if (declaration && declaration.level <= entry.levels) {
       const { target, level } = declaration

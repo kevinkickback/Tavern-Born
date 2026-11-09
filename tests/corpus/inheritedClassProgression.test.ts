@@ -4,12 +4,23 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getCurrentClassCastingProducer } from '@/lib/5etools/classCastingSource'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getClassResourceDefs } from '@/lib/5etools/classData'
+import {
+  getClassFeatureIdentity,
+  getSubclassFeatureIdentity,
+  getSubclassFeatureReferenceLevel,
+} from '@/lib/5etools/classFeatureIdentity'
+import {
+  getClassResourceRecoveryAtLevel,
+  normalizeClassRules,
+} from '@/lib/5etools/classRuleNormalization'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
@@ -25,6 +36,11 @@ import {
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import {
+  getEpicBoonSlots,
+  projectEpicBoonSlots,
+  replaceEpicBoonSelection,
+} from '@/lib/character/epicBoonSlots'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import {
   getManagedClassSpellPool,
@@ -32,6 +48,10 @@ import {
 } from '@/lib/character/managedClassSpells'
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getSelectedFeatureCantripSlots } from '@/lib/character/selectedFeatureSpells'
+import {
+  getDisplayedClassFeatures,
+  projectClassLevelFeatures,
+} from '@/pages/build/class/model/pageUtils'
 import type { GameData } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -42,6 +62,7 @@ const sources = ['XPHB', 'WoW']
 const available = [
   'class/class-deathknight.json',
   'class/class-warlock.json',
+  'class/class-cleric.json',
   'generated/gendata-spell-source-lookup.json',
 ].every((path) => existsSync(`data/${path}`))
 const reopen = (character: Character, result: CharacterCommandResult) =>
@@ -60,21 +81,43 @@ describe.runIf(available)('configured inherited class progression', () => {
   let lookups: ReturnType<typeof buildGameDataLookups>
   let catalogs: ReturnType<typeof buildClassChoiceFeatureCatalogs>
 
-  beforeAll(async () => {
-    const layer = await new FiveEToolsDataLoader(
+  const loadWithCopy = (parent: 'Cleric' | 'Druid', actor = 'Lightkeeper', source = 'EXAMPLE') =>
+    new FiveEToolsDataLoader(
       { type: 'local', path: 'data', isValid: true },
       {
         type: 'local',
-        readJson: async (file) => JSON.parse(await readFile(`data/${file}`, 'utf8')),
+        readJson: async (file) => {
+          const document = JSON.parse(await readFile(`data/${file}`, 'utf8'))
+          if (actor === 'Priest' && file === 'class/class-priest.json') {
+            document.class = document.class.filter(
+              (row: { source: string }) => row.source !== source,
+            )
+          }
+          if (file === `class/class-${parent.toLowerCase()}.json`) {
+            document._meta.internalCopies.push('class')
+            document.class.push({
+              name: actor,
+              source,
+              _copy: { name: parent, source: 'XPHB' },
+            })
+          }
+          if (source === 'EXAMPLE' && file === 'generated/gendata-spell-source-lookup.json') {
+            for (const name of ['sacred flame', 'cure wounds']) {
+              document.xphb[name].class.EXAMPLE = { Lightkeeper: true }
+            }
+          }
+          return document
+        },
       },
     ).loadAllData()
-    data = composeGameDataLayers([layer])
+  beforeAll(async () => {
+    data = composeGameDataLayers([await loadWithCopy('Cleric')])
     lookups = buildGameDataLookups(data)
     catalogs = buildClassChoiceFeatureCatalogs(data)
   }, 45_000)
 
-  const classRow = (name: string) =>
-    data.classes.find((row) => row.name === name && row.source === 'WoW')!
+  const classRow = (name: string, source = 'WoW') =>
+    data.classes.find((row) => row.name === name && row.source === source)!
   const spellContext = (character: Character) => ({
     catalogs,
     spellsByKey: lookups.spellsByKey,
@@ -86,10 +129,10 @@ describe.runIf(available)('configured inherited class progression', () => {
       classChoiceClasses: data.classes,
       classChoiceFeatureCatalogs: catalogs,
     })
-  const start = (name: string) => {
+  const start = (name: string, source = 'WoW') => {
     const character = makeCharacterFixture({
       originSystem: '2024',
-      allowedSources: sources,
+      allowedSources: ['XPHB', source],
       classProgression: [],
       initialClass: undefined,
     })
@@ -98,7 +141,7 @@ describe.runIf(available)('configured inherited class progression', () => {
       applyClassSelectionCommand(
         character,
         character.provenance,
-        classRow(name),
+        classRow(name, source),
         undefined,
         lookups.itemLookup,
         { classChoiceFeatureCatalogs: catalogs },
@@ -125,6 +168,292 @@ describe.runIf(available)('configured inherited class progression', () => {
       ),
     )
   }
+
+  test('the roster displays exact inherited class and subclass features and earns Epic Boons', () => {
+    const cohort = data.classes.filter((cls) => cls.source === 'WoW')
+    expect(cohort).toHaveLength(13)
+    for (const cls of cohort) {
+      const features = getDisplayedClassFeatures(cls, catalogs)
+      expect(features.map(getClassFeatureIdentity), cls.name).toEqual(
+        cls.classFeatureRefs?.filter((ref) => ref.feature).map(getClassFeatureIdentity),
+      )
+      const character = makeCharacterFixture({
+        originSystem: '2024',
+        allowedSources: sources,
+        classProgression: [{ name: cls.name, source: cls.source, levels: 19 }],
+      })
+      expect(getEpicBoonSlots(character, catalogs, data.feats), cls.name).toEqual([
+        expect.objectContaining({ current: true, state: 'empty' }),
+      ])
+      for (const subclass of cls.subclasses ?? []) {
+        const groups = projectClassLevelFeatures(
+          new Map(),
+          cls,
+          subclass,
+          subclass,
+          [],
+          20,
+          catalogs,
+        )
+        for (const ref of subclass.subclassFeatureRefs ?? []) {
+          const level = getSubclassFeatureReferenceLevel(ref)
+          if (!ref.feature || !level || level <= 3) continue
+          expect(
+            groups.get(level)?.map(getSubclassFeatureIdentity),
+            `${cls.name} / ${subclass.name} / ${ref.name}`,
+          ).toContain(getSubclassFeatureIdentity(ref))
+        }
+      }
+    }
+    const knight = classRow('Death Knight')
+    const aura = 'class-feature|aura of protection|paladin|xphb|6|xphb'
+    expect(getDisplayedClassFeatures(knight, catalogs).map(getClassFeatureIdentity)).toContain(aura)
+    expect(getDisplayedClassFeatures({ ...knight, classFeatures: [] }, catalogs)).toEqual([])
+    expect(
+      getDisplayedClassFeatures(knight, {
+        ...catalogs,
+        ambiguousClassFeatureTargets: new Set([aura]),
+      }).map(getClassFeatureIdentity),
+    ).not.toContain(aura)
+  })
+
+  test('class tables supply earned counters when the owner still declares the matching rules', () => {
+    for (const [name, label, level, max, shortRest] of [
+      ['Death Knight', 'Channel Divinity', 3, 2, 1],
+      ['Demon Hunter', 'Favored Enemy', 1, 2, undefined],
+      ['Druid', 'Wild Shape', 2, 2, 1],
+      ['Evoker', 'Sorcery Points', 5, 5, 2],
+      ['Hunter', 'Favored Enemy', 1, 2, undefined],
+      ['Monk', 'Focus Points', 2, 2, 'all'],
+      ['Paladin', 'Channel Divinity', 3, 2, 1],
+      ['Priest', 'Channel Divinity', 2, 2, 1],
+      ['Shaman', 'Rages', 1, 2, 1],
+      ['Warrior', 'Second Wind', 1, 2, 1],
+    ] as const) {
+      const cls = classRow(name)
+      const resource = getClassResourceDefs(cls, level).find((row) => row.label === label)
+      expect(resource?.maxPerLevel[level - 1], name).toBe(max)
+      expect(getClassResourceRecoveryAtLevel(resource!, level - 1), name).toMatchObject({
+        longRest: 'all',
+        ...(shortRest === undefined ? {} : { shortRest }),
+      })
+      expect(getClassResourceRecoveryAtLevel(resource!, level - 1).shortRest, name).toBe(shortRest)
+      expect(
+        normalizeClassRules({ ...cls, classFeatures: [] }, cls.classFeatureRefs ?? []).resources,
+      ).not.toContainEqual(expect.objectContaining({ label }))
+    }
+    const [configured] = getClassResourceDefs(classRow('Druid'), 2)
+    const [core] = getClassResourceDefs(classRow('Druid', 'XPHB'), 2)
+    expect(configured.id).not.toBe(core.id)
+    const character = {
+      ...levelUp(start('Druid'), 8),
+      classResources: { [configured.id]: 1 },
+    }
+    const resources = (current: typeof catalogs) =>
+      getCharacterClassResources(character, () => classRow('Druid'), {
+        catalogs: current,
+        charismaModifier: 0,
+        unlimitedWildShape: false,
+      })
+    expect(resources(catalogs)).toContainEqual(
+      expect.objectContaining({ id: configured.id, current: 1 }),
+    )
+    expect(
+      resources({ ...catalogs, classes: data.classes.filter((cls) => cls.source !== 'WoW') }),
+    ).not.toContainEqual(expect.objectContaining({ id: configured.id }))
+    expect(resources(catalogs)).toContainEqual(
+      expect.objectContaining({ id: configured.id, current: 1 }),
+    )
+  })
+
+  test('inherited Epic Boon selections suspend and can clear when their class source is removed', () => {
+    let character = start('Druid')
+    for (let level = 2; level <= 19; level++) character = levelUp(character, 8)
+    const [slot] = getEpicBoonSlots(character, catalogs, data.feats)
+    const expected = 'class-feature|epic boon|druid|xphb|19|xphb'
+    const context = calculation(character)
+    const authority = {
+      catalogs,
+      feats: data.feats,
+      prerequisites: {
+        ...context.classChoices.prerequisites,
+        progression: character.classProgression,
+      },
+    }
+    const alert = data.feats.find((feat) => feat.name === 'Alert' && feat.source === 'XPHB')!
+    for (const replacement of [
+      {
+        abilityChanges: { wisdom: 2 } as Record<string, 1 | 2>,
+        before: context.abilityScores.total,
+      },
+      { feat: alert },
+    ]) {
+      const saved = characterPersistenceSchema.parse(
+        JSON.parse(
+          JSON.stringify(replaceEpicBoonSelection(character, slot, replacement, authority)),
+        ),
+      )
+      const claim = 'feat' in replacement ? saved.feats[0] : saved.asiChoices?.[0]
+      expect(claim?.epicBoonTarget).toBe(expected)
+      const missing = { ...catalogs, classes: data.classes.filter((cls) => cls.source !== 'WoW') }
+      const [dormant] = getEpicBoonSlots(saved, missing, data.feats)
+      expect(dormant).toMatchObject({ current: false, state: 'unavailable', hasClaims: true })
+      const projected = projectEpicBoonSlots(saved, [dormant])
+      expect(projected.asiChoices ?? []).toHaveLength(0)
+      expect(projected.feats).toHaveLength(0)
+      const cleared = replaceEpicBoonSelection(saved, dormant, null)
+      expect(getEpicBoonSlots(cleared, catalogs, data.feats)[0].state).toBe('empty')
+      expect(getEpicBoonSlots(saved, catalogs, data.feats)[0].state).toBe('selected')
+    }
+  })
+
+  test.each([
+    ['Priest', 'WoW'],
+    ['Lightkeeper', 'EXAMPLE'],
+  ])('%s uses only its declared list and keeps spell intent across reload and source withdrawal', (name, source) => {
+    let character = start(name, source)
+    const [entry] = character.classProgression
+    const [slot] = getManagedClassSpellSlots(entry, character, catalogs)
+    expect(slot?.slice(0, 2)).toEqual([
+      ['class', name.toLowerCase(), source.toLowerCase()],
+      'class-cantrip',
+    ])
+    const select = (spell: string) =>
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        [
+          {
+            slot,
+            expected: null,
+            expectedEmptyRevision: 0,
+            target: { name: spell, source: 'XPHB' },
+            policy: 'default',
+          },
+        ],
+        spellContext(character),
+      )
+
+    expect(() => select('Fire Bolt')).toThrow()
+    if (source === 'EXAMPLE') expect(() => select('Guidance')).toThrow()
+    character = reopen(character, select('Sacred Flame'))
+    const profileId = `class:${name}|${source}`
+    const prepare = (prepared: boolean, context = spellContext(character)) =>
+      setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        profileId,
+        'Cure Wounds|XPHB',
+        prepared,
+        context,
+      )
+    character = reopen(character, prepare(true))
+    if (source === 'EXAMPLE') {
+      expect(
+        character.spells.spellProfiles.find((profile) => profile.id === profileId)
+          ?.dailyCastingTarget,
+      ).toBe('class-feature|spellcasting|cleric|xphb|1|xphb')
+    }
+    const current = projectManagedClassSpellState(character, spellContext(character))
+    expect(current.statuses).toContainEqual(expect.objectContaining({ active: true }))
+    expect(current.dailyStatuses).toContainEqual(
+      expect.objectContaining({ profileId, active: true }),
+    )
+    const withdrawn = {
+      ...spellContext(character),
+      catalogs: { ...catalogs, classCastingSources: [] },
+    }
+    const inactive = projectManagedClassSpellState(character, withdrawn)
+    expect(inactive.statuses).toContainEqual(expect.objectContaining({ active: false }))
+    expect(inactive.dailyStatuses).toContainEqual(
+      expect.objectContaining({ profileId, active: false }),
+    )
+    expect(getManagedClassSpellSlots(entry, character, withdrawn.catalogs)).toContainEqual(slot)
+    const cleared = reopen(character, prepare(false, withdrawn))
+    expect(
+      cleared.spells.spellProfiles.find((profile) => profile.id === profileId)?.preparedSpells,
+    ).not.toContain('Cure Wounds|XPHB')
+  })
+
+  test('an empty catalog-discovered cantrip slot expires when its level is lost offline', () => {
+    let character = start('Lightkeeper', 'EXAMPLE')
+    for (let level = 2; level <= 4; level++) character = levelUp(character, 8)
+    const [entry] = character.classProgression
+    const slot = getManagedClassSpellSlots(entry, character, catalogs).find(
+      (slot) => slot[1] === 'class-cantrip' && slot[3] === 4,
+    )
+    expect(slot).toBeDefined()
+    const expectedEmptyRevision = character.managedClassSpellRevision ?? 0
+    character = reopen(
+      character,
+      applyLevelDown(
+        character,
+        character.provenance,
+        createCharacterCalculationContext(character, {}),
+      ),
+    )
+    expect(character.classProgression[0].levels).toBe(3)
+    character = levelUp(character, 8)
+    expect(character.managedClassSpellRevision).toBeGreaterThan(expectedEmptyRevision)
+    expect(() =>
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        [
+          {
+            slot: slot!,
+            expected: null,
+            expectedEmptyRevision,
+            target: { name: 'Sacred Flame', source: 'XPHB' },
+            policy: 'default',
+          },
+        ],
+        spellContext(character),
+      ),
+    ).toThrow(/empty spell choice changed/i)
+  })
+
+  test.each([
+    ['Lightkeeper', 'EXAMPLE'],
+    ['Priest', 'WoW'],
+  ])(
+    '%s can clear dormant daily intent and prepare under a newly declared parent',
+    async (name, source) => {
+      let character = start(name, source)
+      const profileId = `class:${name}|${source}`
+      const prepare = (prepared: boolean, context = spellContext(character)) =>
+        setDailyClassSpellPreparedCommand(
+          character,
+          character.provenance,
+          profileId,
+          'Cure Wounds|XPHB',
+          prepared,
+          context,
+        )
+      character = reopen(character, prepare(true))
+      const replacementData = composeGameDataLayers([await loadWithCopy('Druid', name, source)])
+      const replacement = {
+        ...spellContext(character),
+        catalogs: buildClassChoiceFeatureCatalogs(replacementData),
+        spellsByKey: buildGameDataLookups(replacementData).spellsByKey,
+      }
+      expect(projectManagedClassSpellState(character, replacement).dailyStatuses).toContainEqual(
+        expect.objectContaining({ profileId, active: false }),
+      )
+      character = reopen(character, prepare(false, replacement))
+      expect(
+        character.spells.spellProfiles.find((row) => row.id === profileId)?.dailyCastingTarget,
+      ).toBeUndefined()
+      character = reopen(character, prepare(true, replacement))
+      expect(
+        character.spells.spellProfiles.find((row) => row.id === profileId)?.dailyCastingTarget,
+      ).toBe('class-feature|spellcasting|druid|xphb|1|xphb')
+      expect(projectManagedClassSpellState(character, replacement).dailyStatuses).toContainEqual(
+        expect.objectContaining({ profileId, active: true }),
+      )
+    },
+    25_000,
+  )
 
   test('Death Knight earns weapon mastery, daily preparation and Fighting Style at the source levels', () => {
     let character = start('Death Knight')
@@ -347,11 +676,12 @@ describe.runIf(available)('configured inherited class progression', () => {
 
   test('casting authority requires the current selected copy and exact retained declaration', () => {
     const cls = classRow('Warlock')
-    const { owner, rule } = getClassSpellProfilePolicy({
+    const entry = {
       name: cls.name,
       source: cls.source,
       levels: 1,
-    })
+    }
+    const { owner, rule } = getClassSpellProfilePolicy(entry)
     const target = rule!.declaration.target
     const current = (source = catalogs) => getCurrentClassCastingProducer(source, owner, target, 1)
     expect(current()?.effective.source).toBe('WoW')
@@ -375,9 +705,12 @@ describe.runIf(available)('configured inherited class progression', () => {
         ],
       },
     ]) {
-      expect(
-        current({ ...catalogs, classes: data.classes.map((row) => (row === cls ? broken : row)) }),
-      ).toBeUndefined()
+      const changed = {
+        ...catalogs,
+        classes: data.classes.map((row) => (row === cls ? broken : row)),
+      }
+      expect(current(changed)).toBeUndefined()
+      expect(getManagedClassSpellSlots(entry, undefined, changed)).toEqual([])
     }
     expect(
       getClassSpellProfilePolicy({ name: 'Demon Hunter', source: 'WoW', levels: 1 }).rule,

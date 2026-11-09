@@ -2,7 +2,11 @@ import { getBardLoreSpellSlots } from '@/lib/5etools/bardSpellSources'
 import {
   getClassCastingProducersForOwner,
   getClassSpellProfilePolicy,
+  getManagedClassSpellRule,
+  isCatalogCastingCopyOwner,
 } from '@/lib/5etools/classCastingRules'
+import { getCurrentClassCastingProducer } from '@/lib/5etools/classCastingSource'
+import type { CastingProducerRule } from '@/lib/5etools/classCastingStructure'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClericArcanaSpellRule,
@@ -25,13 +29,23 @@ export function getManagedClassSpellSlots(
   catalogs?: ClassChoiceFeatureCatalogs,
   prerequisites?: ClassChoicePrerequisiteContext,
 ): ManagedClassSpellSlot[] {
-  const { rule, owner } = getClassSpellProfilePolicy(entry)
+  const sources = catalogs?.classCastingSources
+  const { rule, owner } = getClassSpellProfilePolicy(entry, sources)
+  const currentRule = (producer: CastingProducerRule) =>
+    !catalogs ||
+    !isCatalogCastingCopyOwner(owner) ||
+    !!getCurrentClassCastingProducer(
+      catalogs,
+      owner,
+      producer.declaration.target,
+      producer.declaration.level,
+    )
   const domains: Extract<
     ManagedClassSpellDomain,
     'class-cantrip' | 'class-known' | 'class-spellbook'
   >[] = ['class-cantrip', 'class-known', 'class-spellbook']
   const ordinary =
-    !rule || entry.levels < rule.declaration.level
+    !rule || entry.levels < rule.declaration.level || !currentRule(rule)
       ? []
       : domains.flatMap((domain) =>
           (rule.domains[domain] ?? []).flatMap((gain) =>
@@ -57,28 +71,31 @@ export function getManagedClassSpellSlots(
             (choice) =>
               choice.slot[1] === 'feature-cantrip' ||
               isArcaneDabblerSlot(choice.slot) ||
-              getClericArcanaSpellRule(choice.slot),
+              getClericArcanaSpellRule(choice.slot) ||
+              getManagedClassSpellRule(choice.slot),
           )
           .map((choice) => choice.slot),
       ].filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]) && slot[3] <= entry.levels)
     : []
   const arcanumOwner = ['class', owner[1], owner[2]] as ['class', string, string]
-  const arcanum = getClassCastingProducersForOwner(arcanumOwner).flatMap((producer) =>
-    (producer.domains['class-arcanum'] ?? []).flatMap((gain) =>
-      gain.level <= entry.levels
-        ? Array.from(
-            { length: gain.count },
-            (_, ordinal): ManagedClassSpellSlot => [
-              arcanumOwner,
-              'class-arcanum',
-              producer.declaration.target,
-              gain.level,
-              ordinal,
-            ],
-          ).filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]))
-        : [],
-    ),
-  )
+  const arcanum = getClassCastingProducersForOwner(arcanumOwner, sources)
+    .filter(currentRule)
+    .flatMap((producer) =>
+      (producer.domains['class-arcanum'] ?? []).flatMap((gain) =>
+        gain.level <= entry.levels
+          ? Array.from(
+              { length: gain.count },
+              (_, ordinal): ManagedClassSpellSlot => [
+                arcanumOwner,
+                'class-arcanum',
+                producer.declaration.target,
+                gain.level,
+                ordinal,
+              ],
+            ).filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]))
+          : [],
+      ),
+    )
   const matches = catalogs?.classes?.filter((cls) => findClassReference(entry, [cls]))
   const currentClass = matches?.length === 1 ? matches[0] : undefined
   return [

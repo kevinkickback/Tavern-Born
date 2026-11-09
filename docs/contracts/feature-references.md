@@ -20,6 +20,13 @@ selected owner, declaring feature and target identities separate. Intro presenta
 declared intro references. Raw unavailable details may remain readable without granting rules.
 Legacy stored name/source descriptions can enrich only on one unique owner/level match.
 
+Builder follows the selected class and subclass's direct references, including exact targets
+printed under another class. This keeps inherited descriptions and the Epic Boon choice tied
+to the selected owner. Supported resource counters also require a matching declared feature
+and the selected class's own table. Their saved counters are separate across printings.
+An inherited Epic Boon claim retains its exact declaration so it can suspend or be cleared
+when the class source is withdrawn.
+
 ## Internal subclass-feature copies
 
 Resolve copies before reference expansion, with the shared data-only copy engine. Match all seven

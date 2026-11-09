@@ -16,6 +16,7 @@ import generated from './classCastingRuntime.generated'
 import {
   type CastingDomain,
   type CastingParentRule,
+  castingDeclarationMetadata,
   castingParentKey,
   castingParentProjection,
   castingParsedParentMatches,
@@ -108,16 +109,6 @@ function withCanonicalCastingSlotLabels<T extends object>(row: T): T {
   return changed ? { ...row, classTableGroups: normalized } : row
 }
 
-function castingComparison<T extends object>(row: T): T {
-  const normalized = withCanonicalCastingSlotLabels(row)
-  const fields = normalized as Record<string, unknown>
-  if (!('itemMasteries' in fields) && !('itemMasteriesProgression' in fields)) return normalized
-  // The upstream exporter also describes mastery in class metadata. It is not a casting input.
-  const comparison = { ...fields }
-  delete comparison.itemMasteries
-  delete comparison.itemMasteriesProgression
-  return comparison as T
-}
 const declarations = createDeclarationSourceAccess(
   CLASS_CASTING_PRODUCERS.map((row) => row.declaration),
   'casting-declaration',
@@ -126,6 +117,7 @@ const declarations = createDeclarationSourceAccess(
       (row): row is ClassCastingSourceProof & { kind: 'casting-declaration' } =>
         row.kind === 'casting-declaration',
     ),
+  castingDeclarationMetadata,
 )
 const declarationPacks = [
   CLASS_CASTING_PRODUCERS.map((row) => row.declaration),
@@ -148,11 +140,15 @@ const currentDeclarations = declarationPacks.map((rules) => {
   )
   return {
     certificates,
-    access: createDeclarationSourceAccess(rules, 'casting-declaration', (value) =>
-      proofs(value).filter(
-        (row): row is ClassCastingSourceProof & { kind: 'casting-declaration' } =>
-          row.kind === 'casting-declaration' && certificates.get(row.target) === row.certificate,
-      ),
+    access: createDeclarationSourceAccess(
+      rules,
+      'casting-declaration',
+      (value) =>
+        proofs(value).filter(
+          (row): row is ClassCastingSourceProof & { kind: 'casting-declaration' } =>
+            row.kind === 'casting-declaration' && certificates.get(row.target) === row.certificate,
+        ),
+      castingDeclarationMetadata,
     ),
   }
 })
@@ -189,7 +185,7 @@ export function auditClassCastingSources(
 ): ClassCastingSourceProof[] {
   const document = optionalDeclarationObject(value)
   const classes = Array.isArray(document.class)
-    ? document.class.map((row) => castingComparison(optionalDeclarationObject(row)))
+    ? document.class.map((row) => withCanonicalCastingSlotLabels(optionalDeclarationObject(row)))
     : []
   const castingDocument = { ...document, class: classes }
   const result: ClassCastingSourceProof[] = currentDeclarations.flatMap(({ access }) =>
@@ -213,8 +209,15 @@ export function auditClassCastingSources(
   if (copiedClasses) {
     for (const [index, raw] of classes.entries()) {
       const owner = getCastingParentOwner(raw)
-      const parent = owner && getClassCastingCopyParent(owner)
-      if (!owner || !parent) continue
+      const parent = getPlainCastingCopyParent(raw)
+      if (
+        !owner ||
+        !parent ||
+        !CLASS_CASTING_PRODUCERS.some(
+          (rule) => JSON.stringify(rule.declaration.owner) === JSON.stringify(parent),
+        )
+      )
+        continue
       const prepared = copiedClasses[index]
       const target = JSON.stringify(owner)
       const certificate = JSON.stringify(parent)
@@ -224,9 +227,9 @@ export function auditClassCastingSources(
         target,
         certificate,
         origin: origin + ':' + target,
-        copyTargets: prepared ? auditCopiedCastingTargets(prepared, owner) : [],
+        copyTargets: prepared ? auditCopiedCastingTargets(prepared, parent) : [],
         verified:
-          JSON.stringify(getPlainCastingCopyParent(raw)) === certificate &&
+          target !== certificate &&
           !!prepared &&
           !prepared._copy &&
           JSON.stringify(getCastingParentOwner(prepared)) === target,
@@ -248,7 +251,9 @@ function currentParent(catalog: ClassCastingCatalog, key: string) {
   )
   const identity = parentIdentities.get(key)
   const comparison =
-    identity && found.length === 1 ? castingComparison({ ...found[0], ...identity }) : undefined
+    identity && found.length === 1
+      ? withCanonicalCastingSlotLabels({ ...found[0], ...identity })
+      : undefined
   if (
     found.length !== 1 ||
     evidence.length !== 1 ||
@@ -352,7 +357,7 @@ export function getCurrentClassCastingProducer(
   target: string,
   level: number,
 ) {
-  const parent = getClassCastingCopyParent(owner)
+  const parent = getClassCastingCopyParent(owner, proofs(catalog))
   if (!parent) return getNativeClassCastingProducer(catalog, owner, target, level)
   const ownerKey = JSON.stringify(owner)
   const evidence = proofs(catalog).filter(
@@ -384,7 +389,7 @@ export function getCurrentClassCastingProducer(
     !comparisonIdentity ||
     !parentRule ||
     !castingParsedParentMatches(
-      castingComparison({ ...classData, ...comparisonIdentity }),
+      withCanonicalCastingSlotLabels({ ...classData, ...comparisonIdentity }),
       parentRule,
     )
   )

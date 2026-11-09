@@ -931,6 +931,7 @@ export function replaceFeatSelectionsCommand(
           className: feat.className ?? existing?.className,
           classSource: feat.classSource ?? existing?.classSource,
           classLevel: feat.classLevel ?? existing?.classLevel,
+          epicBoonTarget: feat.epicBoonTarget ?? existing?.epicBoonTarget,
         }
       }),
     },

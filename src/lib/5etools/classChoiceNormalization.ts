@@ -1170,6 +1170,7 @@ export function normalizeClassChoices(
     | 'edition'
     | 'sourceIdentityConflict'
     | 'classTableGroups'
+    | 'classFeatures'
     | 'optionalfeatureProgression'
   >,
   refs: readonly ClassFeatureReference[],

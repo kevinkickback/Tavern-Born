@@ -38,7 +38,7 @@ export function deriveCurrentClassCasting(
   const allowed = sources(character)
   const unearnedProfiles: string[] = []
   const entries = character.classProgression.flatMap((entry) => {
-    const { rule, owner } = getClassSpellProfilePolicy(entry)
+    const { rule, owner } = getClassSpellProfilePolicy(entry, catalogs?.classCastingSources)
     if (
       !catalogs ||
       !rule ||

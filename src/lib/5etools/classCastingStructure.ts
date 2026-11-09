@@ -10,6 +10,21 @@ import {
 } from './optionalClassDeclarationStructure'
 
 type Row = Record<string, unknown>
+// These fields are validated by their own class consumers. They cannot grant or limit casting.
+const independentClassFields = new Set([
+  'hd',
+  'itemMasteries',
+  'itemMasteriesProgression',
+  'multiclassing',
+  'primaryAbility',
+  'proficiency',
+  'startingEquipment',
+  'startingProficiencies',
+])
+
+export function castingDeclarationMetadata(row: Row) {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => !independentClassFields.has(key)))
+}
 export type CastingDomain = 'class-cantrip' | 'class-known' | 'class-spellbook' | 'class-arcanum'
 interface CastingGain {
   level: number

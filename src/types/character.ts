@@ -348,6 +348,7 @@ export interface Feat {
   className?: string
   classSource?: string
   classLevel?: number
+  epicBoonTarget?: string
 }
 
 export interface ClassFeatChoice {
@@ -369,6 +370,7 @@ export interface AsiChoice {
   /** Class name this ASI belongs to (for multiclass support). */
   className: string
   classSource: string
+  epicBoonTarget?: string
   /** Ability key → bonus applied (e.g. { strength: 2 } or { strength: 1, dexterity: 1 }). */
   abilityChanges: Record<string, 1 | 2>
 }
@@ -437,6 +439,8 @@ export interface SpellProfile {
   cantrips: string[]
   spellsKnown: string[]
   preparedSpells: string[]
+  /** Exact declaration for retained daily intent from a catalog-derived casting owner. */
+  dailyCastingTarget?: string
   /** Special unrestricted profile is always prepared. */
   alwaysPrepared?: boolean
 }

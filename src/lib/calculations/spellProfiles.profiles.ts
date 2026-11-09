@@ -188,6 +188,9 @@ export function ensureSpellProfiles(
 
     next.push({
       ...metadata,
+      ...(existingProfile?.dailyCastingTarget && {
+        dailyCastingTarget: existingProfile.dailyCastingTarget,
+      }),
       cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips, spellKey),
       spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells, spellKey),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(

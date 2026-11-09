@@ -7,6 +7,7 @@ import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getFighterSubclassResources } from '@/lib/5etools/fighterSubclassResources'
 import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
 import { getCurrentMonkBaseRules, getMonkBaseResources } from '@/lib/5etools/monkBaseRules'
@@ -120,12 +121,24 @@ export function getCharacterClassResources(
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
+    const current = getCurrentResourceClass(character, entry, catalogs)
     const definitions = isNativeSorcerer(entry)
       ? currentSorcerer?.owner === entry
         ? getSorcererResourceDefs(currentSorcerer)
         : []
-      : getClassResourceDefs(resolveClass(entry), level)
+      : getClassResourceDefs(resolveClass(entry), level).filter(
+          (resource) => !resource.declarationTarget,
+        )
     const earned = [...definitions]
+    if (current && catalogs)
+      earned.push(
+        ...getClassResourceDefs(current, level).filter(
+          ({ declarationTarget }) =>
+            !!declarationTarget &&
+            !catalogs.ambiguousClassFeatureTargets?.has(declarationTarget) &&
+            !!getCurrentDirectClassFeature(current, catalogs, declarationTarget),
+        ),
+      )
     earned.push(
       ...getArtificerClassResources(
         character,
@@ -148,7 +161,6 @@ export function getCharacterClassResources(
           proficiencyBonus,
         ),
       )
-    const current = getCurrentResourceClass(character, entry, catalogs)
     if (
       catalogs &&
       current &&
