@@ -276,7 +276,7 @@ test('parsed subrace labels distinguish competing books and retain the saved sou
   expect(reopened.subraceSource).toBe('BOOK-B')
 })
 
-test('Builder requires a 2014 Dragonborn ancestor without choosing one automatically', async () => {
+test('Builder defaults the 2014 Dragonborn to the first available ancestry', async () => {
   const races = parseRaces(
     JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
   ) as Race5e[]
@@ -299,8 +299,9 @@ test('Builder requires a 2014 Dragonborn ancestor without choosing one automatic
         racesByKey: { 'Dragonborn|PHB': dragonborn },
       }),
     ).some(({ title }) => title === 'Choose a draconic ancestry')
-  expect(current().subrace).toBeUndefined()
-  expect(ancestryRequired()).toBe(true)
+  expect(current()).toMatchObject({ subrace: 'Dragonborn (Black)', subraceSource: 'PHB' })
+  expect(current().racialDefenses?.resist).toEqual({ ownerType: 'subrace', values: ['acid'] })
+  expect(ancestryRequired()).toBe(false)
   await user.click(screen.getByRole('combobox', { name: 'Draconic Ancestry' }))
   expect(screen.queryByRole('option', { name: 'Default' })).toBeNull()
   await user.click(screen.getByRole('option', { name: 'Green' }))

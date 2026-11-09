@@ -334,11 +334,7 @@ export function BuildRacePage() {
                           onClick={() => {
                             const requiresAncestry = requiresDraconicAncestry(race)
                             if (!isSelected || !requiresAncestry) {
-                              applyRaceSelection(
-                                race,
-                                requiresAncestry ? undefined : namedSubraces[0],
-                                0,
-                              )
+                              applyRaceSelection(race, namedSubraces[0], 0)
                             }
                             setCompactPane('right')
                           }}

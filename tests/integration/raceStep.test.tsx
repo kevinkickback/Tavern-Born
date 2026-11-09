@@ -57,7 +57,7 @@ describe('RaceStep', () => {
     })
   })
 
-  test('requires an explicit source-backed ancestry for the 2014 Dragonborn', () => {
+  test('defaults to a source-backed ancestry for the 2014 Dragonborn and keeps later choices', () => {
     const races = parseRaces(
       JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
     ) as Race5e[]
@@ -75,10 +75,12 @@ describe('RaceStep', () => {
     const { getByRole, getByText, queryByRole, rerender } = render(step(data))
     expect(getByText('Draconic Ancestry', { selector: 'span' })).toBeTruthy()
     expect(queryByRole('button', { name: 'Default' })).toBeNull()
-    expect(onChange).not.toHaveBeenCalled()
+    const firstAncestry = { subrace: 'Dragonborn (Black)', subraceSource: 'PHB' }
+    expect(onChange).toHaveBeenLastCalledWith(firstAncestry)
     const pools = { races: [dragonborn], classes: [], backgrounds: [] }
     expect(validateStep('race', data, pools)).toMatchObject({ valid: false })
     expect(validateStep('review', data, pools)).toMatchObject({ valid: false })
+    expect(validateStep('race', { ...data, ...firstAncestry }, pools).valid).toBe(true)
 
     fireEvent.click(getByRole('button', { name: 'Green' }))
     const chosen = { subrace: 'Dragonborn (Green)', subraceSource: 'PHB' }

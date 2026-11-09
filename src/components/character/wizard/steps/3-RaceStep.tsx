@@ -73,9 +73,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     const firstRace = orderedRaces[0]
     if (!firstRace) return
 
-    const firstSubrace = requiresDraconicAncestry(firstRace)
-      ? undefined
-      : getWizardSubraces(firstRace)[0]
+    const firstSubrace = getWizardSubraces(firstRace)[0]
     onChange({
       race: firstRace.name,
       raceSource: firstRace.source ?? '',
@@ -96,7 +94,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   )
 
   useEffect(() => {
-    if (!selectedRace || requiresAncestry) return
+    if (!selectedRace || (requiresAncestry && data.subrace)) return
     if (subraces.length === 0) {
       if (data.subrace || data.subraceSource) {
         onChange({ subrace: '', subraceSource: '' })
@@ -132,7 +130,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
 
   const handleSelectRace = (race: Race5e) => {
     if (requiresDraconicAncestry(race) && race === selectedRace) return
-    const firstSubrace = requiresDraconicAncestry(race) ? undefined : getWizardSubraces(race)[0]
+    const firstSubrace = getWizardSubraces(race)[0]
     onChange({
       race: race.name,
       raceSource: race.source ?? '',

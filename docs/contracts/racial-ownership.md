@@ -50,8 +50,9 @@ from the unfiltered catalog.
 
 ### Racial defenses
 
-The 2014 PHB Dragonborn requires an explicit draconic ancestor. Both race pickers offer the
-catalog's materialized ancestry versions, including available source-qualified setting variants.
+The 2014 PHB Dragonborn requires a draconic ancestor. Both race pickers offer the catalog's
+materialized ancestry versions, including available source-qualified setting variants, and
+preselect the first available version when choosing the race.
 The wizard requires an available ancestry to advance or finish. Builder readiness treats the
 parent-only selection as incomplete.
 
@@ -197,5 +198,5 @@ new race and child options remain restricted to the filtered catalog. Child opti
 the separate complete name and source, without interpreting a joined label as an identity.
 Nested child resolution compares both complete fields with case and surrounding whitespace
 normalized; a different printing, truncated name or absent source cannot supply that child.
-Race selection preselects an initial child where applicable. Required draconic ancestry is
-chosen separately. Explicit child selection owns later changes.
+Race selection preselects an initial child where applicable. Explicit child selection owns later
+changes.
