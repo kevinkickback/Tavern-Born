@@ -70,7 +70,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText('Warming up the dice...')).toBeTruthy()
   })
 
-  test('cold remote failure keeps the startup overlay and recovery actions available', async () => {
+  test('startup recovery offers retry and source setup after both catalogs fail', async () => {
     const user = userEvent.setup()
     useGameDataStore.setState({ hasHydrated: true, remoteStartup: 'unavailable', error: 'Offline' })
     render(
@@ -80,7 +80,8 @@ describe('startup integration: loading overlay and startup modal', () => {
       </>,
     )
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Use Included SRD for this session' })).toBeTruthy()
+    expect(screen.getByText('Game data is unavailable.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Use Included SRD/ })).toBeNull()
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Change source' }))
     expect(await screen.findByRole('dialog', { name: 'Choose Game Data' })).toBeTruthy()

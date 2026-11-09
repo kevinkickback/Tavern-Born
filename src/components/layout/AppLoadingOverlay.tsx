@@ -14,13 +14,7 @@ export function AppLoadingOverlay() {
   const error = useGameDataStore((s) => s.error)
   const remoteStartup = useGameDataStore((s) => s.remoteStartup)
   const retryRemote = useGameDataStore((s) => s.loadFromCache)
-  const loadBundled = useGameDataStore((s) => s.useBundledForSession)
   const reconfigure = useGameDataStore((s) => s.reconfigureRemoteStartup)
-  const canUseBundled =
-    !gameData &&
-    (remoteStartup === 'checking' ||
-      remoteStartup === 'committing' ||
-      remoteStartup === 'unavailable')
 
   const shouldStayVisible =
     remoteStartup === 'unavailable' ||
@@ -107,7 +101,7 @@ export function AppLoadingOverlay() {
             ? 'Online game data is ready.'
             : 'App is ready'
   } else if (remoteStartup === 'unavailable') {
-    statusLine = 'Online game data is unavailable.'
+    statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
     statusLine = 'Loading the Included SRD…'
   } else if (!hasHydrated) {
@@ -184,19 +178,14 @@ export function AppLoadingOverlay() {
         </div>
       </div>
       {error && <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>}
-      {canUseBundled && (
+      {remoteStartup === 'unavailable' && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
-          {remoteStartup === 'unavailable' && (
-            <Button variant="outline" onClick={() => void retryRemote({ forceCheck: true })}>
-              Retry
-            </Button>
-          )}
-          <Button onClick={() => void loadBundled()}>Use Included SRD for this session</Button>
-          {remoteStartup === 'unavailable' && (
-            <Button variant="ghost" onClick={reconfigure}>
-              Change source
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => void retryRemote({ forceCheck: true })}>
+            Retry
+          </Button>
+          <Button variant="ghost" onClick={reconfigure}>
+            Change source
+          </Button>
         </div>
       )}
     </div>

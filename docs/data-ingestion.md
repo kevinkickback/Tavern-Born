@@ -181,16 +181,21 @@ representation. The generator checks both outputs and includes the runtime modul
 
 ## Remote startup
 
+The online source can be a GitHub repository or a plain HTTPS root that serves a compatible
+5etools-style `data/` directory. A self-hosted server needs to allow cross-origin reads from the
+app. The same catalog validation and loading rules apply to both hosts.
+
 The startup overlay waits for a remote catalog check to settle. A single 15-second deadline covers
 the initial cache and manifest lookup, source loading, queued resources, and the IndexedDB cache
 transaction. Cancellation prevents a queued write from starting and aborts a pending transaction.
 Superseded attempts cannot publish late progress or replace the active catalog.
 
 When a schema-compatible cache matches the configured source stack, a failed check leaves that
-catalog active. With no matching cache, the overlay offers **Use Included SRD for this session** during
-the check. **Retry** appears after failure or timeout, alongside the fallback. The session fallback
-leaves the saved remote configuration and its cache intact. A later successful source check can
-replace the session catalog even when the remote fingerprint is unchanged.
+catalog active. After failure or timeout with no matching cache, startup loads the Included SRD
+automatically with a separate bounded attempt. The session fallback leaves the saved remote
+configuration and cache intact. Settings can retry the configured source, and a successful check
+can replace the session catalog even when the remote fingerprint is unchanged. The startup overlay
+offers **Retry** and **Change source** if neither catalog could be loaded.
 
 ## Parsing policy
 

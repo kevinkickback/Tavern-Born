@@ -29,13 +29,19 @@ let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
 let remoteStartupPreparation: AbortController | null = null
 let remoteStartupAttempt: AbortController | null = null
-let remoteStartupLoad: Promise<boolean> | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
 const GAME_DATA_STORE_VERSION = 1
 export const REMOTE_STARTUP_TIMEOUT_MS = 15_000
 const remoteTimeout = () =>
   new DOMException('The game data source did not respond within 15 seconds.', 'TimeoutError')
+
+function cancelRemoteStartup() {
+  remoteStartupAttempt?.abort()
+  remoteStartupAttempt = null
+  remoteStartupPreparation?.abort()
+  remoteStartupPreparation = null
+}
 
 type RemoteStartupStatus =
   | 'checking'
@@ -197,7 +203,7 @@ interface GameDataState {
     deadline?: number,
     sourceStack?: GameDataSourceStack | null,
   ) => Promise<boolean>
-  useBundledForSession: () => Promise<boolean>
+  loadStartupSrd: () => Promise<void>
   reconfigureRemoteStartup: () => void
   refreshGameData: () => Promise<void>
   restoreBundledData: () => Promise<boolean>
@@ -287,17 +293,19 @@ export const useGameDataStore = create<GameDataState>()(
             remoteStartupPreparation === controller &&
             get().dataSourceConfig === savedSourceConfig
           ) {
-            set({
-              remoteStartup: 'unavailable',
-              error: error instanceof Error ? error.message : null,
-            })
+            clearTimeout(timer)
+            await get().loadStartupSrd()
           }
           return {}
         } finally {
           clearTimeout(timer)
           if (remoteStartupPreparation === controller) remoteStartupPreparation = null
         }
-        if (controller && get().dataSourceConfig !== savedSourceConfig) return {}
+        if (
+          controller &&
+          (controller.signal.aborted || get().dataSourceConfig !== savedSourceConfig)
+        )
+          return {}
         const [cache, configuredStack] = resolved
         const cacheIdentity = configuredStack ?? dataSourceConfig
 
@@ -396,7 +404,7 @@ export const useGameDataStore = create<GameDataState>()(
         if (remaining <= 0) attempt.abort(timeoutError)
         set({ remoteStartup: 'checking' })
         try {
-          remoteStartupLoad = get().loadGameData(config, Boolean(gameData), {
+          const load = get().loadGameData(config, Boolean(gameData), {
             signal: attempt.signal,
             sourceStack,
             beginCommit: () => {
@@ -405,42 +413,34 @@ export const useGameDataStore = create<GameDataState>()(
               set({ remoteStartup: 'committing' })
             },
           })
-          const changed = await remoteStartupLoad
+          const changed = await load
           if (remoteStartupAttempt !== attempt) return false
           const current = get()
           if (!current.error && current.cacheStatus === 'fetched') set({ remoteStartup: 'loaded' })
           else if (gameData)
             set({ remoteStartup: 'cached', cacheStatus: 'remote-cache', error: null })
-          else set({ remoteStartup: 'unavailable' })
+          else {
+            clearTimeout(timer)
+            await get().loadStartupSrd()
+          }
           return changed
         } finally {
           clearTimeout(timer)
-          if (remoteStartupAttempt === attempt) {
-            remoteStartupAttempt = null
-            remoteStartupLoad = null
-          }
+          if (remoteStartupAttempt === attempt) remoteStartupAttempt = null
         }
       },
 
-      useBundledForSession: async () => {
-        if (!get().gameData && get().remoteStartup === 'committing') {
-          remoteStartupAttempt?.abort()
-          // A transaction that already committed settles as success. Otherwise, wait for abort
-          // before starting the fallback so the two catalogs cannot both win.
-          await remoteStartupLoad
-        }
-        const { gameData, remoteStartup } = get()
-        if (gameData || (remoteStartup !== 'checking' && remoteStartup !== 'unavailable'))
-          return false
+      loadStartupSrd: async () => {
+        if (get().gameData) return
         const requestId = ++activeLoadRequestId
-        remoteStartupPreparation?.abort()
-        remoteStartupPreparation = null
-        remoteStartupAttempt?.abort()
-        remoteStartupAttempt = null
-        remoteStartupLoad = null
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
+        const { signal } = controller
+        const timer = setTimeout(
+          () => controller.abort(new Error('Loading the Included SRD timed out.')),
+          REMOTE_STARTUP_TIMEOUT_MS,
+        )
         set({
           remoteStartup: 'loading-srd',
           isLoading: true,
@@ -449,32 +449,33 @@ export const useGameDataStore = create<GameDataState>()(
           error: null,
         })
         try {
-          const bundled = await resolveDefaultBundledSource()
+          const bundled = await settleOnAbort(resolveDefaultBundledSource(), signal)
           if (!bundled)
             throw new Error('The Included SRD is unavailable in this copy of Tavern Born.')
           const required = new Set<string>()
-          const data = await loadDataFromSource(bundled, {
-            signal: controller.signal,
+          const load = loadDataFromSource(bundled, {
+            signal,
             onProgress: (current, total, resource) => {
-              if (requestId === activeLoadRequestId)
+              if (requestId === activeLoadRequestId && !signal.aborted)
                 set({ loadProgress: { current, total, resource } })
             },
             onResourceFailure: (resource, failure) => {
               if (failure.required) required.add(resource)
             },
           })
-          if (requestId !== activeLoadRequestId) return false
+          const data = await settleOnAbort(load, signal)
+          signal.throwIfAborted()
+          if (requestId !== activeLoadRequestId) return
           if (required.size || getCatalogEntityCount(data) === 0)
             throw new Error('The Included SRD could not be loaded.')
-          get().setGameData(data)
           set({
+            gameData: data,
             remoteStartup: 'srd',
             sessionBundledSource: bundled,
             cacheStatus: 'session-srd',
             isLoading: false,
             loadProgress: null,
           })
-          return true
         } catch (error) {
           if (requestId === activeLoadRequestId)
             set({
@@ -484,8 +485,8 @@ export const useGameDataStore = create<GameDataState>()(
               error:
                 error instanceof Error ? error.message : 'The Included SRD could not be loaded.',
             })
-          return false
         } finally {
+          clearTimeout(timer)
           if (activeLoadController === controller) activeLoadController = null
         }
       },
@@ -499,6 +500,10 @@ export const useGameDataStore = create<GameDataState>()(
 
       loadGameData: async (config, background = false, startup) => {
         const requestId = ++activeLoadRequestId
+        if (!startup && (remoteStartupPreparation || remoteStartupAttempt)) {
+          cancelRemoteStartup()
+          set({ remoteStartup: null })
+        }
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
@@ -694,11 +699,7 @@ export const useGameDataStore = create<GameDataState>()(
         // Invalidate results even when the underlying operation (notably local IPC
         // reads or an IndexedDB write) cannot be cancelled by AbortController.
         activeLoadRequestId += 1
-        remoteStartupAttempt?.abort()
-        remoteStartupAttempt = null
-        remoteStartupLoad = null
-        remoteStartupPreparation?.abort()
-        remoteStartupPreparation = null
+        cancelRemoteStartup()
         activeLoadController?.abort()
         activeLoadController = null
         set({

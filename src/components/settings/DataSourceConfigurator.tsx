@@ -481,7 +481,7 @@ export function DataSourceConfigurator({
                         id={remotePathId}
                         value={sourcePath}
                         onChange={(e) => handleUrlChange(e.target.value)}
-                        placeholder="https://github.com/username/example-data"
+                        placeholder="https://example.com/game-data"
                         disabled={isLoading}
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
