@@ -379,6 +379,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
       </div>
     )
   const intro = stepId === 'content' ? null : renderIntro()
+  const usesSplitLayout = stepId === 'basics' || stepId === 'rules'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -397,17 +398,20 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           key={stepId}
           className={cn(
             'min-h-0 min-w-0 flex-1',
-            stepId !== 'basics' && 'flex flex-col p-4 sm:px-6 lg:py-6',
+            !usesSplitLayout && 'flex flex-col p-4 sm:px-6 lg:py-6',
             stepId === 'content' ? 'overflow-hidden max-lg:py-3' : 'overflow-y-auto',
           )}
         >
           {validationError && stepId !== 'basics' && (
-            <Alert variant="destructive" className="mb-4 shrink-0">
+            <Alert
+              variant="destructive"
+              className={cn('mb-4 shrink-0', stepId === 'rules' && 'mx-4 mt-4 sm:mx-6')}
+            >
               <Warning className="size-4" />
               <AlertDescription>{validationError}</AlertDescription>
             </Alert>
           )}
-          {stepId !== 'basics' && intro}
+          {!usesSplitLayout && intro}
           {Step && (
             <Step
               intro={intro}

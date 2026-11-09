@@ -15,25 +15,22 @@ const RULE_OPTIONS = [
   {
     key: 'averageHitPoints',
     label: 'Average Hit Points',
-    description:
-      'Use fixed hit points when leveling up. Turn this off to roll or enter the result.',
+    description: 'Use fixed HP at level-up. Turn off to roll or enter HP.',
   },
   {
     key: 'optionalClassFeatures',
     label: 'Allow Optional Class Features',
-    description:
-      'Enable optional features. Choose individual features on the Class page after creation.',
+    description: 'Enable optional features for selection in Builder.',
   },
   {
     key: 'anyRaceSubclasses',
     label: 'Any-Race Subclasses',
-    description: 'Allow subclasses that normally require a particular race.',
+    description: 'Ignore race requirements for subclasses.',
   },
   {
     key: 'preferNewerPrintings',
     label: 'Prefer Newer Printings',
-    description:
-      'Show the newest printing when multiple versions are available in your selected books.',
+    description: 'Prefer newer versions in your selected books.',
   },
 ] as const
 
@@ -46,7 +43,7 @@ export function WizardVariantOptions({
 
   return (
     <TooltipProvider>
-      <div className="divide-y divide-border border-y border-border">
+      <div className="divide-y divide-border">
         {RULE_OPTIONS.map(({ key, label, description }) => {
           const id = baseId + key
           const detailsId = `${id}-details`
@@ -72,7 +69,7 @@ export function WizardVariantOptions({
             />
           )
           return (
-            <div key={key} className="flex items-center justify-between gap-5 min-h-13 py-2.5">
+            <div key={key} className="flex min-h-13 items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">
                 <Label htmlFor={id} className="text-sm font-semibold">
                   {label}

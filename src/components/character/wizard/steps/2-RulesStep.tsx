@@ -1,4 +1,5 @@
 import { CheckCircle, Circle } from '@phosphor-icons/react'
+import { type ReactNode, useId } from 'react'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { cn } from '@/lib/utils'
@@ -6,95 +7,126 @@ import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
 import { WizardVariantOptions } from '../WizardVariantOptions'
 
+const RULESETS = [
+  {
+    value: '2014',
+    label: '5e Legacy (2014)',
+    highlights: [
+      'Race usually provides ability score bonuses.',
+      'Backgrounds grant proficiencies and a feature.',
+      'Subclass levels vary by class.',
+      'Feats are optional in the core rules.',
+    ],
+  },
+  {
+    value: '2024',
+    label: '5.5e Revised (2024)',
+    highlights: [
+      'Backgrounds grant ability bonuses and an Origin feat.',
+      'Species have revised traits.',
+      'Revised classes choose subclasses at level 3.',
+      'Weapon Mastery adds options for eligible classes.',
+    ],
+  },
+] as const
+
 export function RulesStep({
   data,
   onChange,
+  intro,
   sources = [],
   variantRuleAvailability,
 }: StepProps & {
+  intro?: ReactNode
   sources?: SourceBook[]
   variantRuleAvailability?: VariantRuleContentAvailability
 }) {
+  const summaryId = useId()
+
   return (
-    <div className="@container space-y-7 sm:space-y-9">
-      <section className="space-y-3">
-        <div className="grid gap-3 @min-[32rem]:grid-cols-2">
-          {[
-            {
-              value: '2014' as const,
-              label: '5e Legacy (2014)',
-              description: 'Use the original 5th Edition rules and character options.',
-            },
-            {
-              value: '2024' as const,
-              label: '5.5e Revised (2024)',
-              description: 'Use the revised rules and compatible earlier options.',
-            },
-          ].map((option) => {
+    <div className="grid min-h-full md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <section className="@container min-w-0 p-4 sm:p-6">
+        {intro}
+        <div className="grid gap-3 @min-[22rem]:grid-cols-2">
+          {RULESETS.map((option) => {
             const selected = data.originSystem === option.value
+            const descriptionId = `${summaryId}-${option.value}`
             return (
-              <button
+              <div
                 key={option.value}
-                type="button"
-                aria-pressed={selected}
-                onClick={() =>
-                  onChange({
-                    originSystem: option.value,
-                    allowedSources: normalizeSelectableAllowedSources(
-                      data.allowedSources,
-                      option.value,
-                      sources,
-                    ),
-                    ...(option.value === '2024'
-                      ? {
-                          variantRules: {
-                            ...data.variantRules,
-                            preferNewerPrintings: true,
-                          },
-                        }
-                      : {}),
-                  })
-                }
                 className={cn(
-                  'flex items-start gap-2.5 rounded-md border border-border px-3 py-3 text-left transition-colors motion-reduce:transition-none',
-                  selected ? 'border-primary/50 bg-surface-selected' : 'hover:bg-surface-hover',
+                  'min-w-0 overflow-hidden rounded-lg border',
+                  selected ? 'border-primary/50' : 'border-border',
                 )}
               >
-                {selected ? (
-                  <CheckCircle
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    weight="fill"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Circle
-                    className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                )}
-                <div>
-                  <div className="text-sm font-semibold">{option.label}</div>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {option.description}
-                  </p>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  aria-describedby={descriptionId}
+                  aria-pressed={selected}
+                  onClick={() =>
+                    onChange({
+                      originSystem: option.value,
+                      allowedSources: normalizeSelectableAllowedSources(
+                        data.allowedSources,
+                        option.value,
+                        sources,
+                      ),
+                      ...(option.value === '2024'
+                        ? {
+                            variantRules: {
+                              ...data.variantRules,
+                              preferNewerPrintings: true,
+                            },
+                          }
+                        : {}),
+                    })
+                  }
+                  className={cn(
+                    'flex w-full items-center gap-2.5 border-b border-border px-3 py-3 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+                    selected ? 'bg-surface-selected' : 'hover:bg-surface-hover',
+                  )}
+                >
+                  {selected ? (
+                    <CheckCircle
+                      className="size-4 shrink-0 text-primary"
+                      weight="fill"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Circle className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
+                  {option.label}
+                </button>
+                <ul
+                  id={descriptionId}
+                  className="list-disc space-y-2 py-3 pr-3 pl-7 text-sm text-muted-foreground"
+                >
+                  {option.highlights.map((highlight) => (
+                    <li key={highlight}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
             )
           })}
         </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          The revised rules update many spells and still support compatible older options.
+        </p>
       </section>
 
-      <section className="space-y-3">
-        <h3 className="text-base font-semibold">Rule Options</h3>
+      <aside className="min-w-0 space-y-3 border-t border-border bg-workspace-canvas p-4 sm:p-6 md:border-t-0 md:border-l">
+        <h3 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground after:h-px after:flex-1 after:bg-border">
+          Rule Options
+        </h3>
         <WizardVariantOptions
           data={data}
           onChange={onChange}
           contentAvailability={variantRuleAvailability}
         />
-        <p className="border-l-2 border-border bg-surface-raised/50 px-3 py-2 text-xs text-muted-foreground">
-          Some options depend on your sourcebooks. You can revisit Rules after choosing them.
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Some options depend on sourcebooks. Revisit Rules after choosing them.
         </p>
-      </section>
+      </aside>
     </div>
   )
 }
