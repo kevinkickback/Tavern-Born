@@ -105,6 +105,7 @@ const managedClassSpellChoiceSchema = z
 const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
 
 const originSystemSchema = z.enum(['2014', '2024'])
+const abilityScoreMethodSchema = z.enum(['point-buy', 'standard-array', 'custom'])
 
 const abilityScoresSchema = z.object({
   strength: abilityScoreSchema,
@@ -119,7 +120,7 @@ const variantRulesSchema = z
   .object({
     optionalClassFeatures: z.boolean().default(false),
     averageHitPoints: z.boolean().default(true),
-    abilityScoreMethod: z.enum(['point-buy', 'standard-array', 'custom']).optional(),
+    abilityScoreMethod: abilityScoreMethodSchema.optional(),
     anyRaceSubclasses: z.boolean().default(false),
     preferNewerPrintings: z.boolean().optional(),
     ignoreEquipRestrictions: z.boolean().default(false),
@@ -722,10 +723,6 @@ const provenanceLedgerSchema = z.object({
   choices: z.array(choiceRecordSchema),
 })
 
-const abilityScoreMethodSchema = z
-  .enum(['point-buy', 'standard-array', 'custom', 'manual'])
-  .transform((method) => (method === 'manual' ? 'custom' : method))
-
 export const wizardBasicsSchema = z.object({
   name: z
     .string()
@@ -735,9 +732,6 @@ export const wizardBasicsSchema = z.object({
 
 export const wizardRulesSchema = z.object({
   originSystem: originSystemSchema,
-  abilityScoreMethod: abilityScoreMethodSchema.refine((v) => !!v, {
-    message: 'Please select an ability score generation method',
-  }),
 })
 
 export const wizardContentSchema = z.object({
@@ -757,7 +751,8 @@ export const wizardBackgroundSchema = z.object({
 })
 
 export const wizardAbilitiesSchema = z.object({
-  abilityScores: abilityScoresSchema.optional(),
+  abilityScoreMethod: abilityScoreMethodSchema,
+  abilityScores: abilityScoresSchema,
 })
 
 const spellSlotLevelSchema = z

@@ -72,7 +72,7 @@ describe('Wizard rule controls', () => {
 
   test('disables content-specific rules whose records are unavailable', () => {
     render(
-      <ContentStep
+      <RulesStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, preferNewerPrintings: false },
@@ -93,16 +93,18 @@ describe('Wizard rule controls', () => {
       (screen.getByRole('switch', { name: 'Prefer Newer Printings' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true)
-    expect(screen.getAllByText('Unavailable with selected content')).toHaveLength(3)
+    expect(screen.queryByText('Unavailable with selected content')).toBeNull()
+    const unavailable = screen.getByRole('group', { name: 'Any-Race Subclasses' })
+    expect(unavailable.getAttribute('tabindex')).toBe('0')
   })
 
   test('enables a content-specific rule when its matching record is available', () => {
     render(
-      <ContentStep
+      <RulesStep
         data={INITIAL_CHARACTER_DATA}
         onChange={vi.fn()}
         sources={[]}
-        contentAvailability={{
+        variantRuleAvailability={{
           optionalClassFeatures: true,
           anyRaceSubclasses: true,
           preferNewerPrintings: true,
@@ -123,9 +125,10 @@ describe('Wizard rule controls', () => {
     ).toBe(false)
   })
 
-  test('explains that newer printings are always preferred for 2024 characters', () => {
+  test('explains the locked 2024 printing preference in its tooltip', async () => {
+    const user = userEvent.setup()
     render(
-      <ContentStep
+      <RulesStep
         data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2024' }}
         onChange={vi.fn()}
         sources={[]}
@@ -137,14 +140,16 @@ describe('Wizard rule controls', () => {
     }) as HTMLButtonElement
     expect(preferNewerPrintings.disabled).toBe(true)
     expect(preferNewerPrintings.getAttribute('data-state')).toBe('checked')
-    expect(screen.getByText('Always on for 2024 characters')).toBeTruthy()
+    expect(screen.queryByText('Always on for 2024 characters')).toBeNull()
+    await user.hover(screen.getByRole('group', { name: 'Prefer Newer Printings' }))
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Always on for 2024 characters')
   })
 
   test('allows a saved unavailable rule to be switched off', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
-      <ContentStep
+      <RulesStep
         data={{
           ...INITIAL_CHARACTER_DATA,
           variantRules: {
@@ -269,6 +274,6 @@ describe('Wizard rule controls', () => {
       'border',
     )
     expect(container.querySelector('[data-allowed-sources-count]')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Sourcebook presets' })).toBeNull()
   })
 })

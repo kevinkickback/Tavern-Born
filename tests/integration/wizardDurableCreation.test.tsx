@@ -222,7 +222,6 @@ test('outside mouse and touch clicks preserve the current wizard step and entere
 })
 
 test.each([
-  'Cancel',
   'Close',
   'Escape',
 ] as const)('%s confirms changed input and only confirmed discard resets the wizard', async (action) => {
@@ -277,7 +276,6 @@ test.each([
 })
 
 test.each([
-  'Cancel',
   'Close',
   'Escape',
 ] as const)('%s closes an untouched wizard without confirmation', async (action) => {
@@ -293,13 +291,13 @@ test('non-text input requires confirmation and the confirmation backdrop retains
   const user = userEvent.setup()
   render(<WizardHarness />)
   await user.click(screen.getByRole('button', { name: 'Change gender' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   const confirmation = screen.getByRole('alertdialog', { name: 'Discard character creation?' })
   const backdrop = document.querySelector<HTMLElement>('[data-slot="alert-dialog-overlay"]')!
   await user.click(backdrop)
   expect(screen.getByRole('alertdialog')).toBe(confirmation)
   await user.click(within(confirmation).getByRole('button', { name: 'Keep editing' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('alertdialog')).toBeTruthy()
 })
 
@@ -313,7 +311,7 @@ test('no-op and fully reverted structured choices close without confirmation', a
   }
   await user.click(screen.getByRole('button', { name: 'Change sources' }))
   await user.click(screen.getByRole('button', { name: 'Restore sources' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('alertdialog')).toBeNull()
   expect(screen.queryByRole('dialog')).toBeNull()
 })
@@ -342,12 +340,12 @@ test('late automatic source defaults stay pristine after an edit is reverted, wh
   )
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
   await user.click(screen.getByRole('button', { name: 'Change gender' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByRole('alertdialog')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
   await user.click(screen.getByRole('button', { name: 'Change sources' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('alertdialog', { name: 'Discard character creation?' })).toBeTruthy()
 })
 
@@ -378,23 +376,23 @@ test.each([
     }),
   )
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE')
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   if (keepGenderChange) {
     expect(screen.getByRole('alertdialog')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Keep editing' }))
     await user.click(screen.getByRole('button', { name: 'Change gender' }))
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Close' }))
   }
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByRole('alertdialog')).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
   await user.click(screen.getByRole('button', { name: 'Toggle additional source' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('alertdialog')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Keep editing' }))
   await user.click(screen.getByRole('button', { name: 'Toggle additional source' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog')).toBeNull()
 })
 
@@ -413,7 +411,7 @@ test('explicit empty sources survive refresh while confirmation is open and rese
   render(<WizardHarness />)
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
   await user.click(screen.getByRole('button', { name: 'Clear sources' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('alertdialog')).toBeTruthy()
   await act(() =>
     useGameDataStore.setState({
@@ -429,16 +427,16 @@ test('explicit empty sources survive refresh while confirmation is open and rese
   )
   await user.click(screen.getByRole('button', { name: 'Keep editing' }))
   expect(screen.getByLabelText('Sources').textContent).toBe('')
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('alertdialog')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Keep editing' }))
   await user.click(screen.getByRole('button', { name: 'Restore sources' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
   await user.click(screen.getByRole('button', { name: 'Clear sources' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   await user.click(screen.getByRole('button', { name: 'Discard changes' }))
   await user.click(screen.getByRole('button', { name: 'Reopen wizard' }))
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE,TCE')
@@ -461,7 +459,7 @@ test('clearing already empty sources remains a no-op for delayed defaults', asyn
     }),
   )
   expect(screen.getByLabelText('Sources').textContent).toBe('XGE')
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByRole('alertdialog')).toBeNull()
 })
@@ -484,7 +482,6 @@ test('keeps wizard input and permits retry after a delayed creation failure', as
   await user.click(screen.getByRole('button', { name: 'Create' }))
   expect(screen.getByRole('button', { name: 'Creating…' }).hasAttribute('disabled')).toBe(true)
   expect(screen.getByRole('button', { name: 'Back' }).hasAttribute('disabled')).toBe(true)
-  expect(screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')).toBe(true)
   expect(screen.getByRole('button', { name: 'Close' }).hasAttribute('disabled')).toBe(true)
   await user.keyboard('{Escape}')
   await user.click(wizardBackdrop())

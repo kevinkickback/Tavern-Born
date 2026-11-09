@@ -1,47 +1,73 @@
-import { BookOpen, Warning } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { Info, MagnifyingGlass, Warning } from '@phosphor-icons/react'
+import { type ReactNode, useState } from 'react'
 import { SourcebookChoice } from '@/components/SourcebookChoice'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import {
   getSourceCompatibility,
   normalizeAllowedSources,
   normalizeSelectableAllowedSources,
 } from '@/lib/sourceCompatibility'
-import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
+import {
+  getImplicitSource,
+  IMPLICIT_SOURCES,
+  SOURCE_PRESETS,
+  type SourcePreset,
+} from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
-import { NO_CONTENT_SPECIFIC_RULES, WizardVariantOptions } from '../WizardVariantOptions'
 
 export function ContentStep({
   data,
   onChange,
   sources = [],
-  contentAvailability = NO_CONTENT_SPECIFIC_RULES,
   isBundledSrd = false,
+  renderIntro,
 }: StepProps & {
   sources?: SourceBook[]
-  contentAvailability?: VariantRuleContentAvailability
   isBundledSrd?: boolean
+  renderIntro?: (titleAccessory?: ReactNode, actions?: ReactNode) => ReactNode
 }) {
   const [search, setSearch] = useState('')
-  const query = search.trim().toLowerCase()
+  const [requestedCategory, setCategory] = useState('all')
+  const [selectedOnly, setSelectedOnly] = useState(false)
   const selectableSources = sources.filter((source) => source.hasCharacterOptions !== false)
-  const displaySources = selectableSources.filter(
+  const displaySources = sources.filter(
+    (source) => source.hasCharacterOptions !== false || IMPLICIT_SOURCES.has(source.abbreviation),
+  )
+  const hasAdditionalSources = selectableSources.some(
     (source) => !IMPLICIT_SOURCES.has(source.abbreviation),
   )
-  const configuredSources = data.allowedSources || []
-  const allowedSources = data.originSystem
-    ? normalizeSelectableAllowedSources(configuredSources, data.originSystem, sources)
-    : configuredSources
+  const query = hasAdditionalSources ? search.trim().toLowerCase() : ''
+  const filterSelected = hasAdditionalSources && selectedOnly
+  const includedCore = getImplicitSource(data.originSystem)
+  if (displaySources.some((source) => source.abbreviation === includedCore)) {
+    const otherEdition = data.originSystem === '2024' ? '2014' : '2024'
+    const otherCore = getImplicitSource(otherEdition)
+    if (!displaySources.some((source) => source.abbreviation === otherCore)) {
+      // This is a disabled reference in the UI. Only the loaded catalog supplies selectable content.
+      displaySources.push({
+        abbreviation: otherCore,
+        name: "Player's Handbook",
+        group: 'core',
+        year: Number(otherEdition),
+        hasCharacterOptions: false,
+      })
+    }
+  }
+  const allowedSources = normalizeSelectableAllowedSources(
+    data.allowedSources,
+    data.originSystem,
+    sources,
+  )
+  const selected = new Set(allowedSources)
   const availableSourceSet = new Set(selectableSources.map((source) => source.abbreviation))
 
   const sourcesByGroup = displaySources.reduce<Record<string, SourceBook[]>>((acc, source) => {
-    if (!acc[source.group]) {
-      acc[source.group] = []
-    }
-    acc[source.group].push(source)
+    const group = IMPLICIT_SOURCES.has(source.abbreviation) ? 'core' : source.group
+    if (!acc[group]) acc[group] = []
+    acc[group].push(source)
     return acc
   }, {})
 
@@ -68,133 +94,113 @@ export function ContentStep({
     ]),
   ]
 
+  const category =
+    hasAdditionalSources && sourcesByGroup[requestedCategory]?.length ? requestedCategory : 'all'
+  const visibleGroups = groupOrder.flatMap((group) => {
+    if (category !== 'all' && category !== group) return []
+    const books = (sourcesByGroup[group] ?? [])
+      .filter(
+        (source) =>
+          (!filterSelected ||
+            (!IMPLICIT_SOURCES.has(source.abbreviation) && selected.has(source.abbreviation))) &&
+          (source.name.toLowerCase().includes(query) ||
+            source.abbreviation.toLowerCase().includes(query)),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name) || a.abbreviation.localeCompare(b.abbreviation))
+    return books.length > 0 ? [{ group, books }] : []
+  })
+
   const toggleSource = (sourceAbbr: string) => {
+    if (IMPLICIT_SOURCES.has(sourceAbbr)) return
     const source =
       selectableSources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
-    if (data.originSystem && !getSourceCompatibility(source, data.originSystem).compatible) return
-    const currentSources = allowedSources
-    const nextSources = currentSources.includes(sourceAbbr)
-      ? currentSources.filter((source) => source !== sourceAbbr)
-      : [...currentSources, sourceAbbr]
-    const normalizedSources = data.originSystem
-      ? normalizeAllowedSources(nextSources, data.originSystem, sources)
-      : nextSources
-    onChange({ allowedSources: normalizedSources })
+    if (!getSourceCompatibility(source, data.originSystem).compatible) return
+    const nextSources = allowedSources.includes(sourceAbbr)
+      ? allowedSources.filter((source) => source !== sourceAbbr)
+      : [...allowedSources, sourceAbbr]
+    onChange({ allowedSources: normalizeAllowedSources(nextSources, data.originSystem, sources) })
   }
 
-  const applySourcePreset = (preset: SourcePreset) => {
-    const presetSources = preset.abbreviations.filter((abbreviation) =>
-      availableSourceSet.has(abbreviation),
+  const getPresetSources = (preset: SourcePreset) =>
+    normalizeSelectableAllowedSources(
+      preset.abbreviations.filter((abbreviation) => availableSourceSet.has(abbreviation)),
+      data.originSystem,
+      sources,
     )
-    onChange({
-      allowedSources: data.originSystem
-        ? normalizeAllowedSources(presetSources, data.originSystem, sources)
-        : presetSources,
-    })
-  }
-
-  const selectNoneSources = () => {
-    onChange({ allowedSources: [] })
-  }
 
   const isPresetActive = (preset: SourcePreset) => {
-    const availablePresetSources = preset.abbreviations.filter((abbreviation) =>
-      availableSourceSet.has(abbreviation),
-    )
-    const presetSources = data.originSystem
-      ? normalizeSelectableAllowedSources(availablePresetSources, data.originSystem, sources)
-      : availablePresetSources
-    if (presetSources.length !== allowedSources.length) {
+    const presetSources = getPresetSources(preset)
+    if (presetSources.length === 0 || presetSources.length !== allowedSources.length) {
       return false
     }
     return presetSources.every((abbreviation) => allowedSources.includes(abbreviation))
   }
 
+  const activePreset =
+    allowedSources.length === 0 ? 'none' : (SOURCE_PRESETS.find(isPresetActive)?.id ?? 'custom')
   const presetSourceAbbreviations = new Set(
     SOURCE_PRESETS.flatMap((preset) => preset.abbreviations),
   )
   const hasNonPresetSourcesSelected = allowedSources.some(
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
-  const preferNewerPrintingsEnabled =
-    data.originSystem === '2024' || (data.variantRules?.preferNewerPrintings ?? false)
+
+  const sourceWarning =
+    'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
+
+  const count = !isBundledSrd && allowedSources.length > 0 && (
+    <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+      <span data-allowed-sources-count>{allowedSources.length}</span> selected
+    </span>
+  )
+  const presets = !isBundledSrd && hasAdditionalSources && (
+    <fieldset
+      className="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+      aria-label="Sourcebook presets"
+    >
+      <span className="mr-1 text-xs text-muted-foreground">Presets</span>
+      {SOURCE_PRESETS.map((preset) => (
+        <Button
+          key={preset.id}
+          type="button"
+          size="sm"
+          variant={activePreset === preset.id ? 'default' : 'outline'}
+          aria-pressed={activePreset === preset.id}
+          title={preset.description}
+          onClick={() => onChange({ allowedSources: getPresetSources(preset) })}
+        >
+          {preset.label}
+        </Button>
+      ))}
+      <Button
+        type="button"
+        size="sm"
+        variant={activePreset === 'none' ? 'default' : 'outline'}
+        aria-pressed={activePreset === 'none'}
+        onClick={() => onChange({ allowedSources: [] })}
+      >
+        None
+      </Button>
+    </fieldset>
+  )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-6 md:flex-row">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" weight="fill" />
-            <h4 className="font-semibold text-lg">Additional Content</h4>
-            {!isBundledSrd && allowedSources.length > 0 && (
-              <span
-                data-allowed-sources-count
-                className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]"
-              >
-                {allowedSources.length}
-              </span>
-            )}
-          </div>
-          {!isBundledSrd && (
-            <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
-              {[
-                ...SOURCE_PRESETS.map((preset) => ({
-                  key: preset.id,
-                  label: preset.label,
-                  title: preset.description,
-                  onClick: () => applySourcePreset(preset),
-                  active: isPresetActive(preset),
-                })),
-                {
-                  key: 'none',
-                  label: 'None',
-                  title: 'Clear all selected content',
-                  onClick: selectNoneSources,
-                  active: false,
-                },
-              ].map((action, index, allActions) => (
-                <div key={action.key} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={action.onClick}
-                    className={cn(
-                      'font-medium text-primary hover:underline',
-                      action.active && 'underline',
-                    )}
-                    title={action.title}
-                  >
-                    {action.label}
-                  </button>
-                  {index < allActions.length - 1 && (
-                    <span className="text-muted-foreground">|</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {isBundledSrd ? (
-          <div className="px-5 py-6 text-center">
-            <p className="text-sm font-semibold text-foreground">Using the included SRD</p>
-            <p className="mx-auto mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              The included SRD does not provide additional sourcebooks to enable. To add more
-              options, open Settings → Game Data and add compatible 5etools data.
-            </p>
-          </div>
-        ) : displaySources.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground border border-border rounded-lg">
-            No additional content is available. To add sourcebooks, open Settings → Game Data.
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 flex flex-col gap-2">
-            <div className="relative shrink-0">
+    <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
+      {renderIntro ? renderIntro(count, presets) : presets}
+      <div className="shrink-0 pb-1">
+        {!isBundledSrd && hasAdditionalSources && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-36 flex-1">
+              <MagnifyingGlass
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 aria-label="Search sources"
-                placeholder="Search by name or abbreviation…"
+                placeholder="Find a book by name or code…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="pr-16"
+                className="pl-8 pr-14"
               />
               {search && (
                 <button
@@ -206,106 +212,116 @@ export function ContentStep({
                 </button>
               )}
             </div>
-            {query &&
-              !displaySources.some(
-                (source) =>
-                  source.name.toLowerCase().includes(query) ||
-                  source.abbreviation.toLowerCase().includes(query),
-              ) && (
-                <p role="status" className="py-6 text-sm text-muted-foreground">
-                  No sources match your search.
-                </p>
-              )}
-            <section
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
-              tabIndex={0}
-              aria-label="Additional Content"
-              className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <select
+              aria-label="Sourcebook category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="h-9 max-w-full rounded-md border border-border bg-workspace-pane px-2 text-sm focus-visible:outline-ring"
             >
-              {groupOrder.map((group) => {
-                const groupSources = sourcesByGroup[group]?.filter(
-                  (source) =>
-                    !query ||
-                    source.name.toLowerCase().includes(query) ||
-                    source.abbreviation.toLowerCase().includes(query),
-                )
-                if (!groupSources || groupSources.length === 0) return null
-
-                return (
-                  <div key={group} className="space-y-1.5">
-                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {groupLabels[group] ?? group}
-                    </h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {groupSources.map((source) => {
-                        const compatibility = data.originSystem
-                          ? getSourceCompatibility(source, data.originSystem)
-                          : { compatible: true }
-                        return (
-                          <SourcebookChoice
-                            key={source.abbreviation}
-                            source={source}
-                            selected={allowedSources.includes(source.abbreviation)}
-                            compatibility={compatibility}
-                            onClick={() => toggleSource(source.abbreviation)}
-                            className="transition-all"
-                            wrapName
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </section>
+              <option value="all">All sourcebooks</option>
+              {groupOrder
+                .filter((group) => sourcesByGroup[group]?.length > 0)
+                .map((group) => (
+                  <option key={group} value={group}>
+                    {groupLabels[group] ?? group}
+                  </option>
+                ))}
+            </select>
+            <select
+              aria-label="Sourcebook selection filter"
+              value={filterSelected ? 'selected' : 'all'}
+              onChange={(event) => setSelectedOnly(event.target.value === 'selected')}
+              className="h-9 max-w-full rounded-md border border-border bg-workspace-pane px-2 text-sm focus-visible:outline-ring"
+            >
+              <option value="all">Show all</option>
+              <option value="selected">Selected only</option>
+            </select>
           </div>
         )}
-      </section>
-
-      <aside className="shrink-0 space-y-5 md:w-56 md:overflow-y-auto md:border-l md:border-border md:pl-5">
-        <section className="space-y-4">
-          <h3 className="text-sm font-semibold">Options for this content</h3>
-          <WizardVariantOptions
-            data={data}
-            onChange={onChange}
-            keys={['optionalClassFeatures', 'anyRaceSubclasses', 'preferNewerPrintings']}
-            contentAvailability={contentAvailability}
-          />
-        </section>{' '}
-        <div aria-live="polite" className="contents">
-          {hasNonPresetSourcesSelected && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                Non-recommended sources often contain DM-only or outdated content. These may clutter
-                your options with material not intended for players.
-              </span>
-            </div>
-          )}
-
-          {data.originSystem === '2024' && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                {preferNewerPrintingsEnabled
-                  ? 'Revised replacements are always used. Compatible older options remain available when no revised version exists.'
-                  : ''}
-              </span>
-            </div>
-          )}
-
-          {data.originSystem === '2014' && (
-            <div className="flex flex-shrink-0 items-center gap-1.5 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              <Warning className="h-3.5 w-3.5 flex-shrink-0 text-warning" />
-              <span>
-                {preferNewerPrintingsEnabled
-                  ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
-                  : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
-              </span>
-            </div>
-          )}
+      </div>
+      {isBundledSrd ? (
+        <div className="px-5 py-6 text-center">
+          <p className="text-sm font-semibold">Using the included SRD</p>
+          <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
+            The included SRD does not provide additional sourcebooks to enable. To add more options,
+            open Settings → Game Data and add compatible 5etools data.
+          </p>
         </div>
-      </aside>
-    </div>
+      ) : displaySources.length === 0 ? (
+        <p className="py-4 text-sm text-muted-foreground">
+          No additional content is available. To add sourcebooks, open Settings → Game Data.
+        </p>
+      ) : (
+        <>
+          <section
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
+            tabIndex={0}
+            aria-label="Additional Content"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-border bg-workspace-canvas p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {visibleGroups.length === 0 && (
+              <p role="status" className="p-3 text-sm text-muted-foreground">
+                {category === 'all' && !filterSelected
+                  ? 'No sources match your search.'
+                  : 'No books match these filters.'}
+              </p>
+            )}
+            {visibleGroups.map(({ group, books }) => (
+              <section key={group} className="space-y-2">
+                <h4 className="flex items-baseline gap-2 text-sm font-semibold">
+                  {groupLabels[group] ?? group}
+                  <span aria-hidden="true" className="text-xs font-normal text-muted-foreground">
+                    {books.length}
+                  </span>
+                </h4>
+                <div className="grid gap-2 @min-[25rem]:grid-cols-2 @min-[54rem]:grid-cols-3">
+                  {books.map((source) => (
+                    <SourcebookChoice
+                      key={source.abbreviation}
+                      source={source}
+                      selected={selected.has(source.abbreviation)}
+                      required={source.abbreviation === includedCore}
+                      compatibility={getSourceCompatibility(source, data.originSystem)}
+                      onClick={() => toggleSource(source.abbreviation)}
+                      variant="wizard"
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+            {!hasAdditionalSources && (
+              <p className="py-2 text-sm text-muted-foreground">
+                No additional content is available. To add sourcebooks, open Settings → Game Data.
+              </p>
+            )}
+          </section>
+          {hasAdditionalSources && (
+            <div className="shrink-0 space-y-1.5 text-xs leading-relaxed">
+              <div aria-live="polite" aria-atomic="true">
+                <p
+                  aria-hidden={!hasNonPresetSourcesSelected}
+                  className={cn(
+                    'flex items-start gap-2 border-l-2 border-border bg-surface-raised/50 px-3 py-1 text-warning-foreground transition-opacity duration-200 motion-reduce:transition-none',
+                    !hasNonPresetSourcesSelected && 'opacity-0',
+                  )}
+                >
+                  <Warning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+                  <span>{sourceWarning}</span>
+                </p>
+              </div>
+              {data.originSystem === '2024' && (
+                <p className="flex items-start gap-2 text-muted-foreground">
+                  <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Revised replacements are always used. Compatible older options remain available
+                    when no revised version exists.
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </section>
   )
 }

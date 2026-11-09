@@ -1,4 +1,4 @@
-/** Sort visible labels while leaving catalog order available for draft defaults. */
+/** Sort visible labels by name and source without mutating catalog order. */
 export function sortCreatorOptions<T extends { name: string; source?: string }>(
   entries: readonly T[],
   label: (entry: T) => string = (entry) => entry.name,

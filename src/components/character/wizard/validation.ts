@@ -1,3 +1,5 @@
+import { getAvailableSubraces, requiresDraconicAncestry } from '@/lib/calculations/raceUtils'
+import type { Race5e } from '@/types/5etools'
 import {
   wizardAbilitiesSchema,
   wizardBackgroundSchema,
@@ -20,7 +22,7 @@ const STEP_SCHEMAS = {
 } as const
 
 interface WizardStepAvailability {
-  races: unknown[]
+  races: Race5e[]
   classes: unknown[]
   backgrounds: unknown[]
 }
@@ -49,20 +51,25 @@ export function validateStep(
     }
   }
 
+  if (
+    (step === 'race' || step === 'review') &&
+    requiresDraconicAncestry({ name: characterData.race, source: characterData.raceSource })
+  ) {
+    const race = gameData?.races.find(requiresDraconicAncestry)
+    const selectedAncestry = getAvailableSubraces(race).some(
+      (ancestry) =>
+        ancestry.name === characterData.subrace && ancestry.source === characterData.subraceSource,
+    )
+    if (!selectedAncestry) {
+      return { valid: false, error: 'Choose a draconic ancestry on the Race step.' }
+    }
+  }
+
   const schema = STEP_SCHEMAS[step as keyof typeof STEP_SCHEMAS]
   if (!schema) return { valid: true }
 
   const result = schema.safeParse(characterData)
   if (result.success) return { valid: true }
 
-  const first = result.error.errors[0]
-  const fields = result.error.errors
-    .map((e) => e.path[0])
-    .filter((p): p is string => typeof p === 'string')
-
-  return {
-    valid: false,
-    error: first?.message ?? 'Validation failed',
-    fields: fields.length > 0 ? fields : undefined,
-  }
+  return { valid: false, error: result.error.errors[0]?.message ?? 'Validation failed' }
 }

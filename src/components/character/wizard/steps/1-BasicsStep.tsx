@@ -1,5 +1,5 @@
-import { IdentificationCard } from '@phosphor-icons/react'
-import { useCallback, useId } from 'react'
+import { type ReactNode, useCallback, useId } from 'react'
+import { IDENTITY_PLACEHOLDERS } from '@/components/character/identityPlaceholders'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,25 +10,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
+import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 import type { StepProps } from '../types'
 
-export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepProps) {
+const physicalFields = [
+  { key: 'height', label: 'Height' },
+  { key: 'weight', label: 'Weight' },
+  { key: 'eyes', label: 'Eyes' },
+] as const
+
+export function BasicsStep({
+  data,
+  onChange,
+  intro,
+  nameError,
+}: StepProps & { intro?: ReactNode; nameError?: string | null }) {
   const characterNameId = useId()
-  const playerNameId = useId()
+  const physicalFieldId = useId()
   const ageId = useId()
   const genderId = useId()
-
-  const hasError = (field: string) => invalidFields.has(field)
+  const hairId = useId()
 
   const handlePortraitChange = useCallback(
     (p: string | null) => {
-      onChange({
-        portrait: p || '',
-        portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
-      })
+      onChange({ portrait: p ?? '' })
     },
     [onChange],
   )
@@ -40,96 +47,102 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
     [onChange],
   )
 
-  return (
-    <div className="flex min-h-full flex-col gap-5">
-      <section className="overflow-hidden rounded-lg border border-border bg-workspace-pane">
-        <div className="flex items-center gap-2 border-b border-border bg-surface-raised px-4 py-3">
-          <IdentificationCard className="size-4 text-primary" weight="duotone" />
-          <div>
-            <h3 className="text-sm font-semibold">Character identity</h3>
-            <p className="text-xs text-muted-foreground">
-              Add the details used on your character sheet.
+  const identity = (
+    <div>
+      {intro}
+      <div className="grid grid-cols-3 gap-2.5">
+        <div className="col-span-full min-w-0 space-y-1.5">
+          <Label htmlFor={characterNameId}>Character Name</Label>
+          <Input
+            id={characterNameId}
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? `${characterNameId}-error` : undefined}
+            value={data.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="Enter character name"
+            className={cn(
+              nameError && 'border-destructive focus-visible:ring-destructive animate-shake',
+            )}
+          />
+          {nameError && (
+            <p id={`${characterNameId}-error`} className="text-xs text-destructive">
+              {nameError}
             </p>
-          </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 gap-x-5 gap-y-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="space-y-2">
-            <Label htmlFor={characterNameId}>Character Name</Label>
+        {physicalFields.map(({ key, label }) => (
+          <div key={key} className="min-w-0 space-y-1.5">
+            <Label htmlFor={`${physicalFieldId}-${key}`}>{label}</Label>
             <Input
-              id={characterNameId}
-              value={data.name}
-              onChange={(e) => onChange({ name: e.target.value })}
-              placeholder="Enter character name"
-              className={cn(
-                hasError('name') &&
-                  'border-destructive focus-visible:ring-destructive animate-shake',
-              )}
+              id={`${physicalFieldId}-${key}`}
+              value={data[key]}
+              onChange={(e) => onChange({ [key]: e.target.value })}
+              placeholder={IDENTITY_PLACEHOLDERS[key]}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={playerNameId}>Player Name</Label>
-            <Input
-              id={playerNameId}
-              value={data.playerName}
-              onChange={(e) => onChange({ playerName: e.target.value })}
-              placeholder="Enter player name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={ageId}>Age</Label>
-            <Input
-              id={ageId}
-              type="number"
-              min={0}
-              step={1}
-              value={data.age ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value
-                if (raw === '') {
-                  onChange({ age: null })
-                  return
-                }
-                const parsed = Number.parseInt(raw, 10)
-                if (Number.isNaN(parsed)) {
-                  return
-                }
-                onChange({ age: Math.max(0, parsed) })
-              }}
-              placeholder="Enter age"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={genderId}>Gender</Label>
-            <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
-              <SelectTrigger id={genderId}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Non-binary">Non-binary</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        ))}
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor={ageId}>Age</Label>
+          <Input
+            id={ageId}
+            type="number"
+            min={0}
+            step={1}
+            value={data.age ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') {
+                onChange({ age: null })
+                return
+              }
+              const parsed = Number.parseInt(raw, 10)
+              if (Number.isNaN(parsed)) {
+                return
+              }
+              onChange({ age: Math.max(0, parsed) })
+            }}
+            placeholder={IDENTITY_PLACEHOLDERS.age}
+          />
         </div>
-      </section>
-
-      <section className="min-h-[28rem] flex-1">
-        <PortraitPicker
-          portrait={data.portrait}
-          transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
-          name={data.name}
-          level={1}
-          race="Race"
-          characterClass="Class"
-          gender={data.gender}
-          onPortraitChange={handlePortraitChange}
-          onTransformChange={handleTransformChange}
-          density="compact"
-          collapsible={false}
-        />
-      </section>
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor={genderId}>Gender</Label>
+          <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
+            <SelectTrigger id={genderId} className="w-full">
+              <SelectValue placeholder={IDENTITY_PLACEHOLDERS.gender} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+              <SelectItem value="Non-binary">Non-binary</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor={hairId}>Hair</Label>
+          <Input
+            id={hairId}
+            value={data.hair}
+            onChange={(e) => onChange({ hair: e.target.value })}
+            placeholder={IDENTITY_PLACEHOLDERS.hair}
+          />
+        </div>
+      </div>
     </div>
+  )
+
+  return (
+    <PortraitPicker
+      identity={identity}
+      portrait={data.portrait}
+      transform={data.portraitTransform}
+      name={data.name}
+      level={1}
+      race={getRaceDisplayName(data.race, data.subrace) || 'Race'}
+      characterClass={data.class || 'Class'}
+      gender={data.gender}
+      onPortraitChange={handlePortraitChange}
+      onTransformChange={handleTransformChange}
+    />
   )
 }

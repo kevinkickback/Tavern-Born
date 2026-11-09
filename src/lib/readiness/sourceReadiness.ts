@@ -2,6 +2,7 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
+import { requiresDraconicAncestry } from '@/lib/calculations/raceUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Character } from '@/types/character'
 import { readinessClassKey, readinessIssue } from './readinessIssue'
@@ -12,6 +13,20 @@ export function validateSourceReferences(
   calculation: CharacterCalculationContext,
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
+  if (
+    requiresDraconicAncestry(calculation.raceResolution.parentRace) &&
+    calculation.raceResolution.subraceData?._isVersion !== true
+  ) {
+    issues.push(
+      readinessIssue(
+        'identity:race',
+        'blocking',
+        'race',
+        'Choose a draconic ancestry',
+        'The selected Dragonborn needs a dragon ancestor for its breath weapon and resistance.',
+      ),
+    )
+  }
   if (character.race && !calculation.raceResolution.parentRace) {
     issues.push(
       readinessIssue(

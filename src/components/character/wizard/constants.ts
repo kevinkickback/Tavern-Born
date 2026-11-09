@@ -9,24 +9,75 @@ import {
   Users,
 } from '@phosphor-icons/react'
 import { DEFAULT_PORTRAIT_TRANSFORM, PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
-import type { WizardStep } from './types'
+import type { CharacterWizardData, WizardStep } from './types'
 
 export const WIZARD_STEPS: WizardStep[] = [
-  { id: 'basics', label: 'Basics', icon: User },
-  { id: 'rules', label: 'Rules', icon: Sparkle },
-  { id: 'content', label: 'Additional Content', icon: Books },
-  { id: 'race', label: 'Race', icon: Users },
-  { id: 'class', label: 'Class', icon: Sword },
-  { id: 'background', label: 'Background', icon: BookOpen },
-  { id: 'abilities', label: 'Ability Scores', icon: ChartBar },
-  { id: 'review', label: 'Review', icon: CheckCircle },
+  {
+    id: 'basics',
+    section: 'Identity',
+    label: 'Basics',
+    title: 'Character details',
+    icon: User,
+  },
+  {
+    id: 'rules',
+    section: 'Campaign rules',
+    label: 'Rules',
+    title: 'Choose a ruleset',
+    icon: Sparkle,
+  },
+  {
+    id: 'content',
+    section: 'Available options',
+    label: 'Sourcebooks',
+    title: 'Choose sourcebooks',
+    icon: Books,
+  },
+  {
+    id: 'race',
+    section: 'Character build',
+    label: 'Race',
+    title: 'Choose a race',
+    icon: Users,
+  },
+  {
+    id: 'class',
+    section: 'Character build',
+    label: 'Class',
+    title: 'Choose a class',
+    icon: Sword,
+  },
+  {
+    id: 'background',
+    section: 'Character build',
+    label: 'Background',
+    title: 'Choose a background',
+    icon: BookOpen,
+  },
+  {
+    id: 'abilities',
+    section: 'Character build',
+    label: 'Ability Scores',
+    title: 'Set ability scores',
+    icon: ChartBar,
+  },
+  {
+    id: 'review',
+    section: 'Final check',
+    label: 'Review',
+    title: 'Review your character',
+    icon: CheckCircle,
+  },
 ]
 
-export const INITIAL_CHARACTER_DATA = {
+export const INITIAL_CHARACTER_DATA: CharacterWizardData = {
   name: '',
-  playerName: '',
   age: null,
   gender: 'Female',
+  height: '',
+  weight: '',
+  eyes: '',
+  hair: '',
   race: '',
   raceSource: '',
   subrace: '',
@@ -35,7 +86,7 @@ export const INITIAL_CHARACTER_DATA = {
   classSource: '',
   background: '',
   backgroundSource: '',
-  originSystem: '' as const,
+  originSystem: '2014',
   abilityScoreMethod: 'point-buy',
   abilityScores: {
     strength: 8,
@@ -47,9 +98,9 @@ export const INITIAL_CHARACTER_DATA = {
   },
   portrait: PLACEHOLDER_PORTRAITS[0] ?? '',
   portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
-  allowedSources: [] as string[],
-  raceAsiChoices: [] as string[][],
-  raceAsiBlockIndex: 0 as 0 | 1,
+  allowedSources: [],
+  raceAsiChoices: [],
+  raceAsiBlockIndex: 0,
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: true,

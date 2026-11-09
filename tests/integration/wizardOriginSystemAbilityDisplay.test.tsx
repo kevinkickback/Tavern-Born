@@ -91,7 +91,7 @@ describe('wizard 2024 origin-system ability display', () => {
       />,
     )
 
-    expect(screen.queryByText('Racial Bonuses')).toBeNull()
+    expect(screen.queryByTestId('race-ability-choices')).toBeNull()
     expect(screen.queryByText('10+2')).toBeNull()
   })
 
@@ -133,9 +133,9 @@ describe('wizard 2024 origin-system ability display', () => {
       />,
     )
 
-    expect(
-      screen.getByText('Choose 1 ability from STR, DEX (+2) · Choose 1 ability from STR, DEX (+1)'),
-    ).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: /Racial ability bonus \+2/ })).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: /Racial ability bonus \+1/ })).toBeTruthy()
+    expect(screen.queryByText(/Choose 1 ability from/)).toBeNull()
     expect(screen.getByText('Bonus +2')).toBeTruthy()
     expect(screen.queryByText('Bonus +3')).toBeNull()
   })

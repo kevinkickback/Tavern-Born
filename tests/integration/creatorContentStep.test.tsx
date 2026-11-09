@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -48,7 +48,19 @@ test('source search is a view filter and hidden selections, presets and None use
     screen.getByRole<HTMLButtonElement>('button', { name: /Revised Dungeon Master Guide/ })
       .disabled,
   ).toBe(true)
-  expect(screen.queryByRole('button', { name: /Revised Player Handbook/ })).toBeNull()
+  const coreGroup = screen.getByRole('heading', { name: 'Core Rulebooks' }).parentElement!
+  const included = within(coreGroup).getByRole<HTMLButtonElement>('button', {
+    name: /PHB Required/,
+  })
+  const incompatible = within(coreGroup).getByRole<HTMLButtonElement>('button', {
+    name: /XPHB Requires the 2024 ruleset/,
+  })
+  expect(included.disabled).toBe(true)
+  expect(incompatible.disabled).toBe(true)
+  expect(included.getAttribute('aria-pressed')).toBe('true')
+  await user.click(included)
+  await user.click(incompatible)
+  expect(screen.getByLabelText('Selected sources').textContent).toBe('XGE')
   await user.type(search, '  aTlAs ')
   expect(screen.queryByRole('button', { name: /Xanathar/ })).toBeNull()
   expect(screen.getByLabelText('Selected sources').textContent).toBe('XGE')
@@ -66,42 +78,34 @@ test('source search is a view filter and hidden selections, presets and None use
   expect(screen.getByLabelText('Selected sources').textContent).toBe('')
 })
 
-test('search leaves content availability unchanged and preserves inactive intent and the 2024 lock', async () => {
-  const user = userEvent.setup(),
-    onChange = vi.fn()
-  const data = {
-    ...INITIAL_CHARACTER_DATA,
-    originSystem: '2024' as const,
-    variantRules: { ...INITIAL_CHARACTER_DATA.variantRules, anyRaceSubclasses: true },
-  }
-  const { rerender } = render(
-    <ContentStep
-      data={data}
-      sources={sources}
-      onChange={onChange}
-      contentAvailability={{
-        optionalClassFeatures: true,
-        anyRaceSubclasses: false,
-        preferNewerPrintings: false,
-      }}
-    />,
+test('search is local to Additional Content and survives catalog refresh without editing the draft', async () => {
+  const user = userEvent.setup()
+  const onChange = vi.fn()
+  const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2024' as const }
+  const { rerender } = render(<ContentStep data={data} sources={sources} onChange={onChange} />)
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /XPHB Required/ }).disabled).toBe(
+    true,
   )
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', {
+      name: /PHB Replaced by the revised core rulebook/,
+    }).disabled,
+  ).toBe(true)
   await user.type(screen.getByRole('textbox', { name: 'Search sources' }), 'missing')
   expect(onChange).not.toHaveBeenCalled()
+  expect(screen.queryByRole('switch')).toBeNull()
+  rerender(
+    <ContentStep
+      data={data}
+      sources={sources.filter((source) => source.abbreviation === 'XPHB')}
+      onChange={onChange}
+    />,
+  )
+  expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
+  expect(screen.getByRole('button', { name: /XPHB Required/ })).toBeTruthy()
   expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Allow Optional Class Features' })
-      .disabled,
-  ).toBe(false)
-  expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Any-Race Subclasses' }).disabled,
-  ).toBe(false)
-  expect(screen.getByText('Currently inactive')).toBeTruthy()
-  expect(
-    screen.getByRole<HTMLButtonElement>('switch', { name: 'Prefer Newer Printings' }).disabled,
-  ).toBe(true)
-  expect(
-    screen.getByRole('switch', { name: 'Prefer Newer Printings' }).getAttribute('data-state'),
-  ).toBe('checked')
+    screen.getByRole('button', { name: /PHB.*Replaced by the revised core rulebook/ }),
+  ).toBeTruthy()
   rerender(
     <ContentStep
       data={data}
@@ -110,6 +114,7 @@ test('search leaves content availability unchanged and preserves inactive intent
     />,
   )
   expect(onChange).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: /Restored book/ })).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Clear' }))
   expect(screen.getByRole('button', { name: /Restored book/ })).toBeTruthy()
 })
@@ -119,7 +124,20 @@ test('core-only catalogs explain that no additional sources are available withou
   const core = buildSourcesList(['PHB'], {
     book: [{ id: 'PHB', name: 'Player Handbook', group: 'core' }],
   })
-  render(<ContentStep data={INITIAL_CHARACTER_DATA} sources={core} onChange={onChange} />)
+  render(
+    <ContentStep
+      data={{ ...INITIAL_CHARACTER_DATA, originSystem: '2014' }}
+      sources={core}
+      onChange={onChange}
+    />,
+  )
+  expect(screen.getByRole<HTMLButtonElement>('button', { name: /PHB Required/ }).disabled).toBe(
+    true,
+  )
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: /XPHB.*Requires the 2024 ruleset/ })
+      .disabled,
+  ).toBe(true)
   expect(screen.getByText(/No additional content is available/)).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'Search sources' })).toBeNull()
   expect(onChange).not.toHaveBeenCalled()
@@ -163,18 +181,13 @@ test('supported organized play and explicitly selectable unfamiliar groups remai
 
 test('semantic validation gates the owning step and permits explicit empty Content', () => {
   const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2014' as const }
-  const pools = { races: [{}], classes: [{}], backgrounds: [{}] }
-  expect(validateStep('basics', data, pools).fields).toEqual(['name'])
-  expect(validateStep('rules', { ...data, originSystem: '' }, pools).fields).toContain(
-    'originSystem',
-  )
+  const pools = { races: [{ name: 'Human', source: 'PHB' }], classes: [{}], backgrounds: [{}] }
+  expect(validateStep('basics', data, pools).error).toBe('Character name is required')
   expect(validateStep('rules', { ...data, allowedSources: [''] }, pools).valid).toBe(true)
   expect(validateStep('content', { ...data, allowedSources: [] }, pools).valid).toBe(true)
-  expect(validateStep('content', { ...data, allowedSources: [''] }, pools).fields).toEqual([
-    'allowedSources',
-  ])
+  expect(validateStep('content', { ...data, allowedSources: [''] }, pools).valid).toBe(false)
   for (const id of ['race', 'class', 'background'] as const) {
-    expect(validateStep(id, data, pools).fields).toEqual([id])
+    expect(validateStep(id, data, pools).error).toBe(`Please select a ${id}`)
     expect(validateStep(id, data, { races: [], classes: [], backgrounds: [] }).error).toMatch(
       /No .* available/,
     )

@@ -9,9 +9,6 @@ import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MAX,
   getAbilityModifier,
-  getPointBuyCost,
-  POINT_BUY_COSTS,
-  POINT_BUY_MAX,
   POINT_BUY_MIN,
   STANDARD_ARRAY,
 } from './gameRules'
@@ -97,24 +94,6 @@ export function getAllAbilityModifiers(
   return Object.fromEntries(
     ABILITY_NAMES.map((a) => [a, getAbilityModifierForCharacter(a, scores, bonuses)]),
   ) as Record<AbilityName, number>
-}
-
-export function calculatePointBuyTotal(scores: Partial<AbilityScores>): number {
-  return Object.values(scores).reduce((sum: number, s) => sum + getPointBuyCost(s as number), 0)
-}
-
-export function getRemainingPointBuy(scores: Partial<AbilityScores>, budget: number): number {
-  return budget - calculatePointBuyTotal(scores)
-}
-
-export function getValidPointBuyScores(): number[] {
-  return Object.keys(POINT_BUY_COSTS)
-    .map(Number)
-    .sort((a, b) => a - b)
-}
-
-export function isValidPointBuyScore(score: number): boolean {
-  return score >= POINT_BUY_MIN && score <= POINT_BUY_MAX
 }
 
 /**
@@ -250,7 +229,14 @@ type FlexibleRaceAbilitySource = {
   _tavernBornSuppressFlexibleAsi?: boolean
 }
 
-export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null): boolean {
+export function hasFlexibleRaceOriginAsi(
+  race?: FlexibleRaceAbilitySource | null,
+  subrace?:
+    | (FlexibleRaceAbilitySource & { _isVersion?: unknown; overwrite?: { ability?: boolean } })
+    | null,
+): boolean {
+  if (subrace?._isVersion !== true && subrace?.overwrite?.ability === true) return false
+  race = subrace?._isVersion === true ? subrace : race
   if (race?._tavernBornSuppressFlexibleAsi === true || (race?.ability?.length ?? 0) > 0) {
     return false
   }
@@ -354,9 +340,7 @@ export function getRaceAbilityData(
   const fixed: FixedAbilityBonus[] = []
   const choices: ChoosableAbilityBonus[] = []
   const flexibleSource = subrace?._isVersion === true ? 'subrace' : 'race'
-  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(
-    flexibleSource === 'subrace' ? subrace : race,
-  )
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race, subrace)
 
   function processEntries(entries: unknown[] | undefined, source: 'race' | 'subrace') {
     if (!entries) return
@@ -410,7 +394,7 @@ export function getRaceAbilityData(
   // Lineage races follow Tasha's ASI choice at character creation:
   // - block 0: +2 to one ability and +1 to a different ability
   // - block 1: +1 to three different abilities
-  if (usesTashasLineageAsi && !replacesParentAbility) {
+  if (usesTashasLineageAsi) {
     const allAbilities = [...ABILITY_NAMES] as AbilityName[]
     if (lineageAsiBlockIndex === 1) {
       choices.push({

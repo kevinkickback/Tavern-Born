@@ -243,6 +243,13 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await page.getByRole('button', { name: 'Apply game data update' }).click()
     await expect(status).toHaveText('Additional Content Loaded')
     await expect(update).toBeHidden()
+
+    // Isolate cache repair on the final reload from another background update check.
+    const startupCheck = page.getByRole('tabpanel', { name: 'Game Data' }).getByRole('switch')
+    await expect(startupCheck).toBeChecked()
+    await startupCheck.click()
+    await expect(startupCheck).not.toBeChecked()
+
     const applied = await catalogStamp(page, true)
     expect(applied.contentFingerprint).not.toBe(accepted.contentFingerprint)
     await page.reload()

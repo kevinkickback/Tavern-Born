@@ -25,7 +25,7 @@ import { useBackgroundLookup, useClassLookup, useRaceLookup, useSpellLookup } fr
 
 interface WizardGameDataParams {
   allowedSources?: string[]
-  originSystem?: '2014' | '2024' | ''
+  originSystem?: '2014' | '2024'
   preferNewerPrintings?: boolean
 }
 
@@ -145,7 +145,6 @@ export function useWizardGameData({
     races,
     classes,
     itemLookup,
-    spellLookups,
     creationLookups,
     resolveRace,
     resolveClass,

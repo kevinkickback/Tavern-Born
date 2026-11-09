@@ -1,47 +1,83 @@
-import type { Icon } from '@phosphor-icons/react'
+import { BookOpen } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 
+export function CreatorEntityDetails({
+  entity,
+  subtitle,
+  placeholder,
+  children,
+}: {
+  entity?: { name: string; source: string; page?: number }
+  subtitle?: string
+  placeholder: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="@container flex min-w-0 flex-col rounded-lg border border-border bg-workspace-canvas p-4 md:min-h-0 md:overflow-hidden sm:px-5">
+      {entity ? (
+        <>
+          <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-2">
+            <h3 className="break-words text-2xl font-semibold tracking-tight">
+              {entity.name}
+              {subtitle && <span className="ml-1.5 text-primary">({subtitle})</span>}
+            </h3>
+            <div className="flex items-center gap-1.5 rounded-full border border-border bg-workspace-pane px-2.5 py-1 text-xs text-muted-foreground">
+              <BookOpen className="size-3.5" aria-hidden="true" />
+              <span className="font-mono">{entity.source}</span>
+              {entity.page && <span>p.{entity.page}</span>}
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 space-y-4 py-3 md:overflow-y-auto md:pr-2">{children}</div>
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
+          {placeholder}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DetailSection({
-  icon: Icon,
   label,
   children,
   empty,
 }: {
-  icon: Icon
   label: string
   children: React.ReactNode
   empty?: boolean
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
-      </div>
+    <div className="min-w-0 bg-workspace-pane px-3 py-2.5">
+      <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">{label}</h3>
       <p className={cn('text-sm', empty && 'text-muted-foreground')}>{children}</p>
     </div>
   )
 }
 
+export function DetailRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1 border-b border-border py-2 @sm:grid-cols-[minmax(8rem,1fr)_2fr]">
+      <h3 className="text-sm font-semibold">{label}</h3>
+      {children}
+    </div>
+  )
+}
+
 export function DetailHtmlSection({
-  icon: Icon,
   label,
   html,
   recursiveLookup,
 }: {
-  icon: Icon
   label: string
   html: string | null
   recursiveLookup?: RecursiveLookup
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
-      </div>
+    <DetailRow label={label}>
       {html ? (
         <GameContent
           entry={html}
@@ -51,6 +87,6 @@ export function DetailHtmlSection({
       ) : (
         <p className="text-sm text-muted-foreground">None</p>
       )}
-    </div>
+    </DetailRow>
   )
 }

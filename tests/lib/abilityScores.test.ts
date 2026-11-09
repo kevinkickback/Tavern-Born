@@ -1,22 +1,19 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildRacialBonuses,
-  calculatePointBuyTotal,
   formatModifier,
   getAbilityModifierForCharacter,
   getAbilityScore,
   getAllAbilityModifiers,
   getRaceAbilityData,
-  getRemainingPointBuy,
   getTotalAbilityScore,
-  getValidPointBuyScores,
   hasUnresolvedRaceAbilityChoices,
-  isValidPointBuyScore,
   isValidStandardArrayAssignment,
   makeDefaultAbilityScores,
   makeEmptyAbilityBonuses,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
+import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 
 type TestRaceAbilityEntry =
   | Partial<Record<string, number>>
@@ -29,6 +26,27 @@ type TestRaceAbilityEntry =
     }
 
 describe('abilityScores', () => {
+  test('a background distribution is fixed only when every distinct ability receives the same bonus', () => {
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['constitution', 'wisdom', 'charisma'],
+        weights: [1, 1, 1],
+      }),
+    ).toBe(true)
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['constitution', 'wisdom'],
+        weights: [2, 1],
+      }),
+    ).toBe(false)
+    expect(
+      isFixedBackgroundAbilityBlock({
+        from: ['wisdom', 'wisdom'],
+        weights: [1, 1],
+      }),
+    ).toBe(false)
+  })
+
   test('default scores and empty bonuses create expected shape', () => {
     expect(makeDefaultAbilityScores()).toEqual({
       strength: 8,
@@ -71,23 +89,6 @@ describe('abilityScores', () => {
     const all = getAllAbilityModifiers(scores, bonuses)
     expect(all.dexterity).toBe(2)
     expect(all.strength).toBe(0)
-  })
-
-  test('point-buy helpers compute totals and validity', () => {
-    const scores = {
-      strength: 15,
-      dexterity: 14,
-      constitution: 13,
-      intelligence: 12,
-      wisdom: 10,
-      charisma: 8,
-    }
-
-    expect(calculatePointBuyTotal(scores)).toBe(27)
-    expect(getRemainingPointBuy(scores, 27)).toBe(0)
-    expect(getValidPointBuyScores()).toEqual([8, 9, 10, 11, 12, 13, 14, 15])
-    expect(isValidPointBuyScore(15)).toBe(true)
-    expect(isValidPointBuyScore(16)).toBe(false)
   })
 
   test('standard array assignment rejects duplicates and unknown values', () => {

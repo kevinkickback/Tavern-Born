@@ -1,12 +1,16 @@
-import { BookOpen, MagnifyingGlass, Shield, Toolbox, X } from '@phosphor-icons/react'
+import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
 import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
+import { formatBackgroundAbilityPatterns } from '@/lib/calculations/abilityScoreDisplay'
+import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
+import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
+import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
-import { DetailSection } from '../../DetailCards'
+import { CreatorEntityDetails, DetailSection } from '../../DetailCards'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
@@ -100,13 +104,17 @@ export function BackgroundStep({
     ? getBackgroundFeatureBlock(selectedBackground.entries ?? [])
     : null
   const featureEntries = backgroundFeature?.entries ?? []
+  const originBackground = normalizeBackgroundForOriginSystem(selectedBackground, data.originSystem)
+  const abilityPatterns = formatBackgroundAbilityPatterns(
+    getBackgroundAbilityData(originBackground),
+  )
+  const originFeats = parseFeatGrantBlocks(originBackground?.feats)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 md:flex-row">
-      <div className="h-48 min-h-0 w-full shrink-0 flex flex-col md:h-auto md:w-56 xl:w-64 rounded-lg border border-border bg-muted/20">
-        <div className="p-3 border-b border-border">
+    <div className="grid min-w-0 gap-5 md:min-h-0 md:flex-1 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
+      <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
+        <div className="shrink-0 pb-3">
           <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Backgrounds
               <span className="text-muted-foreground font-normal ml-1">
@@ -134,7 +142,7 @@ export function BackgroundStep({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 space-y-0.5">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-2">
           {searchFilteredBackgrounds.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No backgrounds found.
@@ -154,11 +162,12 @@ export function BackgroundStep({
                       backgroundSource: bg.source ?? '',
                     })
                   }
+                  aria-pressed={isSelected}
                   className={cn(
-                    'w-full text-left px-3 py-2 rounded-md transition-all text-sm border',
+                    'w-full text-left px-3 py-2.5 rounded-md transition-colors text-sm border',
                     isSelected
-                      ? 'bg-accent/15 text-foreground border-accent/40'
-                      : 'hover:bg-muted/50 border-transparent',
+                      ? 'border-primary/50 bg-primary/10 text-foreground'
+                      : 'bg-workspace-pane hover:bg-surface-hover border-transparent',
                   )}
                 >
                   <div className="font-semibold truncate">{bg.name}</div>
@@ -170,117 +179,116 @@ export function BackgroundStep({
         </div>
       </div>
 
-      <div className="@container flex-1 min-h-0 min-w-0 flex flex-col rounded-lg border border-border bg-muted/20 overflow-hidden">
-        {!selectedBackground ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/40" />
-              <p className="text-muted-foreground text-sm">Select a background to view details</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-col h-full">
-            <div className="px-5 py-4 border-b border-border">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-xl font-bold">{selectedBackground.name}</h2>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span className="font-mono">{selectedBackground.source}</span>
-                  {selectedBackground.page && <span>p.{selectedBackground.page}</span>}
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Background Overview
-                  </span>
-                </div>
-                {summary ? (
-                  <GameContent
-                    entry={summary}
-                    recursiveLookup={recursiveLookup}
-                    className="text-sm text-muted-foreground leading-relaxed"
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    No description available.
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3">
-                <DetailSection
-                  icon={Shield}
-                  label="Skill Proficiencies"
-                  empty={skillProficiencies === 'None'}
-                >
-                  {skillProficiencies}
-                </DetailSection>
-                <DetailSection
-                  icon={BookOpen}
-                  label="Language Proficiencies"
-                  empty={languageProficiencies === 'None'}
-                >
-                  {languageProficiencies}
-                </DetailSection>
-                <DetailSection
-                  icon={Toolbox}
-                  label="Tool Proficiencies"
-                  empty={toolProficiencies === 'None'}
-                >
-                  {toolProficiencies}
-                </DetailSection>
-              </div>
-
-              {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
-                <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">
-                      Details
-                    </span>
-                  </div>
-                  {featureEntries.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No background feature details available.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold">
-                        Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
-                      </h4>
-                      {(() => {
-                        const entries = featureEntries
-                        const collisionCounts = new Map<string, number>()
-
-                        return entries.map((entry) => {
-                          const baseKey = getEntryBaseKey(entry)
-                          const seen = collisionCounts.get(baseKey) ?? 0
-                          collisionCounts.set(baseKey, seen + 1)
-                          const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
-
-                          return (
-                            <GameContent
-                              key={key}
-                              entry={entry}
-                              recursiveLookup={recursiveLookup}
-                              className="text-sm leading-relaxed"
-                            />
-                          )
-                        })
-                      })()}
-                    </div>
-                  )}
-                </div>
+      <CreatorEntityDetails
+        entity={selectedBackground}
+        placeholder="Select a background to view details"
+      >
+        {selectedBackground && (
+          <>
+            <div className="max-w-[72ch] space-y-1.5">
+              {summary ? (
+                <GameContent
+                  entry={summary}
+                  recursiveLookup={recursiveLookup}
+                  className="text-sm text-muted-foreground leading-relaxed"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  No description available.
+                </p>
               )}
             </div>
-          </div>
+
+            <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
+              <DetailSection label="Skill Proficiencies" empty={skillProficiencies === 'None'}>
+                {skillProficiencies}
+              </DetailSection>
+              <DetailSection
+                label="Language Proficiencies"
+                empty={languageProficiencies === 'None'}
+              >
+                {languageProficiencies}
+              </DetailSection>
+              <DetailSection label="Tool Proficiencies" empty={toolProficiencies === 'None'}>
+                {toolProficiencies}
+              </DetailSection>
+            </div>
+
+            {(abilityPatterns.length > 0 || originFeats.length > 0) && (
+              <div className="space-y-3">
+                {abilityPatterns.length > 0 && (
+                  <section className="space-y-1.5">
+                    <h4 className="text-sm font-semibold">Ability Score Bonuses</h4>
+                    <p className="border-l-2 border-border bg-workspace-pane px-3 py-2 text-sm text-muted-foreground">
+                      {abilityPatterns.join(' or ')}
+                    </p>
+                  </section>
+                )}
+                {originFeats.length > 0 && (
+                  <section className="space-y-1.5">
+                    <h4 className="text-sm font-semibold">Origin Feat</h4>
+                    <ul className="divide-y divide-border border-y border-border text-sm [&>li]:py-2">
+                      {originFeats.map((feat, index) => (
+                        <li key={JSON.stringify([feat, index])}>
+                          {feat.type === 'fixed' ? (
+                            <GameContent
+                              entry={`{@feat ${feat.name}|${feat.source}${feat.variant ? `|${feat.name} (${feat.variant})` : ''}}`}
+                              recursiveLookup={recursiveLookup}
+                            />
+                          ) : (
+                            'Choose in the Builder'
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
+              <div className="space-y-2 border-t border-border pt-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
+                    Details
+                  </span>
+                </div>
+                {featureEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No background feature details available.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">
+                      Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
+                    </h4>
+                    {(() => {
+                      const entries = featureEntries
+                      const collisionCounts = new Map<string, number>()
+
+                      return entries.map((entry) => {
+                        const baseKey = getEntryBaseKey(entry)
+                        const seen = collisionCounts.get(baseKey) ?? 0
+                        collisionCounts.set(baseKey, seen + 1)
+                        const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
+
+                        return (
+                          <GameContent
+                            key={key}
+                            entry={entry}
+                            recursiveLookup={recursiveLookup}
+                            className="text-sm leading-relaxed"
+                          />
+                        )
+                      })
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
-      </div>
+      </CreatorEntityDetails>
     </div>
   )
 }

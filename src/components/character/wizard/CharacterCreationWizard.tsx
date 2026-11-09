@@ -1,5 +1,5 @@
 import { Warning } from '@phosphor-icons/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -13,19 +13,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
+import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import {
+  getBackgroundAbilityData,
+  isBackgroundAbilitySelectionComplete,
   makeDefaultAbilityScores,
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
+import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
+import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { getVariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { resolveRaceGrantFilterOptions } from '@/lib/provenance/raceGrantFilterOptions'
-import { getEffectiveSources } from '@/lib/sourceCompatibility'
+import { getEffectiveSources, normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -45,7 +50,6 @@ import {
 import type { CharacterWizardData, WizardStepId } from './types'
 import { validateStep } from './validation'
 import { WizardFooter } from './WizardFooter'
-import { WizardNavigation } from './WizardNavigation'
 
 interface CharacterCreationWizardProps {
   open: boolean
@@ -63,7 +67,7 @@ const STEP_COMPONENTS = {
   review: ReviewStep,
 } satisfies Record<WizardStepId, unknown>
 
-function getDefaultAbilityScoresForMethod(method: string): Record<string, number> {
+function getDefaultAbilityScoresForMethod(method: AbilityScoreMethod): AbilityScores {
   if (method === 'standard-array') return makeDefaultStandardArrayAssignment()
   if (method === 'custom') return makeDefaultAbilityScores(ABILITY_SCORE_MIN)
   return makeDefaultAbilityScores(POINT_BUY_MIN)
@@ -100,13 +104,15 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   )
   const gameData = useGameDataStore((state) => state.gameData)
   const [currentStep, setCurrentStep] = useState(1)
-  const stepId = WIZARD_STEPS[currentStep - 1]?.id
+  const [completedThrough, setCompletedThrough] = useState(0)
+  const activeStep = WIZARD_STEPS[currentStep - 1]
+  const stepId = activeStep?.id
+  const StepIcon = activeStep?.icon
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const originalValues = useRef<Record<string, unknown>>({})
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const discardOrigin = useRef<HTMLElement | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
-  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
   const { isPending: isCreating, run: runCreation } = useAsyncAction()
   const wizardData = useWizardGameData({
     allowedSources: characterData.allowedSources,
@@ -117,7 +123,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     if (!gameData) return false
     const effectiveSources = getEffectiveSources(
       characterData.allowedSources ?? [],
-      characterData.originSystem || '2014',
+      characterData.originSystem,
       wizardData.sources,
     )
     return hasAvailableReprintPair(gameData, effectiveSources)
@@ -130,18 +136,28 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   })
 
   useEffect(() => {
-    if (!open) return
+    if (!open || wizardData.sources.length === 0) return
     setCharacterData((previous) => {
-      if ((previous.allowedSources?.length ?? 0) > 0 || 'allowedSources' in originalValues.current)
-        return previous
+      if ('allowedSources' in originalValues.current) return previous
+      const ruleset = previous.originSystem
+      const selected = normalizeSelectableAllowedSources(
+        previous.allowedSources,
+        ruleset,
+        wizardData.sources,
+      )
       const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
-      if (!recommended) return previous
       const availableSources = new Set(wizardData.sources.map((source) => source.abbreviation))
       const allowedSources =
-        availableSources.size > 0
-          ? recommended.abbreviations.filter((source) => availableSources.has(source))
-          : recommended.abbreviations
-      return allowedSources.length > 0 ? { ...previous, allowedSources } : previous
+        selected.length > 0
+          ? selected
+          : normalizeSelectableAllowedSources(
+              recommended?.abbreviations.filter((source) => availableSources.has(source)) ?? [],
+              ruleset,
+              wizardData.sources,
+            )
+      return sameWizardValue(allowedSources, previous.allowedSources, true)
+        ? previous
+        : { ...previous, allowedSources }
     })
   }, [open, wizardData.sources])
 
@@ -150,9 +166,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     setConfirmDiscard(false)
     originalValues.current = {}
     setCurrentStep(1)
+    setCompletedThrough(0)
     setCharacterData(INITIAL_CHARACTER_DATA)
     setValidationError(null)
-    setInvalidFields(new Set())
     onOpenChange(false)
   }
 
@@ -173,6 +189,21 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     } else resetAndClose()
   }
 
+  const background = wizardData.resolveBackground({
+    name: characterData.background,
+    source: characterData.backgroundSource,
+  })
+  const backgroundAbilityData = getBackgroundAbilityData(
+    normalizeBackgroundForOriginSystem(background, characterData.originSystem),
+  )
+  const backgroundBlockIndex = characterData.backgroundAsi?.blockIndex ?? 0
+  const backgroundBlock = backgroundAbilityData.blocks[backgroundBlockIndex]
+  const fixedBackgroundAsi = backgroundBlock && isFixedBackgroundAbilityBlock(backgroundBlock)
+  const backgroundAsi = fixedBackgroundAsi
+    ? { blockIndex: backgroundBlockIndex, choices: backgroundBlock.from }
+    : characterData.backgroundAsi
+  const hasBackgroundAsiChoices = backgroundAsi?.choices.some(Boolean) ?? false
+
   const handleFinish = () =>
     runCreation(
       async () => {
@@ -184,35 +215,33 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           name: characterData.class,
           source: characterData.classSource,
         })
-        const background = wizardData.resolveBackground({
-          name: characterData.background,
-          source: characterData.backgroundSource,
-        })
         const character = buildInitialCharacter(
           {
             initial: {
               name: characterData.name,
-              originSystem: characterData.originSystem as '2014' | '2024',
+              originSystem: characterData.originSystem,
               portrait: characterData.portrait,
               portraitTransform: characterData.portraitTransform,
               allowedSources: characterData.allowedSources,
-              abilityScores: characterData.abilityScores as unknown as AbilityScores,
+              abilityScores: characterData.abilityScores,
               variantRules: {
                 ...characterData.variantRules,
-                abilityScoreMethod:
-                  (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
-                  'standard-array',
+                abilityScoreMethod: characterData.abilityScoreMethod,
               },
               details: {
-                playerName: characterData.playerName,
                 age: characterData.age ?? undefined,
                 gender: characterData.gender,
+                height: characterData.height || undefined,
+                weight: characterData.weight || undefined,
+                eyes: characterData.eyes || undefined,
+                hair: characterData.hair || undefined,
               },
             },
             race: raceResolution.parentRace,
             subrace: raceResolution.subraceData,
             classEntity,
             background,
+            backgroundAsi: hasBackgroundAsiChoices ? backgroundAsi : undefined,
             raceAsiChoices: characterData.raceAsiChoices,
             raceAsiBlockIndex: characterData.raceAsiBlockIndex,
           },
@@ -243,31 +272,58 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     const validation = validateStep(stepId, characterData, wizardData)
     if (!validation.valid) {
       setValidationError(validation.error || 'Please complete this step')
-      if (validation.fields) setInvalidFields(new Set(validation.fields))
+      return
+    }
+    if (
+      stepId === 'abilities' &&
+      backgroundAsi &&
+      hasBackgroundAsiChoices &&
+      !isBackgroundAbilitySelectionComplete(
+        backgroundAbilityData,
+        backgroundAsi.blockIndex,
+        backgroundAsi.choices,
+      )
+    ) {
+      setValidationError('Finish choosing background bonuses or clear them to assign them later.')
       return
     }
     setValidationError(null)
-    setInvalidFields(new Set())
-    if (currentStep < WIZARD_STEPS.length) setCurrentStep(currentStep + 1)
-    else handleFinish()
+    if (currentStep < WIZARD_STEPS.length) {
+      setCompletedThrough(Math.max(completedThrough, currentStep))
+      setCurrentStep(currentStep + 1)
+    } else handleFinish()
   }
 
-  const handleBack = () => {
+  const revisitStep = (step: number) => {
+    if (isCreating || step < 1 || step >= currentStep) return
     setValidationError(null)
-    setInvalidFields(new Set())
-    if (currentStep > 1) setCurrentStep(currentStep - 1)
+    setCurrentStep(step)
   }
 
   const updateCharacterData = (updates: Partial<CharacterWizardData>) => {
     const normalizedUpdates = { ...updates }
-    if (
-      typeof normalizedUpdates.abilityScoreMethod === 'string' &&
-      !normalizedUpdates.abilityScores
-    ) {
+    if (normalizedUpdates.abilityScoreMethod !== undefined && !normalizedUpdates.abilityScores) {
       normalizedUpdates.abilityScores = getDefaultAbilityScoresForMethod(
         normalizedUpdates.abilityScoreMethod,
       )
     }
+    if (
+      (updates.originSystem !== undefined && updates.originSystem !== characterData.originSystem) ||
+      (updates.background !== undefined && updates.background !== characterData.background) ||
+      (updates.backgroundSource !== undefined &&
+        updates.backgroundSource !== characterData.backgroundSource)
+    ) {
+      normalizedUpdates.backgroundAsi = undefined
+    }
+    const changed = Object.entries(normalizedUpdates).some(
+      ([key, value]) =>
+        !sameWizardValue(
+          value,
+          characterData[key as keyof CharacterWizardData],
+          key === 'allowedSources',
+        ),
+    )
+    if (changed && completedThrough >= currentStep) setCompletedThrough(currentStep - 1)
     for (const [key, value] of Object.entries(normalizedUpdates)) {
       if (
         key in originalValues.current &&
@@ -287,11 +343,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     }
     setCharacterData((previous) => ({ ...previous, ...normalizedUpdates }))
     setValidationError(null)
-    const nextInvalidFields = new Set(invalidFields)
-    Object.keys(normalizedUpdates).forEach((key) => {
-      nextInvalidFields.delete(key)
-    })
-    setInvalidFields(nextInvalidFields)
   }
 
   const raceResolution = wizardData.resolveRace({
@@ -301,62 +352,92 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     subraceSource: characterData.subraceSource,
   })
   const Step = stepId ? STEP_COMPONENTS[stepId] : undefined
+  const renderIntro = (titleAccessory?: ReactNode, actions?: ReactNode) =>
+    activeStep &&
+    StepIcon && (
+      <div
+        className={cn(
+          'min-w-0 shrink-0 pb-[calc(0.25rem+var(--text-sm)*var(--leading-relaxed))]',
+          stepId === 'content' ? 'mb-1' : 'mb-3',
+        )}
+      >
+        <p className="flex items-center gap-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground after:h-px after:flex-1 after:bg-border">
+          {activeStep.section}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/35 bg-primary/10 text-primary">
+                <StepIcon className="size-5" weight="duotone" aria-hidden="true" />
+              </span>
+              {activeStep.title}
+            </h2>
+            {titleAccessory}
+          </div>
+          {actions}
+        </div>
+      </div>
+    )
+  const intro = stepId === 'content' ? null : renderIntro()
+  const usesSplitLayout = stepId === 'basics' || stepId === 'rules'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
+        aria-describedby={undefined}
         viewportPortalHostRef={setPortalHost}
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}
         aria-busy={isCreating}
         className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane"
       >
-        <DialogTitle className="sr-only">Create New Character</DialogTitle>
-        <DialogDescription className="sr-only">
-          Step through the wizard to configure your new character.
-        </DialogDescription>
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div
-              className={cn(
-                'min-h-0 flex-1 p-4 sm:p-6 lg:pr-12',
-                stepId === 'content' ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto',
-              )}
+        <header className="flex h-14 shrink-0 items-center border-b border-border bg-workspace-canvas px-4 pr-14 sm:px-6">
+          <DialogTitle className="text-sm font-semibold">Create New Character</DialogTitle>
+        </header>
+        <div
+          key={stepId}
+          className={cn(
+            'min-h-0 min-w-0 flex-1',
+            !usesSplitLayout && 'flex flex-col p-4 sm:px-6 lg:py-6',
+            stepId === 'content' ? 'overflow-hidden max-lg:py-3' : 'overflow-y-auto',
+          )}
+        >
+          {validationError && stepId !== 'basics' && (
+            <Alert
+              variant="destructive"
+              className={cn('mb-4 shrink-0', stepId === 'rules' && 'mx-4 mt-4 sm:mx-6')}
             >
-              {validationError && invalidFields.size === 0 && (
-                <Alert variant="destructive" className="mb-4">
-                  <Warning className="size-4" />
-                  <AlertDescription>{validationError}</AlertDescription>
-                </Alert>
-              )}
-              {Step && (
-                <Step
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  invalidFields={invalidFields}
-                  contentAvailability={variantRuleAvailability}
-                  isBundledSrd={isBundledSrd}
-                  races={wizardData.races}
-                  recursiveLookup={wizardData.recursiveLookup}
-                  classes={wizardData.classes}
-                  backgrounds={wizardData.backgrounds}
-                  raceResolution={raceResolution}
-                  sources={wizardData.sources}
-                  variantRuleAvailability={variantRuleAvailability}
-                />
-              )}
-            </div>
-            <WizardFooter
-              currentStep={currentStep}
-              totalSteps={WIZARD_STEPS.length}
-              onBack={handleBack}
-              onNext={handleNext}
-              onCancel={handleClose}
-              isPending={isCreating}
+              <Warning className="size-4" />
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
+          )}
+          {!usesSplitLayout && intro}
+          {Step && (
+            <Step
+              intro={intro}
+              renderIntro={renderIntro}
+              data={fixedBackgroundAsi ? { ...characterData, backgroundAsi } : characterData}
+              onChange={updateCharacterData}
+              nameError={stepId === 'basics' ? validationError : null}
+              isBundledSrd={isBundledSrd}
+              races={wizardData.races}
+              recursiveLookup={wizardData.recursiveLookup}
+              classes={wizardData.classes}
+              backgrounds={wizardData.backgrounds}
+              backgroundAbilityData={backgroundAbilityData}
+              raceResolution={raceResolution}
+              sources={wizardData.sources}
+              variantRuleAvailability={variantRuleAvailability}
             />
-          </div>
+          )}
         </div>
+        <WizardFooter
+          currentStep={currentStep}
+          completedThrough={completedThrough}
+          onRevisit={revisitStep}
+          onNext={handleNext}
+          isPending={isCreating}
+        />
         <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
           <AlertDialogContent
             onCloseAutoFocus={(event) => {

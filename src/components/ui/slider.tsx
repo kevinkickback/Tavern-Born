@@ -11,8 +11,9 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  thumbLabel,
   ...props
-}: ComponentProps<typeof SliderPrimitive.Root>) {
+}: ComponentProps<typeof SliderPrimitive.Root> & { thumbLabel?: string }) {
   const _values = useMemo(
     () => (Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max]),
     [value, defaultValue, min, max],
@@ -47,6 +48,7 @@ function Slider({
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
+          {...(_values.length === 1 && thumbLabel ? { 'aria-label': thumbLabel } : {})}
           key={index}
           className="border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />

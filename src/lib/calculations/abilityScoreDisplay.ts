@@ -6,7 +6,6 @@ import {
   formatModifier,
   getRaceAbilityChoiceSelections,
   getRaceAbilityData,
-  type RaceAbilityData,
 } from './abilityScores'
 
 function displayAbilityAbbreviation(ability: string): string {
@@ -39,12 +38,6 @@ export function formatAbilityChoice(
 
 export function formatBackgroundAbilityPatterns(data: BackgroundAbilityData): string[] {
   return data.blocks.map(({ from, weights }) => formatAbilityChoice(weights.length, from, weights))
-}
-
-export function formatRacialAbilityPatterns({ choices }: RaceAbilityData): string {
-  return choices
-    .map(({ count, from, amount }) => formatAbilityChoice(count, from, amount))
-    .join(' · ')
 }
 
 /**

@@ -55,11 +55,15 @@ Do not add a saved parent/child status mirror.
 
 ## Creator steps
 
-The creator uses semantic step IDs for component and validation selection; ordinal progress comes
-from the ordered step metadata. Rules owns edition, ability generation and hit points. Additional
-Content owns source selection and content-dependent options. Its search filters displayed source
-rows only: presets, selected counts and option availability use the complete draft catalog. Explicit
-empty sources remain valid. Draft changes and durable creation stay with the existing wizard owner.
+The creator uses semantic step IDs for component and validation selection. Ordinal progress comes
+from the ordered step metadata. Rules owns the ruleset and variant options and defaults to 5e
+Legacy. Sourcebooks owns source selection. Search and filters change the visible list while
+presets, selected counts and option availability use the complete draft catalog. An empty selection
+of supplemental books is valid.
+
+Create Character and Build share the ability score editor and origin bonus panels. The wizard
+adapts those controls to its draft and creates the character after Review. Build applies changes
+to the active character through its existing store and provenance commands.
 
 ## Rules preview manager
 
