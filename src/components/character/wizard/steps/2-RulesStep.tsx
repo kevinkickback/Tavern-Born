@@ -125,7 +125,7 @@ export function RulesStep({
               height={748}
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 m-auto hidden h-auto w-full rounded-lg opacity-60 [@container_(max-aspect-ratio:2103/748)]:block"
+              className="absolute inset-0 m-auto hidden h-auto w-full mask-x-from-88% mask-y-from-80% opacity-60 [@container_(max-aspect-ratio:2103/748)]:block"
             />
           </div>
         </div>

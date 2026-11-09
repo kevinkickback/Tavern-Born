@@ -267,7 +267,7 @@ export function ContentStep({
             // biome-ignore lint/a11y/noNoninteractiveTabindex: This named scroll region needs native keyboard scrolling.
             tabIndex={0}
             aria-label="Additional Content"
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-border p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-border bg-workspace-canvas p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {visibleGroups.length === 0 && (
               <p role="status" className="p-3 text-sm text-muted-foreground">

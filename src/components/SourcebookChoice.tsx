@@ -32,7 +32,7 @@ export function SourcebookChoice({
       title={required ? undefined : compatibility.reason}
       className={cn(
         'flex items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm',
-        showSelection && 'bg-workspace-canvas',
+        showSelection && 'bg-workspace-pane',
         className,
         !required &&
           !compatibility.compatible &&
@@ -40,7 +40,10 @@ export function SourcebookChoice({
         required
           ? 'cursor-not-allowed border-border bg-muted/20 text-muted-foreground'
           : selected
-            ? 'border-accent bg-accent/10 text-foreground'
+            ? cn(
+                'border-accent text-foreground',
+                showSelection ? 'bg-surface-selected' : 'bg-accent/10',
+              )
             : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
       )}
     >
