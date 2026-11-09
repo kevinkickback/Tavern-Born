@@ -433,6 +433,17 @@ for (const viewport of [
     }
     await wizard.getByRole('button', { name: 'Next' }).click()
     await expect(wizard.getByRole('textbox', { name: 'Search sources' })).toHaveCount(0)
+    const revisedSummary = wizard.getByText('Species have revised traits.', { exact: true })
+    const summaryBounds = (await revisedSummary.boundingBox())!
+    // Click the summary area, outside the visible bounds of the edition button.
+    await page.mouse.click(
+      summaryBounds.x + summaryBounds.width / 2,
+      summaryBounds.y + summaryBounds.height / 2,
+    )
+    await expect(wizard.getByRole('button', { name: /5\.5e Revised/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await wizard.getByRole('button', { name: /5e Legacy/ }).click()
     await wizard.screenshot({ animations: 'disabled', path: info.outputPath('rules.png') })
     await wizard.getByRole('button', { name: 'Next' }).click()

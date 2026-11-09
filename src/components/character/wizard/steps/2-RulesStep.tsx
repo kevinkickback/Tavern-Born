@@ -1,4 +1,4 @@
-import { CheckCircle, Circle } from '@phosphor-icons/react'
+import { CheckCircle, Circle, Info } from '@phosphor-icons/react'
 import { type ReactNode, useId } from 'react'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
@@ -16,6 +16,9 @@ const RULESETS = [
       'Backgrounds grant proficiencies and a feature.',
       'Subclass levels vary by class.',
       'Feats are optional in the core rules.',
+      'Cure Wounds starts at 1d8 plus your spellcasting modifier.',
+      'Surprise blocks movement and actions on your first turn.',
+      'Exhaustion adds different penalties at each level.',
     ],
   },
   {
@@ -26,6 +29,9 @@ const RULESETS = [
       'Species have revised traits.',
       'Revised classes choose subclasses at level 3.',
       'Weapon Mastery adds options for eligible classes.',
+      'Cure Wounds starts at 2d8 plus your spellcasting modifier.',
+      'Surprise gives Disadvantage on Initiative.',
+      'Exhaustion reduces D20 Tests by 2 and Speed by 5 ft. per level.',
     ],
   },
 ] as const
@@ -55,7 +61,7 @@ export function RulesStep({
               <div
                 key={option.value}
                 className={cn(
-                  'min-w-0 overflow-hidden rounded-lg border',
+                  'relative min-w-0 overflow-hidden rounded-lg border',
                   selected ? 'border-primary/50' : 'border-border',
                 )}
               >
@@ -82,7 +88,7 @@ export function RulesStep({
                     })
                   }
                   className={cn(
-                    'flex w-full items-center gap-2.5 border-b border-border px-3 py-3 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+                    'flex w-full cursor-pointer items-center gap-2.5 border-b border-border px-3 py-3 text-left text-sm font-semibold transition-colors after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:-outline-offset-2 focus-visible:after:outline-2 focus-visible:after:outline-ring motion-reduce:transition-none',
                     selected ? 'bg-surface-selected' : 'hover:bg-surface-hover',
                   )}
                 >
@@ -109,9 +115,6 @@ export function RulesStep({
             )
           })}
         </div>
-        <p className="mt-4 text-sm text-muted-foreground">
-          The revised rules update many spells and still support compatible older options.
-        </p>
       </section>
 
       <aside className="min-w-0 space-y-3 border-t border-border bg-workspace-canvas p-4 sm:p-6 md:border-t-0 md:border-l">
@@ -123,8 +126,9 @@ export function RulesStep({
           onChange={onChange}
           contentAvailability={variantRuleAvailability}
         />
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Some options depend on sourcebooks. Revisit Rules after choosing them.
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>Some options depend on sourcebooks. Revisit Rules after choosing them.</span>
         </p>
       </aside>
     </div>
