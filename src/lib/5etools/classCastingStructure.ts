@@ -1,10 +1,12 @@
 import type { ClassPreparationRule } from '@/types/classCasting'
 import { getParsedClassSpellSlotProgression } from './classSpellSlotTable'
 import {
+  decodeOptionalDeclaration,
   getOptionalDeclarationOwner,
   type OptionalDeclarationOwner,
   type OptionalDeclarationRule,
   optionalDeclarationDigest,
+  optionalDeclarationObject,
 } from './optionalClassDeclarationStructure'
 
 type Row = Record<string, unknown>
@@ -99,6 +101,31 @@ export function castingParsedParentMatches(row: Row, rule: CastingParentRule): b
 
 export function getCastingParentOwner(row: Row) {
   return getOptionalDeclarationOwner(row, 'class') as ['class', string, string] | undefined
+}
+
+export function getPlainCastingCopyParent(row: Row) {
+  const copy = optionalDeclarationObject(row._copy)
+  if (
+    Object.keys(copy).length !== 2 ||
+    typeof copy.name !== 'string' ||
+    typeof copy.source !== 'string'
+  )
+    return undefined
+  return getCastingParentOwner(copy)
+}
+
+/** Locate literal references to one casting target in the class's declared features. */
+export function getClassCastingRoots(row: Row, target: string): unknown[] {
+  return Array.isArray(row.classFeatures)
+    ? row.classFeatures.filter((value) => {
+        const uid =
+          typeof value === 'string' ? value : optionalDeclarationObject(value).classFeature
+        return (
+          typeof uid === 'string' &&
+          decodeOptionalDeclaration(uid, 'classFeature')?.target === target
+        )
+      })
+    : []
 }
 
 /** Generation arithmetic is classified before schedules are admitted as numeric acquisitions. */

@@ -164,6 +164,9 @@ source-qualified references. Starting and multiclass proficiency grants belong t
 class printing. Inherited features use their own source checks for class casting, optional features,
 and other automated choices.
 
+Inherited mastery and Fighting Style choices resolve the selected class's declared feature
+reference. The exact target supplies eligibility, while the selected class owns the saved choice.
+
 Shared feature digests canonicalize current input on every call. Only exact canonical strings and
 their SHA-256 values are reused in memory; source validity, ownership and multiplicity are always
 checked separately. Retention is bounded to 256 entries, 32,768 code units per signature and a
@@ -192,6 +195,13 @@ cannot disappear through alternative filtering. Winning layers replace the entir
 parent metadata cannot be stitched to a different bundled feature body.
 The finite registry distinguishes level-earned cantrips/known spells, Wizard spellbook increments
 and separate Arcanum gains; daily leveled preparation creates no historical numeric acquisition.
+Simple class copies can use these same casting declarations when the current catalog proves the
+declared copy, exact feature and casting fields. Saved slots name the selected class and reference
+the original casting target. List membership still uses the selected class's current routes.
+`node scripts/generate-class-casting-copy-owners.mjs` derives the owner pairs used to validate
+saved intent offline. Changed casting features and transformed copies need their own authority.
+Multiple named subclass spell schedules need a resolved configuration. Independent unnamed
+schedules can still apply while the named schedules are unresolved.
 Declaration and dependency qualification alone do not create character spell choices or usage events.
 Ordinary `generate-class-casting-rules.mjs` checks the separate reviewed semantic input before writing
 rules and its source/helper manifest; it never recaptures semantic authority on source drift.

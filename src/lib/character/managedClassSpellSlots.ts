@@ -1,6 +1,6 @@
 import { getBardLoreSpellSlots } from '@/lib/5etools/bardSpellSources'
 import {
-  CLASS_CASTING_PRODUCERS,
+  getClassCastingProducersForOwner,
   getClassSpellProfilePolicy,
 } from '@/lib/5etools/classCastingRules'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -25,7 +25,7 @@ export function getManagedClassSpellSlots(
   catalogs?: ClassChoiceFeatureCatalogs,
   prerequisites?: ClassChoicePrerequisiteContext,
 ): ManagedClassSpellSlot[] {
-  const { rule } = getClassSpellProfilePolicy(entry)
+  const { rule, owner } = getClassSpellProfilePolicy(entry)
   const domains: Extract<
     ManagedClassSpellDomain,
     'class-cantrip' | 'class-known' | 'class-spellbook'
@@ -39,7 +39,7 @@ export function getManagedClassSpellSlots(
               ? Array.from(
                   { length: gain.count },
                   (_, ordinal): ManagedClassSpellSlot => [
-                    rule.declaration.owner,
+                    owner,
                     domain,
                     rule.declaration.target,
                     gain.level,
@@ -62,13 +62,14 @@ export function getManagedClassSpellSlots(
           .map((choice) => choice.slot),
       ].filter((slot) => getManagedClassSpellOwnerEntry(slot, [entry]) && slot[3] <= entry.levels)
     : []
-  const arcanum = CLASS_CASTING_PRODUCERS.flatMap((producer) =>
+  const arcanumOwner = ['class', owner[1], owner[2]] as ['class', string, string]
+  const arcanum = getClassCastingProducersForOwner(arcanumOwner).flatMap((producer) =>
     (producer.domains['class-arcanum'] ?? []).flatMap((gain) =>
       gain.level <= entry.levels
         ? Array.from(
             { length: gain.count },
             (_, ordinal): ManagedClassSpellSlot => [
-              producer.declaration.owner,
+              arcanumOwner,
               'class-arcanum',
               producer.declaration.target,
               gain.level,

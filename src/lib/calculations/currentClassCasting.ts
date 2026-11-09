@@ -38,7 +38,7 @@ export function deriveCurrentClassCasting(
   const allowed = sources(character)
   const unearnedProfiles: string[] = []
   const entries = character.classProgression.flatMap((entry) => {
-    const { rule } = getClassSpellProfilePolicy(entry)
+    const { rule, owner } = getClassSpellProfilePolicy(entry)
     if (
       !catalogs ||
       !rule ||
@@ -48,7 +48,7 @@ export function deriveCurrentClassCasting(
       ).length !== 1
     )
       return []
-    const { owner, target, level } = rule.declaration
+    const { target, level } = rule.declaration
     const scoped = scopeClassChoiceFeatureCatalogs(
       catalogs,
       owner[0] === 'subclass'
@@ -141,18 +141,20 @@ export function deriveCurrentClassCasting(
         ),
       0,
     )
-    const revised = character.classProgression.some((entry) => {
-      const parent = getCurrentClassCastingParent(catalogs, [
-        'class',
-        norm(entry.name),
-        norm(entry.source),
-      ])
-      return (
-        parent &&
-        permitted(allowed, parent.source) &&
-        (parent.edition === 'one' || parent.source.trim().toUpperCase() === 'XPHB')
-      )
-    })
+    const revised =
+      shared.some(({ effective }) => effective.edition === 'one') ||
+      character.classProgression.some((entry) => {
+        const parent = getCurrentClassCastingParent(catalogs, [
+          'class',
+          norm(entry.name),
+          norm(entry.source),
+        ])
+        return (
+          parent &&
+          permitted(allowed, parent.source) &&
+          (parent.edition === 'one' || parent.source.trim().toUpperCase() === 'XPHB')
+        )
+      })
     const provider = getCurrentStandardSpellSlotProvider(catalogs, level, revised ? '2024' : '2014')
     slots.shared = provider && permitted(allowed, provider.classData.source) ? provider.slots : {}
   } else if (shared.length === 1 && shared[0].access.provider) {

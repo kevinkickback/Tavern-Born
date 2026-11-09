@@ -58,13 +58,14 @@ export function getDailyClassSpellAccess(
   context?: ManagedClassSpellContext,
 ) {
   const entry = getDailyClassSpellEntry(character, profile)
-  const rule = entry && getClassSpellProfilePolicy(entry).rule
-  if (!entry || !rule) return undefined
+  if (!entry) return undefined
+  const { rule, owner } = getClassSpellProfilePolicy(entry)
+  if (!rule) return undefined
   const current =
     context?.catalogs &&
     getClassCastingLevelAccess(
       context.catalogs,
-      rule.declaration.owner,
+      owner,
       rule.declaration.target,
       rule.declaration.level,
       entry.levels,

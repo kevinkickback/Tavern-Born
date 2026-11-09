@@ -603,10 +603,12 @@ function prepareClassDocument(
     subclasses: materializedSubclasses,
     subclassFeatures: materialized,
   })
-  const classCastingSources = auditClassCastingSources(data, origin, {
-    subclasses: materializedSubclasses,
-    subclassFeatures: materialized,
-  })
+  const classCastingSources = auditClassCastingSources(
+    data,
+    origin,
+    { subclasses: materializedSubclasses, subclassFeatures: materialized },
+    preparedOwners?.classes,
+  )
   const classFeature = auditFixedClassFeatures(
     auditClassProficiencySources(
       auditFavoredEnemySources(

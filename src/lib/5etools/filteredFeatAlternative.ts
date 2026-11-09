@@ -35,13 +35,10 @@ export function getFilteredFeatAlternative(
   const nested = wrapper && Array.isArray(wrapper.entries) ? object(wrapper.entries[0]) : undefined
   if (
     owner.type !== 'class' ||
-    owner.source.trim().toLowerCase() !== 'xphb' ||
     ref.source?.trim().toLowerCase() !== 'xphb' ||
     ref.classSource?.trim().toLowerCase() !== 'xphb' ||
-    ref.className?.trim().toLowerCase() !== owner.name.trim().toLowerCase() ||
     ref.feature?.source?.trim().toLowerCase() !== 'xphb' ||
     ref.feature?.classSource?.trim().toLowerCase() !== 'xphb' ||
-    ref.feature?.className?.trim().toLowerCase() !== owner.name.trim().toLowerCase() ||
     !ref.ref ||
     getClassFeatureIdentity(decodeClassFeatureReference(ref.ref)) !==
       getClassFeatureIdentity(ref) ||

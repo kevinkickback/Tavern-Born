@@ -157,8 +157,12 @@
       "sha256": "1d5a02dd7446c4655fc458623e6462264a385402adf9e5857b012ae867cb7cc0"
     },
     {
+      "file": "src/lib/5etools/classCastingCopyOwners.generated.ts",
+      "sha256": "4ea3b624f128d70fc73419af46692547b33b66f278b8788582cadb2e8c01c00f"
+    },
+    {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "9ec76b9bf6852551bfd5c0ba37cf240887a0024f986a866d99b5fe7fd8175c40"
+      "sha256": "3cf41c32184a44bf905c80d26094094d8c3ffff61cb2963af65ba66dc5e0eee8"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
@@ -166,11 +170,11 @@
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
-      "sha256": "5a5140c667a1f2a67b19aa4c914c2859e73ac4400dcef738ecc69b239d045e89"
+      "sha256": "c58628cb10953ccd8fe6076eaa7218851844db98bb4b945ef095f9c9ab2d8e50"
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "a3e98ca8b70272ca0cda89add916577197779d4ffec55bf9abb67f5a01bd5fe0"
+      "sha256": "b01dcfbefe0a43f045d5bf3d8aca031317d9711db1558c8792522a31f1187d49"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -338,7 +342,7 @@
     },
     {
       "file": "src/lib/5etools/filteredFeatAlternative.ts",
-      "sha256": "3a60bf58c3dce392548c58d2cf5d9957a5ad51a13d1c877da8edaa3d0f9077da"
+      "sha256": "d447361b6afd71012b71158abe3a6fa8cf8566a634426ebf4ae0cda9de41668a"
     },
     {
       "file": "src/lib/5etools/filters.ts",
@@ -466,7 +470,7 @@
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "c99c67e97aac8bf9b977054eb6c3f76fecee7e0508009f47a11b98111e17e2de"
+      "sha256": "558caff2de948b4b06d7f3389d22bd0c05fc1359ce72e4fa5c9908bf0cd0df83"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -622,7 +626,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "9b1b2b14858ba9fb8280a2842325a027fce69c768ffd1948084153fdd11a5e64"
+      "sha256": "a6e82c59dd891f3ea41aac808641dc9704b2730af5f8cb8f2a2e4faa354b7e42"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
@@ -758,7 +762,7 @@
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "5113ca247dd0b85856c34f1f0415bfd2d1aa168dec7a808119659a6ade798667"
+      "sha256": "18c79ee8bb25374b843b4d350f29462d5ed9ebb2dbf3699c329f016607648d60"
     },
     {
       "file": "src/types/classRules.ts",

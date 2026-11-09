@@ -1,7 +1,7 @@
 import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { getCurrentClassCastingProducer } from '@/lib/5etools/classCastingSource'
-import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisiteRules'
@@ -13,15 +13,6 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
-
-function getCurrentClassFeature(target: string, catalogs: ClassChoiceFeatureCatalogs) {
-  const candidates = catalogs.classFeatureCandidates
-    ? (catalogs.classFeatureCandidates.get(target) ?? [])
-    : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === target)
-  return candidates.length === 1 && !candidates[0].sourceIdentityConflict
-    ? candidates[0]
-    : undefined
-}
 
 function hasOpenFeatDeclaration(
   cls: Class5e,
@@ -38,10 +29,9 @@ function hasOpenFeatDeclaration(
       /^(ability score improvement|epic boon)$/i.test(gain.reference.name.trim()),
   )
   if (gains.length !== 1 || gains[0].reference.feature?.sourceIdentityConflict) return false
-  const feature = getCurrentClassFeature(gains[0].target, catalogs)
+  const feature = getCurrentDirectClassFeature(cls, catalogs, gains[0].target)
   return (
     !!feature &&
-    !!findClassReference({ name: feature.className, source: feature.classSource }, [cls]) &&
     (feature.entries ?? []).some(
       (entry) =>
         typeof entry === 'string' &&
@@ -107,9 +97,10 @@ function getEarnedSpellcasting(
     const castingEntry = subclass
       ? entry
       : { ...entry, subclass: undefined, subclassSource: undefined }
-    const declaration = getClassSpellProfilePolicy(castingEntry).rule?.declaration
+    const { rule, owner } = getClassSpellProfilePolicy(castingEntry)
+    const declaration = rule?.declaration
     if (declaration && declaration.level <= entry.levels) {
-      const { owner, target, level } = declaration
+      const { target, level } = declaration
       const scoped = scopeClassChoiceFeatureCatalogs(
         catalogs,
         owner[0] === 'subclass'

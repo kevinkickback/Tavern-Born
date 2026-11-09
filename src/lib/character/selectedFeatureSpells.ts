@@ -23,6 +23,7 @@ import {
 import {
   getClassFeatureSpellSemantics,
   hasCurrentFeatureSpellSemantics,
+  hasDeclaredClassFeatSpellContext,
 } from '@/lib/5etools/featureSpellSemantics'
 import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
 import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
@@ -60,6 +61,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
+import { getCurrentClassChoiceDeclaration } from './classChoiceOptions'
 import { getCurrentClassOrder } from './classOrder'
 import { type ManagedClassSpellContext, permitted, sources } from './classSpellAuthority'
 import {
@@ -145,13 +147,23 @@ export function getSelectedFeatureCantripSetups(
       if (option.entityType === 'feat' && !semantics) return []
       if (!order && !semantics && !(feature && 'additionalSpells' in feature)) return []
       const owner = selectedFeatureSpellOwner(selection)
+      const declaredFeat =
+        option.entityType === 'feat' &&
+        feature?.source &&
+        activeRoute &&
+        catalogs &&
+        hasDeclaredClassFeatSpellContext(
+          activeRoute.choice,
+          { ...feature, source: feature.source },
+          getCurrentClassChoiceDeclaration(activeRoute.choice, catalogs),
+        )
       const setup: SelectedFeatureCantripSetup = {
         owner,
         producer,
         level: option.slotLevel,
         name: option.name,
         count: 0,
-        offered: !!order || (!!semantics && semantics.className === owner[1]),
+        offered: !!order || !!declaredFeat || (!!semantics && semantics.className === owner[1]),
       }
       const deny = (reason: string) => [{ ...setup, reason }]
       if (order && getCurrentClassOrder(character, order, catalogs)?.selection !== selection)
@@ -198,6 +210,7 @@ export function getSelectedFeatureCantripSetups(
         return deny('Decorated class spell filters need unsupported source or plugin rules.')
       if (
         !order &&
+        !declaredFeat &&
         (!feature ||
           !hasCurrentFeatureSpellSemantics(option.entityType, feature, selection.className))
       )
@@ -230,7 +243,7 @@ export function getSelectedFeatureCantripSetups(
       const entry = entries.length === 1 ? entries[0] : undefined
       if (!entry || entry.levels < setup.level)
         return deny('This feature spell choice is not earned by its class owner.')
-      const { rule } = getClassSpellProfilePolicy(entry)
+      const { rule, owner: castingOwner } = getClassSpellProfilePolicy(entry)
       const scoped =
         catalogs &&
         scopeClassChoiceFeatureCatalogs(
@@ -244,7 +257,7 @@ export function getSelectedFeatureCantripSetups(
         scoped &&
         getClassCastingLevelAccess(
           scoped,
-          rule.declaration.owner,
+          castingOwner,
           rule.declaration.target,
           rule.declaration.level,
           entry.levels,

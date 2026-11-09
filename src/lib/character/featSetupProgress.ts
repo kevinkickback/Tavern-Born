@@ -107,9 +107,10 @@ export function getFeatSetupStatus(
       ),
     )
     const sourceAvailable =
-      !!classOwner &&
-      !!owner?.data &&
-      hasCurrentFeatureSpellSemantics('feat', owner.data, classOwner.className)
+      active.length > 0 ||
+      (!!classOwner &&
+        !!owner?.data &&
+        hasCurrentFeatureSpellSemantics('feat', owner.data, classOwner.className))
     return {
       options,
       saved: choices.length > 0,

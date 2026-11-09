@@ -146,11 +146,11 @@ function resolveSlot(
   const lore = getBardLoreSpellRule(slot)
   const arcana = getClericArcanaSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
-  const rule =
+  const baseCasting =
     (savantGain || lore || arcana) && entry
       ? getClassSpellProfilePolicy({ name: entry.name, source: entry.source, levels: entry.levels })
-          .rule
-      : getManagedClassSpellRule(slot)?.rule
+      : undefined
+  const rule = baseCasting ? baseCasting.rule : getManagedClassSpellRule(slot)?.rule
   if (!rule) return 'The saved class spell ownership is invalid.'
   if (!entry || entry.levels < slot[3] || entry.levels < rule.declaration.level)
     return 'This spell choice is not earned by the selected class or subclass.'
@@ -164,22 +164,16 @@ function resolveSlot(
       : undefined,
   )
   const { declaration } = rule
+  const castingOwner = baseCasting?.owner ?? owner
   const authority = arcana
     ? getClassCastingLevelAccess(
         catalog,
-        declaration.owner,
+        castingOwner,
         declaration.target,
         declaration.level,
         slot[3],
       )
-    : gainAuthority(
-        catalog,
-        declaration.owner,
-        declaration.target,
-        declaration.level,
-        slot[1],
-        slot[3],
-      )
+    : gainAuthority(catalog, castingOwner, declaration.target, declaration.level, slot[1], slot[3])
   const allowed = sources(character)
   if (
     !authority ||

@@ -79,6 +79,7 @@ import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classDat
 import {
   decodeClassFeatureReference,
   getClassFeatureIdentity,
+  getClassFeatureReferenceLevel,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import {
@@ -95,6 +96,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getDivineSoulConfiguration,
   getDivineSoulOwnerRule,
@@ -105,6 +107,7 @@ import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
 import {
   getClassFeatureSpellSemantics,
   hasDeclaredClassFeatSpellContext,
@@ -873,6 +876,52 @@ export function getEarnedFixedClassChoiceOptions(
   })
 }
 
+export function getCurrentClassChoiceDeclaration(
+  choice: NormalizedCharacterChoice,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  if (choice.owner.type !== 'class') return undefined
+  const owners = catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
+  if (owners?.length !== 1 || owners[0].sourceIdentityConflict) return undefined
+  const refs = owners[0].classFeatureRefs?.filter(
+    (ref) =>
+      normalized(ref.name) === normalized(choice.owner.featureName) &&
+      normalized(ref.source) === normalized(choice.owner.featureSource) &&
+      getClassFeatureReferenceLevel(ref) === choice.level,
+  )
+  if (refs?.length !== 1) return undefined
+  const [ref] = refs
+  const target = getClassFeatureIdentity(ref)
+  if (
+    !target ||
+    typeof ref.ref !== 'string' ||
+    getClassFeatureIdentity(decodeClassFeatureReference(ref.ref)) !== target ||
+    catalogs.ambiguousClassFeatureTargets?.has(target)
+  )
+    return undefined
+  const digest = getFeatureSourceDigest([ref.feature], false)
+  return getCurrentDirectClassFeature(
+    owners[0],
+    catalogs,
+    target,
+    (feature) => getFeatureSourceDigest([feature], false) === digest,
+  )
+}
+
+function satisfyFightingStyleRequirement(option: ClassChoiceOptionView): ClassChoiceOptionView {
+  if (option.reference.entityType !== 'feat' || !option.prerequisite?.length) return option
+  let satisfied = false
+  const prerequisite = option.prerequisite.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
+    const { feature, ...rest } = entry
+    if (!Array.isArray(feature) || feature.length !== 1 || feature[0] !== 'Fighting Style')
+      return entry
+    satisfied ||= Object.keys(rest).length === 0
+    return rest
+  })
+  return { ...option, prerequisite: satisfied ? undefined : prerequisite }
+}
+
 /** Resolves one normalized choice against filtered catalogs without source-specific option lists. */
 export function resolveClassChoiceOptions(
   choice: NormalizedCharacterChoice,
@@ -1038,32 +1087,18 @@ export function resolveClassChoiceOptions(
     ]
   }
   const filter = choice.optionFilter
-  const masteryOwners = filter?.requiresMastery
-    ? catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
-    : undefined
-  const masteryTarget = filter?.requiresMastery
-    ? getClassFeatureIdentity({
-        name: choice.owner.featureName,
-        source: choice.owner.featureSource,
-        className: choice.owner.name,
-        classSource: choice.owner.source,
-        level: choice.level,
-      })
-    : undefined
-  const masteryFeatures = masteryTarget
-    ? (catalogs.classFeatureCandidates?.get(masteryTarget) ??
-      catalogs.classFeatures.filter(
-        (feature) => getClassFeatureIdentity(feature) === masteryTarget,
-      ))
-    : []
-  const currentFilter =
-    masteryOwners &&
-    (masteryOwners.length !== 1 ||
-      masteryOwners[0].sourceIdentityConflict ||
-      masteryFeatures.length !== 1 ||
-      masteryFeatures[0].sourceIdentityConflict)
-      ? undefined
-      : filter
+  const fightingStyle =
+    filter?.entityType === 'feat' &&
+    filter.categories?.length === 1 &&
+    filter.categories[0] === 'FS' &&
+    normalized(choice.owner.featureName) === 'fighting style'
+  const declaration =
+    filter?.requiresMastery || fightingStyle
+      ? getCurrentClassChoiceDeclaration(choice, catalogs)
+      : undefined
+  const declarationUnavailable =
+    (filter?.requiresMastery || fightingStyle) && !!catalogs.classes && !declaration
+  const currentFilter = declarationUnavailable ? undefined : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
   const tableItems =
@@ -1074,7 +1109,7 @@ export function resolveClassChoiceOptions(
     choice.source.kind === 'optional-feature-progression' &&
     filter?.featureTypes?.length === 1 &&
     filter.featureTypes[0] === 'AI'
-  if (choice.options.length > 0 && !filter?.requiresMastery) {
+  if (choice.options.length > 0 && !filter?.requiresMastery && !declarationUnavailable) {
     resolved.push(
       ...choice.options
         .filter(
@@ -1253,6 +1288,9 @@ export function resolveClassChoiceOptions(
   const bladeUnavailable = 'Restore the exact Invocation source and its earned Pact of the Blade.'
   const byKey = new Map(
     resolved
+      .map((option) =>
+        fightingStyle && declaration ? satisfyFightingStyleRequirement(option) : option,
+      )
       .map((option) => {
         if (
           !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
@@ -1269,7 +1307,8 @@ export function resolveClassChoiceOptions(
             normalized(feat.name) === normalized(option.reference.name) &&
             normalized(feat.source) === normalized(option.reference.source),
         )
-        return candidates.length === 1 && hasDeclaredClassFeatSpellContext(choice, candidates[0])
+        return candidates.length === 1 &&
+          hasDeclaredClassFeatSpellContext(choice, candidates[0], declaration)
           ? { ...option, prerequisite: undefined }
           : { ...option, availability: 'retained' as const }
       })
@@ -1433,21 +1472,7 @@ export function resolveClassChoiceOptions(
         rows?.length === 1 &&
         !('sourceIdentityConflict' in rows[0] && rows[0].sourceIdentityConflict === true)
       ) {
-        if (currentStyle && option.reference.entityType === 'feat' && option.prerequisite?.length) {
-          let satisfied = false
-          const prerequisite = option.prerequisite.map((entry) => {
-            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
-            const { feature, ...rest } = entry
-            if (!Array.isArray(feature) || feature.length !== 1 || feature[0] !== 'Fighting Style')
-              return entry
-            satisfied ||= Object.keys(rest).length === 0
-            return rest
-          })
-          byKey.set(key, {
-            ...option,
-            prerequisite: satisfied ? undefined : prerequisite,
-          })
-        }
+        if (currentStyle) byKey.set(key, satisfyFightingStyleRequirement(option))
         continue
       }
       if (savedStyleKeys.has(key)) byKey.set(key, { ...option, availability: 'retained' })

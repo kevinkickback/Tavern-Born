@@ -310,7 +310,16 @@ export function getEarnedSubclassSpellGrants(
         !getSourceCompatibility(classData.source, landContext.character.originSystem).compatible
         ? []
         : rituals
-    const grants = parseSubclassSpells(subclasses[0].additionalSpells, classLevel)
+    const blocks = subclasses[0].additionalSpells
+    const isNamed = (block: SubclassAdditionalSpells) =>
+      typeof block?.name === 'string' && block.name.trim().length > 0
+    // Known configuration handlers choose their block above. Unresolved named schedules
+    // cannot all grant spells, while independent unnamed schedules remain usable.
+    const unambiguous =
+      Array.isArray(blocks) && blocks.filter(isNamed).length > 1
+        ? blocks.filter((block) => !isNamed(block))
+        : blocks
+    const grants = parseSubclassSpells(unambiguous, classLevel)
     const alchemist = getAlchemistFeatureCasts(classData, subclasses[0], classLevel)
     if (alchemist) return [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
     if (norm(entry.name) === 'cleric') {

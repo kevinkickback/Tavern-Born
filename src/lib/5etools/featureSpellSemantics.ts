@@ -1,3 +1,4 @@
+import type { ClassFeature } from '@/types/5etools'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
 
@@ -84,13 +85,16 @@ export function hasCurrentFeatureSpellSemantics(
 export function hasDeclaredClassFeatSpellContext(
   choice: NormalizedCharacterChoice,
   feature: { name: string; source: string; entries?: unknown[]; prerequisite?: unknown },
+  declaration: ClassFeature | undefined,
 ) {
   if (
     choice.kind !== 'feat' ||
     choice.owner.type !== 'class' ||
-    norm(choice.owner.source) !== 'xphb' ||
+    !declaration ||
+    norm(declaration.classSource ?? '') !== 'xphb' ||
+    norm(declaration.source) !== 'xphb' ||
     !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
-    !hasCurrentFeatureSpellSemantics('feat', feature, choice.owner.name) ||
+    !hasCurrentFeatureSpellSemantics('feat', feature, declaration.className ?? '') ||
     !choice.options.some(
       (option) =>
         option.entityType === 'feat' &&
@@ -106,8 +110,8 @@ export function hasDeclaredClassFeatSpellContext(
   return (
     !!clause &&
     choice.level === Number(clause[1]) &&
-    norm(choice.owner.name) === norm(clause[2]) &&
-    norm(choice.owner.featureName ?? '') === norm(clause[3]) &&
-    norm(choice.owner.featureSource ?? '') === 'xphb'
+    declaration.level === Number(clause[1]) &&
+    norm(declaration.className ?? '') === norm(clause[2]) &&
+    norm(declaration.name) === norm(clause[3])
   )
 }
