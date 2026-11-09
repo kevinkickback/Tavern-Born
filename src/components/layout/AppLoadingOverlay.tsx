@@ -1,3 +1,4 @@
+import { CheckCircle } from '@phosphor-icons/react'
 import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -47,7 +48,7 @@ export function AppLoadingOverlay({
     }
 
     // Release startup even if the CSS animation is interrupted or disabled.
-    const timeout = window.setTimeout(onStartupComplete, 600)
+    const timeout = window.setTimeout(onStartupComplete, 800)
     return () => window.clearTimeout(timeout)
   }, [isLoadingOverlay, isStartupReady, onStartupComplete])
 
@@ -130,16 +131,24 @@ export function AppLoadingOverlay({
         </p>
       </div>
       <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
-        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div className="flex h-6 items-center justify-center">
           {isStartupReady ? (
-            <div className="h-full w-full rounded-full bg-primary" />
-          ) : hasProgress ? (
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-              style={{ width: `${pct}%` }}
+            <CheckCircle
+              aria-hidden="true"
+              data-testid="startup-ready-check"
+              className="size-6 text-success motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
             />
           ) : (
-            <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              {hasProgress ? (
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                  style={{ width: `${pct}%` }}
+                />
+              ) : (
+                <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+              )}
+            </div>
           )}
         </div>
         <div

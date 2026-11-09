@@ -100,7 +100,7 @@
   }
 
   .startup-ready-exit {
-    animation: startup-ready-fade 160ms ease-out 300ms both;
+    animation: startup-ready-fade 160ms ease-out 500ms both;
   }
 
   @keyframes hint-bounce-once {

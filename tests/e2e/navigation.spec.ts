@@ -57,9 +57,11 @@ for (const initialHash of ['', '#/build']) {
         const observer = new MutationObserver(() => {
           if (element.querySelector('[role="status"]')?.textContent?.trim() !== 'Ready') return
           const { animationDelay, animationDuration } = getComputedStyle(element)
+          const check = element.querySelector('[data-testid="startup-ready-check"]')
           Reflect.set(window, 'startupExit', {
             animationDelay,
             animationDuration,
+            checkAnimation: check ? getComputedStyle(check).animationName !== 'none' : null,
             busy: element.getAttribute('aria-busy'),
             workspaceInert: document
               .getElementById('app-interactive-content')
@@ -72,8 +74,9 @@ for (const initialHash of ['', '#/build']) {
       home.release()
       await expect(overlay).toBeHidden()
       expect(await page.evaluate(() => Reflect.get(window, 'startupExit'))).toEqual({
-        animationDelay: '0.3s',
+        animationDelay: '0.5s',
         animationDuration: '0.16s',
+        checkAnimation: !reducedMotion,
         busy: 'false',
         workspaceInert: true,
       })
