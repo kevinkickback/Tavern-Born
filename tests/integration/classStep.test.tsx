@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ClassStep } from '@/components/character/wizard/steps/4-ClassStep'
@@ -98,7 +98,7 @@ describe('ClassStep', () => {
     })
   })
 
-  test('sorts class rows across sources and defaults from catalog order', async () => {
+  test('sorts class rows across sources and defaults to the first displayed class', () => {
     const onChange = vi.fn()
     const classes: Class5e[] = [
       { name: 'Wizard', source: 'TCE' } as Class5e,
@@ -119,11 +119,9 @@ describe('ClassStep', () => {
       />,
     )
 
-    await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith({
-        class: 'Wizard',
-        classSource: 'TCE',
-      })
+    expect(onChange).toHaveBeenCalledWith({
+      class: 'Barbarian',
+      classSource: 'TCE',
     })
     expect(
       getAllByRole('button', { name: /^(Barbarian|Wizard) (PHB|TCE)·/ }).map(
