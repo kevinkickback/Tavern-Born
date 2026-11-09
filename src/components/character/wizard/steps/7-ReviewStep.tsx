@@ -132,7 +132,6 @@ export function ReviewStep({
               </span>
             </div>
             <InfoRow label="Race Source" value={data.raceSource} />
-            {data.playerName && <InfoRow label="Player" value={data.playerName} />}
           </div>
         </div>
       </div>

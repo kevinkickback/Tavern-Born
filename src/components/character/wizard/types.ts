@@ -22,9 +22,12 @@ export interface WizardStep {
 
 export interface CharacterWizardData {
   name: string
-  playerName: string
   age: number | null
   gender: string
+  height: string
+  weight: string
+  eyes: string
+  hair: string
   race: string
   raceSource: string
   subrace: string

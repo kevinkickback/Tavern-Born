@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useId } from 'react'
+import { IDENTITY_PLACEHOLDERS } from '@/components/character/identityPlaceholders'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,12 @@ import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 import type { StepProps } from '../types'
 
+const physicalFields = [
+  { key: 'height', label: 'Height' },
+  { key: 'weight', label: 'Weight' },
+  { key: 'eyes', label: 'Eyes' },
+] as const
+
 export function BasicsStep({
   data,
   onChange,
@@ -22,9 +29,10 @@ export function BasicsStep({
   nameError,
 }: StepProps & { intro?: ReactNode; nameError?: string | null }) {
   const characterNameId = useId()
-  const playerNameId = useId()
+  const physicalFieldId = useId()
   const ageId = useId()
   const genderId = useId()
+  const hairId = useId()
 
   const handlePortraitChange = useCallback(
     (p: string | null) => {
@@ -46,8 +54,8 @@ export function BasicsStep({
   const identity = (
     <div>
       {intro}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="col-span-2 min-w-0 space-y-1.5">
+      <div className="grid grid-cols-3 gap-2.5">
+        <div className="col-span-full min-w-0 space-y-1.5">
           <Label htmlFor={characterNameId}>Character Name</Label>
           <Input
             id={characterNameId}
@@ -66,16 +74,18 @@ export function BasicsStep({
             </p>
           )}
         </div>
-        <div className="col-span-2 min-w-0 space-y-1.5">
-          <Label htmlFor={playerNameId}>Player Name</Label>
-          <Input
-            id={playerNameId}
-            value={data.playerName}
-            onChange={(e) => onChange({ playerName: e.target.value })}
-            placeholder="Enter player name"
-          />
-        </div>
-        <div className="space-y-2">
+        {physicalFields.map(({ key, label }) => (
+          <div key={key} className="min-w-0 space-y-1.5">
+            <Label htmlFor={`${physicalFieldId}-${key}`}>{label}</Label>
+            <Input
+              id={`${physicalFieldId}-${key}`}
+              value={data[key]}
+              onChange={(e) => onChange({ [key]: e.target.value })}
+              placeholder={IDENTITY_PLACEHOLDERS[key]}
+            />
+          </div>
+        ))}
+        <div className="min-w-0 space-y-2">
           <Label htmlFor={ageId}>Age</Label>
           <Input
             id={ageId}
@@ -95,14 +105,14 @@ export function BasicsStep({
               }
               onChange({ age: Math.max(0, parsed) })
             }}
-            placeholder="Years"
+            placeholder={IDENTITY_PLACEHOLDERS.age}
           />
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor={genderId}>Gender</Label>
           <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
             <SelectTrigger id={genderId} className="w-full">
-              <SelectValue />
+              <SelectValue placeholder={IDENTITY_PLACEHOLDERS.gender} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Male">Male</SelectItem>
@@ -111,6 +121,15 @@ export function BasicsStep({
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor={hairId}>Hair</Label>
+          <Input
+            id={hairId}
+            value={data.hair}
+            onChange={(e) => onChange({ hair: e.target.value })}
+            placeholder={IDENTITY_PLACEHOLDERS.hair}
+          />
         </div>
       </div>
     </div>

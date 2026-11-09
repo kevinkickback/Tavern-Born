@@ -229,9 +229,12 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                 abilityScoreMethod: characterData.abilityScoreMethod,
               },
               details: {
-                playerName: characterData.playerName,
                 age: characterData.age ?? undefined,
                 gender: characterData.gender,
+                height: characterData.height || undefined,
+                weight: characterData.weight || undefined,
+                eyes: characterData.eyes || undefined,
+                hair: characterData.hair || undefined,
               },
             },
             race: raceResolution.parentRace,

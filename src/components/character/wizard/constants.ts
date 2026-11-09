@@ -80,9 +80,12 @@ export const WIZARD_STEPS: WizardStep[] = [
 
 export const INITIAL_CHARACTER_DATA: CharacterWizardData = {
   name: '',
-  playerName: '',
   age: null,
   gender: 'Female',
+  height: '',
+  weight: '',
+  eyes: '',
+  hair: '',
   race: '',
   raceSource: '',
   subrace: '',

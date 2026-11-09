@@ -10,6 +10,7 @@ import {
 } from '@phosphor-icons/react'
 import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { IDENTITY_PLACEHOLDERS } from '@/components/character/identityPlaceholders'
 import { RichTextArea } from '@/components/editor/RichTextArea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -372,7 +373,7 @@ export function CharacteristicsPage() {
                         }}
                       >
                         <SelectTrigger id={genderId}>
-                          <SelectValue placeholder="Select gender" />
+                          <SelectValue placeholder={IDENTITY_PLACEHOLDERS.gender} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Male">Male</SelectItem>
@@ -458,7 +459,7 @@ export function CharacteristicsPage() {
                             age: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
                           })
                         }}
-                        placeholder="25"
+                        placeholder={IDENTITY_PLACEHOLDERS.age}
                       />
                     </Field>
                     <Field id={heightId} label="Height">
@@ -469,7 +470,7 @@ export function CharacteristicsPage() {
                           setDraftField('height', e.target.value)
                           updateActiveCharacterDetails({ height: e.target.value })
                         }}
-                        placeholder={`5'10"`}
+                        placeholder={IDENTITY_PLACEHOLDERS.height}
                       />
                     </Field>
                     <Field id={weightId} label="Weight">
@@ -480,7 +481,7 @@ export function CharacteristicsPage() {
                           setDraftField('weight', e.target.value)
                           updateActiveCharacterDetails({ weight: e.target.value })
                         }}
-                        placeholder="180 lbs"
+                        placeholder={IDENTITY_PLACEHOLDERS.weight}
                       />
                     </Field>
                     <Field id={eyesId} label="Eyes">
@@ -491,7 +492,7 @@ export function CharacteristicsPage() {
                           setDraftField('eyes', e.target.value)
                           updateActiveCharacterDetails({ eyes: e.target.value })
                         }}
-                        placeholder="Blue"
+                        placeholder={IDENTITY_PLACEHOLDERS.eyes}
                       />
                     </Field>
                     <Field id={hairId} label="Hair">
@@ -502,7 +503,7 @@ export function CharacteristicsPage() {
                           setDraftField('hair', e.target.value)
                           updateActiveCharacterDetails({ hair: e.target.value })
                         }}
-                        placeholder="Black"
+                        placeholder={IDENTITY_PLACEHOLDERS.hair}
                       />
                     </Field>
                     <Field id={skinId} label="Skin">

@@ -516,12 +516,26 @@ test('creates a complete character and persists it across a full reload', async 
 
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const dialog = page.getByRole('dialog', { name: 'Create New Character' })
+  const physicalTraits = [
+    { label: 'Height', placeholder: `5'10"`, value: '1.8 m' },
+    { label: 'Weight', placeholder: '180 lbs', value: '73 kg' },
+    { label: 'Eyes', placeholder: 'Blue', value: 'Amber' },
+    { label: 'Hair', placeholder: 'Black', value: 'Silver' },
+  ]
 
   await test.step('complete required wizard selections', async () => {
     await dialog.getByRole('button', { name: 'Next' }).click()
     await expect(dialog.getByLabel('Character Name')).toHaveAttribute('aria-invalid', 'true')
     await expect(dialog.getByText('Character name is required', { exact: true })).toBeVisible()
     await dialog.getByLabel('Character Name').fill('E2E Created Hero')
+    await expect(dialog.getByLabel('Age')).toHaveAttribute('placeholder', '25')
+    await expect(dialog.getByLabel('Player Name')).toHaveCount(0)
+    for (const { label, placeholder, value } of physicalTraits) {
+      const field = dialog.getByLabel(label, { exact: true })
+      await expect(field).toHaveAttribute('placeholder', placeholder)
+      await expect(field).toHaveValue('')
+      await field.fill(value)
+    }
     await dialog.getByRole('button', { name: 'Next' }).click()
 
     await expect(dialog.getByRole('button', { name: /5e Legacy/ })).toHaveAttribute(
@@ -592,6 +606,12 @@ test('creates a complete character and persists it across a full reload', async 
   await expect(page.getByText('E2E Created Hero').first()).toBeVisible()
 
   await selectCharacterFromHome(page, 'E2E Created Hero')
+  await page.goto('/#/details/characteristics')
+  for (const { label, value } of physicalTraits) {
+    await expect(page.getByLabel(label, { exact: true })).toHaveValue(value)
+  }
+  await expect(page.getByPlaceholder('Player name', { exact: true })).toHaveValue('')
+
   await page.goto('/#/build/ability-scores')
   await expect(page.getByRole('tab', { name: 'Point Buy' })).toHaveAttribute(
     'aria-selected',
