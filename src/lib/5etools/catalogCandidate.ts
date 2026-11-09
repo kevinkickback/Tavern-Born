@@ -10,6 +10,7 @@ import { parseAdditionalSpellBlocks } from './additionalSpells'
 import {
   assertLayerDependencies,
   externalCatalogKeys,
+  hasCatalogRecords,
   loadGameDataSourceStack,
 } from './contentLayers'
 import type { DataLoaderOptions } from './dataLoader'
@@ -96,6 +97,8 @@ export async function prepareCatalog(
           ...options,
           additionalReader: scan.reader,
           onLayerLoaded: (role, data) => {
+            if (role === 'base' && !hasCatalogRecords(data))
+              throw new Error('The Included SRD could not be loaded.')
             if (role === 'additional') additional = data
             layerMetadata[role] = {
               contentFingerprint: computeGameDataFingerprint(data),

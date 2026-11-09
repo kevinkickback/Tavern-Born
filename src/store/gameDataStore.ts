@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import type { PreparedCatalog } from '@/lib/5etools/catalogCandidate'
-import { externalCatalogKeys } from '@/lib/5etools/contentLayers'
+import { externalCatalogKeys, hasCatalogRecords } from '@/lib/5etools/contentLayers'
 import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { loadDataFromSource } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -94,10 +94,6 @@ function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {
     () => undefined,
   )
   return operation
-}
-
-function hasCatalogRecords(data: GameData): boolean {
-  return Object.values(data).some((rows) => Array.isArray(rows) && rows.length > 0)
 }
 
 interface LoadProgress {
@@ -249,6 +245,8 @@ export const useGameDataStore = create<GameDataState>()(
           if (!availableCache || !source || !isCacheForSource(availableCache, source)) return false
           const { data, contentFingerprint, cachedAt, lastDataChangedAt, externalKeys } =
             availableCache
+          if (availableCache.sourceSnapshot.type === 'bundled' && !hasCatalogRecords(data))
+            return false
           set({
             gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
             lastDataChangedAt: lastDataChangedAt ?? cachedAt,
@@ -389,7 +387,7 @@ export const useGameDataStore = create<GameDataState>()(
             background &&
             existingData &&
             hasCatalogRecords(existingData) &&
-            !hasCatalogRecords(data)
+            !(candidate?.keys.length || hasCatalogRecords(data))
           ) {
             throw new Error('Background refresh returned empty data; keeping existing cache')
           }

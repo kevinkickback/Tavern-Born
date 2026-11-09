@@ -82,6 +82,8 @@ dependencies keep the active catalog and cache intact. Item choice metadata can 
 as a diagnostic because these choices retain references without creating inventory or applying effects.
 Fluff can degrade independently. A verified withdrawal shows the affected files or records in
 Settings before the candidate can replace the active catalog.
+The Included SRD must contain parsed rules or compendium records, including when it serves as
+the base of a layered candidate. Source labels and shared text alone cannot open a bundled catalog.
 Older catalogs without an external record inventory require one-time review, even if the composed
 catalog appears unchanged. The preview explains that it may omit withdrawals masked by Included
 SRD records. Applying the candidate records its external inventory for future checks.

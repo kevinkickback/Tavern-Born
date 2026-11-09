@@ -25,6 +25,32 @@ test('prepares a personal HTTPS source using one read per file and no provider A
   expect(urls.every((url) => url.startsWith(`${online.path}/data/`))).toBe(true)
 })
 
+test('a valid external layer cannot mask a metadata-only Included SRD', async () => {
+  const itemEntry = [{ name: 'Loose text', source: 'PHB', entriesTemplate: ['Shared text.'] }]
+  vi.stubGlobal('window', {
+    electronAPI: {
+      readBundledJson: (file: string) =>
+        Promise.resolve(file === 'items-base.json' ? { itemEntry } : {}),
+    },
+  })
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.replace(`${online.path}/data/`, '')
+    return Promise.resolve(key in files ? json(files[key]) : json(null, 404))
+  })
+  const bundled = {
+    type: 'bundled' as const,
+    path: 'srd/core',
+    packId: 'tavern-born-srd-core',
+    packVersion: '1.0.0',
+    isValid: true,
+  }
+  await expect(prepareCatalog(online, bundled, signal())).rejects.toThrow(
+    'The Included SRD could not be loaded.',
+  )
+  const standalone = await prepareCatalog(online, undefined, signal())
+  expect(standalone.data.spells.map(({ name }) => name)).toContain('Magic Missile')
+})
+
 test.each([
   {},
   { spell: [{}] },

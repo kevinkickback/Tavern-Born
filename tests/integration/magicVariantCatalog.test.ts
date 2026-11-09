@@ -80,7 +80,10 @@ describe('raw template cache and concrete character persistence', () => {
     }
     vi.stubGlobal('electronAPI', {
       getBundledManifest: async () => ({ packId: 'tavern-born-srd-core', packVersion: 'test' }),
-      readBundledJson: async () => ({}),
+      readBundledJson: (file: string) =>
+        Promise.resolve(
+          file === 'actions.json' ? { action: [{ name: 'Dash', source: 'PHB' }] } : {},
+        ),
       readLocalJson: (path: string) => {
         const file = path.slice('/additional/'.length)
         if (file.startsWith('class/fluff-')) return {}

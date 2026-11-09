@@ -687,37 +687,49 @@ export function assertLayerDependencies(
   }
 }
 
+const CATALOG_RECORD_COLLECTIONS = [
+  'races',
+  'classes',
+  'backgrounds',
+  'spells',
+  'feats',
+  'items',
+  'itemsBase',
+  'classFeatures',
+  'creatures',
+  'actions',
+  'conditions',
+  'deities',
+  'skills',
+  'senses',
+  'languages',
+  'optionalfeatures',
+  'variantrules',
+  'trapHazards',
+  'rewards',
+  'cultsBoons',
+  'organizations',
+] as const
+
+const EXTERNAL_RECORD_COLLECTIONS = [
+  ...CATALOG_RECORD_COLLECTIONS,
+  'itemProperties',
+  'itemTypes',
+  'itemMasteries',
+  'magicVariants',
+  'psionics',
+] as const
+
+export function hasCatalogRecords(data: GameData): boolean {
+  return CATALOG_RECORD_COLLECTIONS.some((family) => {
+    const records = data[family]
+    return Array.isArray(records) && records.length > 0
+  })
+}
+
 /** Compare the external layer itself so an SRD record cannot hide a withdrawn overlay. */
 export function externalCatalogKeys(data: GameData): string[] {
-  const families = [
-    'races',
-    'classes',
-    'backgrounds',
-    'spells',
-    'feats',
-    'items',
-    'itemsBase',
-    'itemProperties',
-    'itemTypes',
-    'itemMasteries',
-    'magicVariants',
-    'classFeatures',
-    'creatures',
-    'psionics',
-    'actions',
-    'conditions',
-    'deities',
-    'skills',
-    'senses',
-    'languages',
-    'optionalfeatures',
-    'variantrules',
-    'trapHazards',
-    'rewards',
-    'cultsBoons',
-    'organizations',
-  ] as const
-  const keys = families.flatMap((family) => {
+  const keys = EXTERNAL_RECORD_COLLECTIONS.flatMap((family) => {
     const identity = COLLECTION_IDENTITIES[family] ?? recordIdentity
     return (data[family] ?? []).map((record) => `${family}: ${identity(record as never)}`)
   })

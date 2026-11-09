@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { APP_INTERACTIVE_CONTENT_ID } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
+import { clearGameDataCache, readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
 import { useGameDataStore } from '@/store/gameDataStore'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/components/settings/DataSourceConfigurator', () => ({
   DataSourceConfigurator: ({ onCancel }: { onCancel?: () => void }) => (
@@ -45,6 +47,7 @@ function resetGameDataStore() {
     cacheStatus: 'unknown',
     remoteStartup: null,
     sessionBundledSource: null,
+    bundledUnavailable: false,
     hasHydrated: false,
   })
 }
@@ -68,6 +71,43 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     expect(screen.getByText('Tavern Born')).toBeTruthy()
     expect(screen.getByText('Warming up the dice...')).toBeTruthy()
+  })
+
+  test.each([
+    false,
+    true,
+  ])('metadata-only Included SRD reaches recovery (cached=%s)', async (cached) => {
+    const bundled = {
+      type: 'bundled' as const,
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    const itemEntries = [{ name: 'Loose text', source: 'PHB', entriesTemplate: ['Shared text.'] }]
+    const readBundledJson = vi.fn((file: string) =>
+      Promise.resolve(file === 'items-base.json' ? { itemEntry: itemEntries } : {}),
+    )
+    vi.stubGlobal('electronAPI', {
+      getBundledManifest: () => Promise.resolve(bundled),
+      readBundledJson,
+    })
+    await clearGameDataCache(true)
+    try {
+      if (cached) await writeGameDataCache(makeGameDataFixture({ itemEntries }), bundled)
+      await useGameDataStore.getState().loadFromCache()
+      expect(readBundledJson).toHaveBeenCalledWith('items-base.json')
+      expect(useGameDataStore.getState()).toMatchObject({
+        gameData: null,
+        remoteStartup: 'unavailable',
+        bundledUnavailable: true,
+        error: 'The Included SRD could not be loaded.',
+      })
+      if (!cached) expect(await readGameDataCache()).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+      await clearGameDataCache(true)
+    }
   })
 
   test('startup recovery offers retry and source setup after both catalogs fail', async () => {
