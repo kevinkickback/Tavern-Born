@@ -76,6 +76,28 @@ const proofs = (value: object) => {
     ? rows.filter((row) => !!row && typeof row === 'object' && !Array.isArray(row))
     : []
 }
+
+const slotOrdinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+
+/** The class table's linked display label can be ordinal or numeric for the same slot column. */
+function withCanonicalCastingSlotLabels<T extends object>(row: T): T {
+  const groups = (row as Record<string, unknown>).classTableGroups
+  if (!Array.isArray(groups)) return row
+  let changed = false
+  const normalized = groups.map((value) => {
+    const group = optionalDeclarationObject(value)
+    if (!Array.isArray(group.rowsSpellProgression) || !Array.isArray(group.colLabels)) return value
+    const labels = group.colLabels.map((label: unknown, index) => {
+      if (typeof label !== 'string') return label
+      const match = /^\{@filter ([1-9])(\|spells\|level=\1\|class=[^{}|]+)\}$/.exec(label)
+      if (!match || Number(match[1]) !== index + 1) return label
+      changed = true
+      return `{@filter ${slotOrdinals[index]}${match[2]}}`
+    })
+    return { ...group, colLabels: labels }
+  })
+  return changed ? { ...row, classTableGroups: normalized } : row
+}
 const declarations = createDeclarationSourceAccess(
   CLASS_CASTING_PRODUCERS.map((row) => row.declaration),
   'casting-declaration',
@@ -122,9 +144,12 @@ export function auditClassCastingSources(
   prepared?: PreparedOptionalDeclarationSources,
 ): ClassCastingSourceProof[] {
   const document = optionalDeclarationObject(value)
-  const classes = Array.isArray(document.class) ? document.class.map(optionalDeclarationObject) : []
+  const classes = Array.isArray(document.class)
+    ? document.class.map((row) => withCanonicalCastingSlotLabels(optionalDeclarationObject(row)))
+    : []
+  const castingDocument = { ...document, class: classes }
   const result: ClassCastingSourceProof[] = currentDeclarations.flatMap(({ access }) =>
-    access.audit(value, origin, prepared),
+    access.audit(castingDocument, origin, prepared),
   )
   for (const [target, rule] of parents) {
     const found = classes.filter((row) => JSON.stringify(getCastingParentOwner(row)) === target)
@@ -155,7 +180,10 @@ function currentParent(catalog: ClassCastingCatalog, key: string) {
     (row) => row.kind === 'casting-parent' && row.target === key,
   )
   const identity = parentIdentities.get(key)
-  const comparison = identity && found.length === 1 ? { ...found[0], ...identity } : undefined
+  const comparison =
+    identity && found.length === 1
+      ? withCanonicalCastingSlotLabels({ ...found[0], ...identity })
+      : undefined
   if (
     found.length !== 1 ||
     evidence.length !== 1 ||

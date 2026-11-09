@@ -171,7 +171,9 @@ Numeric casting declarations use a separate `classCastingSources` collection. Th
 resolver retains exact actual owners and requested feature targets; ordinary casting never becomes an
 optional adoption merely by sharing that resolver. Additional raw exact-one proofs bind consumed
 parent-class progression, preparation and table inputs. Parsed slot arrays must agree with the
-production table derivation. When a subclass uses the standard-table fallback, current authority
+production table derivation. The casting audit treats numeric and ordinal link labels for the same
+explicit slot column as equivalent. It retains the link target, table rows and displayed data.
+When a subclass uses the standard-table fallback, current authority
 validates the actual helper-selected provider against the finite supported provider catalog; it does
 not choose a different provider from an approved-only subset. Winning parent/provider layers replace
 their proofs even when incoming proof is absent. Empty current evidence denies authority.
