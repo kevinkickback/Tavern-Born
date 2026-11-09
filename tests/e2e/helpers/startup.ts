@@ -148,7 +148,6 @@ export async function seedAppState(
       configSeed: {
         state: {
           dataSourceConfig: { ...resolvedConfig, lastLoaded: now },
-          lastLoadedAt: now,
         },
         version: 0,
       },
@@ -196,7 +195,7 @@ export async function ensureStartupPromptResolved(
 
   const startupHeading = page
     .getByRole('heading', {
-      name: /Welcome to Tavern Born|Game Data Setup|Choose Game Data/i,
+      name: /Welcome to Tavern Born|Choose Game Data/i,
     })
     .first()
 

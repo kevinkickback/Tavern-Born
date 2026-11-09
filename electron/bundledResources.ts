@@ -88,6 +88,13 @@ export async function readBundledJsonFromRoot(
   rootPath: string,
   relativePath: unknown,
 ): Promise<unknown> {
+  return JSON.parse(await readBundledJsonText(rootPath, relativePath))
+}
+
+export async function readBundledJsonText(
+  rootPath: string,
+  relativePath: unknown,
+): Promise<string> {
   const segments = validateBundledResourcePath(relativePath)
   const canonicalRoot = normalize(await realpath(rootPath))
   const canonicalTarget = normalize(await realpath(join(canonicalRoot, ...segments)))
@@ -100,7 +107,7 @@ export async function readBundledJsonFromRoot(
   if (fileStats.size > MAX_BUNDLED_JSON_BYTES) {
     throw new Error('Bundled JSON file exceeds the 50 MB safety limit')
   }
-  return JSON.parse(await readFile(canonicalTarget, 'utf-8'))
+  return readFile(canonicalTarget, 'utf-8')
 }
 
 export async function readBundledManifestFromRoot(

@@ -7,6 +7,7 @@ const renderer = createRendererConfig()
 // https://vite.dev/config/
 export default defineConfig({
   ...renderer,
+  define: { 'import.meta.env.DESKTOP_CATALOG_WORKER': 'true' },
   // Required for Electron: loadFile() uses file:// — relative paths must be used
   // so all asset references resolve from the dist/ directory, not the filesystem root.
   base: './',
@@ -14,7 +15,8 @@ export default defineConfig({
     ...renderer.plugins,
     electron({
       main: {
-        entry: 'electron/main.ts',
+        entry: { main: 'electron/main.ts', catalogWorker: 'electron/catalogWorker.ts' },
+        vite: { resolve: renderer.resolve },
       },
       preload: {
         input: 'electron/preload.ts',

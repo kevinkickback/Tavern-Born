@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { isValidatableRemoteUrl } from '@/components/settings/DataSourceConfigurator'
+import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
 
 describe('remote data source URL validation threshold', () => {
   test.each([
@@ -10,7 +10,7 @@ describe('remote data source URL validation threshold', () => {
     'http://testpage.com',
     'ftp://testpage.com',
   ])('does not validate an incomplete or unsupported URL: %s', (value) => {
-    expect(isValidatableRemoteUrl(value)).toBe(false)
+    expect(parseRemoteDataSourceUrl(value).kind).toBe('invalid')
   })
 
   test.each([
@@ -19,6 +19,6 @@ describe('remote data source URL validation threshold', () => {
     'https://github.com/example/data/releases',
     'https://data.example.co.uk/repository',
   ])('allows validation once a secure HTTPS domain is complete: %s', (value) => {
-    expect(isValidatableRemoteUrl(value)).toBe(true)
+    expect(parseRemoteDataSourceUrl(value).kind).not.toBe('invalid')
   })
 })

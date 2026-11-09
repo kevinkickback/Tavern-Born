@@ -1,11 +1,16 @@
 import type { DataSourceConfig } from '@/types/5etools'
+import { type ReadSourceJson, ResourceHttpError, readRemoteJson } from './resourceReader'
 import { parseRemoteDataSourceUrl } from './urlUtils'
 
 type External = Exclude<DataSourceConfig, { type: 'bundled' }>
 const commitSha = /^[a-f\d]{40}$/i
 
 /** The optional GitHub adapter never participates in ordinary HTTPS or local reads. */
-export async function resolveSourceRevision(config: External, signal: AbortSignal) {
+export async function resolveSourceRevision(
+  config: External,
+  signal: AbortSignal,
+  read?: ReadSourceJson,
+) {
   if (config.type === 'local') return { config, readConfig: config }
   const parsed = parseRemoteDataSourceUrl(config.path)
   if (parsed.kind === 'invalid') throw new Error(parsed.error)
@@ -17,14 +22,17 @@ export async function resolveSourceRevision(config: External, signal: AbortSigna
   const prefix = `https://raw.githubusercontent.com/${owner}/${repo}/`
   const api = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
   const request = async (url: string) => {
-    const response = await fetch(url, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
-    })
-    if (!response.ok)
+    const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(5000)])
+    try {
+      return (await (read
+        ? read({ kind: 'remote', url }, requestSignal)
+        : readRemoteJson(url, requestSignal))) as Record<string, unknown>
+    } catch (error) {
+      if (!(error instanceof ResourceHttpError)) throw error
       throw new Error(
-        `GitHub could not resolve the source revision (HTTP ${response.status}). Try again or use a commit URL.`,
+        `GitHub could not resolve the source revision (HTTP ${error.status}). Try again or use a commit URL.`,
       )
-    return response.json()
+    }
   }
   const ref = branch ?? (await request(api)).default_branch
   if (typeof ref !== 'string' || !ref) throw new Error('GitHub did not report a source branch.')

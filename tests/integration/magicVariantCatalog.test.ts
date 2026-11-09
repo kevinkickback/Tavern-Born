@@ -209,7 +209,13 @@ describe('raw template cache and concrete character persistence', () => {
 
     useGameDataStore.setState({ gameData: first, lastContentFingerprint: 'old-content' })
     payloads['items.json'] = { item: [{ name: 'Changed Shield', source: 'XDMG', type: 'S' }] }
-    expect(await useGameDataStore.getState().loadGameData(additional, true)).toBe(true)
+    const { loadCatalog } = useGameDataStore.getState()
+    expect(await loadCatalog(additional, true)).toEqual({ kind: 'staged' })
+    const { candidate } = useGameDataStore.getState().pendingCatalog!
+    expect(await loadCatalog(additional, false, { prepared: candidate, confirmed: true })).toEqual({
+      kind: 'applied',
+      changed: true,
+    })
     const refreshed = useGameDataStore.getState().gameData!
     expect(useGameDataStore.getState().error).toBeNull()
     expect(refreshed.items.some((item) => item.name === 'Changed Shield')).toBe(true)
@@ -224,21 +230,15 @@ describe('raw template cache and concrete character persistence', () => {
       payloads['items.json'] = {
         item: source ? [{ name: '+1 Shield', source, type: 'S', rarity: 'uncommon' }] : [],
       }
-      const result = await useGameDataStore.getState().loadCatalog(additional, true)
-      if (result.kind === 'staged') {
-        const pending = useGameDataStore.getState().pendingCatalog!
-        expect(pending.removals.length).toBeGreaterThan(0)
-        expect(
-          (
-            await useGameDataStore.getState().loadCatalog(additional, false, {
-              prepared: pending.candidate,
-              confirmed: true,
-            })
-          ).kind,
-        ).toBe('applied')
-      } else {
-        expect(result.kind).toBe('applied')
-      }
+      expect(await loadCatalog(additional, true)).toEqual({ kind: 'staged' })
+      const pending = useGameDataStore.getState().pendingCatalog!
+      expect(pending.removals.length).toBeGreaterThan(0)
+      expect(
+        await loadCatalog(additional, false, {
+          prepared: pending.candidate,
+          confirmed: true,
+        }),
+      ).toMatchObject({ kind: 'applied' })
       expect(useGameDataStore.getState().error).toBeNull()
       expect(isClassChoiceOptionEligible(option(useGameDataStore.getState().gameData!))).toBe(
         source === 'XDMG',

@@ -14,7 +14,6 @@ function resetGameDataStore() {
     isBackgroundRefreshing: false,
     loadProgress: null,
     error: null,
-    lastLoadedAt: null,
     cacheStatus: 'unknown',
     hasHydrated: false,
   })

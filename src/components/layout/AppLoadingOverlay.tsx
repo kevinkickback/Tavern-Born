@@ -1,9 +1,17 @@
-import { useEffect, useId, useRef } from 'react'
+import { CheckCircle } from '@phosphor-icons/react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
 
-export function AppLoadingOverlay() {
+export function AppLoadingOverlay({
+  initialRoutePending = false,
+  onStartupComplete,
+}: {
+  initialRoutePending?: boolean
+  onStartupComplete?: () => void
+}) {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
@@ -23,8 +31,28 @@ export function AppLoadingOverlay() {
   const titleId = useId()
   const statusId = useId()
 
-  const isBlocking = shouldStayVisible || Boolean(gameData && isLoading)
+  const isLoadingOverlay =
+    (initialRoutePending && remoteStartup !== 'setup') ||
+    shouldStayVisible ||
+    Boolean(gameData && isLoading)
+  const isStartupReady = Boolean(
+    onStartupComplete && !isLoadingOverlay && gameData && remoteStartup !== 'setup',
+  )
+  const isBlocking = isLoadingOverlay || isStartupReady
+
   useEffect(() => {
+    if (!onStartupComplete || isLoadingOverlay) return
+    if (!isStartupReady) {
+      onStartupComplete()
+      return
+    }
+
+    // Release startup even if the CSS animation is interrupted or disabled.
+    const timeout = window.setTimeout(onStartupComplete, 800)
+    return () => window.clearTimeout(timeout)
+  }, [isLoadingOverlay, isStartupReady, onStartupComplete])
+
+  useLayoutEffect(() => {
     const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
     if (!appContent) return
 
@@ -45,20 +73,22 @@ export function AppLoadingOverlay() {
 
   if (!isBlocking) return null
 
-  const hasProgress = loadProgress !== null && loadProgress.total > 0
+  const hasProgress = !isStartupReady && loadProgress !== null && loadProgress.total > 0
   const isProgressComplete =
     hasProgress &&
     (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
-  if (remoteStartup === 'unavailable') {
+  if (isStartupReady) {
+    statusLine = 'Ready'
+  } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
     statusLine = 'Loading the Included SRD…'
   } else if (!hasHydrated) {
     statusLine = 'Warming up the dice...'
-  } else if (gameData) {
+  } else if (gameData && isLoading) {
     statusLine = 'Applying game data…'
   } else if (isLoading) {
     statusLine = isProgressComplete
@@ -66,8 +96,10 @@ export function AppLoadingOverlay() {
       : hasProgress
         ? `Loading ${loadProgress.resource}…`
         : 'Connecting to game data source…'
-  } else if (!gameData && cacheStatus === 'unknown') {
+  } else if (shouldStayVisible && cacheStatus === 'unknown') {
     statusLine = 'Checking saved game data…'
+  } else if (initialRoutePending) {
+    statusLine = 'Opening your workspace…'
   } else {
     statusLine = 'Connecting to game data source…'
   }
@@ -80,9 +112,15 @@ export function AppLoadingOverlay() {
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={statusId}
-      aria-busy={remoteStartup !== 'unavailable'}
+      aria-busy={!isStartupReady && remoteStartup !== 'unavailable'}
       tabIndex={-1}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+      onAnimationEnd={(event) => {
+        if (isStartupReady && event.target === event.currentTarget) onStartupComplete?.()
+      }}
+      className={cn(
+        'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background',
+        isStartupReady && 'startup-ready-exit',
+      )}
     >
       <div className="mb-14 text-center select-none">
         <h1 id={titleId} className="font-display text-5xl font-bold tracking-wide text-foreground">
@@ -93,14 +131,24 @@ export function AppLoadingOverlay() {
         </p>
       </div>
       <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
-        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          {hasProgress ? (
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-              style={{ width: `${pct}%` }}
+        <div className="flex h-6 items-center justify-center">
+          {isStartupReady ? (
+            <CheckCircle
+              aria-hidden="true"
+              data-testid="startup-ready-check"
+              className="size-6 text-success motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
             />
           ) : (
-            <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              {hasProgress ? (
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                  style={{ width: `${pct}%` }}
+                />
+              ) : (
+                <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+              )}
+            </div>
           )}
         </div>
         <div
@@ -118,12 +166,14 @@ export function AppLoadingOverlay() {
           )}
         </div>
       </div>
-      {error && <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>}
+      {error && !isStartupReady && (
+        <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>
+      )}
       {remoteStartup === 'unavailable' && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
           <Button
             variant="outline"
-            onClick={() => void retryRemote({ forceCheck: true, retry: true })}
+            onClick={() => void retryRemote({ checkForUpdates: true, retry: true })}
           >
             Retry
           </Button>

@@ -37,7 +37,6 @@ describe('data source switching', () => {
       isBackgroundRefreshing: false,
       loadProgress: null,
       error: null,
-      lastLoadedAt: null,
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
@@ -130,7 +129,6 @@ describe('data source switching', () => {
   test.each([
     'apply',
     'replace',
-    'clear',
   ] as const)('keeps a staged native folder authorized across navigation until %s', async (outcome) => {
     const user = userEvent.setup()
     const active = {
@@ -196,7 +194,7 @@ describe('data source switching', () => {
       )
       expect(approveLocalDataRoot).toHaveBeenCalledWith(replacement.path)
       expect(grant).toBeNull()
-    } else if (outcome === 'replace') {
+    } else {
       nextFolder = anotherFolder
       await chooseFolder()
       expect(screen.queryByText('Game data update ready')).toBeNull()
@@ -204,11 +202,6 @@ describe('data source switching', () => {
       expect(approveLocalDataRoot).not.toHaveBeenCalled()
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(grant).toBeNull()
-    } else {
-      await act(() => useGameDataStore.getState().clearGameData())
-      expect(screen.queryByText('Game data update ready')).toBeNull()
-      expect(grant).toBeNull()
-      expect(approveLocalDataRoot).not.toHaveBeenCalled()
     }
   })
 

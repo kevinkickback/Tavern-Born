@@ -39,7 +39,7 @@ describe('data source refresh feedback', () => {
       error: null,
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       lastUpdateCheckAt: '2026-01-01T00:00:00.000Z',
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
       loadCatalog,
       restoreBundledData: defaultRestoreBundledData,
     })

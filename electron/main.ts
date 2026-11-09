@@ -12,14 +12,15 @@ import {
   session,
   shell,
 } from 'electron'
+import type { CatalogRequestMessage } from '@/lib/5etools/catalogProtocol'
 import {
   assertBundledManifestAllowed,
   type BundledSrdManifestSummary,
-  readBundledJsonFromRoot,
+  readBundledJsonText,
   readBundledManifestFromRoot,
   resolveBundledPackRoot,
-  validateBundledResourcePath,
 } from './bundledResources'
+import { createCatalogService } from './catalogService'
 import { isPathWithinRoot, isTrustedRendererUrl } from './security'
 import {
   cancelDownload,
@@ -51,6 +52,7 @@ let forceClose = false
 let localDataRoots = new Set<string>()
 let selectingLocalDataRoot = false
 let pendingLocalDataRoot: string | null = null
+let localGrantGeneration = 0
 let bundledManifestCache: {
   rootPath: string
   promise: Promise<BundledSrdManifestSummary>
@@ -80,6 +82,30 @@ function isTrustedIpcSender(event: TrustedIpcEvent): boolean {
 
 function assertTrustedIpcSender(event: TrustedIpcEvent): void {
   if (!isTrustedIpcSender(event)) throw new Error('IPC request rejected: untrusted sender')
+}
+
+function checkLocalRoot(root: unknown): asserts root is string {
+  if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
+    throw new Error('Select the local data directory first.')
+  }
+}
+
+async function readLocalJsonText(filePath: unknown, root: unknown): Promise<string> {
+  if (typeof filePath !== 'string' || !isAbsolute(filePath))
+    throw new Error('Path must be absolute')
+  if (extname(filePath).toLowerCase() !== '.json') throw new Error('Only JSON files may be read')
+  checkLocalRoot(root)
+  if (!isPathWithinRoot(root, normalize(filePath)))
+    throw new Error('Access denied: path is outside the configured data directory.')
+  const canonicalTarget = normalize(await realpath(filePath))
+  if (!isPathWithinRoot(root, canonicalTarget))
+    throw new Error('Access denied: path is outside the configured data directory.')
+
+  const fileStats = await stat(canonicalTarget)
+  if (!fileStats.isFile()) throw new Error('Path does not reference a file')
+  if (fileStats.size > MAX_LOCAL_JSON_BYTES)
+    throw new Error('JSON file exceeds the 50 MB safety limit')
+  return readFile(canonicalTarget, 'utf-8')
 }
 
 function getLocalDataAuthPath(): string {
@@ -285,6 +311,7 @@ app.on('ready', async () => {
           })
       if (result.canceled || result.filePaths.length === 0) return null
       pendingLocalDataRoot = normalize(await realpath(result.filePaths[0]))
+      localGrantGeneration += 1
       return pendingLocalDataRoot
     } finally {
       selectingLocalDataRoot = false
@@ -292,49 +319,72 @@ app.on('ready', async () => {
   })
 
   ipcMain.on('fs:discardDataRoot', (event, root: unknown) => {
-    if (isTrustedIpcSender(event) && root === pendingLocalDataRoot) pendingLocalDataRoot = null
+    if (isTrustedIpcSender(event) && root === pendingLocalDataRoot) {
+      pendingLocalDataRoot = null
+      localGrantGeneration += 1
+    }
   })
   ipcMain.handle('fs:approveDataRoot', (event, root: unknown) => {
     assertTrustedIpcSender(event)
     return approveLocalDataRoot(root)
   })
-  ipcMain.handle('fs:readJson', async (event, filePath: unknown, root: unknown) => {
-    assertTrustedIpcSender(event)
-    if (typeof filePath !== 'string' || !isAbsolute(filePath)) {
-      throw new Error('Path must be absolute')
-    }
-    if (extname(filePath).toLowerCase() !== '.json') {
-      throw new Error('Only JSON files may be read')
-    }
-
-    if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
-      throw new Error('Select the local data directory first.')
-    }
-    if (!isPathWithinRoot(root, normalize(filePath)))
-      throw new Error('Access denied: path is outside the configured data directory.')
-    const canonicalTarget = normalize(await realpath(filePath))
-    if (!isPathWithinRoot(root, canonicalTarget)) {
-      throw new Error('Access denied: path is outside the configured data directory.')
-    }
-
-    const fileStats = await stat(canonicalTarget)
-    if (!fileStats.isFile()) throw new Error('Path does not reference a file')
-    if (fileStats.size > MAX_LOCAL_JSON_BYTES) {
-      throw new Error('JSON file exceeds the 50 MB safety limit')
-    }
-
-    const content = await readFile(canonicalTarget, 'utf-8')
-    return JSON.parse(content)
-  })
-  ipcMain.handle('resources:readBundledJson', async (event, relativePath: unknown) => {
-    assertTrustedIpcSender(event)
-    validateBundledResourcePath(relativePath)
-    const { rootPath } = await getAllowedBundledManifest()
-    return readBundledJsonFromRoot(join(rootPath, 'data'), relativePath)
-  })
   ipcMain.handle('resources:getBundledManifest', async (event) => {
     assertTrustedIpcSender(event)
     return (await getAllowedBundledManifest()).manifest
+  })
+  const catalogServices = new WeakMap<
+    Electron.WebContents,
+    ReturnType<typeof createCatalogService>
+  >()
+  ipcMain.on('catalog:message', (event, message: CatalogRequestMessage) => {
+    if (!isTrustedIpcSender(event) || event.sender !== mainWindow?.webContents) return
+    if (!message || typeof message.id !== 'string' || !/^[a-f0-9-]{36}$/.test(message.id)) return
+    const owner = event.sender
+    try {
+      let service = catalogServices.get(owner)
+      if (!service || service.closed) {
+        if (message.kind !== 'run') return
+        service = createCatalogService(
+          owner,
+          join(__dirname, 'catalogWorker.js'),
+          async (request) => {
+            if (request.kind === 'local') return readLocalJsonText(request.path, request.root)
+            const { rootPath } = await getAllowedBundledManifest()
+            return readBundledJsonText(join(rootPath, 'data'), request.path)
+          },
+          (root) => {
+            checkLocalRoot(root)
+            const generation = localGrantGeneration
+            return () => {
+              if (
+                !localDataRoots.has(root) &&
+                (root !== pendingLocalDataRoot || generation !== localGrantGeneration)
+              )
+                throw new Error('Select the data directory again.')
+            }
+          },
+        )
+        catalogServices.set(owner, service)
+      }
+      service.receive(message)
+    } catch (error) {
+      owner.send('catalog:event', {
+        kind: 'error',
+        id: message.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  })
+  app.on('web-contents-created', (_event, owner) => {
+    const close = () => {
+      catalogServices.get(owner)?.close()
+      catalogServices.delete(owner)
+    }
+    owner.on('did-start-navigation', (event) => {
+      if (event.isMainFrame && !event.isSameDocument) close()
+    })
+    owner.on('render-process-gone', close)
+    owner.once('destroyed', close)
   })
   ipcMain.on('state:setUnsavedChanges', (event, value: unknown) => {
     if (!isTrustedIpcSender(event)) return

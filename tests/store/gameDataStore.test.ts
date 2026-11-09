@@ -5,7 +5,6 @@ const {
   loadDataFromSourceMock,
   loadGameDataSourceStackMock,
   writeGameDataCacheMock,
-  clearGameDataCacheMock,
   readGameDataCacheMock,
 } = vi.hoisted(() => ({
   loadDataFromSourceMock: vi.fn(),
@@ -14,7 +13,6 @@ const {
     lastDataChangedAt: '2026-01-01T00:00:00.000Z',
     contentFingerprint: 'abc123ef',
   })),
-  clearGameDataCacheMock: vi.fn(async () => undefined),
   readGameDataCacheMock: vi.fn(),
 }))
 const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
@@ -77,11 +75,9 @@ vi.mock('@/lib/storage/dataCache', () => ({
   GAME_DATA_SETTINGS_KEY: 'game-data-storage',
   GAME_DATA_STORE_VERSION: 1,
   writeGameDataCache: writeGameDataCacheMock,
-  clearGameDataCache: clearGameDataCacheMock,
   readGameDataCachePair: async () => ({ cache: await readGameDataCacheMock() }),
   isCacheForSource: (cache: { sourceSnapshot: { path: string } }, config: DataSourceConfig) =>
     cache.sourceSnapshot.path === config.path,
-  isCacheStale: () => false,
   computeGameDataFingerprint: () => 'layer-fingerprint',
 }))
 
@@ -148,7 +144,6 @@ describe('gameDataStore', () => {
       isBackgroundRefreshing: false,
       loadProgress: null,
       error: null,
-      lastLoadedAt: null,
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
@@ -194,14 +189,14 @@ describe('gameDataStore', () => {
     loadDataFromSourceMock.mockReturnValueOnce(late.promise)
     const { backgroundRefresh } = await useGameDataStore
       .getState()
-      .loadFromCache({ forceCheck: true })
+      .loadFromCache({ checkForUpdates: true })
     expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
     expect(useGameDataStore.getState().isBackgroundRefreshing).toBe(true)
     const next = nonempty('New race')
     useGameDataStore.setState({ lastContentFingerprint: 'previous-fingerprint' })
     late.resolve(next)
     await backgroundRefresh
-    expect(useGameDataStore.getState().pendingCatalog?.candidate.data).toBe(next)
+    expect(useGameDataStore.getState().pendingCatalog?.candidate).toMatchObject({ data: next })
     expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
     const { candidate } = useGameDataStore.getState().pendingCatalog!
@@ -262,9 +257,9 @@ describe('gameDataStore', () => {
     })
     const { loadCatalog } = useGameDataStore.getState()
 
-    expect(
-      await loadCatalog(next, background, { prepared: candidate, stage: background }),
-    ).toMatchObject({ kind: 'staged' })
+    expect(await loadCatalog(next, background, { prepared: candidate })).toMatchObject({
+      kind: 'staged',
+    })
     expect(useGameDataStore.getState().pendingCatalog).toMatchObject({
       candidate,
       removals: [],
@@ -285,7 +280,7 @@ describe('gameDataStore', () => {
       candidate.identity,
       expect.objectContaining({ externalKeys: candidate.keys }),
     )
-    expect(await loadCatalog(next, true, { prepared: candidate, stage: true })).toMatchObject({
+    expect(await loadCatalog(next, true, { prepared: candidate })).toMatchObject({
       kind: 'applied',
     })
     expect(useGameDataStore.getState().pendingCatalog).toBeNull()
@@ -298,10 +293,10 @@ describe('gameDataStore', () => {
     loadDataFromSourceMock
       .mockResolvedValueOnce(data)
       .mockRejectedValueOnce(new Error('New source failed'))
-    const { loadGameData } = useGameDataStore.getState()
-    const first = loadGameData(config)
+    const { loadCatalog } = useGameDataStore.getState()
+    const first = loadCatalog(config)
     await vi.waitFor(() => expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1))
-    const second = loadGameData(remote)
+    const second = loadCatalog(remote)
     commit.resolve({
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       contentFingerprint: 'acknowledged',
@@ -324,7 +319,7 @@ describe('gameDataStore', () => {
 
     const { backgroundRefresh } = await useGameDataStore
       .getState()
-      .loadFromCache({ forceCheck: true })
+      .loadFromCache({ checkForUpdates: true })
     expect(useGameDataStore.getState()).toMatchObject({
       gameData: included,
       sessionBundledSource: bundled,
@@ -341,9 +336,9 @@ describe('gameDataStore', () => {
     useGameDataStore.setState({ dataSourceConfig: remote })
     resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
     loadDataFromSourceMock.mockResolvedValueOnce(nonempty('Included race'))
-    await expect(useGameDataStore.getState().loadFromCache({ forceCheck: false })).resolves.toEqual(
-      {},
-    )
+    await expect(
+      useGameDataStore.getState().loadFromCache({ checkForUpdates: false }),
+    ).resolves.toEqual({})
     expect(useGameDataStore.getState().cacheStatus).toBe('session-srd')
     expect(loadGameDataSourceStackMock).not.toHaveBeenCalled()
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
@@ -356,7 +351,7 @@ describe('gameDataStore', () => {
     })
     try {
       useGameDataStore.setState({ dataSourceConfig: remote })
-      await useGameDataStore.getState().loadFromCache({ forceCheck: true })
+      await useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
       expect(useGameDataStore.getState().remoteStartup).toBe('unavailable')
       expect(loadDataFromSourceMock).not.toHaveBeenCalled()
       const catalog = nonempty('Online race')
@@ -376,7 +371,7 @@ describe('gameDataStore', () => {
       .mockRejectedValueOnce(new Error('Damaged pack'))
       .mockRejectedValueOnce(new Error('Damaged pack'))
       .mockResolvedValueOnce(nonempty('Recovered remote'))
-    await useGameDataStore.getState().loadFromCache({ forceCheck: true })
+    await useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
     expect(useGameDataStore.getState()).toMatchObject({
       bundledUnavailable: true,
       remoteStartup: 'unavailable',
@@ -418,7 +413,7 @@ describe('gameDataStore', () => {
     loadGameDataSourceStackMock.mockResolvedValueOnce(nonempty('New race'))
     const { backgroundRefresh } = await useGameDataStore
       .getState()
-      .loadFromCache({ forceCheck: true })
+      .loadFromCache({ checkForUpdates: true })
     await backgroundRefresh
     expect(useGameDataStore.getState().pendingCatalog?.removals).toEqual([key])
   })
@@ -429,7 +424,7 @@ describe('gameDataStore', () => {
     useGameDataStore.setState({ dataSourceConfig: remote })
     resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
     loadDataFromSourceMock.mockReturnValueOnce(late.promise)
-    const startup = useGameDataStore.getState().loadFromCache({ forceCheck: true })
+    const startup = useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
     await vi.advanceTimersByTimeAsync(0)
     await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS)
     await startup
@@ -472,7 +467,7 @@ describe('gameDataStore', () => {
     loadDataFromSourceMock.mockReturnValueOnce(late.promise)
     const { backgroundRefresh } = await useGameDataStore
       .getState()
-      .loadFromCache({ forceCheck: true })
+      .loadFromCache({ checkForUpdates: true })
     await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS)
     await backgroundRefresh
     late.resolve(nonempty('Late race'))
@@ -531,14 +526,14 @@ describe('gameDataStore', () => {
     expect(indexes.spellsByKey).toEqual({})
   })
 
-  test('loadGameData foreground success updates data and cache status', async () => {
+  test('loadCatalog foreground success updates data and cache status', async () => {
     const data = makeGameDataFixture()
     loadDataFromSourceMock.mockImplementation((_cfg, opts) => {
       opts?.onProgress?.(1, 2, 'classes')
       return Promise.resolve(data)
     })
 
-    const contentChanged = await useGameDataStore.getState().loadGameData(config)
+    const result = await useGameDataStore.getState().loadCatalog(config)
 
     const state = useGameDataStore.getState()
     expect(loadDataFromSourceMock).toHaveBeenCalledWith(
@@ -555,7 +550,7 @@ describe('gameDataStore', () => {
     expect(state.cacheStatus).toBe('fetched')
     expect(state.isLoading).toBe(false)
     expect(state.error).toBeNull()
-    expect(contentChanged).toBe(true)
+    expect(result).toEqual({ kind: 'applied', changed: true })
   })
 
   test('loads external content above the Included SRD and caches both source identities', async () => {
@@ -574,7 +569,7 @@ describe('gameDataStore', () => {
       return Promise.resolve(data)
     })
 
-    await useGameDataStore.getState().loadGameData(config)
+    await useGameDataStore.getState().loadCatalog(config)
 
     const expectedStack = { base: bundledConfig, additional: config }
     expect(loadGameDataSourceStackMock).toHaveBeenCalledWith(
@@ -615,9 +610,9 @@ describe('gameDataStore', () => {
         })
       })
 
-    const firstLoad = useGameDataStore.getState().loadGameData(config)
+    const firstLoad = useGameDataStore.getState().loadCatalog(config)
     await vi.waitFor(() => expect(firstProgress).toBeTypeOf('function'))
-    const secondLoad = useGameDataStore.getState().loadGameData({ ...config, path: '/new-data' })
+    const secondLoad = useGameDataStore.getState().loadCatalog({ ...config, path: '/new-data' })
     await vi.waitFor(() => {
       expect(firstProgress).toBeTypeOf('function')
       expect(secondProgress).toBeTypeOf('function')
@@ -637,30 +632,30 @@ describe('gameDataStore', () => {
     await firstLoad
   })
 
-  test('loadGameData reports unchanged content without replacing in-memory data', async () => {
+  test('loadCatalog reports unchanged content without replacing in-memory data', async () => {
     const data = makeGameDataFixture()
     const lastDataChangedAt = '2026-01-01T00:00:00.000Z'
     loadDataFromSourceMock.mockResolvedValue(data)
     writeGameDataCacheMock.mockResolvedValueOnce({
       lastDataChangedAt,
-      contentFingerprint: 'abc123ef',
+      contentFingerprint: 'layer-fingerprint',
     })
     useGameDataStore.setState({
       gameData: data,
       lastDataChangedAt,
-      lastContentFingerprint: 'abc123ef',
+      lastContentFingerprint: 'layer-fingerprint',
     })
 
-    const contentChanged = await useGameDataStore.getState().loadGameData(config, true)
+    const result = await useGameDataStore.getState().loadCatalog(config, true)
 
-    expect(contentChanged).toBe(false)
+    expect(result).toEqual({ kind: 'applied', changed: false })
     expect(useGameDataStore.getState().gameData).toBe(data)
   })
 
-  test('loadGameData background success toggles background flag', async () => {
+  test('loadCatalog background success toggles background flag', async () => {
     loadDataFromSourceMock.mockResolvedValue(makeGameDataFixture())
 
-    await useGameDataStore.getState().loadGameData(config, true)
+    expect(await useGameDataStore.getState().loadCatalog(config, true)).toEqual({ kind: 'staged' })
 
     const state = useGameDataStore.getState()
     expect(state.isBackgroundRefreshing).toBe(false)
@@ -668,11 +663,20 @@ describe('gameDataStore', () => {
     expect(state.loadProgress).toBeNull()
   })
 
-  test('background refresh publishes bounded missing item text and permits exact text restoration', async () => {
+  test('applying a staged refresh publishes bounded missing item text and permits exact restoration', async () => {
+    const applyRefresh = async () => {
+      const { loadCatalog } = useGameDataStore.getState()
+      expect(await loadCatalog(config, true)).toEqual({ kind: 'staged' })
+      const { candidate } = useGameDataStore.getState().pendingCatalog!
+      expect(await loadCatalog(config, false, { prepared: candidate, confirmed: true })).toEqual({
+        kind: 'applied',
+        changed: true,
+      })
+    }
     const data = makeGameDataFixture()
     data.items = expandItemEntries([firePotion], [])
     loadDataFromSourceMock.mockResolvedValue(data)
-    expect(await useGameDataStore.getState().loadGameData(config, true)).toBe(true)
+    await applyRefresh()
     expect(useGameDataStore.getState().gameData?.items[0].entries).toEqual([
       '[Item rules text unavailable]',
     ])
@@ -685,14 +689,14 @@ describe('gameDataStore', () => {
       lastDataChangedAt: '2026-01-02T00:00:00.000Z',
       contentFingerprint: 'restored',
     })
-    expect(await useGameDataStore.getState().loadGameData(config, true)).toBe(true)
+    await applyRefresh()
     expect(useGameDataStore.getState().gameData?.items[0].entries).toEqual([
       'Restored description.',
     ])
     expect(useGameDataStore.getState().gameData?.items[0].itemEntryDiagnostics).toBeUndefined()
   })
 
-  test('loadGameData reports resource progress during a background refresh', async () => {
+  test('loadCatalog reports resource progress during a background refresh', async () => {
     let reportProgress: ((current: number, total: number, resource: string) => void) | undefined
     let resolveLoad: ((data: GameData) => void) | undefined
     loadDataFromSourceMock.mockImplementation((_config, options) => {
@@ -702,7 +706,7 @@ describe('gameDataStore', () => {
       })
     })
 
-    const load = useGameDataStore.getState().loadGameData(config, true)
+    const load = useGameDataStore.getState().loadCatalog(config, true)
     await vi.waitFor(() => expect(reportProgress).toBeTypeOf('function'))
 
     reportProgress?.(4, 9, 'spells')
@@ -728,17 +732,17 @@ describe('gameDataStore', () => {
       dataSourceConfig: config,
       lastDataChangedAt,
       lastUpdateCheckAt,
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
     })
     loadDataFromSourceMock.mockImplementation((_config, options) => {
       options?.onResourceFailure?.('spells/spells-phb.json', { required: true })
       return Promise.resolve(makeGameDataFixture())
     })
 
-    const contentChanged = await useGameDataStore.getState().loadGameData(config, true)
+    const result = await useGameDataStore.getState().loadCatalog(config, true)
 
     const state = useGameDataStore.getState()
-    expect(contentChanged).toBe(false)
+    expect(result.kind).toBe('rejected')
     expect(state.gameData).toBe(existing)
     expect(state.lastDataChangedAt).toBe(lastDataChangedAt)
     expect(state.lastUpdateCheckAt).toBe(lastUpdateCheckAt)
@@ -794,9 +798,11 @@ describe('gameDataStore', () => {
       dataSourceConfig: config,
       lastDataChangedAt,
       lastUpdateCheckAt,
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
     })
-    expect(await useGameDataStore.getState().loadGameData(config, background)).toBe(false)
+    expect((await useGameDataStore.getState().loadCatalog(config, background)).kind).toBe(
+      'rejected',
+    )
     const state = useGameDataStore.getState()
     expect(state.gameData).toBe(existing)
     expect(state.lastDataChangedAt).toBe(lastDataChangedAt)
@@ -811,10 +817,10 @@ describe('gameDataStore', () => {
       return Promise.resolve(makeGameDataFixture())
     })
 
-    const contentChanged = await useGameDataStore.getState().loadGameData(config)
+    const result = await useGameDataStore.getState().loadCatalog(config)
 
     const state = useGameDataStore.getState()
-    expect(contentChanged).toBe(false)
+    expect(result.kind).toBe('rejected')
     expect(state.gameData).toBeNull()
     expect(state.dataSourceConfig).toBeNull()
     expect(state.error).toBe('Could not load required game data. class/class-wizard.json')
@@ -828,9 +834,9 @@ describe('gameDataStore', () => {
       return Promise.resolve(data)
     })
 
-    const contentChanged = await useGameDataStore.getState().loadGameData(config)
+    const result = await useGameDataStore.getState().loadCatalog(config)
 
-    expect(contentChanged).toBe(true)
+    expect(result).toEqual({ kind: 'applied', changed: true })
     expect(useGameDataStore.getState().gameData).toBe(data)
     expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1)
   })
@@ -841,44 +847,29 @@ describe('gameDataStore', () => {
     useGameDataStore.setState({
       gameData: existing,
       dataSourceConfig: config,
-      cacheStatus: 'stale',
+      cacheStatus: 'cached',
     })
 
     loadDataFromSourceMock.mockResolvedValue(makeGameDataFixture())
 
-    await useGameDataStore.getState().loadGameData(config, true)
+    await useGameDataStore.getState().loadCatalog(config, true)
 
     const state = useGameDataStore.getState()
     expect(state.gameData).toEqual(existing)
-    expect(state.cacheStatus).toBe('stale')
+    expect(state.cacheStatus).toBe('remote-cache')
     expect(state.error).toBe('Background refresh returned empty data; keeping existing cache')
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
-  test('loadGameData handles loader errors', async () => {
+  test('loadCatalog handles loader errors', async () => {
     loadDataFromSourceMock.mockRejectedValue(new Error('boom'))
 
-    await useGameDataStore.getState().loadGameData(config)
+    await useGameDataStore.getState().loadCatalog(config)
 
     const state = useGameDataStore.getState()
     expect(state.error).toBe('boom')
     expect(state.isLoading).toBe(false)
     expect(state.isBackgroundRefreshing).toBe(false)
-  })
-
-  test('refreshGameData uses stored config', async () => {
-    loadDataFromSourceMock.mockResolvedValue(makeGameDataFixture())
-    useGameDataStore.setState({ dataSourceConfig: config })
-
-    await useGameDataStore.getState().refreshGameData()
-
-    expect(loadDataFromSourceMock).toHaveBeenCalledTimes(1)
-  })
-
-  test('refreshGameData does nothing when no config exists', async () => {
-    await useGameDataStore.getState().refreshGameData()
-
-    expect(loadDataFromSourceMock).not.toHaveBeenCalled()
   })
 
   test('restores the bundled source only after its data loads successfully', async () => {
@@ -951,7 +942,6 @@ describe('gameDataStore', () => {
         getOptions: () => {
           partialize: (state: ReturnType<typeof useGameDataStore.getState>) => {
             dataSourceConfig: DataSourceConfig | null
-            lastLoadedAt: string | null
           }
         }
       }
@@ -962,7 +952,6 @@ describe('gameDataStore', () => {
       ...useGameDataStore.getState(),
       gameData: makeGameDataFixture(),
       dataSourceConfig: config,
-      lastLoadedAt: '2026-01-01T00:00:00.000Z',
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
@@ -970,7 +959,6 @@ describe('gameDataStore', () => {
 
     expect(partialized).toEqual({
       dataSourceConfig: config,
-      lastLoadedAt: '2026-01-01T00:00:00.000Z',
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
@@ -993,57 +981,5 @@ describe('gameDataStore', () => {
     onRehydrate?.({ setHasHydrated })
 
     expect(setHasHydrated).toHaveBeenCalledWith(true)
-  })
-
-  test('clearGameData resets store and clears cache', async () => {
-    useGameDataStore.setState({
-      gameData: makeGameDataFixture(),
-      dataSourceConfig: config,
-      cacheStatus: 'fetched',
-      isLoading: true,
-    })
-
-    await useGameDataStore.getState().clearGameData()
-
-    const state = useGameDataStore.getState()
-    expect(clearGameDataCacheMock).toHaveBeenCalledTimes(1)
-    expect(state.gameData).toBeNull()
-    expect(state.dataSourceConfig).toBeNull()
-    expect(state.cacheStatus).toBe('unconfigured')
-    expect(state.isLoading).toBe(false)
-  })
-
-  test('clearGameData wins over a cache write already in flight', async () => {
-    const data = makeGameDataFixture()
-    let resolveCacheWrite!: (value: {
-      lastDataChangedAt: string
-      contentFingerprint: string
-    }) => void
-
-    loadDataFromSourceMock.mockResolvedValue(data)
-    writeGameDataCacheMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveCacheWrite = resolve
-        }),
-    )
-
-    const loadPromise = useGameDataStore.getState().loadGameData(config)
-    await vi.waitFor(() => expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1))
-
-    const clearPromise = useGameDataStore.getState().clearGameData()
-    expect(clearGameDataCacheMock).not.toHaveBeenCalled()
-
-    resolveCacheWrite({
-      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
-      contentFingerprint: 'abc123ef',
-    })
-    await Promise.all([loadPromise, clearPromise])
-
-    const state = useGameDataStore.getState()
-    expect(clearGameDataCacheMock).toHaveBeenCalledTimes(1)
-    expect(state.gameData).toBeNull()
-    expect(state.dataSourceConfig).toBeNull()
-    expect(state.cacheStatus).toBe('unconfigured')
   })
 })

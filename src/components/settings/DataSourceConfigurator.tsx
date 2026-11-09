@@ -31,7 +31,8 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
-import { type PreparedCatalog, prepareCatalog } from '@/lib/5etools/catalogCandidate'
+import { prepareCatalogCandidate, releaseCatalogCandidate } from '@/lib/5etools/catalogClient'
+import type { CatalogCandidate } from '@/lib/5etools/catalogProtocol'
 import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
 import { settleOnAbort } from '@/lib/abortable'
 import { cn } from '@/lib/utils'
@@ -52,10 +53,6 @@ type DataSourceConfiguratorProps = {
 function discardFolder(root: string | null) {
   if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
-export function isValidatableRemoteUrl(value: string): boolean {
-  return parseRemoteDataSourceUrl(value).kind !== 'invalid'
-}
-
 export function DataSourceConfigurator({
   selectorOnly = false,
   showAdditionalContentGuidance = false,
@@ -94,10 +91,11 @@ export function DataSourceConfigurator({
   const localPathId = useId()
   const [validationResult, setValidationResult] = useState<{
     error?: string
-    candidate?: PreparedCatalog
+    candidate?: CatalogCandidate
     basis?: typeof dataSourceConfig
   } | null>(null)
   const validationController = useRef<AbortController | null>(null)
+  const validationCandidate = useRef<CatalogCandidate | undefined>(undefined)
   const autoOpenedSelectorRef = useRef(!hasActiveDataSource)
 
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -105,6 +103,8 @@ export function DataSourceConfigurator({
   const previewFolder = useRef<string | null>(null)
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
+    releaseCatalogCandidate(validationCandidate.current)
+    validationCandidate.current = undefined
     discardFolder(previewFolder.current)
     previewFolder.current = null
     setSourceType(newType)
@@ -125,6 +125,7 @@ export function DataSourceConfigurator({
     return () => {
       validationRequestRef.current += 1
       validationController.current?.abort()
+      releaseCatalogCandidate(validationCandidate.current)
       discardFolder(previewFolder.current)
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current)
@@ -173,6 +174,8 @@ export function DataSourceConfigurator({
 
   const performValidation = async (path: string, type: 'local' | 'remote') => {
     const requestId = ++validationRequestRef.current
+    releaseCatalogCandidate(validationCandidate.current)
+    validationCandidate.current = undefined
 
     if (!path) {
       setValidationStatus('idle')
@@ -196,7 +199,7 @@ export function DataSourceConfigurator({
       const base = useGameDataStore.getState().bundledUnavailable
         ? null
         : await settleOnAbort(resolveDefaultBundledSource(), signal)
-      const candidate = await prepareCatalog(
+      const candidate = await prepareCatalogCandidate(
         {
           ...(basis?.type === type && basis.path === path ? basis : null),
           type,
@@ -206,7 +209,11 @@ export function DataSourceConfigurator({
         base ?? undefined,
         signal,
       )
-      if (requestId !== validationRequestRef.current || controller.signal.aborted) return
+      if (requestId !== validationRequestRef.current || controller.signal.aborted) {
+        releaseCatalogCandidate(candidate)
+        return
+      }
+      validationCandidate.current = candidate
       setValidationResult({ candidate, basis })
       setValidationStatus('valid')
     } catch (error) {
@@ -226,6 +233,8 @@ export function DataSourceConfigurator({
   }
 
   const handleUrlChange = (value: string) => {
+    releaseCatalogCandidate(validationCandidate.current)
+    validationCandidate.current = undefined
     validationRequestRef.current += 1
     validationController.current?.abort()
     setSourcePath(value)
@@ -238,7 +247,7 @@ export function DataSourceConfigurator({
     }
 
     if (value && sourceType === 'remote') {
-      if (isValidatableRemoteUrl(value)) {
+      if (parseRemoteDataSourceUrl(value).kind !== 'invalid') {
         setValidationStatus('validating')
         setIsValidating(true)
         validationTimeoutRef.current = setTimeout(() => {
@@ -278,7 +287,7 @@ export function DataSourceConfigurator({
     }
   }
 
-  const applyCandidate = async (candidate: PreparedCatalog, confirmed = false) => {
+  const applyCandidate = async (candidate: CatalogCandidate, confirmed = false) => {
     if (useCharacterStore.getState().hasUnsavedChanges()) {
       toast.info('Save or discard your character changes before switching game data.')
       return
@@ -287,6 +296,11 @@ export function DataSourceConfigurator({
       candidate.config.type === 'local' && previewFolder.current === candidate.config.path
         ? candidate.config.path
         : undefined
+    if (validationCandidate.current === candidate) {
+      validationCandidate.current = undefined
+      setValidationStatus('idle')
+      setValidationResult(null)
+    }
     if (folderGrant) {
       previewFolder.current = null
       setValidationStatus('idle')
@@ -324,7 +338,7 @@ export function DataSourceConfigurator({
   const handleRefresh = async () => {
     const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
-    const result = await loadCatalog(dataSourceConfig, true, { stage: true })
+    const result = await loadCatalog(dataSourceConfig, true)
     if (result.kind === 'rejected')
       toast.error('Update could not be applied', { description: result.message })
     else if (result.kind === 'staged') toast.info('A game-data update is ready to review')
@@ -345,6 +359,7 @@ export function DataSourceConfigurator({
         return
       }
 
+      handleSourceTypeChange(sourceType)
       setIsSelectingDataSource(false)
       setSourcePath('')
       setValidationStatus('idle')
@@ -606,7 +621,7 @@ export function DataSourceConfigurator({
                     autoOpenedSelectorRef.current = false
                     setIsSelectingDataSource(true)
                   }}
-                  disabled={isLoading || selectorOnly}
+                  disabled={isLoading}
                   variant="outline"
                   className="gap-2"
                 >
