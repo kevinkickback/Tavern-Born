@@ -3,7 +3,11 @@ import { Button } from '@/components/ui/button'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
 
-export function AppLoadingOverlay() {
+export function AppLoadingOverlay({
+  initialRoutePending = false,
+}: {
+  initialRoutePending?: boolean
+}) {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
@@ -23,7 +27,10 @@ export function AppLoadingOverlay() {
   const titleId = useId()
   const statusId = useId()
 
-  const isBlocking = shouldStayVisible || Boolean(gameData && isLoading)
+  const isBlocking =
+    (initialRoutePending && remoteStartup !== 'setup') ||
+    shouldStayVisible ||
+    Boolean(gameData && isLoading)
   useEffect(() => {
     const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
     if (!appContent) return
@@ -58,7 +65,7 @@ export function AppLoadingOverlay() {
     statusLine = 'Loading the Included SRD…'
   } else if (!hasHydrated) {
     statusLine = 'Warming up the dice...'
-  } else if (gameData) {
+  } else if (gameData && isLoading) {
     statusLine = 'Applying game data…'
   } else if (isLoading) {
     statusLine = isProgressComplete
@@ -66,8 +73,10 @@ export function AppLoadingOverlay() {
       : hasProgress
         ? `Loading ${loadProgress.resource}…`
         : 'Connecting to game data source…'
-  } else if (!gameData && cacheStatus === 'unknown') {
+  } else if (shouldStayVisible && cacheStatus === 'unknown') {
     statusLine = 'Checking saved game data…'
+  } else if (initialRoutePending) {
+    statusLine = 'Opening your workspace…'
   } else {
     statusLine = 'Connecting to game data source…'
   }

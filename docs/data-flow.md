@@ -11,8 +11,10 @@ Entry points: useDataInit, gameDataStore, dataLoader and dataCache.
 2. The immutable Included SRD is always the base. One authorized local folder or HTTPS root may
    add content; no external setup is required.
 3. A matching parsed cache supplies initial data. If it is unavailable, the app loads the Included
-   SRD automatically. The startup overlay waits for usable local data and offers recovery if that
-   fails. Automatic source checks respect the hydrated preference and run in the background.
+   SRD automatically. The startup overlay waits for usable local data and the first workspace
+   render. It offers recovery when local data fails, and Change source opens setup while the
+   workspace is still loading. Automatic source checks respect the hydrated preference and run
+   in the background.
    Automatic startup catalog attempts have a 15-second limit. Manual source checks, validation,
    and applying or restoring data allow up to 60 seconds per catalog attempt.
 4. Each candidate is checked as a unit. Composition overlays exact identities, rebuilds retained

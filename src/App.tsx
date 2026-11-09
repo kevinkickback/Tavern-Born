@@ -21,6 +21,7 @@ import { useDataInit } from '@/hooks/data/useDataInit'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 const TOAST_VIEWPORT_OFFSET = { bottom: '3rem' }
 
@@ -117,6 +118,11 @@ function RouteLoadingFallback() {
   )
 }
 
+function WorkspaceRoute({ onReady }: { onReady: (ready: boolean) => void }) {
+  useLayoutEffect(() => onReady(true), [onReady])
+  return <Outlet />
+}
+
 function RequireActiveCharacter() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   return activeCharacter ? <Outlet /> : <Navigate to="/" replace />
@@ -159,6 +165,7 @@ function App() {
   const themeAccent = useAppPreferencesStore((s) => s.themeAccent)
   const themeAppearance = useAppPreferencesStore((s) => s.themeAppearance)
   const uiScale = useAppPreferencesStore((s) => s.uiScale)
+  const choosingRecoverySource = useGameDataStore((s) => s.remoteStartup === 'setup')
 
   const [updateData, setUpdateData] = useState<{
     version: string
@@ -168,6 +175,8 @@ function App() {
   const [changelogOpen, setChangelogOpen] = useState(false)
   const [hasAppUpdate, setHasAppUpdate] = useState(false)
   const [progressVersion, setProgressVersion] = useState<string | null>(null)
+  const [initialRouteReady, setInitialRouteReady] = useState(false)
+  const workspaceRoute = <WorkspaceRoute onReady={setInitialRouteReady} />
   const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
 
   useLayoutEffect(() => {
@@ -217,32 +226,37 @@ function App() {
       <RulesPreviewManager>
         <HashRouter>
           <AppLayout onOpenAppUpdate={hasAppUpdate ? openAppUpdate : undefined}>
-            <Suspense fallback={<RouteLoadingFallback />}>
+            <Suspense fallback={initialRouteReady ? <RouteLoadingFallback /> : null}>
               <Routes>
-                <Route path="/" element={<HomePage />} />
                 <Route element={<RequireActiveCharacter />}>
                   <Route path="/build" element={<Navigate to="/build/race" replace />} />
-                  <Route path="/build/race" element={<BuildRacePage />} />
-                  <Route path="/build/class" element={<BuildClassPage />} />
-                  <Route path="/build/background" element={<BuildBackgroundPage />} />
-                  <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
-                  <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-                  <Route path="/build/review" element={<BuildReviewPage />} />
-                  <Route path="/build/adjustments" element={<AdjustmentsPage />} />
-                  <Route path="/feats" element={<FeatsPage />} />
-                  <Route path="/spells" element={<SpellsPage />} />
-                  <Route path="/equipment" element={<EquipmentPage />} />
-                  <Route path="/rules" element={<RulesPage />} />
                   <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
-                  <Route path="/details/portrait" element={<PortraitPage />} />
-                  <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-                  <Route path="/details/conditions" element={<ConditionsPage />} />
-                  <Route path="/sources" element={<SourcesPage />} />
-                  <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
+                  <Route element={workspaceRoute}>
+                    <Route path="/build/race" element={<BuildRacePage />} />
+                    <Route path="/build/class" element={<BuildClassPage />} />
+                    <Route path="/build/background" element={<BuildBackgroundPage />} />
+                    <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+                    <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                    <Route path="/build/review" element={<BuildReviewPage />} />
+                    <Route path="/build/adjustments" element={<AdjustmentsPage />} />
+                    <Route path="/feats" element={<FeatsPage />} />
+                    <Route path="/spells" element={<SpellsPage />} />
+                    <Route path="/equipment" element={<EquipmentPage />} />
+                    <Route path="/rules" element={<RulesPage />} />
+                    <Route path="/details/portrait" element={<PortraitPage />} />
+                    <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+                    <Route path="/details/conditions" element={<ConditionsPage />} />
+                    <Route path="/sources" element={<SourcesPage />} />
+                    <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
+                  </Route>
                 </Route>
-                <Route path="/compendium" element={<CompendiumPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route element={workspaceRoute}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/compendium" element={<CompendiumPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Route>
                 <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
+                <Route path="*" element={workspaceRoute} />
               </Routes>
             </Suspense>
           </AppLayout>
@@ -251,10 +265,10 @@ function App() {
             offset={TOAST_VIEWPORT_OFFSET}
             mobileOffset={TOAST_VIEWPORT_OFFSET}
           />
-          <DataSourceStartupModal />
-          <AppLoadingOverlay />
+          {(initialRouteReady || choosingRecoverySource) && <DataSourceStartupModal />}
+          <AppLoadingOverlay initialRoutePending={!initialRouteReady} />
           <CloseConfirmDialog />
-          {updateData && (
+          {initialRouteReady && updateData && (
             <Suspense fallback={null}>
               <ChangelogModal
                 open={changelogOpen}
