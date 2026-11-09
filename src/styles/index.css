@@ -93,6 +93,22 @@
     animation: indeterminate 1.4s ease-in-out infinite;
   }
 
+  @keyframes startup-ready-fade {
+    to {
+      opacity: 0;
+    }
+  }
+
+  .startup-ready-exit {
+    animation: startup-ready-fade 160ms ease-out 220ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .startup-ready-exit {
+      animation-duration: 1ms;
+    }
+  }
+
   @keyframes hint-bounce-once {
     0%,
     35%,

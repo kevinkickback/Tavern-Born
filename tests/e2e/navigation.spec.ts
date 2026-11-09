@@ -34,6 +34,8 @@ for (const initialHash of ['', '#/build']) {
   test(`keeps the startup overlay visible until the Character Library is ready (${initialHash || 'home'})`, async ({
     page,
   }) => {
+    const reducedMotion = initialHash !== ''
+    await page.emulateMedia({ reducedMotion: reducedMotion ? 'reduce' : 'no-preference' })
     await page.goto('/')
     await seedBundledCache(page)
     await page.evaluate((hash) => {
@@ -51,8 +53,30 @@ for (const initialHash of ['', '#/build']) {
       await expect(overlay).toContainText('Opening your workspace…')
       await expect(page.getByText('Loading page…')).toBeHidden()
 
+      await overlay.evaluate((element) => {
+        const observer = new MutationObserver(() => {
+          if (element.querySelector('[role="status"]')?.textContent?.trim() !== 'Ready') return
+          const { animationDelay, animationDuration } = getComputedStyle(element)
+          Reflect.set(window, 'startupExit', {
+            animationDelay,
+            animationDuration,
+            busy: element.getAttribute('aria-busy'),
+            workspaceInert: document
+              .getElementById('app-interactive-content')
+              ?.hasAttribute('inert'),
+          })
+          observer.disconnect()
+        })
+        observer.observe(element, { childList: true, characterData: true, subtree: true })
+      })
       home.release()
       await expect(overlay).toBeHidden()
+      expect(await page.evaluate(() => Reflect.get(window, 'startupExit'))).toEqual({
+        animationDelay: '0.22s',
+        animationDuration: reducedMotion ? '0.001s' : '0.16s',
+        busy: 'false',
+        workspaceInert: true,
+      })
       await expect(page.getByRole('button', { name: 'New Character' }).first()).toBeVisible()
     } finally {
       home.release()

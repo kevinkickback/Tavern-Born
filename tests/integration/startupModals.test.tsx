@@ -165,6 +165,28 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
   })
 
+  test('the startup exit is cancelled if a foreground load begins', async () => {
+    vi.useFakeTimers()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: makeGameDataFixture(),
+      cacheStatus: 'fresh',
+    })
+    const finishStartup = vi.fn()
+    render(<AppLoadingOverlay onStartupComplete={finishStartup} />)
+
+    expect(screen.getByRole('status').textContent).toBe('Ready')
+    await act(async () => vi.advanceTimersByTime(220))
+    await act(async () => useGameDataStore.setState({ isLoading: true }))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(screen.getByRole('status').textContent).toBe('Applying game data…')
+    expect(finishStartup).not.toHaveBeenCalled()
+
+    await act(async () => useGameDataStore.setState({ isLoading: false }))
+    await act(async () => vi.advanceTimersByTime(500))
+    expect(finishStartup).toHaveBeenCalledOnce()
+  })
+
   test('AppLoadingOverlay releases cached data immediately during a background check', () => {
     useGameDataStore.setState({
       hasHydrated: true,
@@ -261,7 +283,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(document.getElementById(APP_INTERACTIVE_CONTENT_ID)?.hasAttribute('inert')).toBe(false)
   })
 
-  test('AppLoadingOverlay has no finish delay when hydrated and idle', () => {
+  test('startup hands off to source setup immediately when no catalog is configured', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       isLoading: false,
@@ -269,8 +291,10 @@ describe('startup integration: loading overlay and startup modal', () => {
       cacheStatus: 'unconfigured',
     })
 
-    render(<AppLoadingOverlay />)
+    const finishStartup = vi.fn()
+    render(<AppLoadingOverlay onStartupComplete={finishStartup} />)
     expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    expect(finishStartup).toHaveBeenCalledOnce()
   })
 
   test('DataSourceStartupModal opens when hydrated with no data and not loading', async () => {

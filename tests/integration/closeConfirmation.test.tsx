@@ -40,7 +40,15 @@ vi.mock('@/components/layout/AppLayout', () => ({
 vi.mock('@/components/editor/RulesPreviewManager', () => ({
   RulesPreviewManager: ({ children }: PropsWithChildren) => <>{children}</>,
 }))
-vi.mock('@/components/layout/AppLoadingOverlay', () => ({ AppLoadingOverlay: () => null }))
+vi.mock('@/components/layout/AppLoadingOverlay', async () => {
+  const { useEffect } = await import('react')
+  return {
+    AppLoadingOverlay: ({ onStartupComplete }: { onStartupComplete?: () => void }) => {
+      useEffect(() => onStartupComplete?.(), [onStartupComplete])
+      return null
+    },
+  }
+})
 vi.mock('@/components/settings/DataSourceStartupModal', () => ({
   DataSourceStartupModal: () => null,
 }))

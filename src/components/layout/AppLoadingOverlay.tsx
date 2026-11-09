@@ -1,12 +1,15 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { APP_INTERACTIVE_CONTENT_ID } from './AppLayout'
 
 export function AppLoadingOverlay({
   initialRoutePending = false,
+  onStartupComplete,
 }: {
   initialRoutePending?: boolean
+  onStartupComplete?: () => void
 }) {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
@@ -27,11 +30,28 @@ export function AppLoadingOverlay({
   const titleId = useId()
   const statusId = useId()
 
-  const isBlocking =
+  const isLoadingOverlay =
     (initialRoutePending && remoteStartup !== 'setup') ||
     shouldStayVisible ||
     Boolean(gameData && isLoading)
+  const isStartupReady = Boolean(
+    onStartupComplete && !isLoadingOverlay && gameData && remoteStartup !== 'setup',
+  )
+  const isBlocking = isLoadingOverlay || isStartupReady
+
   useEffect(() => {
+    if (!onStartupComplete || isLoadingOverlay) return
+    if (!isStartupReady) {
+      onStartupComplete()
+      return
+    }
+
+    // Release startup even if the CSS animation is interrupted or disabled.
+    const timeout = window.setTimeout(onStartupComplete, 500)
+    return () => window.clearTimeout(timeout)
+  }, [isLoadingOverlay, isStartupReady, onStartupComplete])
+
+  useLayoutEffect(() => {
     const appContent = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
     if (!appContent) return
 
@@ -52,14 +72,16 @@ export function AppLoadingOverlay({
 
   if (!isBlocking) return null
 
-  const hasProgress = loadProgress !== null && loadProgress.total > 0
+  const hasProgress = !isStartupReady && loadProgress !== null && loadProgress.total > 0
   const isProgressComplete =
     hasProgress &&
     (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
   const pct = hasProgress ? Math.round((loadProgress.current / loadProgress.total) * 100) : 0
 
   let statusLine: string
-  if (remoteStartup === 'unavailable') {
+  if (isStartupReady) {
+    statusLine = 'Ready'
+  } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
     statusLine = 'Loading the Included SRD…'
@@ -89,9 +111,15 @@ export function AppLoadingOverlay({
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={statusId}
-      aria-busy={remoteStartup !== 'unavailable'}
+      aria-busy={!isStartupReady && remoteStartup !== 'unavailable'}
       tabIndex={-1}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+      onAnimationEnd={(event) => {
+        if (isStartupReady && event.target === event.currentTarget) onStartupComplete?.()
+      }}
+      className={cn(
+        'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background',
+        isStartupReady && 'startup-ready-exit',
+      )}
     >
       <div className="mb-14 text-center select-none">
         <h1 id={titleId} className="font-display text-5xl font-bold tracking-wide text-foreground">
@@ -103,7 +131,9 @@ export function AppLoadingOverlay({
       </div>
       <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          {hasProgress ? (
+          {isStartupReady ? (
+            <div className="h-full w-full rounded-full bg-primary" />
+          ) : hasProgress ? (
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
               style={{ width: `${pct}%` }}
@@ -127,7 +157,9 @@ export function AppLoadingOverlay({
           )}
         </div>
       </div>
-      {error && <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>}
+      {error && !isStartupReady && (
+        <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>
+      )}
       {remoteStartup === 'unavailable' && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
           <Button

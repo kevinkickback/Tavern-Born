@@ -176,7 +176,10 @@ function App() {
   const [hasAppUpdate, setHasAppUpdate] = useState(false)
   const [progressVersion, setProgressVersion] = useState<string | null>(null)
   const [initialRouteReady, setInitialRouteReady] = useState(false)
+  const [startupComplete, setStartupComplete] = useState(false)
   const workspaceRoute = <WorkspaceRoute onReady={setInitialRouteReady} />
+  const canOpenStartupDialogs = initialRouteReady && startupComplete
+  const finishStartup = useCallback(() => setStartupComplete(true), [])
   const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
 
   useLayoutEffect(() => {
@@ -265,10 +268,13 @@ function App() {
             offset={TOAST_VIEWPORT_OFFSET}
             mobileOffset={TOAST_VIEWPORT_OFFSET}
           />
-          {(initialRouteReady || choosingRecoverySource) && <DataSourceStartupModal />}
-          <AppLoadingOverlay initialRoutePending={!initialRouteReady} />
+          {(canOpenStartupDialogs || choosingRecoverySource) && <DataSourceStartupModal />}
+          <AppLoadingOverlay
+            initialRoutePending={!initialRouteReady}
+            onStartupComplete={startupComplete ? undefined : finishStartup}
+          />
           <CloseConfirmDialog />
-          {initialRouteReady && updateData && (
+          {canOpenStartupDialogs && updateData && (
             <Suspense fallback={null}>
               <ChangelogModal
                 open={changelogOpen}
