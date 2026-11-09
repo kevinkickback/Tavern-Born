@@ -93,7 +93,7 @@ export function ContentStep({
   )
 
   const sourceWarning =
-    'Non-recommended sources often contain DM-only or outdated options. Select them only if your campaign uses them.'
+    'Books outside the presets can include DM-only or outdated options. Select them only if your campaign uses them.'
 
   const count = !isBundledSrd && allowedSources.length > 0 && (
     <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">

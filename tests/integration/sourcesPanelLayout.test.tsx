@@ -138,7 +138,7 @@ describe('Rules Additional Content panel layout', () => {
     expect(
       screen.getByRole('button', { name: /World of Warcraft/ }).getAttribute('aria-pressed'),
     ).toBe('true')
-    await user.click(screen.getByRole('button', { name: 'Recommended' }))
+    await user.click(screen.getByRole('button', { name: 'Standard' }))
     expect(selectedBooks()).toEqual(['XGE', 'TCE'])
     expect(screen.queryByRole('button', { name: /World of Warcraft/ })).toBeNull()
   })
@@ -184,7 +184,7 @@ describe('Rules Additional Content panel layout', () => {
       activeCharacter: character,
     })
     render(<SourcesPanel />)
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Recommended' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Standard' }))
 
     const saved = useCharacterStore.getState().activeCharacter!
     expect(saved.allowedSources).toContain('XGE')
@@ -226,7 +226,7 @@ describe('Rules Additional Content panel layout', () => {
     expect(characterPersistenceSchema.safeParse(pruned).success).toBe(true)
     expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(true)
     await user.click(screen.getByRole('button', { name: /Xanathar's Guide to Everything XGE/ }))
-    await user.click(screen.getByRole('button', { name: 'Recommended' }))
+    await user.click(screen.getByRole('button', { name: 'Standard' }))
     const restored = useCharacterStore.getState().activeCharacter!
     expect(restored.allowedSources).toContain('XGE')
     expect(restored.spells).toEqual(pruned.spells)
@@ -271,9 +271,9 @@ describe('Rules Additional Content panel layout', () => {
     expect(container.querySelector('[data-slot="workspace-toolbar"]')).toBeNull()
     expect(selectedCount?.textContent).toBe('2')
     expect(allowedSourcesHeader?.contains(selectedCount)).toBe(true)
-    expect(
-      allowedSourcesHeader?.contains(screen.getByRole('button', { name: 'Recommended' })),
-    ).toBe(true)
+    expect(allowedSourcesHeader?.contains(screen.getByRole('button', { name: 'Standard' }))).toBe(
+      true,
+    )
     expect(allowedSourcesHeader?.contains(screen.getByRole('button', { name: 'Expanded' }))).toBe(
       true,
     )
@@ -322,7 +322,7 @@ describe('Rules Additional Content panel layout', () => {
     expect(screen.getByRole('link', { name: 'Settings → Game Data' }).getAttribute('href')).toBe(
       '/settings?section=data',
     )
-    expect(screen.queryByRole('button', { name: 'Recommended' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Standard' })).toBeNull()
   })
 
   test('hides provenance-only sources without changing the saved selection', () => {

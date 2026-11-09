@@ -317,10 +317,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                     </li>
                   )}
                   {hasNonPresetSourcesSelected && (
-                    <li>
-                      Non-recommended sources may include DM-only or outdated options that add noise
-                      to selection lists.
-                    </li>
+                    <li>Books outside the presets can include DM-only or outdated options.</li>
                   )}
                   <li aria-live="polite">{printingNotice}</li>
                 </ul>
