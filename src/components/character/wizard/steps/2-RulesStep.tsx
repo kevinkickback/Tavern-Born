@@ -1,5 +1,6 @@
 import { CheckCircle, Circle, Info } from '@phosphor-icons/react'
 import { type ReactNode, useId } from 'react'
+import { getBundledFileUrl } from '@/lib/assetUrls'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { cn } from '@/lib/utils'
@@ -51,9 +52,9 @@ export function RulesStep({
 
   return (
     <div className="grid min-h-full md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <section className="@container min-w-0 p-4 sm:p-6">
+      <section className="@container flex min-w-0 flex-col p-4 sm:p-6">
         {intro}
-        <div className="grid gap-3 @min-[22rem]:grid-cols-2">
+        <div className="grid shrink-0 gap-3 @min-[22rem]:grid-cols-2">
           {RULESETS.map((option) => {
             const selected = data.originSystem === option.value
             const descriptionId = `${summaryId}-${option.value}`
@@ -114,6 +115,19 @@ export function RulesStep({
               </div>
             )
           })}
+        </div>
+        <div className="relative hidden min-h-0 flex-1 md:block">
+          <div className="absolute inset-x-0 inset-y-4 [container-type:size]">
+            <img
+              src={getBundledFileUrl('assets/images/ui/wizard-rules-art.webp')}
+              alt=""
+              width={2103}
+              height={748}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 m-auto hidden h-auto w-full rounded-lg opacity-60 [@container_(max-aspect-ratio:2103/748)]:block"
+            />
+          </div>
         </div>
       </section>
 
