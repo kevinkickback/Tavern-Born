@@ -35,7 +35,7 @@ import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 const druid = { name: 'Druid', source: 'XPHB' }
 const sourceFiles = [
-  ['bundled', 'resources/srd/core/data/class/class-druid.json'],
+  ['bundled', 'resources/srd/data/class/class-druid.json'],
   ['configured', 'data/class/class-druid.json'],
 ] as const
 const branches = [

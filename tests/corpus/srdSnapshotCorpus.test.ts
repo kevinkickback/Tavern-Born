@@ -25,7 +25,7 @@ import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-const RESOURCE_ROOT = resolve(process.cwd(), 'resources', 'srd', 'core')
+const RESOURCE_ROOT = resolve(process.cwd(), 'resources', 'srd')
 const DATA_ROOT = resolve(RESOURCE_ROOT, 'data')
 
 async function readJson(path: string) {

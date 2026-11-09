@@ -13,10 +13,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
-import {
-  replaceClassFeatSelectionsCommand,
-  replaceFeatSelectionsCommand,
-} from '@/lib/character/commands/featCommands'
+import { replaceFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
 import { makeSourceTag } from '@/lib/provenance'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { useFeatsPageController } from '@/pages/feats/hooks/useFeatsPageController'
@@ -485,16 +482,14 @@ describe('FeatsPage bonus feat configuration', () => {
   })
 
   test('a retained Epic Boon reserves its slot and disappears from active Feats on source loss', () => {
-    const path = 'resources/srd/core/data/class/class-ranger.json'
+    const path = 'resources/srd/data/class/class-ranger.json'
     const parsed = parseClassDocument(JSON.parse(readFileSync(path, 'utf8')), path)
     const classes = (parsed.classes as Class5e[]).filter((row) => row.source === 'XPHB')
-    const feats = JSON.parse(readFileSync('resources/srd/core/data/feats.json', 'utf8'))
-      .feat as Feat5e[]
+    const feats = JSON.parse(readFileSync('resources/srd/data/feats.json', 'utf8')).feat as Feat5e[]
     const boon = feats.find((row) => row.name === 'Boon of Combat Prowess')!
     boonData = { classes, classFeatures: parsed.classFeatures as ClassFeature[], feats: [boon] }
     try {
       const owner = { className: 'Ranger', classSource: 'XPHB' }
-      const id = 'class:ranger|xphb|choice:epic-boon|19'
       const base = makeCharacterFixture({
         originSystem: '2024',
         classProgression: [{ name: 'Ranger', source: 'XPHB', levels: 19 }],
@@ -504,32 +499,13 @@ describe('FeatsPage bonus feat configuration', () => {
           level,
           abilityChanges: { dexterity: 2 },
         })),
-        classChoiceSelections: [
-          {
-            ...owner,
-            choiceId: id,
-            label: 'Epic Boon',
-            kind: 'feat',
-            classLevel: 19,
-            selected: [{ entityType: 'feat', name: boon.name, source: boon.source, slotLevel: 19 }],
-          },
-        ],
       })
       const character = characterPersistenceSchema.parse(
         applyCharacterCommandResult(
           base,
-          replaceClassFeatSelectionsCommand(
-            base,
-            base.provenance,
-            {
-              ...owner,
-              choiceId: id,
-              categories: ['EB'],
-              progressionName: 'Epic Boon',
-              slotLevels: [19],
-            },
-            [boon],
-          ),
+          replaceFeatSelectionsCommand(base, base.provenance, [
+            { ...boon, ...owner, classLevel: 19 },
+          ]),
         ),
       )
       useCharacterStore.setState({
@@ -541,14 +517,12 @@ describe('FeatsPage bonus feat configuration', () => {
         wrapper: MemoryRouter,
       })
       expect(result.current.remainingASI).toBe(0)
-      expect(result.current.classProgressionFeats.map(({ feat }) => feat.name)).toEqual([boon.name])
+      expect(result.current.character?.feats.map((feat) => feat.name)).toEqual([boon.name])
       boonData = { ...boonData, classFeatures: [] }
       rerender()
       expect(result.current.remainingASI).toBe(0)
-      expect(result.current.classProgressionFeats).toEqual([])
-      act(() =>
-        result.current.handleCompleteSetup(boon.name, boon.source, undefined, undefined, id),
-      )
+      expect(result.current.character?.feats).toEqual([])
+      act(() => result.current.handleCompleteSetup(boon.name, boon.source))
       expect(result.current.featOptionsTarget).toBeNull()
       expect(useCharacterStore.getState().activeCharacter).toBe(character)
     } finally {

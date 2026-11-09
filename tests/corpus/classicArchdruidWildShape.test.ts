@@ -64,7 +64,7 @@ const apply = (saved: Character, result: CharacterCommandResult) =>
     provenance: result.provenanceUpdate,
   })
 
-const bundled = 'resources/srd/core/data/class/class-druid.json'
+const bundled = 'resources/srd/data/class/class-druid.json'
 const configured = 'data/class/class-druid.json'
 const note = 'Wild Shape (Archdruid): Unlimited uses.'
 

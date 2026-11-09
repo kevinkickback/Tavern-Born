@@ -55,7 +55,7 @@ function catalogStamp(page: Page, damage = false) {
   )
 }
 
-test.skip(!existsSync(resolve('resources/srd/core/manifest.json')), 'requires the Included SRD')
+test.skip(!existsSync(resolve('resources/srd/manifest.json')), 'requires the Included SRD')
 test.skip(
   HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION && process.env.TAVERN_BORN_RUN_CATALOG_SMOKE !== '1',
   'Windows build has upstream Electron sandbox crash 0x80000003',

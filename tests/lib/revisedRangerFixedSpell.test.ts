@@ -19,7 +19,7 @@ import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixt
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const fixture = makeManagedClassSpellFixtures()
-const file = 'resources/srd/core/data/class/class-ranger.json'
+const file = 'resources/srd/data/class/class-ranger.json'
 const document = JSON.parse(readFileSync(file, 'utf8'))
 const parsed = parseClassDocument(document, file)
 const classes = parsed.classes as Class5e[]

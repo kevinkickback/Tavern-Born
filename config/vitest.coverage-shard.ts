@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config'
-import base from '../vitest.config'
+import base from './vitest.config'
 
-// A partial suite collects evidence; the normal root config judges the combined coverage.
+// A partial suite collects evidence; the main test config judges the combined coverage.
 export default defineConfig({
   ...base,
   test: {

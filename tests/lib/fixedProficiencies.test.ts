@@ -27,7 +27,7 @@ import { makeFixedSourceData } from '../fixtures/fixedProficiencyFixtures'
 
 function fixture(name = 'Rogue', source = 'PHB') {
   const { data } = makeFixedSourceData()
-  data.skills = JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill
+  data.skills = JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill
   const catalogs = buildClassChoiceFeatureCatalogs(data)
   const character = makeCharacterFixture({
     race: '',

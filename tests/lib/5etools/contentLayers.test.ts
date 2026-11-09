@@ -234,7 +234,7 @@ describe('game-data content layers', () => {
 
   test('retains bundled weapon property names after layering', () => {
     const bundledItems = JSON.parse(
-      readFileSync(join(process.cwd(), 'resources/srd/core/data/items-base.json'), 'utf8'),
+      readFileSync(join(process.cwd(), 'resources/srd/data/items-base.json'), 'utf8'),
     )
     const composed = composeGameDataLayers([
       makeGameDataFixture({ itemProperties: parseItemProperties(bundledItems) }),

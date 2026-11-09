@@ -98,7 +98,7 @@ function assertMatchingMetadata(manifest, provenance, field) {
   }
 }
 
-export async function validateBundledSrdPack(resourceDirectory = resolve('resources/srd/core')) {
+export async function validateBundledSrdPack(resourceDirectory = resolve('resources/srd')) {
   const files = await collectFiles(resourceDirectory)
   const packagedFiles = files.filter((file) => PACKAGED_SRD_FILE.test(file.path))
   const packagedPaths = new Set(packagedFiles.map((file) => file.path))
@@ -189,7 +189,7 @@ export function evaluateBundleBudgets(measurements, budgets = BUNDLE_BUDGETS) {
 
 export async function checkBundleBudget(
   distDirectory = resolve('dist'),
-  { requireBundledSrd = false, resourceDirectory = resolve('resources/srd/core') } = {},
+  { requireBundledSrd = false, resourceDirectory = resolve('resources/srd') } = {},
 ) {
   const bundledSrdFiles = requireBundledSrd
     ? await validateBundledSrdPack(resourceDirectory)

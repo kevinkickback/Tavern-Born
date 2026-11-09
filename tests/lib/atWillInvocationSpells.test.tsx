@@ -38,7 +38,7 @@ const catalogsByEdition = new Map<string, GameData>()
 let allowedSources: string[]
 
 beforeAll(async () => {
-  const root = resolve('resources/srd/core/data')
+  const root = resolve('resources/srd/data')
   const readBundledJson = async (path: string) =>
     JSON.parse(readFileSync(resolve(root, path), 'utf8'))
   vi.stubGlobal('electronAPI', { readBundledJson })

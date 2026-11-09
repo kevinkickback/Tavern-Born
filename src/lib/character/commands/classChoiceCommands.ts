@@ -100,7 +100,7 @@ import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
 } from '@/lib/character/effectiveClassChoiceFeatures'
-import { isRetiredEpicBoonChoice } from '@/lib/character/epicBoonSlots'
+import { isEpicBoonAdvancementChoice } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import { stripFixedProficiencyGrants } from '@/lib/character/fixedProficiencyOwnership'
 import {
@@ -1062,7 +1062,7 @@ export function applyClassChoiceSelectionCommand(
       authority,
       expectedSelectionHandle,
     )
-  if (isRetiredEpicBoonChoice(choice, authority?.catalogs))
+  if (isEpicBoonAdvancementChoice(choice, authority?.catalogs))
     throw new RangeError('Choose or remove this feat through the Epic Boon advancement slot.')
   if (choice.id !== REVISED_AFFINITY_ID && selected.some(isRevisedAffinityOption))
     throw new RangeError('Choose a damage type through the exact Elemental Affinity feature.')

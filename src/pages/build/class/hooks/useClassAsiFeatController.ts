@@ -122,9 +122,7 @@ export function useClassAsiFeatController({
     if (!feat || !hasFeatOptions(feat)) return
     setOptionsPendingFeat({
       ...feat,
-      ...(epicBoonSlot.legacy
-        ? { classFeatChoiceId: epicBoonSlot.choiceId }
-        : { selectionKind: 'ordinary' }),
+      selectionKind: 'ordinary',
       epicBoon: epicBoonEditContext(character, epicBoonSlot),
     })
   }

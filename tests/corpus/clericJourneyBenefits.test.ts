@@ -196,7 +196,7 @@ test.each(
       packVersion: '1.0.1',
       isValid: true,
     },
-    'resources/srd/core/data',
+    'resources/srd/data',
   )
   const additional =
     stack === 'bundled'

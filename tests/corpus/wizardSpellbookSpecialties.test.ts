@@ -27,7 +27,7 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const variants = [
-  ['bundled', 'resources/srd/core/data'],
+  ['bundled', 'resources/srd/data'],
   ...(existsSync('data/class/class-wizard.json') ? [['local', 'data']] : []),
 ] as Array<['bundled' | 'local', string]>
 

@@ -27,7 +27,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const bundled = 'resources/srd/core/data'
+const bundled = 'resources/srd/data'
 const stacks: Array<['bundled' | 'local', string]> = [['bundled', bundled]]
 if (existsSync('data/class/class-sorcerer.json')) stacks.push(['local', 'data'])
 

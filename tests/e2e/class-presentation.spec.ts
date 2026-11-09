@@ -23,7 +23,7 @@ test('@focused Class header and replacement tabs preserve independent choices th
   ranger.subclasses = fixture.classData.subclasses
   const subclass = ranger.subclasses!.find((row) => row.source === 'PHB')!
   const parsedFighter = parseClassDocument(
-    JSON.parse(readFileSync('resources/srd/core/data/class/class-fighter.json', 'utf8')),
+    JSON.parse(readFileSync('resources/srd/data/class/class-fighter.json', 'utf8')),
   )
   data.classes.push(...(parsedFighter.classes as Class5e[]))
   data.classFeatures.push(...(parsedFighter.classFeatures as ClassFeature[]))

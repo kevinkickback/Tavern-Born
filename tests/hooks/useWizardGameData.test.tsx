@@ -82,7 +82,7 @@ describe('useWizardGameData', () => {
     ['2014', 'PHB'],
     ['2024', 'XPHB'],
   ] as const)('Rogue %s creation saves Cant and exposes the edition-specific language setup', (originSystem, source) => {
-    const raw = JSON.parse(readFileSync('resources/srd/core/data/class/class-rogue.json', 'utf8'))
+    const raw = JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8'))
     const parsed = parseClassDocument({
       class: rogueLanguageSources.class,
       classFeature: raw.classFeature.filter(
@@ -92,8 +92,7 @@ describe('useWizardGameData', () => {
     const data = makeGameDataFixture({
       classes: parsed.classes as Class5e[],
       classFeatures: parsed.classFeatures as ClassFeature[],
-      languages: JSON.parse(readFileSync('resources/srd/core/data/languages.json', 'utf8'))
-        .language,
+      languages: JSON.parse(readFileSync('resources/srd/data/languages.json', 'utf8')).language,
     })
     data.lookups = buildGameDataLookups(data)
     useGameDataStore.setState({ gameData: data })

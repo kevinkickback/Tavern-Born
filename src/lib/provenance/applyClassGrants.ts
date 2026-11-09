@@ -150,7 +150,7 @@ function addClassSkillChoice(
 }
 
 /** A structured all-skill option has no explicit `choose.from` list. */
-export function addAnyClassSkillChoice(
+function addAnyClassSkillChoice(
   ledger: ProvenanceLedger,
   cls: { name: string; source?: string },
   skills: readonly unknown[],

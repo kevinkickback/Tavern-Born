@@ -47,7 +47,7 @@ const rules = [
 const stacks = ['bundled', ...(existsSync('data/class/class-sorcerer.json') ? ['composed'] : [])]
 
 function loadLayer(type: 'bundled' | 'local') {
-  const root = type === 'bundled' ? 'resources/srd/core/data' : 'data'
+  const root = type === 'bundled' ? 'resources/srd/data' : 'data'
   return new FiveEToolsDataLoader(
     type === 'bundled'
       ? {
@@ -234,7 +234,7 @@ test.each(
 
 test('a malformed parsed subclass short name leaves the sheet exportable', async () => {
   const path = 'class/class-sorcerer.json'
-  const raw = JSON.parse(await readFile(`resources/srd/core/data/${path}`, 'utf8'))
+  const raw = JSON.parse(await readFile(`resources/srd/data/${path}`, 'utf8'))
   const parsed = parseClassDocument(
     {
       ...raw,
@@ -346,7 +346,7 @@ test.each(
 }) => {
   const path = 'class/class-sorcerer.json'
   const raw: { class: Class5e[]; subclass: Subclass5e[]; subclassFeature: SubclassFeature[] } =
-    JSON.parse(await readFile(`resources/srd/core/data/${path}`, 'utf8'))
+    JSON.parse(await readFile(`resources/srd/data/${path}`, 'utf8'))
   const parse = (document: typeof raw, layer: string) => {
     const parsed = parseClassDocument(document, `${layer}/${path}`)
     return makeGameDataFixture({

@@ -16,7 +16,7 @@ const dependencies = JSON.parse(
   readFileSync('tests/fixtures/classProficiencyDependencies.json', 'utf8'),
 )
 const barbarian = JSON.parse(
-  readFileSync('resources/srd/core/data/class/class-barbarian.json', 'utf8'),
+  readFileSync('resources/srd/data/class/class-barbarian.json', 'utf8'),
 ) as { class: Partial<Class5e>[]; classFeature: typeof proficiencySources }
 const options = () => ({
   classes: barbarian.class,

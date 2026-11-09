@@ -20,7 +20,7 @@ export interface RangerDocument {
 export function makeNaturalExplorerFixture(
   level = 10,
   change?: (doc: RangerDocument) => void,
-  file = 'resources/srd/core/data/class/class-ranger.json',
+  file = 'resources/srd/data/class/class-ranger.json',
 ) {
   const document = JSON.parse(readFileSync(file, 'utf8')) as RangerDocument
   change?.(document)

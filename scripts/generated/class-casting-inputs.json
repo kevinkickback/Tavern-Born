@@ -163,7 +163,7 @@
     },
     {
       "file": "scripts/lib/class-casting-source.mjs",
-      "sha256": "4d86b4fbf4302d89795b9ea92b72c034f590b6dcb9557ae1044545a86444a94c"
+      "sha256": "6f262915d95ed01dc92f8077443c21828e08a4c42f0844bb088b52573f4ad549"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
@@ -735,7 +735,7 @@
     },
     {
       "file": "src/lib/calculations/abilityScores.ts",
-      "sha256": "57e8e2f338f1520a012cc5b414d57ab955352d7b5ee165d2a661b13c51db3873"
+      "sha256": "213ce4585dc7459a48252a84fe8ebc4bd5e7eb9ba0e70ee4d21ce522b79fa6a5"
     },
     {
       "file": "src/lib/calculations/armorClass.ts",
@@ -819,7 +819,7 @@
     },
     {
       "file": "src/lib/provenance/types.ts",
-      "sha256": "e76a5c0454ddd4927fea15e27c484167d2e024f41998720b1d1e0dc318a709d9"
+      "sha256": "f84ce9a078cc29b4e0c39499431dc37eeb7c683ab5b756ac64b67df9d7c97737"
     },
     {
       "file": "src/lib/sourceCompatibility.ts",
@@ -831,7 +831,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "ef13bd38a8aa5307c57e397e4f5fe40d8481e5d3c0e7ee8c0742d7679a2a26dd"
+      "sha256": "cce85ad44a33691ef867427f80d894df4f137942a15ce95299346bc1872f1e9f"
     },
     {
       "file": "src/types/actions.ts",

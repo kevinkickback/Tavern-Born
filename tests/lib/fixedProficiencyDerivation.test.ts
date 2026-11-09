@@ -32,17 +32,11 @@ test('complete actual fixed producers reproduce the descriptors and direct decla
     ...fixedSources,
     class: fixedSources.class.filter((row) => row.name !== 'Rogue'),
   }
-  const bundledDruid = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-druid.json', 'utf8'),
-  )
-  const bundledMonk = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-monk.json', 'utf8'),
-  )
-  const bundledRogue = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-rogue.json', 'utf8'),
-  )
+  const bundledDruid = JSON.parse(readFileSync('resources/srd/data/class/class-druid.json', 'utf8'))
+  const bundledMonk = JSON.parse(readFileSync('resources/srd/data/class/class-monk.json', 'utf8'))
+  const bundledRogue = JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8'))
   const bundledSorcerer = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
+    readFileSync('resources/srd/data/class/class-sorcerer.json', 'utf8'),
   )
   const dragon = deriveDragonAncestorLanguage(conditionalSources, bundledSorcerer, {
     ...api,

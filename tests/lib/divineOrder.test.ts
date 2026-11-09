@@ -28,7 +28,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-const bundled = 'resources/srd/core/data'
+const bundled = 'resources/srd/data'
 const configured = 'data'
 const read = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'))
 

@@ -43,11 +43,11 @@ const read = (file) => {
 }
 const index = read('class/index.json')
 const documents = [...new Set(Object.values(index))].sort().map((file) => read(`class/${file}`))
-const bundledClericPath = 'resources/srd/core/data/class/class-cleric.json'
+const bundledClericPath = 'resources/srd/data/class/class-cleric.json'
 const bundledClericBytes = fs.readFileSync(bundledClericPath)
-const bundledSorcererPath = 'resources/srd/core/data/class/class-sorcerer.json'
+const bundledSorcererPath = 'resources/srd/data/class/class-sorcerer.json'
 const bundledSorcererBytes = fs.readFileSync(bundledSorcererPath)
-const bundledBardPath = 'resources/srd/core/data/class/class-bard.json'
+const bundledBardPath = 'resources/srd/data/class/class-bard.json'
 const bundledBardBytes = fs.readFileSync(bundledBardPath)
 const features = documents.flatMap((document) => document.classFeature ?? [])
 const itemDocuments = [read('items.json'), read('items-base.json')]

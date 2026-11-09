@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config'
-import { createRendererConfig } from './config/renderer'
+import { createRendererConfig } from './renderer'
 
 const domTests = [
   'tests/{hooks,store,integration}/**/*.{test,spec}.{ts,tsx}',

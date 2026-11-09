@@ -23,7 +23,7 @@ review rather than tests that mirror strings.
 
 ## Shared setup
 
-`vitest.config.ts` separates Node tests from DOM suites. Hooks, stores, integration and `.tsx` tests
+`config/vitest.config.ts` separates Node tests from DOM suites. Hooks, stores, integration and `.tsx` tests
 use jsdom; `.test.ts` files that need rendering, storage, sanitization or `window.electronAPI` declare
 `// @vitest-environment jsdom` explicitly. Pure tests use Node. Keep per-file isolation and the shared
 `tests/setup.ts`: fake IndexedDB/default no-op adapter in both environments, browser shims only in
@@ -56,7 +56,7 @@ checks; complete creator qualification remains a separate release obligation.
 `@focused` marks narrow diagnostic journeys; `@golden` marks complete release-blocking progression.
 Seed startup deterministically and assert important intermediate choices, readiness, save and reload.
 CI uses two isolated shards with one worker each; retries and timeouts remain configured in
-`playwright.config.ts`. Their union must preserve the full suite. Local runs use the same config.
+`config/playwright.config.ts`. Their union must preserve the full suite. Local runs use the same config.
 Data-dependent checks skip when the required external `data/` is absent; a skip is not a pass.
 
 ## Commands
@@ -64,8 +64,8 @@ Data-dependent checks skip when the required external `data/` is absent; a skip 
 Use Node 24.15 or later in the Node 24 line. Common focused and individual checks:
 
 ```text
-npx vitest run tests/path/to/affected.test.ts --maxWorkers=4
-npx playwright test tests/e2e/affected.spec.ts
+npm test -- tests/path/to/affected.test.ts --maxWorkers=4
+npm run test:e2e -- tests/e2e/affected.spec.ts
 npx biome ci .
 npm run check:health
 npm run build
@@ -85,13 +85,13 @@ PRs use the scope/text/link path described in [CI validation](cicd-workflow.md#v
 
 CI splits the complete Vitest suite across two native coverage parts. Its collection-only config
 preserves source coverage but leaves the threshold decision to the required combined report under
-the normal root config. Ordinary local `test:coverage` remains a complete run with the same floors.
+the main test config. Ordinary local `test:coverage` remains a complete run with the same floors.
 
 Electron smoke requires a display on Linux. It skips local Windows builds 26200–26399 because of
 upstream Electron issue 52098 (`0x80000003` during sandboxed child initialization). Keep CI coverage;
 never use `--no-sandbox` to make this check pass. Remove the skip once the pinned runtime is fixed.
-Before an authorized release also run `test:e2e:release` and `check:release` under the
-[release procedure](releasing.md). `npm run lint` writes fixes; `npx biome ci .` is read-only.
+Before an authorized release, also run `npm run test:e2e:release` and `npm run check:release` locally.
+`npm run lint` writes fixes. `npx biome ci .` is read-only.
 
 ## Runtime reachability review
 

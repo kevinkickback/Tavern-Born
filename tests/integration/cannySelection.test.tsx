@@ -339,7 +339,7 @@ test('saved source-unavailable choices retain removal-only recovery and Clear re
 test('Bard uses owned Expertise while Canny preserves overlap through removal of an earlier manual grant', async () => {
   const f = makeCannyFixture()
   const bard = parseClassDocument(
-    JSON.parse(readFileSync('resources/srd/core/data/class/class-bard.json', 'utf8')),
+    JSON.parse(readFileSync('resources/srd/data/class/class-bard.json', 'utf8')),
   )
   f.data.classes.push(...(bard.classes as Class5e[]).filter((entry) => entry.source === 'PHB'))
   f.data.classFeatures.push(...(bard.classFeatures as ClassFeature[]))

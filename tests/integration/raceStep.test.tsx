@@ -59,7 +59,7 @@ describe('RaceStep', () => {
 
   test('defaults to a source-backed ancestry for the 2014 Dragonborn and keeps later choices', () => {
     const races = parseRaces(
-      JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
+      JSON.parse(readFileSync('resources/srd/data/races.json', 'utf-8')),
     ) as Race5e[]
     const dragonborn = races.find(({ name, source }) => name === 'Dragonborn' && source === 'PHB')!
     const data = { ...INITIAL_CHARACTER_DATA, race: dragonborn.name, raceSource: dragonborn.source }

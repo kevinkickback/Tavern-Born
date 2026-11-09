@@ -92,15 +92,15 @@
     }
   ],
   "bundledLifeDomainInput": {
-    "file": "resources/srd/core/data/class/class-cleric.json",
+    "file": "resources/srd/data/class/class-cleric.json",
     "sha256": "0109e94731de36c37234b59b598b05e92fb8f1ff192e933af0c5de950fb3d1fe"
   },
   "bundledDragonAncestorInput": {
-    "file": "resources/srd/core/data/class/class-sorcerer.json",
+    "file": "resources/srd/data/class/class-sorcerer.json",
     "sha256": "c144b35830ac7d6ea6cafa34c7278dea1ed4f53cbc45dea24b612de814f0865b"
   },
   "bundledBardInput": {
-    "file": "resources/srd/core/data/class/class-bard.json",
+    "file": "resources/srd/data/class/class-bard.json",
     "sha256": "0f94d39e57816eeeca8db68cb6e108bf91a45370dc965a52776a98d471fb4001"
   },
   "dragonAncestorLanguageSource": {

@@ -70,11 +70,12 @@ describe('strict numeric class spell identity and saved inverse', () => {
     expect(parse(character).success).toBe(false)
   })
   test('current format rejects eleven without conversion and admits exact dormant intent without catalogs', () => {
-    expect(CURRENT_CHARACTER_SCHEMA_VERSION).toBe(14)
     const character = materialized()
+    expect(character.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
     expect(parse(character).success).toBe(true)
     expect(parse({ ...character, schemaVersion: 11 }).success).toBe(false)
     expect(parse({ ...character, schemaVersion: 13 }).success).toBe(false)
+    expect(parse({ ...character, schemaVersion: 14 }).success).toBe(false)
     const dormant = stripManagedClassSpellState(character)
     dormant.classProgression = [{ name: 'Fighter', source: 'PHB', levels: 1 }]
     dormant.initialClass = undefined

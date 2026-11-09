@@ -15,6 +15,7 @@ import {
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
@@ -126,7 +127,7 @@ describe('source-qualified Mystic Arcanum setup', () => {
         character = commit(character, [request(character, slot, name)])
       }
       const reopened = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
-      expect(reopened.schemaVersion).toBe(14)
+      expect(reopened.schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
       expect(reopened.managedClassSpellRevision).toBe(4)
       expect(reopened.spells.spellProfiles[0].spellsKnown).toHaveLength(4)
       expect(reopened.spells.spellProfiles[0].fixedSpells ?? []).toEqual([])

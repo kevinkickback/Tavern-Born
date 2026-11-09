@@ -10,36 +10,22 @@ import {
   isRevisedEpicBoonOwner,
 } from '@/lib/5etools/epicBoonAdvancement'
 import { deriveFeatOptionSteps } from '@/lib/5etools/parsers/featOptions'
-import {
-  ABILITY_NAMES,
-  type AbilityName,
-  normalizeAbilityName,
-} from '@/lib/calculations/abilityScores'
+import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { ABILITY_SCORE_MAX, getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisiteRules'
-import { SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import { getFeatSelectionKey } from '@/lib/provenance/featSelectionIdentity'
-import { removeGrantsBySourceRef } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type { SourceTag } from '@/lib/provenance/types'
 import type { Class5e, Feat5e } from '@/types/5etools'
-import type {
-  AsiChoice,
-  Character,
-  CharacterClassChoiceSelection,
-  ClassFeatChoice,
-  Feat,
-} from '@/types/character'
+import type { AsiChoice, Character, Feat } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceDeclaration } from './classChoiceIdentity'
-import { getFeatOptionSourceTag, isSameGrantSource } from './commands/featCommandIdentity'
 import { applyCharacterCommandResult } from './commands/featCommandSupport'
-import { replaceFeatSelectionsCommand, retractFeatOptionsCommand } from './commands/featCommands'
+import { replaceFeatSelectionsCommand } from './commands/featCommands'
 import { getFeatSetupOwners } from './featSetupOwners'
 import { getRevisedClassFeatSlot } from './revisedClassFeatSlot'
 
@@ -52,10 +38,6 @@ type Owner = { name: string; source: string }
 type Target = Pick<Feat, 'name' | 'source'>
 type Claims = {
   ordinary: Feat[]
-  legacySelections: CharacterClassChoiceSelection[]
-  mirrors: ClassFeatChoice[]
-  foreignSelections: CharacterClassChoiceSelection[]
-  foreignMirrors: ClassFeatChoice[]
   increases: AsiChoice[]
 }
 
@@ -69,7 +51,6 @@ export interface EpicBoonSlot {
   allowsAsi: boolean
   feat?: Feat
   asi?: AsiChoice
-  legacy?: boolean
 }
 
 function choiceId(owner: Owner): string {
@@ -81,19 +62,10 @@ function owns(owner: Owner, row: { className?: string; classSource?: string }): 
 }
 
 function getClaims(character: Character, owner: Owner): Claims {
-  const id = choiceId(owner)
-  const selections = (character.classChoiceSelections ?? []).filter((row) => row.choiceId === id)
-  const choices = (character.classFeatChoices ?? []).filter((row) => row.id === id)
-  const matches = (row: CharacterClassChoiceSelection | ClassFeatChoice) =>
-    owns(owner, row) && !row.subclassName && !row.subclassSource
   return {
     ordinary: character.feats.filter(
       (feat) => owns(owner, feat) && feat.classLevel === EPIC_BOON_LEVEL,
     ),
-    legacySelections: selections.filter(matches),
-    mirrors: choices.filter(matches),
-    foreignSelections: selections.filter((row) => !matches(row)),
-    foreignMirrors: choices.filter((row) => !matches(row)),
     increases: (character.asiChoices ?? []).filter(
       (asi) => owns(owner, asi) && asi.level === EPIC_BOON_LEVEL,
     ),
@@ -124,7 +96,7 @@ function currentDeclaration(
   )
 }
 
-export function isRetiredEpicBoonChoice(
+export function isEpicBoonAdvancementChoice(
   choice: NormalizedCharacterChoice,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ): boolean {
@@ -212,62 +184,6 @@ export function isEpicBoonIncreaseWithinCap(
   )
 }
 
-function legacyFeat(character: Character, owner: Owner, claims: Claims): Feat | undefined {
-  const [selection] = claims.legacySelections
-  const [mirror] = claims.mirrors
-  const selected = selection?.selected[0]
-  const feat = mirror?.feats[0]
-  if (
-    claims.legacySelections.length !== 1 ||
-    claims.mirrors.length !== 1 ||
-    !selection ||
-    !mirror ||
-    !feat ||
-    !selected?.source?.trim() ||
-    !owns(owner, selection) ||
-    !owns(owner, mirror) ||
-    !owns(owner, feat) ||
-    selection.label !== LABEL ||
-    selection.kind !== 'feat' ||
-    selection.inactive ||
-    selection.classLevel !== EPIC_BOON_LEVEL ||
-    feat.classLevel !== EPIC_BOON_LEVEL ||
-    selection.subclassName ||
-    selection.subclassSource ||
-    mirror.subclassName ||
-    mirror.subclassSource ||
-    selection.selected.length !== 1 ||
-    mirror.feats.length !== 1 ||
-    mirror.progressionName !== LABEL ||
-    mirror.categories.length !== 1 ||
-    mirror.categories[0] !== 'EB' ||
-    selected.entityType !== 'feat' ||
-    selected.ref ||
-    selected.slotLevel !== EPIC_BOON_LEVEL ||
-    getFeatSelectionKey(selected) !== getFeatSelectionKey(feat)
-  )
-    return undefined
-  const marker = (character.provenance.feats[normalizeKey(feat.name)] ?? []).some(
-    (tag) =>
-      tag.sourceType === 'class' &&
-      tag.grantType === 'choice' &&
-      tag.grantVariant === selection.choiceId &&
-      owns(owner, { className: tag.sourceName, classSource: tag.sourceRef }),
-  )
-  const source = getFeatOptionSourceTag({ ...feat, classFeatChoiceId: selection.choiceId })
-  const bonuses = character.provenance.abilityBonuses.filter(({ sourceTag }) =>
-    isSameGrantSource(sourceTag, source),
-  )
-  const ability = feat.options?.abilityScore && normalizeAbilityName(feat.options.abilityScore)
-  const matchingAbility = feat.options?.abilityScore
-    ? !!ability &&
-      bonuses.length === 1 &&
-      bonuses[0].ability === ability &&
-      bonuses[0].value === SELECTED_FEAT_ABILITY_BONUS
-    : bonuses.length === 0
-  return marker && matchingAbility ? feat : undefined
-}
-
 export function getEpicBoonSlots(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
@@ -288,9 +204,8 @@ export function getEpicBoonSlots(
       return []
     const current = currentDeclaration(owner, catalogs)
     const claims = getClaims(character, owner)
-    const legacy = claims.legacySelections.length > 0 || claims.mirrors.length > 0
-    const count = claims.ordinary.length + claims.increases.length + Number(legacy)
-    if (!current && !legacy) {
+    const count = claims.ordinary.length + claims.increases.length
+    if (!current) {
       const knownGain =
         currentClasses.some(hasEpicBoonAdvancementReference) ||
         !!(rawClass && hasEpicBoonAdvancementReference(rawClass))
@@ -309,113 +224,30 @@ export function getEpicBoonSlots(
       allowsAsi,
       hasClaims: count > 0,
     }
-    if (count > 1 || (legacy && (claims.foreignSelections.length || claims.foreignMirrors.length)))
-      return [{ ...base, state: 'conflict' }]
+    if (count > 1) return [{ ...base, state: 'conflict' }]
     if (!current) return [{ ...base, state: 'unavailable' }]
     if (count === 0) return [{ ...base, state: 'empty' }]
     const [asi] = claims.increases
     if (asi && allowsAsi && validIncrease(asi.abilityChanges)) {
       return [{ ...base, state: 'selected', asi }]
     }
-    const feat = legacy ? legacyFeat(character, owner, claims) : claims.ordinary[0]
+    const [feat] = claims.ordinary
     const target = feat?.source?.trim() && uniqueFeat(feat, feats)
     if (
       feat &&
       target &&
       !isEpicBoonAsiFeat(target) &&
-      (legacy
-        ? target.category === 'EB'
-        : isNormallySelectableFeat(target) || target.category === 'O' || target.category === 'EB')
+      (isNormallySelectableFeat(target) || target.category === 'O' || target.category === 'EB')
     ) {
-      return [{ ...base, state: 'selected', feat, legacy }]
+      return [{ ...base, state: 'selected', feat }]
     }
     return [{ ...base, state: 'unavailable' }]
   })
 }
 
-function retireLegacyClaims(
-  character: Character,
-  owner: Owner,
-  id: string,
-  selections: readonly CharacterClassChoiceSelection[],
-  mirrors: readonly ClassFeatChoice[],
-): Character {
-  if (!selections.length && !mirrors.length) return character
-
-  const survivingMirrors = (character.classFeatChoices ?? []).filter(
-    (row) => !mirrors.includes(row),
-  )
-  const targets = new Map<string, Target>()
-  for (const row of mirrors) {
-    for (const feat of row.feats) targets.set(getFeatSelectionKey(feat), feat)
-  }
-  for (const row of selections) {
-    for (const selected of row.selected) {
-      if (selected.entityType === 'feat' && selected.source?.trim()) {
-        const feat = { name: selected.name, source: selected.source }
-        targets.set(getFeatSelectionKey(feat), feat)
-      }
-    }
-  }
-
-  // A missing or duplicate mirror cannot authorize a benefit, but its precise
-  // option tags are still sufficient to retire materialized grants.
-  for (const [key, feat] of targets) {
-    if (
-      survivingMirrors.some(
-        (row) => row.id === id && row.feats.some((entry) => getFeatSelectionKey(entry) === key),
-      )
-    )
-      continue
-    const target = { ...feat, classFeatChoiceId: id }
-    const source = getFeatOptionSourceTag(target)
-    const contributed = (map: Record<string, SourceTag[]> = {}) =>
-      Object.keys(map).filter((name) => map[name].some((tag) => isSameGrantSource(tag, source)))
-    const provenance = character.provenance.proficiencies
-    const options = {
-      skills: contributed(provenance.skills),
-      tools: contributed(provenance.tools),
-      languages: contributed(provenance.languages),
-      expertiseSkill: contributed(provenance.expertise)[0],
-    }
-    const scoped = {
-      ...character,
-      classFeatChoices: [
-        {
-          id,
-          className: owner.name,
-          classSource: owner.source,
-          progressionName: LABEL,
-          categories: ['EB'],
-          feats: [{ ...feat, id: key, description: '', options }],
-        },
-      ],
-    }
-    character = applyCharacterCommandResult(
-      character,
-      retractFeatOptionsCommand(scoped, character.provenance, target, options),
-    )
-  }
-  return {
-    ...character,
-    classChoiceSelections: character.classChoiceSelections?.filter(
-      (row) => !selections.includes(row),
-    ),
-    classFeatChoices: survivingMirrors,
-    provenance: [...selections, ...mirrors].reduce(
-      (ledger, row) =>
-        removeGrantsBySourceRef(ledger, 'class', row.className, row.classSource, id, {
-          exactVariant: true,
-          normalizeIdentity: true,
-        }),
-      character.provenance,
-    ),
-  }
-}
-
-/** Retire precisely this advancement's representations using the normal feat ownership commands. */
+/** Clear this advancement's feat or ASI without touching other slots. */
 export function withoutEpicBoonSelection(character: Character, owner: Owner): Character {
-  const { ordinary, legacySelections, mirrors, increases } = getClaims(character, owner)
+  const { ordinary, increases } = getClaims(character, owner)
   if (ordinary.length) {
     character = applyCharacterCommandResult(
       character,
@@ -426,7 +258,6 @@ export function withoutEpicBoonSelection(character: Character, owner: Owner): Ch
       ),
     )
   }
-  character = retireLegacyClaims(character, owner, choiceId(owner), legacySelections, mirrors)
   if (increases.length) {
     const asiChoices = (character.asiChoices ?? []).filter((row) => !increases.includes(row))
     character = {
@@ -444,14 +275,6 @@ export function projectEpicBoonSlots(
   slots: readonly EpicBoonSlot[],
 ): Character {
   for (const slot of slots) {
-    const { foreignSelections, foreignMirrors } = getClaims(character, slot.owner)
-    character = retireLegacyClaims(
-      character,
-      slot.owner,
-      slot.choiceId,
-      foreignSelections,
-      foreignMirrors,
-    )
     if (slot.state === 'unavailable' || slot.state === 'conflict') {
       character = withoutEpicBoonSelection(character, slot.owner)
     }
@@ -461,7 +284,7 @@ export function projectEpicBoonSlots(
 
 /** Claims absent from the active ordinary and ASI collections still reserve their slot. */
 export function countReservedEpicBoonFeatSlots(slots: readonly EpicBoonSlot[] = []): number {
-  return slots.filter((slot) => slot.hasClaims && (slot.state !== 'selected' || slot.legacy)).length
+  return slots.filter((slot) => slot.hasClaims && slot.state !== 'selected').length
 }
 
 type Replacement =

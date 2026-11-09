@@ -5,6 +5,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import { isPlainSpellIdentityPart } from '@/lib/character/managedClassSpellIdentity'
 import { getInvalidOptionalClassAdoptionIndexes } from '@/lib/character/optionalClassFeatureIdentity'
 import { isReservedProficiencyCheckNoteId } from '@/lib/provenance/conditionalProficiencyIdentity'
@@ -364,8 +365,18 @@ const manualActionSchema = z.object({
     .optional(),
 })
 
+// Direct level-19 Epic Boons use the ordinary feat or ASI slot.
+function isEpicBoonMirrorId(id: string): boolean {
+  return /^class:[^|]+\|[^|]+\|choice:epic-boon\|19$/.test(id)
+}
+
+const classChoiceIdSchema = z
+  .string()
+  .min(1)
+  .refine((id) => !isEpicBoonMirrorId(id), 'Epic Boons require the level-19 advancement slot.')
+
 const characterClassChoiceSelectionSchema = z.object({
-  choiceId: z.string().min(1),
+  choiceId: classChoiceIdSchema,
   label: z.string().min(1),
   kind: z.enum([
     'class-feature',
@@ -454,16 +465,28 @@ const featSchema = z.object({
   classLevel: z.number().int().min(1).optional(),
 })
 
-const classFeatChoiceSchema = z.object({
-  id: z.string().min(1),
-  className: z.string().min(1),
-  classSource: z.string().min(1),
-  subclassName: z.string().min(1).optional(),
-  subclassSource: z.string().min(1).optional(),
-  progressionName: z.string().min(1),
-  categories: z.array(z.string()),
-  feats: z.array(featSchema),
-})
+const classFeatChoiceSchema = z
+  .object({
+    id: classChoiceIdSchema,
+    className: z.string().min(1),
+    classSource: z.string().min(1),
+    subclassName: z.string().min(1).optional(),
+    subclassSource: z.string().min(1).optional(),
+    progressionName: z.string().min(1),
+    categories: z.array(z.string()),
+    feats: z.array(featSchema),
+  })
+  .superRefine((choice, ctx) => {
+    if (!getFighterStylePair(choice.id)) return
+    choice.feats.forEach((feat, index) => {
+      if (feat.classLevel === undefined)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['feats', index, 'classLevel'],
+          message: 'Fighter Fighting Style feats require an earned class level.',
+        })
+    })
+  })
 
 const equipmentSchema = z.object({
   id: z.string().min(1),
@@ -634,7 +657,13 @@ const sourceTagSchema = z.object({
   sourceType: sourceTypeSchema,
   sourceName: z.string(),
   sourceRef: z.string().optional(),
-  grantVariant: z.string().optional(),
+  grantVariant: z
+    .string()
+    .refine(
+      (id) => !isEpicBoonMirrorId(id) && !isEpicBoonMirrorId(id.replace(/^class:/, '')),
+      'Epic Boon grants require the level-19 advancement slot.',
+    )
+    .optional(),
   grantType: grantTypeSchema,
   label: z.string(),
   grantSource: z.string().optional(),

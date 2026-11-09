@@ -34,7 +34,7 @@ test('equipment producers retain exact printings through projections, strict reo
     entries: ['Second rules.'],
   }
   const { classes, classFeatures } = parseClassDocument(
-    JSON.parse(readFileSync('resources/srd/core/data/class/class-fighter.json', 'utf8')),
+    JSON.parse(readFileSync('resources/srd/data/class/class-fighter.json', 'utf8')),
   )
   const fighter = (classes as Class5e[]).find((row) => row.source === 'XPHB')!
   const mastery = fighter.normalizedRules!.choices.find((row) => row.optionFilter?.requiresMastery)!

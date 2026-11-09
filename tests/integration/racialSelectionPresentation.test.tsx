@@ -278,7 +278,7 @@ test('parsed subrace labels distinguish competing books and retain the saved sou
 
 test('Builder defaults the 2014 Dragonborn to the first available ancestry', async () => {
   const races = parseRaces(
-    JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
+    JSON.parse(readFileSync('resources/srd/data/races.json', 'utf-8')),
   ) as Race5e[]
   const dragonborn = races.find(({ name, source }) => name === 'Dragonborn' && source === 'PHB')!
   const character = buildInitialCharacter(

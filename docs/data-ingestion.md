@@ -37,7 +37,7 @@ entry. For a stable snapshot, publish a versioned directory or switch the server
 atomically. Local folders have the same per-attempt read guarantee.
 
 The catalog worker requests bundled reads by normalized relative JSON path. Electron resolves
-managed data below `resources/srd/core/data` during development and
+managed data below `resources/srd/data` during development and
 `process.resourcesPath/srd/core/data` when packaged. Both environments require the
 fixed `tavern-born-srd-core` pack identity; packaged builds additionally require
 `approved-for-distribution`, while unpackaged development can exercise a review-status snapshot.
@@ -99,14 +99,16 @@ SRD records. Applying the candidate records its external inventory for future ch
 Future standalone add-ons should use the published 5etools homebrew document shape and a separate
 document adapter, not imitate a full data tree.
 
-The committed bundle is the approved output of a completed one-time source and PDF provenance
-audit. `manifest.json` inventories every distributed top-level record and every data-file SHA-256
-checksum; `provenance.json` pins the official documents, upstream revision, and final audit result.
-The temporary source converter, correction adapters, exception queue, and PDF-review commands were
-removed after pack 1.0.0 was reproduced byte-for-byte. The retained bundle validator rejects an
-unapproved manifest, mismatched provenance or notices, missing or extra data files, and checksum
-drift. The committed corpus test loads the reviewed files through the normal parser and capability
-report. See the [Bundled SRD Provenance Record](../resources/srd/core/PROVENANCE.md).
+## Included SRD
+
+`resources/srd/` holds the approved, read-only SRD 5.1 and 5.2.1 pack. Its `data/` directory
+retains the 5etools file layout and indexes. Packaging copies that data, `manifest.json` and
+`THIRD_PARTY_NOTICES.md` to `srd/core`. The manifest inventories distributed records and SHA-256
+checksums. The release bundle check requires approval, an exact data file set, valid checksums,
+and agreement between the manifest, provenance and legal notices. Curated fixes require refreshed
+checksums and the normal parser, bundle and application checks. The corpus test uses the normal
+parser. [Provenance](../resources/srd/PROVENANCE.md) · [Notices](../resources/srd/THIRD_PARTY_NOTICES.md)
+
 The restricted manifest IPC returns validated pack identity, HTTPS source links, attribution,
 license metadata, and the transformation notice for offline display in Settings. Renderer code does
 not read arbitrary files or construct legal metadata independently.
@@ -261,11 +263,17 @@ Copy trust boundaries, race/subrace versions and native additional-spell grammar
 
 ## Prerequisite eligibility
 
-See [Prerequisite eligibility](contracts/prerequisites.md) for raw OR/AND rules and explicit unsupported states.
+See [Prerequisite eligibility](contracts/reference-resolution.md#prerequisite-eligibility).
+
+## Compound reference collections
+
+`conditionsdiseases.json` carries conditions, diseases and statuses. `trapshazards.json` carries
+traps and hazards. Parser-owned `_sourceType` keeps each kind distinct in overlays and nested
+references. Condition/status tags default to PHB. Disease and trap/hazard tags default to DMG.
+Disease previews require a disease tag. Compendium reference availability is global. Character
+condition controls and immunity names exclude diseases and statuses.
 
 ## Normalized capabilities
-
-See [Compound references](contracts/reference-collections.md) for condition/disease/status/trap/hazard identity and consumer limits.
 
 The parser layer owns normalization that would otherwise be repeated across pages, including:
 

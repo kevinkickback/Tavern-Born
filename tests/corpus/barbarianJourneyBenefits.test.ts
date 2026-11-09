@@ -48,14 +48,12 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const catalogsToTest = [['bundled', 'resources/srd/core/data']] as Array<
-  ['bundled' | 'local', string]
->
+const catalogsToTest = [['bundled', 'resources/srd/data']] as Array<['bundled' | 'local', string]>
 if (existsSync('data/class/class-barbarian.json')) catalogsToTest.push(['local', 'data'])
 
 test('a new Barbarian path prints named intro rules and later declarations at their earned gains', async () => {
   const document = JSON.parse(
-    await readFile('resources/srd/core/data/class/class-barbarian.json', 'utf8'),
+    await readFile('resources/srd/data/class/class-barbarian.json', 'utf8'),
   )
   document.subclass.push({
     name: 'Path of the Trial',
@@ -244,9 +242,7 @@ test('Included SRD proves both Giant Power cantrips without accepting changed cl
     ['phb', 'xphb'].map(
       async (source) =>
         parseSpells(
-          JSON.parse(
-            await readFile(`resources/srd/core/data/spells/spells-${source}.json`, 'utf8'),
-          ),
+          JSON.parse(await readFile(`resources/srd/data/spells/spells-${source}.json`, 'utf8')),
         ) as Spell5e[],
     ),
   )

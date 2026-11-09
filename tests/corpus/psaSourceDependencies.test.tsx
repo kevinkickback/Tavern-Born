@@ -42,7 +42,7 @@ describe.runIf(existsSync('data/class/class-cleric.json'))(
       const failures: string[] = []
       vi.stubGlobal('electronAPI', {
         readBundledJson: async (file: string) =>
-          JSON.parse(readFileSync(resolve('resources/srd/core/data', file), 'utf8')),
+          JSON.parse(readFileSync(resolve('resources/srd/data', file), 'utf8')),
         readLocalJson: async (file: string) => JSON.parse(readFileSync(file, 'utf8')),
       })
       data = await loadGameDataSourceStack(

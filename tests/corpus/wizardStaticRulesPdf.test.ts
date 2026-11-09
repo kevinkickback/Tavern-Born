@@ -17,7 +17,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-wizard.json')) stacks.push(['local', 'data'])
 
 const printings = [

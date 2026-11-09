@@ -427,7 +427,7 @@ export function projectEffectiveClassChoiceFeatures(
       const current = allowed.some(
         ({ option }) =>
           option.entityType === 'feat' &&
-          (feat.classLevel == null || option.slotLevel === feat.classLevel) &&
+          feat.classLevel === option.slotLevel &&
           getFeatSelectionKey(option) === getFeatSelectionKey(feat),
       )
       if (!current) {

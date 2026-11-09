@@ -315,7 +315,7 @@ describe('home page integration workflows', () => {
     useGameDataStore.setState({
       dataSourceConfig: {
         type: 'bundled',
-        path: 'resources/srd/core',
+        path: 'resources/srd',
         isValid: true,
         packId: 'tavern-born-srd',
         packVersion: 'test',

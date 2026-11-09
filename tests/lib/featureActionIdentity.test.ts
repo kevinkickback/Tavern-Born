@@ -66,10 +66,7 @@ function observe(classes: Class5e[], stored = false) {
 
 test('bundled Fighter repeated Action Surge gains use one canonical owned action', () => {
   const raw = JSON.parse(
-    readFileSync(
-      resolve(process.cwd(), 'resources/srd/core/data/class/class-fighter.json'),
-      'utf8',
-    ),
+    readFileSync(resolve(process.cwd(), 'resources/srd/data/class/class-fighter.json'), 'utf8'),
   )
   const fighter = (parseClasses(raw) as Class5e[]).find(
     (entry) => entry.name === 'Fighter' && entry.source === 'XPHB',

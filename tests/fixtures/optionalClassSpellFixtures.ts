@@ -14,7 +14,7 @@ export function makeOptionalClassSpellFixtures() {
     readFileSync('tests/fixtures/optionalClassSpellRoutes.json', 'utf8'),
   )
   const raw = [
-    ...JSON.parse(readFileSync('resources/srd/core/data/spells/spells-phb.json', 'utf8')).spell,
+    ...JSON.parse(readFileSync('resources/srd/data/spells/spells-phb.json', 'utf8')).spell,
     ...['managedClassDailyOptionalSpell.json', 'managedClassSourceSpell.json'].map((file) =>
       JSON.parse(readFileSync(`tests/fixtures/${file}`, 'utf8')),
     ),

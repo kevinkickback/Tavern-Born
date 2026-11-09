@@ -29,7 +29,7 @@ export function makeFeatureOptionFixture(
   change?: (document: FeatureOptionDocument) => void,
 ) {
   const document = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
+    readFileSync('resources/srd/data/class/class-sorcerer.json', 'utf8'),
   ) as FeatureOptionDocument
   change?.(document)
   const data = makeGameDataFixture({

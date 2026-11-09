@@ -73,7 +73,7 @@ describe('selected feature cantrip setup', () => {
     character.allowedSources = []
     const slot = getSelectedFeatureCantripSlots(character, fixture.context.catalogs)[0]
     const raw = JSON.parse(
-      readFileSync('resources/srd/core/data/spells/spells-phb.json', 'utf8'),
+      readFileSync('resources/srd/data/spells/spells-phb.json', 'utf8'),
     ).spell.find((row: { name: string }) => row.name === 'Mage Hand')
     for (const [definedInSource, source, expected] of [
       [undefined, 'PHB', false],

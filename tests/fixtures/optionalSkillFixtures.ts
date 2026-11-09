@@ -21,7 +21,7 @@ export function makeOptionalSkillFixture(
     ['class', 'barbarian', 'phb'],
     change,
   )
-  data.skills = JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill
+  data.skills = JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill
   data.lookups = buildGameDataLookups(data)
   const catalogs = buildClassChoiceFeatureCatalogs(data)
   const character = makeCharacterFixture({

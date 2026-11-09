@@ -47,7 +47,7 @@ export function makeBundledClassCastingLayer(
   change?: (document: OptionalDeclarationDocument) => void,
 ) {
   const document = JSON.parse(
-    readFileSync('resources/srd/core/data/' + file, 'utf8'),
+    readFileSync('resources/srd/data/' + file, 'utf8'),
   ) as OptionalDeclarationDocument
   change?.(document)
   const parsed = parseClassDocument(document, 'casting-bundled-fixture:' + file)
@@ -60,9 +60,10 @@ export function makeBundledClassCastingLayer(
 }
 
 export function makeBundledClassCastingData() {
-  const index = JSON.parse(
-    readFileSync('resources/srd/core/data/class/index.json', 'utf8'),
-  ) as Record<string, string>
+  const index = JSON.parse(readFileSync('resources/srd/data/class/index.json', 'utf8')) as Record<
+    string,
+    string
+  >
   return composeGameDataLayers(
     [...new Set(Object.values(index))].map((file) => makeBundledClassCastingLayer('class/' + file)),
   )

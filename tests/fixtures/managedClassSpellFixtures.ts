@@ -15,14 +15,13 @@ import { makeClassCastingData } from './classCastingFixtures'
 export function makeManagedClassSpellFixtures() {
   const data = makeClassCastingData()
   const sourceLookup = JSON.parse(
-    readFileSync('resources/srd/core/data/generated/gendata-spell-source-lookup.json', 'utf8'),
+    readFileSync('resources/srd/data/generated/gendata-spell-source-lookup.json', 'utf8'),
   )
   const spells = parseSpells(
     [
       ...['phb', 'xphb'].flatMap(
         (source) =>
-          JSON.parse(readFileSync(`resources/srd/core/data/spells/spells-${source}.json`, 'utf8'))
-            .spell,
+          JSON.parse(readFileSync(`resources/srd/data/spells/spells-${source}.json`, 'utf8')).spell,
       ),
       JSON.parse(readFileSync('tests/fixtures/managedClassSourceSpell.json', 'utf8')),
       JSON.parse(readFileSync('tests/fixtures/managedClassDailyOptionalSpell.json', 'utf8')),

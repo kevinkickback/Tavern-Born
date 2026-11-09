@@ -23,7 +23,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 const file = 'data/class/class-rogue.json'
 
 test('Devious Strikes reads the current referenced rules and rejects an ambiguous body', () => {
-  const path = 'resources/srd/core/data/class/class-rogue.json'
+  const path = 'resources/srd/data/class/class-rogue.json'
   const document = JSON.parse(readFileSync(path, 'utf8'))
   const expand = () => {
     const parsed = parseClassDocument(document, path)
@@ -43,7 +43,7 @@ test('Devious Strikes reads the current referenced rules and rejects an ambiguou
 })
 
 test('both Included Rogue grants resolve independently on the same class', () => {
-  const path = 'resources/srd/core/data/class/class-rogue.json'
+  const path = 'resources/srd/data/class/class-rogue.json'
   const source = 'XPHB'
   const document = JSON.parse(readFileSync(path, 'utf8'))
   const actor = createEmptyCharacter({
