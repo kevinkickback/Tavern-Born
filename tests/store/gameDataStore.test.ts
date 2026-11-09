@@ -87,7 +87,11 @@ vi.mock('@/lib/storage/dataCache', () => ({
 
 import { expandItemEntries } from '@/lib/5etools/itemEntries'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { REMOTE_STARTUP_TIMEOUT_MS, useGameDataStore } from '@/store/gameDataStore'
+import {
+  INTERACTIVE_CATALOG_TIMEOUT_MS,
+  STARTUP_CATALOG_TIMEOUT_MS,
+  useGameDataStore,
+} from '@/store/gameDataStore'
 import { firePotion } from '../fixtures/itemEntryFixtures'
 
 function deferred<T>() {
@@ -419,7 +423,7 @@ describe('gameDataStore', () => {
     expect(useGameDataStore.getState().pendingCatalog?.removals).toEqual([key])
   })
 
-  test('reaches recovery if the bundled read stalls and ignores late results', async () => {
+  test('reaches recovery if the bundled read stalls and allows a slower retry', async () => {
     vi.useFakeTimers()
     const late = deferred<GameData>()
     useGameDataStore.setState({ dataSourceConfig: remote })
@@ -427,7 +431,7 @@ describe('gameDataStore', () => {
     loadDataFromSourceMock.mockReturnValueOnce(late.promise)
     const startup = useGameDataStore.getState().loadFromCache({ forceCheck: true })
     await vi.advanceTimersByTimeAsync(0)
-    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS)
     await startup
     late.resolve(nonempty('Late bundled data'))
     await vi.advanceTimersByTimeAsync(0)
@@ -435,6 +439,22 @@ describe('gameDataStore', () => {
       dataSourceConfig: remote,
       gameData: null,
       remoteStartup: 'unavailable',
+    })
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+
+    const retryRead = deferred<GameData>()
+    loadDataFromSourceMock.mockReturnValueOnce(retryRead.promise)
+    const retry = useGameDataStore.getState().loadFromCache({ retry: true })
+    await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS + 1)
+    expect(useGameDataStore.getState().remoteStartup).toBe('loading-srd')
+    const recovered = nonempty('Recovered bundled data')
+    retryRead.resolve(recovered)
+    await retry
+    expect(useGameDataStore.getState()).toMatchObject({
+      dataSourceConfig: remote,
+      gameData: recovered,
+      remoteStartup: null,
+      cacheStatus: 'session-srd',
     })
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
@@ -453,12 +473,51 @@ describe('gameDataStore', () => {
     const { backgroundRefresh } = await useGameDataStore
       .getState()
       .loadFromCache({ forceCheck: true })
-    await vi.advanceTimersByTimeAsync(REMOTE_STARTUP_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS)
     await backgroundRefresh
     late.resolve(nonempty('Late race'))
     await vi.advanceTimersByTimeAsync(0)
     expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
     expect(useGameDataStore.getState().pendingCatalog).toBeNull()
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test.each([config, bundled])('manual $type loading can outlast startup', async (source) => {
+    vi.useFakeTimers()
+    const late = deferred<GameData>()
+    const data = nonempty('Slow catalog race')
+    loadDataFromSourceMock.mockReturnValueOnce(late.promise)
+
+    const loading = useGameDataStore.getState().loadCatalog(source)
+    await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS + 1)
+    expect(useGameDataStore.getState().isLoading).toBe(true)
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+
+    late.resolve(data)
+    expect(await loading).toMatchObject({ kind: 'applied' })
+    expect(useGameDataStore.getState().gameData).toBe(data)
+  })
+
+  test('a timed-out manual load preserves the accepted catalog and ignores late reads', async () => {
+    vi.useFakeTimers()
+    const previous = nonempty('Accepted race')
+    const late = deferred<GameData>()
+    useGameDataStore.setState({ dataSourceConfig: config, gameData: previous })
+    loadDataFromSourceMock.mockReturnValueOnce(late.promise)
+
+    const loading = useGameDataStore.getState().loadCatalog(config)
+    await vi.advanceTimersByTimeAsync(INTERACTIVE_CATALOG_TIMEOUT_MS)
+    expect(await loading).toEqual({
+      kind: 'rejected',
+      message: 'The game data source did not respond within 60 seconds.',
+    })
+    late.resolve(nonempty('Late race'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(useGameDataStore.getState()).toMatchObject({
+      gameData: previous,
+      dataSourceConfig: config,
+      isLoading: false,
+    })
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 

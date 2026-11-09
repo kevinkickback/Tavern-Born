@@ -26,9 +26,13 @@ let lastClearRequestId = 0
 let remoteStartupPreparation: AbortController | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 
-export const REMOTE_STARTUP_TIMEOUT_MS = 15_000
-const remoteTimeout = () =>
-  new DOMException('The game data source did not respond within 15 seconds.', 'TimeoutError')
+export const STARTUP_CATALOG_TIMEOUT_MS = 15_000
+export const INTERACTIVE_CATALOG_TIMEOUT_MS = 60_000
+const catalogTimeout = (timeoutMs: number) =>
+  new DOMException(
+    `The game data source did not respond within ${timeoutMs / 1000} seconds.`,
+    'TimeoutError',
+  )
 
 function cancelRemoteStartup() {
   remoteStartupPreparation?.abort()
@@ -47,6 +51,7 @@ interface CatalogRequest {
   prepared?: PreparedCatalog
   confirmed?: boolean
   session?: boolean
+  startup?: boolean
   folderGrant?: string
 }
 
@@ -207,7 +212,9 @@ export const useGameDataStore = create<GameDataState>()(
         const controller = new AbortController()
         remoteStartupPreparation = controller
         const { signal } = controller
-        const timer = setTimeout(() => controller.abort(remoteTimeout()), REMOTE_STARTUP_TIMEOUT_MS)
+        const startup = !opts?.retry
+        const timeoutMs = startup ? STARTUP_CATALOG_TIMEOUT_MS : INTERACTIVE_CATALOG_TIMEOUT_MS
+        const timer = setTimeout(() => controller.abort(catalogTimeout(timeoutMs)), timeoutMs)
         const [pair, installed] = await Promise.all([
           settleOnAbort(readGameDataCachePair(), signal).catch(() => null),
           settleOnAbort(resolveDefaultBundledSource(), signal).catch(() => null),
@@ -264,14 +271,17 @@ export const useGameDataStore = create<GameDataState>()(
         if (!openCache(identity)) {
           if (installed) {
             set({ remoteStartup: 'loading-srd' })
-            const result = await get().loadCatalog(installed, false, { session: Boolean(external) })
+            const result = await get().loadCatalog(installed, false, {
+              session: Boolean(external),
+              startup,
+            })
             if (result.kind === 'superseded') return {}
             if (result.kind === 'rejected') set({ bundledUnavailable: true })
           }
           if (!get().gameData && !openCache(external)) {
             if (external && (opts?.retry || (opts?.forceCheck && !desktop && !installed))) {
               set({ remoteStartup: 'checking' })
-              const result = await get().loadCatalog(external)
+              const result = await get().loadCatalog(external, false, { startup })
               if (result.kind === 'staged')
                 set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
               else if (result.kind === 'rejected') set({ remoteStartup: 'unavailable' })
@@ -289,7 +299,7 @@ export const useGameDataStore = create<GameDataState>()(
         if (external && opts?.forceCheck && get().gameData && get().dataSourceConfig === config) {
           return {
             backgroundRefresh: get()
-              .loadCatalog(external, true, { stage: true })
+              .loadCatalog(external, true, { stage: true, startup })
               .then((result) => result.kind === 'applied' && result.changed),
           }
         }
@@ -324,10 +334,10 @@ export const useGameDataStore = create<GameDataState>()(
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
-        const timeout = setTimeout(
-          () => controller.abort(remoteTimeout()),
-          REMOTE_STARTUP_TIMEOUT_MS,
-        )
+        const timeoutMs = request?.startup
+          ? STARTUP_CATALOG_TIMEOUT_MS
+          : INTERACTIVE_CATALOG_TIMEOUT_MS
+        const timeout = setTimeout(() => controller.abort(catalogTimeout(timeoutMs)), timeoutMs)
         const { signal } = controller
 
         set({
@@ -520,10 +530,8 @@ export const useGameDataStore = create<GameDataState>()(
             return { kind: 'superseded' }
           }
 
-          const isAbortError =
-            (error instanceof DOMException && error.name === 'AbortError') ||
-            (error instanceof Error && error.name === 'AbortError')
-          if (isAbortError) {
+          const failure = error instanceof DOMException || error instanceof Error ? error : null
+          if (failure?.name === 'AbortError') {
             set({
               isLoading: false,
               isBackgroundRefreshing: false,
@@ -532,7 +540,7 @@ export const useGameDataStore = create<GameDataState>()(
             return { kind: 'superseded' }
           }
 
-          const message = error instanceof Error ? error.message : 'Failed to load game data'
+          const message = failure?.message ?? 'Failed to load game data'
           set({
             error: message,
             ...(request?.stage && get().gameData && !get().sessionBundledSource

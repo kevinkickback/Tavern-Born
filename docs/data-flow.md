@@ -13,6 +13,8 @@ Entry points: useDataInit, gameDataStore, dataLoader and dataCache.
 3. A matching parsed cache supplies initial data. If it is unavailable, the app loads the Included
    SRD automatically. The startup overlay waits for usable local data and offers recovery if that
    fails. Automatic source checks respect the hydrated preference and run in the background.
+   Automatic startup catalog attempts have a 15-second limit. Manual source checks, validation,
+   and applying or restoring data allow up to 60 seconds per catalog attempt.
 4. Each candidate is checked as a unit. Composition overlays exact identities, rebuilds retained
    raw families and creates lookup indexes. Changed background candidates and verified withdrawals
    wait for explicit review. Applying a candidate writes the source settings and cache together

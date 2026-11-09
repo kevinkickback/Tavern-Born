@@ -37,7 +37,7 @@ import { settleOnAbort } from '@/lib/abortable'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
+import { INTERACTIVE_CATALOG_TIMEOUT_MS, useGameDataStore } from '@/store/gameDataStore'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
 type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
@@ -189,7 +189,10 @@ export function DataSourceConfigurator({
     validationController.current = controller
     const basis = useGameDataStore.getState().dataSourceConfig
     try {
-      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)])
+      const signal = AbortSignal.any([
+        controller.signal,
+        AbortSignal.timeout(INTERACTIVE_CATALOG_TIMEOUT_MS),
+      ])
       const base = useGameDataStore.getState().bundledUnavailable
         ? null
         : await settleOnAbort(resolveDefaultBundledSource(), signal)
@@ -210,7 +213,8 @@ export function DataSourceConfigurator({
       if (requestId !== validationRequestRef.current || controller.signal.aborted) return
 
       setValidationResult({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error:
+          error instanceof DOMException || error instanceof Error ? error.message : 'Unknown error',
       })
       setValidationStatus('invalid')
       toast.error('Game data check failed')
