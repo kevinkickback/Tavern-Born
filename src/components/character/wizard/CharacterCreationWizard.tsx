@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { hasAvailableReprintPair } from '@/lib/5etools/reprints'
@@ -357,23 +357,15 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     StepIcon && (
       <div
         className={cn(
-          'flex shrink-0 flex-wrap items-center justify-between gap-x-5 gap-y-2',
+          'min-w-0 shrink-0 pb-[calc(0.25rem+var(--text-sm)*var(--leading-relaxed))]',
           stepId === 'content' ? 'mb-1' : 'mb-3',
-          stepId === 'basics' && 'mb-[calc(1rem+var(--text-sm)*var(--leading-relaxed))]',
         )}
       >
-        <div className={cn('min-w-0', stepId === 'basics' && 'w-full')}>
-          <p
-            className={cn(
-              'text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground',
-              stepId === 'basics'
-                ? 'flex items-center gap-3 after:h-px after:flex-1 after:bg-border'
-                : 'pl-[2.875rem]',
-            )}
-          >
-            {activeStep.section}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="flex items-center gap-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground after:h-px after:flex-1 after:bg-border">
+          {activeStep.section}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             <h2 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight sm:text-3xl">
               <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/35 bg-primary/10 text-primary">
                 <StepIcon className="size-5" weight="duotone" aria-hidden="true" />
@@ -382,13 +374,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             </h2>
             {titleAccessory}
           </div>
-          {activeStep.description && (
-            <DialogDescription className="mt-1 pl-[2.875rem] text-sm leading-relaxed text-muted-foreground">
-              {activeStep.description}
-            </DialogDescription>
-          )}
+          {actions}
         </div>
-        {actions}
       </div>
     )
   const intro = stepId === 'content' ? null : renderIntro()
@@ -396,7 +383,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        {...(!activeStep?.description && { 'aria-describedby': undefined })}
+        aria-describedby={undefined}
         viewportPortalHostRef={setPortalHost}
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}

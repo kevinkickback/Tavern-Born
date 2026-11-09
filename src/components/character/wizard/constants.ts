@@ -24,7 +24,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Campaign rules',
     label: 'Rules',
     title: 'Choose a ruleset',
-    description: 'Set the edition and rules your character will use.',
     icon: Sparkle,
   },
   {
@@ -32,7 +31,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Available options',
     label: 'Sourcebooks',
     title: 'Choose sourcebooks',
-    description: 'Include the books your table allows for this character.',
     icon: Books,
   },
   {
@@ -40,7 +38,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Character build',
     label: 'Race',
     title: 'Choose a race',
-    description: 'Compare traits, movement, and other benefits.',
     icon: Users,
   },
   {
@@ -48,7 +45,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Character build',
     label: 'Class',
     title: 'Choose a class',
-    description: 'Compare hit dice, training, spellcasting, and class features.',
     icon: Sword,
   },
   {
@@ -56,7 +52,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Character build',
     label: 'Background',
     title: 'Choose a background',
-    description: 'See what your character’s life before adventuring grants them.',
     icon: BookOpen,
   },
   {
@@ -64,7 +59,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Character build',
     label: 'Ability Scores',
     title: 'Set ability scores',
-    description: 'Set your base scores and check how bonuses affect your modifiers.',
     icon: ChartBar,
   },
   {
@@ -72,7 +66,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Final check',
     label: 'Review',
     title: 'Review your character',
-    description: 'Check your choices before creating your level 1 character.',
     icon: CheckCircle,
   },
 ]
