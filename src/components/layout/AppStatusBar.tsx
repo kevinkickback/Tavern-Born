@@ -109,16 +109,16 @@ export function AppStatusBar() {
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
+  const isBundledCatalog = dataSourceConfig?.type === 'bundled'
   const catalogLabel =
     !hasCatalog || !dataSourceConfig
       ? null
-      : dataSourceConfig.type === 'bundled'
-        ? 'Included SRD'
-        : 'Additional Content'
-  const catalogDetail =
-    dataSourceConfig?.type === 'bundled'
-      ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
-      : dataSourceConfig?.path
+      : isBundledCatalog
+        ? 'SRD Content Only'
+        : 'Additional Content Loaded'
+  const catalogDetail = isBundledCatalog
+    ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
+    : dataSourceConfig?.path
 
   useEffect(() => {
     window.electronAPI
@@ -167,7 +167,14 @@ export function AppStatusBar() {
             aria-hidden="true"
             className={cn('size-3.5 shrink-0', dataStatus.spinning && 'animate-spin')}
           />
-          <span className="truncate">{dataStatus.label}</span>
+          <span
+            className={cn(
+              'truncate',
+              isBundledCatalog && dataStatus.label === catalogLabel && 'text-muted-foreground',
+            )}
+          >
+            {dataStatus.label}
+          </span>
         </span>
         {appVersion && <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />}
         {appVersion && <span className="shrink-0 tabular-nums">v{appVersion}</span>}

@@ -37,7 +37,7 @@ describe('application status bar', () => {
 
     render(<AppStatusBar />)
 
-    expect(screen.getByTestId('game-data-status').textContent).toBe('Additional Content')
+    expect(screen.getByTestId('game-data-status').textContent).toBe('Additional Content Loaded')
   })
 
   test('uses the catalog slot for update checks and restores it after success or failure', async () => {
@@ -47,12 +47,12 @@ describe('application status bar', () => {
     await act(() => useGameDataStore.setState({ isBackgroundRefreshing: true }))
     expect(status.textContent).toBe('Checking for game data updates')
     expect(status.querySelector('svg')?.classList.contains('animate-spin')).toBe(true)
-    expect(screen.queryByText('Additional Content')).toBeNull()
+    expect(screen.queryByText('Additional Content Loaded')).toBeNull()
 
     await act(() =>
       useGameDataStore.setState({ isBackgroundRefreshing: false, cacheStatus: 'fetched' }),
     )
-    expect(status.textContent).toBe('Additional Content')
+    expect(status.textContent).toBe('Additional Content Loaded')
 
     await act(() => useGameDataStore.setState({ isBackgroundRefreshing: true }))
     await act(() =>
@@ -62,7 +62,7 @@ describe('application status bar', () => {
         error: 'Source is offline',
       }),
     )
-    expect(status.textContent).toBe('Additional Content')
+    expect(status.textContent).toBe('Additional Content Loaded')
     expect(status.getAttribute('title')).toBe('Source is offline')
     expect(status.querySelector('svg')?.classList.contains('animate-spin')).toBe(false)
   })
@@ -84,7 +84,10 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     const status = screen.getByTestId('game-data-status')
-    expect(status.textContent).toBe('Included SRD')
+    expect(status.textContent).toBe('SRD Content Only')
+    expect(screen.getByText('SRD Content Only').classList.contains('text-muted-foreground')).toBe(
+      true,
+    )
     expect(status.getAttribute('title')).toBe(
       fallback
         ? 'Using Included SRD this session. Check the configured source in Settings.'
