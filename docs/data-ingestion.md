@@ -47,6 +47,13 @@ Bundled, local, and remote resources all pass through the same loader and parser
 Source validation uses the same resource readers, so path construction, remote normalization,
 timeouts, and Electron capability checks cannot drift between validation and ingestion.
 
+On desktop, Electron runs preparation, comparison, and cache repair in a catalog utility process.
+The main process continues to authorize bundled and local reads. Chromium performs HTTPS reads
+with the existing origin and session policy, and sends raw bytes for the utility to parse.
+Progress and preview metadata reach the UI while the prepared catalog stays in the utility.
+Applying retrieves that exact candidate. Cancelling or replacing a check releases its candidate,
+and a renderer reload or utility exit invalidates outstanding previews.
+
 ## Content layers
 
 The Included SRD is permanent. An optional validated local/HTTPS layer overlays exact identities;
@@ -210,6 +217,9 @@ available. Settings shows the configured source, active catalog, most recent att
 check and applied date, plus the relevant issue or optional warning. A changed catalog waits for
 **Apply game data update** in Settings. The previous catalog remains active during checks and
 review. The cache and accepted configuration are committed together after validation.
+An unchanged check against a matching cache updates check metadata without rewriting the catalog.
+The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
+only if the original cache generation is still current.
 
 The source compatibility workflow checks a pinned public mirror revision and the mirror's current
 default branch. It is scheduled and can run manually. Ordinary CI uses local fixtures.

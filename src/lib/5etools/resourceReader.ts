@@ -8,6 +8,13 @@ export interface JsonResourceReader {
   readJson(relativePath: string, signal?: AbortSignal): Promise<unknown>
 }
 
+export type JsonSourceRead =
+  | { kind: 'remote'; url: string }
+  | { kind: 'bundled'; path: string }
+  | { kind: 'local'; path: string; root: string }
+
+export type ReadSourceJson = (request: JsonSourceRead, signal?: AbortSignal) => Promise<unknown>
+
 export class ResourceHttpError extends Error {
   constructor(
     readonly status: number,
@@ -70,39 +77,54 @@ export function buildRemoteResourceUrl(baseUrl: string, relativePath: string): s
   return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath.split('/').map(encodeURIComponent).join('/')}`
 }
 
-function createBundledReader(): JsonResourceReader {
+const readDesktopJson: ReadSourceJson = async (request, signal) => {
+  if (request.kind === 'remote') {
+    const response = await fetch(request.url, { signal })
+    if (!response.ok) throw new ResourceHttpError(response.status, request.url)
+    return response.json()
+  }
+  if (request.kind === 'bundled') {
+    const read = window.electronAPI?.readBundledJson
+    if (!read) throw new Error('Bundled data loading requires Electron runtime')
+    return read(request.path)
+  }
+  const read = window.electronAPI?.readLocalJson
+  if (!read) throw new Error('Local data loading requires Electron runtime')
+  return read(request.path, request.root)
+}
+
+function createBundledReader(read: ReadSourceJson): JsonResourceReader {
   return {
     type: 'bundled',
     async readJson(relativePath, signal) {
       throwIfAborted(signal)
-      const readBundledJson = window.electronAPI?.readBundledJson
-      if (!readBundledJson) throw new Error('Bundled data loading requires Electron runtime')
-      const result = await readBundledJson(normalizeJsonResourcePath(relativePath))
+      const result = await read(
+        { kind: 'bundled', path: normalizeJsonResourcePath(relativePath) },
+        signal,
+      )
       throwIfAborted(signal)
       return result
     },
   }
 }
 
-function createLocalReader(basePath: string): JsonResourceReader {
+function createLocalReader(basePath: string, read: ReadSourceJson): JsonResourceReader {
   return {
     type: 'local',
     async readJson(relativePath, signal) {
       throwIfAborted(signal)
-      const readLocalJson = window.electronAPI?.readLocalJson
-      if (!readLocalJson) throw new Error('Local data loading requires Electron runtime')
       const normalizedPath = normalizeJsonResourcePath(relativePath)
       const separator = basePath.includes('\\') ? '\\' : '/'
       const separatorPrefix = basePath.endsWith(separator) ? '' : separator
       const fullPath = `${basePath}${separatorPrefix}${normalizedPath.split('/').join(separator)}`
-      const result = await readLocalJson(fullPath, basePath)
+      const result = await read({ kind: 'local', path: fullPath, root: basePath }, signal)
       throwIfAborted(signal)
       return result
     },
   }
 }
 
-function createRemoteReader(path: string): JsonResourceReader {
+function createRemoteReader(path: string, read: ReadSourceJson): JsonResourceReader {
   const parsedUrl = parseRemoteDataSourceUrl(path)
   if (parsedUrl.kind === 'invalid') throw new Error(parsedUrl.error)
   const baseUrl = parsedUrl.normalizedUrl
@@ -113,13 +135,14 @@ function createRemoteReader(path: string): JsonResourceReader {
       const normalizedPath = normalizeJsonResourcePath(relativePath)
       const timedSignal = createTimedSignal(signal)
       try {
-        const response = await fetch(buildRemoteResourceUrl(baseUrl, normalizedPath), {
-          signal: timedSignal.signal,
-        })
-        if (!response.ok) {
-          throw new ResourceHttpError(response.status, normalizedPath)
-        }
-        return await response.json()
+        return await read(
+          { kind: 'remote', url: buildRemoteResourceUrl(baseUrl, normalizedPath) },
+          timedSignal.signal,
+        )
+      } catch (error) {
+        if (error instanceof ResourceHttpError)
+          throw new ResourceHttpError(error.status, normalizedPath)
+        throw error
       } finally {
         timedSignal.cleanup()
       }
@@ -127,13 +150,16 @@ function createRemoteReader(path: string): JsonResourceReader {
   }
 }
 
-export function createJsonResourceReader(config: DataSourceConfig): JsonResourceReader {
+export function createJsonResourceReader(
+  config: DataSourceConfig,
+  read: ReadSourceJson = readDesktopJson,
+): JsonResourceReader {
   switch (config.type) {
     case 'bundled':
-      return createBundledReader()
+      return createBundledReader(read)
     case 'local':
-      return createLocalReader(config.path)
+      return createLocalReader(config.path, read)
     case 'remote':
-      return createRemoteReader(config.path)
+      return createRemoteReader(config.path, read)
   }
 }

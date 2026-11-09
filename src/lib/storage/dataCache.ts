@@ -1,10 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
-import { createStore, del, delMany, get, getMany, set } from 'idb-keyval'
+import { createStore, delMany, get, getMany } from 'idb-keyval'
 import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
+const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 87
@@ -12,6 +13,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {
+  generation?: string
   data: GameData
   cacheSchemaVersion?: number
   cachedAt: string
@@ -19,6 +21,20 @@ export interface GameDataCacheEntry {
   lastDataChangedAt?: string
   sourceSnapshot: DataSourceSnapshot
   externalKeys?: string[]
+}
+
+export type GameDataCacheMetadata = Omit<GameDataCacheEntry, 'data'>
+type LegacyCacheIdentity = Pick<
+  GameDataCacheMetadata,
+  'cachedAt' | 'contentFingerprint' | 'sourceSnapshot'
+>
+type LegacyCacheStamp = LegacyCacheIdentity & { generation: string }
+
+export function cacheMetadata({
+  data: _data,
+  ...metadata
+}: GameDataCacheEntry): GameDataCacheMetadata {
+  return metadata
 }
 
 interface SourceLayerSnapshot {
@@ -136,21 +152,33 @@ export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
 }
 
 export async function readGameDataCachePair() {
-  const [cache, persisted] = await getMany([CACHE_KEY, GAME_DATA_SETTINGS_KEY])
+  const [value, persisted, stamp] = await getMany([
+    CACHE_KEY,
+    GAME_DATA_SETTINGS_KEY,
+    CACHE_GENERATION_KEY,
+  ])
+  const cache = usableCache(value)
+  if (
+    cache &&
+    !cache.generation &&
+    stamp &&
+    typeof stamp !== 'string' &&
+    sameLegacyCache(stamp, cache)
+  )
+    cache.generation = stamp.generation
   const settings = persisted?.state as
     | {
         dataSourceConfig?: DataSourceConfig | null
         lastUpdateCheckAt?: string | null
       }
     | undefined
-  return { cache: usableCache(cache), settings }
+  return { cache, settings }
 }
 
-function writeCacheBeforeAbort(
-  entry: GameDataCacheEntry,
+function writeBeforeAbort(
   signal: AbortSignal,
-  config?: DataSourceConfig,
-): Promise<void> {
+  write: (store: IDBObjectStore, done: (applied: boolean) => void) => void,
+): Promise<boolean> {
   // Use the same database and store as idb-keyval's default get/set/del.
   abortableCacheStore ??= createStore('keyval-store', 'keyval')
   let transactionAttached = false
@@ -158,7 +186,8 @@ function writeCacheBeforeAbort(
     signal.throwIfAborted()
     transactionAttached = true
     const transaction = store.transaction
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<boolean>((resolve, reject) => {
+      let applied = false
       const abort = () => {
         try {
           transaction.abort()
@@ -170,7 +199,7 @@ function writeCacheBeforeAbort(
       const cleanup = () => signal.removeEventListener('abort', abort)
       transaction.oncomplete = () => {
         cleanup()
-        resolve()
+        resolve(applied)
       }
       transaction.onabort = () => {
         cleanup()
@@ -178,21 +207,9 @@ function writeCacheBeforeAbort(
       }
       signal.addEventListener('abort', abort, { once: true })
       try {
-        store.put(entry, CACHE_KEY)
-        if (config)
-          store.put(
-            {
-              version: GAME_DATA_STORE_VERSION,
-              state: {
-                dataSourceConfig: config,
-                lastLoadedAt: entry.cachedAt,
-                lastUpdateCheckAt: entry.cachedAt,
-                lastContentFingerprint: entry.contentFingerprint,
-                lastDataChangedAt: entry.lastDataChangedAt,
-              },
-            },
-            GAME_DATA_SETTINGS_KEY,
-          )
+        write(store, (result) => {
+          applied = result
+        })
       } catch (error) {
         transaction.abort()
         cleanup()
@@ -201,6 +218,102 @@ function writeCacheBeforeAbort(
     })
   })
   return settleOnAbort(pending, signal, () => !transactionAttached)
+}
+
+function putSettings(
+  store: IDBObjectStore,
+  config: DataSourceConfig,
+  entry: GameDataCacheMetadata,
+  lastUpdateCheckAt = entry.cachedAt,
+) {
+  store.put(
+    {
+      version: GAME_DATA_STORE_VERSION,
+      state: {
+        dataSourceConfig: config,
+        lastLoadedAt: config.lastLoaded ?? entry.cachedAt,
+        lastUpdateCheckAt,
+        lastContentFingerprint: entry.contentFingerprint,
+        lastDataChangedAt: entry.lastDataChangedAt,
+      },
+    },
+    GAME_DATA_SETTINGS_KEY,
+  )
+}
+
+function sameLegacyCache(current: LegacyCacheIdentity, expected: LegacyCacheIdentity) {
+  return (
+    current.cachedAt === expected.cachedAt &&
+    current.contentFingerprint === expected.contentFingerprint &&
+    JSON.stringify(current.sourceSnapshot) === JSON.stringify(expected.sourceSnapshot)
+  )
+}
+
+function ifCurrentCache(
+  store: IDBObjectStore,
+  expected: GameDataCacheMetadata,
+  write: (generation?: string) => void,
+) {
+  const read = store.get(CACHE_GENERATION_KEY)
+  read.onsuccess = () => {
+    const stamp = read.result as string | LegacyCacheStamp | undefined
+    const generation = typeof stamp === 'string' ? stamp : stamp?.generation
+    if (expected.generation) {
+      if (generation === expected.generation) write(generation)
+      return
+    }
+    if (stamp) {
+      if (typeof stamp !== 'string' && sameLegacyCache(stamp, expected)) write(stamp.generation)
+      return
+    }
+
+    // Adopt pre-worker caches once, without rewriting their catalog data.
+    const legacy = store.get(CACHE_KEY)
+    legacy.onsuccess = () => {
+      const current = legacy.result as GameDataCacheEntry | undefined
+      if (current && !current.generation && sameLegacyCache(current, expected)) write()
+    }
+  }
+}
+
+export async function markCatalogChecked(
+  entry: GameDataCacheMetadata,
+  config: DataSourceConfig,
+  checkedAt: string,
+  signal: AbortSignal,
+) {
+  let generation: string | undefined
+  const written = await writeBeforeAbort(signal, (store, done) => {
+    ifCurrentCache(store, entry, (current) => {
+      generation = current ?? crypto.randomUUID()
+      if (!current) {
+        const { cachedAt, contentFingerprint, sourceSnapshot } = entry
+        store.put(
+          { generation, cachedAt, contentFingerprint, sourceSnapshot } satisfies LegacyCacheStamp,
+          CACHE_GENERATION_KEY,
+        )
+      }
+      putSettings(store, config, entry, checkedAt)
+      done(true)
+    })
+  })
+  return written ? generation : undefined
+}
+
+export async function persistCatalogRepair(
+  entry: GameDataCacheEntry,
+  result: Pick<GameDataCacheEntry, 'data' | 'contentFingerprint'>,
+  signal: AbortSignal,
+): Promise<GameDataCacheEntry | null> {
+  const repaired = { ...entry, ...result, generation: crypto.randomUUID() }
+  const written = await writeBeforeAbort(signal, (store, done) => {
+    ifCurrentCache(store, entry, () => {
+      store.put(repaired, CACHE_KEY)
+      store.put(repaired.generation, CACHE_GENERATION_KEY)
+      done(true)
+    })
+  })
+  return written ? repaired : null
 }
 
 export async function writeGameDataCache(
@@ -214,18 +327,23 @@ export async function writeGameDataCache(
     beforeWrite?: () => void
     config?: DataSourceConfig
     externalKeys?: string[]
+    contentFingerprint?: string
+    previous?: GameDataCacheMetadata | null
   },
 ): Promise<GameDataCacheEntry> {
   options?.signal?.throwIfAborted()
   const now = new Date().toISOString()
-  const contentFingerprint = computeGameDataFingerprint(data)
-  const existing = readGameDataCache()
+  const contentFingerprint = options?.contentFingerprint ?? computeGameDataFingerprint(data)
+  const existing =
+    options?.previous === undefined ? readGameDataCache() : Promise.resolve(options.previous)
   const previous = await (options?.signal ? settleOnAbort(existing, options.signal) : existing)
   const sameSource = previous !== null && isCacheForSource(previous, identity)
   const previousFingerprint = sameSource
     ? previous.contentFingerprint?.length === 64
       ? previous.contentFingerprint
-      : computeGameDataFingerprint(previous.data)
+      : 'data' in previous
+        ? computeGameDataFingerprint(previous.data as GameData)
+        : null
     : null
 
   let lastDataChangedAt: string
@@ -243,6 +361,7 @@ export async function writeGameDataCache(
   }
 
   const entry: GameDataCacheEntry = {
+    generation: crypto.randomUUID(),
     data,
     cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
     cachedAt: now,
@@ -255,19 +374,21 @@ export async function writeGameDataCache(
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
   options?.beforeWrite?.()
-  if (options?.signal || options?.config)
-    await writeCacheBeforeAbort(
-      entry,
-      options.signal ?? new AbortController().signal,
-      options.config,
-    )
-  else await set(CACHE_KEY, entry)
+  await writeBeforeAbort(options?.signal ?? new AbortController().signal, (store, done) => {
+    store.put(entry, CACHE_KEY)
+    store.put(entry.generation, CACHE_GENERATION_KEY)
+    if (options?.config) putSettings(store, options.config, entry)
+    done(true)
+  })
   return entry
 }
 
 export async function clearGameDataCache(clearSettings = false): Promise<void> {
-  if (clearSettings) await delMany([CACHE_KEY, GAME_DATA_SETTINGS_KEY])
-  else await del(CACHE_KEY)
+  await delMany([
+    CACHE_KEY,
+    CACHE_GENERATION_KEY,
+    ...(clearSettings ? [GAME_DATA_SETTINGS_KEY] : []),
+  ])
 }
 
 export function isCacheStale(cachedAt: string): boolean {
@@ -275,7 +396,7 @@ export function isCacheStale(cachedAt: string): boolean {
 }
 
 export function isCacheForSource(
-  entry: GameDataCacheEntry,
+  entry: Pick<GameDataCacheEntry, 'sourceSnapshot'>,
   identity: GameDataCacheIdentity,
 ): boolean {
   const expected = createSourceSnapshot(identity)

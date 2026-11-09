@@ -1,11 +1,16 @@
 import type { DataSourceConfig } from '@/types/5etools'
+import { type ReadSourceJson, ResourceHttpError } from './resourceReader'
 import { parseRemoteDataSourceUrl } from './urlUtils'
 
 type External = Exclude<DataSourceConfig, { type: 'bundled' }>
 const commitSha = /^[a-f\d]{40}$/i
 
 /** The optional GitHub adapter never participates in ordinary HTTPS or local reads. */
-export async function resolveSourceRevision(config: External, signal: AbortSignal) {
+export async function resolveSourceRevision(
+  config: External,
+  signal: AbortSignal,
+  read?: ReadSourceJson,
+) {
   if (config.type === 'local') return { config, readConfig: config }
   const parsed = parseRemoteDataSourceUrl(config.path)
   if (parsed.kind === 'invalid') throw new Error(parsed.error)
@@ -17,8 +22,19 @@ export async function resolveSourceRevision(config: External, signal: AbortSigna
   const prefix = `https://raw.githubusercontent.com/${owner}/${repo}/`
   const api = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
   const request = async (url: string) => {
+    const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(5000)])
+    if (read) {
+      try {
+        return (await read({ kind: 'remote', url }, requestSignal)) as Record<string, unknown>
+      } catch (error) {
+        if (!(error instanceof ResourceHttpError)) throw error
+        throw new Error(
+          `GitHub could not resolve the source revision (HTTP ${error.status}). Try again or use a commit URL.`,
+        )
+      }
+    }
     const response = await fetch(url, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+      signal: requestSignal,
     })
     if (!response.ok)
       throw new Error(

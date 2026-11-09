@@ -7,22 +7,24 @@ import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { filterSpellRouteSources } from '@/lib/5etools/spellRouteSources'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
-const { idbGetMock, idbSetMock } = vi.hoisted(() => ({
+const { idbGetMock } = vi.hoisted(() => ({
   idbGetMock: vi.fn<() => Promise<unknown>>(async () => null),
-  idbSetMock: vi.fn(async () => undefined),
 }))
 
 vi.mock('idb-keyval', async (importOriginal) => ({
   ...(await importOriginal<typeof import('idb-keyval')>()),
   get: idbGetMock,
-  set: idbSetMock,
   del: vi.fn(async () => undefined),
 }))
 
 import {
+  cacheMetadata,
+  clearGameDataCache,
   computeGameDataFingerprint,
   GAME_DATA_CACHE_SCHEMA_VERSION,
   isCacheForSource,
+  markCatalogChecked,
+  persistCatalogRepair,
   readGameDataCache,
   readGameDataCachePair,
   writeGameDataCache,
@@ -66,7 +68,66 @@ describe('writeGameDataCache', () => {
 
   afterEach(() => vi.useRealTimers())
 
+  test('updates check metadata without rewriting the catalog and rejects writes after clear', async () => {
+    const source = { ...config, acceptedRevision: '1'.repeat(40) }
+    const verified = { ...source, acceptedRevision: '2'.repeat(40) }
+    const checkedAt = '2026-10-01T00:00:00.000Z'
+    const signal = new AbortController().signal
+    const entry = await writeGameDataCache(makeGameData(), source, { config: source })
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put')
+    try {
+      await expect(
+        markCatalogChecked(cacheMetadata(entry), verified, checkedAt, signal),
+      ).resolves.toBe(entry.generation)
+      expect(put.mock.calls.map(([, key]) => key)).toEqual(['game-data-storage'])
+      const pair = await readGameDataCachePair()
+      expect(pair.cache).toEqual(entry)
+      expect(pair.settings).toMatchObject({
+        dataSourceConfig: verified,
+        lastUpdateCheckAt: checkedAt,
+      })
+      await clearGameDataCache(true)
+      await expect(
+        markCatalogChecked(cacheMetadata(entry), verified, checkedAt, signal),
+      ).resolves.toBeUndefined()
+      await expect(persistCatalogRepair(entry, entry, signal)).resolves.toBeNull()
+      expect(await readGameDataCachePair()).toEqual({ cache: null, settings: undefined })
+    } finally {
+      put.mockRestore()
+      await clearGameDataCache(true)
+    }
+  })
+
+  test('adopts a pre-worker cache once without rewriting its catalog', async () => {
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    const cacheKey = 'tb:game-data-cache'
+    const generationKey = 'tb:game-data-cache-generation'
+    const signal = new AbortController().signal
+    const entry = await writeGameDataCache(makeGameData(), config, { config })
+    const { generation: _generation, ...legacy } = entry
+    await idb.set(cacheKey, legacy)
+    await idb.del(generationKey)
+    const get = vi.spyOn(IDBObjectStore.prototype, 'get')
+    try {
+      const stamp = await markCatalogChecked(legacy, config, entry.cachedAt, signal)
+      expect(stamp).toEqual(expect.any(String))
+      expect(get.mock.calls.map(([key]) => key)).toEqual([generationKey, cacheKey])
+      expect(await idb.get(cacheKey)).toEqual(legacy)
+      const { cache } = await readGameDataCachePair()
+      expect(cache?.generation).toBe(stamp)
+      get.mockClear()
+      await expect(
+        markCatalogChecked(cacheMetadata(cache!), config, entry.cachedAt, signal),
+      ).resolves.toBe(stamp)
+      expect(get.mock.calls.map(([key]) => key)).toEqual([generationKey])
+    } finally {
+      get.mockRestore()
+      await clearGameDataCache(true)
+    }
+  })
+
   test('aborting the pre-write cache read releases the writer without committing', async () => {
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put')
     let finishRead: (value: unknown) => void = () => {}
     const pendingRead = new Promise((resolve) => {
       finishRead = resolve
@@ -81,10 +142,15 @@ describe('writeGameDataCache', () => {
     attempt.abort(new Error('Startup deadline'))
     await expect(writing).rejects.toThrow('Startup deadline')
     expect(beforeWrite).not.toHaveBeenCalled()
-    expect(idbSetMock).not.toHaveBeenCalled()
-    finishRead(null)
-    await writeGameDataCache(makeGameData('next'), config)
-    expect(idbSetMock).toHaveBeenCalledTimes(1)
+    try {
+      expect(put).not.toHaveBeenCalled()
+      finishRead(null)
+      const next = await writeGameDataCache(makeGameData('next'), config)
+      expect(put).toHaveBeenCalledWith(next, 'tb:game-data-cache')
+    } finally {
+      put.mockRestore()
+      await clearGameDataCache()
+    }
   })
 
   test('aborting a queued IndexedDB transaction prevents the catalog from being written', async () => {
@@ -101,7 +167,7 @@ describe('writeGameDataCache', () => {
     try {
       const attempt = new AbortController()
       const writing = writeGameDataCache(makeGameData(), config, { signal: attempt.signal })
-      await vi.waitFor(() => expect(put).toHaveBeenCalledTimes(1))
+      await vi.waitFor(() => expect(put).toHaveBeenCalled())
       attempt.abort(new Error('Startup deadline'))
       await expect(writing).rejects.toThrow('Startup deadline')
     } finally {
@@ -314,7 +380,7 @@ describe('writeGameDataCache', () => {
   })
 
   test('updates lastDataChangedAt when content actually changes', async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
 
     const first = await writeGameDataCache(makeGameData('a'), config)
@@ -400,7 +466,7 @@ describe('writeGameDataCache', () => {
   })
 
   test('uses the current write date for identical content from a different source', async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
     const data = makeGameData()
     const first = await writeGameDataCache(data, config)

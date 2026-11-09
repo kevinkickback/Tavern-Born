@@ -201,7 +201,7 @@ describe('gameDataStore', () => {
     useGameDataStore.setState({ lastContentFingerprint: 'previous-fingerprint' })
     late.resolve(next)
     await backgroundRefresh
-    expect(useGameDataStore.getState().pendingCatalog?.candidate.data).toBe(next)
+    expect(useGameDataStore.getState().pendingCatalog?.candidate).toMatchObject({ data: next })
     expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
     const { candidate } = useGameDataStore.getState().pendingCatalog!
