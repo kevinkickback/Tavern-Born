@@ -161,14 +161,27 @@ export function PortraitPicker({
   const clearPortraitButton = (
     <Button
       type="button"
-      variant={isCreator ? 'ghost' : 'outline'}
+      variant="outline"
       size={isCreator ? 'sm' : 'default'}
       onClick={handleClear}
       disabled={!portrait}
-      className={isCreator ? 'ml-auto' : 'w-full'}
+      className={isCreator ? 'h-8 flex-1 text-xs' : 'w-full'}
     >
       <X className={cn('size-4', !isCreator && 'mr-2')} />
       Clear Portrait
+    </Button>
+  )
+
+  const resetViewButton = (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      onClick={resetTransform}
+      disabled={!portrait}
+      className={cn('h-8 text-xs', isCreator ? 'flex-1' : 'w-full')}
+    >
+      Reset View
     </Button>
   )
 
@@ -240,16 +253,14 @@ export function PortraitPicker({
           </span>
         </div>
       </div>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={resetTransform}
-        disabled={!portrait}
-        className="h-8 w-full text-xs"
-      >
-        Reset View
-      </Button>
+      {isCreator ? (
+        <div className="flex flex-wrap gap-2">
+          {resetViewButton}
+          {clearPortraitButton}
+        </div>
+      ) : (
+        resetViewButton
+      )}
     </div>
   )
   const preview = (
@@ -293,7 +304,7 @@ export function PortraitPicker({
     <section
       className={cn(
         'flex w-full flex-col overflow-hidden',
-        isCreator ? 'md:min-h-32 md:flex-1' : 'h-full',
+        isCreator ? 'rounded-lg border border-border md:min-h-32 md:flex-1' : 'h-full',
       )}
     >
       <WorkspacePaneHeader
@@ -302,14 +313,10 @@ export function PortraitPicker({
         className={cn(
           !isCreator && collapsible && 'pr-20',
           isCreator &&
-            'h-auto flex-wrap gap-x-2 gap-y-1 border-0 bg-transparent px-0 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
+            'h-auto border-0 bg-transparent px-2 pt-2 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
         )}
-      >
-        {isCreator && clearPortraitButton}
-      </WorkspacePaneHeader>
-      <div
-        className={cn('flex min-h-0 flex-1 flex-col', isCreator ? 'gap-3 px-0 pt-3' : 'gap-4 p-4')}
-      >
+      />
+      <div className={cn('flex min-h-0 flex-1 flex-col', isCreator ? 'p-2 pt-3' : 'gap-4 p-4')}>
         <div
           className={cn(
             'grid flex-1 content-start overflow-y-auto pr-1',

@@ -416,9 +416,13 @@ for (const viewport of [
         root.style.fontSize = '120%'
         return previous
       })
-      const clearPortrait = wizard.getByRole('button', { name: 'Clear Portrait' })
-      await clearPortrait.scrollIntoViewIfNeeded()
+      const previewControls = wizard.locator('[data-slot="portrait-image-controls"]')
+      const clearPortrait = previewControls.getByRole('button', { name: 'Clear Portrait' })
+      await clearPortrait.evaluate((button) => button.scrollIntoView({ block: 'center' }))
       await expect(clearPortrait).toBeInViewport({ ratio: 1 })
+      await expect(previewControls.getByRole('button', { name: 'Reset View' })).toBeInViewport({
+        ratio: 1,
+      })
       await wizard.screenshot({
         animations: 'disabled',
         path: info.outputPath('basics-large-text.png'),
