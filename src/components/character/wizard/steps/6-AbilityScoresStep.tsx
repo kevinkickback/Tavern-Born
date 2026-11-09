@@ -51,18 +51,22 @@ export function AbilityScoresStep({
       <Tabs
         value={method}
         onValueChange={(value) => onChange({ abilityScoreMethod: value as AbilityScoreMethod })}
-        className="gap-3"
+        className="gap-3 [&>section]:mt-0 [&>section]:bg-workspace-pane"
       >
-        <div className="h-10 min-w-0">
-          <AbilityScoreMethodTabs />
+        <div className="overflow-hidden rounded-lg border border-border bg-workspace-canvas">
+          <div className="h-10 min-w-0 border-b border-border bg-workspace-pane px-3">
+            <AbilityScoreMethodTabs />
+          </div>
+          <div className="p-3 sm:p-4">
+            <AbilityScoreEditor
+              method={method}
+              scores={data.abilityScores}
+              bonuses={abilityBonuses}
+              setScore={setScore}
+              setAllScores={setAllScores}
+            />
+          </div>
         </div>
-        <AbilityScoreEditor
-          method={method}
-          scores={data.abilityScores}
-          bonuses={abilityBonuses}
-          setScore={setScore}
-          setAllScores={setAllScores}
-        />
         {showRaceOriginBonuses ? (
           <RacialAbilityBonusPanel
             data={raceAsiData}

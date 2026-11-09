@@ -182,7 +182,7 @@ test('supported organized play and explicitly selectable unfamiliar groups remai
 
 test('semantic validation gates the owning step and permits explicit empty Content', () => {
   const data = { ...INITIAL_CHARACTER_DATA, originSystem: '2014' as const }
-  const pools = { races: [{}], classes: [{}], backgrounds: [{}] }
+  const pools = { races: [{ name: 'Human', source: 'PHB' }], classes: [{}], backgrounds: [{}] }
   expect(validateStep('basics', data, pools).error).toBe('Character name is required')
   expect(validateStep('rules', { ...data, allowedSources: [''] }, pools).valid).toBe(true)
   expect(validateStep('content', { ...data, allowedSources: [] }, pools).valid).toBe(true)

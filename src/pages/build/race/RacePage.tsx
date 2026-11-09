@@ -58,6 +58,7 @@ import {
   getRaceTraits,
   getSpeedDisplay,
   mergeRaceWithSubrace,
+  requiresDraconicAncestry,
 } from '@/lib/calculations/raceUtils'
 import { getFeatChoiceSelectedRefs } from '@/lib/character/commands/featCommandSupport'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
@@ -115,6 +116,8 @@ export function BuildRacePage() {
     matchesGameDataEntry(character?.race, character?.raceSource, r),
   ) as Race5e | undefined
   const selectedRace = calculationContext?.raceResolution.parentRace
+  const requiresAncestry = requiresDraconicAncestry(selectedRace)
+  const subraceLabel = requiresAncestry ? 'Draconic Ancestry' : 'Subrace'
   const subraces = getAvailableSubraces(catalogRace)
   const selectedSubrace = calculationContext?.raceResolution.subraceData
   const parentName = selectedRace?.name ?? character?.race ?? ''
@@ -329,8 +332,14 @@ export function BuildRacePage() {
                         <button
                           type="button"
                           onClick={() => {
-                            const firstSubrace = namedSubraces[0]
-                            applyRaceSelection(race, firstSubrace, 0)
+                            const requiresAncestry = requiresDraconicAncestry(race)
+                            if (!isSelected || !requiresAncestry) {
+                              applyRaceSelection(
+                                race,
+                                requiresAncestry ? undefined : namedSubraces[0],
+                                0,
+                              )
+                            }
                             setCompactPane('right')
                           }}
                           className="flex items-center gap-3 min-w-0 flex-1 text-left"
@@ -404,7 +413,7 @@ export function BuildRacePage() {
                       {selectedRace && subraces.length > 0 && (
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            Subrace
+                            {subraceLabel}
                           </span>
                           <Select
                             value={
@@ -431,10 +440,14 @@ export function BuildRacePage() {
                             }}
                           >
                             <SelectTrigger
-                              aria-label="Subrace"
+                              aria-label={subraceLabel}
                               className="h-8 min-w-44 max-w-60 bg-background text-xs"
                             >
-                              <SelectValue placeholder="Choose a subrace">
+                              <SelectValue
+                                placeholder={
+                                  requiresAncestry ? 'Choose an ancestry' : 'Choose a subrace'
+                                }
+                              >
                                 {renderSubraceLabel(subraceName, subraceSource)}
                               </SelectValue>
                             </SelectTrigger>
@@ -454,6 +467,11 @@ export function BuildRacePage() {
                             </SelectContent>
                           </Select>
                         </div>
+                      )}
+                      {requiresAncestry && subraces.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No draconic ancestries are available from the selected content.
+                        </p>
                       )}
 
                       {selectedRaceFeatChoices.map((choice) => {

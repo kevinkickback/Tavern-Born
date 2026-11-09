@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { RaceStep } from '@/components/character/wizard/steps/3-RaceStep'
+import { validateStep } from '@/components/character/wizard/validation'
+import { parseRaces } from '@/lib/5etools/parsers/races'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import type { Race5e } from '@/types/5etools'
 
@@ -15,7 +18,7 @@ describe('RaceStep', () => {
     const child = { name: 'Dragonborn (Draconblood; Brass)', source: 'EGW' } as Race5e
     const parent = {
       name: 'Dragonborn',
-      source: 'PHB',
+      source: 'TEST',
       subraces: [
         { name: 'Dragonborn (Zinc)', source: 'PHB' },
         child,
@@ -52,6 +55,50 @@ describe('RaceStep', () => {
       subraceSource: 'DMG',
       raceAsiChoices: [],
     })
+  })
+
+  test('requires an explicit source-backed ancestry for the 2014 Dragonborn', () => {
+    const races = parseRaces(
+      JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
+    ) as Race5e[]
+    const dragonborn = races.find(({ name, source }) => name === 'Dragonborn' && source === 'PHB')!
+    const data = { ...INITIAL_CHARACTER_DATA, race: dragonborn.name, raceSource: dragonborn.source }
+    const onChange = vi.fn()
+    const step = (draft: typeof data, parent = dragonborn) => (
+      <RaceStep
+        recursiveLookup={buildRecursiveLookup({})}
+        data={draft}
+        onChange={onChange}
+        races={[parent]}
+      />
+    )
+    const { getByRole, getByText, queryByRole, rerender } = render(step(data))
+    expect(getByText('Draconic Ancestry', { selector: 'span' })).toBeTruthy()
+    expect(queryByRole('button', { name: 'Default' })).toBeNull()
+    expect(onChange).not.toHaveBeenCalled()
+    const pools = { races: [dragonborn], classes: [], backgrounds: [] }
+    expect(validateStep('race', data, pools)).toMatchObject({ valid: false })
+    expect(validateStep('review', data, pools)).toMatchObject({ valid: false })
+
+    fireEvent.click(getByRole('button', { name: 'Green' }))
+    const chosen = { subrace: 'Dragonborn (Green)', subraceSource: 'PHB' }
+    expect(onChange).toHaveBeenLastCalledWith({ ...chosen, raceAsiChoices: [] })
+    expect(validateStep('race', { ...data, ...chosen }, pools).valid).toBe(true)
+    expect(validateStep('review', { ...data, ...chosen, subraceSource: 'XPHB' }, pools).valid).toBe(
+      false,
+    )
+    const chosenDraft = { ...data, ...chosen }
+    const filtered = {
+      ...dragonborn,
+      subraces: dragonborn.subraces?.filter((ancestry) => ancestry.name !== chosen.subrace),
+    }
+    onChange.mockClear()
+    rerender(step(chosenDraft, filtered))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(validateStep('race', chosenDraft, { ...pools, races: [filtered] }).valid).toBe(false)
+    rerender(step(chosenDraft))
+    expect(getByRole('heading', { name: /Dragonborn\s*\(Green\)/ })).toBeTruthy()
+    expect(validateStep('race', chosenDraft, pools).valid).toBe(true)
   })
 
   test('renders repeated trait names without duplicate React keys', () => {
@@ -118,7 +165,7 @@ describe('RaceStep', () => {
     expect(document.body.textContent?.includes('diverse and ambitious')).toBe(true)
   })
 
-  test('sorts the displayed races across sources and defaults from catalog order', async () => {
+  test('sorts the displayed races across sources and defaults to the first displayed race', async () => {
     const onChange = vi.fn()
     const races: Race5e[] = [
       { name: 'Elf', source: 'TCE' } as Race5e,
@@ -137,7 +184,7 @@ describe('RaceStep', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
-        race: 'Elf',
+        race: 'Dwarf',
         raceSource: 'TCE',
         subrace: '',
         subraceSource: '',
@@ -212,8 +259,7 @@ describe('RaceStep', () => {
         races={[parent]}
       />,
     )
-    expect(getByText('CON +1')).toBeTruthy()
-    expect(getByText('Choose 3 abilities (+1 each)')).toBeTruthy()
+    expect(getByText('CON +1 · Choose 3 abilities (+1 each)')).toBeTruthy()
   })
 
   test('renders the filtered race collection supplied by the wizard controller', () => {

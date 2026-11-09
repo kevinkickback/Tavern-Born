@@ -50,6 +50,11 @@ from the unfiltered catalog.
 
 ### Racial defenses
 
+The 2014 PHB Dragonborn requires an explicit draconic ancestor. Both race pickers offer the
+catalog's materialized ancestry versions, including available source-qualified setting variants.
+The wizard requires an available ancestry to advance or finish. Builder readiness treats the
+parent-only selection as incomplete.
+
 `racialDefenses` stores the current fixed grants and their actual field owners, bound to the exact
 selected parent/child name and source. For each of `resist`, `immune` and `conditionImmune`, an ordinary
 child's absent key inherits the parent, null removes the field, an empty array grants nothing, and a
@@ -192,4 +197,5 @@ new race and child options remain restricted to the filtered catalog. Child opti
 the separate complete name and source, without interpreting a joined label as an identity.
 Nested child resolution compares both complete fields with case and surrounding whitespace
 normalized; a different printing, truncated name or absent source cannot supply that child.
-Explicit race selection chooses its initial child; explicit child selection owns later changes.
+Race selection preselects an initial child where applicable. Required draconic ancestry is
+chosen separately. Explicit child selection owns later changes.

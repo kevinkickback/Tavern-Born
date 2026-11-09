@@ -1,6 +1,7 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import { getRaceDefenseField, RACE_DEFENSE_FIELDS } from '@/lib/calculations/raceDefenseFields'
+import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Race5e } from '@/types/5etools'
 
 type RaceTraitEntry = {
@@ -46,10 +47,20 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   return merged
 }
 
+export function requiresDraconicAncestry(race?: Pick<Race5e, 'name' | 'source'>): boolean {
+  return (
+    normalizeOwnerIdentity(race?.name) === 'dragonborn' &&
+    normalizeOwnerIdentity(race?.source) === 'phb'
+  )
+}
+
 export function getAvailableSubraces(race?: Race5e): Race5e[] {
   const all = ((race?.subraces ?? []) as (Race5e & { _isMetadataDefault?: boolean })[]).filter(
     (sr) => !!sr.name,
   )
+  // The PHB base and the supplemental lineage templates still require an ancestry.
+  // The source's complete versions carry the chosen dragon's mechanics.
+  if (requiresDraconicAncestry(race)) return all.filter((subrace) => subrace._isVersion === true)
   // If the only option is a metadata-only 'Default' placeholder (no gameplay content),
   // suppress it — the base race traits are already on the parent and no choice is needed.
   if (all.length === 1 && all[0]?._isMetadataDefault) return []

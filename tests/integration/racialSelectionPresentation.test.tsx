@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -5,6 +6,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   commitFeatOptionsCommand,
@@ -12,6 +14,7 @@ import {
   resolveFeatChoiceCommand,
 } from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { validateSourceReferences } from '@/lib/readiness/sourceReadiness'
 import { BuildRacePage } from '@/pages/build/race/RacePage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -271,4 +274,42 @@ test('parsed subrace labels distinguish competing books and retain the saved sou
   )
   expect(reopened.subrace).toBe('Dragonborn (Draconblood; Brass)')
   expect(reopened.subraceSource).toBe('BOOK-B')
+})
+
+test('Builder requires a 2014 Dragonborn ancestor without choosing one automatically', async () => {
+  const races = parseRaces(
+    JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf-8')),
+  ) as Race5e[]
+  const dragonborn = races.find(({ name, source }) => name === 'Dragonborn' && source === 'PHB')!
+  const character = buildInitialCharacter(
+    { initial: { name: 'Ancestry test', originSystem: '2014', allowedSources: ['PHB'] } },
+    new Map(),
+    () => [],
+  )
+  loadData([], dragonborn)
+  showPage(characterPersistenceSchema.parse(character))
+  const user = userEvent.setup()
+  const raceButton = screen.getByRole('button', { name: /Dragonborn/ })
+  await user.click(raceButton)
+  const current = () => useCharacterStore.getState().activeCharacter!
+  const ancestryRequired = () =>
+    validateSourceReferences(
+      current(),
+      createCharacterCalculationContext(current(), {
+        racesByKey: { 'Dragonborn|PHB': dragonborn },
+      }),
+    ).some(({ title }) => title === 'Choose a draconic ancestry')
+  expect(current().subrace).toBeUndefined()
+  expect(ancestryRequired()).toBe(true)
+  await user.click(screen.getByRole('combobox', { name: 'Draconic Ancestry' }))
+  expect(screen.queryByRole('option', { name: 'Default' })).toBeNull()
+  await user.click(screen.getByRole('option', { name: 'Green' }))
+  expect(current()).toMatchObject({ subrace: 'Dragonborn (Green)', subraceSource: 'PHB' })
+  expect(current().racialDefenses?.resist).toEqual({ ownerType: 'subrace', values: ['poison'] })
+  expect(ancestryRequired()).toBe(false)
+  await user.click(raceButton)
+  expect(current().subrace).toBe('Dragonborn (Green)')
+  await user.click(screen.getByRole('combobox', { name: 'Draconic Ancestry' }))
+  await user.click(screen.getByRole('option', { name: 'Black' }))
+  expect(current().racialDefenses?.resist).toEqual({ ownerType: 'subrace', values: ['acid'] })
 })

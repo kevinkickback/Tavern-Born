@@ -1,5 +1,5 @@
 import { MagnifyingGlass, X } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
@@ -12,12 +12,14 @@ import {
   isSubraceDisplayNameAmbiguous,
 } from '@/lib/calculations/raceDisplay'
 import {
+  getAvailableSubraces,
   getDamageTraitDisplay,
   getLanguageDisplay,
   getRaceTraits,
   getSkillProfDisplay,
   getSpeedDisplay,
   mergeRaceWithSubrace,
+  requiresDraconicAncestry,
 } from '@/lib/calculations/raceUtils'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
@@ -30,6 +32,12 @@ import type { StepProps } from '../types'
 interface RaceStepProps extends StepProps {
   races: Race5e[]
   recursiveLookup: RecursiveLookup
+}
+
+function getWizardSubraces(race?: Race5e) {
+  return requiresDraconicAncestry(race)
+    ? getAvailableSubraces(race)
+    : (race?.subraces ?? []).filter((subrace) => Boolean(subrace.name))
 }
 
 export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepProps) {
@@ -54,11 +62,6 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       : filteredRaces.find((r) => r.name === data.race)
     : undefined
 
-  const getAvailableSubraces = useCallback(
-    (race?: Race5e) => (race?.subraces || []).filter((subrace) => Boolean(subrace.name)),
-    [],
-  )
-
   useEffect(() => {
     if (filteredRaces.length === 0) return
 
@@ -70,7 +73,9 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     const firstRace = orderedRaces[0]
     if (!firstRace) return
 
-    const firstSubrace = getAvailableSubraces(firstRace)[0]
+    const firstSubrace = requiresDraconicAncestry(firstRace)
+      ? undefined
+      : getWizardSubraces(firstRace)[0]
     onChange({
       race: firstRace.name,
       raceSource: firstRace.source ?? '',
@@ -79,9 +84,10 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       raceAsiChoices: [],
       raceAsiBlockIndex: 0,
     })
-  }, [data.race, data.raceSource, filteredRaces, getAvailableSubraces, onChange, orderedRaces])
+  }, [data.race, data.raceSource, filteredRaces, onChange, orderedRaces])
 
-  const subraces = getAvailableSubraces(selectedRace)
+  const requiresAncestry = requiresDraconicAncestry(selectedRace)
+  const subraces = getWizardSubraces(selectedRace)
   const orderedSubraces = sortCreatorOptions(subraces, (subrace) =>
     getSubraceDisplayName(selectedRace?.name ?? '', subrace.name),
   )
@@ -90,7 +96,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   )
 
   useEffect(() => {
-    if (!selectedRace) return
+    if (!selectedRace || requiresAncestry) return
     if (subraces.length === 0) {
       if (data.subrace || data.subraceSource) {
         onChange({ subrace: '', subraceSource: '' })
@@ -104,7 +110,15 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       subrace: firstSubrace.name,
       subraceSource: firstSubrace.source ?? '',
     })
-  }, [data.subrace, data.subraceSource, onChange, selectedRace, selectedSubrace, subraces])
+  }, [
+    data.subrace,
+    data.subraceSource,
+    onChange,
+    requiresAncestry,
+    selectedRace,
+    selectedSubrace,
+    subraces,
+  ])
 
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     selectedRace,
@@ -117,7 +131,8 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       : normalizedSelection.subrace || normalizedSelection.race
 
   const handleSelectRace = (race: Race5e) => {
-    const firstSubrace = getAvailableSubraces(race)[0]
+    if (requiresDraconicAncestry(race) && race === selectedRace) return
+    const firstSubrace = requiresDraconicAncestry(race) ? undefined : getWizardSubraces(race)[0]
     onChange({
       race: race.name,
       raceSource: race.source ?? '',
@@ -193,7 +208,7 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
           ) : (
             searchFilteredRaces.map((race) => {
               const isSelected = race.name === data.race && (race.source ?? '') === data.raceSource
-              const raceSubraces = getAvailableSubraces(race)
+              const raceSubraces = getWizardSubraces(race)
               return (
                 <button
                   key={`${race.name}|${race.source ?? ''}`}
@@ -243,11 +258,16 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
             )}
 
             {/* Subrace selector */}
-            {subraces.length > 0 && (
+            {(subraces.length > 0 || requiresAncestry) && (
               <div className="rounded-lg border border-border bg-card/50 p-3">
                 <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  Subrace
+                  {requiresAncestry ? 'Draconic Ancestry' : 'Subrace'}
                 </span>
+                {requiresAncestry && subraces.length === 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    No draconic ancestries are available from the selected content.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {orderedSubraces.map((sr) => {
                     const name = getSubraceDisplayName(selectedRace.name, sr.name)

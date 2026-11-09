@@ -1,3 +1,5 @@
+import { getAvailableSubraces, requiresDraconicAncestry } from '@/lib/calculations/raceUtils'
+import type { Race5e } from '@/types/5etools'
 import {
   wizardAbilitiesSchema,
   wizardBackgroundSchema,
@@ -20,7 +22,7 @@ const STEP_SCHEMAS = {
 } as const
 
 interface WizardStepAvailability {
-  races: unknown[]
+  races: Race5e[]
   classes: unknown[]
   backgrounds: unknown[]
 }
@@ -46,6 +48,20 @@ export function validateStep(
     return {
       valid: false,
       error: 'No backgrounds available. Please load game data in Settings first.',
+    }
+  }
+
+  if (
+    (step === 'race' || step === 'review') &&
+    requiresDraconicAncestry({ name: characterData.race, source: characterData.raceSource })
+  ) {
+    const race = gameData?.races.find(requiresDraconicAncestry)
+    const selectedAncestry = getAvailableSubraces(race).some(
+      (ancestry) =>
+        ancestry.name === characterData.subrace && ancestry.source === characterData.subraceSource,
+    )
+    if (!selectedAncestry) {
+      return { valid: false, error: 'Choose a draconic ancestry on the Race step.' }
     }
   }
 
