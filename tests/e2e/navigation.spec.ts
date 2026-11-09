@@ -72,8 +72,8 @@ for (const initialHash of ['', '#/build']) {
       home.release()
       await expect(overlay).toBeHidden()
       expect(await page.evaluate(() => Reflect.get(window, 'startupExit'))).toEqual({
-        animationDelay: '0.22s',
-        animationDuration: reducedMotion ? '0.001s' : '0.16s',
+        animationDelay: '0.3s',
+        animationDuration: '0.16s',
         busy: 'false',
         workspaceInert: true,
       })

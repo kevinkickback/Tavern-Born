@@ -47,7 +47,7 @@ export function AppLoadingOverlay({
     }
 
     // Release startup even if the CSS animation is interrupted or disabled.
-    const timeout = window.setTimeout(onStartupComplete, 500)
+    const timeout = window.setTimeout(onStartupComplete, 600)
     return () => window.clearTimeout(timeout)
   }, [isLoadingOverlay, isStartupReady, onStartupComplete])
 

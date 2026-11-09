@@ -100,13 +100,7 @@
   }
 
   .startup-ready-exit {
-    animation: startup-ready-fade 160ms ease-out 220ms both;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .startup-ready-exit {
-      animation-duration: 1ms;
-    }
+    animation: startup-ready-fade 160ms ease-out 300ms both;
   }
 
   @keyframes hint-bounce-once {

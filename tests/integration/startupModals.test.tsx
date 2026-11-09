@@ -176,14 +176,14 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay onStartupComplete={finishStartup} />)
 
     expect(screen.getByRole('status').textContent).toBe('Ready')
-    await act(async () => vi.advanceTimersByTime(220))
+    await act(async () => vi.advanceTimersByTime(300))
     await act(async () => useGameDataStore.setState({ isLoading: true }))
-    await act(async () => vi.advanceTimersByTime(500))
+    await act(async () => vi.advanceTimersByTime(600))
     expect(screen.getByRole('status').textContent).toBe('Applying game data…')
     expect(finishStartup).not.toHaveBeenCalled()
 
     await act(async () => useGameDataStore.setState({ isLoading: false }))
-    await act(async () => vi.advanceTimersByTime(500))
+    await act(async () => vi.advanceTimersByTime(600))
     expect(finishStartup).toHaveBeenCalledOnce()
   })
 
