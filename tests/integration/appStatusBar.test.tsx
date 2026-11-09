@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppStatusBar } from '@/components/layout/AppStatusBar'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 describe('application status bar', () => {
   beforeEach(() => {
@@ -14,6 +15,8 @@ describe('application status bar', () => {
     })
     useGameDataStore.setState({
       cacheStatus: 'fresh',
+      gameData: makeGameDataFixture(),
+      sessionBundledSource: null,
       dataSourceConfig: { type: 'local', path: 'C:\\game-data', isValid: true },
       isLoading: false,
       isBackgroundRefreshing: false,
@@ -27,31 +30,65 @@ describe('application status bar', () => {
     vi.clearAllMocks()
   })
 
-  test('shows durable data-source state', () => {
-    render(<AppStatusBar />)
-
-    expect(screen.getByTestId('game-data-status').textContent).toContain('Game data ready')
-    expect(screen.getByText('Included SRD + Local Content')).toBeTruthy()
-  })
-
-  test('identifies the bundled SRD pack without exposing a filesystem path', () => {
+  test.each(['local', 'remote'] as const)('labels %s content in the same status slot', (type) => {
     useGameDataStore.setState({
-      cacheStatus: 'fetched',
-      dataSourceConfig: {
-        type: 'bundled',
-        path: 'srd/core',
-        packId: 'tavern-born-srd-core',
-        packVersion: '1.0.0',
-        isValid: true,
-      },
+      dataSourceConfig: { type, path: 'example', isValid: true },
     })
 
     render(<AppStatusBar />)
 
-    const source = screen.getByText('Included SRD')
-    expect(source.getAttribute('title')).toBe('tavern-born-srd-core 1.0.0')
-    expect(screen.getByTestId('game-data-status').getAttribute('title')).toBe(
-      'Included SRD loaded successfully',
+    expect(screen.getByTestId('game-data-status').textContent).toBe('Additional Content')
+  })
+
+  test('uses the catalog slot for update checks and restores it after success or failure', async () => {
+    render(<AppStatusBar />)
+    const status = screen.getByTestId('game-data-status')
+
+    await act(() => useGameDataStore.setState({ isBackgroundRefreshing: true }))
+    expect(status.textContent).toBe('Checking for game data updates')
+    expect(status.querySelector('svg')?.classList.contains('animate-spin')).toBe(true)
+    expect(screen.queryByText('Additional Content')).toBeNull()
+
+    await act(() =>
+      useGameDataStore.setState({ isBackgroundRefreshing: false, cacheStatus: 'fetched' }),
+    )
+    expect(status.textContent).toBe('Additional Content')
+
+    await act(() => useGameDataStore.setState({ isBackgroundRefreshing: true }))
+    await act(() =>
+      useGameDataStore.setState({
+        isBackgroundRefreshing: false,
+        cacheStatus: 'remote-cache',
+        error: 'Source is offline',
+      }),
+    )
+    expect(status.textContent).toBe('Additional Content')
+    expect(status.getAttribute('title')).toBe('Source is offline')
+    expect(status.querySelector('svg')?.classList.contains('animate-spin')).toBe(false)
+  })
+
+  test.each([false, true])('labels the bundled catalog when the fallback is %s', (fallback) => {
+    const bundled = {
+      type: 'bundled' as const,
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    useGameDataStore.setState(
+      fallback
+        ? { cacheStatus: 'session-srd', sessionBundledSource: bundled }
+        : { cacheStatus: 'fetched', dataSourceConfig: bundled },
+    )
+
+    render(<AppStatusBar />)
+
+    const status = screen.getByTestId('game-data-status')
+    expect(status.textContent).toBe('Included SRD')
+    expect(status.getAttribute('title')).toBe(
+      fallback
+        ? 'Using Included SRD this session. Check the configured source in Settings.'
+        : 'tavern-born-srd-core 1.0.0',
     )
   })
 

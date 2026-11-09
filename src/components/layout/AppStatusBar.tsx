@@ -5,7 +5,7 @@ import {
   type Icon,
   WarningCircle,
 } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { type CacheStatus, useGameDataStore } from '@/store/gameDataStore'
@@ -24,17 +24,9 @@ function getDataStatus(
   isBackgroundRefreshing: boolean,
   error: string | null,
   progress: { current: number; total: number; resource: string } | null,
-  sourceDescription: string | null,
+  catalogLabel: string | null,
+  catalogDetail?: string,
 ): DataStatusPresentation {
-  if (error && cacheStatus !== 'session-srd' && cacheStatus !== 'remote-cache') {
-    return {
-      label: 'Game data issue',
-      detail: error,
-      icon: WarningCircle,
-      tone: 'text-destructive',
-    }
-  }
-
   if (isLoading) {
     const count = progress?.total ? ` ${progress.current}/${progress.total}` : ''
     return {
@@ -48,29 +40,33 @@ function getDataStatus(
 
   if (isBackgroundRefreshing) {
     return {
-      label: 'Refreshing game data',
-      detail: 'Cached data remains available while the source is refreshed',
+      label: 'Checking for game data updates',
+      detail: 'The current catalog is available while the app checks for updates.',
       icon: CircleNotch,
       tone: 'text-primary',
       spinning: true,
     }
   }
 
-  if (cacheStatus === 'session-srd') {
+  if (cacheStatus === 'session-srd' || cacheStatus === 'remote-cache') {
     return {
-      label: 'Using Included SRD this session',
-      detail: 'Check the configured source in Settings.',
+      label: catalogLabel ?? 'Using saved game data',
+      detail:
+        error ??
+        (cacheStatus === 'session-srd'
+          ? 'Using Included SRD this session. Check the configured source in Settings.'
+          : 'Using saved game data. See Settings for details about the failed check.'),
       icon: CloudSlash,
       tone: 'text-warning-foreground',
     }
   }
 
-  if (cacheStatus === 'remote-cache') {
+  if (error) {
     return {
-      label: 'Using saved game data',
-      detail: 'The source check failed. See Settings for details.',
-      icon: CloudSlash,
-      tone: 'text-warning-foreground',
+      label: catalogLabel ?? 'Game data issue',
+      detail: error,
+      icon: WarningCircle,
+      tone: 'text-destructive',
     }
   }
 
@@ -93,11 +89,8 @@ function getDataStatus(
   }
 
   return {
-    label: 'Game data ready',
-    detail:
-      cacheStatus === 'fetched'
-        ? `${sourceDescription ?? 'Game data'} loaded successfully`
-        : 'Game data loaded from cache',
+    label: catalogLabel ?? 'Game data ready',
+    detail: catalogDetail ?? 'Game data is ready to use.',
     icon: CheckCircle,
     tone: 'text-success',
   }
@@ -108,6 +101,7 @@ export function AppStatusBar() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
+  const hasCatalog = useGameDataStore((state) => state.gameData !== null)
   const dataSourceConfig = useGameDataStore(
     (state) => state.sessionBundledSource ?? state.dataSourceConfig,
   )
@@ -115,14 +109,16 @@ export function AppStatusBar() {
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const loadProgress = useGameDataStore((state) => state.loadProgress)
   const error = useGameDataStore((state) => state.error)
-  const sourceDescription =
+  const catalogLabel =
+    !hasCatalog || !dataSourceConfig
+      ? null
+      : dataSourceConfig.type === 'bundled'
+        ? 'Included SRD'
+        : 'Additional Content'
+  const catalogDetail =
     dataSourceConfig?.type === 'bundled'
-      ? 'Included SRD'
-      : dataSourceConfig?.type === 'local'
-        ? 'Included SRD + Local Content'
-        : dataSourceConfig?.type === 'remote'
-          ? 'Included SRD + Online Content'
-          : null
+      ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
+      : dataSourceConfig?.path
 
   useEffect(() => {
     window.electronAPI
@@ -131,24 +127,16 @@ export function AppStatusBar() {
       .catch(() => {})
   }, [])
 
-  const dataStatus = useMemo(
-    () =>
-      getDataStatus(
-        cacheStatus,
-        isLoading,
-        isBackgroundRefreshing,
-        error,
-        loadProgress,
-        sourceDescription,
-      ),
-    [cacheStatus, error, isBackgroundRefreshing, isLoading, loadProgress, sourceDescription],
+  const dataStatus = getDataStatus(
+    cacheStatus,
+    isLoading,
+    isBackgroundRefreshing,
+    error,
+    loadProgress,
+    catalogLabel,
+    catalogDetail,
   )
   const DataStatusIcon = dataStatus.icon
-  const dataSourceLabel = dataSourceConfig?.type === 'bundled' ? 'Included SRD' : sourceDescription
-  const dataSourceTitle =
-    dataSourceConfig?.type === 'bundled'
-      ? `${dataSourceConfig.packId} ${dataSourceConfig.packVersion}`
-      : dataSourceConfig?.path
 
   return (
     <div
@@ -156,40 +144,33 @@ export function AppStatusBar() {
       aria-label="Application status"
       className="app-no-drag col-[2/4] row-start-3 flex h-6 shrink-0 items-center justify-between bg-app-shell px-3 text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] text-muted-foreground"
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="min-w-0 truncate">
+        {activeCharacter && (
+          <span
+            className={cn(
+              hasUnsavedChanges ? 'font-medium text-warning-foreground' : 'text-muted-foreground',
+            )}
+            data-testid="character-save-status"
+          >
+            {hasUnsavedChanges ? 'Unsaved changes' : 'Character saved'}
+          </span>
+        )}
+      </div>
+
+      <div className="ml-3 flex min-w-0 items-center gap-2">
         <span
           className={cn('flex min-w-0 items-center gap-1.5', dataStatus.tone)}
           title={dataStatus.detail}
           data-testid="game-data-status"
         >
           <DataStatusIcon
+            aria-hidden="true"
             className={cn('size-3.5 shrink-0', dataStatus.spinning && 'animate-spin')}
           />
           <span className="truncate">{dataStatus.label}</span>
         </span>
-
-        {activeCharacter && (
-          <>
-            <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />
-            <span
-              className={cn(
-                'truncate',
-                hasUnsavedChanges ? 'font-medium text-warning-foreground' : 'text-muted-foreground',
-              )}
-              data-testid="character-save-status"
-            >
-              {hasUnsavedChanges ? 'Unsaved changes' : 'Character saved'}
-            </span>
-          </>
-        )}
-      </div>
-
-      <div className="ml-3 flex shrink-0 items-center gap-2">
-        {dataSourceConfig && <span title={dataSourceTitle}>{dataSourceLabel}</span>}
-        {dataSourceConfig && appVersion && (
-          <span className="h-3 w-px bg-border" aria-hidden="true" />
-        )}
-        {appVersion && <span className="tabular-nums">v{appVersion}</span>}
+        {appVersion && <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />}
+        {appVersion && <span className="shrink-0 tabular-nums">v{appVersion}</span>}
       </div>
     </div>
   )
