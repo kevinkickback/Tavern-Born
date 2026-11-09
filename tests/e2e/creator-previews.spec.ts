@@ -249,7 +249,7 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
   const pinPosition = await pin.boundingBox()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(pin).toHaveAttribute('data-snapshot-sentinel', 'retained')
-  await wizard.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click()
   const discard = page.getByRole('alertdialog', { name: 'Discard character creation?' })
   await expect(discard.getByRole('button', { name: 'Keep editing' })).toBeFocused()
   await expect(page.getByTitle('Unpin tooltip')).toHaveCount(1)
@@ -257,7 +257,7 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
   await discard.getByRole('button', { name: 'Keep editing' }).press('Escape')
   await expect(discard).toBeHidden()
   await expect(pin).toHaveAttribute('data-snapshot-sentinel', 'retained')
-  await wizard.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click()
   // Start before closing/reopening actions so the first painted animation frames count.
   await page.evaluate(() => {
     const capture = { stopped: false, frames: [] as PreviewFrame[] }
@@ -382,7 +382,7 @@ test('portaled select and menu own Escape without discarding an independent pin'
   await expect(gender).toBeFocused()
   await expect(gender).toHaveText('Female')
   await expect(pin).toHaveCount(1)
-  await wizard.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click()
   await page.getByRole('button', { name: 'Discard changes', exact: true }).click()
   await expect(wizard).toBeHidden()
   await page.getByRole('button', { name: 'List view', exact: true }).click()
