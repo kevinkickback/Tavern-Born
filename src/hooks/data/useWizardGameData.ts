@@ -145,7 +145,6 @@ export function useWizardGameData({
     races,
     classes,
     itemLookup,
-    spellLookups,
     creationLookups,
     resolveRace,
     resolveClass,

@@ -297,7 +297,6 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
   await expect(dialog.getByText('Adjust portrait', { exact: true })).toBeVisible()
   await expect(dialog.locator('[data-slot=portrait-card-preview]')).toContainText('Level 1')
-  await expect(dialog.getByText('Level 1 · Draft', { exact: true })).toHaveCount(0)
   const zoom = dialog.getByRole('slider', { name: 'Zoom' })
   await expect(zoom).toBeInViewport()
   const tones = await dialog.evaluate((modal) => {

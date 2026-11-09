@@ -732,7 +732,6 @@ export const wizardBasicsSchema = z.object({
 
 export const wizardRulesSchema = z.object({
   originSystem: originSystemSchema,
-  abilityScoreMethod: abilityScoreMethodSchema,
 })
 
 export const wizardContentSchema = z.object({
@@ -752,6 +751,7 @@ export const wizardBackgroundSchema = z.object({
 })
 
 export const wizardAbilitiesSchema = z.object({
+  abilityScoreMethod: abilityScoreMethodSchema,
   abilityScores: abilityScoresSchema,
 })
 

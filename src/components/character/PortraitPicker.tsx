@@ -33,7 +33,6 @@ interface PortraitPickerProps {
   onPortraitChange: (portrait: string | null) => void
   onTransformChange: (transform: PortraitTransform) => void
   identity?: ReactNode
-  collapsible?: boolean
 }
 
 export function PortraitPicker({
@@ -48,7 +47,6 @@ export function PortraitPicker({
   onPortraitChange,
   onTransformChange,
   identity,
-  collapsible = true,
 }: PortraitPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const selectionVersionRef = useRef(0)
@@ -272,7 +270,7 @@ export function PortraitPicker({
         title={isCreator ? 'Portrait Preview' : 'Card preview'}
         icon={isCreator ? undefined : <Image className="size-4 text-primary" weight="duotone" />}
         className={cn(
-          !isCreator && collapsible && 'pr-20',
+          !isCreator && 'pr-20',
           isCreator && ['h-auto border-0 bg-transparent px-0', headingRule],
         )}
       />
@@ -314,7 +312,7 @@ export function PortraitPicker({
         title={isCreator ? 'Portrait Library' : 'Portrait library'}
         icon={isCreator ? undefined : <Images className="size-4 text-primary" weight="duotone" />}
         className={cn(
-          !isCreator && collapsible && 'pr-20',
+          !isCreator && 'pr-20',
           isCreator && [
             'h-auto border-0 bg-transparent px-2 pt-2 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
             headingRule,
@@ -428,7 +426,6 @@ export function PortraitPicker({
           onRightCollapsedChange={setLibraryCollapsed}
           compactLeftLabel="Preview"
           compactRightLabel="Portrait library"
-          showCollapseControls={collapsible}
           left={preview}
           right={library}
         />

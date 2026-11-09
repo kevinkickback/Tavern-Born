@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
-import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 import type { StepProps } from '../types'
@@ -36,10 +35,7 @@ export function BasicsStep({
 
   const handlePortraitChange = useCallback(
     (p: string | null) => {
-      onChange({
-        portrait: p || '',
-        portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
-      })
+      onChange({ portrait: p ?? '' })
     },
     [onChange],
   )
@@ -139,7 +135,7 @@ export function BasicsStep({
     <PortraitPicker
       identity={identity}
       portrait={data.portrait}
-      transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
+      transform={data.portraitTransform}
       name={data.name}
       level={1}
       race={getRaceDisplayName(data.race, data.subrace) || 'Race'}

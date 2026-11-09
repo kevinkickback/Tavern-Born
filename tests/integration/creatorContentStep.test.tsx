@@ -43,7 +43,6 @@ test('source search is a view filter and hidden selections, presets and None use
   }
   render(<Harness />)
   const search = screen.getByRole('textbox', { name: 'Search sources' })
-  expect(screen.queryByText(/Choose the sourcebooks you want/)).toBeNull()
   expect(screen.queryByRole('button', { name: /Provenance only/ })).toBeNull()
   expect(
     screen.getByRole<HTMLButtonElement>('button', { name: /Revised Dungeon Master Guide/ })

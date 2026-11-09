@@ -18,7 +18,7 @@ const baseData = {
   name: 'Aelar',
   gender: 'Male',
   portrait: '/portrait.png',
-  portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
+  portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM, zoom: 175 },
 }
 
 describe('BasicsStep portrait preview wiring', () => {
@@ -44,22 +44,6 @@ describe('BasicsStep portrait preview wiring', () => {
     expect(props.race).toBe('Race')
     expect(props.characterClass).toBe('Class')
     expect(props.gender).toBe('Male')
-    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM)
-  })
-
-  test('uses default portrait transform when wizard data does not provide one', () => {
-    const dataWithoutTransform = {
-      ...baseData,
-      portraitTransform: undefined,
-    }
-
-    render(
-      <BasicsStep data={dataWithoutTransform as unknown as typeof baseData} onChange={vi.fn()} />,
-    )
-
-    expect(pickerSpy).toHaveBeenCalledTimes(1)
-
-    const props = pickerSpy.mock.calls[0][0] as Record<string, unknown>
-    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM)
+    expect(props.transform).toEqual(baseData.portraitTransform)
   })
 })

@@ -115,31 +115,21 @@ export function ContentStep({
     const source =
       selectableSources.find((candidate) => candidate.abbreviation === sourceAbbr) ?? sourceAbbr
     if (!getSourceCompatibility(source, data.originSystem).compatible) return
-    const currentSources = allowedSources
-    const nextSources = currentSources.includes(sourceAbbr)
-      ? currentSources.filter((source) => source !== sourceAbbr)
-      : [...currentSources, sourceAbbr]
+    const nextSources = allowedSources.includes(sourceAbbr)
+      ? allowedSources.filter((source) => source !== sourceAbbr)
+      : [...allowedSources, sourceAbbr]
     onChange({ allowedSources: normalizeAllowedSources(nextSources, data.originSystem, sources) })
   }
 
-  const applySourcePreset = (preset: SourcePreset) => {
-    const presetSources = preset.abbreviations.filter((abbreviation) =>
-      availableSourceSet.has(abbreviation),
-    )
-    onChange({
-      allowedSources: normalizeAllowedSources(presetSources, data.originSystem, sources),
-    })
-  }
-
-  const isPresetActive = (preset: SourcePreset) => {
-    const availablePresetSources = preset.abbreviations.filter((abbreviation) =>
-      availableSourceSet.has(abbreviation),
-    )
-    const presetSources = normalizeSelectableAllowedSources(
-      availablePresetSources,
+  const getPresetSources = (preset: SourcePreset) =>
+    normalizeSelectableAllowedSources(
+      preset.abbreviations.filter((abbreviation) => availableSourceSet.has(abbreviation)),
       data.originSystem,
       sources,
     )
+
+  const isPresetActive = (preset: SourcePreset) => {
+    const presetSources = getPresetSources(preset)
     if (presetSources.length === 0 || presetSources.length !== allowedSources.length) {
       return false
     }
@@ -177,7 +167,7 @@ export function ContentStep({
           variant={activePreset === preset.id ? 'default' : 'outline'}
           aria-pressed={activePreset === preset.id}
           title={preset.description}
-          onClick={() => applySourcePreset(preset)}
+          onClick={() => onChange({ allowedSources: getPresetSources(preset) })}
         >
           {preset.label}
         </Button>
@@ -293,8 +283,7 @@ export function ContentStep({
                       required={source.abbreviation === includedCore}
                       compatibility={getSourceCompatibility(source, data.originSystem)}
                       onClick={() => toggleSource(source.abbreviation)}
-                      showSelection
-                      wrapName
+                      variant="wizard"
                     />
                   ))}
                 </div>
