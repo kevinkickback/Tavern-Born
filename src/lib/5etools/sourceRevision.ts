@@ -1,5 +1,5 @@
 import type { DataSourceConfig } from '@/types/5etools'
-import { type ReadSourceJson, ResourceHttpError } from './resourceReader'
+import { type ReadSourceJson, ResourceHttpError, readRemoteJson } from './resourceReader'
 import { parseRemoteDataSourceUrl } from './urlUtils'
 
 type External = Exclude<DataSourceConfig, { type: 'bundled' }>
@@ -23,24 +23,16 @@ export async function resolveSourceRevision(
   const api = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
   const request = async (url: string) => {
     const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(5000)])
-    if (read) {
-      try {
-        return (await read({ kind: 'remote', url }, requestSignal)) as Record<string, unknown>
-      } catch (error) {
-        if (!(error instanceof ResourceHttpError)) throw error
-        throw new Error(
-          `GitHub could not resolve the source revision (HTTP ${error.status}). Try again or use a commit URL.`,
-        )
-      }
-    }
-    const response = await fetch(url, {
-      signal: requestSignal,
-    })
-    if (!response.ok)
+    try {
+      return (await (read
+        ? read({ kind: 'remote', url }, requestSignal)
+        : readRemoteJson(url, requestSignal))) as Record<string, unknown>
+    } catch (error) {
+      if (!(error instanceof ResourceHttpError)) throw error
       throw new Error(
-        `GitHub could not resolve the source revision (HTTP ${response.status}). Try again or use a commit URL.`,
+        `GitHub could not resolve the source revision (HTTP ${error.status}). Try again or use a commit URL.`,
       )
-    return response.json()
+    }
   }
   const ref = branch ?? (await request(api)).default_branch
   if (typeof ref !== 'string' || !ref) throw new Error('GitHub did not report a source branch.')

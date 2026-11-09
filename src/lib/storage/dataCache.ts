@@ -9,7 +9,6 @@ const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 87
-const MAX_AGE_MS = 24 * 60 * 60 * 1000
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {
@@ -231,7 +230,6 @@ function putSettings(
       version: GAME_DATA_STORE_VERSION,
       state: {
         dataSourceConfig: config,
-        lastLoadedAt: config.lastLoaded ?? entry.cachedAt,
         lastUpdateCheckAt,
         lastContentFingerprint: entry.contentFingerprint,
         lastDataChangedAt: entry.lastDataChangedAt,
@@ -324,7 +322,6 @@ export async function writeGameDataCache(
     lastDataChangedAt?: string | null
     layerMetadata?: GameDataLayerCacheMetadataByRole
     signal?: AbortSignal
-    beforeWrite?: () => void
     config?: DataSourceConfig
     externalKeys?: string[]
     contentFingerprint?: string
@@ -373,7 +370,6 @@ export async function writeGameDataCache(
 
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
-  options?.beforeWrite?.()
   await writeBeforeAbort(options?.signal ?? new AbortController().signal, (store, done) => {
     store.put(entry, CACHE_KEY)
     store.put(entry.generation, CACHE_GENERATION_KEY)
@@ -389,10 +385,6 @@ export async function clearGameDataCache(clearSettings = false): Promise<void> {
     CACHE_GENERATION_KEY,
     ...(clearSettings ? [GAME_DATA_SETTINGS_KEY] : []),
   ])
-}
-
-export function isCacheStale(cachedAt: string): boolean {
-  return Date.now() - new Date(cachedAt).getTime() > MAX_AGE_MS
 }
 
 export function isCacheForSource(

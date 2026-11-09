@@ -77,21 +77,16 @@ export function buildRemoteResourceUrl(baseUrl: string, relativePath: string): s
   return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath.split('/').map(encodeURIComponent).join('/')}`
 }
 
-const readDesktopJson: ReadSourceJson = async (request, signal) => {
-  if (request.kind === 'remote') {
-    const response = await fetch(request.url, { signal })
-    if (!response.ok) throw new ResourceHttpError(response.status, request.url)
-    return response.json()
-  }
-  if (request.kind === 'bundled') {
-    const read = window.electronAPI?.readBundledJson
-    if (!read) throw new Error('Bundled data loading requires Electron runtime')
-    return read(request.path)
-  }
-  const read = window.electronAPI?.readLocalJson
-  if (!read) throw new Error('Local data loading requires Electron runtime')
-  return read(request.path, request.root)
+export async function readRemoteJson(url: string, signal?: AbortSignal): Promise<unknown> {
+  const response = await fetch(url, { signal })
+  if (!response.ok) throw new ResourceHttpError(response.status, url)
+  return response.json()
 }
+
+const readBrowserJson: ReadSourceJson = (request, signal) =>
+  request.kind === 'remote'
+    ? readRemoteJson(request.url, signal)
+    : Promise.reject(new Error('Reading local catalog files requires the Electron catalog worker'))
 
 function createBundledReader(read: ReadSourceJson): JsonResourceReader {
   return {
@@ -152,7 +147,7 @@ function createRemoteReader(path: string, read: ReadSourceJson): JsonResourceRea
 
 export function createJsonResourceReader(
   config: DataSourceConfig,
-  read: ReadSourceJson = readDesktopJson,
+  read: ReadSourceJson = readBrowserJson,
 ): JsonResourceReader {
   switch (config.type) {
     case 'bundled':

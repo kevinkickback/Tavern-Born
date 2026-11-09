@@ -53,10 +53,6 @@ type DataSourceConfiguratorProps = {
 function discardFolder(root: string | null) {
   if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
-export function isValidatableRemoteUrl(value: string): boolean {
-  return parseRemoteDataSourceUrl(value).kind !== 'invalid'
-}
-
 export function DataSourceConfigurator({
   selectorOnly = false,
   showAdditionalContentGuidance = false,
@@ -251,7 +247,7 @@ export function DataSourceConfigurator({
     }
 
     if (value && sourceType === 'remote') {
-      if (isValidatableRemoteUrl(value)) {
+      if (parseRemoteDataSourceUrl(value).kind !== 'invalid') {
         setValidationStatus('validating')
         setIsValidating(true)
         validationTimeoutRef.current = setTimeout(() => {
@@ -342,7 +338,7 @@ export function DataSourceConfigurator({
   const handleRefresh = async () => {
     const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
-    const result = await loadCatalog(dataSourceConfig, true, { stage: true })
+    const result = await loadCatalog(dataSourceConfig, true)
     if (result.kind === 'rejected')
       toast.error('Update could not be applied', { description: result.message })
     else if (result.kind === 'staged') toast.info('A game-data update is ready to review')
@@ -625,7 +621,7 @@ export function DataSourceConfigurator({
                     autoOpenedSelectorRef.current = false
                     setIsSelectingDataSource(true)
                   }}
-                  disabled={isLoading || selectorOnly}
+                  disabled={isLoading}
                   variant="outline"
                   className="gap-2"
                 >

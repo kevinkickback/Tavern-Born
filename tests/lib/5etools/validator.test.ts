@@ -1,325 +1,116 @@
-// @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { validateDataSource } from '@/lib/5etools/validator'
+import { expect, test, vi } from 'vitest'
+import { type JsonResourceReader, ResourceHttpError } from '@/lib/5etools/resourceReader'
+import { inspectCatalogResources } from '@/lib/5etools/validator'
 
-function makeJsonResponse(jsonData: unknown, ok = true) {
-  return new Response(JSON.stringify(jsonData), {
-    status: ok ? 200 : 404,
-    headers: { 'content-type': 'application/json' },
-  })
+const feats = { feat: [{ name: 'Alert', source: 'PHB' }] }
+const bookPath = 'book/book-tce.json'
+const signal = () => new AbortController().signal
+
+function makeReader(files: Record<string, unknown>, type: JsonResourceReader['type'] = 'remote') {
+  return {
+    type,
+    readJson: vi.fn((path: string) => {
+      if (!(path in files)) {
+        return Promise.reject(
+          type === 'local'
+            ? new Error(`ENOENT: no such file ${path}`)
+            : new ResourceHttpError(404, path),
+        )
+      }
+      const value = files[path]
+      return value instanceof Error ? Promise.reject(value) : Promise.resolve(value)
+    }),
+  }
 }
 
-const payloadByFile: Record<string, unknown> = {
-  'books.json': { book: [{ id: 'PHB', name: 'Players Handbook' }] },
-  'adventures.json': { adventure: [] },
-  'races.json': { race: [{ name: 'Human', source: 'PHB' }] },
-  'fluff-races.json': { raceFluff: [] },
-  'fluff-backgrounds.json': { backgroundFluff: [] },
-  'class/index.json': { phb: 'class-phb.json' },
-  'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
-  'spells/index.json': { phb: 'spells-phb.json' },
-  'bestiary/index.json': { mm: 'bestiary-mm.json' },
-  'generated/gendata-spell-source-lookup.json': {},
-  'feats.json': { feat: [{ name: 'Alert', source: 'PHB' }] },
-  'items.json': { item: [{ name: 'Rope', source: 'PHB' }] },
-  'items-base.json': { item: [{ name: 'Longsword', source: 'PHB' }] },
-  'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
-  'conditionsdiseases.json': {
-    condition: [{ name: 'Blinded', source: 'PHB' }],
-    disease: [{ name: 'Sight Rot', source: 'DMG' }],
-    status: [{ name: 'Concentration', source: 'PHB' }],
-  },
-  'deities.json': { deity: [{}] },
-  'skills.json': { skill: [{}] },
-  'senses.json': { sense: [{}] },
-  'languages.json': { language: [{ name: 'Common', source: 'PHB' }] },
-  'magicvariants.json': { variant: [{}] },
-  'optionalfeatures.json': { optionalfeature: [{ name: 'Feature', source: 'PHB' }] },
-  'variantrules.json': { variantrule: [{}] },
-  'trapshazards.json': { trap: [], hazard: [{ name: 'Cold', source: 'DMG' }] },
-  'rewards.json': { reward: [] },
-  'cultsboons.json': { cult: [], boon: [] },
-}
+test.each([
+  ['current TCE', { bookData: [{ id: 'TCE', source: 'TCE', data: [] }] }, true],
+  ['malformed data', { data: 'malformed' }, false],
+  ['foreign book', { bookData: [{ id: 'PHB', source: 'PHB', data: [] }] }, false],
+  [
+    'conflicting envelopes',
+    { data: [], bookData: [{ id: 'TCE', source: 'TCE', data: [] }] },
+    false,
+  ],
+])('inventories optional book support and diagnoses an incompatible envelope: %s', async (_label, book, valid) => {
+  const reader = makeReader({ [bookPath]: book, 'feats.json': feats })
+  const result = await inspectCatalogResources(reader, [], signal())
+  expect(result.resources).toEqual([bookPath, 'feats.json'])
+  expect(result.warnings).toEqual(valid ? [] : [`Incompatible ${bookPath}`])
+})
 
-describe('5etools/validator', () => {
-  const originalFetch = globalThis.fetch
-
-  beforeEach(() => {
-    vi.restoreAllMocks()
+test('a newly unavailable optional book warns, while a previously supplied book blocks the candidate', async () => {
+  const reader = makeReader({
+    [bookPath]: new ResourceHttpError(503, bookPath),
+    'feats.json': feats,
   })
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch
-    vi.unstubAllGlobals()
+  await expect(inspectCatalogResources(reader, [], signal())).resolves.toMatchObject({
+    resources: ['feats.json'],
+    warnings: [expect.stringContaining(bookPath)],
   })
+  await expect(inspectCatalogResources(reader, [bookPath], signal())).rejects.toThrow(
+    /Could not read book\/book-tce\.json.*503/,
+  )
+})
 
-  test('malformed optional book support is diagnosed independently of valid ordinary source content', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) =>
-      String(input).endsWith('/data/book/book-tce.json')
-        ? makeJsonResponse({ data: 'malformed' })
-        : String(input).endsWith('/data/feats.json')
-          ? makeJsonResponse(payloadByFile['feats.json'])
-          : makeJsonResponse({}, false),
-    ) as unknown as typeof fetch
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-    expect(result.isValid).toBe(true)
-    expect(result.foundResources).toEqual(['feats.json'])
-    expect(result.optionalSupportDiagnostics).toEqual([
-      'Optional class feature support is unavailable in book/book-tce.json.',
-    ])
+test.each([
+  ['conditionsdiseases.json', { status: {} }],
+  ['trapshazards.json', { hazard: [{ source: 'DMG' }] }],
+  ['items-base.json', { itemEntry: [{ name: 'Broken', source: 'DMG' }] }],
+  ['items-base.json', { baseitem: [], itemTypeAdditionalEntries: {} }],
+  ['races.json', { race: 'invalid' }],
+])('rejects malformed supported collections in %s', async (file, invalid) => {
+  const reader = makeReader({ 'feats.json': feats, [file]: invalid })
+  await expect(inspectCatalogResources(reader, [], signal())).rejects.toThrow(
+    `Incompatible ${file}`,
+  )
+})
+
+test('keeps malformed optional category prose inside a valid item collection for parser diagnostics', async () => {
+  const reader = makeReader({
+    'items-base.json': {
+      baseitem: [{ name: 'Longsword', source: 'PHB' }],
+      itemTypeAdditionalEntries: [{ source: 'XGE', appliesTo: 'INS|PHB', entries: 'broken' }],
+    },
   })
-
-  test.each([
-    ['current TCE', { bookData: [{ id: 'TCE', source: 'TCE', data: [] }] }, true],
-    ['foreign book', { bookData: [{ id: 'PHB', source: 'PHB', data: [] }] }, false],
-    [
-      'conflicting envelopes',
-      { data: [], bookData: [{ id: 'TCE', source: 'TCE', data: [] }] },
-      false,
-    ],
-  ])('validates the optional book envelope independently: %s', async (_label, book, valid) => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) =>
-      String(input).endsWith('/data/book/book-tce.json')
-        ? makeJsonResponse(book)
-        : String(input).endsWith('/data/feats.json')
-          ? makeJsonResponse(payloadByFile['feats.json'])
-          : makeJsonResponse({}, false),
-    ) as unknown as typeof fetch
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-    expect(result.isValid).toBe(true)
-    expect(result.foundResources).toEqual(
-      valid ? ['book/book-tce.json', 'feats.json'] : ['feats.json'],
-    )
-    expect(result.optionalSupportDiagnostics).toHaveLength(valid ? 0 : 1)
+  await expect(inspectCatalogResources(reader, [], signal())).resolves.toMatchObject({
+    resources: ['items-base.json'],
+    warnings: [],
   })
+})
 
-  test('rejects empty path', async () => {
-    const result = await validateDataSource({
-      type: 'remote',
-      path: '',
-      isValid: false,
-    })
+test.each([
+  'remote',
+  'local',
+] as const)('accepts a partial %s source and reuses its inventoried read', async (type) => {
+  const reader = makeReader({ 'feats.json': feats }, type)
+  const result = await inspectCatalogResources(reader, [], signal())
+  expect(result.resources).toEqual(['feats.json'])
+  await expect(result.reader.readJson('feats.json')).resolves.toBe(feats)
+  expect(reader.readJson.mock.calls.filter(([path]) => path === 'feats.json')).toHaveLength(1)
+})
 
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain('Path cannot be empty')
-  })
+test('rejects an empty inventory and does not treat access errors as missing files', async () => {
+  await expect(inspectCatalogResources(makeReader({}), [], signal())).rejects.toThrow(
+    'No compatible game data files were found',
+  )
+  const blocked = makeReader({ 'feats.json': new Error('EACCES: permission denied') }, 'local')
+  await expect(inspectCatalogResources(blocked, [], signal())).rejects.toThrow(
+    'Could not read feats.json — EACCES: permission denied',
+  )
+})
 
-  test.each([
-    ['conditionsdiseases.json', { status: {} }],
-    ['trapshazards.json', { hazard: [{ source: 'DMG' }] }],
-    ['items-base.json', { itemEntry: [{ name: 'Broken', source: 'DMG' }] }],
-  ])('reports malformed supported collections in %s', async (file, invalid) => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const match = Object.entries(payloadByFile).find(([name]) =>
-        String(input).endsWith(`/data/${name}`),
-      )
-      return match
-        ? makeJsonResponse(match[0] === file ? invalid : match[1])
-        : makeJsonResponse({}, false)
-    }) as unknown as typeof fetch
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain(`Invalid file: ${file}`)
-  })
-
-  test('rejects non-http remote URL protocol', async () => {
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'ftp://example.com/data',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain('HTTPS')
-  })
-
-  test.each([
-    {},
-    [{ source: 'XGE', appliesTo: 'INS|PHB', entries: 'broken' }],
-  ])('keeps malformed optional category prose from invalidating the item resource: %j', async (optional) => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const match = Object.entries(payloadByFile).find(([name]) =>
-        String(input).endsWith(`/data/${name}`),
-      )
-      return match
-        ? makeJsonResponse(
-            match[0] === 'items-base.json'
-              ? { ...(match[1] as object), itemTypeAdditionalEntries: optional }
-              : match[1],
-          )
-        : makeJsonResponse({}, false)
-    }) as unknown as typeof fetch
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-    expect(result.isValid).toBe(true)
-    expect(result.foundResources).toContain('items-base.json')
-  })
-
-  test('returns invalid when no required resources are found', async () => {
-    globalThis.fetch = vi.fn(async () => makeJsonResponse({}, false)) as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain('No valid 5etools data files found')
-  })
-
-  test('accepts remote source when all required files validate', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input)
-      const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
-      if (!entry) return makeJsonResponse({}, false)
-      return makeJsonResponse(entry[1], true)
-    }) as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(true)
-    expect(result.foundResources?.length).toBe(Object.keys(payloadByFile).length)
-    expect(result.normalizedPath).toBe('https://example.com')
-  })
-
-  test('accepts a coherent partial external source and inventories the available families', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input)
-      return url.endsWith('/data/feats.json')
-        ? makeJsonResponse(payloadByFile['feats.json'])
-        : makeJsonResponse({}, false)
-    }) as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-
-    expect(result).toEqual(
-      expect.objectContaining({
-        isValid: true,
-        foundResources: ['feats.json'],
-      }),
-    )
-  })
-
-  test('rejects a malformed resource instead of treating it as an absent family', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input)
-      if (url.endsWith('/data/races.json')) return makeJsonResponse({ race: 'invalid' })
-      if (url.endsWith('/data/feats.json')) return makeJsonResponse(payloadByFile['feats.json'])
-      return makeJsonResponse({}, false)
-    }) as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain('Invalid file: races.json')
-  })
-
-  test('validates remote JSON through the shared resource reader', async () => {
-    globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input)
-      const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
-      return entry ? makeJsonResponse(entry[1]) : makeJsonResponse({}, false)
-    }) as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'remote',
-      path: 'https://example.com',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(true)
-    expect(result.foundResources).toHaveLength(Object.keys(payloadByFile).length)
-    expect(globalThis.fetch).toHaveBeenCalledTimes(Object.keys(payloadByFile).length + 2)
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://example.com/data/book/book-tce.json',
-      expect.any(Object),
-    )
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://example.com/data/psionics.json',
-      expect.any(Object),
-    )
-  })
-
-  test('validates bundled resources through the Electron bridge without a network request', async () => {
-    const readBundledJson = vi.fn(async (relativePath: string) => payloadByFile[relativePath])
-    vi.stubGlobal('electronAPI', { readBundledJson })
-    globalThis.fetch = vi.fn() as unknown as typeof fetch
-
-    const result = await validateDataSource({
-      type: 'bundled',
-      path: 'srd/core',
-      packId: 'tavern-born-srd-core',
-      packVersion: 'test',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(true)
-    expect(readBundledJson).toHaveBeenCalledTimes(Object.keys(payloadByFile).length)
-    expect(readBundledJson).not.toHaveBeenCalledWith('psionics.json')
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-  })
-
-  test('still requires the complete approved resource set for the bundled source', async () => {
-    const readBundledJson = vi.fn((relativePath: string) => {
-      if (relativePath === 'feats.json') return Promise.reject(new Error('missing'))
-      return Promise.resolve(payloadByFile[relativePath])
-    })
-    vi.stubGlobal('electronAPI', { readBundledJson })
-
-    const result = await validateDataSource({
-      type: 'bundled',
-      path: 'srd/core',
-      packId: 'tavern-born-srd-core',
-      packVersion: 'test',
-      isValid: false,
-    })
-
-    expect(result.isValid).toBe(false)
-    expect(result.error).toContain('Missing required file: feats.json')
-  })
-  test('recognizes a partial psionic family and rejects malformed mode costs', async () => {
-    let psi = {
+test('recognizes a partial psionic family and rejects malformed mode costs', async () => {
+  const valid = makeReader({
+    'psionics.json': {
       psionic: [{ name: 'Test Talent', source: 'TEST', type: 'T', entries: ['Test rules.'] }],
-    }
-    globalThis.fetch = vi.fn((input: string | URL | Request) =>
-      String(input).endsWith('/data/psionics.json')
-        ? makeJsonResponse(psi)
-        : makeJsonResponse({}, false),
-    ) as unknown as typeof fetch
-    const config = { type: 'remote' as const, path: 'https://example.com', isValid: false }
-    expect(await validateDataSource(config)).toMatchObject({
-      isValid: true,
-      foundResources: ['psionics.json'],
-    })
-    psi = {
+    },
+  })
+  await expect(inspectCatalogResources(valid, [], signal())).resolves.toMatchObject({
+    resources: ['psionics.json'],
+  })
+  const invalid = makeReader({
+    'psionics.json': {
       psionic: [
         {
           name: 'Bad Discipline',
@@ -329,10 +120,9 @@ describe('5etools/validator', () => {
           modes: [{ name: 'Mode', entries: [], cost: { min: 3, max: 1 } }],
         },
       ],
-    } as unknown as typeof psi
-    expect(await validateDataSource(config)).toMatchObject({
-      isValid: false,
-      error: 'Invalid file: psionics.json',
-    })
+    },
   })
+  await expect(inspectCatalogResources(invalid, [], signal())).rejects.toThrow(
+    'Incompatible psionics.json',
+  )
 })

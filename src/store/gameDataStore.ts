@@ -17,13 +17,11 @@ import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { settleOnAbort } from '@/lib/abortable'
 import {
   cacheMetadata,
-  clearGameDataCache,
   computeGameDataFingerprint,
   GAME_DATA_SETTINGS_KEY,
   GAME_DATA_STORE_VERSION,
   type GameDataCacheMetadata,
   isCacheForSource,
-  isCacheStale,
   markCatalogChecked,
   persistCatalogRepair,
   readGameDataCachePair,
@@ -34,7 +32,6 @@ import type { BundledDataSourceConfig, DataSourceConfig, GameData } from '@/type
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
-let lastClearRequestId = 0
 let remoteStartupPreparation: AbortController | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 let acceptedCache: GameDataCacheMetadata | null = null
@@ -60,7 +57,6 @@ type CatalogResult =
   | { kind: 'rejected'; message: string }
 
 interface CatalogRequest {
-  stage?: boolean
   prepared?: CatalogCandidate
   confirmed?: boolean
   session?: boolean
@@ -123,9 +119,8 @@ interface LoadProgress {
 /** How the current gameData was sourced this session. */
 export type CacheStatus =
   | 'unknown' // initial, before hydration
-  | 'fresh' // loaded from cache, within 24 h, same source
-  | 'stale' // loaded from cache, being refreshed in background
-  | 'remote-cache' // matching remote cache retained after a failed or timed-out startup check
+  | 'cached' // loaded from a matching cache
+  | 'remote-cache' // accepted catalog retained after a failed or timed-out check
   | 'session-srd' // Included SRD loaded into memory only
   | 'fetched' // freshly fetched from source this session
   | 'unconfigured' // no cache and no source — user must configure
@@ -137,7 +132,6 @@ interface GameDataState {
   isBackgroundRefreshing: boolean
   loadProgress: LoadProgress | null
   error: string | null
-  lastLoadedAt: string | null
   lastDataChangedAt: string | null
   /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
@@ -161,24 +155,13 @@ interface GameDataState {
   setGameData: (data: GameData) => void
   setHasHydrated: (v: boolean) => void
 
-  /**
-   * Read from IDB cache and populate store state. Returns UI-facing outcome
-   * hints while keeping notification libraries out of the store.
-   *
-   * Pass `forceCheck: true` to skip the 1-hour background-verify interval and
-   * always fire a background source check (used by auto-refresh on launch).
-   */
+  /** Open the local catalog and optionally check the configured source in the background. */
   loadFromCache: (opts?: {
-    forceCheck?: boolean
+    checkForUpdates?: boolean
     retry?: boolean
   }) => Promise<{ backgroundRefresh?: Promise<boolean> }>
 
-  /**
-   * Fetch data from `config`, write to IDB cache, and update the store. Resolves
-   * true only when the content fingerprint changed. Pass `background = true`
-   * to refresh without blocking or clearing the current data.
-   */
-  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
+  /** Prepare a catalog. Background checks stage changed content for explicit Apply. */
   loadCatalog: (
     config: DataSourceConfig,
     background?: boolean,
@@ -186,9 +169,7 @@ interface GameDataState {
   ) => Promise<CatalogResult>
   reconfigureRemoteStartup: () => void
   invalidatePendingFolderSelection: () => void
-  refreshGameData: () => Promise<void>
   restoreBundledData: () => Promise<boolean>
-  clearGameData: () => Promise<void>
 }
 
 export const useGameDataStore = create<GameDataState>()(
@@ -200,7 +181,6 @@ export const useGameDataStore = create<GameDataState>()(
       isBackgroundRefreshing: false,
       loadProgress: null,
       error: null,
-      lastLoadedAt: null,
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
@@ -297,7 +277,6 @@ export const useGameDataStore = create<GameDataState>()(
           } else if (hasCatalogWorker()) {
             acceptedCache = cacheMetadata(availableCache)
           }
-          const lastChecked = pair?.settings?.lastUpdateCheckAt
           set({
             gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
             lastDataChangedAt: lastDataChangedAt ?? cachedAt,
@@ -306,11 +285,7 @@ export const useGameDataStore = create<GameDataState>()(
                 ? contentFingerprint
                 : computeGameDataFingerprint(data),
             externalKeys,
-            cacheStatus: isCacheStale(
-              lastChecked && lastChecked > cachedAt ? lastChecked : cachedAt,
-            )
-              ? 'stale'
-              : 'fresh',
+            cacheStatus: 'cached',
             remoteStartup: null,
             error: null,
           })
@@ -332,7 +307,7 @@ export const useGameDataStore = create<GameDataState>()(
           const openedFallback = get().gameData || (await openCache(external))
           if (fallbackRequestId !== activeLoadRequestId) return {}
           if (!openedFallback) {
-            if (external && (opts?.retry || (opts?.forceCheck && !desktop && !installed))) {
+            if (external && (opts?.retry || (opts?.checkForUpdates && !desktop && !installed))) {
               set({ remoteStartup: 'checking' })
               const result = await get().loadCatalog(external, false, { startup })
               if (result.kind === 'staged')
@@ -349,10 +324,15 @@ export const useGameDataStore = create<GameDataState>()(
           }
         }
 
-        if (external && opts?.forceCheck && get().gameData && get().dataSourceConfig === config) {
+        if (
+          external &&
+          opts?.checkForUpdates &&
+          get().gameData &&
+          get().dataSourceConfig === config
+        ) {
           return {
             backgroundRefresh: get()
-              .loadCatalog(external, true, { stage: true, startup })
+              .loadCatalog(external, true, { startup })
               .then((result) => result.kind === 'applied' && result.changed),
           }
         }
@@ -373,11 +353,6 @@ export const useGameDataStore = create<GameDataState>()(
           releaseCatalogCandidate(pending.candidate)
           set({ pendingCatalog: null, catalogWarnings: [] })
         }
-      },
-
-      loadGameData: async (config, background) => {
-        const result = await get().loadCatalog(config, background)
-        return result.kind === 'applied' && result.changed
       },
 
       loadCatalog: async (config, background = false, request) => {
@@ -509,7 +484,7 @@ export const useGameDataStore = create<GameDataState>()(
             !request?.confirmed &&
             (removals.length ||
               incompleteRemovalPreview ||
-              (request?.stage &&
+              (background &&
                 (prior.sessionBundledSource ||
                   ('workerId' in candidate
                     ? candidate.contentFingerprint
@@ -540,7 +515,6 @@ export const useGameDataStore = create<GameDataState>()(
           if (
             candidate &&
             'workerId' in candidate &&
-            request?.stage &&
             background &&
             prior.gameData &&
             !prior.sessionBundledSource &&
@@ -566,13 +540,12 @@ export const useGameDataStore = create<GameDataState>()(
               const generation = await markCatalogChecked(cached, checkedConfig, now, signal)
               if (!generation)
                 throw new Error('The game data cache changed during the check. Try again.')
-              if (requestId < lastClearRequestId) return { kind: 'superseded' } as const
               acceptedCache = { ...cached, generation }
               set({
                 dataSourceConfig: checkedConfig,
                 catalogWarnings: warnings,
                 lastUpdateCheckAt: now,
-                cacheStatus: 'fresh',
+                cacheStatus: 'cached',
                 ...(requestId === activeLoadRequestId
                   ? { isBackgroundRefreshing: false, loadProgress: null }
                   : {}),
@@ -628,7 +601,6 @@ export const useGameDataStore = create<GameDataState>()(
               externalKeys: prepared?.keys,
               ...(hasCatalogWorker() ? { contentFingerprint, previous: acceptedCache } : {}),
             })
-            if (requestId < lastClearRequestId) return { kind: 'superseded' } as const
             if (hasCatalogWorker()) acceptedCache = cacheMetadata(cacheEntry)
 
             // Publish a committed pair before the next queued operation can use it.
@@ -643,7 +615,6 @@ export const useGameDataStore = create<GameDataState>()(
               ...(requestId === activeLoadRequestId
                 ? { isLoading: false, isBackgroundRefreshing: false, loadProgress: null }
                 : {}),
-              lastLoadedAt: now,
               lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
               lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
               lastUpdateCheckAt: now,
@@ -674,7 +645,7 @@ export const useGameDataStore = create<GameDataState>()(
           const message = failure?.message ?? 'Failed to load game data'
           set({
             error: message,
-            ...(request?.stage && get().gameData && !get().sessionBundledSource
+            ...(background && get().gameData && !get().sessionBundledSource
               ? { cacheStatus: 'remote-cache' as const }
               : {}),
             isLoading: false,
@@ -692,13 +663,6 @@ export const useGameDataStore = create<GameDataState>()(
         }
       },
 
-      refreshGameData: async () => {
-        const { dataSourceConfig } = get()
-        if (dataSourceConfig) {
-          await get().loadGameData(dataSourceConfig)
-        }
-      },
-
       restoreBundledData: async () => {
         const bundledSource = await resolveDefaultBundledSource()
         if (!bundledSource) {
@@ -709,49 +673,16 @@ export const useGameDataStore = create<GameDataState>()(
           return false
         }
 
-        await get().loadGameData(bundledSource)
+        const result = await get().loadCatalog(bundledSource)
         const state = get()
         return (
+          result.kind === 'applied' &&
           !state.error &&
           state.gameData !== null &&
           state.dataSourceConfig?.type === 'bundled' &&
           state.dataSourceConfig.packId === bundledSource.packId &&
           state.dataSourceConfig.packVersion === bundledSource.packVersion
         )
-      },
-
-      clearGameData: async () => {
-        // Invalidate results even when the underlying operation (notably local IPC
-        // reads or an IndexedDB write) cannot be cancelled by AbortController.
-        lastClearRequestId = ++activeLoadRequestId
-        cancelRemoteStartup()
-        activeLoadController?.abort()
-        activeLoadController = null
-        acceptedCache = null
-        releaseCatalogCandidate(get().pendingCatalog?.candidate)
-        releaseFolderGrant(get().pendingCatalog?.folderGrant)
-        set({
-          gameData: null,
-          dataSourceConfig: null,
-          isLoading: false,
-          isBackgroundRefreshing: false,
-          loadProgress: null,
-          error: null,
-          lastLoadedAt: null,
-          lastDataChangedAt: null,
-          lastContentFingerprint: null,
-          lastUpdateCheckAt: null,
-          lastAttemptAt: null,
-          catalogWarnings: [],
-          externalKeys: undefined,
-          pendingCatalog: null,
-          cacheStatus: 'unconfigured',
-          remoteStartup: null,
-          sessionBundledSource: null,
-        })
-        // Serialize cache mutations so a write already in flight is always followed
-        // by this deletion, while later user-initiated loads write after the clear.
-        await enqueueCacheMutation(() => clearGameDataCache(true))
       },
     }),
     {
@@ -766,7 +697,6 @@ export const useGameDataStore = create<GameDataState>()(
       // Only persist the config — game data is cached separately in dataCache.ts.
       partialize: (state) => ({
         dataSourceConfig: state.dataSourceConfig,
-        lastLoadedAt: state.lastLoadedAt,
         lastDataChangedAt: state.lastDataChangedAt,
         lastContentFingerprint: state.lastContentFingerprint,
         lastUpdateCheckAt: state.lastUpdateCheckAt,

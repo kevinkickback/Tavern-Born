@@ -36,9 +36,9 @@ resource is read once per candidate, including shared files referenced by more t
 entry. For a stable snapshot, publish a versioned directory or switch the server's content
 atomically. Local folders have the same per-attempt read guarantee.
 
-Bundled reads use a separate, read-only IPC capability. The renderer supplies only a normalized
-relative JSON path. Electron resolves managed data below `resources/srd/core/data` during
-development and `process.resourcesPath/srd/core/data` when packaged. Both environments require the
+The catalog worker requests bundled reads by normalized relative JSON path. Electron resolves
+managed data below `resources/srd/core/data` during development and
+`process.resourcesPath/srd/core/data` when packaged. Both environments require the
 fixed `tavern-born-srd-core` pack identity; packaged builds additionally require
 `approved-for-distribution`, while unpackaged development can exercise a review-status snapshot.
 Absolute paths, backslashes, empty/dot/parent segments, non-JSON files, symlink escapes, non-files,
@@ -48,8 +48,9 @@ Source validation uses the same resource readers, so path construction, remote n
 timeouts, and Electron capability checks cannot drift between validation and ingestion.
 
 On desktop, Electron runs preparation, comparison, and cache repair in a catalog utility process.
-The main process continues to authorize bundled and local reads. Chromium performs HTTPS reads
-with the existing origin and session policy, and sends raw bytes for the utility to parse.
+The main process authorizes bundled and local reads and supplies file contents to the worker.
+Chromium performs HTTPS reads with the existing origin and session policy, and sends raw bytes for
+the utility to parse.
 Progress and preview metadata reach the UI while the prepared catalog stays in the utility.
 Applying retrieves that exact candidate. Cancelling or replacing a check releases its candidate,
 and a renderer reload or utility exit invalidates outstanding previews.

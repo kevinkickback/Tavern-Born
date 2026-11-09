@@ -43,7 +43,6 @@ function resetGameDataStore() {
     isBackgroundRefreshing: false,
     loadProgress: null,
     error: null,
-    lastLoadedAt: null,
     cacheStatus: 'unknown',
     remoteStartup: null,
     sessionBundledSource: null,
@@ -170,7 +169,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: makeGameDataFixture(),
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
     })
     const finishStartup = vi.fn()
     render(<AppLoadingOverlay onStartupComplete={finishStartup} />)
@@ -219,7 +218,7 @@ describe('startup integration: loading overlay and startup modal', () => {
       },
       isLoading: false,
       isBackgroundRefreshing: true,
-      cacheStatus: 'fresh',
+      cacheStatus: 'cached',
     })
 
     render(<AppLoadingOverlay />)
@@ -457,44 +456,5 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     const { container } = render(<DataSourceStartupModal />)
     expect(container.textContent).toBe('')
-  })
-
-  test('DataSourceStartupModal forced mode opens with setup title', async () => {
-    localStorage.setItem('tb:force-setup', '1')
-    useGameDataStore.setState({
-      hasHydrated: true,
-      gameData: {
-        races: [],
-        classes: [],
-        backgrounds: [],
-        spells: [],
-        feats: [],
-        items: [],
-        itemsBase: [],
-        itemProperties: [],
-        itemTypes: [],
-        classFeatures: [],
-        actions: [],
-        conditions: [],
-        deities: [],
-        skills: [],
-        senses: [],
-        languages: [],
-        optionalfeatures: [],
-        variantrules: [],
-        trapHazards: [],
-        rewards: [],
-        cultsBoons: [],
-        organizations: [],
-        sources: [],
-      },
-      isLoading: false,
-      cacheStatus: 'fresh',
-    })
-
-    render(<DataSourceStartupModal />)
-
-    expect(screen.getByText('Game Data Setup')).toBeTruthy()
-    expect(await screen.findByText('Data Source Configurator')).toBeTruthy()
   })
 })

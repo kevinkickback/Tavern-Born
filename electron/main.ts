@@ -16,11 +16,9 @@ import type { CatalogRequestMessage } from '@/lib/5etools/catalogProtocol'
 import {
   assertBundledManifestAllowed,
   type BundledSrdManifestSummary,
-  readBundledJsonFromRoot,
   readBundledJsonText,
   readBundledManifestFromRoot,
   resolveBundledPackRoot,
-  validateBundledResourcePath,
 } from './bundledResources'
 import { createCatalogService } from './catalogService'
 import { isPathWithinRoot, isTrustedRendererUrl } from './security'
@@ -329,16 +327,6 @@ app.on('ready', async () => {
   ipcMain.handle('fs:approveDataRoot', (event, root: unknown) => {
     assertTrustedIpcSender(event)
     return approveLocalDataRoot(root)
-  })
-  ipcMain.handle('fs:readJson', async (event, filePath: unknown, root: unknown) => {
-    assertTrustedIpcSender(event)
-    return JSON.parse(await readLocalJsonText(filePath, root))
-  })
-  ipcMain.handle('resources:readBundledJson', async (event, relativePath: unknown) => {
-    assertTrustedIpcSender(event)
-    validateBundledResourcePath(relativePath)
-    const { rootPath } = await getAllowedBundledManifest()
-    return readBundledJsonFromRoot(join(rootPath, 'data'), relativePath)
   })
   ipcMain.handle('resources:getBundledManifest', async (event) => {
     assertTrustedIpcSender(event)

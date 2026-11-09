@@ -134,14 +134,11 @@ describe('writeGameDataCache', () => {
     })
     idbGetMock.mockReturnValueOnce(pendingRead)
     const attempt = new AbortController()
-    const beforeWrite = vi.fn()
     const writing = writeGameDataCache(makeGameData(), config, {
       signal: attempt.signal,
-      beforeWrite,
     })
     attempt.abort(new Error('Startup deadline'))
     await expect(writing).rejects.toThrow('Startup deadline')
-    expect(beforeWrite).not.toHaveBeenCalled()
     try {
       expect(put).not.toHaveBeenCalled()
       finishRead(null)

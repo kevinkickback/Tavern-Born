@@ -19,7 +19,7 @@ test.each([
   useAppPreferencesStore.setState({ autoRefreshGameData: enabled })
   useGameDataStore.setState({ hasHydrated: true, gameData: null, isLoading: false, loadFromCache })
   const hook = renderHook(useDataInit)
-  await waitFor(() => expect(loadFromCache).toHaveBeenCalledWith({ forceCheck: enabled }))
+  await waitFor(() => expect(loadFromCache).toHaveBeenCalledWith({ checkForUpdates: enabled }))
   hook.rerender()
   expect(loadFromCache).toHaveBeenCalledTimes(1)
 })

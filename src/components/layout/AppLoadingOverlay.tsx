@@ -173,7 +173,7 @@ export function AppLoadingOverlay({
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">
           <Button
             variant="outline"
-            onClick={() => void retryRemote({ forceCheck: true, retry: true })}
+            onClick={() => void retryRemote({ checkForUpdates: true, retry: true })}
           >
             Retry
           </Button>

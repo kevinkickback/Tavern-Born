@@ -22,7 +22,7 @@ if (!port) throw new Error('Catalog worker requires a parent process')
 const send = (message: CatalogWorkerMessage) => port.postMessage(message)
 const tasks = new Map<string, AbortController>()
 const reads = new Map<number, { id: string; resolve: (reply: CatalogReply) => void }>()
-const prepared = new Map<string, { candidate: PreparedCatalog; contentFingerprint: string }>()
+const prepared = new Map<string, PreparedCatalog>()
 let readId = 0
 
 function getCandidate(id: string) {
@@ -61,7 +61,7 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
       signal.throwIfAborted()
       const { data, keys: _keys, ...metadata } = candidate
       const contentFingerprint = computeGameDataFingerprint(data)
-      prepared.set(id, { candidate, contentFingerprint })
+      prepared.set(id, candidate)
       return { ...metadata, contentFingerprint } satisfies CatalogSummary
     }
     case 'bundled': {
@@ -97,11 +97,9 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
       }
     }
     case 'compare':
-      return compareCatalog(getCandidate(command.workerId).candidate, command.prior)
-    case 'take': {
-      const { candidate } = getCandidate(command.workerId)
-      return candidate
-    }
+      return compareCatalog(getCandidate(command.workerId), command.prior)
+    case 'take':
+      return getCandidate(command.workerId)
   }
 }
 

@@ -153,7 +153,7 @@ describe('home page integration workflows', () => {
       activeCharacterId: active.id,
       isActiveCharacterDirty: true,
     })
-    const refresh = vi.spyOn(useGameDataStore.getState(), 'loadGameData')
+    const refresh = vi.spyOn(useGameDataStore.getState(), 'loadCatalog')
     render(
       <MemoryRouter>
         <Routes>

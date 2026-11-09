@@ -137,6 +137,28 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
       ),
     ).toBe(true)
 
+    const rejectedRoot = await page.evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          const api = window.electronAPI
+          const id = crypto.randomUUID()
+          const unsubscribe = api.onCatalogMessage((message) => {
+            if (message.kind !== 'error' || message.id !== id) return
+            unsubscribe()
+            resolve(message.error)
+          })
+          api.sendCatalogMessage({
+            kind: 'run',
+            id,
+            command: {
+              kind: 'prepare',
+              config: { type: 'local', path: 'unapproved-catalog-root', isValid: false },
+            },
+          })
+        }),
+    )
+    expect(rejectedRoot).toContain('Select the local data directory first.')
+
     const imported = JSON.parse(readFileSync('tests/fixtures/equipment-e2e.tbc', 'utf8'))
     const chooser = page.waitForEvent('filechooser')
     await page.getByRole('button', { name: 'Import' }).first().click()

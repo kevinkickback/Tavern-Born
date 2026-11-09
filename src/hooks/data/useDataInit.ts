@@ -22,6 +22,6 @@ export function useDataInit() {
     if (initialized.current || gameData || isLoading) return
     initialized.current = true
 
-    void loadFromCache({ forceCheck: autoRefreshGameData })
+    void loadFromCache({ checkForUpdates: autoRefreshGameData })
   }, [hasHydrated, preferencesReady, gameData, isLoading, loadFromCache, autoRefreshGameData])
 }
