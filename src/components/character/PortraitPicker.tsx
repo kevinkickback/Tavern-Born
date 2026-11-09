@@ -185,16 +185,19 @@ export function PortraitPicker({
     </Button>
   )
 
+  const headingRule = 'after:h-px after:flex-1 after:bg-border'
   const controls = (
     <div
       data-slot="portrait-image-controls"
       className={cn(
-        'mx-auto min-w-0 w-full space-y-3 border-t border-border',
-        isCreator ? 'pt-2' : 'pt-3',
+        'mx-auto min-w-0 w-full space-y-3',
+        isCreator ? 'pt-2' : 'border-t border-border pt-3',
       )}
       style={previewWidth === null ? undefined : { width: previewWidth, maxWidth: '100%' }}
     >
-      <div className="flex items-center gap-2 text-muted-foreground">
+      <div
+        className={cn('flex items-center gap-2 text-muted-foreground', isCreator && headingRule)}
+      >
         <Crop className="h-3.5 w-3.5" weight="duotone" aria-hidden="true" />
         <span className="text-[11px] font-bold uppercase tracking-wider">
           {isCreator ? 'Adjust portrait' : 'Image Controls'}
@@ -270,7 +273,7 @@ export function PortraitPicker({
         icon={isCreator ? undefined : <Image className="size-4 text-primary" weight="duotone" />}
         className={cn(
           !isCreator && collapsible && 'pr-20',
-          isCreator && 'h-auto border-0 bg-transparent px-0',
+          isCreator && ['h-auto border-0 bg-transparent px-0', headingRule],
         )}
       />
       <div
@@ -312,8 +315,10 @@ export function PortraitPicker({
         icon={isCreator ? undefined : <Images className="size-4 text-primary" weight="duotone" />}
         className={cn(
           !isCreator && collapsible && 'pr-20',
-          isCreator &&
+          isCreator && [
             'h-auto border-0 bg-transparent px-2 pt-2 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
+            headingRule,
+          ],
         )}
       />
       <div className={cn('flex min-h-0 flex-1 flex-col', isCreator ? 'p-2 pt-3' : 'gap-4 p-4')}>

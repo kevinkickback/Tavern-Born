@@ -359,10 +359,18 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         className={cn(
           'flex shrink-0 flex-wrap items-center justify-between gap-x-5 gap-y-2',
           stepId === 'content' ? 'mb-1' : 'mb-3',
+          stepId === 'basics' && 'mb-[calc(1rem+var(--text-sm)*var(--leading-relaxed))]',
         )}
       >
-        <div className="min-w-0">
-          <p className="pl-[2.875rem] text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className={cn('min-w-0', stepId === 'basics' && 'w-full')}>
+          <p
+            className={cn(
+              'text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground',
+              stepId === 'basics'
+                ? 'flex items-center gap-3 after:h-px after:flex-1 after:bg-border'
+                : 'pl-[2.875rem]',
+            )}
+          >
             {activeStep.section}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -374,9 +382,11 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             </h2>
             {titleAccessory}
           </div>
-          <DialogDescription className="mt-1 pl-[2.875rem] text-sm leading-relaxed text-muted-foreground">
-            {activeStep.description}
-          </DialogDescription>
+          {activeStep.description && (
+            <DialogDescription className="mt-1 pl-[2.875rem] text-sm leading-relaxed text-muted-foreground">
+              {activeStep.description}
+            </DialogDescription>
+          )}
         </div>
         {actions}
       </div>
@@ -386,6 +396,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
+        {...(!activeStep?.description && { 'aria-describedby': undefined })}
         viewportPortalHostRef={setPortalHost}
         onPointerDownOutside={(event) => event.preventDefault()}
         closeDisabled={isCreating}

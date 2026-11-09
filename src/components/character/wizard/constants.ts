@@ -17,7 +17,6 @@ export const WIZARD_STEPS: WizardStep[] = [
     section: 'Identity',
     label: 'Basics',
     title: 'Character details',
-    description: 'Add the name and details you want on your character sheet.',
     icon: User,
   },
   {
