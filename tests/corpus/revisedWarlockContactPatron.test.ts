@@ -52,7 +52,7 @@ function lookups(current: GameData) {
 }
 
 beforeAll(async () => {
-  const root = 'resources/srd/core/data'
+  const root = 'resources/srd/data'
   data = composeGameDataLayers([
     await new FiveEToolsDataLoader(
       {

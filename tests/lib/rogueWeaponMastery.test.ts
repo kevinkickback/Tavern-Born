@@ -20,7 +20,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-const read = (file: string) => JSON.parse(readFileSync(`resources/srd/core/data/${file}`, 'utf8'))
+const read = (file: string) => JSON.parse(readFileSync(`resources/srd/data/${file}`, 'utf8'))
 const { classes, classFeatures } = parseClassDocument(read('class/class-rogue.json'))
 const rogue = (classes as Class5e[]).find((cls) => cls.source === 'XPHB')!
 const choice = rogue.normalizedRules!.choices.find((row) => row.optionFilter?.requiresMastery)!

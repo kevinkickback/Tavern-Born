@@ -77,7 +77,7 @@ for (const edition of ['2014', '2024'] as const) {
     const initial = ['Heightened Spell', 'Twinned Spell']
     const gameData = makeBundledClassCastingLayer('class/class-sorcerer.json')
     gameData.optionalfeatures = parseOptionalFeatures(
-      JSON.parse(readFileSync('resources/srd/core/data/optionalfeatures.json', 'utf8')),
+      JSON.parse(readFileSync('resources/srd/data/optionalfeatures.json', 'utf8')),
     )
     const actor = makeCharacterFixture({
       name: `Draconic Sorcerer ${edition}`,
@@ -304,7 +304,7 @@ for (const edition of ['2014', '2024'] as const) {
     const choiceId = `class:warlock|${source.toLowerCase()}|choice:eldritch-invocations|${initialLevel}`
     const gameData = makeBundledClassCastingLayer('class/class-warlock.json')
     gameData.optionalfeatures = parseOptionalFeatures(
-      JSON.parse(readFileSync('resources/srd/core/data/optionalfeatures.json', 'utf8')),
+      JSON.parse(readFileSync('resources/srd/data/optionalfeatures.json', 'utf8')),
     )
     const actor = makeCharacterFixture({
       name: `Fiend Warlock ${edition}`,

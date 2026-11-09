@@ -41,7 +41,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-const bundled = 'resources/srd/core/data/class/class-cleric.json'
+const bundled = 'resources/srd/data/class/class-cleric.json'
 const configured = 'data/class/class-cleric.json'
 
 function setup(path: string) {

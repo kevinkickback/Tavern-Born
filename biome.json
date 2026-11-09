@@ -14,8 +14,8 @@
       "!dist",
       "!dist-electron",
       "!node_modules",
-      "!resources/srd/core/data",
-      "!resources/srd/core/manifest.json",
+      "!resources/srd/data",
+      "!resources/srd/manifest.json",
       "!test-results",
       "!index.html"
     ]

@@ -37,7 +37,7 @@ export function makeConditionalSourceLayer(
     classes: parsed.classes as Class5e[],
     classFeatures: parsed.classFeatures as ClassFeature[],
     optionalfeatures: parseOptionalFeatures(document, origin),
-    skills: JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill,
+    skills: JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill,
   })
 }
 export function makeConditionalSourceData(change?: (document: ConditionalSourceDocument) => void) {

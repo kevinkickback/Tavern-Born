@@ -19,7 +19,7 @@ import type { GameData, SubclassFeature } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-druid.json')) stacks.push(['local', 'data'])
 
 async function load(type: 'bundled' | 'local', root: string) {

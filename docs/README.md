@@ -11,13 +11,13 @@ when placement or a new boundary is unclear. No task requires preloading every t
 | Startup, refresh or user-to-save sequence | [Data flow](data-flow.md) | [Ingestion](data-ingestion.md), [state](state-management.md) |
 | Store writes, drafts or calculations | [State](state-management.md) | [Character format](contracts/character-format.md), [equipment](contracts/equipment-state.md) |
 | Grant/remove/replace or source ownership | [Provenance](provenance.md) | [Feat](contracts/feat-ownership.md), [racial](contracts/racial-ownership.md), [class/actions](contracts/class-ownership.md) |
-| 5etools loading, layering or cache | [Ingestion](data-ingestion.md) | [Race](contracts/race-ingestion.md), [feature UIDs](contracts/feature-references.md), [items](contracts/item-ingestion.md), [compound references](contracts/reference-collections.md) |
-| Exact saved selection, filters or eligibility | [Reference resolution](contracts/reference-resolution.md) | [Prerequisites](contracts/prerequisites.md), relevant owner above |
-| Components, controllers or selection lists | [React patterns](react-patterns.md) | [Workspaces](contracts/workspaces.md), [previews](contracts/rules-previews.md), [spell selection](contracts/spell-selection.md) |
+| 5etools loading, layering or cache | [Ingestion](data-ingestion.md) | [Race](contracts/race-ingestion.md), [feature UIDs](contracts/feature-references.md), [items](contracts/item-ingestion.md) |
+| Exact saved selection, filters or eligibility | [Reference resolution](contracts/reference-resolution.md) | [Prerequisites](contracts/reference-resolution.md#prerequisite-eligibility) |
+| Components, controllers or selection lists | [React patterns](react-patterns.md) | [Spell selection](contracts/spell-selection.md) |
 | PDF projection, fitting or forms | [PDF generation](pdf-generation.md) | [Template maintenance](../scripts/pdf-sources/README.md) |
 | Verification | [Testing](testing-map.md) | Relevant existing tests and their fixtures |
 | CI, PRs or packaging | [CI/CD](cicd-workflow.md) | [Testing](testing-map.md#commands) |
-| Bundled content or artwork | [SRD pack](../resources/srd/core/README.md), [artwork](../build/README.md) | Retained provenance/notices and manifests |
+| Bundled content or artwork | [Included SRD](data-ingestion.md#included-srd), [artwork](../build/README.md) | Retained provenance and notices |
 | Historical release behavior | [Changelog](changelog.md) | The relevant release section only |
 
 ## Current behavior and release requirements

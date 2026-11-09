@@ -19,7 +19,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 
-const bundled = 'resources/srd/core/data/class/class-ranger.json'
+const bundled = 'resources/srd/data/class/class-ranger.json'
 const configured = 'data/class/class-ranger.json'
 function parse(
   file = bundled,

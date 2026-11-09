@@ -81,7 +81,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Collect coverage for this part
-        run: npm run test:coverage -- --config config/vitest.coverage-shard.ts --shard=${{ matrix.part }}/2 --reporter=default --reporter=blob --outputFile.blob=reports/vitest/blob-${{ matrix.part }}.json
+        run: npx vitest run --config config/vitest.coverage-shard.ts --coverage --maxWorkers=4 --shard=${{ matrix.part }}/2 --reporter=default --reporter=blob --outputFile.blob=reports/vitest/blob-${{ matrix.part }}.json
       - name: Preserve coverage evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -125,7 +125,7 @@ jobs:
         if: needs.changes.outputs.mode == 'code'
         env:
           COVERAGE_PARTS: '2'
-        run: npx vitest run --config vitest.config.ts --merge-reports=reports/vitest --coverage --reporter=default --reporter=./scripts/ci/coverage-guard.ts
+        run: npm test -- --merge-reports=reports/vitest --coverage --reporter=default --reporter=./scripts/ci/coverage-guard.ts
       - name: Upload coverage report
         if: ${{ always() && needs.changes.outputs.mode == 'code' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

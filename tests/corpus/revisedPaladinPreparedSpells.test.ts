@@ -40,7 +40,7 @@ const isPaladin = (row: { name: string; source: string }) =>
 const isSteedFeature = (row: ClassFeature) => row.name === steedName && row.source === 'XPHB'
 const exactSpell = (name: string, source: string) => getSpellReferenceKey(name, source)
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-paladin.json')) stacks.push(['local', 'data'])
 
 function lookups(data: GameData) {
@@ -65,7 +65,7 @@ test.each([
   'paladin',
   'ranger',
 ])('malformed revised %s declarations grant no spells', async (name) => {
-  const raw = JSON.parse(await readFile(`resources/srd/core/data/class/class-${name}.json`, 'utf8'))
+  const raw = JSON.parse(await readFile(`resources/srd/data/class/class-${name}.json`, 'utf8'))
   const actorClass = raw.class.find((row: Class5e) => row.source === 'XPHB')
   const actor = makeCharacterFixture({
     originSystem: '2024',

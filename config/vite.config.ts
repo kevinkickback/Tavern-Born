@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import electron from 'vite-plugin-electron/simple'
-import { createRendererConfig } from './config/renderer'
+import { createRendererConfig } from './renderer'
 
 const renderer = createRendererConfig()
 

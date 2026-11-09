@@ -23,7 +23,7 @@ const EMPTY_LOOKUP = new Map<string, Item5e>()
 
 test('keeps the two bundled classic Warlock simple-weapon choices distinct in diagnostics', () => {
   const { class: classes } = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-warlock.json', 'utf8'),
+    readFileSync('resources/srd/data/class/class-warlock.json', 'utf8'),
   ) as { class: { source: string; startingEquipment: unknown }[] }
   const classic = classes.find(({ source }) => source === 'PHB')!
   const blocks = getClassDefaultEquipmentBlocks(classic.startingEquipment)

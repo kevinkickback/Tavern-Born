@@ -23,7 +23,7 @@ describe.each(['2014', '2024'] as const)('Sorcerer %s Metamagic gain edits', (ed
     const source = edition === '2014' ? 'PHB' : 'XPHB'
     const layer = makeBundledClassCastingLayer('class/class-sorcerer.json')
     const optionalFeatures = parseOptionalFeatures(
-      JSON.parse(readFileSync('resources/srd/core/data/optionalfeatures.json', 'utf8')),
+      JSON.parse(readFileSync('resources/srd/data/optionalfeatures.json', 'utf8')),
     )
     layer.optionalfeatures = optionalFeatures
     const cls = layer.classes.find((row) => row.source === source)!

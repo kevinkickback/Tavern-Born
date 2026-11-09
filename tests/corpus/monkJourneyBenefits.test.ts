@@ -33,7 +33,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 const configured = 'data/class/class-monk.json'
-const bundled = 'resources/srd/core/data/class/class-monk.json'
+const bundled = 'resources/srd/data/class/class-monk.json'
 const configuredTest = test.skipIf(!existsSync(configured))
 const read = (file: string) => JSON.parse(readFileSync(file, 'utf8'))
 const parse = (document: unknown) => {
@@ -95,11 +95,11 @@ test.each([
   'XPHB',
 ])('Included %s Monk applies earned base rules and retracts them on level loss', (source) => {
   const spells = (
-    read('resources/srd/core/data/spells/spells-phb.json').spell as GameData['spells']
+    read('resources/srd/data/spells/spells-phb.json').spell as GameData['spells']
   ).filter((spell) => spell.name.toLowerCase() === 'astral projection')
   expect(spells).toHaveLength(1)
   const monks = parse(read(bundled))
-  const barbarians = parse(read('resources/srd/core/data/class/class-barbarian.json'))
+  const barbarians = parse(read('resources/srd/data/class/class-barbarian.json'))
   const data = makeGameDataFixture({
     classes: [...monks.classes, ...barbarians.classes],
     classFeatures: [...monks.classFeatures, ...barbarians.classFeatures],

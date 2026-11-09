@@ -5,7 +5,7 @@ import { expect, test, vi } from 'vitest'
 import { prepareCatalog } from '@/lib/5etools/catalogCandidate'
 
 const source = process.env.TB_5ETOOLS_CANARY
-const bundled = resolve('resources/srd/core')
+const bundled = resolve('resources/srd')
 test.skipIf(!source)(
   'the candidate pipeline admits a complete, revision-pinned 5etools catalog',
   async () => {

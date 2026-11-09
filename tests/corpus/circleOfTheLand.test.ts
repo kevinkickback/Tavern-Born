@@ -41,7 +41,7 @@ beforeAll(async () => {
     {
       type: 'bundled',
       readJson: async (file) =>
-        JSON.parse(await readFile(resolve('resources/srd/core/data', file), 'utf8')),
+        JSON.parse(await readFile(resolve('resources/srd/data', file), 'utf8')),
     },
   ).loadAllData()
 })

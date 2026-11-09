@@ -1,139 +1,43 @@
 # Equipment state and fixed bonuses
 
-Read this reference only when changing this contract. Start with the [topic index](../README.md).
-
 ## Proficiencies and equipment
 
-`character.proficiencies` is the canonical list model. Expertise must be a subset of skill
-proficiency; `reconcileSkillExpertise()` removes invalid expertise.
+Expertise requires its underlying skill proficiency. Use the shared command path so inventory,
+wallet and provenance change together. Derived AC and capacity read equipped state.
 
-Starting-equipment option keys and concrete generic-item choices are stored separately. Inventory
-and equipment provenance change through the same equipment command. Derived AC and capacity read
-equipped state; they are not copied into equipment records.
+Only the explicit initial Class owns the Class starting package. Adding or reordering classes
+never issues another package. Background and Class choices save exact item arrays. Repeated
+references can fill multiple units. Validate the exact count, group, mundane or Basic rules
+and proficiency clauses against the current declaration. Unknown or ambiguous rules leave
+setup pending. Groups are choice pools and cannot become inventory rows.
 
-Format14 records the explicit `initialClass`, independently of progression order. Only that currently
-present Class owns the Class starting package; adding or reordering multiclass entries grants no
-extra package. Removing it retracts only its remaining owned inventory and coins. Another Class is
-not automatically promoted. Explicit base-Class selection establishes the new owner.
+Each grant lot retains its original role, entry address, exact target and physical inventory ID.
+Remaining owned quantity is issued minus cumulative consumption, floored at zero. Refresh
+cannot reissue consumed copies. Replace or remove only the remaining owned copies, preserving
+manual surplus and other providers. Unavailable rules preserve the snapshot. A never-issued
+grant requires explicit Apply when its exact rules return.
 
-Each concrete starting choice saves an array of exact `{name, source}` references. A quantity of two
-permits different items or repeated references. Source-derived category, Basic/mundane, exact group
-and declared proficiency requirements govern the same picker, command and readiness policy. Changes
-must fill the exact declared count; unchanged unfinished selections can remain pending. Explicit named
-groups require a concrete member; groups are never carried as inventory. Raw source-qualified
-dependencies retained for an admitted owner do not enable an entire book or restrict ordinary Add Item.
-Missing or ambiguous rules leave setup pending; another printing cannot substitute.
+Class and Background own their unspent starting coins separately. Spend starting coins first
+in the edited denomination, Class before Background. Carry each role's cumulative copper debit
+through removal, re-add and budget changes. Structured `value` and `containsValue` credit the
+wallet. `worthValue` describes an item. The legacy gold roll stays manual.
+[Grant ownership tests](../../tests/unit/startingEquipmentOwnership.test.ts)
 
-Group qualifiers apply to their own source clause. Exact member alternatives narrow the declared
-group (for example, Spellfire Initiate's Crystal/Wand choice); a neighboring gaming proficiency
-requirement does not restrict that focus. Legacy coordinated tool alternatives share only their
-own proficiency clause. Unknown, conflicting or unbound qualifiers stay unsupported. Display names
-can corroborate exact source references. The revised Druid's Package A specifies a Quarterstaff
-form of Druidic Focus. The SRD Druidic Focuses table identifies Wooden Staff, so the exact live
-Druid XPHB package declaration and group member authorize one fixed Wooden Staff XPHB lot.
-When the exact group stays at its authored address but the corroborating text or item rules are
-unavailable or its member list contains invalid references, the focus lot stays pending and retains
-its existing grant. Either member reference format can identify the staff, and the group must list
-it exactly once. Missing or disputed package
-structure leaves the selected package pending and preserves its saved grants. A conflict in the
-shared entries suspends both options. A conflict confined to Package A leaves a valid B usable.
-An independently declared exact Wooden Staff uses the ordinary item rule at its own address.
-
-`startingEquipmentGrants` keeps independent Class and Background lots. A lot records its raw entry
-address, exact target, inventory ID, current issued quantity, cumulative `consumedQuantity` and
-remaining owned quantity. A retained lot keeps `remaining = max(0, issued - consumed)` even when
-its current quantity shrinks and regrows; consumption may exceed that current quantity. It never merges
-into a manual or other-role row. Unchanged lots retain their ID and runtime fields; consumed/deleted
-copies do not return on refresh. Quantity increases are independent surplus; decreases consume owned
-copies first. Replacement subtracts only the remaining owned quantity from that exact row, preserving
-surplus and independent providers. Explicitly changing a physical selection can issue a replacement;
-there is no historical anti-farming ledger for former item selections. Name-keyed provenance remains
-a source summary and cannot authorize subtraction. Source loss preserves physical snapshots and saved
-intent; exact restoration revalidates them. Previously unavailable, never-issued grants require an
-explicit Apply current package action, while consumed lots remain consumed.
-
-Structured `value`/`containsValue` amounts credit the wallet; `worthValue` is item valuation. Class and
-Background currency each retain a declared amount, remaining owned coins and cumulative spent copper.
-Wallet decreases consume starting coins first, Class then Background in the edited denomination;
-deposits are independent money. Package changes remove only owned unspent coins, then issue the new
-budget minus that role's cumulative spending, floored at zero. Spending survives lower/higher budgets,
-owner removal and re-add. Wallet edits do not exchange denominations; a changed package budget issues
-its residual as GP/SP/CP. All arithmetic uses safe integers. Strict admission requires each role's
-remaining currency value to equal its declared value minus spending, floored at zero. It also checks
-that combined owned denominations fit the wallet and positive item lots fit exact
-physical rows. Choices, grants, wallet and provenance commit atomically.
-
-This supports deterministic structured packages and A/B gold alternatives. The separate 2014
-`goldAlternative` dice workflow remains manual; refresh never invents or rolls an amount. Structured
-currency takes precedence over inconsistent display prose (for example, the current Cleric XPHB
-declaration contains 7000 copper despite its 7 GP prose). Managed source data is not silently corrected.
-
-Armor proficiency and body-armor/shield slot checks share one pure policy. Re-enabling equipment
-restrictions from either page applies the rule and unequips invalid armor in one character patch.
-Base AC and intrinsic armor/shield `bonusAc` effects share the first equipped body-armor and shield
-owners, selected from saved equipment classification/order. Other equipped armor/shields contribute
-no intrinsic AC bonus, including when equipment restrictions are ignored. Missing catalog rules,
-suppression or attunement failure do not promote another equipped owner. Unequipping, removing or
-reordering the selected owner changes the slot. Nonarmor AC items, manual effects/adjustments and
-explicit overrides retain their existing behavior; quantity does not multiply bonuses.
-
-Source-qualified equipment without an exact current rules record gets a nonblocking readiness
-recommendation after primary-then-raw resolution. An authoritative raw lookup must be supplied:
-undefined/loading data is unknown, while an explicit empty map establishes absence. A filtered primary
-lookup supplied alone retains calculation fallback but cannot establish raw-rule absence; callers
-must explicitly supply the authoritative raw item map for this recommendation. A filtered primary
-view with an exact raw match produces no warning; another printing cannot substitute. Source-less
-custom entries remain outside this check, and existing unresolved starting placeholders keep their
-separate blocking issue. Review and PDF preflight consume the same readiness result. Missing rules
-remove only live catalog contributions; exact restoration recomputes them and clears the recommendation.
-Saved physical fields, player prose, inventory IDs/runtime state and provenance remain intact.
-Catalog physical-field refresh changes catalog records and future adds without silently overwriting
-existing inventory snapshots. Concrete generated shields need no saved template/base relation.
-
-Inventory weapon properties preserve 5etools references as abbreviations or source-qualified
-`{ uid, note }` records. Display surfaces resolve full names from the parsed item-property lookup;
-the structured form retains item-specific notes without changing existing saved abbreviations.
+AC chooses the first saved equipped body armor and shield. Ignored restrictions or unavailable
+rules do not promote another intrinsic owner. Re-enabling restrictions unequips invalid armor
+in one patch. Missing exact rules suspend live effects while preserving the physical snapshot.
+An authoritative raw item lookup is required for a missing-data recommendation. An explicit
+empty lookup proves absence, and a loading lookup does not.
 
 ## Fixed weapon bonuses
 
-`deriveStructuredItemEffects` projects supported fixed `bonusWeapon` (attack and damage),
-`bonusWeaponAttack` and `bonusWeaponDamage` tags through `weaponBonuses.ts`. Each additive
-effect targets the inventory instance ID used by its existing weapon attack. Quantity does
-not multiply a bonus. Equipped state and the saved-or-current attunement requirement gate
-numeric benefits; other feature/manual effects, suppression and manual-action precedence remain
-independent. `deriveWeaponActions` consumes an explicit calculation context; calling it without
-effects does not implicitly project catalog bonuses. Actions, Review and PDF use the shared context.
+Only an existing equipped physical weapon with exact rules can receive its own attack/damage
+bonus. Honor attunement and apply bonuses to the inventory ID, once regardless of quantity.
+Accept safe signed integer fields. A malformed field or combined-plus-split conflict gives a
+manual review note with no intrinsic bonus. Exact primary rules take precedence over raw
+fallback, including explicit absence of a bonus.
 
-Only finite safe signed integers (numbers or trimmed signed digit strings, including zero) are
-supported. A malformed present field or combined-plus-split coexistence yields no intrinsic
-weapon bonus and a manual-review note. Separate attack/damage fields remain separate channels.
-Exact primary item resolution wins over raw fallback, even when its bonus fields are absent or
-unsupported. Missing exact data removes only the derived contribution; restoration recomputes it.
-The projection preserves saved equipment, prose, provenance and manual values without changing the character format.
-
-Eligibility requires an existing physical weapon in both inventory and selected item data.
-Shared classification excludes ammunition, armor, consumables, groups and generic/reference
-templates. Physical staff/rod/wand weapons with damage or weapon-category fields remain eligible.
-Source-qualified ranged types such as `R|XPHB` use Dexterity under the existing ability policy.
-No attack is synthesized from a template, base-item reference, transformation or prose.
-
-Tags are prose-converter output, not unconditional mechanics. The audited producer boundary is
-5etools `b9061583536101068b3a59d27e886d1fa664e366`, `BonusTag` in
-`js/converter/converterutils-item.js` and item filter/render consumers. These exact special
-weapons retain manual notes instead of automatic weapon bonuses: Blood Spear|CoS,
-Bloodrage Greataxe|BMT, Duskcrusher|EGW, Hammer of Runic Focus|BMT, Hazirawn|HotDQ,
-Niko's Mace|UtHftLH, Needle of Mending|EGW, True-Ice Shards (Rapier)|CoA, Dawnbringer|OotA,
-Sun Blade|DMG/XDMG, Sunsword|CoS and Baba Yaga's Pestle|TCE. Their bearer, HP, charges, attunement exception,
-spell attack, defensive transfer or deployed/form state is not modeled by these numeric tags.
-Mace of Smiting|DMG/XDMG, Dragontooth Dagger|RoT and Moonblade|DMG retain their fixed +1
-baseline with notes for target/rune increases. Hammer of Thunderbolts|DMG has no root attunement
-requirement for its +1 baseline; its optional Giant's Bane remains manual.
-
-Notes use the existing source-effects/Review displays and active PDF preflight warnings; they
-do not overwrite player descriptions or add an attack-row note channel. Notes require equipped
-state so exceptions such as Hazirawn remain explained even when unattuned. Review can also list
-inactive declarations. Details retain the exact item's complete available prose. This does not
-automate every item rule: extra dice, critical/charge effects, ammunition stacking, unarmed grants,
-temporary/area effects, ability substitution and form controls remain outside this projection.
-Later concrete generation must reassess its producers, especially Bloodshed Blade's Constitution
-modifier minimum and Repeating Shot's ranged-only condition, rather than blindly copying tags.
+The audited source exception registry separates fixed baselines from conditional or alternate-form
+rules. Special bearer, charge, target, ability or weapon-form mechanics stay manual unless
+explicitly supported. Actions, Review and PDF share one effect projection and preserve player
+prose and manual adjustments.

@@ -96,7 +96,7 @@ async function select(page: Page, label: string, value: string) {
   await page.getByRole('option', { name: value, exact: true }).click()
 }
 for (const [label, file] of [
-  ['bundled', 'resources/srd/core/data/class/class-ranger.json'],
+  ['bundled', 'resources/srd/data/class/class-ranger.json'],
   ['configured', 'data/class/class-ranger.json'],
 ] as const) {
   test(`@focused ${label} Ranger Favored Enemy campaign confirmation saves, reopens, cancels and clears exactly`, async ({

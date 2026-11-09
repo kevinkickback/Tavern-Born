@@ -48,7 +48,7 @@ function totals(character: Character, primary = lookup(venom), raw = primary) {
 
 describe('fixed intrinsic weapon bonuses', () => {
   test('actual bundled items retain tags through parsing, copy resolution and layered cache persistence', async () => {
-    const input = JSON.parse(readFileSync('resources/srd/core/data/items.json', 'utf8'))
+    const input = JSON.parse(readFileSync('resources/srd/data/items.json', 'utf8'))
     const parsed = resolveCopiedRecords(parseItems(input) as Item5e[], 'item')
     expect(parsed.diagnostics).toEqual([])
     const dagger = parsed.records.find(

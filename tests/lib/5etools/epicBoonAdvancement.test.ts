@@ -27,7 +27,7 @@ const coreClasses = [
   'Wizard',
 ]
 const configuredClassDir = 'data/class'
-const bundledClassDir = 'resources/srd/core/data/class'
+const bundledClassDir = 'resources/srd/data/class'
 const owner = { name: 'Ranger', source: 'XPHB' }
 const uid = 'Epic Boon|Ranger|XPHB|19'
 const tagged = {

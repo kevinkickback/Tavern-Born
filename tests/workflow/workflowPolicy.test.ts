@@ -202,7 +202,7 @@ describe('trusted workflow policy', () => {
     const packageJson = JSON.parse(await readFile(resolve(process.cwd(), 'package.json'), 'utf8'))
 
     expect(packageJson.build.extraResources).toContainEqual({
-      from: 'resources/srd/core',
+      from: 'resources/srd',
       to: 'srd/core',
       filter: ['data/**/*', 'manifest.json', 'THIRD_PARTY_NOTICES.md'],
     })

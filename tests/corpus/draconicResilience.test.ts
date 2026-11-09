@@ -27,7 +27,7 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-sorcerer.json')) stacks.push(['local', 'data'])
 
 function reopen(actor: Character, result?: CharacterCommandResult) {
@@ -258,7 +258,7 @@ test.each(stacks)(
 
 test('only a complete owning native intro and leaf authorize Resilience across layers', async () => {
   const original = JSON.parse(
-    await readFile('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
+    await readFile('resources/srd/data/class/class-sorcerer.json', 'utf8'),
   )
   const actor = makeSorcerer('2024')
   const layer = (document: unknown) => {

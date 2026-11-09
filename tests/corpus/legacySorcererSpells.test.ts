@@ -80,7 +80,7 @@ beforeAll(async () => {
       { type, readJson: async (file) => JSON.parse(await readFile(resolve(root, file), 'utf8')) },
     ).loadAllData()
   data = composeGameDataLayers([
-    await load('bundled', 'resources/srd/core/data'),
+    await load('bundled', 'resources/srd/data'),
     await load('local', 'data'),
   ])
 })

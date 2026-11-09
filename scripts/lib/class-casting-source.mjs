@@ -6,7 +6,7 @@ export async function deriveClassCastingRegistry(
   server,
   root,
   targets,
-  bundledRoot = 'resources/srd/core/data',
+  bundledRoot = 'resources/srd/data',
 ) {
   const declarations = await server.ssrLoadModule(
     '/src/lib/5etools/optionalClassDeclarationStructure.ts',

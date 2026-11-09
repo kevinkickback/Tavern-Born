@@ -35,7 +35,7 @@ export function resolveBundledPackRoot({
   repositoryRoot: string
 }): string {
   if (isPackaged) return join(resourcesPath, 'srd/core')
-  return join(repositoryRoot, 'resources/srd/core')
+  return join(repositoryRoot, 'resources/srd')
 }
 
 export function assertBundledManifestAllowed(

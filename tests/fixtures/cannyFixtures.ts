@@ -30,10 +30,8 @@ export function makeCannyFixture(level = 1, change?: (document: RangerDocument) 
     ;(ranger.classFeatures as string[]).push('Deft Explorer|Ranger||1|TCE')
     change?.(document)
   })
-  f.data.skills = JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill
-  f.data.languages = JSON.parse(
-    readFileSync('resources/srd/core/data/languages.json', 'utf8'),
-  ).language
+  f.data.skills = JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill
+  f.data.languages = JSON.parse(readFileSync('resources/srd/data/languages.json', 'utf8')).language
   f.data.lookups = buildGameDataLookups(f.data)
   const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(f.data))
   let character: Character = {

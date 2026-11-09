@@ -191,7 +191,7 @@ test.skipIf(!existsSync(file))(
   () => {
     const parsed = parseClassDocument(JSON.parse(readFileSync(file, 'utf8')))
     const classes = parsed.classes as Class5e[]
-    const skills = JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill
+    const skills = JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill
     const languages = JSON.parse(readFileSync('data/languages.json', 'utf8'))
       .language as Language5e[]
     const catalogs = buildClassChoiceFeatureCatalogs({

@@ -47,7 +47,7 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-sorcerer.json')) stacks.push(['local', 'data'])
 const owner = {
   name: 'Sorcerer',
@@ -71,9 +71,7 @@ function reopen(actor: Character, result?: CharacterCommandResult) {
 }
 
 test('a copied subclass declaration or feature body cannot authorize the direct choice', async () => {
-  const data = JSON.parse(
-    await readFile('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
-  )
+  const data = JSON.parse(await readFile('resources/srd/data/class/class-sorcerer.json', 'utf8'))
   const native = data.subclass.find((row: Record<string, unknown>) => row.name === owner.subclass)
   const body = data.subclassFeature.find(
     (row: Record<string, unknown>) => row.name === 'Elemental Affinity' && row.source === 'XPHB',

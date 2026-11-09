@@ -13,12 +13,10 @@ import { makeNaturalExplorerFixture, type RangerDocument } from './naturalExplor
 export function makeFavoredEnemyFixture(
   level = 14,
   change?: (d: RangerDocument) => void,
-  file = 'resources/srd/core/data/class/class-ranger.json',
+  file = 'resources/srd/data/class/class-ranger.json',
 ) {
   const f = makeNaturalExplorerFixture(level, change, file)
-  f.data.languages = JSON.parse(
-    readFileSync('resources/srd/core/data/languages.json', 'utf8'),
-  ).language
+  f.data.languages = JSON.parse(readFileSync('resources/srd/data/languages.json', 'utf8')).language
   f.data.lookups = buildGameDataLookups(f.data)
   const choices = f.classData.normalizedRules!.choices.filter((c) => c.label === 'Favored Enemy')
   const catalogs = createClassChoiceCatalogs(buildClassChoiceFeatureCatalogs(f.data))

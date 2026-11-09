@@ -38,9 +38,7 @@ const expected = [
   ['Silver', 'Cold'],
   ['White', 'Cold'],
 ]
-const bundled = JSON.parse(
-  readFileSync('resources/srd/core/data/class/class-sorcerer.json', 'utf8'),
-)
+const bundled = JSON.parse(readFileSync('resources/srd/data/class/class-sorcerer.json', 'utf8'))
 const sourceFeature = bundled.subclassFeature.find(
   (feature: ClassFeature) => feature.name === 'Dragon Ancestor' && feature.source === 'PHB',
 ) as ClassFeature

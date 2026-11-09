@@ -128,7 +128,7 @@ describe.runIf(available)('configured source-owned Swords and Kensei setup', () 
     const trained = pick(f, f.character, 'Kensei ranged weapon', ['Longbow'])
     expect(trained.proficiencies.weapons).toContain('longbow')
     const data = parseClassDocument(
-      JSON.parse(readFileSync('resources/srd/core/data/class/class-rogue.json', 'utf8')),
+      JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8')),
     )
     const rogue = (data.classes as Class5e[]).find((row) => row.source === 'XPHB')!
     const mastery = rogue.normalizedRules!.choices.find((row) => row.optionFilter?.requiresMastery)!

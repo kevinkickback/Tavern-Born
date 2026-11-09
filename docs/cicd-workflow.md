@@ -64,7 +64,7 @@ does not authorize a README edit.
 
 Code/build, coverage parts and browser parts run independently after scope checks. Coverage collection
 uses `config/vitest.coverage-shard.ts`; partial coverage has no independent threshold decision. The
-required merge uses normal `vitest.config.ts`, checks both reports against dynamic test/source inventories,
+required merge uses `config/vitest.config.ts`, checks both reports against dynamic test/source inventories,
 and rejects missing, corrupt, duplicate or incomplete evidence before enforcing the existing floors.
 
 For a documentation-only PR, scope/document checks run and build/runtime workers skip. Both required
@@ -72,10 +72,10 @@ gates accept those skips only for that verified mode. On a code PR, every corres
 succeed. Gates run after dependency failure/cancellation and reject missing or unexpected results.
 Browser parts keep separate failure diagnostics. A new PR run cancels its predecessor; final-head
 checks qualify merge readiness. Required-name changes must be coordinated with branch protection.
-Root `vite.config.ts`, `vitest.config.ts` and `playwright.config.ts` retain normal tool discovery.
-`config/renderer.ts` shares renderer plugins/alias setup; `config/vite.e2e.ts` serves browser tests and
-data generators, and `config/playwright.electron.ts` configures desktop smoke. Root `index.html` is
-the renderer entry used by Vite and is required.
+The npm scripts select Vite, Vitest and Playwright configs under `config/`. The shared
+`config/renderer.ts` supplies renderer plugins and aliases. `config/vite.e2e.ts` serves browser tests
+and data generators. `config/playwright.electron.ts` configures desktop smoke. Root `index.html`
+remains the renderer entry.
 
 ## Independent review
 

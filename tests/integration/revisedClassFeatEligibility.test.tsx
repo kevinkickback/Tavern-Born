@@ -24,7 +24,7 @@ import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterSt
 import { makeClassCastingData } from '../fixtures/classCastingFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
-const read = (file: string) => JSON.parse(readFileSync(`resources/srd/core/data/${file}`, 'utf8'))
+const read = (file: string) => JSON.parse(readFileSync(`resources/srd/data/${file}`, 'utf8'))
 const feats = (parseFeats(read('feats.json')) as Feat5e[]).filter((feat) => feat.source === 'XPHB')
 const alert = feats.find((feat) => feat.name === 'Alert')!
 const combat = feats.find((feat) => feat.name === 'Boon of Combat Prowess')!

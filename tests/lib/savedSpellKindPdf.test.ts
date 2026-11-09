@@ -21,7 +21,7 @@ import {
 afterEach(resetCharacterStore)
 
 const tiefling = (
-  JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf8')) as { race: Race5e[] }
+  JSON.parse(readFileSync('resources/srd/data/races.json', 'utf8')) as { race: Race5e[] }
 ).race.find((race) => race.name === 'Tiefling' && race.source === 'PHB')!
 const templates = ['2014-official', '2014-custom', '2024-official', '2024-custom'] as const
 

@@ -21,7 +21,7 @@ describe('bundled resource boundary', () => {
   test('uses the committed bundle in development and packaged resources in release builds', async () => {
     const repositoryRoot = await mkdtemp(join(tmpdir(), 'tavern-born-repository-'))
     roots.push(repositoryRoot)
-    const managedRoot = join(repositoryRoot, 'resources', 'srd', 'core')
+    const managedRoot = join(repositoryRoot, 'resources', 'srd')
     await mkdir(managedRoot, { recursive: true })
 
     expect(

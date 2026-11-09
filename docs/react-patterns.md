@@ -32,9 +32,15 @@ writes cannot retrigger a mutation loop. This is a narrow safeguard, not a gener
 
 ## Content page layout
 
-Use [workspace layouts](contracts/workspaces.md) for pane state, accessible tabs and portrait
-coordinates. Character draft and pending-write preservation belongs to the
-[store contract](state-management.md#saved-library-transactions).
+Use `WorkspacePage`, `WorkspacePaneHeader` and `WorkspaceBody` for a flat page with a centered
+scrolling content column. `SplitPane` uses container width and separate compact pane selection
+and desktop collapse preferences. Selecting details on compact layouts opens its pane without
+changing desktop preferences. A collapsed desktop pane reserves zero space.
+
+Use `handleTabListKeyDown` for arrow, Home and End keys, with one tabbable selected tab and
+matching tab/panel ARIA relationships. Keep portrait attribution accessible. Portrait pan uses
+the card's 360 × 240 logical space and renders as card-relative percentages. Scale the whole
+preview uniformly and commit drag changes once at the end.
 
 ## Feature controller hooks
 
@@ -67,8 +73,19 @@ to the active character through its existing store and provenance commands.
 
 ## Rules preview manager
 
-Interactive 5etools content uses `GameContent` and the
-[shared preview contract](contracts/rules-previews.md), including creator draft context and modal integration.
+Interactive 5etools content uses `GameContent` and one root `RulesPreviewManager`. Creator triggers
+and nested references use the wizard's catalog. Triggers pass immutable descriptors so a pinned
+preview survives route changes and virtual row unmounts.
+
+Two transient shells roll forward without moving the shell under the pointer. An explicit pin
+action controls the one independent draggable snapshot. Escape closes the newest transient
+first and restores focus without reopening the trigger. Ordinary dialogs, menus and listboxes
+retain their own focus and Escape behavior.
+
+The creator hosts the stable portal inside its viewport-fixed modal boundary before Radix hides
+siblings. Host changes clear transient previews and preserve the pin. Use Floating UI with the
+existing collision fallback, hover corridors and fade-only entry. Preview scrolling stays
+inside its own shell.
 
 ## Spell presentation
 

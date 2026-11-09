@@ -55,7 +55,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
   it('loads the actual bundled and managed source stack with concrete shield item-choice targets', async () => {
     const failures: string[] = []
     vi.stubGlobal('electronAPI', {
-      readBundledJson: async (file: string) => readJson(resolve('resources/srd/core/data', file)),
+      readBundledJson: async (file: string) => readJson(resolve('resources/srd/data', file)),
       readLocalJson: async (file: string) => readJson(file),
     })
     try {

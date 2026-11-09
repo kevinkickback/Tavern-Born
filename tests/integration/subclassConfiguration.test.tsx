@@ -219,7 +219,7 @@ test('a partially available subclass gain keeps its generic fallback while showi
 })
 
 test('revised Hunter Builder shows one recovery row and keeps the unsaved group diagnostic', async () => {
-  const path = 'resources/srd/core/data/class/class-ranger.json'
+  const path = 'resources/srd/data/class/class-ranger.json'
   const document = JSON.parse(readFileSync(path, 'utf8'))
   const prey = "Hunter's Prey"
   const defense = 'Defensive Tactics'
@@ -323,9 +323,7 @@ test('unconfigured ancestry parent stays incomplete when the persisted subclass 
 })
 
 test('resolved Champion parent completes without a separate initial configuration', async () => {
-  const document = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-fighter.json', 'utf8'),
-  )
+  const document = JSON.parse(readFileSync('resources/srd/data/class/class-fighter.json', 'utf8'))
   const data = makeGameDataFixture({
     classes: parseClasses(document) as Class5e[],
     classFeatures: parseClassFeatures(document) as ClassFeature[],

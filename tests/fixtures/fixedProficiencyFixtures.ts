@@ -42,7 +42,7 @@ export function makeFixedSourceData(change?: (document: FixedSourceDocument) => 
 
 export function makeFixedCharacterFixture(name = 'Rogue', source = 'PHB') {
   const { data } = makeFixedSourceData()
-  data.skills = JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill
+  data.skills = JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill
   data.lookups = buildGameDataLookups(data)
   const character = makeCharacterFixture({
     race: '',

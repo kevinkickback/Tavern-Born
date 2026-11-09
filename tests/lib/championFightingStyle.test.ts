@@ -24,7 +24,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeOptionalClassSectionData } from '../fixtures/optionalClassSectionFixtures'
 
-const read = (file: string) => JSON.parse(readFileSync(`resources/srd/core/data/${file}`, 'utf8'))
+const read = (file: string) => JSON.parse(readFileSync(`resources/srd/data/${file}`, 'utf8'))
 const doc = parseClassDocument(read('class/class-fighter.json'), 'bundled-fighter')
 const feats = parseFeats(read('feats.json')) as Feat5e[]
 const optionalfeatures = parseOptionalFeatures(read('optionalfeatures.json'))

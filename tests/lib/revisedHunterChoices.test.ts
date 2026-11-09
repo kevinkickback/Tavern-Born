@@ -24,7 +24,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-const file = 'resources/srd/core/data/class/class-ranger.json'
+const file = 'resources/srd/data/class/class-ranger.json'
 const document = JSON.parse(readFileSync(file, 'utf8'))
 const prey = "Hunter's Prey"
 const defense = 'Defensive Tactics'

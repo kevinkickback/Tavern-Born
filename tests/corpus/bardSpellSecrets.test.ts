@@ -43,7 +43,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-const stacks = [['bundled', 'resources/srd/core/data']] as Array<['bundled' | 'local', string]>
+const stacks = [['bundled', 'resources/srd/data']] as Array<['bundled' | 'local', string]>
 if (existsSync('data/class/class-bard.json')) stacks.push(['local', 'data'])
 
 const load = (type: 'bundled' | 'local', root: string) =>

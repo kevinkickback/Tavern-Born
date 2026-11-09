@@ -25,8 +25,8 @@ export function makeKnowledgeFixture(
   const data = makeGameDataFixture({
     classes: parsed.classes as Class5e[],
     classFeatures: parsed.classFeatures as ClassFeature[],
-    skills: JSON.parse(readFileSync('resources/srd/core/data/skills.json', 'utf8')).skill,
-    languages: JSON.parse(readFileSync('resources/srd/core/data/languages.json', 'utf8')).language,
+    skills: JSON.parse(readFileSync('resources/srd/data/skills.json', 'utf8')).skill,
+    languages: JSON.parse(readFileSync('resources/srd/data/languages.json', 'utf8')).language,
     items: knowledgeSources.items.item as Item5e[],
   })
   data.lookups = buildGameDataLookups(data)

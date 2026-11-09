@@ -34,13 +34,12 @@ import { makeClassCastingData, makeClassCastingLayer } from '../fixtures/classCa
 
 const data = makeClassCastingData()
 const sourceLookup = JSON.parse(
-  readFileSync('resources/srd/core/data/generated/gendata-spell-source-lookup.json', 'utf8'),
+  readFileSync('resources/srd/data/generated/gendata-spell-source-lookup.json', 'utf8'),
 )
 const spells = parseSpells(
   ['phb', 'xphb'].flatMap(
     (source) =>
-      JSON.parse(readFileSync(`resources/srd/core/data/spells/spells-${source}.json`, 'utf8'))
-        .spell,
+      JSON.parse(readFileSync(`resources/srd/data/spells/spells-${source}.json`, 'utf8')).spell,
   ),
   { sourceLookup },
 )

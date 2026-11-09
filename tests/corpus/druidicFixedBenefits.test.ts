@@ -42,7 +42,7 @@ const reopen = (character: Character, result?: CharacterCommandResult) =>
   )
 
 const variants = [
-  ['bundled', 'resources/srd/core/data'],
+  ['bundled', 'resources/srd/data'],
   ...(existsSync('data/class/class-druid.json') ? [['local', 'data']] : []),
 ] as Array<['bundled' | 'local', string]>
 const readJson = async (path: string) => JSON.parse(await readFile(path, 'utf8'))

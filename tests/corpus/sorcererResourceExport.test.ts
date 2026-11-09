@@ -24,7 +24,7 @@ import {
 } from '../fixtures/optionalPoolRecoveryFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
-const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/core/data']]
+const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-sorcerer.json')) stacks.push(['local', 'data'])
 
 const printings = [

@@ -87,7 +87,7 @@ conflicts are reported rather than silently rewritten.
 
 ## Rules content and previews
 
-Interactive content uses sanitized `GameContent` and the [shared preview contract](contracts/rules-previews.md).
+Interactive content uses sanitized `GameContent` and the [shared preview contract](react-patterns.md#rules-preview-manager).
 Static PDF/compact projections may use the lower-level renderer explicitly.
 
 ## Character format compatibility

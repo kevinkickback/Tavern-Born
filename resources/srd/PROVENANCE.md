@@ -3,7 +3,7 @@
 Tavern Born's bundled SRD 1.0.0 pack completed its one-time provenance audit on 2026-09-20.
 The approved snapshot was produced from 5etools v2.35.1 at commit
 `e5d052071b635f58cc8006e9727053eaf78ea8f9` and compared with the exact official English SRD 5.1
-and SRD 5.2.1 documents pinned in `resources/srd/core/provenance.json`.
+and SRD 5.2.1 documents pinned in `resources/srd/provenance.json`.
 
 The final audit covered 3,102 distributed records:
 

@@ -21,11 +21,11 @@ import type { Class5e, ClassFeature, Feat5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 
-const path = 'resources/srd/core/data/class/class-ranger.json'
+const path = 'resources/srd/data/class/class-ranger.json'
 const parsed = parseClassDocument(JSON.parse(readFileSync(path, 'utf8')), path)
 const classes = (parsed.classes as Class5e[]).filter((row) => row.source === 'XPHB')
 const feats = (
-  JSON.parse(readFileSync('resources/srd/core/data/feats.json', 'utf8')) as {
+  JSON.parse(readFileSync('resources/srd/data/feats.json', 'utf8')) as {
     feat: Feat5e[]
   }
 ).feat

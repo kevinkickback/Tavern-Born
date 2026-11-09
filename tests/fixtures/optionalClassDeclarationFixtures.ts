@@ -24,7 +24,7 @@ export const optionalDeclarationSources: {
 /** The optional/casting source slices omit ordinary feature bodies. */
 export function addRangerArchetypeGain(document: OptionalDeclarationDocument) {
   const bundled = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-ranger.json', 'utf8'),
+    readFileSync('resources/srd/data/class/class-ranger.json', 'utf8'),
   ) as OptionalDeclarationDocument
   const gain = bundled.classFeature.find(
     (row) => row.name === 'Ranger Archetype' && row.source === 'PHB' && row.level === 3,

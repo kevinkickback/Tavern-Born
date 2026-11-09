@@ -763,7 +763,7 @@ test.skipIf(
 )
 
 test('retains the fixed revised Druid focus lot through missing or ambiguous source rules', () => {
-  const root = 'resources/srd/core/data'
+  const root = 'resources/srd/data'
   const read = (file: string) => JSON.parse(readFileSync(`${root}/${file}`, 'utf8'))
   const cls = (parseClassDocument(read('class/class-druid.json')).classes as Class5e[]).find(
     (row) => row.name === 'Druid' && row.source === 'XPHB',

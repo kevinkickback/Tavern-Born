@@ -59,7 +59,7 @@ let bundled: GameData
 const dataByPack = new Map<string, GameData>()
 
 function loadLayer(type: 'bundled' | 'local') {
-  const root = type === 'bundled' ? 'resources/srd/core/data' : 'data'
+  const root = type === 'bundled' ? 'resources/srd/data' : 'data'
   return new FiveEToolsDataLoader(
     type === 'bundled'
       ? {
@@ -1254,7 +1254,7 @@ test.skipIf(!packs.includes('composed'))(
 )
 
 async function rawRevisedFiendFixture() {
-  const raw = JSON.parse(await readFile('resources/srd/core/data/class/class-warlock.json', 'utf8'))
+  const raw = JSON.parse(await readFile('resources/srd/data/class/class-warlock.json', 'utf8'))
   const exact = (row: SubclassFeature, name: string) =>
     row.name === name &&
     row.classSource === 'XPHB' &&

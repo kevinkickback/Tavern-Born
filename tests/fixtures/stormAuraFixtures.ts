@@ -20,7 +20,7 @@ export interface StormDocument {
 // Controlled source-shaped examples, not a distributed XGE rules pack.
 function makeStormDocument(): StormDocument {
   const document = JSON.parse(
-    readFileSync('resources/srd/core/data/class/class-barbarian.json', 'utf8'),
+    readFileSync('resources/srd/data/class/class-barbarian.json', 'utf8'),
   ) as StormDocument
   const uid = (name: string, level: number) => `${name}|Barbarian|PHB|Storm Herald|XGE|${level}|XGE`
   const ref = (name: string, level: number) => ({

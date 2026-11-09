@@ -27,7 +27,7 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 const fighterDocument = 'data/class/class-fighter.json'
-const bundledDocument = 'resources/srd/core/data/class/class-fighter.json'
+const bundledDocument = 'resources/srd/data/class/class-fighter.json'
 const configuredTest = test.skipIf(!existsSync(fighterDocument))
 const read = (file: string) => JSON.parse(readFileSync(file, 'utf8'))
 const parse = (document: unknown) => parseClassDocument(document).classes as Class5e[]
@@ -57,7 +57,7 @@ function configuredData(...documents: string[]) {
   return makeGameDataFixture({
     classes: parsed.flatMap((row) => row.classes) as GameData['classes'],
     classFeatures: parsed.flatMap((row) => row.classFeatures) as GameData['classFeatures'],
-    skills: read('resources/srd/core/data/skills.json').skill,
+    skills: read('resources/srd/data/skills.json').skill,
     languages: [{ name: 'Dwarvish', source: 'PHB' }],
   })
 }

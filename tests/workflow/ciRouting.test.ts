@@ -62,7 +62,7 @@ describe('whole-PR routing', () => {
     'src/example.ts',
     'docs/runtime.ts',
     'docs/assets/icon.png',
-    'resources/srd/core/THIRD_PARTY_NOTICES.md',
+    'resources/srd/THIRD_PARTY_NOTICES.md',
     '.github/workflows/ci.yml',
     'package-lock.json',
     'docs/../src/guide.md',

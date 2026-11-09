@@ -256,7 +256,7 @@ test('fixed providers share one actual feat option allowance and retain it when 
   f.character.specialFeats = []
   f.character.provenance.feats = {}
   const human = (
-    JSON.parse(readFileSync('resources/srd/core/data/races.json', 'utf8')).race as Race5e[]
+    JSON.parse(readFileSync('resources/srd/data/races.json', 'utf8')).race as Race5e[]
   ).find((race) => race.name === 'Human' && race.source === 'PHB')!
   const raceResult = applyRaceSelectionCommand(
     f.character,

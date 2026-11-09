@@ -485,11 +485,10 @@ describe('FeatsPage bonus feat configuration', () => {
   })
 
   test('a retained Epic Boon reserves its slot and disappears from active Feats on source loss', () => {
-    const path = 'resources/srd/core/data/class/class-ranger.json'
+    const path = 'resources/srd/data/class/class-ranger.json'
     const parsed = parseClassDocument(JSON.parse(readFileSync(path, 'utf8')), path)
     const classes = (parsed.classes as Class5e[]).filter((row) => row.source === 'XPHB')
-    const feats = JSON.parse(readFileSync('resources/srd/core/data/feats.json', 'utf8'))
-      .feat as Feat5e[]
+    const feats = JSON.parse(readFileSync('resources/srd/data/feats.json', 'utf8')).feat as Feat5e[]
     const boon = feats.find((row) => row.name === 'Boon of Combat Prowess')!
     boonData = { classes, classFeatures: parsed.classFeatures as ClassFeature[], feats: [boon] }
     try {

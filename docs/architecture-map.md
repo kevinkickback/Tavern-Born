@@ -82,7 +82,7 @@ exception into another resolver. See [Reference resolution](contracts/reference-
 User-facing 5etools content goes through `GameContent`, which provides sanitization and source-aware
 recursive previews. PDFs and compact noninteractive projections may use the lower-level string
 renderer explicitly. Preview positioning and the shared pinned/transient chain belong to
-RulesPreviewManager and Floating UI helpers. The [preview contract](contracts/rules-previews.md)
+RulesPreviewManager and Floating UI helpers. The [preview contract](react-patterns.md#rules-preview-manager)
 records current creator integration limits.
 
 ### Assets and responsive workspaces
