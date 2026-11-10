@@ -218,7 +218,13 @@ export async function fillCharacterSheetDocument(
     clearAttackModDropdowns(fieldIndex)
     stripFormActions(form, fields)
     makeCalculatedFieldsEditable(fieldIndex)
-    fitMpmbText(form, fieldIndex, fields.textFields, onTextTruncated)
+    fitMpmbText(
+      form,
+      fieldIndex,
+      fields.textFields,
+      onTextTruncated,
+      options.paragraphsReservedForOverflow,
+    )
     enlargeMpmbSpellAbilityModifiers(form, fieldIndex)
     updateDirtyFieldAppearances(form)
     alignMpmbRuledText(form, fieldIndex)
@@ -232,7 +238,11 @@ export async function fillCharacterSheetDocument(
         options.paragraphsReservedForOverflow,
       )
     if (options.templateId === '2014-official')
-      normalizeOfficial2014TextAppearances(form, onTextTruncated)
+      normalizeOfficial2014TextAppearances(
+        form,
+        onTextTruncated,
+        options.paragraphsReservedForOverflow,
+      )
     updateDirtyFieldAppearances(form)
   }
   replaceCheckboxOffAppearances(pdfDoc, form, options.templateId)
@@ -323,11 +333,20 @@ function updateDirtyFieldAppearances(form: ReturnType<PDFDocument['getForm']>) {
   }
 }
 
+function withoutReservedParagraphs(value: string, reserved: ReadonlySet<string> | undefined) {
+  if (!reserved?.size) return value
+  return value
+    .split('\n\n')
+    .filter((paragraph) => !reserved.has(paragraph))
+    .join('\n\n')
+}
+
 function fitMpmbText(
   form: ReturnType<PDFDocument['getForm']>,
   fieldIndex: FieldIndex,
   values: Record<string, string>,
   onTextTruncated: (name: string) => void,
+  paragraphsReservedForOverflow?: ReadonlySet<string>,
 ) {
   const font = form.getDefaultFont()
   for (const name of Object.keys(values)) {
@@ -340,23 +359,26 @@ function fitMpmbText(
     const isLargeNumber = MPMB_LARGE_NUMBER_FIELDS.has(name)
     if (name === 'HP Current') field.disableMultiline()
     if (isLargeNumber) field.setAlignment(TextAlignment.Center)
-    const fitted = fitPdfText(
-      field.getText() ?? '',
-      font,
-      width,
-      height,
-      {
-        min: isLargeNumber ? 16 : field.isMultiline() ? 8 : 7,
-        max: isLargeNumber ? 18 : field.isMultiline() ? 9 : 11,
-        multiline: field.isMultiline(),
-      },
-      widget.getBorderStyle()?.getWidth() ?? 0,
-    )
-    field.setText(fitted.text)
-    field.setFontSize(fitted.fontSize)
+    const value = field.getText() ?? ''
+    const multiline = field.isMultiline()
+    const bounds = {
+      min: isLargeNumber ? 16 : multiline ? 8 : 7,
+      max: isLargeNumber ? 18 : multiline ? 9 : 11,
+      multiline,
+    }
+    const borderWidth = widget.getBorderStyle()?.getWidth() ?? 0
+    const fitted = fitPdfText(value, font, width, height, bounds, borderWidth)
+    const main =
+      fitted.truncated && name === 'Class Features'
+        ? withoutReservedParagraphs(value, paragraphsReservedForOverflow)
+        : value
+    const visible =
+      main === value ? fitted : fitPdfText(main, font, width, height, bounds, borderWidth)
+    field.setText(visible.text)
+    field.setFontSize(visible.fontSize)
     const appearance = PDFString.of(field.acroField.getDefaultAppearance() ?? '')
     for (const item of field.acroField.getWidgets()) item.dict.set(PDFName.of('DA'), appearance)
-    field.acroField.dict.set(PDFName.of('DV'), PDFHexString.fromText(fitted.text))
+    field.acroField.dict.set(PDFName.of('DV'), PDFHexString.fromText(visible.text))
     field.defaultUpdateAppearances(font)
     if (fitted.truncated) onTextTruncated(name)
   }
@@ -380,6 +402,7 @@ function enlargeMpmbSpellAbilityModifiers(
 function normalizeOfficial2014TextAppearances(
   form: ReturnType<PDFDocument['getForm']>,
   onTextTruncated?: (fieldName: string) => void,
+  paragraphsReservedForOverflow?: ReadonlySet<string>,
 ) {
   const font = form.getDefaultFont()
   for (const field of form.getFields()) {
@@ -413,8 +436,16 @@ function normalizeOfficial2014TextAppearances(
         )
         if (!spaced.truncated) fitted = spaced
       }
-      fontSize = fitted.fontSize
-      if (fitted.text !== field.getText()) field.setText(fitted.text)
+      const main =
+        fitted.truncated && field.getName() === 'Features and Traits'
+          ? withoutReservedParagraphs(value, paragraphsReservedForOverflow)
+          : value
+      const visible =
+        main === value
+          ? fitted
+          : fitPdfText(main, font, width, height, { ...bounds, multiline }, borderWidth)
+      fontSize = visible.fontSize
+      if (visible.text !== value) field.setText(visible.text)
       if (fitted.truncated) onTextTruncated?.(field.getName())
     }
     field.setFontSize(fontSize)
@@ -481,13 +512,8 @@ function fit2024TextAppearances(
     if (!fitted) continue
     // The full field goes to Notes on overflow. Keep each qualified note whole and in one place.
     const main =
-      fitted.truncated &&
-      paragraphsReservedForOverflow?.size &&
-      (field.getName() === 'Text_57' || field.getName() === 'Text_58')
-        ? value
-            .split('\n\n')
-            .filter((row) => !paragraphsReservedForOverflow.has(row))
-            .join('\n\n')
+      fitted.truncated && (field.getName() === 'Text_57' || field.getName() === 'Text_58')
+        ? withoutReservedParagraphs(value, paragraphsReservedForOverflow)
         : value
     const visible = main === value ? fitted : (fit(main) ?? { ...fitted, text: '' })
     if (visible.text !== value) field.setText(visible.text)
