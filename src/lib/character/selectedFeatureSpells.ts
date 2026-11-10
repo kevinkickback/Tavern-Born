@@ -265,7 +265,14 @@ export function getSelectedFeatureCantripSetups(
           rule.declaration.level,
           entry.levels,
         )
-      if (!casting || norm(casting.effective.spellcastingAbility) !== block.ability)
+      if (
+        !casting ||
+        norm(casting.effective.spellcastingAbility) !== block.ability ||
+        (casting.templateSources &&
+          ![casting.declaration.feature.source, ...casting.templateSources].every((source) =>
+            permitted(allowed, source),
+          ))
+      )
         return deny('Restore this class’s casting source and matching feature casting ability.')
       return [setup]
     }),

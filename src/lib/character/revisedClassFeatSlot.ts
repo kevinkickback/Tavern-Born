@@ -13,6 +13,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
+import { permitted, sources } from './classSpellAuthority'
 
 function hasOpenFeatDeclaration(
   cls: Class5e,
@@ -78,6 +79,7 @@ function progressionAtGain(
 function getEarnedSpellcasting(
   progression: readonly CharacterClassEntry[],
   catalogs: ClassChoiceFeatureCatalogs,
+  allowed: ReadonlySet<string> | undefined,
 ): boolean | undefined {
   let unverified = false
   const found = progression.some((entry) => {
@@ -108,7 +110,14 @@ function getEarnedSpellcasting(
           : undefined,
       )
       const current = getCurrentClassCastingProducer(scoped, owner, target, level)
-      if (current && /^(spellcasting|pact magic)$/i.test(current.declaration.feature.name))
+      if (
+        current &&
+        /^(spellcasting|pact magic)$/i.test(current.declaration.feature.name) &&
+        (!current.templateSources ||
+          [entry.source, current.declaration.feature.source, ...current.templateSources].every(
+            (source) => permitted(allowed, source),
+          ))
+      )
         return true
       unverified = true
     } else if (!declaration) {
@@ -158,7 +167,8 @@ export function getRevisedClassFeatSlot(
 
   const known = progressionAtGain(character, owner, request.level)
   const progression = known ?? [{ ...owner, levels: request.level }]
-  const earnedSpellcasting = getEarnedSpellcasting(progression, catalogs)
+  const allowed = sources(character)
+  const earnedSpellcasting = getEarnedSpellcasting(progression, catalogs, allowed)
   return {
     openFeatCategories: hasOpenFeatDeclaration(cls, request.level, catalogs),
     progression,
@@ -168,7 +178,7 @@ export function getRevisedClassFeatSlot(
     hasSpellcastingFeature:
       earnedSpellcasting === false &&
       !known &&
-      getEarnedSpellcasting(character.classProgression, catalogs) !== false
+      getEarnedSpellcasting(character.classProgression, catalogs, allowed) !== false
         ? undefined
         : earnedSpellcasting,
   }

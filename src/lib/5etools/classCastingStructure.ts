@@ -1,3 +1,4 @@
+import type { ClassFeature } from '@/types/5etools'
 import type { ClassPreparationRule } from '@/types/classCasting'
 import { getParsedClassSpellSlotProgression } from './classSpellSlotTable'
 import {
@@ -141,6 +142,66 @@ export function getClassCastingRoots(row: Row, target: string): unknown[] {
         )
       })
     : []
+}
+
+const featureDisplayFields = new Set([
+  'name',
+  'className',
+  'classSource',
+  'source',
+  'level',
+  'page',
+  'srd',
+  'srd52',
+  'basicRules',
+  'basicRules2024',
+])
+const focusItem = '\\{@item [^{}|]+\\|[^{}|]+\\}'
+const focusPermission = new RegExp(
+  `^You can use (?:a|an) ${focusItem}(?: \\(not (?:a|an) ${focusItem}\\))? as a \\{@variantrule Spellcasting Focus\\|[^{}|]+\\} for your [\\p{L}\\p{N} '’-]+ spells\\.$`,
+  'u',
+)
+
+/** A direct replacement may change the permitted focus equipment without changing picker rules. */
+export function hasEquivalentReplacementSpellcasting(
+  replacement: ClassFeature,
+  template: ClassFeature,
+) {
+  const project = (feature: ClassFeature, omitFocus: boolean) => {
+    let focusCount = 0
+    const visit = (entries: unknown[], depth = 0): unknown[] =>
+      entries.map((value) => {
+        const row = optionalDeclarationObject(value)
+        if (!Array.isArray(row.entries)) return value
+        if (
+          row.type === 'entries' &&
+          row.name === 'Spellcasting Focus' &&
+          Object.keys(row).length === 3 &&
+          row.entries.length === 1 &&
+          typeof row.entries[0] === 'string' &&
+          focusPermission.test(row.entries[0])
+        ) {
+          focusCount++
+          return { ...row, entries: [] }
+        }
+        return depth < 2 ? { ...row, entries: visit(row.entries, depth + 1) } : value
+      })
+    const fields = Object.fromEntries(
+      Object.entries(feature).filter(([key]) => !featureDisplayFields.has(key)),
+    )
+    if (omitFocus && Array.isArray(fields.entries)) fields.entries = visit(fields.entries)
+    return { digest: optionalDeclarationDigest(fields), focusCount }
+  }
+  const exact = project(replacement, false).digest
+  if (exact && exact === project(template, false).digest) return true
+  const actual = project(replacement, true)
+  const expected = project(template, true)
+  return (
+    actual.focusCount === 1 &&
+    expected.focusCount === 1 &&
+    !!actual.digest &&
+    actual.digest === expected.digest
+  )
 }
 
 /** Generation arithmetic is classified before schedules are admitted as numeric acquisitions. */

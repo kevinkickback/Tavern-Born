@@ -181,6 +181,7 @@ function resolveSlot(
       owner[2],
       ...(owner[0] === 'subclass' ? [owner[4]] : []),
       authority.declaration.feature.source,
+      ...(authority.templateSources ?? []),
       ...(authority.provider ? [authority.provider.source] : []),
     ].every((source) => permitted(allowed, source))
   )

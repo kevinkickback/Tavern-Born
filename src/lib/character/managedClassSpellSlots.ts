@@ -18,6 +18,7 @@ import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRule
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
+import { sources as characterSources, permitted } from './classSpellAuthority'
 import type { ClassChoicePrerequisiteContext } from './effectiveClassChoiceFeatures'
 import { getManagedClassSpellOwnerEntry, managedClassSpellId } from './managedClassSpellIdentity'
 import { getSelectedFeatureCantripSlots } from './selectedFeatureSpells'
@@ -31,15 +32,23 @@ export function getManagedClassSpellSlots(
 ): ManagedClassSpellSlot[] {
   const sources = catalogs?.classCastingSources
   const { rule, owner } = getClassSpellProfilePolicy(entry, sources)
-  const currentRule = (producer: CastingProducerRule) =>
-    !catalogs ||
-    !isCatalogCastingCopyOwner(owner) ||
-    !!getCurrentClassCastingProducer(
+  const allowed = character && characterSources(character)
+  const currentRule = (producer: CastingProducerRule) => {
+    if (!catalogs || !isCatalogCastingCopyOwner(owner)) return true
+    const current = getCurrentClassCastingProducer(
       catalogs,
       owner,
       producer.declaration.target,
       producer.declaration.level,
     )
+    return (
+      !!current &&
+      (!current.templateSources ||
+        [entry.source ?? '', current.declaration.feature.source, ...current.templateSources].every(
+          (source) => permitted(allowed, source),
+        ))
+    )
+  }
   const domains: Extract<
     ManagedClassSpellDomain,
     'class-cantrip' | 'class-known' | 'class-spellbook'

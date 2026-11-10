@@ -83,6 +83,7 @@ export function deriveCurrentClassCasting(
           owner[2],
           ...(owner[0] === 'subclass' ? [owner[4]] : []),
           current.declaration.feature.source,
+          ...(current.templateSources ?? []),
         ].every((source) => permitted(allowed, source))
       )
         unearnedProfiles.push(id)
@@ -95,6 +96,7 @@ export function deriveCurrentClassCasting(
         owner[2],
         ...(owner[0] === 'subclass' ? [owner[4]] : []),
         access.declaration.feature.source,
+        ...(access.templateSources ?? []),
         ...(access.provider ? [access.provider.source] : []),
       ].every((source) => permitted(allowed, source))
     )

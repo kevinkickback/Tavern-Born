@@ -5,12 +5,14 @@ import {
   getStandardSpellSlotProvider,
   type SpellSlotRuleset,
 } from '@/lib/calculations/spellSlots'
-import type { Class5e, GameData } from '@/types/5etools'
+import type { Class5e, ClassFeature, GameData } from '@/types/5etools'
 import type { ClassCastingSourceProof } from '@/types/classCasting'
 import {
   CLASS_CASTING_PRODUCERS,
   getClassCastingCopyParent,
   getClassCastingProducersForOwner,
+  getReplacementSpellcasting,
+  replacementSpellcastingAddress,
 } from './classCastingRules'
 import generated from './classCastingRuntime.generated'
 import {
@@ -23,9 +25,10 @@ import {
   getCastingParentOwner,
   getClassCastingRoots,
   getPlainCastingCopyParent,
+  hasEquivalentReplacementSpellcasting,
 } from './classCastingStructure'
 import { getEffectiveSpellcastingClassData } from './classData'
-import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import { getClassFeatureIdentity, getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import { createDeclarationSourceAccess, type DeclarationCatalog } from './declarationSourceAccess'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
 import {
@@ -40,6 +43,7 @@ import {
 
 export interface ClassCastingCatalog extends DeclarationCatalog {
   classCastingSources?: readonly ClassCastingSourceProof[]
+  ambiguousClassFeatureTargets?: ReadonlySet<string>
 }
 export { CLASS_CASTING_PRODUCERS } from './classCastingRules'
 
@@ -153,27 +157,64 @@ const currentDeclarations = declarationPacks.map((rules) => {
   }
 })
 
-function auditCopiedCastingTargets(row: Record<string, unknown>, owner: OptionalDeclarationOwner) {
-  if (!Array.isArray(row.classFeatures)) return []
-  const refs = row.classFeatures.flatMap((value) => {
+function classRootDeclarations(row: Record<string, unknown>) {
+  return (Array.isArray(row.classFeatures) ? row.classFeatures : []).map((value) => {
     const raw = optionalDeclarationObject(value)
     const uid = typeof value === 'string' ? value : raw.classFeature
+    return { raw, uid }
+  })
+}
+
+function isSpellcastingRoot({ raw, uid }: ReturnType<typeof classRootDeclarations>[number]) {
+  return (
+    (typeof uid === 'string' && uid.split('|', 1)[0].trim().toLowerCase() === 'spellcasting') ||
+    (typeof raw.name === 'string' && raw.name.trim().toLowerCase() === 'spellcasting')
+  )
+}
+
+function auditCopiedCastingTargets(
+  row: Record<string, unknown>,
+  owner: OptionalDeclarationOwner,
+  parent: OptionalDeclarationOwner,
+) {
+  const roots = classRootDeclarations(row)
+  const spellcastingRoots = roots.filter(isSpellcastingRoot)
+  const refs = roots.flatMap(({ raw, uid }) => {
     const decoded = typeof uid === 'string' && decodeOptionalDeclaration(uid, 'classFeature')
     return typeof uid === 'string' && decoded ? [{ raw, uid, ...decoded }] : []
   })
-  return getClassCastingProducersForOwner(owner).flatMap(({ declaration }) => {
+  return getClassCastingProducersForOwner(parent).flatMap(({ declaration }) => {
     const root = decodeOptionalDeclaration(declaration.path[0].uid, 'classFeature')
     const name = root?.decoded.name.trim().toLowerCase()
     const atGain = refs.filter(
       ({ decoded }) =>
         decoded.level === declaration.level && decoded.name.trim().toLowerCase() === name,
     )
-    return atGain.length === 1 &&
+    if (name === 'spellcasting' && spellcastingRoots.length !== 1) return []
+    if (
+      atGain.length === 1 &&
       atGain[0].target === declaration.target &&
       exactOptionalDeclarationReference(atGain[0].raw, atGain[0].uid, 'classFeature')
-      ? [declaration.target]
-      : []
+    )
+      return [declaration.target]
+    const candidate = atGain[0]
+    if (
+      name !== 'spellcasting' ||
+      atGain.length !== 1 ||
+      !isDirectReplacementRoot(candidate.raw, candidate.uid)
+    )
+      return []
+    const address = replacementSpellcastingAddress(candidate.target, declaration.target)
+    return getReplacementSpellcasting(owner, address) ? [address] : []
   })
+}
+
+function isDirectReplacementRoot(row: Record<string, unknown>, uid: string) {
+  return (
+    Object.keys(row).every((key) =>
+      ['classFeature', 'name', 'className', 'classSource', 'source', 'level'].includes(key),
+    ) && exactOptionalDeclarationReference(row, uid, 'classFeature')
+  )
 }
 
 /** Raw exact-one dependency evidence is captured before class/feature Maps can collapse it. */
@@ -227,7 +268,7 @@ export function auditClassCastingSources(
         target,
         certificate,
         origin: origin + ':' + target,
-        copyTargets: prepared ? auditCopiedCastingTargets(prepared, parent) : [],
+        copyTargets: prepared ? auditCopiedCastingTargets(prepared, owner, parent) : [],
         verified:
           target !== certificate &&
           !!prepared &&
@@ -351,12 +392,16 @@ function getNativeClassCastingProducer(
   return { rule, declaration, effective }
 }
 
+type CurrentClassCastingProducer = NonNullable<ReturnType<typeof getNativeClassCastingProducer>> & {
+  templateSources?: readonly string[]
+}
+
 export function getCurrentClassCastingProducer(
   catalog: ClassCastingCatalog,
   owner: OptionalDeclarationOwner,
   target: string,
   level: number,
-) {
+): CurrentClassCastingProducer | undefined {
   const parent = getClassCastingCopyParent(owner, proofs(catalog))
   if (!parent) return getNativeClassCastingProducer(catalog, owner, target, level)
   const ownerKey = JSON.stringify(owner)
@@ -380,7 +425,23 @@ export function getCurrentClassCastingProducer(
     !evidence[0].copyTargets.includes(target)
   )
     return undefined
-  const current = getNativeClassCastingProducer(catalog, parent, target, level)
+  const replacement = getReplacementSpellcasting(owner, target)
+  if (
+    replacement &&
+    (replacement.rule.parent !== JSON.stringify(parent) ||
+      evidence[0].copyTargets.includes(replacement.template) ||
+      evidence[0].copyTargets.filter(
+        (candidate: string) =>
+          getReplacementSpellcasting(owner, candidate)?.template === replacement.template,
+      ).length !== 1)
+  )
+    return undefined
+  const current = getNativeClassCastingProducer(
+    catalog,
+    parent,
+    replacement?.template ?? target,
+    level,
+  )
   const classData = found[0]
   const comparisonIdentity = current && parentIdentities.get(current.rule.parent)
   const parentRule = current && parents.get(current.rule.parent)
@@ -395,15 +456,65 @@ export function getCurrentClassCastingProducer(
   )
     return undefined
 
+  if (replacement) {
+    const refs = classData.classFeatureRefs?.filter(
+      (ref) => ref.name.trim().toLowerCase() === 'spellcasting',
+    )
+    if (refs?.length !== 1 || catalog.ambiguousClassFeatureTargets?.has(replacement.target))
+      return undefined
+    const roots = classRootDeclarations(classData).filter(isSpellcastingRoot)
+    if (roots.length !== 1) return undefined
+    const [{ raw, uid }] = roots
+    if (typeof uid !== 'string' || !isDirectReplacementRoot(raw, uid)) return undefined
+    const attached = refs[0].feature
+    const digest = attached && optionalDeclarationDigest(attached)
+    const listed = catalog.classFeatures.filter(
+      (row) => getClassFeatureIdentity(row) === replacement.target,
+    )
+    if (!digest || listed.length !== 1 || optionalDeclarationDigest(listed[0]) !== digest)
+      return undefined
+    const feature = getCurrentDirectClassFeature(
+      classData,
+      catalog,
+      replacement.target,
+      (candidate) =>
+        [candidate.name, candidate.className, candidate.classSource, candidate.source].every(
+          (part) => typeof part === 'string' && !!part.trim(),
+        ) &&
+        optionalDeclarationDigest(candidate) === digest &&
+        hasEquivalentReplacementSpellcasting(
+          candidate,
+          current.declaration.feature as ClassFeature,
+        ),
+    )
+    if (!feature) return undefined
+    return {
+      rule: replacement.rule,
+      declaration: {
+        ...current.declaration,
+        classData,
+        parent: classData,
+        reference: refs[0],
+        feature,
+      },
+      effective: classData,
+      templateSources: [current.declaration.classData.source, current.declaration.feature.source],
+    }
+  }
+
   const roots = getClassCastingRoots(classData, target)
   const nativeRoots = getClassCastingRoots(current.declaration.classData, target)
   const name = current.declaration.feature.name.trim().toLowerCase()
   const refs = classData.classFeatureRefs?.filter(
-    (row) => row.name.trim().toLowerCase() === name && getClassFeatureReferenceLevel(row) === level,
+    (row) =>
+      row.name.trim().toLowerCase() === name &&
+      (name === 'spellcasting' || getClassFeatureReferenceLevel(row) === level),
   )
   if (
     roots.length !== 1 ||
     nativeRoots.length !== 1 ||
+    (name === 'spellcasting' &&
+      classRootDeclarations(classData).filter(isSpellcastingRoot).length !== 1) ||
     optionalDeclarationDigest(roots) !== optionalDeclarationDigest(nativeRoots) ||
     refs?.length !== 1 ||
     !getCurrentDirectClassFeature(

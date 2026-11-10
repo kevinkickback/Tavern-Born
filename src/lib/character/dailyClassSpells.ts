@@ -98,6 +98,7 @@ export function getDailyClassSpellAccess(
     ![
       entry.source,
       current.declaration.feature.source,
+      ...(current.templateSources ?? []),
       ...(current.provider ? [current.provider.source] : []),
     ].every((source) => permitted(allowed, source))
   )

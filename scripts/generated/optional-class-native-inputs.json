@@ -162,7 +162,7 @@
     },
     {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "a2ead4b4c4a765c8cce8be1255a2f9887f6139633f7f3650c66db2085489d271"
+      "sha256": "5879331f736a54f71bc48783e20efa30c40b44032705806119995e661efd5a75"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
@@ -170,11 +170,11 @@
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
-      "sha256": "99462cdb9150bb781bf2cfde2f194a0a7ff86fe83e734393073dbe5298e425b3"
+      "sha256": "66f59cb4652a582c07695df6eb38fe6cd23edf80b245c18ca0e940618e1e7849"
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "3b5ba1ed0f004d195f4ef04dba753588061a34607c3e69713f1c2eb99bbf2739"
+      "sha256": "adc0f6a16e46144cfe85714449c30fcfa4c15844e8183edf6b582aabcfbd9952"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -706,7 +706,7 @@
     },
     {
       "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
-      "sha256": "a1ad8d7141c849b43111d06d2bb739b5924a7dd4eff7abdb1e38929277fb5486"
+      "sha256": "a923333aa872d8ab8a046bf6d298c83c8406549117e047fef9b4c5885365a0b2"
     },
     {
       "file": "src/lib/character/classChoiceFilters.ts",

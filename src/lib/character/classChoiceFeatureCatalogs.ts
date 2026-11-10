@@ -63,6 +63,7 @@ export type ScopedClassChoiceFeatureCatalogs = Pick<
   | 'legacySubclassChoices'
   | 'psionics'
   | 'classFeatureCandidates'
+  | 'ambiguousClassFeatureTargets'
   | 'subclassFeatures'
   | 'subclassFeatureCandidates'
   | 'skills'
@@ -117,6 +118,7 @@ export function scopeClassChoiceFeatureCatalogs(
     optionalFeatures: catalogs.optionalFeatures,
     optionalFeatureCandidates: catalogs.optionalFeatureCandidates,
     classFeatureCandidates: catalogs.classFeatureCandidates,
+    ambiguousClassFeatureTargets: catalogs.ambiguousClassFeatureTargets,
     subclassFeatures: [...(targets?.values() ?? [])],
     subclassFeatureCandidates: candidates ?? new Map(),
   }

@@ -1,7 +1,10 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { beforeAll, describe, expect, test } from 'vitest'
-import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
+import {
+  getClassSpellProfilePolicy,
+  replacementSpellcastingAddress,
+} from '@/lib/5etools/classCastingRules'
 import { getCurrentClassCastingProducer } from '@/lib/5etools/classCastingSource'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
@@ -61,6 +64,7 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 const sources = ['XPHB', 'WoW']
 const available = [
   'class/class-deathknight.json',
+  'class/class-demonhunter.json',
   'class/class-warlock.json',
   'class/class-cleric.json',
   'generated/gendata-spell-source-lookup.json',
@@ -100,10 +104,35 @@ describe.runIf(available)('configured inherited class progression', () => {
               source,
               _copy: { name: parent, source: 'XPHB' },
             })
+            if (parent === 'Cleric' && actor === 'Lightkeeper') {
+              const original = document.class.find(
+                (row: { source: string }) => row.source === 'XPHB',
+              )
+              const root = document.classFeature.find(
+                (row: { source: string; name: string }) =>
+                  row.source === 'XPHB' && row.name === 'Spellcasting',
+              )
+              document.class.push({
+                name: 'Wardkeeper',
+                source,
+                _copy: { name: parent, source: 'XPHB' },
+                classFeatures: original.classFeatures.map((ref: unknown) =>
+                  ref === 'Spellcasting|Cleric|XPHB|1'
+                    ? `Spellcasting|Wardkeeper|${source}|1`
+                    : ref,
+                ),
+              })
+              document.classFeature.push({
+                ...root,
+                className: 'Wardkeeper',
+                classSource: source,
+                source,
+              })
+            }
           }
           if (source === 'EXAMPLE' && file === 'generated/gendata-spell-source-lookup.json') {
             for (const name of ['sacred flame', 'cure wounds']) {
-              document.xphb[name].class.EXAMPLE = { Lightkeeper: true }
+              document.xphb[name].class.EXAMPLE = { Lightkeeper: true, Wardkeeper: true }
             }
           }
           return document
@@ -724,6 +753,188 @@ describe.runIf(available)('configured inherited class progression', () => {
     ).toBeGreaterThan(4)
   })
 
+  test('Demon Hunter prepares its own spells with the replacement rule and keeps exact saved intent', () => {
+    let character = start('Demon Hunter')
+    const [entry] = character.classProgression
+    const { owner, rule } = getClassSpellProfilePolicy(entry, catalogs.classCastingSources)
+    const target = replacementSpellcastingAddress(
+      'class-feature|spellcasting|demon hunter|wow|1|wow',
+      'class-feature|spellcasting|ranger|xphb|1|xphb',
+    )
+    expect(rule?.declaration.target).toBe(target)
+    expect(
+      getCurrentClassCastingProducer(catalogs, owner, target, 1)?.declaration.feature,
+    ).toMatchObject({ className: 'Demon Hunter', source: 'WoW' })
+    expect(getManagedClassSpellSlots(entry, character, catalogs)).toEqual([])
+    const profileId = 'class:Demon Hunter|WoW'
+    const prepare = (reference: string, prepared = true, context = spellContext(character)) =>
+      setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        profileId,
+        reference,
+        prepared,
+        context,
+      )
+    expect(calculation(character).classCasting.details).toContainEqual(
+      expect.objectContaining({
+        profileId,
+        preparedSpellLimit: 2,
+        maxSpellLevel: 1,
+      }),
+    )
+    expect(calculation(character).classCasting.slots.shared[1]?.max).toBe(2)
+    expect(() => prepare('Freezing Trap|WoW')).toThrow(/spell list/i)
+    expect(() => prepare('Lesser Restoration|XPHB')).toThrow(/outside the level/i)
+    character = reopen(character, prepare('Cure Wounds|XPHB'))
+    character = reopen(character, prepare('Ensnaring Strike|XPHB'))
+    expect(() => prepare('Fog Cloud|XPHB')).toThrow(/limit/i)
+    expect(character.spells.spellProfiles.find((row) => row.id === profileId)).toMatchObject({
+      dailyCastingTarget: target,
+      preparedSpells: ['Cure Wounds|XPHB', 'Ensnaring Strike|XPHB'],
+    })
+    const blockedSources = { ...character, allowedSources: ['XPHB'] }
+    expect(
+      projectManagedClassSpellState(blockedSources, spellContext(blockedSources)).dailyStatuses,
+    ).toHaveLength(2)
+    expect(
+      projectManagedClassSpellState(blockedSources, spellContext(blockedSources)).dailyStatuses,
+    ).toEqual([
+      expect.objectContaining({ active: false }),
+      expect.objectContaining({ active: false }),
+    ])
+    const withdrawn = {
+      ...spellContext(character),
+      catalogs: { ...catalogs, classCastingSources: [] },
+    }
+    expect(
+      projectManagedClassSpellState(character, withdrawn).dailyStatuses.every(
+        ({ active }) => !active,
+      ),
+    ).toBe(true)
+    const cleared = reopen(character, prepare('Cure Wounds|XPHB', false, withdrawn))
+    expect(
+      cleared.spells.spellProfiles.find((row) => row.id === profileId)?.preparedSpells,
+    ).toEqual(['Ensnaring Strike|XPHB'])
+    expect(
+      projectManagedClassSpellState(character, spellContext(character)).dailyStatuses.every(
+        ({ active }) => active,
+      ),
+    ).toBe(true)
+    for (let level = 2; level <= 5; level++) character = levelUp(character, 10)
+    expect(calculation(character).classCasting.slots.shared).toMatchObject({
+      1: { max: 4 },
+      2: { max: 2 },
+    })
+    expect(calculation(character).classCasting.details).toContainEqual(
+      expect.objectContaining({
+        profileId,
+        preparedSpellLimit: 6,
+        maxSpellLevel: 2,
+      }),
+    )
+    character = reopen(character, prepare('Lesser Restoration|XPHB'))
+    expect(
+      projectManagedClassSpellState(character, spellContext(character)).dailyStatuses,
+    ).toHaveLength(3)
+  })
+
+  test('a replacement from a separate source supports bounded numeric choices and offline clear', () => {
+    let character = start('Wardkeeper', 'EXAMPLE')
+    const [entry] = character.classProgression
+    const target = replacementSpellcastingAddress(
+      'class-feature|spellcasting|wardkeeper|example|1|example',
+      'class-feature|spellcasting|cleric|xphb|1|xphb',
+    )
+    const slots = getManagedClassSpellSlots(entry, character, catalogs)
+    expect(slots).toHaveLength(3)
+    const [slot] = slots
+    expect(slot).toEqual([['class', 'wardkeeper', 'example'], 'class-cantrip', target, 1, 0])
+    const pick = (name: string) =>
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        [
+          {
+            slot,
+            expected: null,
+            expectedEmptyRevision: 0,
+            policy: 'default',
+            target: { name, source: 'XPHB' },
+          },
+        ],
+        spellContext(character),
+      )
+    expect(() => pick('Guidance')).toThrow()
+    character = reopen(character, pick('Sacred Flame'))
+    const [choice] = character.managedClassSpellChoices!
+    const withoutTemplate: Character = {
+      ...character,
+      originSystem: '2014',
+      allowedSources: ['EXAMPLE'],
+    }
+    expect(calculation(withoutTemplate).classCasting.details).toEqual([])
+    expect(
+      projectManagedClassSpellState(withoutTemplate, spellContext(withoutTemplate)).statuses,
+    ).toContainEqual(
+      expect.objectContaining({ active: false, reason: expect.stringMatching(/casting feature/i) }),
+    )
+    const offline = {
+      ...spellContext(character),
+      catalogs: { ...catalogs, classCastingSources: [] },
+    }
+    expect(projectManagedClassSpellState(character, offline).statuses).toContainEqual(
+      expect.objectContaining({ active: false }),
+    )
+    expect(
+      characterPersistenceSchema.safeParse({
+        ...character,
+        managedClassSpellChoices: [
+          { ...choice, slot: [slot[0], slot[1], target.replace('wardkeeper', 'other'), 1, 0] },
+        ],
+      }).success,
+    ).toBe(false)
+    const cleared = reopen(
+      character,
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        [{ slot, expected: choice }],
+        offline,
+      ),
+    )
+    expect(cleared.managedClassSpellChoices).toEqual([])
+    expect(
+      projectManagedClassSpellState(character, spellContext(character)).statuses,
+    ).toContainEqual(expect.objectContaining({ active: true }))
+    const cls = classRow('Wardkeeper', 'EXAMPLE')
+    const authored = cls.classFeatureRefs!.find((ref) => ref.name === 'Spellcasting')!.feature!
+    for (const replacement of [
+      { ...authored, entries: [...authored.entries!, 'You can prepare one additional spell.'] },
+      { ...authored, source: '' },
+    ]) {
+      const changed = buildClassChoiceFeatureCatalogs({
+        ...data,
+        classes: data.classes.map((row) =>
+          row !== cls
+            ? row
+            : {
+                ...row,
+                classFeatureRefs: row.classFeatureRefs?.map((ref) =>
+                  ref.feature !== authored ? ref : { ...ref, feature: replacement },
+                ),
+              },
+        ),
+        classFeatures: data.classFeatures.map((feature) =>
+          getClassFeatureIdentity(feature) === getClassFeatureIdentity(authored)
+            ? replacement
+            : feature,
+        ),
+      })
+      expect(getManagedClassSpellSlots(entry, undefined, changed)).toEqual([])
+    }
+  })
+
   test('source filters cannot hide a competing casting declaration on a copied class', async () => {
     const layer = await new FiveEToolsDataLoader(
       { type: 'local', path: 'data', isValid: true, availableResources: ['class/index.json'] },
@@ -735,6 +946,10 @@ describe.runIf(available)('configured inherited class progression', () => {
             const copy = document.class.find((row: { source: string }) => row.source === 'WoW')
             const parent = document.class.find((row: { source: string }) => row.source === 'XPHB')
             copy.classFeatures = [...parent.classFeatures, 'Pact Magic|Warlock|PHB|1']
+          }
+          if (file === 'class/class-demonhunter.json') {
+            const copy = document.class.find((row: { source: string }) => row.source === 'WoW')
+            copy.classFeatures.push('Spellcasting|Ranger|PHB|2')
           }
           return document
         },
@@ -752,6 +967,12 @@ describe.runIf(available)('configured inherited class progression', () => {
     })
     const copy = filtered.classes!.find((row) => row.name === 'Warlock' && row.source === 'WoW')
     expect(copy?.classFeatureRefs?.filter((ref) => ref.name === 'Pact Magic')).toHaveLength(1)
+    expect(
+      getClassSpellProfilePolicy(
+        { name: 'Demon Hunter', source: 'WoW', levels: 1 },
+        filtered.classCastingSources,
+      ).rule,
+    ).toBeUndefined()
     expect(
       getCurrentClassCastingProducer(filtered, owner, rule!.declaration.target, 1),
     ).toBeUndefined()

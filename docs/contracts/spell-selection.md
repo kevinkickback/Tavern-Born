@@ -23,7 +23,17 @@ casting projection. [Managed spell command tests](../../tests/lib/managedClassSp
 The loader discovers a class copy's eligible casting rules from its declared parent, exact
 feature roots and unchanged casting fields. The selected copy supplies its own spell routes.
 Other class fields, such as equipment and proficiencies, have separate authority. A renamed
-or replaced casting root needs its own supported rule.
+or replaced root has to be verified on its own. A plain class copy can replace its direct
+Spellcasting feature at the same gain with an exact feature under its own class identity.
+The app verifies the parent's certified progression and compares the replacement's rules.
+An equivalent focus-equipment clause may change. The selected class's exact spell routes
+still determine the list. Conflicting roots and changed casting mechanics are unsupported
+by this equivalence rule. [Pinned 5etools class-route handling](https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/render.js#L7841)
+
+Saved replacement choices retain both the actual declaration and the certified template.
+The template bounds what can be reopened offline. Current casting still requires the
+class, declaration, template and their sources. Daily preparation uses the existing
+loadout editor and does not simulate the act of replacing spells on a rest.
 
 ## Mystic Arcanum setup
 

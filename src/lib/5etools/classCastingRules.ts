@@ -49,6 +49,60 @@ export function isCatalogCastingCopyOwner(owner: ClassSpellOwner) {
   )
 }
 
+const replacementPrefix = 'replacement-spellcasting:'
+
+export function replacementSpellcastingAddress(target: string, template: string) {
+  return replacementPrefix + JSON.stringify([target, template])
+}
+
+/** The template bounds saved intent. Only the live catalog can certify the replacement. */
+export function getReplacementSpellcasting(owner: ClassSpellOwner, address: string) {
+  if (
+    typeof address !== 'string' ||
+    !address.startsWith(replacementPrefix) ||
+    !isCatalogCastingCopyOwner(owner)
+  )
+    return undefined
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(address.slice(replacementPrefix.length))
+  } catch {
+    return undefined
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 2) return undefined
+  const [target, template] = parsed
+  if (
+    typeof target !== 'string' ||
+    typeof template !== 'string' ||
+    target === template ||
+    replacementSpellcastingAddress(target, template) !== address
+  )
+    return undefined
+  const rule = ordinary.find(
+    ({ declaration }) =>
+      declaration.owner[0] === 'class' &&
+      declaration.path.length === 1 &&
+      declaration.target === template &&
+      template.startsWith('class-feature|spellcasting|'),
+  )
+  if (!rule) return undefined
+  const prefix = `class-feature|spellcasting|${owner[1]}|${owner[2]}|${rule.declaration.level}|`
+  const source = target.slice(prefix.length)
+  if (
+    !target.startsWith(prefix) ||
+    !source ||
+    source !== norm(source) ||
+    /[|#{}]/u.test(source) ||
+    Array.from(source).some((character) => character.charCodeAt(0) < 32)
+  )
+    return undefined
+  return {
+    target,
+    template,
+    rule: { ...rule, declaration: { ...rule.declaration, owner, target: address } },
+  }
+}
+
 /** Historic owner pairs recover existing intent offline. Live copies come from the loaded catalog. */
 export function getClassCastingCopyParent(
   owner: ClassSpellOwner,
@@ -76,15 +130,31 @@ export function getClassCastingProducersForOwner(
       ? (sources.find((row) => row.kind === 'casting-copy' && row.target === JSON.stringify(owner))
           ?.copyTargets ?? [])
       : undefined
-  return CLASS_CASTING_PRODUCERS.filter(
+  const registered = CLASS_CASTING_PRODUCERS.filter(
     (row) =>
       same(row.declaration.owner, parent) &&
       (!copiedTargets || copiedTargets.includes(row.declaration.target)),
   )
+  if (!copiedTargets) return registered
+  const replacements = copiedTargets.flatMap((target) => {
+    const replacement = getReplacementSpellcasting(owner, target)
+    return replacement && replacement.rule.parent === JSON.stringify(parent) ? [replacement] : []
+  })
+  return [
+    ...registered,
+    ...replacements.flatMap((replacement) =>
+      copiedTargets.includes(replacement.template) ||
+      replacements.filter((row) => row.template === replacement.template).length !== 1
+        ? []
+        : [replacement.rule],
+    ),
+  ]
 }
 
 /** A source-free saved address can retain intent but cannot authorize a new pick. */
 function getRetainedClassCastingRule(owner: ClassSpellOwner, target: string) {
+  const replacement = getReplacementSpellcasting(owner, target)
+  if (replacement) return replacement.rule
   const registered = CLASS_CASTING_PRODUCERS.filter((row) => same(row.declaration.owner, owner))
   return (
     registered.length || !isCatalogCastingCopyOwner(owner)
