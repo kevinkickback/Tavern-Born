@@ -160,6 +160,15 @@ interface FixedClassCatalogs {
   classFeatureCandidates?: ReadonlyMap<string, readonly ClassFeature[]>
 }
 
+export function getCurrentFixedClassFeatureRule(target: string, catalogs: FixedClassCatalogs) {
+  const rule = directFeatures.get(target)
+  const candidates =
+    catalogs.classFeatureCandidates !== undefined
+      ? (catalogs.classFeatureCandidates.get(target) ?? [])
+      : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === target)
+  return rule && currentFeature(rule, candidates) ? rule : undefined
+}
+
 function getCurrentDirectRule(
   classData: Class5e,
   catalogs: FixedClassCatalogs,
@@ -208,17 +217,8 @@ function getCurrentDirectRule(
     )
   )
     return []
-  const rule = directFeatures.get(certificate.target)
-  const candidates =
-    catalogs.classFeatureCandidates !== undefined
-      ? (catalogs.classFeatureCandidates.get(certificate.target) ?? [])
-      : catalogs.classFeatures.filter((row) => getClassFeatureIdentity(row) === certificate.target)
-  return rule &&
-    currentFeature(rule, candidates) &&
-    ref.feature &&
-    currentFeature(rule, [ref.feature])
-    ? [rule]
-    : []
+  const rule = getCurrentFixedClassFeatureRule(certificate.target, catalogs)
+  return rule && ref.feature && currentFeature(rule, [ref.feature]) ? [rule] : []
 }
 
 /** Explicit current raw declarations, direct refs, catalogs and embedded producer must all agree. */

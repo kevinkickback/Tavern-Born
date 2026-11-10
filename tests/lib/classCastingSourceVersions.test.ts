@@ -1,6 +1,8 @@
 import { expect, test } from 'vitest'
 import {
   CLASS_CASTING_PRODUCERS,
+  getClassCastingGainAuthority,
+  getClassCastingLevelAccess,
   getCurrentClassCastingProducer,
 } from '@/lib/5etools/classCastingSource'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
@@ -21,6 +23,49 @@ const owner: OptionalDeclarationOwner = ['class', 'wizard', 'phb']
 const target = 'class-feature|spellcasting|wizard|phb|1|phb'
 const key = optionalDeclarationKey(owner, target, 1)
 const catalog = buildClassChoiceFeatureCatalogs
+
+test.each([
+  { label: 'linked numeric headings', eligible: true },
+  { label: 'wrong spell level in the link', eligible: false },
+  { label: 'changed slot count', eligible: false },
+])('revised Artificer casting with $label', ({ label, eligible }) => {
+  const layer = makeClassCastingLayer('class/class-artificer.json', (document) => {
+    const cls = document.class.find((row) => row.name === 'Artificer' && row.source === 'EFA')!
+    const tables = cls.classTableGroups as {
+      colLabels: string[]
+      rowsSpellProgression?: number[][]
+    }[]
+    const table = tables.find((group) => group.rowsSpellProgression)!
+    table.colLabels = [1, 2, 3, 4, 5].map(
+      (level) => `{@filter ${level}|spells|level=${level}|class=artificer}`,
+    )
+    if (label === 'wrong spell level in the link')
+      table.colLabels[0] = '{@filter 1|spells|level=2|class=artificer}'
+    if (label === 'changed slot count') table.rowsSpellProgression![0][0] = 3
+  })
+  const sources = catalog(layer)
+  const artificer = ['class', 'artificer', 'efa'] as const
+  const spellcasting = 'class-feature|spellcasting|artificer|efa|1|efa'
+  const cantrips = getClassCastingGainAuthority(
+    sources,
+    [...artificer],
+    spellcasting,
+    1,
+    'class-cantrip',
+    1,
+  )
+  const access = getClassCastingLevelAccess(sources, [...artificer], spellcasting, 1, 1)
+  if (eligible) {
+    expect(cantrips?.gain).toEqual({ level: 1, count: 2 })
+    expect(access?.maxSpellLevel).toBe(1)
+    expect(
+      JSON.stringify(layer.classes.find((row) => row.source === 'EFA')?.classTableGroups),
+    ).toContain('{@filter 1|spells|level=1|class=artificer}')
+  } else {
+    expect(cantrips).toBeUndefined()
+    expect(access).toBeUndefined()
+  }
+})
 
 test('all actual bundled packages qualify without adding producers or inferring absent subclasses', () => {
   const data = makeBundledClassCastingData()

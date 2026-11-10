@@ -1,4 +1,7 @@
-import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
+import {
+  getClassSpellProfilePolicy,
+  isSavedDailyCastingTarget,
+} from '@/lib/5etools/classCastingRules'
 import { getClassCastingLevelAccess } from '@/lib/5etools/classCastingSource'
 import { getEntityLookupKey } from '@/lib/5etools/entityIdentity'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -6,6 +9,7 @@ import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
+import type { ClassCastingSourceProof } from '@/types/classCasting'
 import {
   hasCurrentClassSpellListRoute,
   type ManagedClassSpellContext,
@@ -15,7 +19,11 @@ import {
 
 const norm = normalizeOwnerIdentity
 
-export function getDailyClassSpellEntry(character: Character, profile: SpellProfile) {
+export function getDailyClassSpellEntry(
+  character: Character,
+  profile: SpellProfile,
+  castingSources?: readonly ClassCastingSourceProof[],
+) {
   if (
     profile.type !== 'class' ||
     !profile.className ||
@@ -30,7 +38,10 @@ export function getDailyClassSpellEntry(character: Character, profile: SpellProf
   const entry = entries.length === 1 ? entries[0] : undefined
   return entry &&
     profile.id === toClassProfileId(entry.name, entry.source) &&
-    getClassSpellProfilePolicy(entry).mode === 'daily'
+    (profile.dailyCastingTarget
+      ? isSavedDailyCastingTarget(entry, profile.dailyCastingTarget)
+      : getClassSpellProfilePolicy(entry).mode === 'daily' ||
+        getClassSpellProfilePolicy(entry, castingSources).mode === 'daily')
     ? entry
     : undefined
 }
@@ -42,11 +53,15 @@ export function preserveDailyClassSpellIntent(saved: Character, next: Character)
     spells: {
       ...next.spells,
       spellProfiles: next.spells.spellProfiles.map((profile) => {
-        if (!getDailyClassSpellEntry(next, profile)) return profile
         const previous = saved.spells.spellProfiles.find(
           (row) => row.id === profile.id && getDailyClassSpellEntry(saved, row),
         )
-        return previous ? { ...profile, preparedSpells: [...previous.preparedSpells] } : profile
+        const retained = previous?.dailyCastingTarget
+          ? { ...profile, dailyCastingTarget: previous.dailyCastingTarget }
+          : profile
+        return previous && getDailyClassSpellEntry(next, retained)
+          ? { ...retained, preparedSpells: [...previous.preparedSpells] }
+          : profile
       }),
     },
   }
@@ -57,14 +72,22 @@ export function getDailyClassSpellAccess(
   profile: SpellProfile,
   context?: ManagedClassSpellContext,
 ) {
-  const entry = getDailyClassSpellEntry(character, profile)
-  const rule = entry && getClassSpellProfilePolicy(entry).rule
-  if (!entry || !rule) return undefined
+  const castingSources = context?.catalogs?.classCastingSources
+  const entry = getDailyClassSpellEntry(character, profile, castingSources)
+  if (!entry) return undefined
+  const { rule, owner, mode } = getClassSpellProfilePolicy(entry, castingSources)
+  const savedTarget =
+    profile.dailyCastingTarget ??
+    (profile.preparedSpells.length
+      ? getClassSpellProfilePolicy(entry).rule?.declaration.target
+      : undefined)
+  if (!rule || mode !== 'daily' || (savedTarget && savedTarget !== rule.declaration.target))
+    return undefined
   const current =
     context?.catalogs &&
     getClassCastingLevelAccess(
       context.catalogs,
-      rule.declaration.owner,
+      owner,
       rule.declaration.target,
       rule.declaration.level,
       entry.levels,
@@ -75,6 +98,7 @@ export function getDailyClassSpellAccess(
     ![
       entry.source,
       current.declaration.feature.source,
+      ...(current.templateSources ?? []),
       ...(current.provider ? [current.provider.source] : []),
     ].every((source) => permitted(allowed, source))
   )
@@ -115,7 +139,7 @@ export function projectDailyClassSpellIntent(
       !getDailyClassSpellEntry(current, profile)
     )
       return profile
-    const access = getDailyClassSpellAccess(current, profile, context)
+    const access = getDailyClassSpellAccess(current, previous, context)
     const preparedSpells = [...profile.preparedSpells]
     for (const reference of previous.preparedSpells) {
       const spell = currentTargets().get(getSpellReferenceKey(reference))

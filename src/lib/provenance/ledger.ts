@@ -209,6 +209,7 @@ export function removeGrantsBySourceRef(
     normalizeIdentity?: boolean
     normalizeFixedVariant?: boolean
     exactVariant?: boolean
+    preserve?: (tag: SourceTag, domain?: MapDomain, key?: string) => boolean
   },
 ): ProvenanceLedger {
   const matchesIdentity = (left: string, right: string) =>
@@ -229,7 +230,9 @@ export function removeGrantsBySourceRef(
     const map = getMap(result, domain)
     const updated: Record<string, SourceTag[]> = {}
     for (const [key, tags] of Object.entries(map)) {
-      const retained = tags.filter((tag) => !matchesSource(tag))
+      const retained = tags.filter(
+        (tag) => !matchesSource(tag) || options?.preserve?.(tag, domain, key),
+      )
       if (retained.length > 0) updated[key] = retained
     }
     result = setMap(result, domain, updated)
@@ -237,8 +240,12 @@ export function removeGrantsBySourceRef(
 
   return {
     ...result,
-    abilityBonuses: result.abilityBonuses.filter((record) => !matchesSource(record.sourceTag)),
-    choices: result.choices.filter((choice) => !matchesSource(choice.sourceTag)),
+    abilityBonuses: result.abilityBonuses.filter(
+      (record) => !matchesSource(record.sourceTag) || options?.preserve?.(record.sourceTag),
+    ),
+    choices: result.choices.filter(
+      (choice) => !matchesSource(choice.sourceTag) || options?.preserve?.(choice.sourceTag),
+    ),
   }
 }
 

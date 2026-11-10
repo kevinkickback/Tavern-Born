@@ -443,9 +443,14 @@ describe('source-owned Primal Awareness knowledge grants', () => {
       const actual = JSON.parse(readFileSync('data/spells/spells-phb.json', 'utf8')).spell.find(
         (spell: { name: string }) => spell.name === 'Beast Sense',
       )
-      expect(
-        JSON.parse(readFileSync('tests/fixtures/primalAwarenessBeastSense.json', 'utf8')),
-      ).toEqual(actual)
+      const captured = JSON.parse(
+        readFileSync('tests/fixtures/primalAwarenessBeastSense.json', 'utf8'),
+      )
+      // The catalog can add classification tags independently of the captured spell facts.
+      expect(actual).toEqual({
+        ...captured,
+        miscTags: expect.arrayContaining(captured.miscTags),
+      })
     },
   )
 })

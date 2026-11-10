@@ -7,7 +7,7 @@ import {
   type CharacterSheetViewModel,
   formatViewModelModifier,
 } from '@/lib/pdf/characterSheetViewModel'
-import { withSorcererResourceText } from '@/lib/pdf/sorcererSheetRules'
+import { withClassResourceText } from '@/lib/pdf/classResourceSheetRules'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 
 const CAPACITY = CHARACTER_SHEET_CAPACITIES['2024']
@@ -138,7 +138,7 @@ export function mapCharacterSheet2024(
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
     [
       ...healingDiceText,
-      withSorcererResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
+      withClassResourceText(viewModel.classResourceRows, viewModel.classFeaturesSummary2014),
     ]
       .filter(Boolean)
       .join('\n\n'),

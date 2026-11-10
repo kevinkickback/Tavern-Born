@@ -59,313 +59,308 @@ const s56 = 'edition'
 const s57 = 'featProgression'
 const s58 = 'hasFluff'
 const s59 = 'hasFluffImages'
-const s60 = 'multiclassing'
-const s61 = 'name'
-const s62 = 'page'
-const s63 = 'preparedSpellsChange'
-const s64 = 'preparedSpellsProgression'
-const s65 = 'primaryAbility'
-const s66 = 'proficiency'
-const s67 = 'source'
-const s68 = 'spellcastingAbility'
-const s69 = 'startingEquipment'
-const s70 = 'startingProficiencies'
-const s71 = 'subclassTitle'
-const s72 = 'className'
-const s73 = 'classSource'
-const s74 = 'level'
-const s75 = 'array'
-const s76 = '02847c09833a43f6863c87cc3985ebffde37c5a822e1e6b11481ddd2e4278d29'
-const s77 = 'type'
-const s78 = 'f88e0119ecabdd43809d294b4bd4d7842abe1084de1947e2aa7f390d257981a1'
-const s79 = '9235e20fa8a13a29218d403b0b7ff766293527cb3a1fe8691bab108b490097d8'
-const s80 = '7734799be60056e60d1a2c9623fa966487188c645fdc720a168649666a09031f'
-const s81 = '1e877d20bb9fbc281a432c0fdd60961b28f3618344f931b7b0b26eb41d6e96b1'
-const s82 = 'd55a0c2cf3254ecafed468c133e51c92fe53c40c9171d8a26d98ca6ad1a7cdc1'
-const s83 = 'a83a0fcd8783698fa935a5267c702e20a28ea2407d2119d15da113d0db16228d'
-const s84 = 'daily'
-const s85 = 'int'
-const s86 = 'progression'
-const s87 = 'Spellcasting|Artificer|TCE|1'
-const s88 = 'optionalfeatureProgression'
-const s89 = 'otherSources'
-const s90 = 'preparedSpells'
-const s91 = 'reprintedAs'
-const s92 = '6aa7610a5b35f30adef86d137443c0b6723d79b8f5726ce156f1f44e599bdb43'
-const s93 = 'ef0a35601987078fd04a3d999833e13981b90608fc2ff827678a0de316645f91'
-const s94 = 'attributes'
-const s95 = 'absent'
-const s96 = '28f48b94cedb610f046cd9dddaee5eac4c0ef07523c6f8c742662356807261cc'
-const s97 = '8f1f3fae3cd176fa1afbc1d8267330698c742db9fd730bca42e422dae8218d2e'
-const s98 = 'formula'
-const s99 = 'Spellcasting|Bard||1'
-const s100 = 'spellsKnownProgression'
-const s101 = 'srd'
-const s102 = '1676eaa7d39dd467f2114de3e5dee136b7d043bb3d1021f98cde6b53790df59d'
-const s103 = '8dc841003f4945c2eca937ead3d67a83b55c0c58194508c0954aed04bcc9fa28'
-const s104 = '1069e4a8b5dac6174e0a4c60c16fc6b104bcf94a08b21fec523aa29350386ea4'
-const s105 = 'b8a62d6869d7aff011fd1f060a753a5931f8dbf7d315a88a155ff0f5b72c7ca8'
-const s106 = '9680c4c93e3de133a42c8f4aff5ecb6f4f986bad9e1f53d75fc028e6984cdc27'
-const s107 = '14f8008f1d9d708791441b925be0b3b34b096d2d0e4e7fa73a12840cb876baed'
-const s108 = '025a5c72a2898c3d89c71fa24687bb02f36e7c20b8ead35908989a284765cb2e'
-const s109 = '3a5158acfcc640b0ffcfcd97b3298423ff2c47a8adefb46a70799a32fda0a3ad'
-const s110 = '4d4e6f5ec6a1728b5a5c808b0b58fa0cd8c2c702f872ee15f2e6307a99b0a4d1'
-const s111 = 'b7abc276d490d5257baea9b941799f0f63baeadac870e3d797de5a94ee533a45'
-const s112 = 'c084ee0f75d0303befcc1138b62cd4802c892eac32d338dd434b0e48b0e413c9'
-const s113 = '149ab6e01228d6eee65b1cb9f2e78693aba02bab474ad3f333f2aaea78e0f6ee'
-const s114 = 'Spellcasting|Bard|XPHB|1'
-const s115 = 'basicRules2024'
-const s116 = 'srd52'
-const s117 = '329d02a2b65239507e47d6915676dad5d94bad68ab2a2504262c6f02625d28ef'
-const s118 = 'd98407d67744627dd225b14243508cfdb4a77c0b645e24b8d00d0084d92a98c8'
-const s119 = 'f4674b47fe51c5120ce08d6788c2f7f196170574e66cebbf9da7b56f81f9281d'
-const s120 = '26daff8559a340ac774e3214f03df6bd68058b088213b8bdb997afd6a626a246'
-const s121 = '71652f52efa23dfddbb6f98444d18706e3e8bb82c7a57b2c94d10fa8b29cdad0'
-const s122 = '01d918a4b4e94736e896e1871005410e79eb9d1538a0d61e20da1358e8605646'
-const s123 = '0a59699a5d31193bc40cfa2598c09a9f0165fabb7b760cec64491ceac662978a'
-const s124 = '13e41af95556f300c5d4b4ffffca60df0279c4678c36e194b6515703b926a3f6'
-const s125 = '758c411b0598f34d15054028a7fec4c022344d1eb0ee38e29cf142757ffadbf8'
-const s126 = 'e65150fc0db76a7dc138f7bce5ffc268a518b65c31f09718ed98422b1857246c'
-const s127 = 'cha'
-const s128 = 'Spellcasting|Cleric||1'
-const s129 = 'basicRules'
-const s130 = '760a81433d1dd8fa77a1e31355c7381f606db1b23b9638668e64e1ebe44ba4d6'
-const s131 = '8b895bdf8ca185740af7c2c29c2fb856a187fc8ac958b1c28aca0182a1349b19'
-const s132 = 'b4408a4350c8c9cb2ec1010bc49261e4beb86b7611a5874b1d98d78263156bcf'
-const s133 = 'db20267cb95856eeff4467002cf88ac95927f573bc6a88825a91e79e1877fd93'
-const s134 = 'feb8ec355bbe8312599246b8e1995e01975ff3d14320b7424c0334df2e860376'
-const s135 = '50e0db80c06be97e6a87ce0590ba4ceca5e2254cf42dea2f293543e776696e7d'
-const s136 = '8b4fdcd76ef867460fa9db62a863c8e19ada1485c45c41b7d9dc8404d93e505a'
-const s137 = '3b8679187ff5f0d1fa3b4547c376e806a6bff750f39da24e2417be68a7bd4bbd'
-const s138 = 'ec7b2525d3036e8385fc17cf489c9af217a0463c6e31b35bbc97fb7131ca6847'
-const s139 = 'wis'
-const s140 = '<$level$> + <$wis_mod$>'
-const s141 = 'Spellcasting|Cleric|XPHB|1'
-const s142 = '0e0012df0c368d02f0581a504c9ce5a96403cbd9b23cd374bc49a66a6f60933c'
-const s143 = '629d52137d23dc8913909e6f877ac56fa9bc99e2f299601e7d5bdf62417eb4ef'
-const s144 = '8da14e469be2fb7c5f69760508659c2265593929a0cb221208c509d65c4ab12c'
-const s145 = 'b58978c450f3a82f463d0728636b14807abfe62fb207b49cbde5debf2e6564a2'
-const s146 = 'b1d12dd3a4bcf2f737435d1541d1982ab96e2702e1896de6b40bb48ba4a30684'
-const s147 = '918f601e7e712b32fbb8ecb362fa3d27b354d5c32da3924aba8d7936a0e8bd46'
-const s148 = '55afcf8434aeff09ca3bbcd307f973a118b3237aa21d01bdb43003bf015f390e'
-const s149 = 'b81aec92328be8e98a5a2351651eaeff21488ff72f2bd80f9af7da7107002544'
-const s150 = 'f6c0ff1aeead8b64228820bd25359afe4b217b86597a156d8b33e59e21b66b21'
-const s151 = '03147976e63416cc6fe8ef9fe0a28179d045196f32e5ac6cc7296be3c8fd9c43'
-const s152 = 'Spellcasting|Druid||1'
-const s153 = '47253668912afa0cc01e8ff090064d9d0aed6ee84fafe95cb221d5cfb7706c4d'
-const s154 = 'd258f00c5aa9f2618a1d70b27c4b70e84fe262cd527b04e68d8420e91fc76878'
-const s155 = '3a13fafc696a164ab58ef5e90d267acf49198c60138aee4d7bffbe1a30bc625e'
-const s156 = 'd5176acc7d1431994bf647e3d4066a66b229d0893915f51465e7caa6036d17b5'
-const s157 = '401cb84d6f9a48732fe8a138661586e20b0056f9f0597295368d46ca39df5d60'
-const s158 = '82ecd54f491ff67cfcaea6ae22965331a66b35e3013990ac34e10aabd3c7eed0'
-const s159 = '15986306ebe77384e0918ee6f58d65f34fc659b641e94fd15f176f8b3a15f65a'
-const s160 = 'Spellcasting|Druid|XPHB|1'
-const s161 = '39ef663739af9f6bf15a7f7a6b7326d411f827b00dbc8443be0a247261e891e1'
-const s162 = 'c3acf542d57a7be5bfa9e8fde8595a20dc1f9bfab82fa66b732b2a2fbebe3383'
-const s163 = '5094abd7aab48d5a35d39664a7fcd8e7730bf68d3aa1da8975329687a88060a9'
-const s164 = 'caf834c680bae8042abac4adc0aa32de23852a2baeed56deb65b714e14aaa480'
-const s165 = 'fc5ad03ddb188dd0989b10a545540ed37f7c2923db820a2b1c16f07615160f44'
-const s166 = 'f7097bab271fbcbf1801ca3c7577ff770d6253f76011da8008b5441d0c997306'
-const s167 = '9e5c6f1955f631d90c7d33ef1494a8af967d4f181a3aa80a08f68077396c970c'
-const s168 = 'd1a587fa3d6fdf0da48cb97e3cec873d7a951eb5afe0eebe387101ef0237e1b4'
-const s169 = '9a83b8d85a6b738f32c997a107f84c97837ab8cd11cec8207d2464b27b515e6a'
-const s170 = '09195e5f55380123f4ee359647880e2cf0d174fc0085b16b09e0f4b04b091d96'
-const s171 = 'subclass'
-const s172 = 'eldritch knight'
-const s173 = 'subclassFeature'
-const s174 = 'subclass-feature|eldritch knight|fighter|phb|eldritch knight|phb|3|phb'
-const s175 = 'Eldritch Knight|Fighter||Eldritch Knight||3'
-const s176 = 'Spellcasting|Fighter||Eldritch Knight||3'
-const s177 = 'shortName'
-const s178 = 'subclassTableGroups'
-const s179 = 'edd5d554c1fc1b130fb6ddb7ef7efc89ada51e8a2df19b4f0d115de77a1cfc16'
-const s180 = 'subclassShortName'
-const s181 = 'subclassSource'
-const s182 = 'fa11f57f4de0b360608cd3a23037a861b75364bf631e1797213ff4c270a6e071'
-const s183 = '93fa9abc10ad1743e8a62e56b0fabdff0617b033a411665d2b925d0d7edad7e7'
-const s184 = '45ef01d8f2c61334971b4a41ca4065cbaff4d554e4ac9059caae28da3ae688a4'
-const s185 = 'subclass-feature|weapon bond|fighter|phb|eldritch knight|phb|3|phb'
-const s186 = '2d4a4c9276352141412eb4b0da9bd139d6b317934d01bd0b832402a911fa2fcb'
-const s187 = 'header'
-const s188 = '3b540b09325865ba78257282a99b2ed4329730f649b822577383495dd2a7130e'
-const s189 = '6717b1af5f483809e050bd9f1973d4132b0b76b72cd42eea433f1f178be521d5'
-const s190 = '0abddba71bbbb6d2575e1041623889e79b779c34804a74eaa08e24033f361c13'
-const s191 = '1c67ffd853b05c094274e4f2dd9c77d2973a4b93fd43e7afe25189270fc3f364'
-const s192 = '2140f9e2b4baccd0bcc305e6167366ce1df9875b9f9f352658a20761635bfece'
-const s193 = 'ef278dee02a183a41df1fe48e5954e1ad4e8047570420e08d950d4514919bdfb'
-const s194 = '7590bbf9f7c4c643fdf35eb4ce90eab430b893fcd1453e1436cbc79e88bea29e'
-const s195 = '3d85b25c5f64252aadb126e5119bc8e862ce4268f7440d92813a4f9f9a49d175'
-const s196 = '21a61630714c17a3e2d6427c663da61a1b0e5bce3f3ac5b858b099781077a931'
-const s197 = '1ef42609438bae88f9d8ef04be33afa4ec8dfc757ac1588e420fa934e3fbc759'
-const s198 = '_copy'
-const s199 = '["class","fighter","xphb"]'
-const s200 = 'subclass-feature|eldritch knight|fighter|xphb|eldritch knight|xphb|3|xphb'
-const s201 = 'Eldritch Knight|Fighter|XPHB|Eldritch Knight|XPHB|3'
-const s202 = '01e3e05529145b0caf6fb6fd1e16c9a2c24f9e18cf2df7cc9215dc543834552c'
-const s203 = 'cea3a2eccf435baa8a896853cc5a26490ffed998779de5d8a46142323a4ed0f5'
-const s204 = 'subclass-feature|warrior of the mystic arts|monk|xphb|mystic arts|au|3|au'
-const s205 = 'Warrior of the Mystic Arts|Monk|XPHB|Mystic Arts|AU|3|AU'
-const s206 = 'a6724c37412e1bfec6c1c25a8cb7a037ee796975e9e41e88543c1bafdd972f1b'
-const s207 = 'Spellcasting|Paladin||2'
-const s208 = '9a60f3f4073e140d737366aaa2200bf203ed7dbc56c0e9d93133f38804f4e391'
-const s209 = '1d1c569582df4ab30b2e7c00fb80182f80a5c0a62ec78bd62bbe544a0810e669'
-const s210 = '221fc3f0ebb2b47dfd81fbc7fde99e17510f91771cd47afa080ddc450c2aa111'
-const s211 = 'cecc148d783526c018fd9498fd088c1a2d4ada95f8fcdda8c71867d629c435ef'
-const s212 = '25f86665b062f418df77c88cff2c23ac216b64f61ee2722345bdcf387da041ac'
-const s213 = 'Spellcasting|Paladin|XPHB|1'
-const s214 = 'a83cd43449fdb366ddb3ee9309b8b4908e12aeaf7a73a54ceb70ead041d7f052'
-const s215 = '3853b4584baae8e4b30fa422902a77787e486a5697d151780d63e74acba20c7b'
-const s216 = '53c46deea0ab0170b8db9d3f2f6e3004fcdb65b2a20927c353770b5e64b58759'
-const s217 = '2f60a7a6097206d09287637fb9a9889aa8a8f8f27f19ef48e045176d375fa4a0'
-const s218 = '31f48e3300c2236caa84161a9bb7c96b6b78233a6c10ff12f41e2e5addbe2803'
-const s219 = 'b9852e64053f1a2b0f8e88ef5c5cbb83d9dca05e084fbe9d171a0894d6117e0c'
-const s220 = 'd0fe7df947d0c2ea7507ba4fb69aeb56a39303ff80daa32ae2105879cacfb3f5'
-const s221 = 'Spellcasting|Ranger||2'
-const s222 = 'e326d2f6f876ba876ececca8164b5d1796618cb85474acfeafb2ed12592e86ba'
-const s223 = 'cc5d018f180bf98f2b7f98f5864f4ad0970e80d0e5d539a5625007516e19ec06'
-const s224 = '87dcaa3afa1bc2e952274e607b9f4409feb7e37b11bb951b4e358185ae7fcbc0'
-const s225 = 'c1b9d397e0cc1cbd05fe0ae18f9b499a9150a63476f1c6b549a4006eb8c7fbdf'
-const s226 = '4ee7bd035870808c97603150cbfed2aecb26d10045a27f8b05264662057394ae'
-const s227 = 'Spellcasting|Ranger|XPHB|1'
-const s228 = '55fd4b546e6376c505017afb1d34f015c759cef9764d0f0a3bc02f4c1e0fcf2a'
-const s229 = 'ed79342caba9d08777813e687c92f40a41472fb502749ede7f97b58dc7e8b4e2'
-const s230 = 'a4ce218796ae2121584002052bad0f3f48f32fdb5586dd6464d37c01f7f938d5'
-const s231 = 'c6fb68122a55646ac7fba516792e3247e5163445597b4fe045786252049021df'
-const s232 = 'e7a96dbf11ee4454a731b247912b4a23d6d49dafaa0b2d52925743d35e5684bb'
-const s233 = '09f62bdb3a9554d61cd05b43c1abf20ae845463a6683dabd57b03f6837a52c07'
-const s234 = '49122a8754d005c4881f8f06571fd8871a66288ffc69c68611d468cb6982fc85'
-const s235 = 'arcane trickster'
-const s236 = 'subclass-feature|arcane trickster|rogue|phb|arcane trickster|phb|3|phb'
-const s237 = 'Arcane Trickster|Rogue||Arcane Trickster||3'
-const s238 = 'Spellcasting|Rogue||Arcane Trickster||3'
-const s239 = '174d16e2e1a8df069323292d23c54cff0ca6714b7fbe87e1d62c8b8253358d04'
-const s240 = '58a0c4fb32ea20e097b7f92350d401834c6a93c113764e0591736a3fd6fae67b'
-const s241 = '83df07781e52d587b7d9ef7e2e50e8a8e71423e6f2d8393ee4653ddc68d41f9d'
-const s242 = 'de5340808f9333108f721d16437e6392982f3b3d939e47851f122db9ce052c8e'
-const s243 = 'subclass-feature|mage hand legerdemain|rogue|phb|arcane trickster|phb|3|phb'
-const s244 = '9324250369138754a382af029b3a29c9e497880356b8b8299d06dca884cad1cf'
-const s245 = '4263ecff85a5a9b9c41cb7fed89a2e782bd0444a6f350dc4d488a5d4ec2ccc13'
-const s246 = 'f910321ca32653a6b25cdef7653ed8394c22dbfe13324f97c13eecdd8b9dd2d3'
-const s247 = 'd278d0cf2ee6af59bbf4d91507ce1d2a4699d08d26368dc8fa76f80fd5fbc243'
-const s248 = '78e360b3535f02785d4e92f08e68161ac172b00c9f24ef8b21e847b0f9e5d382'
-const s249 = '2931ca88a5cc8f5a58a2d10bdf198ff7e2f00f6180d11b4f8b1802f50256abe1'
-const s250 = 'efc00675ee0037a56ab38547e83e491bfbda98a42c21759707191218b3177ea7'
-const s251 = 'e0f95a2360f2db217cfbf94450e9a621bdfd3223e889170195f60f8bfe9a4b86'
-const s252 = '247c8cabd5852c1ba002bc689e2726273404e027a0252d6b9074a7252ca05828'
-const s253 = '["class","rogue","xphb"]'
-const s254 = 'subclass-feature|arcane trickster|rogue|xphb|arcane trickster|xphb|3|xphb'
-const s255 = 'Arcane Trickster|Rogue|XPHB|Arcane Trickster|XPHB|3'
-const s256 = 'Spellcasting|Spellcaster Sidekick|TCE|1'
-const s257 = 'Spellcasting|Sorcerer||1'
-const s258 = '6473972b9bd8f5a3bd9e19cc25be4f69ebd3e1bf2229eb697e8e92126dc59451'
-const s259 = 'cffe08a22432229000ac3e1d938b8af078c41643682897f42886d0a4661a6aec'
-const s260 = '683ddbad0dd8b69ebd05ff94d4210208907952b034bafc62927a7a1bc829f7e8'
-const s261 = 'd487df77c4f41dccb22c024c6875e5fa85e594c124265a05b5c42e17861e4b4d'
-const s262 = 'be11da42346a04644bf6958f3b69a62a92e5067632d0a15dafd5e06d7d3e2fa9'
-const s263 = 'dc00145ace893c27927c41f292d13ee5c3bed38ebd4645caee54b23bcd4a9c29'
-const s264 = 'bd8ddc7783e70d4bf69f2250a1da42d503729fe6e52de35a27ec8648cc0f2bfd'
-const s265 = 'Spellcasting|Sorcerer|XPHB|1'
-const s266 = '38070dd2efd8483c38788b2d9a919d39986440776fda95b39ec226c84a262174'
-const s267 = '5d93abda78288617f853ea707fdb2970bfb7b5f63ba4f2e6e8cd45cd2bde8ad5'
-const s268 = '8e2a81de152a0bcc12e67e94b1975381ddb2c273b321ec4aa90a09304f4ec2c3'
-const s269 = 'ce2c2561ead71ab0ae7361ff885c852e2b6db17196ac3d8bae32ba743364fdf8'
-const s270 = 'ac4755da79adeff0cf2cacca4dbb2c47a14a102a535584c22d99a46b0cce2871'
-const s271 = 'e37aa42131fec55562d75659b843c5ded11f4cbf43dbfc921ec2e77634341534'
-const s272 = 'd5577991c6de9c6271d181a391c241d4da0aa4fd4fa4d39218af4dcce6e5fcdb'
-const s273 = '25f80decc043a3a71613eccefc1829aa29c86913a7a15be507bb19c718c4d3c2'
-const s274 = 'Mystic Arcanum (6th level)|Warlock||11'
-const s275 = '52818adb975946403dac6d676dff9ab4ffa47d8c5a64562d78bb43c6536ae169'
-const s276 = 'spellsKnownProgressionFixedByLevel'
-const s277 = 'e36062df25d80e498d59c131d55c77bc2d3c5cd10d5801d035b1303efa04aefc'
-const s278 = '5fa4b6b6a769caa7de1e9f30174595d3b82854bb98057b854ca0495806c1c6af'
-const s279 = '09b3da3070bf4a4d80954fe2a5c48d37a876c4173c084174509f9aa9e6a35bec'
-const s280 = '["class","warlock","phb"]'
-const s281 = '8518bc4fcb8ec4a3c3cc78be5cfb1eebf486366af89d00485fe3f1094b5ce2f2'
-const s282 = 'Mystic Arcanum (7th level)|Warlock||13'
-const s283 = '33bbcb7cea1915c9a16d00a96dfa0771ea18e23cff6dcbbf1392734c2016288f'
-const s284 = 'Mystic Arcanum (8th level)|Warlock||15'
-const s285 = '5d1f14091d3b1610ad1e2bcbdde6206941b254bec44cb753e5629cdebbec3a71'
-const s286 = 'Mystic Arcanum (9th level)|Warlock||17'
-const s287 = '2a485c3b7b9dd311fbd77fdc584f40cbf0cff6720d0bf63d61a359be1e289b95'
-const s288 = 'Pact Magic|Warlock||1'
-const s289 = '7082ca329a56bc00c497dc88586e08054effb6c155a2c583bbdcc29aac0401f0'
-const s290 = '49be3e5e2a4cdbf04df0097c1c3105c4ffc3ddc34be35684a730ae1b973cd92a'
-const s291 = '7dc78d056268b0288cd8df260cce774d624c0e1f09d355c74078b7f848ad06f6'
-const s292 = '8347d0df012860692f1c463874cbe04ed7e4f9488666b31913634465b18aa62f'
-const s293 = '01a1add8d9103f79e8941fbadbc8d58ef0079995c3c9bfd3f6ef909bda3ba816'
-const s294 = '97ce1b55a1b848e6073fbe6dbb51e5735dcb70c44e2133814c612c635d7ba629'
-const s295 = '1d0f5ba63dd9d77489c0b073e8e56f4f3c43227d7d9ac6da926410b8191fd18f'
-const s296 = '96eb1c360368b00faa70c92d6b429d1b3e0e439b4e8ec74496e93ef2d6abd24b'
-const s297 = 'Mystic Arcanum|Warlock|XPHB|11'
-const s298 = 'bb7b686ed3cde5a63f0b0369358440df5c678ce408414b5c319dffdd41aba509'
-const s299 = 'cd54a5c8c7ab5b44bba36063cc5969ee8cd9e75f264d061fd151f53ae2334cb6'
-const s300 = 'a31f3e2196abd95c62e266285f22770938cee5685f3391b0fb352478494d716b'
-const s301 = '3d79ebbff266f4380451c944e294505af4b821f45b51990f529350b9c2fda497'
-const s302 = 'fe78f78a3a270786a83022c33c54aa020381bcd7aac20c6f98bfbf50c2637155'
-const s303 = '["class","warlock","xphb"]'
-const s304 = 'e537cb434382ec4f3ca517fa7034babe72e1005dadc9a00878139683ace2f5cd'
-const s305 = 'Mystic Arcanum|Warlock|XPHB|13'
-const s306 = '5c03e126b716295892524b927cbafacf13e555d84b20bdb36176cec0d1fc1cd9'
-const s307 = 'Mystic Arcanum|Warlock|XPHB|15'
-const s308 = '5c933b06ae1fb8e4ab0502459cbd9c592c5c9216b2831fc32ba6a198571a064a'
-const s309 = 'Mystic Arcanum|Warlock|XPHB|17'
-const s310 = '8f773b77db8cbbeb1aa616f3152e22c4b6f87b2b196c8812f807380646e39ada'
-const s311 = 'Pact Magic|Warlock|XPHB|1'
-const s312 = '5d3a025d72fe946432e7dce8e11d57169f6d6fc7bcdfaeb836f17a96ef08629b'
-const s313 = 'bc01c81739ab94cf83eb3966c7b11e0a2b18eadcdfafcfe9e6ece8c2d1125815'
-const s314 = 'ebee10272fa314cffd38b4047fb87b4bb4969439c69315a64eacb91f2853d4d9'
-const s315 = 'efefcebaa8a9c65fd298a0636e3d7a77c3a41511a38ffd8ff4b0e486cc5cc1aa'
-const s316 = '8f562dc669b2d51886251d57b8983b501b92472755c46eede4d0ffd28866e687'
-const s317 = '5fab3fe8165e3b07a78faa587d1ca0200eba57134a26473514a76693ef81b80d'
-const s318 = '4f9fd53b611ba3edee479483ba469caf4b4495b3eaa6b4aa33235f013be0ea97'
-const s319 = 'eeb6d04625a8948500429174ff92984e29ce8d10c690e011b08ade31f333d875'
-const s320 = '52dfc326fcc8166222ff069e81884428132be648cfcd9d7314177ffb39d3c5fd'
-const s321 = 'b477a52e2808151a2b29c1c723db5dbfc461dda4e594a968ffd2563999f4bc80'
-const s322 = 'Spellcasting|Wizard||1'
-const s323 = 'spellsKnownProgressionFixed'
-const s324 = 'spellsKnownProgressionFixedAllowLowerLevel'
-const s325 = '15fc5057fce12535de310dbd09c7ca8505100e71641139d246f2a1a54f27069f'
-const s326 = '27c274b20e54ec62c598496d015aafea7a37af68b310a8d2990a3d7a6f7eaa7c'
-const s327 = '13243901e9c2b364eea0c7f404e7b94dd112875326be4a580335c2e1af2aa02e'
-const s328 = 'a041b57d35977ae2a1369d8a9e8d814b600b0f64c431ce8c7983574b6c7d5856'
-const s329 = '41a7768970771a7303ebd128feda9589f2b2227ec0744bec2ad7dcf72ef49b75'
-const s330 = '1975da313873d54b8acc2815f3134b86b10547331f64c876200e4b3863430740'
-const s331 = '68cb35a38b55437af741b104fd375c6f1e63f75d59c3b7031cb407ee9369379b'
-const s332 = '833fa2cf798ec0e3a6c042bb351f104adfffab4a72a0b5f4bb2037c85af408f7'
-const s333 = 'f8e3d5d90a51ea1493f2388990141acad9d2cf01f17fce1e8b1d0c22bcff1618'
-const s334 = '08c5cb17c08705405583d1b7e773dcfb3332d38e9aa7a47c7547ff76b3603870'
-const s335 = '03692b965e7ab0734da7cbc8070b9a61911ae45996b01ffe61929f4d8e80bb9b'
-const s336 = '95134fe7c9294e0098fc83ac70275b737d37f88fb312c8d28fed552d2d0da875'
-const s337 = 'daf1aa945f0ac4ab8900c2ea8d8b447a26ba4420528c9c350f75c823f1b74652'
-const s338 = 'c9e7973a7928ad7b64b4f94351260c49279559ad73f6ea390a69f3d764114257'
-const s339 = '9e161fa497f4a181968e671fd13a00ed779228f0d7518d4a998e9ac74b7145d6'
-const s340 = 'f79978bccc9d3668740091db58c8a93b2cb304642991fb76a0057f6d6a26a268'
-const s341 = 'c53788102c71b941e628d883f3e6979f43f168545d03469831849e052103d510'
-const s342 = 'c2b000b0c23515205327a1e075a8c3fb5580c28dcb7b969cd87ac23989f801e6'
-const s343 = '07a5cc47c5a65aefa3c503e34a858204ebba1258e0b699532dc75b9eed51af9d'
-const s344 = '36d25cdf0d211569b59aa0bc06fbfb1ba4d0d35951d15c9e92ad99a90baead02'
-const s345 = '8c412a3ed8003da88c6515b50bc9de4fee336e07bcc7a2f842d5061cda9ea81f'
-const s346 = 'c22c13259820fe376e6b78939818d8887aeb4cf9938eb516e6459cf45a136d6d'
-const s347 = '5855facbac14a96e70e41bea391b6100b0660bd1e62f13aa0d90fe8987ce1dc9'
-const s348 = 'spellbook'
-const s349 = 'Spellcasting|Wizard|XPHB|1'
-const s350 = 'da53baf0ad58481e31f511342e56988b93cfc1e46a5c9017e2aaa3cc5781b4a5'
-const s351 = '06b4a0726a3f596b336c214d6cb62b483957d025b415f5c746b6d0f420923c3a'
-const s352 = 'dc8810463a3afe152fde0a8aad2ed4cbf956dc82d8f22208e85e519ea5a9f725'
-const s353 = '5af8fd957b78560862f9d1a7b73cbbad4620d301cd179336367a19715b0a6e9c'
-const s354 = '9ef4c94741864754a9dc6fd6fe172f64bbcdf2a589a6808dc6e1a8f11a53968f'
-const s355 = '1ba56fdae71239c1cd80b61df6f5d7c58587443a18e2a52daca081f80eb132c4'
-const s356 = 'f82742e9d21f9611630c6acca79b167f903bab1b28d50a76de5c789a54998bbb'
-const s357 = 'b96563654985f875da8f75f1838f6bab7cfac7e122a7295d7028b4e005311e9b'
-const s358 = '49129c6548e5c7a22f0a7911c58caf4bc3618b792b1e4ca6263428f652676364'
-const s359 = 'cb41efcbc464cde10137209bc9099a9e010204dbc8aff351f01083437ea743cf'
-const s360 = '07c6d319c94d6e68169153eef2c8118219ac29910409a96110737c72a292e7f7'
-const s361 = '50c8d29a74a7fe92b9c1c7fe8e3eaccc3801a7111c2f15ae9d455c84687cff6a'
-const s362 = 'db0e3a2629d0ac24625555198de4d9e9e52487b5fc69d031421e0c9d295bb989'
-const s363 = '8373b34a4587c3ce303d8b9c0224f164a528dd18aa487b9325505c95069dd1b2'
-const s364 = '907a480f43d149f33cde5baaefd2eb7bef2b7ff113b0cb51e8fd72ac70bda452'
-const s365 = '80c56ba4743b123c8e89abf11d71f59bffaabfdca405c8d316694c9c98f609be'
-const s366 = 'e9325887786fddaf9eecfa021e91618465323dd740145b3d8aef9a6eceb2eaae'
+const s60 = 'name'
+const s61 = 'page'
+const s62 = 'preparedSpellsChange'
+const s63 = 'preparedSpellsProgression'
+const s64 = 'source'
+const s65 = 'spellcastingAbility'
+const s66 = 'subclassTitle'
+const s67 = 'className'
+const s68 = 'classSource'
+const s69 = 'level'
+const s70 = 'array'
+const s71 = '02847c09833a43f6863c87cc3985ebffde37c5a822e1e6b11481ddd2e4278d29'
+const s72 = 'type'
+const s73 = 'f88e0119ecabdd43809d294b4bd4d7842abe1084de1947e2aa7f390d257981a1'
+const s74 = '9235e20fa8a13a29218d403b0b7ff766293527cb3a1fe8691bab108b490097d8'
+const s75 = '7734799be60056e60d1a2c9623fa966487188c645fdc720a168649666a09031f'
+const s76 = '1e877d20bb9fbc281a432c0fdd60961b28f3618344f931b7b0b26eb41d6e96b1'
+const s77 = 'd55a0c2cf3254ecafed468c133e51c92fe53c40c9171d8a26d98ca6ad1a7cdc1'
+const s78 = 'a83a0fcd8783698fa935a5267c702e20a28ea2407d2119d15da113d0db16228d'
+const s79 = 'daily'
+const s80 = 'int'
+const s81 = 'progression'
+const s82 = 'Spellcasting|Artificer|TCE|1'
+const s83 = 'optionalfeatureProgression'
+const s84 = 'otherSources'
+const s85 = 'preparedSpells'
+const s86 = 'reprintedAs'
+const s87 = '6aa7610a5b35f30adef86d137443c0b6723d79b8f5726ce156f1f44e599bdb43'
+const s88 = 'ef0a35601987078fd04a3d999833e13981b90608fc2ff827678a0de316645f91'
+const s89 = 'attributes'
+const s90 = 'absent'
+const s91 = '28f48b94cedb610f046cd9dddaee5eac4c0ef07523c6f8c742662356807261cc'
+const s92 = '8f1f3fae3cd176fa1afbc1d8267330698c742db9fd730bca42e422dae8218d2e'
+const s93 = 'formula'
+const s94 = 'Spellcasting|Bard||1'
+const s95 = 'spellsKnownProgression'
+const s96 = 'srd'
+const s97 = '1676eaa7d39dd467f2114de3e5dee136b7d043bb3d1021f98cde6b53790df59d'
+const s98 = '8dc841003f4945c2eca937ead3d67a83b55c0c58194508c0954aed04bcc9fa28'
+const s99 = '1069e4a8b5dac6174e0a4c60c16fc6b104bcf94a08b21fec523aa29350386ea4'
+const s100 = 'b8a62d6869d7aff011fd1f060a753a5931f8dbf7d315a88a155ff0f5b72c7ca8'
+const s101 = '9680c4c93e3de133a42c8f4aff5ecb6f4f986bad9e1f53d75fc028e6984cdc27'
+const s102 = '14f8008f1d9d708791441b925be0b3b34b096d2d0e4e7fa73a12840cb876baed'
+const s103 = '025a5c72a2898c3d89c71fa24687bb02f36e7c20b8ead35908989a284765cb2e'
+const s104 = '3a5158acfcc640b0ffcfcd97b3298423ff2c47a8adefb46a70799a32fda0a3ad'
+const s105 = '4d4e6f5ec6a1728b5a5c808b0b58fa0cd8c2c702f872ee15f2e6307a99b0a4d1'
+const s106 = 'b7abc276d490d5257baea9b941799f0f63baeadac870e3d797de5a94ee533a45'
+const s107 = 'c084ee0f75d0303befcc1138b62cd4802c892eac32d338dd434b0e48b0e413c9'
+const s108 = '149ab6e01228d6eee65b1cb9f2e78693aba02bab474ad3f333f2aaea78e0f6ee'
+const s109 = 'Spellcasting|Bard|XPHB|1'
+const s110 = 'basicRules2024'
+const s111 = 'srd52'
+const s112 = '329d02a2b65239507e47d6915676dad5d94bad68ab2a2504262c6f02625d28ef'
+const s113 = 'd98407d67744627dd225b14243508cfdb4a77c0b645e24b8d00d0084d92a98c8'
+const s114 = 'f4674b47fe51c5120ce08d6788c2f7f196170574e66cebbf9da7b56f81f9281d'
+const s115 = '26daff8559a340ac774e3214f03df6bd68058b088213b8bdb997afd6a626a246'
+const s116 = '71652f52efa23dfddbb6f98444d18706e3e8bb82c7a57b2c94d10fa8b29cdad0'
+const s117 = '01d918a4b4e94736e896e1871005410e79eb9d1538a0d61e20da1358e8605646'
+const s118 = '0a59699a5d31193bc40cfa2598c09a9f0165fabb7b760cec64491ceac662978a'
+const s119 = '13e41af95556f300c5d4b4ffffca60df0279c4678c36e194b6515703b926a3f6'
+const s120 = '758c411b0598f34d15054028a7fec4c022344d1eb0ee38e29cf142757ffadbf8'
+const s121 = 'e65150fc0db76a7dc138f7bce5ffc268a518b65c31f09718ed98422b1857246c'
+const s122 = 'cha'
+const s123 = 'Spellcasting|Cleric||1'
+const s124 = 'basicRules'
+const s125 = '760a81433d1dd8fa77a1e31355c7381f606db1b23b9638668e64e1ebe44ba4d6'
+const s126 = '8b895bdf8ca185740af7c2c29c2fb856a187fc8ac958b1c28aca0182a1349b19'
+const s127 = 'b4408a4350c8c9cb2ec1010bc49261e4beb86b7611a5874b1d98d78263156bcf'
+const s128 = 'db20267cb95856eeff4467002cf88ac95927f573bc6a88825a91e79e1877fd93'
+const s129 = 'feb8ec355bbe8312599246b8e1995e01975ff3d14320b7424c0334df2e860376'
+const s130 = '50e0db80c06be97e6a87ce0590ba4ceca5e2254cf42dea2f293543e776696e7d'
+const s131 = '8b4fdcd76ef867460fa9db62a863c8e19ada1485c45c41b7d9dc8404d93e505a'
+const s132 = '3b8679187ff5f0d1fa3b4547c376e806a6bff750f39da24e2417be68a7bd4bbd'
+const s133 = 'ec7b2525d3036e8385fc17cf489c9af217a0463c6e31b35bbc97fb7131ca6847'
+const s134 = 'wis'
+const s135 = '<$level$> + <$wis_mod$>'
+const s136 = 'Spellcasting|Cleric|XPHB|1'
+const s137 = '0e0012df0c368d02f0581a504c9ce5a96403cbd9b23cd374bc49a66a6f60933c'
+const s138 = '629d52137d23dc8913909e6f877ac56fa9bc99e2f299601e7d5bdf62417eb4ef'
+const s139 = '8da14e469be2fb7c5f69760508659c2265593929a0cb221208c509d65c4ab12c'
+const s140 = 'b58978c450f3a82f463d0728636b14807abfe62fb207b49cbde5debf2e6564a2'
+const s141 = 'b1d12dd3a4bcf2f737435d1541d1982ab96e2702e1896de6b40bb48ba4a30684'
+const s142 = '918f601e7e712b32fbb8ecb362fa3d27b354d5c32da3924aba8d7936a0e8bd46'
+const s143 = '55afcf8434aeff09ca3bbcd307f973a118b3237aa21d01bdb43003bf015f390e'
+const s144 = 'b81aec92328be8e98a5a2351651eaeff21488ff72f2bd80f9af7da7107002544'
+const s145 = 'f6c0ff1aeead8b64228820bd25359afe4b217b86597a156d8b33e59e21b66b21'
+const s146 = '03147976e63416cc6fe8ef9fe0a28179d045196f32e5ac6cc7296be3c8fd9c43'
+const s147 = 'Spellcasting|Druid||1'
+const s148 = '47253668912afa0cc01e8ff090064d9d0aed6ee84fafe95cb221d5cfb7706c4d'
+const s149 = 'd258f00c5aa9f2618a1d70b27c4b70e84fe262cd527b04e68d8420e91fc76878'
+const s150 = '3a13fafc696a164ab58ef5e90d267acf49198c60138aee4d7bffbe1a30bc625e'
+const s151 = 'd5176acc7d1431994bf647e3d4066a66b229d0893915f51465e7caa6036d17b5'
+const s152 = '401cb84d6f9a48732fe8a138661586e20b0056f9f0597295368d46ca39df5d60'
+const s153 = '82ecd54f491ff67cfcaea6ae22965331a66b35e3013990ac34e10aabd3c7eed0'
+const s154 = '15986306ebe77384e0918ee6f58d65f34fc659b641e94fd15f176f8b3a15f65a'
+const s155 = 'Spellcasting|Druid|XPHB|1'
+const s156 = '39ef663739af9f6bf15a7f7a6b7326d411f827b00dbc8443be0a247261e891e1'
+const s157 = 'c3acf542d57a7be5bfa9e8fde8595a20dc1f9bfab82fa66b732b2a2fbebe3383'
+const s158 = '5094abd7aab48d5a35d39664a7fcd8e7730bf68d3aa1da8975329687a88060a9'
+const s159 = 'caf834c680bae8042abac4adc0aa32de23852a2baeed56deb65b714e14aaa480'
+const s160 = 'fc5ad03ddb188dd0989b10a545540ed37f7c2923db820a2b1c16f07615160f44'
+const s161 = 'f7097bab271fbcbf1801ca3c7577ff770d6253f76011da8008b5441d0c997306'
+const s162 = '9e5c6f1955f631d90c7d33ef1494a8af967d4f181a3aa80a08f68077396c970c'
+const s163 = 'd1a587fa3d6fdf0da48cb97e3cec873d7a951eb5afe0eebe387101ef0237e1b4'
+const s164 = '9a83b8d85a6b738f32c997a107f84c97837ab8cd11cec8207d2464b27b515e6a'
+const s165 = '09195e5f55380123f4ee359647880e2cf0d174fc0085b16b09e0f4b04b091d96'
+const s166 = 'subclass'
+const s167 = 'eldritch knight'
+const s168 = 'subclassFeature'
+const s169 = 'subclass-feature|eldritch knight|fighter|phb|eldritch knight|phb|3|phb'
+const s170 = 'Eldritch Knight|Fighter||Eldritch Knight||3'
+const s171 = 'Spellcasting|Fighter||Eldritch Knight||3'
+const s172 = 'shortName'
+const s173 = 'subclassTableGroups'
+const s174 = 'edd5d554c1fc1b130fb6ddb7ef7efc89ada51e8a2df19b4f0d115de77a1cfc16'
+const s175 = 'subclassShortName'
+const s176 = 'subclassSource'
+const s177 = 'fa11f57f4de0b360608cd3a23037a861b75364bf631e1797213ff4c270a6e071'
+const s178 = '93fa9abc10ad1743e8a62e56b0fabdff0617b033a411665d2b925d0d7edad7e7'
+const s179 = '45ef01d8f2c61334971b4a41ca4065cbaff4d554e4ac9059caae28da3ae688a4'
+const s180 = 'subclass-feature|weapon bond|fighter|phb|eldritch knight|phb|3|phb'
+const s181 = '2d4a4c9276352141412eb4b0da9bd139d6b317934d01bd0b832402a911fa2fcb'
+const s182 = 'header'
+const s183 = '3b540b09325865ba78257282a99b2ed4329730f649b822577383495dd2a7130e'
+const s184 = '6717b1af5f483809e050bd9f1973d4132b0b76b72cd42eea433f1f178be521d5'
+const s185 = '0abddba71bbbb6d2575e1041623889e79b779c34804a74eaa08e24033f361c13'
+const s186 = '1c67ffd853b05c094274e4f2dd9c77d2973a4b93fd43e7afe25189270fc3f364'
+const s187 = '2140f9e2b4baccd0bcc305e6167366ce1df9875b9f9f352658a20761635bfece'
+const s188 = 'ef278dee02a183a41df1fe48e5954e1ad4e8047570420e08d950d4514919bdfb'
+const s189 = '7590bbf9f7c4c643fdf35eb4ce90eab430b893fcd1453e1436cbc79e88bea29e'
+const s190 = '3d85b25c5f64252aadb126e5119bc8e862ce4268f7440d92813a4f9f9a49d175'
+const s191 = '21a61630714c17a3e2d6427c663da61a1b0e5bce3f3ac5b858b099781077a931'
+const s192 = '1ef42609438bae88f9d8ef04be33afa4ec8dfc757ac1588e420fa934e3fbc759'
+const s193 = '_copy'
+const s194 = '["class","fighter","xphb"]'
+const s195 = 'subclass-feature|eldritch knight|fighter|xphb|eldritch knight|xphb|3|xphb'
+const s196 = 'Eldritch Knight|Fighter|XPHB|Eldritch Knight|XPHB|3'
+const s197 = '01e3e05529145b0caf6fb6fd1e16c9a2c24f9e18cf2df7cc9215dc543834552c'
+const s198 = 'cea3a2eccf435baa8a896853cc5a26490ffed998779de5d8a46142323a4ed0f5'
+const s199 = 'subclass-feature|warrior of the mystic arts|monk|xphb|mystic arts|au|3|au'
+const s200 = 'Warrior of the Mystic Arts|Monk|XPHB|Mystic Arts|AU|3|AU'
+const s201 = 'a6724c37412e1bfec6c1c25a8cb7a037ee796975e9e41e88543c1bafdd972f1b'
+const s202 = 'Spellcasting|Paladin||2'
+const s203 = '9a60f3f4073e140d737366aaa2200bf203ed7dbc56c0e9d93133f38804f4e391'
+const s204 = '1d1c569582df4ab30b2e7c00fb80182f80a5c0a62ec78bd62bbe544a0810e669'
+const s205 = '221fc3f0ebb2b47dfd81fbc7fde99e17510f91771cd47afa080ddc450c2aa111'
+const s206 = 'cecc148d783526c018fd9498fd088c1a2d4ada95f8fcdda8c71867d629c435ef'
+const s207 = '25f86665b062f418df77c88cff2c23ac216b64f61ee2722345bdcf387da041ac'
+const s208 = 'Spellcasting|Paladin|XPHB|1'
+const s209 = 'a83cd43449fdb366ddb3ee9309b8b4908e12aeaf7a73a54ceb70ead041d7f052'
+const s210 = '3853b4584baae8e4b30fa422902a77787e486a5697d151780d63e74acba20c7b'
+const s211 = '53c46deea0ab0170b8db9d3f2f6e3004fcdb65b2a20927c353770b5e64b58759'
+const s212 = '2f60a7a6097206d09287637fb9a9889aa8a8f8f27f19ef48e045176d375fa4a0'
+const s213 = '31f48e3300c2236caa84161a9bb7c96b6b78233a6c10ff12f41e2e5addbe2803'
+const s214 = 'b9852e64053f1a2b0f8e88ef5c5cbb83d9dca05e084fbe9d171a0894d6117e0c'
+const s215 = 'd0fe7df947d0c2ea7507ba4fb69aeb56a39303ff80daa32ae2105879cacfb3f5'
+const s216 = 'Spellcasting|Ranger||2'
+const s217 = 'e326d2f6f876ba876ececca8164b5d1796618cb85474acfeafb2ed12592e86ba'
+const s218 = 'cc5d018f180bf98f2b7f98f5864f4ad0970e80d0e5d539a5625007516e19ec06'
+const s219 = '87dcaa3afa1bc2e952274e607b9f4409feb7e37b11bb951b4e358185ae7fcbc0'
+const s220 = 'c1b9d397e0cc1cbd05fe0ae18f9b499a9150a63476f1c6b549a4006eb8c7fbdf'
+const s221 = '4ee7bd035870808c97603150cbfed2aecb26d10045a27f8b05264662057394ae'
+const s222 = 'Spellcasting|Ranger|XPHB|1'
+const s223 = '55fd4b546e6376c505017afb1d34f015c759cef9764d0f0a3bc02f4c1e0fcf2a'
+const s224 = 'ed79342caba9d08777813e687c92f40a41472fb502749ede7f97b58dc7e8b4e2'
+const s225 = 'a4ce218796ae2121584002052bad0f3f48f32fdb5586dd6464d37c01f7f938d5'
+const s226 = 'c6fb68122a55646ac7fba516792e3247e5163445597b4fe045786252049021df'
+const s227 = 'e7a96dbf11ee4454a731b247912b4a23d6d49dafaa0b2d52925743d35e5684bb'
+const s228 = '09f62bdb3a9554d61cd05b43c1abf20ae845463a6683dabd57b03f6837a52c07'
+const s229 = '49122a8754d005c4881f8f06571fd8871a66288ffc69c68611d468cb6982fc85'
+const s230 = 'arcane trickster'
+const s231 = 'subclass-feature|arcane trickster|rogue|phb|arcane trickster|phb|3|phb'
+const s232 = 'Arcane Trickster|Rogue||Arcane Trickster||3'
+const s233 = 'Spellcasting|Rogue||Arcane Trickster||3'
+const s234 = '174d16e2e1a8df069323292d23c54cff0ca6714b7fbe87e1d62c8b8253358d04'
+const s235 = '58a0c4fb32ea20e097b7f92350d401834c6a93c113764e0591736a3fd6fae67b'
+const s236 = '83df07781e52d587b7d9ef7e2e50e8a8e71423e6f2d8393ee4653ddc68d41f9d'
+const s237 = 'de5340808f9333108f721d16437e6392982f3b3d939e47851f122db9ce052c8e'
+const s238 = 'subclass-feature|mage hand legerdemain|rogue|phb|arcane trickster|phb|3|phb'
+const s239 = '9324250369138754a382af029b3a29c9e497880356b8b8299d06dca884cad1cf'
+const s240 = '4263ecff85a5a9b9c41cb7fed89a2e782bd0444a6f350dc4d488a5d4ec2ccc13'
+const s241 = 'f910321ca32653a6b25cdef7653ed8394c22dbfe13324f97c13eecdd8b9dd2d3'
+const s242 = 'd278d0cf2ee6af59bbf4d91507ce1d2a4699d08d26368dc8fa76f80fd5fbc243'
+const s243 = '78e360b3535f02785d4e92f08e68161ac172b00c9f24ef8b21e847b0f9e5d382'
+const s244 = '2931ca88a5cc8f5a58a2d10bdf198ff7e2f00f6180d11b4f8b1802f50256abe1'
+const s245 = 'efc00675ee0037a56ab38547e83e491bfbda98a42c21759707191218b3177ea7'
+const s246 = 'e0f95a2360f2db217cfbf94450e9a621bdfd3223e889170195f60f8bfe9a4b86'
+const s247 = '247c8cabd5852c1ba002bc689e2726273404e027a0252d6b9074a7252ca05828'
+const s248 = '["class","rogue","xphb"]'
+const s249 = 'subclass-feature|arcane trickster|rogue|xphb|arcane trickster|xphb|3|xphb'
+const s250 = 'Arcane Trickster|Rogue|XPHB|Arcane Trickster|XPHB|3'
+const s251 = 'Spellcasting|Spellcaster Sidekick|TCE|1'
+const s252 = 'Spellcasting|Sorcerer||1'
+const s253 = '6473972b9bd8f5a3bd9e19cc25be4f69ebd3e1bf2229eb697e8e92126dc59451'
+const s254 = 'cffe08a22432229000ac3e1d938b8af078c41643682897f42886d0a4661a6aec'
+const s255 = '683ddbad0dd8b69ebd05ff94d4210208907952b034bafc62927a7a1bc829f7e8'
+const s256 = 'd487df77c4f41dccb22c024c6875e5fa85e594c124265a05b5c42e17861e4b4d'
+const s257 = 'be11da42346a04644bf6958f3b69a62a92e5067632d0a15dafd5e06d7d3e2fa9'
+const s258 = 'dc00145ace893c27927c41f292d13ee5c3bed38ebd4645caee54b23bcd4a9c29'
+const s259 = 'bd8ddc7783e70d4bf69f2250a1da42d503729fe6e52de35a27ec8648cc0f2bfd'
+const s260 = 'Spellcasting|Sorcerer|XPHB|1'
+const s261 = '38070dd2efd8483c38788b2d9a919d39986440776fda95b39ec226c84a262174'
+const s262 = '5d93abda78288617f853ea707fdb2970bfb7b5f63ba4f2e6e8cd45cd2bde8ad5'
+const s263 = '8e2a81de152a0bcc12e67e94b1975381ddb2c273b321ec4aa90a09304f4ec2c3'
+const s264 = 'ce2c2561ead71ab0ae7361ff885c852e2b6db17196ac3d8bae32ba743364fdf8'
+const s265 = 'ac4755da79adeff0cf2cacca4dbb2c47a14a102a535584c22d99a46b0cce2871'
+const s266 = 'e37aa42131fec55562d75659b843c5ded11f4cbf43dbfc921ec2e77634341534'
+const s267 = 'd5577991c6de9c6271d181a391c241d4da0aa4fd4fa4d39218af4dcce6e5fcdb'
+const s268 = '25f80decc043a3a71613eccefc1829aa29c86913a7a15be507bb19c718c4d3c2'
+const s269 = 'Mystic Arcanum (6th level)|Warlock||11'
+const s270 = 'd36981e7cd7ed3da305819633d043205d9ba1e09dffd304b5ae8e746a25f52c7'
+const s271 = 'spellsKnownProgressionFixedByLevel'
+const s272 = 'e36062df25d80e498d59c131d55c77bc2d3c5cd10d5801d035b1303efa04aefc'
+const s273 = '5fa4b6b6a769caa7de1e9f30174595d3b82854bb98057b854ca0495806c1c6af'
+const s274 = '09b3da3070bf4a4d80954fe2a5c48d37a876c4173c084174509f9aa9e6a35bec'
+const s275 = '["class","warlock","phb"]'
+const s276 = '6779a2876ad73c5498157371a1b31487dbaffb412c71aa9cf31ca6810b4f3590'
+const s277 = 'Mystic Arcanum (7th level)|Warlock||13'
+const s278 = '33bbcb7cea1915c9a16d00a96dfa0771ea18e23cff6dcbbf1392734c2016288f'
+const s279 = 'Mystic Arcanum (8th level)|Warlock||15'
+const s280 = '5d1f14091d3b1610ad1e2bcbdde6206941b254bec44cb753e5629cdebbec3a71'
+const s281 = 'Mystic Arcanum (9th level)|Warlock||17'
+const s282 = '2a485c3b7b9dd311fbd77fdc584f40cbf0cff6720d0bf63d61a359be1e289b95'
+const s283 = 'Pact Magic|Warlock||1'
+const s284 = '7082ca329a56bc00c497dc88586e08054effb6c155a2c583bbdcc29aac0401f0'
+const s285 = '49be3e5e2a4cdbf04df0097c1c3105c4ffc3ddc34be35684a730ae1b973cd92a'
+const s286 = '7dc78d056268b0288cd8df260cce774d624c0e1f09d355c74078b7f848ad06f6'
+const s287 = '8347d0df012860692f1c463874cbe04ed7e4f9488666b31913634465b18aa62f'
+const s288 = '01a1add8d9103f79e8941fbadbc8d58ef0079995c3c9bfd3f6ef909bda3ba816'
+const s289 = '97ce1b55a1b848e6073fbe6dbb51e5735dcb70c44e2133814c612c635d7ba629'
+const s290 = '1d0f5ba63dd9d77489c0b073e8e56f4f3c43227d7d9ac6da926410b8191fd18f'
+const s291 = '96eb1c360368b00faa70c92d6b429d1b3e0e439b4e8ec74496e93ef2d6abd24b'
+const s292 = 'Mystic Arcanum|Warlock|XPHB|11'
+const s293 = 'e4be3ff3c56628cd669778b8ae2b17f28721633b516a6dd4172b0f4e21c301bb'
+const s294 = 'cd54a5c8c7ab5b44bba36063cc5969ee8cd9e75f264d061fd151f53ae2334cb6'
+const s295 = 'a31f3e2196abd95c62e266285f22770938cee5685f3391b0fb352478494d716b'
+const s296 = '3d79ebbff266f4380451c944e294505af4b821f45b51990f529350b9c2fda497'
+const s297 = 'fe78f78a3a270786a83022c33c54aa020381bcd7aac20c6f98bfbf50c2637155'
+const s298 = '["class","warlock","xphb"]'
+const s299 = '424703fb3309dcdb456d497f8390c1a36aff4dbe554243ecf6b07d41e695ed7a'
+const s300 = 'Mystic Arcanum|Warlock|XPHB|13'
+const s301 = '5c03e126b716295892524b927cbafacf13e555d84b20bdb36176cec0d1fc1cd9'
+const s302 = 'Mystic Arcanum|Warlock|XPHB|15'
+const s303 = '5c933b06ae1fb8e4ab0502459cbd9c592c5c9216b2831fc32ba6a198571a064a'
+const s304 = 'Mystic Arcanum|Warlock|XPHB|17'
+const s305 = '8f773b77db8cbbeb1aa616f3152e22c4b6f87b2b196c8812f807380646e39ada'
+const s306 = 'Pact Magic|Warlock|XPHB|1'
+const s307 = '5d3a025d72fe946432e7dce8e11d57169f6d6fc7bcdfaeb836f17a96ef08629b'
+const s308 = 'bc01c81739ab94cf83eb3966c7b11e0a2b18eadcdfafcfe9e6ece8c2d1125815'
+const s309 = 'ebee10272fa314cffd38b4047fb87b4bb4969439c69315a64eacb91f2853d4d9'
+const s310 = 'efefcebaa8a9c65fd298a0636e3d7a77c3a41511a38ffd8ff4b0e486cc5cc1aa'
+const s311 = '8f562dc669b2d51886251d57b8983b501b92472755c46eede4d0ffd28866e687'
+const s312 = '5fab3fe8165e3b07a78faa587d1ca0200eba57134a26473514a76693ef81b80d'
+const s313 = '4f9fd53b611ba3edee479483ba469caf4b4495b3eaa6b4aa33235f013be0ea97'
+const s314 = 'eeb6d04625a8948500429174ff92984e29ce8d10c690e011b08ade31f333d875'
+const s315 = '52dfc326fcc8166222ff069e81884428132be648cfcd9d7314177ffb39d3c5fd'
+const s316 = 'b477a52e2808151a2b29c1c723db5dbfc461dda4e594a968ffd2563999f4bc80'
+const s317 = 'Spellcasting|Wizard||1'
+const s318 = 'spellsKnownProgressionFixed'
+const s319 = 'spellsKnownProgressionFixedAllowLowerLevel'
+const s320 = '15fc5057fce12535de310dbd09c7ca8505100e71641139d246f2a1a54f27069f'
+const s321 = '27c274b20e54ec62c598496d015aafea7a37af68b310a8d2990a3d7a6f7eaa7c'
+const s322 = '13243901e9c2b364eea0c7f404e7b94dd112875326be4a580335c2e1af2aa02e'
+const s323 = 'a041b57d35977ae2a1369d8a9e8d814b600b0f64c431ce8c7983574b6c7d5856'
+const s324 = '41a7768970771a7303ebd128feda9589f2b2227ec0744bec2ad7dcf72ef49b75'
+const s325 = '1975da313873d54b8acc2815f3134b86b10547331f64c876200e4b3863430740'
+const s326 = '68cb35a38b55437af741b104fd375c6f1e63f75d59c3b7031cb407ee9369379b'
+const s327 = '833fa2cf798ec0e3a6c042bb351f104adfffab4a72a0b5f4bb2037c85af408f7'
+const s328 = 'f8e3d5d90a51ea1493f2388990141acad9d2cf01f17fce1e8b1d0c22bcff1618'
+const s329 = '08c5cb17c08705405583d1b7e773dcfb3332d38e9aa7a47c7547ff76b3603870'
+const s330 = '03692b965e7ab0734da7cbc8070b9a61911ae45996b01ffe61929f4d8e80bb9b'
+const s331 = '95134fe7c9294e0098fc83ac70275b737d37f88fb312c8d28fed552d2d0da875'
+const s332 = 'daf1aa945f0ac4ab8900c2ea8d8b447a26ba4420528c9c350f75c823f1b74652'
+const s333 = 'c9e7973a7928ad7b64b4f94351260c49279559ad73f6ea390a69f3d764114257'
+const s334 = '9e161fa497f4a181968e671fd13a00ed779228f0d7518d4a998e9ac74b7145d6'
+const s335 = 'f79978bccc9d3668740091db58c8a93b2cb304642991fb76a0057f6d6a26a268'
+const s336 = 'c53788102c71b941e628d883f3e6979f43f168545d03469831849e052103d510'
+const s337 = 'c2b000b0c23515205327a1e075a8c3fb5580c28dcb7b969cd87ac23989f801e6'
+const s338 = '07a5cc47c5a65aefa3c503e34a858204ebba1258e0b699532dc75b9eed51af9d'
+const s339 = '36d25cdf0d211569b59aa0bc06fbfb1ba4d0d35951d15c9e92ad99a90baead02'
+const s340 = '8c412a3ed8003da88c6515b50bc9de4fee336e07bcc7a2f842d5061cda9ea81f'
+const s341 = 'c22c13259820fe376e6b78939818d8887aeb4cf9938eb516e6459cf45a136d6d'
+const s342 = '5855facbac14a96e70e41bea391b6100b0660bd1e62f13aa0d90fe8987ce1dc9'
+const s343 = 'spellbook'
+const s344 = 'Spellcasting|Wizard|XPHB|1'
+const s345 = 'da53baf0ad58481e31f511342e56988b93cfc1e46a5c9017e2aaa3cc5781b4a5'
+const s346 = '06b4a0726a3f596b336c214d6cb62b483957d025b415f5c746b6d0f420923c3a'
+const s347 = 'dc8810463a3afe152fde0a8aad2ed4cbf956dc82d8f22208e85e519ea5a9f725'
+const s348 = '5af8fd957b78560862f9d1a7b73cbbad4620d301cd179336367a19715b0a6e9c'
+const s349 = '9ef4c94741864754a9dc6fd6fe172f64bbcdf2a589a6808dc6e1a8f11a53968f'
+const s350 = '1ba56fdae71239c1cd80b61df6f5d7c58587443a18e2a52daca081f80eb132c4'
+const s351 = 'f82742e9d21f9611630c6acca79b167f903bab1b28d50a76de5c789a54998bbb'
+const s352 = 'b96563654985f875da8f75f1838f6bab7cfac7e122a7295d7028b4e005311e9b'
+const s353 = '49129c6548e5c7a22f0a7911c58caf4bc3618b792b1e4ca6263428f652676364'
+const s354 = 'cb41efcbc464cde10137209bc9099a9e010204dbc8aff351f01083437ea743cf'
+const s355 = '07c6d319c94d6e68169153eef2c8118219ac29910409a96110737c72a292e7f7'
+const s356 = '50c8d29a74a7fe92b9c1c7fe8e3eaccc3801a7111c2f15ae9d455c84687cff6a'
+const s357 = 'db0e3a2629d0ac24625555198de4d9e9e52487b5fc69d031421e0c9d295bb989'
+const s358 = '8373b34a4587c3ce303d8b9c0224f164a528dd18aa487b9325505c95069dd1b2'
+const s359 = '907a480f43d149f33cde5baaefd2eb7bef2b7ff113b0cb51e8fd72ac70bda452'
+const s360 = '80c56ba4743b123c8e89abf11d71f59bffaabfdca405c8d316694c9c98f609be'
+const s361 = 'e9325887786fddaf9eecfa021e91618465323dd740145b3d8aef9a6eceb2eaae'
 
 const registry = {
   version: 1,
@@ -556,31 +551,9 @@ const registry = {
         target: s0,
         level: 1,
         path: [{ kind: s50, target: s0, uid: s51 }],
-        certificate: 'adf35952cf7200bffe04da071b1b737cefb17ba82fafc78df218056dfbac6dcf',
-        parentMetadataDigest: '4e42d4e6220d5ac362acb3d5c2f41bf8020505c3ac78638262116bee821dcc6c',
-        parentFields: [
-          s52,
-          s53,
-          s54,
-          s55,
-          s56,
-          s57,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s62,
-          s63,
-          s64,
-          s65,
-          s66,
-          s67,
-          s68,
-          s69,
-          s70,
-          s71,
-        ],
+        certificate: '335a65f15e345b8919ec663c3123d8e21d84c7f81c6ae0993d41dd23cf156f8e',
+        parentMetadataDigest: 'c698dbf5e07d9686439fb652b764c5156567d6af5036d0076d12ff0a430676b7',
+        parentFields: [s52, s53, s54, s55, s56, s57, s58, s59, s60, s61, s62, s63, s64, s65, s66],
         rootValues: [s51],
         features: [
           {
@@ -588,22 +561,22 @@ const registry = {
             target: s0,
             body: {
               metadataDigest: '6125042808d1787e01f7712775ef7d9fb9335b8445e7a5f09a9ed4deaf7152c3',
-              fields: [s72, s73, s74, s61, s62, s67],
+              fields: [s67, s68, s69, s60, s61, s64],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'bafc138088a825d599fab3b31e2d3f7f85ae4218b12192060d66385e43155526' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s78,
-                          fields: [s61, s77],
+                          metadataDigest: s73,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -613,10 +586,10 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
+                          metadataDigest: s74,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -634,10 +607,10 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
+                          metadataDigest: s75,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -647,10 +620,10 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -668,10 +641,10 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
+                          metadataDigest: s77,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -681,10 +654,10 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -722,10 +695,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s85,
+        mode: s79,
+        ability: s80,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
         },
         maximumByLevel: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
@@ -736,9 +709,9 @@ const registry = {
         owner: [s32, s33, s35],
         target: s1,
         level: 1,
-        path: [{ kind: s50, target: s1, uid: s87 }],
-        certificate: 'e14035db77c06bb0a4451505efd6b9395eb13b5d0267a1cff069491d05797c8f',
-        parentMetadataDigest: '95d0e6ab6644842117c739266c81d15a2a7dc1ad8e69a318e124caee4bb68262',
+        path: [{ kind: s50, target: s1, uid: s82 }],
+        certificate: '48a6f81566201d0f35a64fe02dc37b773ad9098976cd49939962fc4035d34925',
+        parentMetadataDigest: '25d3c8ee9572bd05d4bb5346bba27606b7fbb8d1326a7d6ffffd23f065eacf54',
         parentFields: [
           s53,
           s54,
@@ -746,40 +719,35 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
+          s84,
           s61,
-          s88,
-          s89,
+          s85,
           s62,
-          s90,
-          s63,
+          s86,
+          s64,
+          s65,
           s66,
-          s91,
-          s67,
-          s68,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s87],
+        rootValues: [s82],
         features: [
           {
             kind: s50,
             target: s1,
             body: {
               metadataDigest: '5887eb56c4cf582810bcfaa5e8d74d0c7f149d38ed04dff4e0f829b10e40263c',
-              fields: [s72, s73, s74, s61, s89, s62, s67],
+              fields: [s67, s68, s69, s60, s84, s61, s64],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '5b74cd1cc44fbd9082a3d518192ed07bfb64044d237346437460a5121ae6bad3' },
                   { digest: '5024bbaac4a17163acfc6d9409cf3e76487e11c7596a6be3f02cb117477f6fc2' },
                   {
-                    metadataDigest: s78,
-                    fields: [s61, s77],
+                    metadataDigest: s73,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -792,9 +760,9 @@ const registry = {
                         {
                           metadataDigest:
                             'c51d3264774dc54b2e556d94f3d403c4416a4560210501b0530ba4f5fb912666',
-                          fields: [s61, s77],
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -817,9 +785,9 @@ const registry = {
                   {
                     metadataDigest:
                       '8aee23ff82868b5c87ff8fdf3a24d8a18b342849a4bbf99d5cf865553d122f14',
-                    fields: [s61, s77],
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -833,10 +801,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s92,
-                    fields: [s61, s77],
+                    metadataDigest: s87,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -858,25 +826,25 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '94706bd0aa6920a7fa4dca2a701b9b257771a4319798f96c7182eef21e65ea07',
                         },
-                        { metadataDigest: s93, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s96, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { metadataDigest: s88, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s91, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s97,
-                    fields: [s61, s77],
+                    metadataDigest: s92,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -911,9 +879,9 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s85,
-        capacity: { kind: s98, formula: '<$level$> / 2 + <$int_mod$>', minimum: 1 },
+        mode: s79,
+        ability: s80,
+        capacity: { kind: s93, formula: '<$level$> / 2 + <$int_mod$>', minimum: 1 },
         maximumByLevel: [
           10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20,
         ],
@@ -924,91 +892,70 @@ const registry = {
         owner: [s32, s36, s37],
         target: s2,
         level: 1,
-        path: [{ kind: s50, target: s2, uid: s99 }],
-        certificate: 'bf1457e64b58edb507ab601dc047440bbc9c11896181d2b3aad35928420c2796',
-        parentMetadataDigest: 'f8928fb73edebbf860e2f8bd4d643b6b7a5113d8c9523db53658d9e45053e98e',
-        parentFields: [
-          s52,
-          s53,
-          s54,
-          s55,
-          s56,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s62,
-          s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s101,
-          s69,
-          s70,
-          s71,
-        ],
-        rootValues: [s99],
+        path: [{ kind: s50, target: s2, uid: s94 }],
+        certificate: '52465cf21cbc570b569726e74d0ba9cf953d8977cb87850c3cbffb0f951cddc9',
+        parentMetadataDigest: 'abde8f25162362b09eb7f3e54a86c286b71e94029cbb1577e79c78e85cc15f3c',
+        parentFields: [s52, s53, s54, s55, s56, s58, s59, s60, s61, s86, s64, s65, s95, s96, s66],
+        rootValues: [s94],
         features: [
           {
             kind: s50,
             target: s2,
             body: {
               metadataDigest: '6bc700ea4497f8a144dd41587a9af51663f43b9efb0eab4c76ae9865cc18bc60',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '031e9f6b02eaaeb03d93ef695148bcd37764ae71499464802fd6b4a818071bb9' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s102 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s97 }] },
                   },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
+                    metadataDigest: s75,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '668ddaa84e433b7e35fdcaa6deb1dd9dc4d7214df0deec913ed834f91e4804e3',
                         },
-                        { digest: s103 },
+                        { digest: s98 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s104,
-                    fields: [s61, s77],
+                    metadataDigest: s99,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
-                      values: [{ digest: s105 }, { digest: s106 }, { digest: s107 }],
+                      kind: s70,
+                      values: [{ digest: s100 }, { digest: s101 }, { digest: s102 }],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s108 },
-                        { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s103 },
+                        { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s97,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s111 }] },
+                    metadataDigest: s92,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s106 }] },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s113 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s108 }] },
                   },
                 ],
               },
@@ -1058,87 +1005,70 @@ const registry = {
           owner: [s32, s36, s37],
           target: s2,
           level: 1,
-          path: [{ kind: s50, target: s2, uid: s99 }],
-          certificate: 'e0a81f819ae0ff8ffe877f11d94d979535d473f1136c4ee713899fded1ee70f5',
-          parentMetadataDigest: 'da8ab52def34032116f926a57d4f540001e85f99d6feb405c5c060798adc8584',
-          parentFields: [
-            s52,
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s66,
-            s67,
-            s68,
-            s100,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s99],
+          path: [{ kind: s50, target: s2, uid: s94 }],
+          certificate: '656464b8e6e122c2aa64f94c601575ef0b6716a89f33465bef95f14751c81b0d',
+          parentMetadataDigest: '42dd72a6cfc4ed5571e5401e00d261519c0ae00e90cc9311f41f3d77b862d5d6',
+          parentFields: [s52, s53, s54, s55, s56, s60, s64, s65, s95, s96, s66],
+          rootValues: [s94],
           features: [
             {
               kind: s50,
               target: s2,
               body: {
                 metadataDigest: '12270adfac8618b14e9375ee4851f673a5b4b129234060703a270037bcafd072',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '7fcb6dfc902be0bfb1fe54429c357aa86b8c0746ab533ad2522183cf79189739' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s102 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s97 }] },
                     },
                     {
-                      metadataDigest: s80,
-                      fields: [s61, s77],
+                      metadataDigest: s75,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '262132b3319898978f8f2de858dff6cbada417de037d6f6edef01fdd72113026',
                           },
-                          { digest: s103 },
+                          { digest: s98 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s104,
-                      fields: [s61, s77],
+                      metadataDigest: s99,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
-                        values: [{ digest: s105 }, { digest: s106 }, { digest: s107 }],
+                        kind: s70,
+                        values: [{ digest: s100 }, { digest: s101 }, { digest: s102 }],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s108 },
-                          { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s103 },
+                          { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s97,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s111 }] },
+                      metadataDigest: s92,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s106 }] },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s113 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s108 }] },
                     },
                   ],
                 },
@@ -1153,12 +1083,12 @@ const registry = {
         owner: [s32, s36, s38],
         target: s3,
         level: 1,
-        path: [{ kind: s50, target: s3, uid: s114 }],
-        certificate: '67999de4277b711c229c0a81475f5eb400449980fee8be058838d47d76e6bd54',
-        parentMetadataDigest: '5645e3f64fa736e098a4c674bffb97df58ac5a2feeae44b0796fb299127d33c8',
+        path: [{ kind: s50, target: s3, uid: s109 }],
+        certificate: 'd602ce2b61d526b7889028274cf92f0443bcbcfffc0e46df37533e9219451d05',
+        parentMetadataDigest: '0ef08092687202e246198e7acf410b7ac65aebd1dbafd5662e13749472377e15',
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -1166,74 +1096,68 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s114],
+        rootValues: [s109],
         features: [
           {
             kind: s50,
             target: s3,
             body: {
               metadataDigest: 'c99d8b59bccf0f5d128ad79a4a4380768b19a811558b27c829fdd17524043287',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'a6a192425487a7b1dc672c4b91651099088a389dc94f87ca76938d48f34fce95' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
+                          metadataDigest: s74,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s117 }, { digest: s118 }, { digest: s119 }],
+                            kind: s70,
+                            values: [{ digest: s112 }, { digest: s113 }, { digest: s114 }],
                           },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s120 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s115 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s121 }, { digest: s122 }, { digest: s123 }],
+                            kind: s70,
+                            values: [{ digest: s116 }, { digest: s117 }, { digest: s118 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s124 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s119 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s125 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s120 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s126 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s121 }] },
                         },
                       ],
                     },
@@ -1283,10 +1207,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s127,
+        mode: s69,
+        ability: s122,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
         },
         maximumByLevel: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
@@ -1296,83 +1220,63 @@ const registry = {
           owner: [s32, s36, s38],
           target: s3,
           level: 1,
-          path: [{ kind: s50, target: s3, uid: s114 }],
-          certificate: 'eea8e64cb72af5d9978fe1a406ddfa6d8ccfd9ae83b17b7e267f20eaf12ac7ce',
-          parentMetadataDigest: 'ba8b3640f2ad538b24e1f0223cc1137ae5494bd1ebe54f5c54a941b3cfa69057',
-          parentFields: [
-            s52,
-            s53,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s114],
+          path: [{ kind: s50, target: s3, uid: s109 }],
+          certificate: '24b393e9ffdba69b23fd368177e57cc22cb85766b6a19bfd176058f39e377aba',
+          parentMetadataDigest: '51c7bf79cc122c55d29999cbe2eab913e1061a3edad3908e2799ccb4c805f9f6',
+          parentFields: [s52, s53, s54, s55, s56, s57, s60, s62, s63, s64, s65, s111, s66],
+          rootValues: [s109],
           features: [
             {
               kind: s50,
               target: s3,
               body: {
                 metadataDigest: 'ea662d98c921381d2368e07daee78bc466902786c4c9764045121bcaf13da186',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '0aa360921a139d0bd1a0bafb3656489ef5d66d8c4e205b78616bc41429d17df0' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
+                            metadataDigest: s74,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s117 }, { digest: s118 }, { digest: s119 }],
+                              kind: s70,
+                              values: [{ digest: s112 }, { digest: s113 }, { digest: s114 }],
                             },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s120 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s115 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s121 }, { digest: s122 }, { digest: s123 }],
+                              kind: s70,
+                              values: [{ digest: s116 }, { digest: s117 }, { digest: s118 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s124 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s119 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s125 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s120 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s126 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s121 }] },
                           },
                         ],
                       },
@@ -1390,86 +1294,81 @@ const registry = {
         owner: [s32, s39, s37],
         target: s4,
         level: 1,
-        path: [{ kind: s50, target: s4, uid: s128 }],
-        certificate: '795ead015784770a840c422fac19039038937e20d01bf22c2f33408386ccbeca',
-        parentMetadataDigest: '6cbe4db29dce5a9473264197b8ef9c0ad84048b79425e1bade4f83b0700d76d7',
+        path: [{ kind: s50, target: s4, uid: s123 }],
+        certificate: '5b335fcb14a26376578bcfdc88d2ef0b8f1d1f922b84556b5a7fef5f1ca83696',
+        parentMetadataDigest: 'a7017b3a6a9fd63c258c3a96e4450d882a0fd1aaffa2718d5ececc120e7908b9',
         parentFields: [
-          s129,
+          s124,
           s53,
           s54,
           s55,
           s56,
           s58,
           s59,
-          'hd',
           s60,
           s61,
+          s85,
           s62,
-          s90,
-          s63,
+          s86,
+          s64,
+          s65,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s128],
+        rootValues: [s123],
         features: [
           {
             kind: s50,
             target: s4,
             body: {
               metadataDigest: 'dc4907615c9afc93a5c607de169e766ae0a1acdfcc061bf30650771c90144227',
-              fields: [s129, s72, s73, s74, s61, s62, s67, s101],
+              fields: [s124, s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '886b64b5cca98fcf12fc59784ade0c105914a7cfeab606b2b501055ec33c7b4a' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s130 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s125 }] },
                   },
                   {
-                    metadataDigest: s92,
-                    fields: [s61, s77],
+                    metadataDigest: s87,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             'bbcd1430d7c35105d9af078dbc9b60de1d43fbc873f6203f5294bd6e8505b7a5',
                         },
-                        { digest: s131 },
-                        { digest: s132 },
-                        { digest: s133 },
+                        { digest: s126 },
+                        { digest: s127 },
+                        { digest: s128 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s134 },
-                        { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s129 },
+                        { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s97,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s137 }] },
+                    metadataDigest: s92,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s132 }] },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s138 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s133 }] },
                   },
                 ],
               },
@@ -1497,9 +1396,9 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s139,
-        capacity: { kind: s98, formula: s140, minimum: 1 },
+        mode: s79,
+        ability: s134,
+        capacity: { kind: s93, formula: s135, minimum: 1 },
         maximumByLevel: [
           11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         ],
@@ -1509,81 +1408,64 @@ const registry = {
           owner: [s32, s39, s37],
           target: s4,
           level: 1,
-          path: [{ kind: s50, target: s4, uid: s128 }],
-          certificate: '9b8482173863e875be4cf8039aee10f6f651fcea55bba23af048df0fcdfe3812',
-          parentMetadataDigest: '3f3a760618d6d05fe07b13382fb9c4070a842766f191f0fb91f67038292688ae',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s90,
-            s63,
-            s66,
-            s67,
-            s68,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s128],
+          path: [{ kind: s50, target: s4, uid: s123 }],
+          certificate: '2577692b07f6799158a57c1381a166e877642ac40089d3e9c938326f7a1d876b',
+          parentMetadataDigest: 'e66635e4c9a2e45eccc5fa0ba621ef40658528190e33816d8bf3fadbb367c587',
+          parentFields: [s53, s54, s55, s56, s60, s85, s62, s64, s65, s96, s66],
+          rootValues: [s123],
           features: [
             {
               kind: s50,
               target: s4,
               body: {
                 metadataDigest: '6725041b2ebe53bc85f974f1c8c89feb72743fad7e9eeb015c8b85d36fe8f579',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '494697cbc019fe594ec3a60a115a0598db58b1ef2ab39331a5346c9d5b9ceaed' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s130 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s125 }] },
                     },
                     {
-                      metadataDigest: s92,
-                      fields: [s61, s77],
+                      metadataDigest: s87,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               'a6b5d6f54eb0322a3ae8552bbc40df946a9c63462567c250d9aa5da448a79404',
                           },
-                          { digest: s131 },
-                          { digest: s132 },
-                          { digest: s133 },
+                          { digest: s126 },
+                          { digest: s127 },
+                          { digest: s128 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s134 },
-                          { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s129 },
+                          { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s97,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s137 }] },
+                      metadataDigest: s92,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s132 }] },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s138 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s133 }] },
                     },
                   ],
                 },
@@ -1598,11 +1480,11 @@ const registry = {
         owner: [s32, s39, s38],
         target: s5,
         level: 1,
-        path: [{ kind: s50, target: s5, uid: s141 }],
-        certificate: '62a7ad6011e5399ca9fcb190086cd8a27847e0c85788766c8aed2c00c2ac7087',
-        parentMetadataDigest: 'ce2015624a14c769827df277c2f92e0b508a30c20d435f8efbcc0f2ccafa00ad',
+        path: [{ kind: s50, target: s5, uid: s136 }],
+        certificate: 'cc5e1cda315d99bb5cb23dfff07aff587335baa6a1d5360cad84c59b18b03623',
+        parentMetadataDigest: 'a0e77c7f14bd202b8f038d43cb3a5d21b3dd902a9f93aa215744fae854cd951a',
         parentFields: [
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -1610,74 +1492,68 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s141],
+        rootValues: [s136],
         features: [
           {
             kind: s50,
             target: s5,
             body: {
               metadataDigest: 'af17cd5d983dcb1b010e45416fbdf7786a514d141b2a08a63a92ad3112152e0c',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '1d47447e78918fe09912a20413f3341163d55cf5c707c7915cc5bf03985a5b29' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
+                          metadataDigest: s74,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s142 }, { digest: s143 }, { digest: s144 }],
+                            kind: s70,
+                            values: [{ digest: s137 }, { digest: s138 }, { digest: s139 }],
                           },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s145 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s140 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s146 }, { digest: s147 }, { digest: s148 }],
+                            kind: s70,
+                            values: [{ digest: s141 }, { digest: s142 }, { digest: s143 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s149 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s144 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s150 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s145 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s151 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s146 }] },
                         },
                       ],
                     },
@@ -1708,10 +1584,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s139,
+        mode: s79,
+        ability: s134,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
         },
         maximumByLevel: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
@@ -1721,82 +1597,63 @@ const registry = {
           owner: [s32, s39, s38],
           target: s5,
           level: 1,
-          path: [{ kind: s50, target: s5, uid: s141 }],
-          certificate: 'bd4e8f54d9177c7bc629fd4f9cc29432e794263b5b73c49d600f9bcaafbbf1f1',
-          parentMetadataDigest: '83ed909ab32042c61cf40dd2a4030152dc6fcbe98eacf676067ba6a8575cbd0e',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s141],
+          path: [{ kind: s50, target: s5, uid: s136 }],
+          certificate: '0df5077fad7b6d8bccb09ecf434d06520883b1054b310ac3326952fe6642a925',
+          parentMetadataDigest: 'b5ff0271cb09f81dd129f6c6194ecb434536353231587aa7e86ed288add98bc3',
+          parentFields: [s53, s54, s55, s56, s57, s60, s62, s63, s64, s65, s111, s66],
+          rootValues: [s136],
           features: [
             {
               kind: s50,
               target: s5,
               body: {
                 metadataDigest: '30809c96326c490712b4379ed4e08540bb1aa9bdde864ad1d5937c82b2344ec6',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '917945fe68eb88ae7c72cc80a3233776cf272f5540bb8baed113e6d8d7e52072' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
+                            metadataDigest: s74,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s142 }, { digest: s143 }, { digest: s144 }],
+                              kind: s70,
+                              values: [{ digest: s137 }, { digest: s138 }, { digest: s139 }],
                             },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s145 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s140 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s146 }, { digest: s147 }, { digest: s148 }],
+                              kind: s70,
+                              values: [{ digest: s141 }, { digest: s142 }, { digest: s143 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s149 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s144 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s150 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s145 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s151 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s146 }] },
                           },
                         ],
                       },
@@ -1814,85 +1671,64 @@ const registry = {
         owner: [s32, s40, s37],
         target: s6,
         level: 1,
-        path: [{ kind: s50, target: s6, uid: s152 }],
-        certificate: '5337e36d56756e85cd2fcf83c2c86507fed9e037d0619eb219d42a9683530118',
-        parentMetadataDigest: '31d79d5f724d1f382107760fada4f5da3b2f7a77cf64d3d0cbaeae223528594d',
-        parentFields: [
-          s53,
-          s54,
-          s55,
-          s56,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s62,
-          s90,
-          s63,
-          s66,
-          s91,
-          s67,
-          s68,
-          s101,
-          s69,
-          s70,
-          s71,
-        ],
-        rootValues: [s152],
+        path: [{ kind: s50, target: s6, uid: s147 }],
+        certificate: '1d6c00ed9e4762afb1274cf9e01db9eba2f18a88256280ecbbd8f91f0fa73fd5',
+        parentMetadataDigest: 'feb0f400797cfa820b0bbbbc735d13eeb4f55475f657c96f12ed1e51876b1ea8',
+        parentFields: [s53, s54, s55, s56, s58, s59, s60, s61, s85, s62, s86, s64, s65, s96, s66],
+        rootValues: [s147],
         features: [
           {
             kind: s50,
             target: s6,
             body: {
               metadataDigest: 'ef670ced675d4ea52a527c62a635787797762ac320ac50c8e9e1728740f36c27',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '6ad167a65a6ec86e06c29565345a61d3d2ccd5d06cbe5d955786ec44a2c1d8b9' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s153 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s148 }] },
                   },
                   {
-                    metadataDigest: s92,
-                    fields: [s61, s77],
+                    metadataDigest: s87,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '0880d3f0329a8a8aa795c96318203e8236535b8bd4959a7137a3ad22ebccd6d0',
                         },
-                        { digest: s154 },
-                        { digest: s155 },
-                        { digest: s156 },
+                        { digest: s149 },
+                        { digest: s150 },
+                        { digest: s151 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s157 },
-                        { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s152 },
+                        { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s97,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s158 }] },
+                    metadataDigest: s92,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s153 }] },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s159 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s154 }] },
                   },
                 ],
               },
@@ -1920,9 +1756,9 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s139,
-        capacity: { kind: s98, formula: s140, minimum: 1 },
+        mode: s79,
+        ability: s134,
+        capacity: { kind: s93, formula: s135, minimum: 1 },
         maximumByLevel: [
           11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         ],
@@ -1932,81 +1768,64 @@ const registry = {
           owner: [s32, s40, s37],
           target: s6,
           level: 1,
-          path: [{ kind: s50, target: s6, uid: s152 }],
-          certificate: '27f4875425ceff541d190d2ad6c88691a4658990c451872a5fc1b787607723f5',
-          parentMetadataDigest: '060eb852bd7b79963d614283edc60e64e408c39c54e55d02379a0281e13c65d4',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s90,
-            s63,
-            s66,
-            s67,
-            s68,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s152],
+          path: [{ kind: s50, target: s6, uid: s147 }],
+          certificate: '04964cc42213068069f578032d12fa13ddadb4c57bdc0586300aedc091ecbdbf',
+          parentMetadataDigest: 'ed96426a7ce7ae733687f11be3c9760ccc3a85f2403330c15e17586717213e75',
+          parentFields: [s53, s54, s55, s56, s60, s85, s62, s64, s65, s96, s66],
+          rootValues: [s147],
           features: [
             {
               kind: s50,
               target: s6,
               body: {
                 metadataDigest: '425b44d489b86b210d733ed844a0259efc8ef72900c7bfa8eb777324c2f513e7',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '324bd94fd7bc53ae32159b768e827d8886ebb7f58ce530825d67ae9b0fd068fa' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s153 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s148 }] },
                     },
                     {
-                      metadataDigest: s92,
-                      fields: [s61, s77],
+                      metadataDigest: s87,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '67ce55523e31f3f205c0f9ae25d88ceacb048fdc4b2fc6decefb4b9a22318daf',
                           },
-                          { digest: s154 },
-                          { digest: s155 },
-                          { digest: s156 },
+                          { digest: s149 },
+                          { digest: s150 },
+                          { digest: s151 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s157 },
-                          { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s152 },
+                          { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s97,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s158 }] },
+                      metadataDigest: s92,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s153 }] },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s159 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s154 }] },
                     },
                   ],
                 },
@@ -2021,12 +1840,12 @@ const registry = {
         owner: [s32, s40, s38],
         target: s7,
         level: 1,
-        path: [{ kind: s50, target: s7, uid: s160 }],
-        certificate: '27620c2ccf93bede43e887040245390a00b43e0704d337846ad8aaa24fa4b033',
-        parentMetadataDigest: '6f850702aabe2d14c7e695b5753801a8277bd4a35f4be4dadf4ff3eb094fbef9',
+        path: [{ kind: s50, target: s7, uid: s155 }],
+        certificate: 'e551f2b6c8ffb968a35618ae955af735950131aac8d36546d7f6b243ef290c99',
+        parentMetadataDigest: '392ed9168277825759a1cfbef607a1a496a314b2faa10ed58bd47691cea58f36',
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -2034,74 +1853,68 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s160],
+        rootValues: [s155],
         features: [
           {
             kind: s50,
             target: s7,
             body: {
               metadataDigest: 'eb12321b1b193e848491f092ac9a06e28e0c956d098c910dd6f0c2c3d7edef7a',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'cdd57c12d20690cc56d2db330da2a3801a107ba8738311106a5dd768b4767dfe' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
+                          metadataDigest: s74,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s161 }, { digest: s162 }, { digest: s163 }],
+                            kind: s70,
+                            values: [{ digest: s156 }, { digest: s157 }, { digest: s158 }],
                           },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s164 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s159 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s165 }, { digest: s166 }, { digest: s167 }],
+                            kind: s70,
+                            values: [{ digest: s160 }, { digest: s161 }, { digest: s162 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s168 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s163 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s169 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s164 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s170 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s165 }] },
                         },
                       ],
                     },
@@ -2132,10 +1945,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s84,
-        ability: s139,
+        mode: s79,
+        ability: s134,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
         },
         maximumByLevel: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
@@ -2145,83 +1958,63 @@ const registry = {
           owner: [s32, s40, s38],
           target: s7,
           level: 1,
-          path: [{ kind: s50, target: s7, uid: s160 }],
-          certificate: '9729dd2e9b07d03328249c379f18c5952c2b4d1dbabb4a999c6380fc37412afa',
-          parentMetadataDigest: '9d81f59c6736caccc0de3e04cfd4772a2047ee49ff23b4b8733bc0ec0396132d',
-          parentFields: [
-            s52,
-            s53,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s160],
+          path: [{ kind: s50, target: s7, uid: s155 }],
+          certificate: '3ea86db3de43b1dbfb85200d23d54dfb4e6f9c5cfcfada0127a031a4e4b47fc7',
+          parentMetadataDigest: 'ac1e280c93d1581bab3bf3712496d81ff310bb56b6988e05507ea4e40ab41afc',
+          parentFields: [s52, s53, s54, s55, s56, s57, s60, s62, s63, s64, s65, s111, s66],
+          rootValues: [s155],
           features: [
             {
               kind: s50,
               target: s7,
               body: {
                 metadataDigest: '7784f3177106cfc487a129f25f69775f37ae83dd80a6d6c8b815d84d310bdcd5',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '808c54d78c193e69ba2f4b0251f4a56e0cfa5af39b2555510046f23f98356502' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
+                            metadataDigest: s74,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s161 }, { digest: s162 }, { digest: s163 }],
+                              kind: s70,
+                              values: [{ digest: s156 }, { digest: s157 }, { digest: s158 }],
                             },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s164 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s159 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s165 }, { digest: s166 }, { digest: s167 }],
+                              kind: s70,
+                              values: [{ digest: s160 }, { digest: s161 }, { digest: s162 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s168 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s163 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s169 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s164 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s170 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s165 }] },
                           },
                         ],
                       },
@@ -2236,89 +2029,89 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s41, s37, s172, s37],
+        owner: [s166, s41, s37, s167, s37],
         target: s8,
         level: 3,
         path: [
-          { kind: s173, target: s174, uid: s175 },
-          { kind: s173, target: s8, uid: s176 },
+          { kind: s168, target: s169, uid: s170 },
+          { kind: s168, target: s8, uid: s171 },
         ],
         certificate: '48e3c55b53186aab57364dfbf748f494f89b61b9e43990d62b3a5b38e97154d0',
         parentMetadataDigest: '3f9ba5169898c5f59a3a875dd1ff25a89a1a65b0b68a583fa8541064bc2d8c88',
-        parentFields: [s52, s53, s54, s72, s73, s56, s61, s62, s91, s177, s67, s68, s100, s178],
-        rootValues: [s175],
+        parentFields: [s52, s53, s54, s67, s68, s56, s60, s61, s86, s172, s64, s65, s95, s173],
+        rootValues: [s170],
         features: [
           {
-            kind: s173,
-            target: s174,
+            kind: s168,
+            target: s169,
             body: {
-              metadataDigest: s179,
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s174,
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s182 },
+                  { digest: s177 },
                   {
-                    metadataDigest: s183,
-                    fields: [s173, s77],
+                    metadataDigest: s178,
+                    fields: [s168, s72],
                     reference: s8,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
-                    metadataDigest: s184,
-                    fields: [s173, s77],
-                    reference: s185,
-                    entries: { kind: s95 },
+                    metadataDigest: s179,
+                    fields: [s168, s72],
+                    reference: s180,
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s8,
             body: {
-              metadataDigest: s186,
-              fields: [s72, s73, s187, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s181,
+              fields: [s67, s68, s182, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s188 },
+                  { digest: s183 },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s189 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s184 }] },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s190 }, { digest: s191 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s185 }, { digest: s186 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s192,
-                          fields: [s61, s77],
+                          metadataDigest: s187,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s193 },
-                              { digest: s194 },
-                              { digest: s195 },
-                              { digest: s196 },
+                              { digest: s188 },
+                              { digest: s189 },
+                              { digest: s190 },
+                              { digest: s191 },
                             ],
                           },
                         },
@@ -2326,27 +2119,27 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s197 },
+                              { digest: s192 },
                               {
-                                metadataDigest: s93,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s88,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                               {
-                                metadataDigest: s96,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s91,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
@@ -2362,11 +2155,11 @@ const registry = {
       },
       parent: '["class","fighter","phb"]',
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
-        spellsKnownProgression: s171,
+        cantripProgression: s166,
+        spellsKnownProgression: s166,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
         preparedSpellsProgression: s32,
@@ -2396,105 +2189,105 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s41, s38, s172, s37],
+        owner: [s166, s41, s38, s167, s37],
         target: s8,
         level: 3,
         path: [
-          { kind: s173, target: s174, uid: s175 },
-          { kind: s173, target: s8, uid: s176 },
+          { kind: s168, target: s169, uid: s170 },
+          { kind: s168, target: s8, uid: s171 },
         ],
         certificate: 'a586fe3416a1a4c2419db94b8b442d656cb0b05968440409391ca8dfbdec4f71',
         parentMetadataDigest: '0985325c5c041bd1ea4160b54044d2e8c307f6e36c2fa223e44e5984081eeb6b',
         parentFields: [
-          s198,
+          s193,
           s52,
           s53,
           s54,
-          s72,
-          s73,
-          s56,
-          s61,
-          s62,
-          s91,
-          s177,
           s67,
           s68,
-          s100,
-          s178,
+          s56,
+          s60,
+          s61,
+          s86,
+          s172,
+          s64,
+          s65,
+          s95,
+          s173,
         ],
-        rootValues: [s175],
+        rootValues: [s170],
         features: [
           {
-            kind: s173,
-            target: s174,
+            kind: s168,
+            target: s169,
             body: {
-              metadataDigest: s179,
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s174,
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s182 },
+                  { digest: s177 },
                   {
-                    metadataDigest: s183,
-                    fields: [s173, s77],
+                    metadataDigest: s178,
+                    fields: [s168, s72],
                     reference: s8,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
-                    metadataDigest: s184,
-                    fields: [s173, s77],
-                    reference: s185,
-                    entries: { kind: s95 },
+                    metadataDigest: s179,
+                    fields: [s168, s72],
+                    reference: s180,
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s8,
             body: {
-              metadataDigest: s186,
-              fields: [s72, s73, s187, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s181,
+              fields: [s67, s68, s182, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s188 },
+                  { digest: s183 },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s189 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s184 }] },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s190 }, { digest: s191 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s185 }, { digest: s186 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s192,
-                          fields: [s61, s77],
+                          metadataDigest: s187,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s193 },
-                              { digest: s194 },
-                              { digest: s195 },
-                              { digest: s196 },
+                              { digest: s188 },
+                              { digest: s189 },
+                              { digest: s190 },
+                              { digest: s191 },
                             ],
                           },
                         },
@@ -2502,27 +2295,27 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s197 },
+                              { digest: s192 },
                               {
-                                metadataDigest: s93,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s88,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                               {
-                                metadataDigest: s96,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s91,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
@@ -2536,13 +2329,13 @@ const registry = {
           },
         ],
       },
-      parent: s199,
+      parent: s194,
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
-        spellsKnownProgression: s171,
+        cantripProgression: s166,
+        spellsKnownProgression: s166,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
         preparedSpellsProgression: s32,
@@ -2572,62 +2365,62 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s41, s38, s172, s38],
+        owner: [s166, s41, s38, s167, s38],
         target: s9,
         level: 3,
         path: [
-          { kind: s173, target: s200, uid: s201 },
-          { kind: s173, target: s9, uid: 'Spellcasting|Fighter|XPHB|Eldritch Knight|XPHB|3' },
+          { kind: s168, target: s195, uid: s196 },
+          { kind: s168, target: s9, uid: 'Spellcasting|Fighter|XPHB|Eldritch Knight|XPHB|3' },
         ],
         certificate: '7a94c07ecbcc81da5e53fa4ab6e2941a2546c145d5c495e6d5013748c1a83538',
         parentMetadataDigest: '647f2af51054ee933589deb54598ba319fdad231991b4218834ce004194561f8',
-        parentFields: [s52, s53, s54, s72, s73, s56, s59, s61, s62, s63, s64, s177, s67, s68, s178],
-        rootValues: [s201],
+        parentFields: [s52, s53, s54, s67, s68, s56, s59, s60, s61, s62, s63, s172, s64, s65, s173],
+        rootValues: [s196],
         features: [
           {
-            kind: s173,
-            target: s200,
+            kind: s168,
+            target: s195,
             body: {
               metadataDigest: '324a878ecdcc13a4966224b78468890df1574b4cff652f674041158ce17f474f',
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'cab93fc8dd60d04f23aa68381ab8ef1b4498d3f667939b5295267f2f6ac3f14e' },
                   { digest: '595a48a1a48a894a6ef6d6c7838024265602357316f63e8ddbeabcc78b22258a' },
                   {
                     metadataDigest:
                       '3b9d6f85aed6c9249ea45f7807176e924e5df3de8fca1a781d3c5c428f407d5b',
-                    fields: [s173, s77],
+                    fields: [s168, s72],
                     reference: s9,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
                     metadataDigest:
                       '76e3c435cbba512d934d2da18da07950242de76f73cec6a4e5e1f49e95c06c32',
-                    fields: [s173, s77],
+                    fields: [s168, s72],
                     reference: 'subclass-feature|war bond|fighter|xphb|eldritch knight|xphb|3|xphb',
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s9,
             body: {
               metadataDigest: '0efedb60f944e1d1ae7e7d7585ecd3a41c226d2b8d7652d054d040b63e2ae953',
-              fields: [s72, s73, s187, s74, s61, s62, s67, s180, s181],
+              fields: [s67, s68, s182, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '7eeb71c38136b2a7fcd79aad5f0bd66ebaddf03ff5a49c29773e67ec85eff88a' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
+                    metadataDigest: s74,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2641,16 +2434,16 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
+                          metadataDigest: s75,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -2663,16 +2456,16 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -2689,17 +2482,17 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           metadataDigest:
                             '00b3ecdd46257f58a5cf408aee7aa2d23094227868c4f3e9cfe146489c01b628',
-                          fields: [s61, s77],
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -2712,29 +2505,29 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s202 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s197 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s203 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s198 }] },
                         },
                       ],
                     },
@@ -2745,17 +2538,17 @@ const registry = {
           },
         ],
       },
-      parent: s199,
+      parent: s194,
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
+        cantripProgression: s166,
         spellsKnownProgression: s32,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
-        preparedSpellsProgression: s171,
-        preparedSpellsChange: s171,
+        preparedSpellsProgression: s166,
+        preparedSpellsChange: s166,
       },
       domains: {
         'class-cantrip': [
@@ -2777,10 +2570,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s85,
+        mode: s69,
+        ability: s80,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
         },
         maximumByLevel: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
@@ -2788,55 +2581,55 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s42, s38, 'warrior of the mystic arts', 'au'],
+        owner: [s166, s42, s38, 'warrior of the mystic arts', 'au'],
         target: s10,
         level: 3,
         path: [
-          { kind: s173, target: s204, uid: s205 },
-          { kind: s173, target: s10, uid: 'Spellcasting|Monk|XPHB|Mystic Arts|AU|3|AU' },
+          { kind: s168, target: s199, uid: s200 },
+          { kind: s168, target: s10, uid: 'Spellcasting|Monk|XPHB|Mystic Arts|AU|3|AU' },
         ],
         certificate: 'dc8875794c5bb7a3829185caa877e0a4e038fd8df7d1f74834006ad80f5dadcc',
         parentMetadataDigest: 'd4514236051ca0ebdbe4a7d2a843687c785bb1763867e027283e8efc54e242ab',
-        parentFields: [s52, s53, s54, s72, s73, s56, s58, s59, s61, s63, s64, s177, s67, s68, s178],
-        rootValues: [s205],
+        parentFields: [s52, s53, s54, s67, s68, s56, s58, s59, s60, s62, s63, s172, s64, s65, s173],
+        rootValues: [s200],
         features: [
           {
-            kind: s173,
-            target: s204,
+            kind: s168,
+            target: s199,
             body: {
               metadataDigest: '875044bc8817760d26fa5dda811f43fad995c7b4e1adf08d1298fecc4d3c938f',
-              fields: [s72, s73, s74, s61, s67, s180, s181],
+              fields: [s67, s68, s69, s60, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '11fec214348c145f88f364d6c22aae92974d222389b11c0dda498a7c837d780d' },
                   { digest: '41610d912f80356452558aa542d1da6dbb804cc8dbf224106925fc73b7bcdb19' },
                   {
                     metadataDigest:
                       'dd11cdf405abf807188742d01cfd1240748ff5e6f45d6b3ca11421f617070e4a',
-                    fields: [s173, s77],
+                    fields: [s168, s72],
                     reference: s10,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s10,
             body: {
               metadataDigest: 'f772be22f2df7aab9d32044950abac107961513ddeb3431d2dbac4fb31b925aa',
-              fields: [s72, s73, s187, s74, s61, s67, s180, s181],
+              fields: [s67, s68, s182, s69, s60, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'f76adab36f2fec3d040ad59861f1d2d081a126ac8b5ece28bc5198b802812580' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
+                    metadataDigest: s74,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2850,10 +2643,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
+                    metadataDigest: s75,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2863,10 +2656,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s81,
-                    fields: [s61, s77],
+                    metadataDigest: s76,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2880,10 +2673,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s82,
-                    fields: [s61, s77],
+                    metadataDigest: s77,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2893,10 +2686,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2906,16 +2699,16 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s206 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s201 }] },
                   },
                   {
                     metadataDigest:
                       '5b9802465bb02b828e6cb4f114503da34aafe62f7f70b54b76a64ebbe67aefb3',
-                    fields: [s61, s77],
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -2932,15 +2725,15 @@ const registry = {
       },
       parent: '["class","monk","xphb"]',
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
+        cantripProgression: s166,
         spellsKnownProgression: s32,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
-        preparedSpellsProgression: s171,
-        preparedSpellsChange: s171,
+        preparedSpellsProgression: s166,
+        preparedSpellsChange: s166,
       },
       domains: {
         'class-cantrip': [
@@ -2962,10 +2755,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s139,
+        mode: s69,
+        ability: s134,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
         },
         maximumByLevel: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
@@ -2976,75 +2769,54 @@ const registry = {
         owner: [s32, s43, s37],
         target: s11,
         level: 2,
-        path: [{ kind: s50, target: s11, uid: s207 }],
-        certificate: '2990369e9e904175b5154f15e5ab746518931e8ed1a7abfd7f54921e9f4913a0',
-        parentMetadataDigest: '782621782f6949631c9816934ff3eb104e8f670dce0e2d5f458245194197a864',
-        parentFields: [
-          s54,
-          s55,
-          s56,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s88,
-          s62,
-          s90,
-          s63,
-          s66,
-          s91,
-          s67,
-          s68,
-          s101,
-          s69,
-          s70,
-          s71,
-        ],
-        rootValues: [s207],
+        path: [{ kind: s50, target: s11, uid: s202 }],
+        certificate: 'd6bc8be63e296d6cee82542b54ce4fcb38b0173a69719b231fc467b155d2116a',
+        parentMetadataDigest: '3f5f350f69db07e704ef2d2ea4f203341896d6511c09d33e67416daaa040bb9f',
+        parentFields: [s54, s55, s56, s58, s59, s60, s83, s61, s85, s62, s86, s64, s65, s96, s66],
+        rootValues: [s202],
         features: [
           {
             kind: s50,
             target: s11,
             body: {
               metadataDigest: '8809088e2935e25b68903ddc07dd417ad3fe0f7afdf3fd71236e5e86c3d96d10',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'cba0be9e82429e54a11e890b49710226729523a86b8611e025db95b6ef18ea13' },
                   {
-                    metadataDigest: s92,
-                    fields: [s61, s77],
+                    metadataDigest: s87,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '469dc25976a17ddb161b1396c3f0e39ac046bcb504bf112f13e1ebe789ef11cd',
                         },
-                        { digest: s208 },
-                        { digest: s209 },
-                        { digest: s210 },
+                        { digest: s203 },
+                        { digest: s204 },
+                        { digest: s205 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s211 },
-                        { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s206 },
+                        { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s212 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s207 }] },
                   },
                 ],
               },
@@ -3066,9 +2838,9 @@ const registry = {
       },
       domains: {},
       preparation: {
-        mode: s84,
-        ability: s127,
-        capacity: { kind: s98, formula: '<$level$> / 2 + <$cha_mod$>', minimum: 1 },
+        mode: s79,
+        ability: s122,
+        capacity: { kind: s93, formula: '<$level$> / 2 + <$cha_mod$>', minimum: 1 },
         maximumByLevel: [
           10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20,
         ],
@@ -3078,71 +2850,54 @@ const registry = {
           owner: [s32, s43, s37],
           target: s11,
           level: 2,
-          path: [{ kind: s50, target: s11, uid: s207 }],
-          certificate: '9fd9efe0e98aff0a9b8f1de18f78290331e031412aa24bfe712e910197b049e5',
-          parentMetadataDigest: '9b84b7ac1d9d2b49434061bbb6d80d7ca4346b48f7ae650f692e09f2cd926d67',
-          parentFields: [
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s90,
-            s63,
-            s66,
-            s67,
-            s68,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s207],
+          path: [{ kind: s50, target: s11, uid: s202 }],
+          certificate: '7e520566d2a3037f790be8b938497c53146518a5ad54427f6a42b6f89d911a55',
+          parentMetadataDigest: '5162725861dd38eedbbf2cee204a20d77eae23c7eb388ce895f003a82e06c43d',
+          parentFields: [s54, s55, s56, s60, s83, s85, s62, s64, s65, s96, s66],
+          rootValues: [s202],
           features: [
             {
               kind: s50,
               target: s11,
               body: {
                 metadataDigest: 'a121954568f8de29d9b789b29fdf482069b4616732e42a2dfb310c85ce7a9e2e',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: 'd38c279064352b0907dee3e896c354d5a9151a17a657faf9c24f6bb2592d9102' },
                     {
-                      metadataDigest: s92,
-                      fields: [s61, s77],
+                      metadataDigest: s87,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '22137ed559558441e7f692f0634771ef494d8661e5302f9b9dc96657c558252a',
                           },
-                          { digest: s208 },
-                          { digest: s209 },
-                          { digest: s210 },
+                          { digest: s203 },
+                          { digest: s204 },
+                          { digest: s205 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s211 },
-                          { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s206 },
+                          { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s212 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s207 }] },
                     },
                   ],
                 },
@@ -3157,78 +2912,72 @@ const registry = {
         owner: [s32, s43, s38],
         target: s12,
         level: 1,
-        path: [{ kind: s50, target: s12, uid: s213 }],
-        certificate: '5b1b99c3bd14084a09ab220384f7558c3a611dbd9e8bcf83c2baf72b41950d41',
-        parentMetadataDigest: 'e4cf132de297cfc12113d99f44822084f270eb5ebf337c0d5f4f5e03ed9afc13',
+        path: [{ kind: s50, target: s12, uid: s208 }],
+        certificate: '7eb65242d2f9c41062391315f10f3651875c2f8bba0062e424f3d7183d09e9bc',
+        parentMetadataDigest: '8d72b54afe3378879a964a6d8d5827b1d2324aa50fa17d1d441da5b0e8a3d346',
         parentFields: [
           s52,
-          s115,
+          s110,
           s54,
           s55,
           s56,
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s213],
+        rootValues: [s208],
         features: [
           {
             kind: s50,
             target: s12,
             body: {
               metadataDigest: '6a7075508f866979daf42239396aabe9622f89eb05313f5b82a0ae17d4f9431f',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '503480698509fc066b9368865482cb0a6ee89111422f7c417c111ddda9ef6dff' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s214 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s209 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s215 }, { digest: s216 }, { digest: s217 }],
+                            kind: s70,
+                            values: [{ digest: s210 }, { digest: s211 }, { digest: s212 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s218 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s213 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s219 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s214 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s220 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s215 }] },
                         },
                       ],
                     },
@@ -3253,10 +3002,10 @@ const registry = {
       },
       domains: {},
       preparation: {
-        mode: s84,
-        ability: s127,
+        mode: s79,
+        ability: s122,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
         },
         maximumByLevel: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
@@ -3266,74 +3015,55 @@ const registry = {
           owner: [s32, s43, s38],
           target: s12,
           level: 1,
-          path: [{ kind: s50, target: s12, uid: s213 }],
-          certificate: '4c11fe80f6557e1188bd76afe39610a9a4616d487489728f4b6c2eb620194e9b',
-          parentMetadataDigest: '932791025a9411fabf4032268ed5f401c2ce7e282aa1584f4d50fe3d6da0d34b',
-          parentFields: [
-            s52,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s213],
+          path: [{ kind: s50, target: s12, uid: s208 }],
+          certificate: '1fa335572b56f0084520d1d94ef9e28332f4b30647ba2e8c073e1f31788490d0',
+          parentMetadataDigest: 'cb887fc8e6379cc4fe67111a6401768995624d8391771ca56257c31a4e974a24',
+          parentFields: [s52, s54, s55, s56, s57, s60, s62, s63, s64, s65, s111, s66],
+          rootValues: [s208],
           features: [
             {
               kind: s50,
               target: s12,
               body: {
                 metadataDigest: 'b3558f7da83fa5f3b2b70f30165f2b054269f71427d5d9400c10e692c65b190e',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: 'd4e8688f2c4cede8944932f0c235c9d2fe0c5886c4bac3a574f06a9aa6f45d05' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s214 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s209 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s215 }, { digest: s216 }, { digest: s217 }],
+                              kind: s70,
+                              values: [{ digest: s210 }, { digest: s211 }, { digest: s212 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s218 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s213 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s219 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s214 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s220 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s215 }] },
                           },
                         ],
                       },
@@ -3351,73 +3081,53 @@ const registry = {
         owner: [s32, s44, s37],
         target: s13,
         level: 2,
-        path: [{ kind: s50, target: s13, uid: s221 }],
-        certificate: '4700f12369375443aec728b7a419ce1b10ab484a996e35253374e586716e533a',
-        parentMetadataDigest: 'f33cc2a5b0a5d042bf10de532ea4f3eced6a002ae6f9e86d172aede0e20eedec',
-        parentFields: [
-          s54,
-          s55,
-          s56,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s88,
-          s62,
-          s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s101,
-          s69,
-          s70,
-          s71,
-        ],
-        rootValues: [s221],
+        path: [{ kind: s50, target: s13, uid: s216 }],
+        certificate: '73a22ec0c630a9f9a2cd9f65aa27ebdffb9d00ed4176a1334773972930a9e3bf',
+        parentMetadataDigest: '21b74037d123141bf5c7097ff586aa15fa5500927061b0c7ba68519476e05416',
+        parentFields: [s54, s55, s56, s58, s59, s60, s83, s61, s86, s64, s65, s95, s96, s66],
+        rootValues: [s216],
         features: [
           {
             kind: s50,
             target: s13,
             body: {
               metadataDigest: '60973419d3833c5379b423430b90d12afbad6780099b7c9e4e92103571259cb4',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '1479782efe70a5bbc7366a62a4338dd3d8720b09dc1d468a1f486bfbf970375d' },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
+                    metadataDigest: s75,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '3a0899206c41cc8967f6c2e1770064f465403dcd850f80f064c1602c61222a7f',
                         },
-                        { digest: s222 },
+                        { digest: s217 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s104,
-                    fields: [s61, s77],
+                    metadataDigest: s99,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
-                      values: [{ digest: s223 }, { digest: s224 }, { digest: s225 }],
+                      kind: s70,
+                      values: [{ digest: s218 }, { digest: s219 }, { digest: s220 }],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s226 },
-                        { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s221 },
+                        { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
@@ -3458,69 +3168,53 @@ const registry = {
           owner: [s32, s44, s37],
           target: s13,
           level: 2,
-          path: [{ kind: s50, target: s13, uid: s221 }],
-          certificate: '8a7960a18b1a1d89d2b03d739a9078789bfbb5f27f5b2c8d41258646a124f542',
-          parentMetadataDigest: '96fcf0654c68cd11c4e8598376d4d49db10a41a0298b5171103f7a50b926e547',
-          parentFields: [
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s221],
+          path: [{ kind: s50, target: s13, uid: s216 }],
+          certificate: '99657899039ccad864dea2fecb465b7357662a81f8b6005cc6de91a9d4faee1b',
+          parentMetadataDigest: 'f066b79135cd0c9813190ad5e56bf3e4d4c67127a71262a6047bc235857093be',
+          parentFields: [s54, s55, s56, s60, s83, s64, s65, s95, s96, s66],
+          rootValues: [s216],
           features: [
             {
               kind: s50,
               target: s13,
               body: {
                 metadataDigest: 'f61e6b777ca0169aa033853548dbff15d51f16eb1005600761e04ac742a9b48d',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '4ddaacd2ec00c1b1444fe86234b99b9dbaff35f544cbc177110807c676547dd4' },
                     {
-                      metadataDigest: s80,
-                      fields: [s61, s77],
+                      metadataDigest: s75,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '5b1996715bcab1f7995804e2f806a56cf49f0c3750332ba5999ce0a6e211fb6c',
                           },
-                          { digest: s222 },
+                          { digest: s217 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s104,
-                      fields: [s61, s77],
+                      metadataDigest: s99,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
-                        values: [{ digest: s223 }, { digest: s224 }, { digest: s225 }],
+                        kind: s70,
+                        values: [{ digest: s218 }, { digest: s219 }, { digest: s220 }],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s226 },
-                          { metadataDigest: s135, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s136, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s221 },
+                          { metadataDigest: s130, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s131, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
@@ -3537,78 +3231,72 @@ const registry = {
         owner: [s32, s44, s38],
         target: s14,
         level: 1,
-        path: [{ kind: s50, target: s14, uid: s227 }],
-        certificate: 'c8621b54710abf2b7efa34e2800c860ff68c5d2d847e30383fa320c53c044883',
-        parentMetadataDigest: 'e5dabb6ef6b0e25671a3c0e105f4dc84607ac9ff1edf24f1274ed7f638712342',
+        path: [{ kind: s50, target: s14, uid: s222 }],
+        certificate: '9e6645065927f41cb98f5636e6000dd944dccf94709171cf69da348d337609f6',
+        parentMetadataDigest: 'd189b01aef500f94840a4ffa3165596c31cf0c78ebbaccb8ec897882a8cc5b48',
         parentFields: [
           s52,
-          s115,
+          s110,
           s54,
           s55,
           s56,
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s227],
+        rootValues: [s222],
         features: [
           {
             kind: s50,
             target: s14,
             body: {
               metadataDigest: '9f19b5adf9a40e072786d0fc2b4fc9a97f9e67d49fe3e430fa512150d069186f',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'f40a5174afde72bfa94873c04194dffd49a50f233f96da24dcb7e1ca0146a148' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s228 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s223 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s229 }, { digest: s230 }, { digest: s231 }],
+                            kind: s70,
+                            values: [{ digest: s224 }, { digest: s225 }, { digest: s226 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s232 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s227 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s233 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s228 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s234 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s229 }] },
                         },
                       ],
                     },
@@ -3633,10 +3321,10 @@ const registry = {
       },
       domains: {},
       preparation: {
-        mode: s84,
-        ability: s139,
+        mode: s79,
+        ability: s134,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
         },
         maximumByLevel: [2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15],
@@ -3646,74 +3334,55 @@ const registry = {
           owner: [s32, s44, s38],
           target: s14,
           level: 1,
-          path: [{ kind: s50, target: s14, uid: s227 }],
-          certificate: 'fa73ef3fd23086533325decf9634ab40e0702cdc69f1a164ae50256eb7555243',
-          parentMetadataDigest: '171c6b43d5b4aa738145de4c6c274dae4c785e7e06da28431ec5ff90bec49a66',
-          parentFields: [
-            s52,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s227],
+          path: [{ kind: s50, target: s14, uid: s222 }],
+          certificate: '11e34d0d0e2fdf4e9cc7f0cd164cadf09d25576f7209506468a9489fd0c7f289',
+          parentMetadataDigest: '0520da6135cf698b2877c86617a4033ccea1afa4e21f815d91d2bee801706aa0',
+          parentFields: [s52, s54, s55, s56, s57, s60, s62, s63, s64, s65, s111, s66],
+          rootValues: [s222],
           features: [
             {
               kind: s50,
               target: s14,
               body: {
                 metadataDigest: 'b93a1e35b0351ba2c03597d5c26932d6f9902f66bb7831d458510ae70c49b8aa',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: 'e9f8642e13b1c9d2391855b9a75285272fde35a253291b8f27a9fa5603699c23' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s228 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s223 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s229 }, { digest: s230 }, { digest: s231 }],
+                              kind: s70,
+                              values: [{ digest: s224 }, { digest: s225 }, { digest: s226 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s232 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s227 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s233 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s228 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s234 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s229 }] },
                           },
                         ],
                       },
@@ -3728,98 +3397,98 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s45, s37, s235, s37],
+        owner: [s166, s45, s37, s230, s37],
         target: s15,
         level: 3,
         path: [
-          { kind: s173, target: s236, uid: s237 },
-          { kind: s173, target: s15, uid: s238 },
+          { kind: s168, target: s231, uid: s232 },
+          { kind: s168, target: s15, uid: s233 },
         ],
         certificate: 'd6ef3bd10a148b8785d5b2a0dae997156b8cf8e16e4751bffc026eb6647284c0',
         parentMetadataDigest: '17b476177ee5c481cc89068f368558fa5c8ef51d3bb66ea669c26ec8199a8f24',
-        parentFields: [s52, s53, s54, s72, s73, s56, s61, s62, s91, s177, s67, s68, s100, s178],
-        rootValues: [s237],
+        parentFields: [s52, s53, s54, s67, s68, s56, s60, s61, s86, s172, s64, s65, s95, s173],
+        rootValues: [s232],
         features: [
           {
-            kind: s173,
-            target: s236,
+            kind: s168,
+            target: s231,
             body: {
-              metadataDigest: s239,
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s234,
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s240 },
+                  { digest: s235 },
                   {
-                    metadataDigest: s241,
-                    fields: [s173, s77],
+                    metadataDigest: s236,
+                    fields: [s168, s72],
                     reference: s15,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
-                    metadataDigest: s242,
-                    fields: [s173, s77],
-                    reference: s243,
-                    entries: { kind: s95 },
+                    metadataDigest: s237,
+                    fields: [s168, s72],
+                    reference: s238,
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s15,
             body: {
-              metadataDigest: s244,
-              fields: [s72, s73, s187, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s239,
+              fields: [s67, s68, s182, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s245 },
+                  { digest: s240 },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s246 }] },
+                          metadataDigest: s74,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s241 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s247 }, { digest: s248 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s242 }, { digest: s243 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s192,
-                          fields: [s61, s77],
+                          metadataDigest: s187,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s249 },
-                              { digest: s250 },
-                              { digest: s195 },
-                              { digest: s251 },
+                              { digest: s244 },
+                              { digest: s245 },
+                              { digest: s190 },
+                              { digest: s246 },
                             ],
                           },
                         },
@@ -3827,27 +3496,27 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s252 },
+                              { digest: s247 },
                               {
-                                metadataDigest: s93,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s88,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                               {
-                                metadataDigest: s96,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s91,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
@@ -3863,11 +3532,11 @@ const registry = {
       },
       parent: '["class","rogue","phb"]',
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
-        spellsKnownProgression: s171,
+        cantripProgression: s166,
+        spellsKnownProgression: s166,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
         preparedSpellsProgression: s32,
@@ -3897,114 +3566,114 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s45, s38, s235, s37],
+        owner: [s166, s45, s38, s230, s37],
         target: s15,
         level: 3,
         path: [
-          { kind: s173, target: s236, uid: s237 },
-          { kind: s173, target: s15, uid: s238 },
+          { kind: s168, target: s231, uid: s232 },
+          { kind: s168, target: s15, uid: s233 },
         ],
         certificate: 'b1dad87bc0cc79fcceaf4848b2045c46db154f7a9a712c0ebdb649ba643ac162',
         parentMetadataDigest: '322eb84f7666acc7d1b7cfd645bed90c20820314423ddf82754501ba99739194',
         parentFields: [
-          s198,
+          s193,
           s52,
           s53,
           s54,
-          s72,
-          s73,
-          s56,
-          s61,
-          s62,
-          s91,
-          s177,
           s67,
           s68,
-          s100,
-          s178,
+          s56,
+          s60,
+          s61,
+          s86,
+          s172,
+          s64,
+          s65,
+          s95,
+          s173,
         ],
-        rootValues: [s237],
+        rootValues: [s232],
         features: [
           {
-            kind: s173,
-            target: s236,
+            kind: s168,
+            target: s231,
             body: {
-              metadataDigest: s239,
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s234,
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s240 },
+                  { digest: s235 },
                   {
-                    metadataDigest: s241,
-                    fields: [s173, s77],
+                    metadataDigest: s236,
+                    fields: [s168, s72],
                     reference: s15,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
-                    metadataDigest: s242,
-                    fields: [s173, s77],
-                    reference: s243,
-                    entries: { kind: s95 },
+                    metadataDigest: s237,
+                    fields: [s168, s72],
+                    reference: s238,
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s15,
             body: {
-              metadataDigest: s244,
-              fields: [s72, s73, s187, s74, s61, s62, s67, s180, s181],
+              metadataDigest: s239,
+              fields: [s67, s68, s182, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
-                  { digest: s245 },
+                  { digest: s240 },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s246 }] },
+                          metadataDigest: s74,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s241 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s247 }, { digest: s248 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s242 }, { digest: s243 }] },
                         },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s192,
-                          fields: [s61, s77],
+                          metadataDigest: s187,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s249 },
-                              { digest: s250 },
-                              { digest: s195 },
-                              { digest: s251 },
+                              { digest: s244 },
+                              { digest: s245 },
+                              { digest: s190 },
+                              { digest: s246 },
                             ],
                           },
                         },
@@ -4012,27 +3681,27 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s252 },
+                              { digest: s247 },
                               {
-                                metadataDigest: s93,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s88,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                               {
-                                metadataDigest: s96,
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                metadataDigest: s91,
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
@@ -4046,13 +3715,13 @@ const registry = {
           },
         ],
       },
-      parent: s253,
+      parent: s248,
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
-        spellsKnownProgression: s171,
+        cantripProgression: s166,
+        spellsKnownProgression: s166,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
         preparedSpellsProgression: s32,
@@ -4082,63 +3751,63 @@ const registry = {
     },
     {
       declaration: {
-        owner: [s171, s45, s38, s235, s38],
+        owner: [s166, s45, s38, s230, s38],
         target: s16,
         level: 3,
         path: [
-          { kind: s173, target: s254, uid: s255 },
-          { kind: s173, target: s16, uid: 'Spellcasting|Rogue|XPHB|Arcane Trickster|XPHB|3' },
+          { kind: s168, target: s249, uid: s250 },
+          { kind: s168, target: s16, uid: 'Spellcasting|Rogue|XPHB|Arcane Trickster|XPHB|3' },
         ],
         certificate: '233138e6fb8c48f0620e737574c4ab6bba33077d8648395836842edbec3efb3c',
         parentMetadataDigest: '776575703644446ba76e0cebfda45fd699b9a1b174ab8af533dbafbdb6404ecd',
-        parentFields: [s52, s53, s54, s72, s73, s56, s59, s61, s62, s63, s64, s177, s67, s68, s178],
-        rootValues: [s255],
+        parentFields: [s52, s53, s54, s67, s68, s56, s59, s60, s61, s62, s63, s172, s64, s65, s173],
+        rootValues: [s250],
         features: [
           {
-            kind: s173,
-            target: s254,
+            kind: s168,
+            target: s249,
             body: {
               metadataDigest: '443d73b18d74e9311427c0909d69be2351d81ea9e1f9a06c4e134cf4e3c938c5',
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'b86a44f7be1b9f2f9d40269b0a59802d2e4dc0fdd16a746bf1218f37b1d3a57b' },
                   { digest: '20c0c3ee9ea1d3d2dc5446772465d51ff066f434682fc7d346f9b35cbdf681e4' },
                   {
                     metadataDigest:
                       'b57ecd2a746d025b30dc46fe432d157d46c63b80c22166783572e11330f9aadb',
-                    fields: [s173, s77],
+                    fields: [s168, s72],
                     reference: s16,
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                   {
                     metadataDigest:
                       '648a2a2b4089f338d7e1ae6931143f4c73b1ca18d952a7342450359858b7b336',
-                    fields: [s173, s77],
+                    fields: [s168, s72],
                     reference:
                       'subclass-feature|mage hand legerdemain|rogue|xphb|arcane trickster|xphb|3|xphb',
-                    entries: { kind: s95 },
+                    entries: { kind: s90 },
                   },
                 ],
               },
             },
           },
           {
-            kind: s173,
+            kind: s168,
             target: s16,
             body: {
               metadataDigest: '696fb6179bdec409a6bc57cd2157cf86d359ab57feb5ff1d6141efc76fab094a',
-              fields: [s72, s73, s74, s61, s62, s67, s180, s181],
+              fields: [s67, s68, s69, s60, s61, s64, s175, s176],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '2476f62017968eddcae1c7067b0aa36a69c82d20464d96afb82ae6e986ae77b5' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
+                    metadataDigest: s74,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -4156,10 +3825,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
+                    metadataDigest: s75,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -4171,9 +3840,9 @@ const registry = {
                   {
                     metadataDigest:
                       '4550de9183ac6ec4a9be8335a17f93ae2f23702e3b2c1b14912b3a76ff0c874a',
-                    fields: [s61, s77],
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -4187,10 +3856,10 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s82,
-                    fields: [s61, s77],
+                    metadataDigest: s77,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
@@ -4200,14 +3869,14 @@ const registry = {
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s202 }] },
+                    metadataDigest: s78,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s197 }] },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s203 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s198 }] },
                   },
                 ],
               },
@@ -4215,17 +3884,17 @@ const registry = {
           },
         ],
       },
-      parent: s253,
+      parent: s248,
       suppliers: {
-        spellcastingAbility: s171,
-        casterProgression: s171,
+        spellcastingAbility: s166,
+        casterProgression: s166,
         spellSlotProgression: s32,
-        cantripProgression: s171,
+        cantripProgression: s166,
         spellsKnownProgression: s32,
         spellsKnownProgressionFixed: s32,
         preparedSpells: s32,
-        preparedSpellsProgression: s171,
-        preparedSpellsChange: s171,
+        preparedSpellsProgression: s166,
+        preparedSpellsChange: s166,
       },
       domains: {
         'class-cantrip': [
@@ -4247,10 +3916,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s85,
+        mode: s69,
+        ability: s80,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
         },
         maximumByLevel: [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13],
@@ -4261,40 +3930,40 @@ const registry = {
         owner: [s32, s47, s35],
         target: s17,
         level: 1,
-        path: [{ kind: s50, target: s17, uid: s256 }],
+        path: [{ kind: s50, target: s17, uid: s251 }],
         certificate: 'd29f4d3268563c30d32ca43a8bc00350aa16268a69c735558bec2c474359c430',
         parentMetadataDigest: '1d859af46df65fabd4e669831d80fdca0c1a213786a08f192e11ad0f100a5a00',
-        parentFields: [s53, s54, s55, s56, s58, s59, 'isSidekick', s61, s62, s67, s100],
-        rootValues: [s256],
+        parentFields: [s53, s54, s55, s56, s58, s59, 'isSidekick', s60, s61, s64, s95],
+        rootValues: [s251],
         features: [
           {
             kind: s50,
             target: s17,
             body: {
               metadataDigest: '398a1b03dd7b44e83a3c6f405f2903b7e04f2199af3b2934ddd52d101c92370f',
-              fields: [s72, s73, s74, s61, s62, s67],
+              fields: [s67, s68, s69, s60, s61, s64],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '307281ddf459d08b0a3c0fdbdb0dae46b0240f412cc7ed996484a4a344239f45' },
                   { digest: '0930da23105ff67cf8e060d85c52f237cadc826edc5ba14d42dae1a654a048a7' },
                   {
                     metadataDigest:
                       'c9e88603a0fdd1d26f3c44f59805ec8103042a6d02543da8c02f08b80535c95c',
-                    fields: ['caption', 'colLabels', 'colStyles', 'rows', s77],
-                    entries: { kind: s95 },
+                    fields: ['caption', 'colLabels', 'colStyles', 'rows', s72],
+                    entries: { kind: s90 },
                   },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
+                          metadataDigest: s75,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -4306,9 +3975,9 @@ const registry = {
                         {
                           metadataDigest:
                             'e0297b5a1ed54691805574400b04fbd8ebf0344b6966599b91605596b83d1c36',
-                          fields: [s61, s77],
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -4317,17 +3986,17 @@ const registry = {
                               {
                                 metadataDigest:
                                   '37fd332b7527791329d7b14f66da3a142edcab75d5193f37328118de4ccee83d',
-                                fields: ['items', 'style', s77],
-                                entries: { kind: s95 },
+                                fields: ['items', 'style', s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
+                          metadataDigest: s78,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -4340,23 +4009,23 @@ const registry = {
                               {
                                 metadataDigest:
                                   '1a50cad9f44e8de030185d80279b67ce5f8bf609b988db50561ff70b8262136f',
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                               {
                                 metadataDigest:
                                   'c7e59ea5abbdd1b05ea1995ada418601ef74681befdc7fc44e0d56d5070295ee',
-                                fields: [s94, s61, s77],
-                                entries: { kind: s95 },
+                                fields: [s89, s60, s72],
+                                entries: { kind: s90 },
                               },
                             ],
                           },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
+                          metadataDigest: s107,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
                                 digest:
@@ -4393,86 +4062,65 @@ const registry = {
         owner: [s32, s46, s37],
         target: s18,
         level: 1,
-        path: [{ kind: s50, target: s18, uid: s257 }],
-        certificate: 'e564868447336455ddb61bc36130d2406fdfa2e1b0700495bb576b764eb25e06',
-        parentMetadataDigest: 'b28c1d181cf499b35fae03396301654b62f6d972324c8bc908dde8c36967e0a2',
-        parentFields: [
-          s53,
-          s54,
-          s55,
-          s56,
-          s58,
-          s59,
-          'hd',
-          s60,
-          s61,
-          s88,
-          s62,
-          s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s101,
-          s69,
-          s70,
-          s71,
-        ],
-        rootValues: [s257],
+        path: [{ kind: s50, target: s18, uid: s252 }],
+        certificate: 'bd99aca1847966d79b4f0b175c55deece711291455f469153390b56d5adcfd84',
+        parentMetadataDigest: '65335a93a22c5b70e7268fed621922511bfe4599dba5d284867d932d9eea0091',
+        parentFields: [s53, s54, s55, s56, s58, s59, s60, s83, s61, s86, s64, s65, s95, s96, s66],
+        rootValues: [s252],
         features: [
           {
             kind: s50,
             target: s18,
             body: {
               metadataDigest: 'f2cc7051fcbbdb451ed635e3880f86dcfa9a1fdaf9285d49fb8510c3e1b91c50',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '3741187489526c6c338ccf541861fa326b62201b57fbe58554cfaebd646458e9' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s258 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s253 }] },
                   },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
+                    metadataDigest: s75,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '81f07a4c29c1aa6d588537738831eaf39170462444852f38aecb0e8e5bc44b7c',
                         },
-                        { digest: s259 },
+                        { digest: s254 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s104,
-                    fields: [s61, s77],
+                    metadataDigest: s99,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
-                      values: [{ digest: s260 }, { digest: s261 }, { digest: s262 }],
+                      kind: s70,
+                      values: [{ digest: s255 }, { digest: s256 }, { digest: s257 }],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s263 },
-                        { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s258 },
+                        { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s264 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s259 }] },
                   },
                 ],
               },
@@ -4520,82 +4168,65 @@ const registry = {
           owner: [s32, s46, s37],
           target: s18,
           level: 1,
-          path: [{ kind: s50, target: s18, uid: s257 }],
-          certificate: '4d79b844ee377b254060c672a8c3f24124afa2a0d3cb3f34852604dd0960e67b',
-          parentMetadataDigest: '44ddf1354863e70f904fc199db13eeef9231e41a1ed6a0d4b0f716f24640ff9a',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s257],
+          path: [{ kind: s50, target: s18, uid: s252 }],
+          certificate: '7f344c1b0f21464eed2d25092f577a956ccf8effd870c2832404ceb898867873',
+          parentMetadataDigest: 'b1d48a496dbcb52a8d04e8d7bab66a304d6cce4fd0868ba4602806d372706d69',
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s96, s66],
+          rootValues: [s252],
           features: [
             {
               kind: s50,
               target: s18,
               body: {
                 metadataDigest: '6b0334a1abd15578f9a1342a318e0588890e45db5349fe4063ed4179a7cba703',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '6edb3c488eed6dd155d363b561cd5f30e82ff93ac8ceb24428ee7499d5378f8c' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s258 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s253 }] },
                     },
                     {
-                      metadataDigest: s80,
-                      fields: [s61, s77],
+                      metadataDigest: s75,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '61c79628593262955aeda097ecf9933a024561a4be35d0bda7b12f842994690d',
                           },
-                          { digest: s259 },
+                          { digest: s254 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s104,
-                      fields: [s61, s77],
+                      metadataDigest: s99,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
-                        values: [{ digest: s260 }, { digest: s261 }, { digest: s262 }],
+                        kind: s70,
+                        values: [{ digest: s255 }, { digest: s256 }, { digest: s257 }],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s263 },
-                          { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s258 },
+                          { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s264 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s259 }] },
                     },
                   ],
                 },
@@ -4610,11 +4241,11 @@ const registry = {
         owner: [s32, s46, s38],
         target: s19,
         level: 1,
-        path: [{ kind: s50, target: s19, uid: s265 }],
-        certificate: '254bbcb3645478bb65d13fd2b20050cc56130d9af4c810c8207c438d8ca80cc1',
-        parentMetadataDigest: '8f761386ec1b18fbf798e84739e18bfb1c7eb93f01de8f5c64270a365bb273fe',
+        path: [{ kind: s50, target: s19, uid: s260 }],
+        certificate: '69a70a225274de71aa61e54e9b19f5230a4368c61624a4ec0b60381c534867a8',
+        parentMetadataDigest: '2c367c10a62246e68992ef6d7dcd4274130f11ca7bbfce12c8225ae8269f1eae',
         parentFields: [
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -4622,72 +4253,66 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s111,
           s66,
-          s67,
-          s68,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s265],
+        rootValues: [s260],
         features: [
           {
             kind: s50,
             target: s19,
             body: {
               metadataDigest: '51944af52a5b420fdfd12ba12bc5c397909ddcfbdd85a2ddf8368abd5d1b0a07',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '3c3eb1264f7a5cd482aaeb65803fe6c5752157616c36873230542b79c756ae96' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s266 }, { digest: s267 }] },
+                          metadataDigest: s74,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s261 }, { digest: s262 }] },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s268 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s263 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s269 }, { digest: s270 }, { digest: s271 }],
+                            kind: s70,
+                            values: [{ digest: s264 }, { digest: s265 }, { digest: s266 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s272 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s267 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s273 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s268 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s206 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s201 }] },
                         },
                       ],
                     },
@@ -4737,10 +4362,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s127,
+        mode: s69,
+        ability: s122,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
         },
         maximumByLevel: [2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
@@ -4750,80 +4375,60 @@ const registry = {
           owner: [s32, s46, s38],
           target: s19,
           level: 1,
-          path: [{ kind: s50, target: s19, uid: s265 }],
-          certificate: '13943ccbb9bc5a6ebfd22089ce5ac4d488aa7675f7bc9b98b6e2c580ee1bfb95',
-          parentMetadataDigest: '79448d0754208aee454e5ea68cfea944a48b085954fb9ec8e9632a952af283b4',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s265],
+          path: [{ kind: s50, target: s19, uid: s260 }],
+          certificate: '54f322efbc9519a236bbe1a4f6058a7f16c5a1bf126a0e9ec0f4216b07cb2608',
+          parentMetadataDigest: '2237ca9e97eb8aa5d762b42cf4d1ca196bfbfb1a5ed2745b9d3aec6811aaafe2',
+          parentFields: [s53, s54, s55, s56, s57, s60, s83, s62, s63, s64, s65, s111, s66],
+          rootValues: [s260],
           features: [
             {
               kind: s50,
               target: s19,
               body: {
                 metadataDigest: 'a7ace26877272a6e2c601cc324f4795b786f81d8b9ace40c66806881c79cd054',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: 'eaec4b4a678c5b89ff03f80bb10e68a366ed6bee5dbd79b64a6739ccaf7a9cad' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s266 }, { digest: s267 }] },
+                            metadataDigest: s74,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s261 }, { digest: s262 }] },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s268 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s263 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s269 }, { digest: s270 }, { digest: s271 }],
+                              kind: s70,
+                              values: [{ digest: s264 }, { digest: s265 }, { digest: s266 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s272 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s267 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s273 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s268 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s206 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s201 }] },
                           },
                         ],
                       },
@@ -4841,9 +4446,9 @@ const registry = {
         owner: [s32, s48, s37],
         target: s21,
         level: 11,
-        path: [{ kind: s50, target: s21, uid: s274 }],
-        certificate: '3821806d085a8b7a273ef9dcadea0878dce336e3861561f7c7c1ad88fd6ac04f',
-        parentMetadataDigest: s275,
+        path: [{ kind: s50, target: s21, uid: s269 }],
+        certificate: '7c15534ba68e867e390f33f3400a930a4a9ac6cf05ffe2e2fe72d33da70d048c',
+        parentMetadataDigest: s270,
         parentFields: [
           s53,
           s54,
@@ -4851,39 +4456,34 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
-          s62,
+          s86,
+          s64,
+          s65,
+          s95,
+          s271,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s276,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s274],
+        rootValues: [s269],
         features: [
           {
             kind: s50,
             target: s21,
             body: {
               metadataDigest: '89d6573dacef00b9055caf087e3e05c732d30323d94d48057c2ff38eeb8350a8',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
-                values: [{ digest: s277 }, { digest: s278 }, { digest: s279 }],
+                kind: s70,
+                values: [{ digest: s272 }, { digest: s273 }, { digest: s274 }],
               },
             },
           },
         ],
       },
-      parent: s280,
+      parent: s275,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -4901,39 +4501,21 @@ const registry = {
           owner: [s32, s48, s37],
           target: s21,
           level: 11,
-          path: [{ kind: s50, target: s21, uid: s274 }],
-          certificate: '369ae58e2e1716e685c81fb597457a8498af3ac20a9e4ec305a39932165ab03f',
-          parentMetadataDigest: s281,
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s276,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s274],
+          path: [{ kind: s50, target: s21, uid: s269 }],
+          certificate: 'bc6990d008738f56f96a950204ab80883f2b2095f5d46815bc2475f30b0fa9b7',
+          parentMetadataDigest: s276,
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s271, s96, s66],
+          rootValues: [s269],
           features: [
             {
               kind: s50,
               target: s21,
               body: {
                 metadataDigest: 'bd2f3dec6c7d449309a5ba595444ee68aa2b2552ee0d83f1915ae60d7ab841e8',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
-                  values: [{ digest: s277 }, { digest: s278 }, { digest: s279 }],
+                  kind: s70,
+                  values: [{ digest: s272 }, { digest: s273 }, { digest: s274 }],
                 },
               },
             },
@@ -4946,9 +4528,9 @@ const registry = {
         owner: [s32, s48, s37],
         target: s22,
         level: 13,
-        path: [{ kind: s50, target: s22, uid: s282 }],
-        certificate: '90f24d27252b0e12f23b468f0135d4695508110466ffd4d9e453682802b10fbf',
-        parentMetadataDigest: s275,
+        path: [{ kind: s50, target: s22, uid: s277 }],
+        certificate: '556766a0e866226a0a521eee47fc5cd06d7ab3ee570c5ba8cf3e8c1fd1ffef2e',
+        parentMetadataDigest: s270,
         parentFields: [
           s53,
           s54,
@@ -4956,36 +4538,31 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
-          s62,
+          s86,
+          s64,
+          s65,
+          s95,
+          s271,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s276,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s282],
+        rootValues: [s277],
         features: [
           {
             kind: s50,
             target: s22,
             body: {
               metadataDigest: '112d13328812c500fa0351cc225d04c16c22004de5da98078ee68801c6103941',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
-              entries: { kind: s75, values: [{ digest: s283 }, { digest: s278 }] },
+              fields: [s67, s68, s69, s60, s61, s64, s96],
+              entries: { kind: s70, values: [{ digest: s278 }, { digest: s273 }] },
             },
           },
         ],
       },
-      parent: s280,
+      parent: s275,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5003,37 +4580,19 @@ const registry = {
           owner: [s32, s48, s37],
           target: s22,
           level: 13,
-          path: [{ kind: s50, target: s22, uid: s282 }],
-          certificate: '67d5f5c080dd2292e986cb5a36e5982c5f4ac877c05904893909b213bfe1a37e',
-          parentMetadataDigest: s281,
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s276,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s282],
+          path: [{ kind: s50, target: s22, uid: s277 }],
+          certificate: '08834a95e3547fcbb7c9354271d4a9ee03a3ef1323b2ec62e018d43029f695af',
+          parentMetadataDigest: s276,
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s271, s96, s66],
+          rootValues: [s277],
           features: [
             {
               kind: s50,
               target: s22,
               body: {
                 metadataDigest: '1d3112e472f987c9f4f1d904524ae5de3dd1edaee8f87229d79f23d3a1366b55',
-                fields: [s72, s73, s74, s61, s67, s101],
-                entries: { kind: s75, values: [{ digest: s283 }, { digest: s278 }] },
+                fields: [s67, s68, s69, s60, s64, s96],
+                entries: { kind: s70, values: [{ digest: s278 }, { digest: s273 }] },
               },
             },
           ],
@@ -5045,9 +4604,9 @@ const registry = {
         owner: [s32, s48, s37],
         target: s23,
         level: 15,
-        path: [{ kind: s50, target: s23, uid: s284 }],
-        certificate: '763b34ca2bc0abbb935fe682a7aa59354509b3aa8d8eebe396ef72421e25f203',
-        parentMetadataDigest: s275,
+        path: [{ kind: s50, target: s23, uid: s279 }],
+        certificate: '7986135bb177cad2fcc50fed1e0f751179b5190abd39a4072f9dd4588ebd7735',
+        parentMetadataDigest: s270,
         parentFields: [
           s53,
           s54,
@@ -5055,36 +4614,31 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
-          s62,
+          s86,
+          s64,
+          s65,
+          s95,
+          s271,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s276,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s284],
+        rootValues: [s279],
         features: [
           {
             kind: s50,
             target: s23,
             body: {
               metadataDigest: 'd5f4231a6d22ee7c9b5e8129de9e5b35e793d0209c1b62b5d4c284905299f986',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
-              entries: { kind: s75, values: [{ digest: s285 }, { digest: s278 }] },
+              fields: [s67, s68, s69, s60, s61, s64, s96],
+              entries: { kind: s70, values: [{ digest: s280 }, { digest: s273 }] },
             },
           },
         ],
       },
-      parent: s280,
+      parent: s275,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5102,37 +4656,19 @@ const registry = {
           owner: [s32, s48, s37],
           target: s23,
           level: 15,
-          path: [{ kind: s50, target: s23, uid: s284 }],
-          certificate: '8a552f12cb97ede41a043e4831ae00278c23daf64688175be03e2bf4886f2cba',
-          parentMetadataDigest: s281,
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s276,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s284],
+          path: [{ kind: s50, target: s23, uid: s279 }],
+          certificate: '4081debb489e70d46a847440c5cb51e47c47f47e6e36941a2a2920cebc2be256',
+          parentMetadataDigest: s276,
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s271, s96, s66],
+          rootValues: [s279],
           features: [
             {
               kind: s50,
               target: s23,
               body: {
                 metadataDigest: '07821ada81136705b7e8faca5667debdbdad05442556adaa0ec11da16d8964a9',
-                fields: [s72, s73, s74, s61, s67, s101],
-                entries: { kind: s75, values: [{ digest: s285 }, { digest: s278 }] },
+                fields: [s67, s68, s69, s60, s64, s96],
+                entries: { kind: s70, values: [{ digest: s280 }, { digest: s273 }] },
               },
             },
           ],
@@ -5144,9 +4680,9 @@ const registry = {
         owner: [s32, s48, s37],
         target: s24,
         level: 17,
-        path: [{ kind: s50, target: s24, uid: s286 }],
-        certificate: '8f51889eb9a3c95817e7dde78bda3d7ce4d878a4492f71fe5f81ca79b21f7a0a',
-        parentMetadataDigest: s275,
+        path: [{ kind: s50, target: s24, uid: s281 }],
+        certificate: '2764fbc19a44131cf08101988abc9e6a27b4adda589b1e68729dd47f70a2f671',
+        parentMetadataDigest: s270,
         parentFields: [
           s53,
           s54,
@@ -5154,36 +4690,31 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
-          s62,
+          s86,
+          s64,
+          s65,
+          s95,
+          s271,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s276,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s286],
+        rootValues: [s281],
         features: [
           {
             kind: s50,
             target: s24,
             body: {
               metadataDigest: '9e129a14ed2dd3a80cc740dace98d41c38eaeeb5ec57f99f5591850693416264',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
-              entries: { kind: s75, values: [{ digest: s287 }, { digest: s278 }] },
+              fields: [s67, s68, s69, s60, s61, s64, s96],
+              entries: { kind: s70, values: [{ digest: s282 }, { digest: s273 }] },
             },
           },
         ],
       },
-      parent: s280,
+      parent: s275,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5201,37 +4732,19 @@ const registry = {
           owner: [s32, s48, s37],
           target: s24,
           level: 17,
-          path: [{ kind: s50, target: s24, uid: s286 }],
-          certificate: '6b1d9437b18a466fdbd724a9bc3691771e7d82db911912fc83aa6dbe23d050b3',
-          parentMetadataDigest: s281,
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s276,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s286],
+          path: [{ kind: s50, target: s24, uid: s281 }],
+          certificate: '9305616ae3138c31dbe8040d22e5fcc3400cee65fc7ed6e6d2e7ba83269b94e5',
+          parentMetadataDigest: s276,
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s271, s96, s66],
+          rootValues: [s281],
           features: [
             {
               kind: s50,
               target: s24,
               body: {
                 metadataDigest: '60ac2e7185135c5db32844cb0347b0563d8d322d6b9c378e42fcd0f367477b8f',
-                fields: [s72, s73, s74, s61, s67, s101],
-                entries: { kind: s75, values: [{ digest: s287 }, { digest: s278 }] },
+                fields: [s67, s68, s69, s60, s64, s96],
+                entries: { kind: s70, values: [{ digest: s282 }, { digest: s273 }] },
               },
             },
           ],
@@ -5243,9 +4756,9 @@ const registry = {
         owner: [s32, s48, s37],
         target: s20,
         level: 1,
-        path: [{ kind: s50, target: s20, uid: s288 }],
-        certificate: 'f1f507010b536d6f4a28f15a3be43349a91faa1c470a41526554f6215d4a27b5',
-        parentMetadataDigest: s275,
+        path: [{ kind: s50, target: s20, uid: s283 }],
+        certificate: '1ff27601d465db559197c860ba3be3b75ff1621a78c8a5a41249400a042d7c0a',
+        parentMetadataDigest: s270,
         parentFields: [
           s53,
           s54,
@@ -5253,68 +4766,63 @@ const registry = {
           s56,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
-          s62,
+          s86,
+          s64,
+          s65,
+          s95,
+          s271,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s100,
-          s276,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s288],
+        rootValues: [s283],
         features: [
           {
             kind: s50,
             target: s20,
             body: {
               metadataDigest: 'fa3d6d3cd416dd7a9e9bc3b843c3aa3f6cde58763d73b3d75781f955e5678cd2',
-              fields: [s72, s73, s74, s61, s62, s67, s101],
+              fields: [s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '67fb2fdfc5e64b15c1aa5e541bf43d346c0de280df4ecea9be869edfe8080845' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s289 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s284 }] },
                   },
                   {
-                    metadataDigest: s80,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s290 }, { digest: s291 }] },
+                    metadataDigest: s75,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s285 }, { digest: s286 }] },
                   },
                   {
-                    metadataDigest: s104,
-                    fields: [s61, s77],
+                    metadataDigest: s99,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
-                      values: [{ digest: s292 }, { digest: s293 }, { digest: s294 }],
+                      kind: s70,
+                      values: [{ digest: s287 }, { digest: s288 }, { digest: s289 }],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s295 },
-                        { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { digest: s290 },
+                        { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s296 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s291 }] },
                   },
                 ],
               },
@@ -5322,7 +4830,7 @@ const registry = {
           },
         ],
       },
-      parent: s280,
+      parent: s275,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5362,74 +4870,56 @@ const registry = {
           owner: [s32, s48, s37],
           target: s20,
           level: 1,
-          path: [{ kind: s50, target: s20, uid: s288 }],
-          certificate: '8f51cb8e4a985df66fc35a03279877b5654f0fb1553bb1ac355f778eb9008eb7',
-          parentMetadataDigest: s281,
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s88,
-            s66,
-            s67,
-            s68,
-            s100,
-            s276,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s288],
+          path: [{ kind: s50, target: s20, uid: s283 }],
+          certificate: 'edcbf49118169db7d7d298a044971caab1972a08c234baa130c3900183b4623b',
+          parentMetadataDigest: s276,
+          parentFields: [s53, s54, s55, s56, s60, s83, s64, s65, s95, s271, s96, s66],
+          rootValues: [s283],
           features: [
             {
               kind: s50,
               target: s20,
               body: {
                 metadataDigest: 'a9cbc59cdee6ba51fcd66d69e21685487845753c2fb55938ec142ec73cd156ab',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: 'b78421e2272b269fa1d5ffd1bb19b9a2e86da699f2b3a9e2ffddaffbb87ab1c1' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s289 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s284 }] },
                     },
                     {
-                      metadataDigest: s80,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s290 }, { digest: s291 }] },
+                      metadataDigest: s75,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s285 }, { digest: s286 }] },
                     },
                     {
-                      metadataDigest: s104,
-                      fields: [s61, s77],
+                      metadataDigest: s99,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
-                        values: [{ digest: s292 }, { digest: s293 }, { digest: s294 }],
+                        kind: s70,
+                        values: [{ digest: s287 }, { digest: s288 }, { digest: s289 }],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s295 },
-                          { metadataDigest: s109, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s110, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s290 },
+                          { metadataDigest: s104, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s105, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s296 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s291 }] },
                     },
                   ],
                 },
@@ -5444,12 +4934,12 @@ const registry = {
         owner: [s32, s48, s38],
         target: s26,
         level: 11,
-        path: [{ kind: s50, target: s26, uid: s297 }],
-        certificate: 'afdb9502ee5a516865efe2081ba16f9b7f9997b6cff7b0f38369e3914832c7c2',
-        parentMetadataDigest: s298,
+        path: [{ kind: s50, target: s26, uid: s292 }],
+        certificate: '0d2e2f5271f251532c350364452fd0767eddbd19a834dab7907571935045049b',
+        parentMetadataDigest: s293,
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -5457,40 +4947,34 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s271,
+          s111,
           s66,
-          s67,
-          s68,
-          s276,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s297],
+        rootValues: [s292],
         features: [
           {
             kind: s50,
             target: s26,
             body: {
               metadataDigest: 'f54e2954dd0627ac8e49edf0903cda7483b4a52208a175d9d1d34556ea9b6ebf',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
-                values: [{ digest: s299 }, { digest: s300 }, { digest: s301 }, { digest: s302 }],
+                kind: s70,
+                values: [{ digest: s294 }, { digest: s295 }, { digest: s296 }, { digest: s297 }],
               },
             },
           },
         ],
       },
-      parent: s303,
+      parent: s298,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5508,9 +4992,9 @@ const registry = {
           owner: [s32, s48, s38],
           target: s26,
           level: 11,
-          path: [{ kind: s50, target: s26, uid: s297 }],
-          certificate: '484a0d53d85e07fcbae23f5ed98638a6551795bfe4c7c3565c1e9a2b96196935',
-          parentMetadataDigest: s304,
+          path: [{ kind: s50, target: s26, uid: s292 }],
+          certificate: '0240da8568e2a853b8bb664d3ab096576e98767c88605050e0a7786becce1a28',
+          parentMetadataDigest: s299,
           parentFields: [
             s52,
             s53,
@@ -5518,33 +5002,27 @@ const registry = {
             s55,
             s56,
             s57,
-            'hd',
             s60,
-            s61,
-            s88,
+            s83,
+            s62,
             s63,
             s64,
             s65,
+            s271,
+            s111,
             s66,
-            s67,
-            s68,
-            s276,
-            s116,
-            s69,
-            s70,
-            s71,
           ],
-          rootValues: [s297],
+          rootValues: [s292],
           features: [
             {
               kind: s50,
               target: s26,
               body: {
                 metadataDigest: 'f92e15599f4619a1e50de9085687974ded89d9e379a9970cb89675e3fac7d2ac',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
-                  values: [{ digest: s299 }, { digest: s300 }, { digest: s301 }, { digest: s302 }],
+                  kind: s70,
+                  values: [{ digest: s294 }, { digest: s295 }, { digest: s296 }, { digest: s297 }],
                 },
               },
             },
@@ -5557,12 +5035,12 @@ const registry = {
         owner: [s32, s48, s38],
         target: s27,
         level: 13,
-        path: [{ kind: s50, target: s27, uid: s305 }],
-        certificate: 'd43e19397ac96a2503d992ed6e6dd814a017d0d72ba20b1020f4cba3b5ae3df6',
-        parentMetadataDigest: s298,
+        path: [{ kind: s50, target: s27, uid: s300 }],
+        certificate: '4bd4e80a66905093ef6f535b03f0cded08000bdfc8c8d11c2062aa42b16e6901',
+        parentMetadataDigest: s293,
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -5570,37 +5048,31 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s271,
+          s111,
           s66,
-          s67,
-          s68,
-          s276,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s305],
+        rootValues: [s300],
         features: [
           {
             kind: s50,
             target: s27,
             body: {
               metadataDigest: '48fd5fb21906befeacdb50f5a114791fe443b3d4713ca8c7ce0772e61be6d430',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
-              entries: { kind: s75, values: [{ digest: s306 }] },
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
+              entries: { kind: s70, values: [{ digest: s301 }] },
             },
           },
         ],
       },
-      parent: s303,
+      parent: s298,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5619,9 +5091,9 @@ const registry = {
           owner: [s32, s48, s38],
           target: s27,
           level: 13,
-          path: [{ kind: s50, target: s27, uid: s305 }],
-          certificate: '371489328ab6ab3bd0517c34c5035572faafafbcd87fe9129c0642cca94cec7e',
-          parentMetadataDigest: s304,
+          path: [{ kind: s50, target: s27, uid: s300 }],
+          certificate: '8eaf636142623cdb6b928d51047c1a115ed3e7c89259a86418a089bc55d475e9',
+          parentMetadataDigest: s299,
           parentFields: [
             s52,
             s53,
@@ -5629,31 +5101,25 @@ const registry = {
             s55,
             s56,
             s57,
-            'hd',
             s60,
-            s61,
-            s88,
+            s83,
+            s62,
             s63,
             s64,
             s65,
+            s271,
+            s111,
             s66,
-            s67,
-            s68,
-            s276,
-            s116,
-            s69,
-            s70,
-            s71,
           ],
-          rootValues: [s305],
+          rootValues: [s300],
           features: [
             {
               kind: s50,
               target: s27,
               body: {
                 metadataDigest: '31cba574d79d913f1b1ef484188cc63f609bc24f870d414ad5b83bdb62ca4ba2',
-                fields: [s72, s73, s74, s61, s67, s116],
-                entries: { kind: s75, values: [{ digest: s306 }] },
+                fields: [s67, s68, s69, s60, s64, s111],
+                entries: { kind: s70, values: [{ digest: s301 }] },
               },
             },
           ],
@@ -5665,12 +5131,12 @@ const registry = {
         owner: [s32, s48, s38],
         target: s28,
         level: 15,
-        path: [{ kind: s50, target: s28, uid: s307 }],
-        certificate: 'b111184e53cfd1f5ad31ff9a1f123ebb4823914ca652f1b092e8560ed07531b9',
-        parentMetadataDigest: s298,
+        path: [{ kind: s50, target: s28, uid: s302 }],
+        certificate: 'dcfd4df3c1bd92f069539b881cf11744de2fd62f616ceacd23f84be25c907c85',
+        parentMetadataDigest: s293,
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -5678,37 +5144,31 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s271,
+          s111,
           s66,
-          s67,
-          s68,
-          s276,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s307],
+        rootValues: [s302],
         features: [
           {
             kind: s50,
             target: s28,
             body: {
               metadataDigest: '6642bf632cb82e2de867cc1f389cf21d78ccc17aeaeee527819f05dc15db9ee4',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
-              entries: { kind: s75, values: [{ digest: s308 }] },
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
+              entries: { kind: s70, values: [{ digest: s303 }] },
             },
           },
         ],
       },
-      parent: s303,
+      parent: s298,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5727,9 +5187,9 @@ const registry = {
           owner: [s32, s48, s38],
           target: s28,
           level: 15,
-          path: [{ kind: s50, target: s28, uid: s307 }],
-          certificate: '80907f6e4e537c773ff7a7f3ba0776c466d395361bb0c894321b8c50b668f58b',
-          parentMetadataDigest: s304,
+          path: [{ kind: s50, target: s28, uid: s302 }],
+          certificate: 'd388ae132d0f76559024541a3e1cc7ede54f97be2ee6ae7679345a9c45ad52cf',
+          parentMetadataDigest: s299,
           parentFields: [
             s52,
             s53,
@@ -5737,31 +5197,25 @@ const registry = {
             s55,
             s56,
             s57,
-            'hd',
             s60,
-            s61,
-            s88,
+            s83,
+            s62,
             s63,
             s64,
             s65,
+            s271,
+            s111,
             s66,
-            s67,
-            s68,
-            s276,
-            s116,
-            s69,
-            s70,
-            s71,
           ],
-          rootValues: [s307],
+          rootValues: [s302],
           features: [
             {
               kind: s50,
               target: s28,
               body: {
                 metadataDigest: '4d2f262d759db165c9331e0b88b9b32876af94c871295e77e8f379d6eb9b8754',
-                fields: [s72, s73, s74, s61, s67, s116],
-                entries: { kind: s75, values: [{ digest: s308 }] },
+                fields: [s67, s68, s69, s60, s64, s111],
+                entries: { kind: s70, values: [{ digest: s303 }] },
               },
             },
           ],
@@ -5773,12 +5227,12 @@ const registry = {
         owner: [s32, s48, s38],
         target: s29,
         level: 17,
-        path: [{ kind: s50, target: s29, uid: s309 }],
-        certificate: '2f47d2d664a499678098623c703dccfa6a8141403e753d0f8048ab683b5424f3',
-        parentMetadataDigest: s298,
+        path: [{ kind: s50, target: s29, uid: s304 }],
+        certificate: '164e13302e5ccb4589a12967911b6348071be96fb07240d22e0b6ad71d70af51',
+        parentMetadataDigest: s293,
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -5786,37 +5240,31 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s271,
+          s111,
           s66,
-          s67,
-          s68,
-          s276,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s309],
+        rootValues: [s304],
         features: [
           {
             kind: s50,
             target: s29,
             body: {
               metadataDigest: 'd759b6bdc453309ada24edd3a32846affbd98c156a981459da645c423a78b0b2',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
-              entries: { kind: s75, values: [{ digest: s310 }] },
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
+              entries: { kind: s70, values: [{ digest: s305 }] },
             },
           },
         ],
       },
-      parent: s303,
+      parent: s298,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -5835,9 +5283,9 @@ const registry = {
           owner: [s32, s48, s38],
           target: s29,
           level: 17,
-          path: [{ kind: s50, target: s29, uid: s309 }],
-          certificate: 'ceb1896427a16b9dbec319b882395df5a52e156e5cd834664f1bcecc59b89376',
-          parentMetadataDigest: s304,
+          path: [{ kind: s50, target: s29, uid: s304 }],
+          certificate: '36878e99a8519957b744fb6016292baeda7424edb0a5437c08bd0a5aa7d93b7c',
+          parentMetadataDigest: s299,
           parentFields: [
             s52,
             s53,
@@ -5845,31 +5293,25 @@ const registry = {
             s55,
             s56,
             s57,
-            'hd',
             s60,
-            s61,
-            s88,
+            s83,
+            s62,
             s63,
             s64,
             s65,
+            s271,
+            s111,
             s66,
-            s67,
-            s68,
-            s276,
-            s116,
-            s69,
-            s70,
-            s71,
           ],
-          rootValues: [s309],
+          rootValues: [s304],
           features: [
             {
               kind: s50,
               target: s29,
               body: {
                 metadataDigest: '9616f2ed89d410250de1a432425471b79e6cfddac5c12df9f6e018499ec5c877',
-                fields: [s72, s73, s74, s61, s67, s116],
-                entries: { kind: s75, values: [{ digest: s310 }] },
+                fields: [s67, s68, s69, s60, s64, s111],
+                entries: { kind: s70, values: [{ digest: s305 }] },
               },
             },
           ],
@@ -5881,12 +5323,12 @@ const registry = {
         owner: [s32, s48, s38],
         target: s25,
         level: 1,
-        path: [{ kind: s50, target: s25, uid: s311 }],
-        certificate: '74c2ec78f15b59c634b0f215458e7a4d8aeba1e34ac42683eb31e299e90ae006',
-        parentMetadataDigest: s298,
+        path: [{ kind: s50, target: s25, uid: s306 }],
+        certificate: 'cd1d3628588f940c1447febbc75673716b1c2a6ac93177aad4d04b4e6636fbdc',
+        parentMetadataDigest: s293,
         parentFields: [
           s52,
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -5894,81 +5336,75 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
+          s83,
           s61,
-          s88,
           s62,
           s63,
           s64,
           s65,
+          s271,
+          s111,
           s66,
-          s67,
-          s68,
-          s276,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s311],
+        rootValues: [s306],
         features: [
           {
             kind: s50,
             target: s25,
             body: {
               metadataDigest: '11dae59e064d24388f48d74b6ff6a03904fe9096e61b9725f02055a9b9512a6b',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: 'ef7767ee374dbe671e0398530fb90ae7362384cb45584ce6e2c9276a937f5723' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s312 }, { digest: s313 }] },
+                          metadataDigest: s74,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s307 }, { digest: s308 }] },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s314 }, { digest: s315 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s309 }, { digest: s310 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s316 }] },
+                          metadataDigest: s76,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s311 }] },
                         },
                       ],
                     },
                   },
-                  { digest: s317 },
-                  { digest: s318 },
+                  { digest: s312 },
+                  { digest: s313 },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s319 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s314 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s320 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s315 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s321 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s316 }] },
                         },
                       ],
                     },
@@ -5979,7 +5415,7 @@ const registry = {
           },
         ],
       },
-      parent: s303,
+      parent: s298,
       suppliers: {
         spellcastingAbility: s32,
         casterProgression: s32,
@@ -6015,10 +5451,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s74,
-        ability: s127,
+        mode: s69,
+        ability: s122,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15],
         },
         maximumByLevel: [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15],
@@ -6028,9 +5464,9 @@ const registry = {
           owner: [s32, s48, s38],
           target: s25,
           level: 1,
-          path: [{ kind: s50, target: s25, uid: s311 }],
-          certificate: 'b4ef93a031779b60d153900903d950a575a814949626cee40f1d33104622f1db',
-          parentMetadataDigest: s304,
+          path: [{ kind: s50, target: s25, uid: s306 }],
+          certificate: 'f680ebff68abbcd140bd5057b0381d02292de4190298518e1184b3092743df51',
+          parentMetadataDigest: s299,
           parentFields: [
             s52,
             s53,
@@ -6038,80 +5474,74 @@ const registry = {
             s55,
             s56,
             s57,
-            'hd',
             s60,
-            s61,
-            s88,
+            s83,
+            s62,
             s63,
             s64,
             s65,
+            s271,
+            s111,
             s66,
-            s67,
-            s68,
-            s276,
-            s116,
-            s69,
-            s70,
-            s71,
           ],
-          rootValues: [s311],
+          rootValues: [s306],
           features: [
             {
               kind: s50,
               target: s25,
               body: {
                 metadataDigest: 'c0255826b686aa58912db30320b139ede752d9581182d89744201813ad7f15ed',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '7d0c37da7fc0d61c7a25033eb8923f25a9c240b16357c3563df38fafd4b784cb' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s312 }, { digest: s313 }] },
+                            metadataDigest: s74,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s307 }, { digest: s308 }] },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s314 }, { digest: s315 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s309 }, { digest: s310 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s316 }] },
+                            metadataDigest: s76,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s311 }] },
                           },
                         ],
                       },
                     },
-                    { digest: s317 },
-                    { digest: s318 },
+                    { digest: s312 },
+                    { digest: s313 },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s319 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s314 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s320 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s315 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s321 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s316 }] },
                           },
                         ],
                       },
@@ -6129,129 +5559,124 @@ const registry = {
         owner: [s32, s49, s37],
         target: s30,
         level: 1,
-        path: [{ kind: s50, target: s30, uid: s322 }],
-        certificate: 'e491c4c6a3a8a40e2aeb2d20d57ccb7fac29ebbb12b8110bb1efc2a857e196ab',
-        parentMetadataDigest: '2d7d0ff7b2692fae629a66c1ece848db0a103bed46b5201bb0dc8a9dd9414867',
+        path: [{ kind: s50, target: s30, uid: s317 }],
+        certificate: '3be9c39aeb7025efc126151e3ff45a300f80028fcd7608050eed4eafcb7d8a84',
+        parentMetadataDigest: 'c07be4d1720dba3897c21966d902fbb881c2a763046992e02564b6c515977492',
         parentFields: [
-          s129,
+          s124,
           s53,
           s54,
           s55,
           s56,
           s58,
           s59,
-          'hd',
           s60,
           s61,
-          s62,
-          s90,
+          s85,
+          s86,
+          s64,
+          s65,
+          s318,
+          s319,
+          s96,
           s66,
-          s91,
-          s67,
-          s68,
-          s323,
-          s324,
-          s101,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s322],
+        rootValues: [s317],
         features: [
           {
             kind: s50,
             target: s30,
             body: {
               metadataDigest: 'fdb03c5bc330dade1cbb16f7769b225989af558b54f3bba2498062366b3f4c7c',
-              fields: [s129, s72, s73, s74, s61, s62, s67, s101],
+              fields: [s124, s67, s68, s69, s60, s61, s64, s96],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '4c0ffca186d596224d7f00dcd48cba62a9d6e75f0ce8a8b774e8169fa54344d9' },
                   {
-                    metadataDigest: s79,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s325 }] },
+                    metadataDigest: s74,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s320 }] },
                   },
                   {
-                    metadataDigest: s326,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s327 }] },
+                    metadataDigest: s321,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s322 }] },
                   },
                   {
-                    metadataDigest: s92,
-                    fields: [s61, s77],
+                    metadataDigest: s87,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             'fb0fca94245bf03010f401228b2b663163b6529434348f0349e2e0f6592b97c4',
                         },
-                        { digest: s328 },
-                        { digest: s329 },
-                        { digest: s330 },
+                        { digest: s323 },
+                        { digest: s324 },
+                        { digest: s325 },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s83,
-                    fields: [s61, s77],
+                    metadataDigest: s78,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
                           digest:
                             '51c5861f785fee4a1868006b6f11aa0db209bd19f6ada93327623d8d3d03b231',
                         },
-                        { metadataDigest: s93, fields: [s94, s61, s77], entries: { kind: s95 } },
-                        { metadataDigest: s96, fields: [s94, s61, s77], entries: { kind: s95 } },
+                        { metadataDigest: s88, fields: [s89, s60, s72], entries: { kind: s90 } },
+                        { metadataDigest: s91, fields: [s89, s60, s72], entries: { kind: s90 } },
                       ],
                     },
                   },
                   {
-                    metadataDigest: s97,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s331 }] },
+                    metadataDigest: s92,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s326 }] },
                   },
                   {
-                    metadataDigest: s112,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s332 }] },
+                    metadataDigest: s107,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s327 }] },
                   },
                   {
-                    metadataDigest: s333,
-                    fields: [s61, s77],
-                    entries: { kind: s75, values: [{ digest: s334 }] },
+                    metadataDigest: s328,
+                    fields: [s60, s72],
+                    entries: { kind: s70, values: [{ digest: s329 }] },
                   },
                   {
-                    metadataDigest: s335,
-                    fields: [s61, s77],
+                    metadataDigest: s330,
+                    fields: [s60, s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
-                        { digest: s336 },
-                        { digest: s337 },
+                        { digest: s331 },
+                        { digest: s332 },
                         {
-                          metadataDigest: s76,
-                          fields: [s77],
+                          metadataDigest: s71,
+                          fields: [s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
-                                metadataDigest: s338,
-                                fields: [s61, s77],
+                                metadataDigest: s333,
+                                fields: [s60, s72],
                                 entries: {
-                                  kind: s75,
+                                  kind: s70,
                                   values: [
-                                    { digest: s339 },
-                                    { digest: s340 },
-                                    { digest: s341 },
+                                    { digest: s334 },
+                                    { digest: s335 },
+                                    { digest: s336 },
                                     {
                                       metadataDigest:
                                         '83a5c509000cfcba4c200115781779ec5370e1c078c7ae30abc3455a6b8ecb2d',
-                                      fields: [s61, s62, s67, s77],
-                                      entries: { kind: s75, values: [{ digest: s342 }] },
+                                      fields: [s60, s61, s64, s72],
+                                      entries: { kind: s70, values: [{ digest: s337 }] },
                                     },
                                   ],
                                 },
@@ -6260,32 +5685,32 @@ const registry = {
                           },
                         },
                         {
-                          metadataDigest: s76,
-                          fields: [s77],
+                          metadataDigest: s71,
+                          fields: [s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
-                                metadataDigest: s343,
-                                fields: [s61, s77],
+                                metadataDigest: s338,
+                                fields: [s60, s72],
                                 entries: {
-                                  kind: s75,
-                                  values: [{ digest: s344 }, { digest: s345 }],
+                                  kind: s70,
+                                  values: [{ digest: s339 }, { digest: s340 }],
                                 },
                               },
                             ],
                           },
                         },
                         {
-                          metadataDigest: s76,
-                          fields: [s77],
+                          metadataDigest: s71,
+                          fields: [s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
                               {
-                                metadataDigest: s346,
-                                fields: [s61, s77],
-                                entries: { kind: s75, values: [{ digest: s347 }] },
+                                metadataDigest: s341,
+                                fields: [s60, s72],
+                                entries: { kind: s70, values: [{ digest: s342 }] },
                               },
                             ],
                           },
@@ -6341,9 +5766,9 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s348,
-        ability: s85,
-        capacity: { kind: s98, formula: '<$level$> + <$int_mod$>', minimum: 1 },
+        mode: s343,
+        ability: s80,
+        capacity: { kind: s93, formula: '<$level$> + <$int_mod$>', minimum: 1 },
         maximumByLevel: [
           11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         ],
@@ -6353,121 +5778,103 @@ const registry = {
           owner: [s32, s49, s37],
           target: s30,
           level: 1,
-          path: [{ kind: s50, target: s30, uid: s322 }],
-          certificate: '3dda99d461340c72427f90f0030559adcf7d5bc9bab256a608c1fc2305f548ce',
-          parentMetadataDigest: 'c8cff20b014c1528639edf8660aebf343309e4ed87fafee8c0a1c40e83de66df',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            'hd',
-            s60,
-            s61,
-            s90,
-            s66,
-            s67,
-            s68,
-            s323,
-            s324,
-            s101,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s322],
+          path: [{ kind: s50, target: s30, uid: s317 }],
+          certificate: 'f15e28e55448940cc99644dfa9b9ffe8098ef7a611b78b6d775dbb75daef0466',
+          parentMetadataDigest: 'b843b4c5ea0363ee1bd9b19b796b036a22678376a94d58fb50c4f051b410db89',
+          parentFields: [s53, s54, s55, s56, s60, s85, s64, s65, s318, s319, s96, s66],
+          rootValues: [s317],
           features: [
             {
               kind: s50,
               target: s30,
               body: {
                 metadataDigest: 'ec8722e33c0e56727cdf8e586a4aafbab858698589df3e816ed865244c4458d0',
-                fields: [s72, s73, s74, s61, s67, s101],
+                fields: [s67, s68, s69, s60, s64, s96],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '7635aeabd3c22f6f5b55bef0e7086ac1e6a31241ec8c97ff10faa7f8d19f1fcc' },
                     {
-                      metadataDigest: s79,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s325 }] },
+                      metadataDigest: s74,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s320 }] },
                     },
                     {
-                      metadataDigest: s326,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s327 }] },
+                      metadataDigest: s321,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s322 }] },
                     },
                     {
-                      metadataDigest: s92,
-                      fields: [s61, s77],
+                      metadataDigest: s87,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
                             digest:
                               '6e246810db7a5a74ccbbd4d3eec9aacdf07142fc7c0e2b217d2c25ad5f78477e',
                           },
-                          { digest: s328 },
-                          { digest: s329 },
-                          { digest: s330 },
+                          { digest: s323 },
+                          { digest: s324 },
+                          { digest: s325 },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s83,
-                      fields: [s61, s77],
+                      metadataDigest: s78,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s252 },
-                          { metadataDigest: s93, fields: [s94, s61, s77], entries: { kind: s95 } },
-                          { metadataDigest: s96, fields: [s94, s61, s77], entries: { kind: s95 } },
+                          { digest: s247 },
+                          { metadataDigest: s88, fields: [s89, s60, s72], entries: { kind: s90 } },
+                          { metadataDigest: s91, fields: [s89, s60, s72], entries: { kind: s90 } },
                         ],
                       },
                     },
                     {
-                      metadataDigest: s97,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s331 }] },
+                      metadataDigest: s92,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s326 }] },
                     },
                     {
-                      metadataDigest: s112,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s332 }] },
+                      metadataDigest: s107,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s327 }] },
                     },
                     {
-                      metadataDigest: s333,
-                      fields: [s61, s77],
-                      entries: { kind: s75, values: [{ digest: s334 }] },
+                      metadataDigest: s328,
+                      fields: [s60, s72],
+                      entries: { kind: s70, values: [{ digest: s329 }] },
                     },
                     {
-                      metadataDigest: s335,
-                      fields: [s61, s77],
+                      metadataDigest: s330,
+                      fields: [s60, s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
-                          { digest: s336 },
-                          { digest: s337 },
+                          { digest: s331 },
+                          { digest: s332 },
                           {
-                            metadataDigest: s76,
-                            fields: [s77],
+                            metadataDigest: s71,
+                            fields: [s72],
                             entries: {
-                              kind: s75,
+                              kind: s70,
                               values: [
                                 {
-                                  metadataDigest: s338,
-                                  fields: [s61, s77],
+                                  metadataDigest: s333,
+                                  fields: [s60, s72],
                                   entries: {
-                                    kind: s75,
+                                    kind: s70,
                                     values: [
-                                      { digest: s339 },
-                                      { digest: s340 },
-                                      { digest: s341 },
+                                      { digest: s334 },
+                                      { digest: s335 },
+                                      { digest: s336 },
                                       {
                                         metadataDigest:
                                           'b065444d821ce89a82937d92ce2698ae753a9a81e1d021019a80c428aa7d4a25',
-                                        fields: [s61, s67, s77],
-                                        entries: { kind: s75, values: [{ digest: s342 }] },
+                                        fields: [s60, s64, s72],
+                                        entries: { kind: s70, values: [{ digest: s337 }] },
                                       },
                                     ],
                                   },
@@ -6476,32 +5883,32 @@ const registry = {
                             },
                           },
                           {
-                            metadataDigest: s76,
-                            fields: [s77],
+                            metadataDigest: s71,
+                            fields: [s72],
                             entries: {
-                              kind: s75,
+                              kind: s70,
                               values: [
                                 {
-                                  metadataDigest: s343,
-                                  fields: [s61, s77],
+                                  metadataDigest: s338,
+                                  fields: [s60, s72],
                                   entries: {
-                                    kind: s75,
-                                    values: [{ digest: s344 }, { digest: s345 }],
+                                    kind: s70,
+                                    values: [{ digest: s339 }, { digest: s340 }],
                                   },
                                 },
                               ],
                             },
                           },
                           {
-                            metadataDigest: s76,
-                            fields: [s77],
+                            metadataDigest: s71,
+                            fields: [s72],
                             entries: {
-                              kind: s75,
+                              kind: s70,
                               values: [
                                 {
-                                  metadataDigest: s346,
-                                  fields: [s61, s77],
-                                  entries: { kind: s75, values: [{ digest: s347 }] },
+                                  metadataDigest: s341,
+                                  fields: [s60, s72],
+                                  entries: { kind: s70, values: [{ digest: s342 }] },
                                 },
                               ],
                             },
@@ -6522,11 +5929,11 @@ const registry = {
         owner: [s32, s49, s38],
         target: s31,
         level: 1,
-        path: [{ kind: s50, target: s31, uid: s349 }],
-        certificate: '4094175f74d185e5cf7544d0b67f060fc302a39d10bf9b9d9f2da4e01e7efd99',
-        parentMetadataDigest: '2e5189a9cf84ae2a6f679fcc727ee5e16327b336eb68241ead932948ba141247',
+        path: [{ kind: s50, target: s31, uid: s344 }],
+        certificate: '14acfaf19ef64ee864b29b9022668ab6adf8a2ae12ee3d523b340c55e7d5936e',
+        parentMetadataDigest: '5346bea479eb98d43e018a22338993dd8e9c51b923684be4a833122bec58d625',
         parentFields: [
-          s115,
+          s110,
           s53,
           s54,
           s55,
@@ -6534,100 +5941,94 @@ const registry = {
           s57,
           s58,
           s59,
-          'hd',
           s60,
           s61,
           s62,
           s63,
           s64,
           s65,
+          s318,
+          s319,
+          s111,
           s66,
-          s67,
-          s68,
-          s323,
-          s324,
-          s116,
-          s69,
-          s70,
-          s71,
         ],
-        rootValues: [s349],
+        rootValues: [s344],
         features: [
           {
             kind: s50,
             target: s31,
             body: {
               metadataDigest: 'd7705b06d56d69c43c181cedfffcce7db5963c7111497d9b65019ca46c6d7858',
-              fields: [s115, s72, s73, s74, s61, s62, s67, s116],
+              fields: [s110, s67, s68, s69, s60, s61, s64, s111],
               entries: {
-                kind: s75,
+                kind: s70,
                 values: [
                   { digest: '9d2f9ba2a4ea17eb3c8421c2974e4a2607ac638b9fe8434bda65bbcdd46c01ca' },
                   {
-                    metadataDigest: s76,
-                    fields: [s77],
+                    metadataDigest: s71,
+                    fields: [s72],
                     entries: {
-                      kind: s75,
+                      kind: s70,
                       values: [
                         {
-                          metadataDigest: s79,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s350 }, { digest: s351 }] },
+                          metadataDigest: s74,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s345 }, { digest: s346 }] },
                         },
                         {
-                          metadataDigest: s326,
-                          fields: [s61, s77],
+                          metadataDigest: s321,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s352 }, { digest: s353 }, { digest: s354 }],
+                            kind: s70,
+                            values: [{ digest: s347 }, { digest: s348 }, { digest: s349 }],
                           },
                         },
                         {
-                          metadataDigest: s80,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s355 }] },
+                          metadataDigest: s75,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s350 }] },
                         },
                         {
-                          metadataDigest: s81,
-                          fields: [s61, s77],
+                          metadataDigest: s76,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
-                            values: [{ digest: s356 }, { digest: s357 }, { digest: s358 }],
+                            kind: s70,
+                            values: [{ digest: s351 }, { digest: s352 }, { digest: s353 }],
                           },
                         },
                         {
-                          metadataDigest: s82,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s359 }] },
+                          metadataDigest: s77,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s354 }] },
                         },
                         {
-                          metadataDigest: s83,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s202 }] },
+                          metadataDigest: s78,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s197 }] },
                         },
                         {
-                          metadataDigest: s112,
-                          fields: [s61, s77],
-                          entries: { kind: s75, values: [{ digest: s360 }] },
+                          metadataDigest: s107,
+                          fields: [s60, s72],
+                          entries: { kind: s70, values: [{ digest: s355 }] },
                         },
                         {
-                          metadataDigest: s361,
-                          fields: [s61, s77],
+                          metadataDigest: s356,
+                          fields: [s60, s72],
                           entries: {
-                            kind: s75,
+                            kind: s70,
                             values: [
-                              { digest: s362 },
+                              { digest: s357 },
                               {
-                                metadataDigest: s338,
-                                fields: [s61, s77],
-                                entries: { kind: s75, values: [{ digest: s363 }] },
+                                metadataDigest: s333,
+                                fields: [s60, s72],
+                                entries: { kind: s70, values: [{ digest: s358 }] },
                               },
                               {
-                                metadataDigest: s364,
-                                fields: [s61, s77],
+                                metadataDigest: s359,
+                                fields: [s60, s72],
                                 entries: {
-                                  kind: s75,
-                                  values: [{ digest: s365 }, { digest: s366 }],
+                                  kind: s70,
+                                  values: [{ digest: s360 }, { digest: s361 }],
                                 },
                               },
                             ],
@@ -6684,10 +6085,10 @@ const registry = {
         ],
       },
       preparation: {
-        mode: s348,
-        ability: s85,
+        mode: s343,
+        ability: s80,
         capacity: {
-          kind: s86,
+          kind: s81,
           values: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25],
         },
         maximumByLevel: [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25],
@@ -6697,108 +6098,87 @@ const registry = {
           owner: [s32, s49, s38],
           target: s31,
           level: 1,
-          path: [{ kind: s50, target: s31, uid: s349 }],
-          certificate: '9345db9b92add6aafdd34c37feedc2e3f790640213d47f5739c64ce63cc11b3d',
-          parentMetadataDigest: '3ca25ea81ee22df0002807f2c1f0ca8fc0e788342eebe8a523d5b399f2d9c8c7',
-          parentFields: [
-            s53,
-            s54,
-            s55,
-            s56,
-            s57,
-            'hd',
-            s60,
-            s61,
-            s63,
-            s64,
-            s65,
-            s66,
-            s67,
-            s68,
-            s323,
-            s324,
-            s116,
-            s69,
-            s70,
-            s71,
-          ],
-          rootValues: [s349],
+          path: [{ kind: s50, target: s31, uid: s344 }],
+          certificate: '106cd98e647d4c31f53806875868056307229e26c28c543c907042f9b0e5b702',
+          parentMetadataDigest: '25f7e6bfa9268f84cfb0c43d636e427e01cc6f2fcdf70de435bd65629f123bb3',
+          parentFields: [s53, s54, s55, s56, s57, s60, s62, s63, s64, s65, s318, s319, s111, s66],
+          rootValues: [s344],
           features: [
             {
               kind: s50,
               target: s31,
               body: {
                 metadataDigest: '1e766582d12503a853f2c6a4cb5162ecd6a58f918d7f51dab6c269e279ad01a4',
-                fields: [s72, s73, s74, s61, s67, s116],
+                fields: [s67, s68, s69, s60, s64, s111],
                 entries: {
-                  kind: s75,
+                  kind: s70,
                   values: [
                     { digest: '921cd295bc8ae3121ea16f5ecc51c61568ea16096af5b96a1a6ee5dc21f2435b' },
                     {
-                      metadataDigest: s76,
-                      fields: [s77],
+                      metadataDigest: s71,
+                      fields: [s72],
                       entries: {
-                        kind: s75,
+                        kind: s70,
                         values: [
                           {
-                            metadataDigest: s79,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s350 }, { digest: s351 }] },
+                            metadataDigest: s74,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s345 }, { digest: s346 }] },
                           },
                           {
-                            metadataDigest: s326,
-                            fields: [s61, s77],
+                            metadataDigest: s321,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s352 }, { digest: s353 }, { digest: s354 }],
+                              kind: s70,
+                              values: [{ digest: s347 }, { digest: s348 }, { digest: s349 }],
                             },
                           },
                           {
-                            metadataDigest: s80,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s355 }] },
+                            metadataDigest: s75,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s350 }] },
                           },
                           {
-                            metadataDigest: s81,
-                            fields: [s61, s77],
+                            metadataDigest: s76,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
-                              values: [{ digest: s356 }, { digest: s357 }, { digest: s358 }],
+                              kind: s70,
+                              values: [{ digest: s351 }, { digest: s352 }, { digest: s353 }],
                             },
                           },
                           {
-                            metadataDigest: s82,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s359 }] },
+                            metadataDigest: s77,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s354 }] },
                           },
                           {
-                            metadataDigest: s83,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s202 }] },
+                            metadataDigest: s78,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s197 }] },
                           },
                           {
-                            metadataDigest: s112,
-                            fields: [s61, s77],
-                            entries: { kind: s75, values: [{ digest: s360 }] },
+                            metadataDigest: s107,
+                            fields: [s60, s72],
+                            entries: { kind: s70, values: [{ digest: s355 }] },
                           },
                           {
-                            metadataDigest: s361,
-                            fields: [s61, s77],
+                            metadataDigest: s356,
+                            fields: [s60, s72],
                             entries: {
-                              kind: s75,
+                              kind: s70,
                               values: [
-                                { digest: s362 },
+                                { digest: s357 },
                                 {
-                                  metadataDigest: s338,
-                                  fields: [s61, s77],
-                                  entries: { kind: s75, values: [{ digest: s363 }] },
+                                  metadataDigest: s333,
+                                  fields: [s60, s72],
+                                  entries: { kind: s70, values: [{ digest: s358 }] },
                                 },
                                 {
-                                  metadataDigest: s364,
-                                  fields: [s61, s77],
+                                  metadataDigest: s359,
+                                  fields: [s60, s72],
                                   entries: {
-                                    kind: s75,
-                                    values: [{ digest: s365 }, { digest: s366 }],
+                                    kind: s70,
+                                    values: [{ digest: s360 }, { digest: s361 }],
                                   },
                                 },
                               ],

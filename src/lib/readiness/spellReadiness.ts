@@ -1,4 +1,5 @@
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import {
@@ -162,9 +163,11 @@ export function validateSpells(
       const level = slots[0][3]
       const savant = getSavantSpellbookGain(slots[0])
       const featureLabel = getManagedClassSpellFeatureLabel(slots[0])
-      const kind =
-        slots[0][1] === 'feature-cantrip'
-          ? `${featureSetups.find((setup) => setup.producer === slots[0][2])?.name ?? 'feature'} cantrip`
+      const selectedFeature = featureSetups.find((setup) => setup.producer === slots[0][2])?.name
+      const kind = isSelectedInvocationRitualSlot(slots[0])
+        ? `${selectedFeature ?? featureLabel ?? 'feature'} ritual`
+        : slots[0][1] === 'feature-cantrip'
+          ? `${selectedFeature ?? 'feature'} cantrip`
           : slots[0][1] === 'class-cantrip'
             ? 'cantrip'
             : slots[0][1] === 'class-arcanum'

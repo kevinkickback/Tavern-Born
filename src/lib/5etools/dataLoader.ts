@@ -9,6 +9,7 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
+import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import {
   type CopyResolutionDiagnostic,
   CopyResolutionError,
@@ -63,7 +64,11 @@ import { createJsonResourceReader, type JsonResourceReader } from './resourceRea
 import { CreatureDataSchema, OptionalClassBookDataSchema } from './schemas'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
-import { createIndexedSubclassFeatureResolver } from './subclassSourcePreparation'
+import {
+  createIndexedClassResolver,
+  createIndexedSubclassFeatureResolver,
+  createIndexedSubclassResolver,
+} from './subclassSourcePreparation'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -221,6 +226,11 @@ export class FiveEToolsDataLoader {
     const hasOptionalClassBook = this.availableResources?.has(OPTIONAL_CLASS_BOOK)
     if (hasOptionalClassBook)
       resources.push({ key: 'optionalClassBook', file: OPTIONAL_CLASS_BOOK, required: false })
+    if (
+      this.sourceType !== 'bundled' &&
+      (!this.availableResources || this.availableResources.has(COMPANION_FAMILY_BOOK))
+    )
+      resources.push({ key: 'companionFamilyBook', file: COMPANION_FAMILY_BOOK, required: false })
     const supportedResources =
       this.sourceType === 'bundled'
         ? resources.filter((resource) => resource.key !== 'psionics')
@@ -253,6 +263,9 @@ export class FiveEToolsDataLoader {
         loadedTopLevelResources += 1
 
         switch (resource.key) {
+          case 'companionFamilyBook':
+            gameData.companionFamilySources = parseCompanionFamilySources(data, 'WoW')
+            break
           case 'optionalClassBook': {
             const book = OptionalClassBookDataSchema.safeParse(data)
             // A readable but invalid book records current unavailability. Only read failures retain the old cache.
@@ -423,6 +436,30 @@ export class FiveEToolsDataLoader {
         booksData,
         OPTIONAL_CLASS_BOOK,
       )
+
+    // Legacy admitted inventories predate this optional book. Only probe it if the
+    // loaded index declares it; candidate admission will then include it normally.
+    if (
+      this.sourceType !== 'bundled' &&
+      !options?.strictCandidate &&
+      this.availableResources &&
+      !this.availableResources.has(COMPANION_FAMILY_BOOK) &&
+      booksData &&
+      typeof booksData === 'object' &&
+      'book' in booksData &&
+      Array.isArray(booksData.book) &&
+      booksData.book.some((row) => row?.source === 'WoW' && row?.id === 'WoW')
+    ) {
+      try {
+        gameData.companionFamilySources = parseCompanionFamilySources(
+          await this.loadResource(COMPANION_FAMILY_BOOK, options?.signal),
+          'WoW',
+        )
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        options?.onResourceFailure?.(COMPANION_FAMILY_BOOK, { required: false })
+      }
+    }
 
     if (classIndexData) {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options)
@@ -610,6 +647,8 @@ export class FiveEToolsDataLoader {
     )
 
     const prepareFeatures = createIndexedSubclassFeatureResolver(indexData, documents)
+    const prepareClasses = createIndexedClassResolver(indexData, documents)
+    const prepareSubclasses = createIndexedSubclassResolver(indexData, documents)
     const optionalClassFeatureSources: NonNullable<GameData['optionalClassFeatureSources']> = []
     const classCastingSources: NonNullable<GameData['classCastingSources']> = []
     for (const loaded of loadedClasses) {
@@ -617,7 +656,12 @@ export class FiveEToolsDataLoader {
       throwIfAborted(options?.signal)
       const { file, classData, fluff } = loaded
       try {
-        const parsedDocument = parseClassDocument(classData, `class/${file}`, prepareFeatures(file))
+        const parsedDocument = parseClassDocument(
+          classData,
+          `class/${file}`,
+          prepareFeatures(file),
+          { classes: prepareClasses(file), subclasses: prepareSubclasses(file) },
+        )
         const fluffByKey = new Map(fluff.map((item) => [`${item.name}|${item.source}`, item]))
         const classes = parsedDocument.classes as GameData['classes']
         for (const item of classes) {

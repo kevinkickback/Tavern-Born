@@ -14,6 +14,7 @@ import {
   optionalDeclarationObject,
   optionalDeclarationParentMetadata,
   type PreparedOptionalDeclarationSources,
+  projectClassDeclarationMetadata,
   scanOptionalDeclarationReferences,
 } from './optionalClassDeclarationStructure'
 import { collectLayerSubclassFeatures } from './subclassFeatureCatalog'
@@ -41,6 +42,7 @@ export function createDeclarationSourceAccess<Kind extends string>(
   rules: readonly OptionalDeclarationRule[],
   proofKind: Kind,
   getProofs: (catalog: object) => readonly DeclarationSourceProof<Kind>[],
+  projectClassMetadata?: (row: Row) => Row,
 ) {
   const OPTIONAL_CLASS_DECLARATIONS = rules
   const keys = new Map(
@@ -62,7 +64,10 @@ export function createDeclarationSourceAccess<Kind extends string>(
     prepared?: PreparedOptionalDeclarationSources,
   ): DeclarationSourceProof<Kind>[] {
     const document = optionalDeclarationObject(data)
-    const found = collectOptionalDeclarationCertificates(document, targets, prepared)
+    const relations = collectOptionalDeclarationCertificates(document, targets, prepared)
+    const found = projectClassMetadata
+      ? relations.map((row) => projectClassDeclarationMetadata(row, projectClassMetadata))
+      : relations
     const result: DeclarationSourceProof<Kind>[] = []
     for (const [key, certificate] of keys) {
       const kind = certificate.owner[0]
@@ -191,11 +196,10 @@ export function createDeclarationSourceAccess<Kind extends string>(
     const expectedFields = Object.fromEntries(
       certificate.parentFields.map((field) => [field, true]),
     )
-    if (
-      digest(optionalDeclarationParentMetadata(parent, kind, expectedFields)) !==
-      certificate.parentMetadataDigest
-    )
-      return undefined
+    const metadata = optionalDeclarationParentMetadata(parent, kind, expectedFields)
+    const consumed =
+      kind === 'class' && projectClassMetadata ? projectClassMetadata(metadata) : metadata
+    if (digest(consumed) !== certificate.parentMetadataDigest) return undefined
     const declarations = parent[kind === 'class' ? 'classFeatures' : 'subclassFeatures']
     const first = certificate.path[0]
     const raw = Array.isArray(declarations)

@@ -1,4 +1,4 @@
-import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
+import { isRevisedInvocationSelection } from '@/lib/5etools/warlockInvocationCantripSource'
 import { inferRulesTextActionKind } from '@/lib/calculations/actions'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getClassChoiceFeatureId } from '@/lib/character/classChoiceIdentity'
@@ -31,12 +31,12 @@ export function getPactOfTheBladeSheetRules(
   prerequisites: ClassChoicePrerequisiteContext,
 ): PactBladeSheetRule[] {
   const picks = (character.classChoiceSelections ?? []).flatMap((selection) => {
-    const revised = selection.choiceId === REVISED_INVOCATION_POOL
+    const revised = isRevisedInvocationSelection(selection)
     if (!revised && selection.choiceId !== CLASSIC_PACT_BOON_POOL) return []
     const source = revised ? ('xphb' as const) : ('phb' as const)
     if (
-      norm(selection.className) !== 'warlock' ||
-      norm(selection.classSource) !== source ||
+      (!revised &&
+        (norm(selection.className) !== 'warlock' || norm(selection.classSource) !== source)) ||
       selection.subclassName ||
       selection.subclassSource
     )
@@ -52,7 +52,10 @@ export function getPactOfTheBladeSheetRules(
   return picks.map(({ selection, option, source }) => {
     const featureId = getClassChoiceFeatureId(selection, option)
     const rule = { featureId, actionId: `feature:${featureId}`, name: PACT_BLADE_NAME, source }
-    const pact = getCurrentPactBladeState(character, catalogs, source)
+    const pact = getCurrentPactBladeState(character, catalogs, source, {
+      name: selection.className,
+      source: selection.classSource,
+    })
     return pact?.selection === selection &&
       pact.option === option &&
       routes.selectedOptions.some((row) => row.selection === selection && row.option === option)

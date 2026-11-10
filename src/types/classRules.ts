@@ -137,11 +137,14 @@ type ClassResourceRecoveryAmount = number | 'all'
 export interface ClassResourceRecovery {
   shortRest?: ClassResourceRecoveryAmount
   longRest?: ClassResourceRecoveryAmount
-  unit?: 'points'
+  unit?: 'points' | 'dice'
   shortRestOncePerLongRest?: true
 }
 
 export interface ClassResourceDef {
+  inheritedFeature?: true
+  /** Exact source declaration required for a catalog-derived table resource. */
+  declarationTarget?: string
   id: string
   label: string
   maxPerLevel: readonly number[]

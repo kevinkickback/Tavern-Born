@@ -24,7 +24,7 @@ export interface AdditionalSpellChoiceDescriptor {
   source: AdditionalSpellGrant['source']
   usage: string
   dailyUses?: number | 'pb'
-  filter?: { level: number; classes: string[] }
+  filter?: { level: number; classes: string[]; ritual?: true }
   pool?: string[]
 }
 
@@ -66,10 +66,12 @@ function parseNativeSpellToken(token: string) {
 export function parseAdditionalSpellFilter(
   filter: string,
   levelDefault?: number,
-): { level: number; classes: string[] } {
+  allowRitual?: true,
+): NonNullable<AdditionalSpellChoiceDescriptor['filter']> {
   let level = 0
   let hasLevel = false
   const classes: string[] = []
+  let ritual: true | undefined
 
   for (const segment of filter.split('|')) {
     const [key, value, extra] = segment.split('=')
@@ -89,6 +91,13 @@ export function parseAdditionalSpellFilter(
         .filter(Boolean)
       if (!suppliedClasses.length) throw new Error('Incomplete native spell filter.')
       classes.push(...suppliedClasses)
+    } else if (
+      allowRitual &&
+      k === 'components & miscellaneous' &&
+      value.trim().toLowerCase() === 'ritual' &&
+      !ritual
+    ) {
+      ritual = true
     } else throw new Error('Unsupported native spell filter field: ' + key)
   }
 
@@ -96,7 +105,7 @@ export function parseAdditionalSpellFilter(
     if (levelDefault === undefined) throw new Error('An explicit spell filter level is required.')
     level = levelDefault
   }
-  return { level, classes }
+  return { level, classes, ...(ritual && { ritual }) }
 }
 
 function parseSchedule(
@@ -104,6 +113,7 @@ function parseSchedule(
   ability: string | undefined,
   source: AdditionalSpellGrant['source'],
   levelDefault?: number,
+  allowRitual?: true,
 ) {
   const grants: AdditionalSpellGrant[] = []
   const choices: AdditionalSpellChoiceDescriptor[] = []
@@ -164,7 +174,7 @@ function parseSchedule(
           throw new Error('Invalid native spell choice count.')
         let target: Pick<AdditionalSpellChoiceDescriptor, 'isCantrip' | 'filter' | 'pool'>
         if (typeof item.choose === 'string') {
-          const filter = parseAdditionalSpellFilter(item.choose, levelDefault)
+          const filter = parseAdditionalSpellFilter(item.choose, levelDefault, allowRitual)
           target = { isCantrip: filter.level === 0, filter }
         } else if (item.choose && Array.isArray(item.choose.from)) {
           const parsed = item.choose.from.map(parseNativeSpellToken)
@@ -242,6 +252,7 @@ function parseAbilityField(abilityField: string | { choose: string[] } | undefin
 function parseBlock(
   block: AdditionalSpellBlock,
   levelDefault?: number,
+  allowRitual?: true,
 ): ParsedAdditionalSpellBlock {
   requireRecord(block, 'block', ['name', 'ability', 'known', 'innate', 'prepared', 'expanded'])
   if (block.name !== undefined && (typeof block.name !== 'string' || !block.name.trim()))
@@ -250,9 +261,9 @@ function parseBlock(
   const resolvedAbility = ability
 
   const schedules = [
-    parseSchedule(block.known, resolvedAbility, 'known', levelDefault),
-    parseSchedule(block.innate, resolvedAbility, 'innate', levelDefault),
-    parseSchedule(block.prepared, resolvedAbility, 'prepared', levelDefault),
+    parseSchedule(block.known, resolvedAbility, 'known', levelDefault, allowRitual),
+    parseSchedule(block.innate, resolvedAbility, 'innate', levelDefault, allowRitual),
+    parseSchedule(block.prepared, resolvedAbility, 'prepared', levelDefault, allowRitual),
   ]
   if (block.expanded !== undefined) requireRecord(block.expanded, 'expanded list')
   const expanded = Object.entries(block.expanded ?? {}).flatMap(([key, references]) => {
@@ -283,9 +294,11 @@ function parseBlock(
  */
 export function parseAdditionalSpellBlocks(
   additionalSpells: AdditionalSpellBlock[] | undefined,
-  options: { filterLevelDefault?: number } = {},
+  options: { filterLevelDefault?: number; allowRitual?: true } = {},
 ): ParsedAdditionalSpellBlock[] {
   if (additionalSpells === undefined) return []
   if (!Array.isArray(additionalSpells)) throw new Error('Invalid native spell blocks.')
-  return additionalSpells.map((block) => parseBlock(block, options.filterLevelDefault))
+  return additionalSpells.map((block) =>
+    parseBlock(block, options.filterLevelDefault, options.allowRitual),
+  )
 }

@@ -6,7 +6,7 @@ import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { isNativeInvocationPoolId } from './atWillInvocationRules'
+import { isInvocationPoolId } from './atWillInvocationRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { permitted, sources } from './classSpellAuthority'
 import {
@@ -31,7 +31,7 @@ export function getAtWillInvocationSpellStatuses(
   prerequisites: ClassChoicePrerequisiteContext,
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): AtWillInvocationSpellStatus[] {
-  if (!character.classChoiceSelections?.some(({ choiceId }) => isNativeInvocationPoolId(choiceId)))
+  if (!character.classChoiceSelections?.some(({ choiceId }) => isInvocationPoolId(choiceId)))
     return []
 
   const allowed = sources(character)

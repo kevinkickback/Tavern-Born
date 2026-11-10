@@ -1,11 +1,11 @@
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
-import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
+import { hasClassFeatSpellSetup } from '@/lib/character/classFeatChoices'
 import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
 import { getFeatSetupStatus, isFeatSetupComplete } from '@/lib/character/featSetupProgress'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -298,7 +298,7 @@ export function validateFeatSetup(
     ...candidates.flatMap((feat) => {
       if (
         feat.target.classFeatChoiceId &&
-        getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '')
+        hasClassFeatSpellSetup(character, feat.target.classFeatChoiceId, feat.name, feat.source)
       ) {
         const selection = character.classChoiceSelections?.find(
           (row) => row.choiceId === feat.target.classFeatChoiceId,

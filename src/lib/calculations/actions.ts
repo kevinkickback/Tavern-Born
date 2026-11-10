@@ -19,6 +19,7 @@ import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { isStormAuraChoiceId, STORM_TARGETS } from '@/lib/5etools/stormAuraIdentity'
+import { isRevisedInvocationSelection } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import {
@@ -38,6 +39,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
+import { isDeclaredRevisedInvocationOption } from '@/lib/character/declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -52,6 +54,7 @@ import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSp
 import {
   getClassicPassiveInvocationName,
   isBladeDependentInvocation,
+  isPactBladeOption,
 } from '@/lib/character/warlockInvocationSource'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -565,7 +568,14 @@ function deriveClassFeatureActions(
           `feature:${featureId}`,
           label ?? option.name,
           renderEntriesToText(
-            label || isBladeDependentInvocation(selection.choiceId, option)
+            label ||
+              isBladeDependentInvocation(selection.choiceId, option) ||
+              isDeclaredRevisedInvocationOption(
+                selection.choiceId,
+                option,
+                context.classChoiceFeatureCatalogs,
+              ) ||
+              (isRevisedInvocationSelection(selection) && isPactBladeOption(option, 'xphb'))
               ? routes.contributions.find(
                   (row) => row.id === featureId && row.choiceId === selection.choiceId,
                 )?.entries

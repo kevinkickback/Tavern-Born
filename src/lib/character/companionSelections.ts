@@ -28,6 +28,7 @@ import {
   isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
+import { getCompanionFamilyRules, isCompanionFamilyOption } from './companionFamilies'
 import type { FeatureOptionSelectionState } from './featureOptionSelections'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
@@ -84,10 +85,28 @@ function savedCompanionRule(selection: CharacterClassChoiceSelection) {
 export function isRegisteredCompanionSelection(selection: CharacterClassChoiceSelection): boolean {
   return (
     selection.kind === 'creature' &&
-    !!savedCompanionRule(selection) &&
     selection.selected.length === 1 &&
     selection.selected[0].entityType === 'creature' &&
-    selection.selected[0].slotLevel === gain
+    selection.selected[0].slotLevel === gain &&
+    (!!savedCompanionRule(selection) ||
+      (isCompanionFamilyOption(selection.selected[0]) &&
+        selection.classLevel === gain &&
+        !!selection.className.trim() &&
+        !!selection.classSource.trim() &&
+        !!selection.subclassName?.trim() &&
+        !!selection.subclassSource?.trim() &&
+        selection.choiceId ===
+          getNormalizedClassChoiceId(
+            {
+              type: 'subclass',
+              name: selection.className,
+              source: selection.classSource,
+              subclassName: selection.subclassName,
+              subclassSource: selection.subclassSource,
+            },
+            'Primal Companion',
+            gain,
+          )))
   )
 }
 
@@ -165,6 +184,7 @@ export interface CompanionSelectionState extends FeatureOptionSelectionState {
   companion: true
   creature?: Creature5e
   classicRangerLevel?: number
+  family?: ReturnType<typeof getCompanionFamilyRules>
 }
 
 /** Current stat blocks and recoverable intent share the same earned choice and option pool. */
@@ -242,7 +262,11 @@ export function getCompanionSelectionStates(
         ? getCurrentDeclaration(candidate, rule, cls, subclass, catalogs)
         : undefined
     const choice = !rule || declaration ? candidate : undefined
-    if (!choice && !rule) return []
+    if (!choice && !rule && !isCompanionFamilyOption(selected)) return []
+    const family =
+      choice && catalogs && isCompanionFamilyOption(selected)
+        ? getCompanionFamilyRules(character, owner, catalogs)
+        : undefined
     const exact = selected.source?.trim()
       ? creatures.filter(
           (row) =>
@@ -250,11 +274,14 @@ export function getCompanionSelectionStates(
         )
       : []
     const option =
-      choice && exact.length === 1
+      choice &&
+      exact.length === 1 &&
+      exact[0].sourceIdentityConflict !== true &&
+      !isCompanionFamilyOption(selected)
         ? resolveClassChoiceOptions(
             choice,
             { ...createClassChoiceCatalogs(catalogs), creatures: exact },
-            [],
+            [selected],
             owner.levels,
             character,
           ).find(
@@ -263,6 +290,43 @@ export function getCompanionSelectionStates(
               getClassChoiceOptionKey(view.reference) === getClassChoiceOptionKey(selected),
           )
         : undefined
+    const familyCreature = family && {
+      ...family.creature,
+      trait: [
+        ...(family.creature.trait ?? []),
+        {
+          name: `Pet family: ${family.family.name}`,
+          entries: [
+            `${family.family.specialization} family. Mastery property: ${family.family.mastery.name}.`,
+          ],
+        },
+        ...(family.specialization
+          ? [
+              {
+                name: `Pet Specialization: ${family.family.specialization}`,
+                entries: [
+                  'While your companion is within 60 feet:',
+                  ...(family.specialization.entries as unknown[]),
+                ],
+              },
+            ]
+          : []),
+      ],
+      ...(family.mastery && {
+        action: family.creature.action?.map((action) =>
+          /^Beast['’]s Strike$/i.test(action.name ?? '')
+            ? {
+                ...action,
+                entries: [
+                  ...(action.entries ?? []),
+                  `Mastery: ${family.mastery?.name}.`,
+                  ...(family.mastery?.entries ?? []),
+                ],
+              }
+            : action,
+        ),
+      }),
+    }
     return [
       {
         selection,
@@ -270,7 +334,8 @@ export function getCompanionSelectionStates(
         classData: cls,
         subclass,
         choice,
-        creature: option ? exact[0] : undefined,
+        creature: familyCreature ?? (option ? exact[0] : undefined),
+        family,
         classicRangerLevel:
           option &&
           rule?.featureSource === 'PHB' &&
@@ -278,16 +343,29 @@ export function getCompanionSelectionStates(
           getFeatureSourceDigest(declaration.entries, false) === classicCompanionBody
             ? owner.levels
             : undefined,
-        recovery: !option,
+        recovery: !option && !family,
         companion: true,
         options: [],
         details: [
           {
             name: selected.name,
-            entries: option?.entries ?? [
-              'Restore the exact companion source or remove the saved choice.',
-            ],
-            available: !!option,
+            entries: family
+              ? [
+                  `${family.creature.name}. ${family.family.specialization} family.`,
+                  ...(family.mastery
+                    ? [
+                        `Beast's Strike mastery: ${family.mastery.name}.`,
+                        ...(family.mastery.entries ?? []),
+                      ]
+                    : []),
+                  ...(family.specialization
+                    ? ['While your companion is within 60 feet:', family.specialization]
+                    : []),
+                ]
+              : (option?.entries ?? [
+                  'Restore the exact companion source or remove the saved choice.',
+                ]),
+            available: !!option || !!family,
           },
         ],
       },

@@ -1,9 +1,7 @@
 import {
   getCurrentMetamagicChoiceId,
   getCurrentNativeSorcerer,
-  INNATE_SORCERY_ID,
   NATIVE_METAMAGIC_CHOICES,
-  SORCERY_POINTS_ID,
 } from '@/lib/5etools/sorcererSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import {
@@ -13,7 +11,6 @@ import {
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Character } from '@/types/character'
-import type { CharacterSheetViewModel } from './characterSheetViewModel'
 
 export function getMetamagicDescriptions(
   character: Character,
@@ -51,23 +48,4 @@ export function getMetamagicDescriptions(
     )
   }
   return descriptions
-}
-
-export function isSorcererResource({ id }: { id: string }) {
-  return id === SORCERY_POINTS_ID || id === INNATE_SORCERY_ID
-}
-
-export function withSorcererResourceText(
-  rows: CharacterSheetViewModel['classResourceRows'],
-  text: string,
-  showCounters = true,
-) {
-  const resources = rows
-    .filter(isSorcererResource)
-    .map(({ label, max, used, recovery }) =>
-      showCounters
-        ? `${label} — ${max - used}/${max} available. ${recovery}.`
-        : `${label} recovery. ${recovery}.`,
-    )
-  return [...resources, text].filter(Boolean).join('\n\n')
 }

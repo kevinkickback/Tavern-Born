@@ -34,6 +34,26 @@ export interface OptionalDeclarationCertificate {
   parentRaw: unknown[]
   features: Array<{ kind: OptionalDeclarationKind; target: string; body: Row; raw: unknown[] }>
 }
+
+/** A consumer with a separate class authority can project independently owned metadata. */
+export function projectClassDeclarationMetadata(
+  value: OptionalDeclarationCertificate,
+  project: (row: Row) => Row,
+): OptionalDeclarationCertificate {
+  if (value.owner[0] !== 'class') return value
+  return {
+    ...value,
+    parentMetadata: project(value.parentMetadata),
+    parentRaw: value.parentRaw.map((raw) => {
+      const row = optionalDeclarationObject(raw)
+      const local = optionalDeclarationObject(row.local)
+      return {
+        ...row,
+        local: { ...local, metadata: project(optionalDeclarationObject(local.metadata)) },
+      }
+    }),
+  }
+}
 export type OptionalDeclarationBodyShape =
   | { digest: string }
   | {

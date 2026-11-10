@@ -26,6 +26,7 @@ export function createEmptyGameData(): GameData & {
     classFeatures: [],
     optionalClassFeatureSources: [],
     optionalClassSections: [],
+    companionFamilySources: [],
     creatures: [],
     actions: [],
     conditions: [],

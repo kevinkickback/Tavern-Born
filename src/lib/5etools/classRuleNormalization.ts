@@ -5,9 +5,15 @@ import type {
   NormalizedClassRules,
 } from '@/types/classRules'
 import { normalizeClassChoices } from './classChoiceNormalization'
-import { getClassFeatureReferenceLevel } from './classFeatureIdentity'
+import { getClassFeatureIdentity, getClassFeatureReferenceLevel } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
-import { EPIC_BOON_LEVEL, isEpicBoonFeatureReference } from './epicBoonAdvancement'
+import { getCurrentDirectClassFeature } from './directClassFeatureSource'
+import {
+  EPIC_BOON_LEVEL,
+  isEpicBoonFeatureReference,
+  isRevisedEpicBoonOwner,
+} from './epicBoonAdvancement'
+import { getFeatureSourceDigest } from './featureSourceAudit'
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
 const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -27,6 +33,25 @@ const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet
 
 const LONG_REST_RECOVERY: ClassResourceRecovery = { longRest: 'all' }
 const SHORT_REST_RECOVERY: ClassResourceRecovery = { shortRest: 'all', longRest: 'all' }
+
+// Table headings such as "Focus Points" describe a pool only when the class also
+// declares the exact rules for spending and recovering it.
+const INHERITED_TABLE_RESOURCES: Readonly<Record<string, readonly string[]>> = {
+  rages: ['class-feature|rage|barbarian|xphb|1|xphb'],
+  'channel divinity': [
+    'class-feature|channel divinity|cleric|xphb|2|xphb',
+    'class-feature|channel divinity|paladin|xphb|3|xphb',
+  ],
+  'wild shape': ['class-feature|wild shape|druid|xphb|2|xphb'],
+  'second wind': ['class-feature|second wind|fighter|xphb|1|xphb'],
+  'focus points': ["class-feature|monk's focus|monk|xphb|2|xphb"],
+  'favored enemy': ['class-feature|favored enemy|ranger|xphb|1|xphb'],
+  'sorcery points': ['class-feature|font of magic|sorcerer|xphb|2|xphb'],
+}
+
+const SORCEROUS_RESTORATION = 'class-feature|sorcerous restoration|sorcerer|xphb|5|xphb'
+const SORCEROUS_RESTORATION_DIGEST =
+  '31a0086f8f9174edde65ac624fd0264ffb279b7e8de25925fd48cec5ad15c703'
 
 const FIGHTER_PROSE_RESOURCE_FIXUPS: readonly ClassResourceDef[] = [
   {
@@ -196,7 +221,10 @@ function inferRecovery(
       return name.includes(labelLower) || labelLower.includes(name)
     }) ?? refs.find((ref) => featureText(ref).includes(labelLower))
   const text = matching ? featureText(matching) : ''
+  return inferRecoveryFromText(text)
+}
 
+function inferRecoveryFromText(text: string): ClassResourceRecovery {
   const recovery: ClassResourceRecovery = { longRest: 'all' }
   if (/regain (?:one|1|a single)[^.]{0,240}short rest/.test(text)) {
     recovery.shortRest = 1
@@ -223,6 +251,8 @@ export function getClassResourceRecoveryAtLevel(
 export function formatClassResourceRecovery(recovery: ClassResourceRecovery): string {
   const shortAmount = recovery.shortRest
   const longAmount = recovery.longRest
+  if (recovery.unit === 'dice' && longAmount === 'all' && shortAmount === undefined)
+    return 'Restores all dice on a long rest'
   if (recovery.unit === 'points' && longAmount === 'all') {
     if (recovery.shortRestOncePerLongRest) {
       return `Restores up to ${shortAmount} points on a short rest (once per long rest). Restores all points on a long rest`
@@ -257,11 +287,30 @@ function normalizeId(className: string, label: string): string {
 }
 
 export function parseTableResources(
-  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
+  classData: Pick<
+    Class5e,
+    'name' | 'source' | 'classTableGroups' | 'classFeatures' | 'sourceIdentityConflict'
+  >,
   refs: readonly ClassFeatureReference[],
 ): ClassResourceDef[] {
   const resources: ClassResourceDef[] = []
   const supportedLabels = findClassReference(classData, CLASS_RESOURCE_RULES)?.labels
+  const inheritedRecovery = inheritedTableRecovery(classData, refs)
+  const inheritedLabels = new Map<string, number>()
+  for (const group of classData.classTableGroups ?? []) {
+    if (
+      !group ||
+      typeof group !== 'object' ||
+      !('colLabels' in group) ||
+      !Array.isArray(group.colLabels)
+    )
+      continue
+    for (const label of group.colLabels) {
+      if (typeof label !== 'string') continue
+      const key = label.trim().toLowerCase()
+      inheritedLabels.set(key, (inheritedLabels.get(key) ?? 0) + 1)
+    }
+  }
   for (const rawGroup of classData.classTableGroups ?? []) {
     if (!rawGroup || typeof rawGroup !== 'object') continue
     const group = rawGroup as Record<string, unknown>
@@ -271,30 +320,110 @@ export function parseTableResources(
 
     labels.forEach((rawLabel, columnIndex) => {
       const label = typeof rawLabel === 'string' ? rawLabel.trim() : ''
-      if (!supportedLabels?.has(label.toLowerCase())) return
+      const key = label.toLowerCase()
+      const native = supportedLabels?.has(key)
+      const inherited =
+        !native && inheritedLabels.get(key) === 1 ? inheritedRecovery(key) : undefined
+      if (!native && !inherited) return
       const parsedValues = rows.map((row) => parseResourceValue(row[columnIndex]))
       if (!parsedValues.every((value): value is number | 'unlimited' => value !== null)) return
       // An unlimited pool no longer needs a counter at that level, but it must not
       // invalidate the finite progression at every earlier level.
       const values = parsedValues.map((value) => (value === 'unlimited' ? 0 : value))
-      if (values.every((value) => value === 0)) return
-      const recovery = inferRecovery(label, refs)
+      if (
+        values.every((value) => value === 0) ||
+        (inherited &&
+          (values.length !== 20 ||
+            !values.every(
+              (value, index) =>
+                Number.isInteger(value) &&
+                value >= 0 &&
+                (index + 1 >= inherited.level || value === 0),
+            )))
+      )
+        return
+      const recovery = inherited?.recovery ?? inferRecovery(label, refs)
       resources.push({
-        id: normalizeId(classData.name, label),
+        id: inherited
+          ? `class-table:${JSON.stringify([classData.name.trim().toLowerCase(), classData.source.trim().toLowerCase(), key])}`
+          : normalizeId(classData.name, label),
         label,
         maxPerLevel: values as number[],
         restType: recovery.shortRest !== undefined ? 'short' : 'long',
         recovery,
+        ...(inherited && { declarationTarget: inherited.target }),
+        ...(inherited?.recoveryByLevel && { recoveryByLevel: inherited.recoveryByLevel }),
       })
     })
   }
   return resources
 }
 
+function inheritedTableRecovery(
+  cls: Pick<Class5e, 'name' | 'source' | 'classFeatures' | 'sourceIdentityConflict'>,
+  refs: readonly ClassFeatureReference[],
+) {
+  const owner = { ...cls, classFeatureRefs: [...refs] } as Class5e
+  const catalog = { classFeatures: refs.flatMap((ref) => (ref.feature ? [ref.feature] : [])) }
+  const direct = (target: string) => getCurrentDirectClassFeature(owner, catalog, target)
+  return (
+    label: string,
+  ):
+    | {
+        level: number
+        target: string
+        recovery: ClassResourceRecovery
+        recoveryByLevel?: ClassResourceRecovery[]
+      }
+    | undefined => {
+    const candidates = INHERITED_TABLE_RESOURCES[label]?.map(direct).filter((feature) => !!feature)
+    if (candidates?.length !== 1) return undefined
+    const [feature] = candidates
+    const level = feature.level
+    const target = getClassFeatureIdentity(feature)
+    if (!level || !target) return undefined
+    const text = JSON.stringify(feature.entries ?? '').toLowerCase()
+    const recovery = inferRecoveryFromText(text)
+    if (label === 'focus points') {
+      if (!/it is unavailable until you finish a [^.]+short rest[^.]+ or [^.]+long rest/.test(text))
+        return undefined
+      return { level, target, recovery: SHORT_REST_RECOVERY }
+    }
+    if (!/regain all[^.]+long rest/.test(text)) return undefined
+    if (label === 'sorcery points') {
+      recovery.unit = 'points'
+      const restoration = direct(SORCEROUS_RESTORATION)
+      const recoveryByLevel =
+        restoration?.entries &&
+        getFeatureSourceDigest(restoration.entries, false) === SORCEROUS_RESTORATION_DIGEST
+          ? Array.from(
+              { length: 20 },
+              (_, index): ClassResourceRecovery =>
+                index < 4
+                  ? recovery
+                  : {
+                      ...recovery,
+                      shortRest: Math.floor((index + 1) / 2),
+                      shortRestOncePerLongRest: true,
+                    },
+            )
+          : undefined
+      return { level, target, recovery, recoveryByLevel }
+    }
+    return { level, target, recovery }
+  }
+}
+
 export function normalizeClassRules(
   classData: Pick<
     Class5e,
-    'name' | 'source' | 'sourceIdentityConflict' | 'classTableGroups' | 'optionalfeatureProgression'
+    | 'name'
+    | 'source'
+    | 'edition'
+    | 'sourceIdentityConflict'
+    | 'classTableGroups'
+    | 'classFeatures'
+    | 'optionalfeatureProgression'
   >,
   refs: readonly ClassFeatureReference[],
 ): NormalizedClassRules {
@@ -306,7 +435,7 @@ export function normalizeClassRules(
 
   const asiLevels = refs
     .filter((ref) =>
-      classData.source.trim().toLowerCase() === 'xphb' && isEpicBoonFeatureReference(ref)
+      isRevisedEpicBoonOwner(classData) && isEpicBoonFeatureReference(ref)
         ? getClassFeatureReferenceLevel(ref) === EPIC_BOON_LEVEL
         : ASI_FEATURE.test(ref.name),
     )

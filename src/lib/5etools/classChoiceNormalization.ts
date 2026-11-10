@@ -1044,7 +1044,7 @@ function normalizeSingleFilterChoices(
       filter.categories,
       maximumSelections,
     )
-    if (alternative.present && !alternative.option)
+    if (alternative.present && !alternative.options)
       diagnostics.push(
         choiceDiagnostic(
           owner,
@@ -1063,14 +1063,14 @@ function normalizeSingleFilterChoices(
       minimumSelections: maximumSelections,
       maximumSelections,
       selectionCountByLevel,
-      options: alternative.option ? [alternative.option] : [],
+      options: alternative.options ?? [],
       optionFilter: filter,
       repeatable: false,
       replacement: inferReplacement(text),
       ...(getFeatureVariant(ref) ? { featureVariant: getFeatureVariant(ref) } : {}),
       source: {
         kind: 'class-feature-options',
-        field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.filter${alternative.option ? '-alternative-v1' : ''}`,
+        field: `classFeatureRefs:${declarationSourceUid(ref, owner.type)}:entries.filter${alternative.options ? '-alternative-v1' : ''}`,
       },
     })
   }
@@ -1170,6 +1170,7 @@ export function normalizeClassChoices(
     | 'edition'
     | 'sourceIdentityConflict'
     | 'classTableGroups'
+    | 'classFeatures'
     | 'optionalfeatureProgression'
   >,
   refs: readonly ClassFeatureReference[],

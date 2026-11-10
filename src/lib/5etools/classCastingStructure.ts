@@ -1,13 +1,31 @@
+import type { ClassFeature } from '@/types/5etools'
 import type { ClassPreparationRule } from '@/types/classCasting'
 import { getParsedClassSpellSlotProgression } from './classSpellSlotTable'
 import {
+  decodeOptionalDeclaration,
   getOptionalDeclarationOwner,
   type OptionalDeclarationOwner,
   type OptionalDeclarationRule,
   optionalDeclarationDigest,
+  optionalDeclarationObject,
 } from './optionalClassDeclarationStructure'
 
 type Row = Record<string, unknown>
+// These fields are validated by their own class consumers. They cannot grant or limit casting.
+const independentClassFields = new Set([
+  'hd',
+  'itemMasteries',
+  'itemMasteriesProgression',
+  'multiclassing',
+  'primaryAbility',
+  'proficiency',
+  'startingEquipment',
+  'startingProficiencies',
+])
+
+export function castingDeclarationMetadata(row: Row) {
+  return Object.fromEntries(Object.entries(row).filter(([key]) => !independentClassFields.has(key)))
+}
 export type CastingDomain = 'class-cantrip' | 'class-known' | 'class-spellbook' | 'class-arcanum'
 interface CastingGain {
   level: number
@@ -99,6 +117,91 @@ export function castingParsedParentMatches(row: Row, rule: CastingParentRule): b
 
 export function getCastingParentOwner(row: Row) {
   return getOptionalDeclarationOwner(row, 'class') as ['class', string, string] | undefined
+}
+
+export function getPlainCastingCopyParent(row: Row) {
+  const copy = optionalDeclarationObject(row._copy)
+  if (
+    Object.keys(copy).length !== 2 ||
+    typeof copy.name !== 'string' ||
+    typeof copy.source !== 'string'
+  )
+    return undefined
+  return getCastingParentOwner(copy)
+}
+
+/** Locate literal references to one casting target in the class's declared features. */
+export function getClassCastingRoots(row: Row, target: string): unknown[] {
+  return Array.isArray(row.classFeatures)
+    ? row.classFeatures.filter((value) => {
+        const uid =
+          typeof value === 'string' ? value : optionalDeclarationObject(value).classFeature
+        return (
+          typeof uid === 'string' &&
+          decodeOptionalDeclaration(uid, 'classFeature')?.target === target
+        )
+      })
+    : []
+}
+
+const featureDisplayFields = new Set([
+  'name',
+  'className',
+  'classSource',
+  'source',
+  'level',
+  'page',
+  'srd',
+  'srd52',
+  'basicRules',
+  'basicRules2024',
+])
+const focusItem = '\\{@item [^{}|]+\\|[^{}|]+\\}'
+const focusPermission = new RegExp(
+  `^You can use (?:a|an) ${focusItem}(?: \\(not (?:a|an) ${focusItem}\\))? as a \\{@variantrule Spellcasting Focus\\|[^{}|]+\\} for your [\\p{L}\\p{N} '’-]+ spells\\.$`,
+  'u',
+)
+
+/** A direct replacement may change the permitted focus equipment without changing picker rules. */
+export function hasEquivalentReplacementSpellcasting(
+  replacement: ClassFeature,
+  template: ClassFeature,
+) {
+  const project = (feature: ClassFeature, omitFocus: boolean) => {
+    let focusCount = 0
+    const visit = (entries: unknown[], depth = 0): unknown[] =>
+      entries.map((value) => {
+        const row = optionalDeclarationObject(value)
+        if (!Array.isArray(row.entries)) return value
+        if (
+          row.type === 'entries' &&
+          row.name === 'Spellcasting Focus' &&
+          Object.keys(row).length === 3 &&
+          row.entries.length === 1 &&
+          typeof row.entries[0] === 'string' &&
+          focusPermission.test(row.entries[0])
+        ) {
+          focusCount++
+          return { ...row, entries: [] }
+        }
+        return depth < 2 ? { ...row, entries: visit(row.entries, depth + 1) } : value
+      })
+    const fields = Object.fromEntries(
+      Object.entries(feature).filter(([key]) => !featureDisplayFields.has(key)),
+    )
+    if (omitFocus && Array.isArray(fields.entries)) fields.entries = visit(fields.entries)
+    return { digest: optionalDeclarationDigest(fields), focusCount }
+  }
+  const exact = project(replacement, false).digest
+  if (exact && exact === project(template, false).digest) return true
+  const actual = project(replacement, true)
+  const expected = project(template, true)
+  return (
+    actual.focusCount === 1 &&
+    expected.focusCount === 1 &&
+    !!actual.digest &&
+    actual.digest === expected.digest
+  )
 }
 
 /** Generation arithmetic is classified before schedules are admitted as numeric acquisitions. */

@@ -24,6 +24,7 @@ export interface SelectedFeat {
   className?: string
   classSource?: string
   classLevel?: number
+  epicBoonTarget?: string
 }
 
 export function getFeatOptionSourceName(feat: FeatOptionTarget): string {

@@ -1,5 +1,9 @@
+import type { ClassFeature } from '@/types/5etools'
+import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
+import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+import { namesFilteredFeatAlternatives } from './filteredFeatAlternative'
 
 const norm = (value: string) => value.trim().toLowerCase()
 
@@ -83,14 +87,20 @@ export function hasCurrentFeatureSpellSemantics(
 /** Exact prose-only acquisition context, not a general prerequisite bypass or level-up event. */
 export function hasDeclaredClassFeatSpellContext(
   choice: NormalizedCharacterChoice,
-  feature: { name: string; source: string; entries?: unknown[]; prerequisite?: unknown },
+  feature: {
+    name: string
+    source: string
+    entries?: unknown[]
+    prerequisite?: unknown
+    additionalSpells?: unknown
+  },
+  declaration: ClassFeature | undefined,
 ) {
   if (
     choice.kind !== 'feat' ||
     choice.owner.type !== 'class' ||
-    norm(choice.owner.source) !== 'xphb' ||
+    !declaration ||
     !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
-    !hasCurrentFeatureSpellSemantics('feat', feature, choice.owner.name) ||
     !choice.options.some(
       (option) =>
         option.entityType === 'feat' &&
@@ -100,14 +110,74 @@ export function hasDeclaredClassFeatSpellContext(
   )
     return false
   const blocks = feature.prerequisite as Array<{ otherSummary?: { entry?: string } }>
-  const clause = blocks?.[0]?.otherSummary?.entry?.match(
-    /^When Gaining the Level (\d+) ([^"]+) "([^"]+)" Feature$/,
-  )
+  const entry = blocks?.[0]?.otherSummary?.entry
+  const clause =
+    typeof entry === 'string' &&
+    entry.match(/^When Gaining the Level (\d+) ([^"]+) "([^"]+)" Feature$/)
   return (
     !!clause &&
     choice.level === Number(clause[1]) &&
-    norm(choice.owner.name) === norm(clause[2]) &&
-    norm(choice.owner.featureName ?? '') === norm(clause[3]) &&
-    norm(choice.owner.featureSource ?? '') === 'xphb'
+    declaration.level === Number(clause[1]) &&
+    norm(declaration.name) === norm(clause[3]) &&
+    (namesFilteredFeatAlternatives(declaration.entries?.[0])
+      ? hasListedCantripStyle(feature, blocks, clause[2], declaration.className)
+      : norm(declaration.classSource ?? '') === 'xphb' &&
+        norm(declaration.source) === 'xphb' &&
+        norm(declaration.className ?? '') === norm(clause[2]) &&
+        hasCurrentFeatureSpellSemantics('feat', feature, clause[2]))
   )
+}
+
+/** A listed class acquisition can borrow a style's own source-defined spell list. */
+function hasListedCantripStyle(
+  feature: { entries?: unknown[]; additionalSpells?: unknown },
+  prerequisite: unknown,
+  printedOwner: string,
+  declarationOwner?: string,
+) {
+  const [entry] = feature.entries ?? []
+  if (
+    feature.entries?.length !== 1 ||
+    typeof entry !== 'string' ||
+    !Array.isArray(prerequisite) ||
+    prerequisite.length !== 1 ||
+    !prerequisite[0] ||
+    typeof prerequisite[0] !== 'object' ||
+    Object.keys(prerequisite[0]).length !== 1 ||
+    !hasFeatureSourceShape(feature, fields)
+  )
+    return false
+  const prose = entry.match(
+    /^You learn two \{@filter [^|{}]+\|spells\|level=0\|class=([^|{};]+)\} of your choice\. \{@spell [^{}]+\} and \{@spell [^{}]+\} are recommended\. The chosen cantrips count as ([^.,]+) spells for you, and (Wisdom|Intelligence|Charisma) is your spellcasting ability for them\. Whenever you gain a(?:n)? ([^.,]+) level, you can replace one of these cantrips with another ([^.,]+) cantrip\.$/,
+  )
+  if (!prose) return false
+  const [, list, attributedClass, ability, replacementClass, replacementList] = prose
+  if (
+    norm(attributedClass) !== norm(replacementClass) ||
+    norm(replacementList) !== norm(list) ||
+    (norm(printedOwner) !== norm(attributedClass) &&
+      norm(printedOwner) !== norm(declarationOwner ?? ''))
+  )
+    return false
+  try {
+    const blocks = parseAdditionalSpellBlocks(feature.additionalSpells as AdditionalSpellBlock[])
+    const [block] = blocks
+    const choice = block?.choices[0]
+    return (
+      blocks.length === 1 &&
+      block.ability === norm(ability).slice(0, 3) &&
+      !block.grants.length &&
+      !block.expanded?.length &&
+      block.choices.length === 1 &&
+      choice?.level === 0 &&
+      choice.isCantrip &&
+      choice.count === 2 &&
+      choice.source === 'known' &&
+      choice.usage === 'direct' &&
+      choice.filter?.classes.length === 1 &&
+      norm(choice.filter.classes[0]) === norm(list)
+    )
+  } catch {
+    return false
+  }
 }

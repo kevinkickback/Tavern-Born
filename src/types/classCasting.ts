@@ -1,11 +1,13 @@
 /** Parsed catalog evidence, separate from optional adoption and saved character state. */
 export interface ClassCastingSourceProof {
   version: 1
-  kind: 'casting-declaration' | 'casting-parent'
+  kind: 'casting-declaration' | 'casting-parent' | 'casting-copy'
   target: string
   certificate: string
   origin: string
   verified: boolean
+  /** Exact casting roots checked before filtering can hide competing declarations. */
+  copyTargets?: string[]
 }
 
 /** Source-derived setup capacity; this does not authorize a level-up or rest replacement. */

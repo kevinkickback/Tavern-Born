@@ -478,6 +478,7 @@ export interface ItemMastery5e {
   name: string
   source: string
   entries?: unknown[]
+  sourceIdentityConflict?: true
 }
 
 export interface ItemEntry5e {
@@ -672,6 +673,7 @@ export interface GameData {
   classCastingSources?: ClassCastingSourceProof[]
   /** Compact current book-only optional sections, including exact unavailable identities. */
   optionalClassSections?: OptionalClassSectionSource[]
+  companionFamilySources?: CompanionFamilySource[]
   creatures?: Creature5e[]
   actions: unknown[]
   conditions: unknown[]
@@ -732,4 +734,16 @@ export interface OptionalClassSectionSource {
     leaf: Record<string, unknown>
   }
   diagnostic?: string
+}
+
+export interface CompanionFamilySource {
+  name: string
+  source: string
+  families: Array<{
+    name: string
+    creatures: Array<{ name: string; source: string }>
+    mastery: { name: string; source: string }
+    specialization: 'Cunning' | 'Ferocity' | 'Tenacity'
+    unusual?: true
+  }>
 }

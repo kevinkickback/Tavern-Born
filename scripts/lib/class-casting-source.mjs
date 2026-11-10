@@ -12,6 +12,10 @@ export async function deriveClassCastingRegistry(
     '/src/lib/5etools/optionalClassDeclarationStructure.ts',
   )
   const casting = await server.ssrLoadModule('/src/lib/5etools/classCastingStructure.ts')
+  const summarize = (relation) =>
+    declarations.summarizeOptionalDeclarationCertificate(
+      declarations.projectClassDeclarationMetadata(relation, casting.castingDeclarationMetadata),
+    )
   /** @type {typeof import('../../src/lib/5etools/classCastingStructure.ts').classifyCastingDomains} */
   const classifyCastingDomains = casting.classifyCastingDomains
   const { deriveClassPreparationRule, getDeclaredPreparationMinimum } = await server.ssrLoadModule(
@@ -126,7 +130,7 @@ export async function deriveClassCastingRegistry(
             : undefined
         : undefined
     return {
-      declaration: declarations.summarizeOptionalDeclarationCertificate(relation),
+      declaration: summarize(relation),
       parent: casting.castingParentKey(relation.owner),
       suppliers,
       domains,
@@ -177,7 +181,7 @@ export async function deriveClassCastingRegistry(
       ) !== declarations.optionalDeclarationDigest(producer.preparation)
     )
       throw Error('Bundled preparation meaning differs ' + key)
-    const alternative = declarations.summarizeOptionalDeclarationCertificate(relation)
+    const alternative = summarize(relation)
     if (
       declarations.optionalDeclarationDigest(alternative.path) !==
         declarations.optionalDeclarationDigest(producer.declaration.path) ||

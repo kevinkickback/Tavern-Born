@@ -10,7 +10,6 @@ import { useClassLookup, useFeatLookup, useSpellLookup } from '@/hooks/data/useG
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolveFeatReference } from '@/lib/5etools/entityResolvers'
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
-import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
 import {
@@ -18,6 +17,7 @@ import {
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
+import { hasClassFeatSpellSetup } from '@/lib/character/classFeatChoices'
 import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
 import {
   getFeatOptionOwnerKey,
@@ -155,8 +155,7 @@ export function useFeatsPageController() {
       if (
         character &&
         (isKnownFeatExpertiseTarget(ref) ||
-          (owner.classFeatChoiceId &&
-            getClassFeatureSpellSemantics('feat', ref.name, ref.source ?? '')))
+          hasClassFeatSpellSetup(character, owner.classFeatChoiceId, ref.name, ref.source))
       )
         return getFeatSetupStatus(
           character,
@@ -413,7 +412,7 @@ export function useFeatsPageController() {
   )
   const openClassSpellSetup = useCallback(
     (name: string, source: string, choiceId?: string) => {
-      if (!choiceId || !getClassFeatureSpellSemantics('feat', name, source)) return false
+      if (!hasClassFeatSpellSetup(visibleCharacter, choiceId, name, source)) return false
       const owner = visibleCharacter?.classFeatChoices?.find((row) => row.id === choiceId)
       const feat = owner?.feats.find(
         (row) => getFeatSelectionKey(row) === getFeatSelectionKey({ name, source }),

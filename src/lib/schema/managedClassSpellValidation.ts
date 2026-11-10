@@ -1,13 +1,18 @@
 import { getBardLoreSpellRule, isClassicMagicalSecretsSlot } from '@/lib/5etools/bardSpellSources'
 import {
   getClassSpellProfilePolicy,
+  isCatalogDerivedClassSpellSlot,
   isManagedClassSpellSlot,
+  isSavedDailyCastingTarget,
 } from '@/lib/5etools/classCastingRules'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
-import { isGiantPowerSpellSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  isGiantPowerSpellSlot,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   getManagedClassSpellOwnerEntry,
@@ -54,10 +59,15 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     ])
     if (
       !isManagedClassSpellSlot(choice.slot) ||
+      (isCatalogDerivedClassSpellSlot(choice.slot) &&
+        (getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)?.levels ?? 0) <
+          choice.slot[3]) ||
       (isGiantPowerSpellSlot(choice.slot) &&
         normalizeOwnerIdentity(choice.target.source) !== choice.slot[0][2]) ||
-      (choice.slot[1] === 'feature-cantrip' &&
-        (!hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
+      ((choice.slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(choice.slot)) &&
+        ((getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)?.levels ?? 0) <
+          choice.slot[3] ||
+          !hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||
       (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
       ((getSavantSpellbookGain(choice.slot) ||
@@ -92,8 +102,11 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   const profiles = character.spells.spellProfiles
   const parentProfiles = new Set<string>()
   profiles.forEach((profile, index) => {
-    if (profile.type !== 'class') return
     const path: Path = ['spells', 'spellProfiles', index]
+    if (profile.type !== 'class') {
+      if (profile.dailyCastingTarget !== undefined) invalid.push([...path, 'dailyCastingTarget'])
+      return
+    }
     const name = normalizeOwnerIdentity(profile.className)
     const source = normalizeOwnerIdentity(profile.classSource)
     const parent = JSON.stringify([name, source])
@@ -105,11 +118,22 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     )
       invalid.push(path)
     parentProfiles.add(parent)
-    const entry = character.classProgression.find(
+    const entries = character.classProgression.filter(
       (row) =>
         normalizeOwnerIdentity(row.name) === name && normalizeOwnerIdentity(row.source) === source,
-    ) ?? { name: profile.className ?? '', source: profile.classSource ?? '', levels: 1 }
+    )
+    const entry = entries[0] ?? {
+      name: profile.className ?? '',
+      source: profile.classSource ?? '',
+      levels: 1,
+    }
     const { mode } = getClassSpellProfilePolicy(entry)
+    const retainedDaily =
+      profile.dailyCastingTarget !== undefined &&
+      entries.length === 1 &&
+      isSavedDailyCastingTarget(entry, profile.dailyCastingTarget)
+    if (profile.dailyCastingTarget !== undefined && !retainedDaily)
+      invalid.push([...path, 'dailyCastingTarget'])
     const materialized = choices.filter(
       (choice) =>
         isManagedClassSpellProfile(choice.slot, profile) &&
@@ -148,7 +172,11 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
                   choice.slot[1] === 'class-arcanum'
                 : choice.slot[1] === 'class-spellbook' && choice.prepare === true),
         )
-        if (!fixed && !(field === 'preparedSpells' && mode === 'daily') && owned.length < 1)
+        if (
+          !fixed &&
+          !(field === 'preparedSpells' && (mode === 'daily' || retainedDaily)) &&
+          owned.length < 1
+        )
           invalid.push([...path, field, member])
       })
     }
@@ -194,7 +222,9 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
         fields
           .flatMap((field) => matchingProfiles[0][field])
           .filter((reference) => getSpellReferenceKey(reference) === target).length !== 1 ||
-        ((isArcaneDabblerSlot(choice.slot) || !!getClericArcanaSpellRule(choice.slot)) &&
+        ((isArcaneDabblerSlot(choice.slot) ||
+          isSelectedInvocationRitualSlot(choice.slot) ||
+          !!getClericArcanaSpellRule(choice.slot)) &&
           matchingProfiles[0].alwaysPreparedSpells?.filter(
             (reference) => getSpellReferenceKey(reference) === target,
           ).length !== 1)
@@ -211,7 +241,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   for (const [index, owner] of (character.classFeatChoices ?? []).entries())
     for (const [featIndex, feat] of owner.feats.entries())
       if (
-        getClassFeatureSpellSemantics('feat', feat.name, feat.source) &&
+        (feat.classSpellSetup || getClassFeatureSpellSemantics('feat', feat.name, feat.source)) &&
         feat.options?.spells?.length
       )
         invalid.push(['classFeatChoices', index, 'feats', featIndex, 'options', 'spells'])

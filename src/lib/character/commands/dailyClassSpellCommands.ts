@@ -1,3 +1,4 @@
+import { getClassSpellProfilePolicy } from '@/lib/5etools/classCastingRules'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getClassPreparationLimit } from '@/lib/calculations/preparedSpellLimits'
@@ -41,7 +42,9 @@ export function setDailyClassSpellPreparedCommand(
     spellsKnown: [],
     preparedSpells: [],
   }
-  if (!getDailyClassSpellEntry(character, profile))
+  const savedEntry = getDailyClassSpellEntry(character, profile)
+  const castingSources = context?.catalogs?.classCastingSources
+  if (!savedEntry && !getDailyClassSpellEntry(character, profile, castingSources))
     throw new RangeError('Learned spell preparation must address its class spell choice.')
   if (
     profiles.some(
@@ -56,11 +59,22 @@ export function setDailyClassSpellPreparedCommand(
   const key = getSpellReferenceKey(reference)
   const selected = profile.preparedSpells.some((row) => getSpellReferenceKey(row) === key)
   if (selected === prepared) return unchanged
+  const access = prepared ? getDailyClassSpellAccess(character, profile, context) : undefined
+  if (prepared && !access)
+    throw new RangeError('Restore the current source for this class and its casting feature.')
+  const { dailyCastingTarget, ...profileMetadata } = profile
+  const preparedSpells = prepared
+    ? [...profile.preparedSpells, formatSpellReference(reference)]
+    : profile.preparedSpells.filter((target) => getSpellReferenceKey(target) !== key)
+  const currentTarget = access?.rule.declaration.target
+  const historicTarget = getClassSpellProfilePolicy(owner).rule?.declaration.target
+  const retainedTarget = preparedSpells.length
+    ? (dailyCastingTarget ?? (currentTarget !== historicTarget ? currentTarget : undefined))
+    : undefined
   const updated = {
-    ...profile,
-    preparedSpells: prepared
-      ? [...profile.preparedSpells, formatSpellReference(reference)]
-      : profile.preparedSpells.filter((target) => getSpellReferenceKey(target) !== key),
+    ...profileMetadata,
+    preparedSpells,
+    ...(retainedTarget && { dailyCastingTarget: retainedTarget }),
   }
   const spellProfiles = saved
     ? profiles.map((row) => (row === saved ? updated : row))
@@ -84,7 +98,6 @@ export function setDailyClassSpellPreparedCommand(
   )
   if (alwaysPrepared.has(key))
     throw new RangeError('This spell is already always prepared for this class.')
-  const access = getDailyClassSpellAccess(proposed, current, context)
   const ability = access && normalizeAbilityName(access.effective.spellcastingAbility ?? '')
   const score = ability && context?.abilityScores?.[ability]
   const capacity =

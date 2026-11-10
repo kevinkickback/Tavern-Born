@@ -514,8 +514,8 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
                 )
               : key === 'spells'
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
-                : key === 'languages'
-                  ? auditFixedLayerMultiplicity(layerValues as GameData['languages'], 'named')
+                : key === 'languages' || key === 'creatures' || key === 'itemMasteries'
+                  ? auditFixedLayerMultiplicity(layerValues as object[], 'named')
                   : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
@@ -749,6 +749,14 @@ export function externalCatalogKeys(data: GameData): string[] {
   }
   for (const section of data.optionalClassSections ?? []) {
     if (section.input && !section.diagnostic) keys.push(`optional class feature: ${section.target}`)
+  }
+  for (const book of data.companionFamilySources ?? []) {
+    for (const family of book.families) {
+      for (const form of family.creatures)
+        keys.push(
+          `companion family: ${recordIdentity(book)}/${normalizeIdentityPart(family.name)}/${recordIdentity(form)}`,
+        )
+    }
   }
   return [...new Set(keys)].sort()
 }

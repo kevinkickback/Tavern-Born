@@ -1,7 +1,7 @@
 import { ALL_SKILLS } from '@/lib/calculations/skills'
 import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
 import { addChoicePlaceholder, addGrant, addSpellGrant } from './ledger'
-import { normalizeKey, stripItemTag } from './normalization'
+import { normalizeGenericToolChoice, normalizeKey, stripItemTag } from './normalization'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger, SpellSourceTag } from './types'
 
@@ -87,10 +87,22 @@ export function applyClassGrants(
     }
   }
 
+  const toolBlocks = toProficiencyBlocks(profs.toolProficiencies)
+  const singleToolAlternatives = toolBlocks.flatMap((block) => {
+    const entries = Object.entries(block)
+    const [category, count] = entries[0] ?? []
+    const tool = entries.length === 1 && count === 1 && normalizeGenericToolChoice(category)
+    return tool ? [tool] : []
+  })
+  // Each block is an alternative. One tool from either category is one choice.
+  const toolChoices =
+    toolBlocks.length > 1 && singleToolAlternatives.length === toolBlocks.length
+      ? toProficiencyBlocks([{ choose: { from: [...new Set(singleToolAlternatives)], count: 1 } }])
+      : toolBlocks
   result = applyProficiencyBlocks(
     result,
     'tools',
-    toProficiencyBlocks(profs.toolProficiencies),
+    toolChoices,
     clsTag,
     `class:${normalizeKey(cls.name)}:${normalizeKey(cls.source ?? '')}`,
   )

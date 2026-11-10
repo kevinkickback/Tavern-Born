@@ -35,6 +35,8 @@ export interface ClassChoiceFeatureCatalogs {
   optionalClassFeatureSources?: readonly OptionalClassFeatureSourceProof[]
   classCastingSources?: readonly ClassCastingSourceProof[]
   optionalClassSections?: readonly OptionalClassSectionSource[]
+  companionFamilySources?: readonly import('@/types/5etools').CompanionFamilySource[]
+  itemMasteries?: readonly import('@/types/5etools').ItemMastery5e[]
   skills?: readonly unknown[]
   languages?: readonly Language5e[]
   proficiencyTools?: readonly Item5e[]
@@ -63,6 +65,7 @@ export type ScopedClassChoiceFeatureCatalogs = Pick<
   | 'legacySubclassChoices'
   | 'psionics'
   | 'classFeatureCandidates'
+  | 'ambiguousClassFeatureTargets'
   | 'subclassFeatures'
   | 'subclassFeatureCandidates'
   | 'skills'
@@ -77,6 +80,8 @@ export type ScopedClassChoiceFeatureCatalogs = Pick<
   | 'optionalClassFeatureSources'
   | 'classCastingSources'
   | 'optionalClassSections'
+  | 'companionFamilySources'
+  | 'itemMasteries'
 >
 const scopedCatalogCache = new WeakMap<
   ClassChoiceFeatureCatalogs,
@@ -111,12 +116,15 @@ export function scopeClassChoiceFeatureCatalogs(
     optionalClassFeatureSources: catalogs.optionalClassFeatureSources,
     classCastingSources: catalogs.classCastingSources,
     optionalClassSections: catalogs.optionalClassSections,
+    companionFamilySources: catalogs.companionFamilySources,
+    itemMasteries: catalogs.itemMasteries,
     proficiencyTools: catalogs.proficiencyTools,
     allConcreteTools: catalogs.allConcreteTools,
     featExpertiseFeats: catalogs.featExpertiseFeats,
     optionalFeatures: catalogs.optionalFeatures,
     optionalFeatureCandidates: catalogs.optionalFeatureCandidates,
     classFeatureCandidates: catalogs.classFeatureCandidates,
+    ambiguousClassFeatureTargets: catalogs.ambiguousClassFeatureTargets,
     subclassFeatures: [...(targets?.values() ?? [])],
     subclassFeatureCandidates: candidates ?? new Map(),
   }
@@ -143,6 +151,8 @@ export function buildClassChoiceFeatureCatalogs(
         | 'optionalClassFeatureSources'
         | 'classCastingSources'
         | 'optionalClassSections'
+        | 'companionFamilySources'
+        | 'itemMasteries'
         | 'creatures'
       >
     >,
@@ -176,6 +186,8 @@ export function buildClassChoiceFeatureCatalogs(
     optionalClassFeatureSources: data.optionalClassFeatureSources ?? [],
     classCastingSources: data.classCastingSources ?? [],
     optionalClassSections: data.optionalClassSections ?? [],
+    companionFamilySources: data.companionFamilySources ?? [],
+    itemMasteries: data.itemMasteries ?? [],
     skills: data.skills ?? [],
     languages: data.languages ?? [],
     items: data.items ?? [],

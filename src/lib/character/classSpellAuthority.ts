@@ -31,6 +31,7 @@ export interface ManagedClassSpellContext {
   abilityScores?: AbilityScores
   /** Current non-feature spell providers used to qualify selected feature grants. */
   independentSpellProfiles?: readonly SpellProfile[]
+  bookPreparationProfiles?: readonly SpellProfile[]
   /** Resolved only from current filtered race data; retained raw text cannot authorize a list. */
   currentRaceResolution?: ResolvedRaceReference
 }

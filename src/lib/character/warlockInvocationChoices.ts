@@ -3,8 +3,8 @@ import {
   getRequiredChoiceSelectionCount,
 } from '@/lib/5etools/classChoiceNormalization'
 import {
+  isRevisedInvocationSelection,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -21,19 +21,15 @@ export function getSavedRevisedInvocationOwner(
   selection: CharacterClassChoiceSelection,
 ) {
   if (
-    selection.choiceId !== REVISED_INVOCATION_POOL ||
-    selection.kind !== 'optional-feature' ||
-    selection.classLevel !== 1 ||
-    norm(selection.className) !== 'warlock' ||
-    norm(selection.classSource) !== 'xphb' ||
-    selection.subclassName ||
-    selection.subclassSource ||
+    !isRevisedInvocationSelection(selection) ||
     character.classChoiceSelections?.filter((row) => row.choiceId === selection.choiceId).length !==
       1
   )
     return undefined
   const owners = character.classProgression.filter(
-    (row) => norm(row.name) === 'warlock' && norm(row.source) === 'xphb',
+    (row) =>
+      norm(row.name) === norm(selection.className) &&
+      norm(row.source) === norm(selection.classSource),
   )
   const owner = owners.length === 1 ? owners[0] : undefined
   if (
