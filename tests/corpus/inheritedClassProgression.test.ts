@@ -30,14 +30,18 @@ import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorCla
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { getWalkingSpeed } from '@/lib/calculations/movement'
+import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getCharacterClassChoices,
   getClassChoiceCandidates,
+  getClassChoiceOptionKey,
+  isClassChoiceOptionEligibleInDraft,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import {
   applyClassSelectionCommand,
   applyLevelDown,
@@ -69,6 +73,8 @@ import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacter
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getSelectedFeatureCantripSlots } from '@/lib/character/selectedFeatureSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
+import { validateSpells } from '@/lib/readiness/spellReadiness'
 import {
   getDisplayedClassFeatures,
   projectClassLevelFeatures,
@@ -2006,6 +2012,239 @@ describe.runIf(available)('configured inherited class progression', () => {
     },
     60_000,
   )
+
+  test.each([
+    'WoW',
+    'XPHB',
+  ])('%s Warlock derives fixed Invocation casts and exact prerequisites', async (source) => {
+    const actor: Character = { ...start('Warlock', source), allowedSources: ['XPHB', 'WoW', 'XMM'] }
+    const cls = classRow('Warlock', source)
+    const poolId = getRevisedInvocationPoolId(actor.classProgression[0])
+    const option = (name: string) => ({
+      entityType: 'optionalFeature' as const,
+      name,
+      source: 'WoW',
+    })
+    const pact = option('Pact of the Legion')
+    const funnel = option('Health Funnel')
+    const call = option('Call of the Void')
+    const legion = option('Legion Summoning')
+    const savedPool = (character: Character) =>
+      character.classChoiceSelections?.find((row) => row.choiceId === poolId)
+    const choice = (character: Character) =>
+      getCharacterClassChoices(
+        cls,
+        undefined,
+        createOptionalClassFeatureActivity(character, catalogs),
+        catalogs,
+      ).find((row) => row.id === poolId)!
+    const choose = (character: Character, ...selected: ReturnType<typeof option>[]) => {
+      const saved = savedPool(character)
+      return reopen(
+        character,
+        applyClassChoiceSelectionWithGrantsCommand(
+          character,
+          character.provenance,
+          choice(character),
+          selected,
+          {
+            classes: data.classes,
+            catalogs,
+            spellContext: calculation(character).classChoices.spellContext,
+          },
+          undefined,
+          saved ? getOptionalPoolSelectionHandle(saved) : '',
+        ),
+      )
+    }
+    const view = (character: Character) =>
+      resolveClassChoiceOptions(
+        choice(character),
+        createClassChoiceCatalogs(catalogs),
+        savedPool(character)?.selected,
+        character.classProgression[0].levels,
+        character,
+      )
+    expect(() => choose(actor, funnel)).toThrow(/earned Invocation/)
+    expect(() => choose(actor, call)).toThrow(/earned Invocation/)
+    const first = choose(actor, pact)
+    const castStatuses = (character: Character) =>
+      calculation(character).fixedClassSpellStatuses.filter((row) =>
+        [pact.name, legion.name].includes(row.featureName),
+      )
+    expect(castStatuses(first)).toMatchObject([
+      {
+        active: true,
+        reference: 'Find Familiar|XPHB',
+        castOnly: { castingTime: 'Magic Action' },
+      },
+    ])
+    const second = reachLevel(first, 2)
+    expect(view(second).find((row) => row.reference.name === funnel.name)).toMatchObject({
+      availability: 'eligible',
+    })
+    const fifth = reachLevel(choose(second, pact, funnel), 5)
+    const callView = view(fifth).find((row) => row.reference.name === call.name)!
+    expect(callView).toMatchObject({
+      availability: 'eligible',
+      invocationPrerequisite: { name: pact.name },
+    })
+    expect(isClassChoiceOptionEligibleInDraft(callView, new Set())).toBe(false)
+    expect(
+      isClassChoiceOptionEligibleInDraft(callView, new Set([getClassChoiceOptionKey(pact)])),
+    ).toBe(true)
+    const ninth = reachLevel(fifth, 9)
+    expect(() => choose(ninth, legion)).toThrow(/earned Invocation/)
+    const malformedPact = { ...pact, ref: '' }
+    expect(() => choose(choose(ninth), malformedPact, legion)).toThrow(/earned Invocation/)
+    expect(() => choose(first, malformedPact)).toThrow(/earned Invocation/)
+    const importedPact = characterPersistenceSchema.parse({
+      ...first,
+      classChoiceSelections: first.classChoiceSelections?.map((row) =>
+        row.choiceId === poolId
+          ? { ...row, selected: [{ ...row.selected[0], ref: 'wrong printing' }] }
+          : row,
+      ),
+    })
+    expect(castStatuses(importedPact)).toEqual([])
+    expect(
+      validateClassChoices(
+        importedPact,
+        calculation(importedPact),
+        createClassChoiceCatalogs(catalogs),
+      ),
+    ).toContainEqual(expect.objectContaining({ title: 'Finish Eldritch Invocations' }))
+    const combined = choose(choose(ninth), pact, funnel, call, legion)
+    expect(castStatuses(combined)).toMatchObject([
+      { reference: 'Find Familiar|XPHB', active: true },
+      {
+        reference: 'Planar Binding|XPHB',
+        active: true,
+        castingNote: expect.stringContaining('Long Rest'),
+      },
+    ])
+    const afterSourceGap = reopen(
+      combined,
+      reconcileOptionalClassFeatureChoicesCommand(
+        combined,
+        combined.provenance,
+        {
+          allClasses: data.classes,
+          availableClasses: data.classes.filter(
+            (row) => row.name !== cls.name || row.source !== cls.source,
+          ),
+          classChoiceFeatureCatalogs: catalogs,
+          spellContext: calculation(combined).classChoices.spellContext,
+        },
+        true,
+      ),
+    )
+    expect(savedPool(afterSourceGap)?.inactive).toBe(true)
+    expect(castStatuses(afterSourceGap)).toEqual(castStatuses(combined))
+    expect(() => choose(combined, funnel, call, legion)).toThrow(/dependent Invocations/)
+    expect(
+      validateSpells(combined, calculation(combined), lookups.spellsByKey).filter((issue) =>
+        /Legion/.test(issue.title),
+      ),
+    ).toEqual([])
+    const profileId = `class:Warlock|${source}`
+    const profile = (character: Character) =>
+      calculation(character).character.spells.spellProfiles.find((row) => row.id === profileId)!
+    const baseline = profile(choose(ninth))
+    expect(profile(combined)).toMatchObject({
+      spellsKnown: [...baseline.spellsKnown, 'Find Familiar|XPHB'],
+      fixedSpells: [...(baseline.fixedSpells ?? []), 'Find Familiar|XPHB'],
+    })
+    expect(getSpellProfileSelectionCounts(profile(combined)).spells).toBe(0)
+    const slot = getManagedClassSpellSlots(ninth.classProgression[0], ninth, catalogs).find(
+      (row) => row[1] === 'class-known' && row[3] === 9,
+    )!
+    const withOrdinary = reopen(
+      combined,
+      setManagedClassSpellChoiceCommand(
+        combined,
+        combined.provenance,
+        {
+          slot,
+          expected: null,
+          expectedEmptyRevision: combined.managedClassSpellRevision ?? 0,
+          target: { name: 'Planar Binding', source: 'XPHB' },
+          policy: 'default',
+        },
+        calculation(combined).classChoices.spellContext,
+      ),
+    )
+    const cleared = choose(withOrdinary, funnel)
+    expect(castStatuses(cleared)).toEqual([])
+    expect(profile(cleared).spellsKnown).toEqual([...baseline.spellsKnown, 'Planar Binding|XPHB'])
+    const legacy = characterPersistenceSchema.parse({
+      ...combined,
+      classChoiceSelections: combined.classChoiceSelections?.map((row) =>
+        row.choiceId === poolId
+          ? { ...row, selected: row.selected.filter((pick) => pick.name !== pact.name) }
+          : row,
+      ),
+    })
+    expect(castStatuses(legacy)).toEqual([])
+    expect(
+      calculation(legacy).character.features.filter((feature) =>
+        [call.name, legion.name].includes(feature.name),
+      ),
+    ).toEqual([])
+    expect(
+      validateClassChoices(legacy, calculation(legacy), createClassChoiceCatalogs(catalogs)),
+    ).toContainEqual(expect.objectContaining({ title: 'Review Eldritch Invocation prerequisites' }))
+    if (source === 'WoW') {
+      const current = {
+        ...lookups,
+        classChoiceClasses: data.classes,
+        classChoiceFeatureCatalogs: catalogs,
+      }
+      const sheet = createCharacterSheetViewModel(combined, current, current)
+      expect(
+        sheet.actions
+          .filter((row) => row.name === 'Find Familiar')
+          .map((row) => row.kind)
+          .sort(),
+      ).toEqual(['action', 'special'])
+      expect(sheet.spellRows).toContainEqual(
+        expect.objectContaining({
+          name: 'Find Familiar',
+          castingNote: expect.stringContaining('Magic action'),
+        }),
+      )
+      expect(sheet.spellRows).toContainEqual(
+        expect.objectContaining({
+          name: 'Planar Binding',
+          castOnly: true,
+          castingNote: expect.stringContaining('Long Rest'),
+        }),
+      )
+      const withoutExact = {
+        ...current,
+        spellsByKey: Object.fromEntries(
+          Object.entries(lookups.spellsByKey).filter(
+            ([, spell]) => spell.name !== 'Find Familiar' || spell.source !== 'XPHB',
+          ),
+        ),
+      }
+      expect(
+        createCharacterCalculationContext(combined, withoutExact, current).fixedClassSpellStatuses,
+      ).toContainEqual(expect.objectContaining({ featureName: pact.name, active: false }))
+      const pdf = await PDFDocument.load(
+        await generateTestCharacterSheet(sheet, '2024-official', {
+          text: { descriptions: 'full', overflow: 'notes' },
+        }),
+      )
+      const text = pdf
+        .getForm()
+        .getFields()
+        .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+        .join(' ')
+      expect(text).toMatch(/Magic action/)
+      expect(text).toMatch(/Planar Binding/)
+    }
+  }, 60_000)
 
   test('Warlock earns Pact Magic and Mystic Arcanum with its own list, profile and inverse', () => {
     let character: Character = start('Warlock')

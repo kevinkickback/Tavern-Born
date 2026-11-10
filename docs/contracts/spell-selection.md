@@ -54,6 +54,15 @@ learned cantrips, and selected Pact govern eligibility. Its supported options st
 current source-qualified Invocation declarations. The copy keeps its own saved choices and spell
 profile. Earlier untargeted choices can be assigned a target without changing their earned slot.
 
+A declared class-level prerequisite follows that same owner. A qualified Invocation prerequisite
+checks the provider in the same pool, including the proposed choices in the editor. One direct
+provider with no prerequisite or a class-level requirement can qualify a dependent.
+
+An exact innate spell schedule can supply a fixed Invocation cast when the feature text confirms
+its terms. A Magic Action cast may accompany a fixed learned spell. A Long Rest cast remains a
+separate casting route, including when the character independently knows the same spell. These
+grants leave the ordinary known-spell quota and casting components in place.
+
 A resource-paid subclass schedule can grant casts independently of a named prepared spell column
 when every column declares the same costs and the earned feature text confirms the spell, cost,
 and casting terms. An uncounted list of authorized uses does not create a build choice. An

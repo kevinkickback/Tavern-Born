@@ -44,7 +44,9 @@ import type { Character } from '@/types/character'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import { isRevisedAtWillInvocationOption } from './atWillInvocationRules'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
+import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
+import { isDeclaredRevisedInvocationOption } from './declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -62,9 +64,14 @@ export interface RetainedChoiceDetails {
   entries: unknown[]
 }
 
-function isGuardedInvocation(choiceId: string, option: NormalizedChoiceOptionReference) {
+function isGuardedInvocation(
+  choiceId: string,
+  option: NormalizedChoiceOptionReference,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
   return (
     isBladeDependentInvocation(choiceId, option) ||
+    isDeclaredRevisedInvocationOption(choiceId, option, catalogs) ||
     (isRevisedInvocationPoolId(choiceId) &&
       (isRevisedTargetedInvocation(option) ||
         isRevisedAtWillInvocationOption(option) ||
@@ -237,7 +244,7 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
-        if (isGuardedInvocation(choice.choiceId, option)) {
+        if (isGuardedInvocation(choice.choiceId, option, catalogs)) {
           details[index] ??= { availability: 'missing', entries: [] }
           return
         }
@@ -285,14 +292,14 @@ export function buildRetainedCharacterDetails(
     }
     const fighterStyle = getFighterStylePair(selection.choiceId)
     const scopedInvocation = selection.selected.some((option) =>
-      isGuardedInvocation(selection.choiceId, option),
+      isGuardedInvocation(selection.choiceId, option, primaryCatalogs),
     )
     if (!scopedInvocation && !fighterStyle && !getOptionalClassPoolSelectionSection(selection))
       continue
     const details = choiceDetailsById.get(selection.choiceId)
     selection.selected.forEach((option, index) => {
       const detail = details?.[index]
-      if (details && isGuardedInvocation(selection.choiceId, option)) {
+      if (details && isGuardedInvocation(selection.choiceId, option, primaryCatalogs)) {
         const id = getClassChoiceFeatureId(selection, option)
         const active = routes.contributions.find(
           (row) => row.choiceId === selection.choiceId && row.id === id,

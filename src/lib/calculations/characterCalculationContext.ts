@@ -68,6 +68,7 @@ import { applyCharacterCommandResult } from '@/lib/character/commands/featComman
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import type { DailyClassSpellStatus } from '@/lib/character/dailyClassSpells'
+import { projectDeclaredInvocationSpells } from '@/lib/character/declaredInvocationSpells'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -620,7 +621,17 @@ export function createCharacterCalculationContext(
     prerequisites,
     primaryLookups.spellsByKey,
   )
-  character = projectEffectiveClassChoiceFeatures(currentSpells, choiceCatalogs, prerequisites)
+  const invocationSpells = projectDeclaredInvocationSpells(
+    currentSpells,
+    choiceCatalogs,
+    prerequisites,
+    primaryLookups.spellsByKey,
+  )
+  character = projectEffectiveClassChoiceFeatures(
+    invocationSpells.character,
+    choiceCatalogs,
+    prerequisites,
+  )
   // Skill modifiers and explanatory notes do not feed back into ability or prerequisite calculations.
   const orderSkillEffects = CLASS_ORDERS.flatMap((order): CharacterEffect[] => {
     const current = getCurrentClassOrder(character, order, choiceCatalogs)
@@ -724,7 +735,10 @@ export function createCharacterCalculationContext(
     abilityScores,
     managedClassSpellStatuses: managedSpells.statuses,
     dailyClassSpellStatuses: managedSpells.dailyStatuses,
-    fixedClassSpellStatuses: managedSpells.fixedClassSpellStatuses,
+    fixedClassSpellStatuses: [
+      ...managedSpells.fixedClassSpellStatuses,
+      ...invocationSpells.statuses,
+    ],
     atWillInvocationSpellStatuses,
     classCasting: deriveCurrentClassCasting(
       character,

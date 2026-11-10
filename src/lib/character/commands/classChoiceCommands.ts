@@ -30,7 +30,10 @@ import {
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isDivineSoulConfigurationGroup } from '@/lib/5etools/divineSoulConfiguration'
-import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
+import {
+  getCurrentSelectedClass,
+  permitsClassRuleSource,
+} from '@/lib/5etools/earnedClassFeatureSource'
 import {
   ELEMENTAL_FURY_ID,
   getCurrentElementalFury,
@@ -89,7 +92,7 @@ import {
   isClassChoiceOptionEligible,
   resolveClassChoiceFeatureEntity,
   resolveClassChoiceOptions,
-  retainsBladeInvocationWithoutPact,
+  retainsInvocationWithoutPrerequisite,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import { getEffectiveOwnerProficiencyChoices } from '@/lib/character/classProficiencyAuthority'
@@ -103,6 +106,10 @@ import {
   getCompanionSelectionStates,
   isRegisteredCompanionSelection,
 } from '@/lib/character/companionSelections'
+import {
+  getDeclaredInvocationLeaf,
+  isDeclaredRevisedInvocationOption,
+} from '@/lib/character/declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -578,51 +585,54 @@ function sameSelectionKeys(left: readonly string[], right: readonly string[]): b
   )
 }
 
-function verifyRevisedPactWithdrawal(
+function verifyRevisedInvocationWithdrawal(
   character: Character,
   selection: CharacterClassChoiceSelection | undefined,
   options: readonly NormalizedChoiceOptionReference[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
   if (!selection || !isRevisedInvocationPoolId(selection.choiceId)) return
-  if (
-    !selection.selected.some((row) => isPactBladeOption(row, 'xphb')) ||
-    options.some((row) => isPactBladeOption(row, 'xphb'))
-  )
-    return
   const next = new Set(options.map(getClassChoiceOptionKey))
-  if (
-    !selection.selected.some(
-      (row) =>
-        isExactBladeInvocationOption(selection.choiceId, row) &&
-        next.has(getClassChoiceOptionKey(row)),
+  const previous = new Set(selection.selected.map(getClassChoiceOptionKey))
+  if (!selection.selected.some((row) => !next.has(getClassChoiceOptionKey(row)))) return
+  if (!catalogs) {
+    if (
+      selection.selected.some((row) => isPactBladeOption(row, 'xphb')) &&
+      !options.some((row) => isPactBladeOption(row, 'xphb')) &&
+      selection.selected.some(
+        (row) =>
+          isExactBladeInvocationOption(selection.choiceId, row) &&
+          next.has(getClassChoiceOptionKey(row)),
+      )
     )
+      throw new RangeError(
+        'Restore the current Invocation source before replacing Pact of the Blade.',
+      )
+    return
+  }
+  const owner = getSavedRevisedInvocationOwner(character, selection)
+  const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+  if (!cls || !owner) return
+  const choices = getCharacterClassChoices(
+    cls,
+    getSelectedSubclassData(cls, owner),
+    createOptionalClassFeatureActivity(character, catalogs),
+    catalogs,
+  ).filter((choice) => choice.id === selection.choiceId)
+  if (
+    choices.length !== 1 ||
+    !hasEarnedRevisedInvocationSlots(choices[0], selection.selected, owner.levels)
   )
     return
-  if (!catalogs)
-    throw new RangeError(
-      'Restore the current Invocation source before replacing Pact of the Blade.',
-    )
-  const pact = getCurrentPactBladeState(character, catalogs, 'xphb', {
-    name: selection.className,
-    source: selection.classSource,
-  })
-  if (!pact?.option) return
   const views = resolveClassChoiceOptions(
-    pact.choice,
+    choices[0],
     createClassChoiceCatalogs(catalogs),
     selection.selected,
-    pact.owner.levels,
+    owner.levels,
     character,
   )
-  if (
-    retainsBladeInvocationWithoutPact(
-      views,
-      new Set(selection.selected.map(getClassChoiceOptionKey)),
-      next,
-    )
-  )
-    throw new RangeError('Remove the dependent Invocations before replacing Pact of the Blade.')
+  if (retainsInvocationWithoutPrerequisite(views, previous, next))
+    throw new RangeError('Remove the dependent Invocations before replacing their prerequisite.')
 }
 
 /** Keeps or removes established source-backed intent without reconstructing missing rules. */
@@ -724,7 +734,7 @@ export function retainSavedFeatureOptionsCommand(
   const selected = selection.selected.filter((option) =>
     remaining.has(getClassChoiceOptionKey(option)),
   )
-  verifyRevisedPactWithdrawal(character, selection, selected, authority?.catalogs)
+  verifyRevisedInvocationWithdrawal(character, selection, selected, authority?.catalogs)
   const next = (character.classChoiceSelections ?? []).flatMap((row) =>
     row.choiceId !== choiceId
       ? [row]
@@ -1084,8 +1094,10 @@ export function applyClassChoiceSelectionCommand(
     expectedSelectionHandle !== undefined &&
     (previousInvocations ? getOptionalPoolSelectionHandle(previousInvocations) : '') !==
       expectedSelectionHandle &&
-    [...(previousInvocations?.selected ?? []), ...selected].some((option) =>
-      isBladeDependentInvocation(choice.id, option),
+    [...(previousInvocations?.selected ?? []), ...selected].some(
+      (option) =>
+        isBladeDependentInvocation(choice.id, option) ||
+        isDeclaredRevisedInvocationOption(choice.id, option, authority?.catalogs),
     )
   )
     throw new RangeError('The saved Invocation choices changed. Review them before confirming.')
@@ -1457,19 +1469,23 @@ export function applyClassChoiceSelectionCommand(
   )
     throw new RangeError('Choose different skills for each earned proficiency choice.')
   if (bladeInvocationSource) {
-    verifyRevisedPactWithdrawal(
+    verifyRevisedInvocationWithdrawal(
       character,
       existingSelection,
       selection.selected,
       authority?.catalogs,
     )
-    const priorKeys = new Set(previousBladeOptions.map(getClassChoiceOptionKey))
-    const newBladeInvocations = selection.selected.filter(
+    const newInvocations = selection.selected.filter(
       (option) =>
-        isBladeDependentInvocation(choice.id, option) &&
-        !priorKeys.has(getClassChoiceOptionKey(option)),
+        (isBladeDependentInvocation(choice.id, option) ||
+          isDeclaredRevisedInvocationOption(choice.id, option, authority?.catalogs)) &&
+        !previousBladeOptions.some(
+          (prior) =>
+            prior.ref === option.ref &&
+            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+        ),
     )
-    if (newBladeInvocations.length) {
+    if (newInvocations.length) {
       const catalogs = authority?.catalogs
       const eligible = catalogs
         ? resolveClassChoiceOptions(
@@ -1482,10 +1498,18 @@ export function applyClassChoiceSelectionCommand(
             .filter(isClassChoiceOptionEligible)
             .map((view) => getClassChoiceOptionKey(view.reference))
         : []
-      if (newBladeInvocations.some((row) => !eligible.includes(getClassChoiceOptionKey(row))))
-        throw new RangeError(
-          'Choose an earned Blade Invocation with its current Pact of the Blade.',
+      for (const option of newInvocations) {
+        if (
+          !eligible.includes(getClassChoiceOptionKey(option)) ||
+          (isDeclaredRevisedInvocationOption(choice.id, option, catalogs) &&
+            !getDeclaredInvocationLeaf(choice, option, catalogs))
         )
+          throw new RangeError(
+            isBladeDependentInvocation(choice.id, option)
+              ? 'Choose an earned Blade Invocation with its current Pact of the Blade.'
+              : 'Choose an earned Invocation with its current prerequisites.',
+          )
+      }
     }
   }
   if (getOptionalClassPoolSection(choice)) {
@@ -1730,7 +1754,8 @@ export function reconcileClassChoiceSelectionGrants(
             (option) =>
               (!isRevisedTargetedInvocation(option) &&
                 !isRevisedAtWillInvocationOption(option) &&
-                !isPactBladeOption(option, 'xphb')) ||
+                !isPactBladeOption(option, 'xphb') &&
+                !isDeclaredRevisedInvocationOption(selection.choiceId, option, catalogs)) ||
               routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
           ),
         }

@@ -96,6 +96,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getDivineSoulConfiguration,
@@ -215,6 +216,11 @@ import {
 } from './classChoiceIdentity'
 import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
+import {
+  getDeclaredInvocationLeaf,
+  getDeclaredInvocationRequirement,
+  hasDeclaredInvocationCast,
+} from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import {
@@ -244,7 +250,7 @@ export interface ClassChoiceOptionView {
   searchText?: string
   featureOption?: { damageType: string }
   sourceGroup?: { group: string }
-  bladePactDraftKey?: string
+  invocationPrerequisite?: { key: string; name: string }
   unavailableReason?: string
   minimumClassLevel?: number
 }
@@ -273,19 +279,24 @@ export function isClassChoiceOptionEligibleInDraft(
   option: ClassChoiceOptionView,
   selectedIds: ReadonlySet<string>,
 ) {
-  return option.bladePactDraftKey
-    ? selectedIds.has(option.bladePactDraftKey)
+  return option.invocationPrerequisite
+    ? selectedIds.has(option.invocationPrerequisite.key)
     : isClassChoiceOptionEligible(option)
 }
 
-export function retainsBladeInvocationWithoutPact(
+export function retainsInvocationWithoutPrerequisite(
   options: readonly ClassChoiceOptionView[],
   previous: ReadonlySet<string>,
   next: ReadonlySet<string>,
 ) {
   return options.some((option) => {
-    const pact = option.bladePactDraftKey
-    if (!pact || !isClassChoiceOptionEligible(option) || !previous.has(pact) || next.has(pact))
+    const prerequisite = option.invocationPrerequisite?.key
+    if (
+      !prerequisite ||
+      !isClassChoiceOptionEligible(option) ||
+      !previous.has(prerequisite) ||
+      next.has(prerequisite)
+    )
       return false
     const key = getClassChoiceOptionKey(option.reference)
     return previous.has(key) && next.has(key)
@@ -1430,7 +1441,10 @@ export function resolveClassChoiceOptions(
               ...(earned &&
                 rule.source === 'xphb' &&
                 bladePact && {
-                  bladePactDraftKey: getClassChoiceOptionKey(bladePact.reference),
+                  invocationPrerequisite: {
+                    key: getClassChoiceOptionKey(bladePact.reference),
+                    name: bladePact.reference.name,
+                  },
                 }),
               ...(!active && {
                 unavailableReason:
@@ -1443,8 +1457,61 @@ export function resolveClassChoiceOptions(
             },
           ]
         }
-        if (!isRevisedInvocationPoolId(choice.id) || !isRevisedTargetedInvocation(option.reference))
-          return [option]
+        if (!isRevisedInvocationPoolId(choice.id)) return [option]
+        if (!isRevisedTargetedInvocation(option.reference)) {
+          const rule = getDeclaredInvocationRequirement(choice, option.reference, catalogs)
+          const fixedCast = hasDeclaredInvocationCast(option.reference, catalogs)
+          if (rule === undefined && !fixedCast) return [option]
+          if (
+            rule === null ||
+            !invocationSourcesAvailable ||
+            (character &&
+              (!permitsClassRuleSource(character, option.reference.source) ||
+                (rule?.required && !permitsClassRuleSource(character, rule.required.source)))) ||
+            (fixedCast &&
+              !readDeclaredInvocationCast(
+                getDeclaredInvocationLeaf(choice, option.reference, catalogs),
+              ))
+          )
+            return [
+              {
+                ...option,
+                availability: 'retained' as const,
+                entries: [],
+                unavailableReason: 'Restore the exact Invocation and prerequisite sources.',
+              },
+            ]
+          if (!rule) return [option]
+          const requirement = rule.required && {
+            name: rule.required.name,
+            key: getClassChoiceOptionKey(rule.required),
+          }
+          const meetsLevel = classLevel >= rule.level
+          const meetsPrerequisite =
+            !requirement ||
+            saved.some(
+              (row) =>
+                row.slotLevel <= classLevel &&
+                row.ref === undefined &&
+                row.invocationCantrip === undefined &&
+                getClassChoiceOptionKey(row) === requirement.key,
+            )
+          const eligible = meetsLevel && meetsPrerequisite
+          return [
+            {
+              ...option,
+              ...invocationLevel(rule.level),
+              availability: eligible ? ('eligible' as const) : ('retained' as const),
+              ...(meetsLevel && requirement && { invocationPrerequisite: requirement }),
+              ...(!eligible && {
+                unavailableReason:
+                  meetsLevel && requirement
+                    ? `Requires ${requirement.name} in this Invocation pool.`
+                    : `Requires ${choice.owner.name} level ${rule.level}.`,
+              }),
+            },
+          ]
+        }
         if (
           !invocationSourcesAvailable ||
           !targetCantrips.length ||

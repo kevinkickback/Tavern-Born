@@ -57,6 +57,7 @@ import { getClassChoiceFeatureId, getFeatureOwnerKey } from '@/lib/character/cla
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
+import { isDeclaredRevisedInvocationOption } from '@/lib/character/declaredInvocationPrerequisites'
 import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   getFeatureOptionSelectionStates,
@@ -90,6 +91,7 @@ import type {
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
+import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { CharacterEffect } from '@/types/effects'
 import { getClassicInvocationDescriptions } from './classicInvocationSheetRules'
 import {
@@ -953,8 +955,11 @@ export function createCharacterSheetViewModel(
       return { text: description ? `${name}: ${description}` : name, compactText: name }
     },
   )
-  const bladeInvocationRoutes = character.classChoiceSelections?.some((row) =>
-    row.selected.some((option) => isBladeDependentInvocation(row.choiceId, option)),
+  const isDetailedInvocation = (choiceId: string, option: NormalizedChoiceOptionReference) =>
+    isBladeDependentInvocation(choiceId, option) ||
+    isDeclaredRevisedInvocationOption(choiceId, option, primaryLookups.classChoiceFeatureCatalogs)
+  const invocationRoutes = character.classChoiceSelections?.some((row) =>
+    row.selected.some((option) => isDetailedInvocation(row.choiceId, option)),
   )
     ? getEffectiveClassChoiceFeatureRoutes(
         character,
@@ -962,18 +967,18 @@ export function createCharacterSheetViewModel(
         calculationContext.classChoices.prerequisites,
       )
     : undefined
-  const bladeInvocationIds =
-    bladeInvocationRoutes &&
+  const invocationIds =
+    invocationRoutes &&
     new Map(
-      bladeInvocationRoutes.selectedOptions.flatMap(({ selection, option }) =>
-        isBladeDependentInvocation(selection.choiceId, option)
+      invocationRoutes.selectedOptions.flatMap(({ selection, option }) =>
+        isDetailedInvocation(selection.choiceId, option)
           ? [[getClassChoiceFeatureId(selection, option), selection.choiceId] as const]
           : [],
       ),
     )
-  const bladeInvocations =
-    bladeInvocationRoutes?.contributions.filter(
-      ({ id, choiceId }) => bladeInvocationIds?.get(id) === choiceId,
+  const detailedInvocations =
+    invocationRoutes?.contributions.filter(
+      ({ id, choiceId }) => invocationIds?.get(id) === choiceId,
     ) ?? []
   const declaredClassFeatureSummaries = [
     ...staticFeatureSummaries,
@@ -990,7 +995,7 @@ export function createCharacterSheetViewModel(
           ]
         : [],
     ),
-    ...bladeInvocations.map(({ name, entries, id }) => ({
+    ...detailedInvocations.map(({ name, entries, id }) => ({
       text: `${name}: ${renderEntriesToText(entries)}`,
       compactText: name,
       replaces: character.features.find((feature) => feature.id === id),

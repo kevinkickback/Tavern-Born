@@ -57,6 +57,10 @@ import {
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
+import {
+  getDeclaredInvocationLeaf,
+  isDeclaredRevisedInvocationOption,
+} from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
@@ -200,7 +204,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
     const invocationPool = isInvocationPool(choice)
     const ambiguousInvocationPool =
       invocationPool && choiceCandidates.filter((row) => row.id === choice.id).length > 1
-    const validInvocationCantripSlots =
+    const validRevisedInvocationSlots =
       isCurrentRevisedInvocationCantripPool(choice, catalogs) &&
       !ambiguousInvocationPool &&
       !!getSavedRevisedInvocationOwner(character, selection) &&
@@ -213,12 +217,15 @@ function buildEffectiveClassChoiceFeatureRoutes(
       }
     }
     for (const option of selection.selected) {
+      const declared = isDeclaredRevisedInvocationOption(choice.id, option, catalogs)
+      if (declared && !getDeclaredInvocationLeaf(choice, option, catalogs)) continue
       const revisedAtWill =
         isRevisedInvocationPoolId(choice.id) && isRevisedAtWillInvocationOption(option)
       if (
         (option.invocationCantrip ||
+          declared ||
           (isRevisedInvocationPoolId(choice.id) && isRevisedTargetedInvocation(option))) &&
-        !validInvocationCantripSlots
+        !validRevisedInvocationSlots
       )
         continue
       if (
@@ -244,7 +251,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
         : undefined
       if (
         revisedAtWill &&
-        (!atWillInvocation || (!ambiguousInvocationPool && !validInvocationCantripSlots))
+        (!atWillInvocation || (!ambiguousInvocationPool && !validRevisedInvocationSlots))
       )
         continue
       // Replacements can fill an earlier slot while requiring the current class level.

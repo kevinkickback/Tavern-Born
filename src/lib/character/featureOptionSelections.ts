@@ -67,6 +67,7 @@ import {
 } from './classChoiceOptions'
 import { getCurrentClassOrder } from './classOrder'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
+import { isDeclaredRevisedInvocationOption } from './declaredInvocationPrerequisites'
 import {
   describeFavoredEnemyLanguage,
   getFavoredEnemySelectionStates,
@@ -109,7 +110,7 @@ export interface FeatureOptionSelectionState {
   companion?: boolean
   classOrder?: boolean
   projectedBranch?: boolean
-  revisedInvocations?: 'cantrip-targets' | 'blade-prerequisites'
+  revisedInvocations?: 'cantrip-targets' | 'blade-prerequisites' | 'prerequisites'
 }
 
 function getRevisedInvocationState(
@@ -124,7 +125,9 @@ function getRevisedInvocationState(
     !isRevisedInvocationSelection(selection) ||
     !selection.selected.some(
       (row) =>
-        isRevisedTargetedInvocation(row) || isBladeDependentInvocation(selection.choiceId, row),
+        isRevisedTargetedInvocation(row) ||
+        isBladeDependentInvocation(selection.choiceId, row) ||
+        isDeclaredRevisedInvocationOption(selection.choiceId, row, catalogs),
     )
   )
     return undefined
@@ -193,7 +196,13 @@ function getRevisedInvocationState(
         !details[index].available && isBladeDependentInvocation(selection.choiceId, option),
     )
       ? 'blade-prerequisites'
-      : 'cantrip-targets',
+      : selection.selected.some(
+            (option, index) =>
+              !details[index].available &&
+              isDeclaredRevisedInvocationOption(selection.choiceId, option, catalogs),
+          )
+        ? 'prerequisites'
+        : 'cantrip-targets',
   }
 }
 

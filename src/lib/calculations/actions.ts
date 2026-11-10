@@ -39,6 +39,7 @@ import {
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceOptions'
 import { effectiveDeclaredEntries } from '@/lib/character/classFeatureActivityView'
+import { isDeclaredRevisedInvocationOption } from '@/lib/character/declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -569,6 +570,11 @@ function deriveClassFeatureActions(
           renderEntriesToText(
             label ||
               isBladeDependentInvocation(selection.choiceId, option) ||
+              isDeclaredRevisedInvocationOption(
+                selection.choiceId,
+                option,
+                context.classChoiceFeatureCatalogs,
+              ) ||
               (isRevisedInvocationSelection(selection) && isPactBladeOption(option, 'xphb'))
               ? routes.contributions.find(
                   (row) => row.id === featureId && row.choiceId === selection.choiceId,
