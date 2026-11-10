@@ -182,7 +182,9 @@ Numeric casting declarations use a separate `classCastingSources` collection. Th
 resolver retains exact actual owners and requested feature targets; ordinary casting never becomes an
 optional adoption merely by sharing that resolver. Additional raw exact-one proofs bind consumed
 parent-class progression, preparation and table inputs. Parsed slot arrays must agree with the
-production table derivation. When a subclass uses the standard-table fallback, current authority
+production table derivation. The casting audit treats numeric and ordinal link labels for the same
+explicit slot column as equivalent. It retains the link target, table rows and displayed data.
+When a subclass uses the standard-table fallback, current authority
 validates the actual helper-selected provider against the finite supported provider catalog; it does
 not choose a different provider from an approved-only subset. Winning parent/provider layers replace
 their proofs even when incoming proof is absent. Empty current evidence denies authority.
@@ -234,8 +236,8 @@ catalog is usable. If the pack is unavailable, recovery can admit a valid standa
 catalog.
 
 With automatic checks enabled, the configured source is checked after local game data becomes
-available. Settings shows the configured source, active catalog, most recent attempt, successful
-check and applied date, plus the relevant issue or optional warning. A changed catalog waits for
+available. Settings shows the configured location, when the content last changed, and when it was
+last successfully checked. Failures and optional warnings appear separately. A changed catalog waits for
 **Apply game data update** in Settings. The previous catalog remains active during checks and
 review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.

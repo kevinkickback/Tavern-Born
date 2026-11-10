@@ -348,7 +348,7 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
     element.scrollTop = element.scrollHeight
   })
   const listBeforeWarning = await sourceScroller.boundingBox()
-  const sourceWarning = dialog.getByText(/Non-recommended sources often contain/)
+  const sourceWarning = dialog.getByText(/Books outside the presets can include/)
   await expect(sourceWarning.locator('..')).toHaveCSS('opacity', '0')
   await dialog.getByRole('button', { name: /Test Source 30/ }).click()
   await expect(sourceWarning.locator('..')).toHaveCSS('opacity', '1')

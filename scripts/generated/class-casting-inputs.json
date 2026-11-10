@@ -655,7 +655,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "35d1e68c414925d5222d8828200f78ae74cbe8959369ee3d1c3ef0ccebeb341f"
+      "sha256": "2a0acb6ee16587ae74e5614b376cea277e2ce5504719becd4f808d447ca25cd5"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
@@ -667,7 +667,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipmentPolicy.ts",
-      "sha256": "5348810dc9277d4a6540ebb9425c4a87988b8fcb3a126c5bb5d04d094d07a9a0"
+      "sha256": "2da8698dff11dcc3aa1749a27c93db214b632786efabff1ee8b580188fd1642c"
     },
     {
       "file": "src/lib/5etools/startingItemCategory.ts",
@@ -723,7 +723,7 @@
     },
     {
       "file": "src/lib/5etools/subclassResourceCasting.ts",
-      "sha256": "5b7076180293ed00b678984eb196127f0a762628f148dd9c04f8bbb0a03edbae"
+      "sha256": "a1165235f7fe1db6b86da8dd6124ee4540267548f864396973b8c0133a242714"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
@@ -863,7 +863,7 @@
     },
     {
       "file": "src/lib/sourcePresets.ts",
-      "sha256": "185c4f08923244d36843a2e8a9ab45c5e887c38db65b3f7533e583e5e51baba3"
+      "sha256": "c39890ca1cfc13ce4ed55f488663ce1581cc392700234e6b8a176997a1dcd0c2"
     },
     {
       "file": "src/types/5etools.ts",

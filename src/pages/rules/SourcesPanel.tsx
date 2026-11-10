@@ -2,7 +2,7 @@ import { BookOpen, Books, Database, Warning } from '@phosphor-icons/react'
 import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { SourcebookChoice } from '@/components/SourcebookChoice'
+import { SourcebookBrowser } from '@/components/SourcebookBrowser'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
@@ -35,17 +35,6 @@ import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-
-const groupLabels: Record<string, string> = {
-  core: 'Core Rulebooks',
-  supplement: 'Supplements',
-  setting: 'Setting Books',
-  adventure: 'Adventure Books',
-  playtest: 'Playtest & Unofficial',
-  other: 'Other Sources',
-}
-
-const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
 const HINT_ID = 'sources-implicit-rulebook'
 const HINT_WIDTH = 300
@@ -91,16 +80,6 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
     return resolveEffectiveSources(allowedSources, character.originSystem, sources)
   }, [allowedSources, character, sources])
 
-  const sourcesByGroup = useMemo(
-    () =>
-      sources.reduce<Record<string, typeof sources>>((acc, source) => {
-        if (!acc[source.group]) acc[source.group] = []
-        acc[source.group].push(source)
-        return acc
-      }, {}),
-    [sources],
-  )
-
   const sourceNameMap = useMemo(
     () => new Map(sources.map((s) => [s.abbreviation, s.name])),
     [sources],
@@ -132,9 +111,13 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
       sources,
     )
     return (
-      filtered.length === allowedSources.length && filtered.every((a) => allowedSources.includes(a))
+      filtered.length > 0 &&
+      filtered.length === allowedSources.length &&
+      filtered.every((a) => allowedSources.includes(a))
     )
   }
+  const activePreset =
+    allowedSources.length === 0 ? 'none' : SOURCE_PRESETS.find(isPresetActive)?.id
 
   const preferNewerPrintings =
     character?.originSystem === '2024' || (character?.variantRules?.preferNewerPrintings ?? false)
@@ -264,14 +247,14 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                 label: preset.label,
                 title: preset.description,
                 onClick: () => applyPreset(preset),
-                active: isPresetActive(preset),
+                active: activePreset === preset.id,
               })),
               {
                 key: 'none',
                 label: 'None',
                 title: 'Clear all selected content',
                 onClick: clearSources,
-                active: false,
+                active: activePreset === 'none',
               },
             ].map((action) => (
               <button
@@ -279,6 +262,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                 type="button"
                 onClick={action.onClick}
                 title={action.title}
+                aria-pressed={action.active}
                 className={cn(
                   'h-8 cursor-pointer rounded-md px-2.5 text-xs font-medium transition-colors',
                   action.active
@@ -333,10 +317,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
                     </li>
                   )}
                   {hasNonPresetSourcesSelected && (
-                    <li>
-                      Non-recommended sources may include DM-only or outdated options that add noise
-                      to selection lists.
-                    </li>
+                    <li>Books outside the presets can include DM-only or outdated options.</li>
                   )}
                   <li aria-live="polite">{printingNotice}</li>
                 </ul>
@@ -365,36 +346,12 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
               </div>
             </aside>
 
-            <div className="flex-1 space-y-4 pr-1">
-              {groupOrder.map((group) => {
-                const groupSources = sourcesByGroup[group]?.filter(
-                  (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
-                )
-                if (!groupSources?.length) return null
-                return (
-                  <div key={group} className="space-y-1.5">
-                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {groupLabels[group]}
-                    </h5>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {groupSources.map((source) => {
-                        const compatibility = getSourceCompatibility(source, character.originSystem)
-                        return (
-                          <SourcebookChoice
-                            key={source.abbreviation}
-                            source={source}
-                            selected={allowedSources.includes(source.abbreviation)}
-                            compatibility={compatibility}
-                            onClick={() => toggleSource(source.abbreviation)}
-                            className="min-h-14 cursor-pointer transition-colors"
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            <SourcebookBrowser
+              sources={sources.filter((source) => !IMPLICIT_SOURCES.has(source.abbreviation))}
+              allowedSources={allowedSources}
+              originSystem={character.originSystem}
+              onToggleSource={toggleSource}
+            />
           </div>
         </div>
       )}

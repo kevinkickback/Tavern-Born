@@ -136,7 +136,6 @@ interface GameDataState {
   /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
   lastUpdateCheckAt: string | null
-  lastAttemptAt: string | null
   catalogWarnings: string[]
   externalKeys: string[] | undefined
   pendingCatalog: {
@@ -184,7 +183,6 @@ export const useGameDataStore = create<GameDataState>()(
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
-      lastAttemptAt: null,
       catalogWarnings: [],
       externalKeys: undefined,
       pendingCatalog: null,
@@ -374,9 +372,6 @@ export const useGameDataStore = create<GameDataState>()(
         const { signal } = controller
 
         set({
-          ...(config.type !== 'bundled' && !request?.prepared
-            ? { lastAttemptAt: new Date().toISOString() }
-            : {}),
           pendingCatalog: null,
           isLoading: !background,
           isBackgroundRefreshing: background,

@@ -69,7 +69,7 @@ test('source search is a view filter and hidden selections, presets and None use
   await user.clear(search)
   await user.type(search, 'missing')
   expect(screen.getByText('No sources match your search.').getAttribute('role')).toBe('status')
-  await user.click(screen.getByRole('button', { name: 'Recommended' }))
+  await user.click(screen.getByRole('button', { name: 'Standard' }))
   expect(screen.getByLabelText('Selected sources').textContent).toBe('XGE,TCE')
   await user.click(screen.getByRole('button', { name: 'Clear' }))
   expect(screen.getByRole('button', { name: /Xanathar/ }).getAttribute('aria-pressed')).toBe('true')

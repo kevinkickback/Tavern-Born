@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   type BackgroundStartingPackage,
   formatEquipmentOptionEntries,
+  getEquipmentBlockSelection,
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
 import type { StartingEquipmentItemChoices, StartingItemReference } from '@/types/character'
@@ -79,9 +80,13 @@ export function StartingEquipmentBlocks({
   const included = blocks.filter(
     (block) => block.isFixed && !block.options._.genericChoices?.length,
   )
+  const canApplyCurrentPackage =
+    needsApplication &&
+    onApply &&
+    !decisions.some((block) => getEquipmentBlockSelection(block, choices).needsReselection)
   return (
     <div className="space-y-2">
-      {needsApplication && onApply && (
+      {canApplyCurrentPackage && (
         <Button
           type="button"
           variant="outline"
@@ -117,9 +122,7 @@ export function StartingEquipmentBlocks({
               <div>{contents(block.index, '_', block.options._)}</div>
             </fieldset>
           )
-        const selected = choices[block.index]?.toLowerCase()
-        const current =
-          selected && block.choiceKeys.includes(selected) ? selected : block.choiceKeys[0]
+        const { optionKey, needsReselection } = getEquipmentBlockSelection(block, choices)
         return (
           <fieldset
             key={block.index}
@@ -127,7 +130,7 @@ export function StartingEquipmentBlocks({
             className="min-w-0 overflow-hidden rounded-lg border border-teal-500/25 bg-teal-500/5 px-3 py-2.5"
           >
             <Tabs
-              value={current}
+              value={needsReselection ? '' : optionKey}
               activationMode="manual"
               className="gap-2.5"
               onValueChange={(value) => {
@@ -163,6 +166,11 @@ export function StartingEquipmentBlocks({
                   ))}
                 </TabsList>
               </div>
+              {needsReselection && (
+                <p className="text-xs text-muted-foreground">
+                  Your saved package is unavailable. Choose an available package.
+                </p>
+              )}
               {block.choiceKeys.map((key) => (
                 <TabsContent key={key} value={key} className="m-0">
                   {contents(block.index, key, block.options[key])}

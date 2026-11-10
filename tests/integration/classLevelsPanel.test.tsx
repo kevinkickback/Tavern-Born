@@ -1,10 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
+import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
@@ -62,6 +64,99 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test.each([
+    [true, []],
+    [false, [null]],
+  ])('hides starting equipment with no package blocks (has levels: %s)', (hasLevels, defaultData) => {
+    const owner = { name: 'Fighter', source: 'XPHB' }
+    const character = makeCharacterFixture({
+      initialClass: owner,
+      classProgression: [{ ...owner, levels: 4 }],
+    })
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          character,
+          classProgression: character.classProgression,
+          viewingClass: owner.name,
+          viewingClassSource: owner.source,
+          viewingClassData: { ...owner, startingEquipment: { defaultData } },
+          levelsToShow: hasLevels ? [4] : [],
+        })}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /Starting Equipment/ })).toBeNull()
+    if (hasLevels) expect(screen.getByRole('button', { name: /^Level 4,/ })).toBeTruthy()
+    else expect(screen.getByText('No feature data available')).toBeTruthy()
+  })
+
+  test('shows a recoverable starting equipment issue when the revised Druid source is unavailable', async () => {
+    const owner = { name: 'Druid', source: 'XPHB' }
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      initialClass: owner,
+      classProgression: [{ ...owner, levels: 1 }],
+    })
+    const previous = useCharacterStore.getState().activeCharacter
+    useCharacterStore.setState({ activeCharacter: character })
+    try {
+      render(
+        <BuildClassLevelsPanel
+          {...makeProps({
+            character,
+            classProgression: character.classProgression,
+            viewingClass: owner.name,
+            viewingClassSource: owner.source,
+            levelsToShow: [],
+          })}
+        />,
+      )
+      const accordion = screen.getByRole('button', { name: /Starting Equipment.*1 pending choice/ })
+      await userEvent.setup().click(accordion)
+      expect(screen.getAllByText('Restore the exact Druid source rules.').length).toBeGreaterThan(0)
+      expect(screen.queryByRole('button', { name: 'Apply current package' })).toBeNull()
+    } finally {
+      cleanup()
+      useCharacterStore.setState({ activeCharacter: previous })
+    }
+  })
+
+  test('marks a withdrawn package pending until the user explicitly chooses a replacement', async () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      initialClass: { name: 'Fighter', source: 'PHB' },
+    })
+    const props = makeProps({
+      character,
+      classProgression: character.classProgression,
+      selectedClassTab: 'Fighter|PHB',
+      viewingClass: 'Fighter',
+      viewingClassSource: 'PHB',
+      viewingClassLevel: 1,
+      viewingClassData: {
+        name: 'Fighter',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ a: [{ value: 100 }] }] },
+      },
+      classEquipmentBlockChoices: ['b'],
+    })
+    const { rerender } = render(<BuildClassLevelsPanel {...props} />)
+    const user = userEvent.setup()
+    const accordion = screen.getByRole('button', { name: /Starting Equipment.*1 pending choice/ })
+    await user.click(accordion)
+    const replacement = screen.getByRole('tab', { name: 'Package A' })
+    expect(replacement.getAttribute('aria-selected')).toBe('false')
+    expect(screen.getByText(/Your saved package is unavailable/)).toBeTruthy()
+    expect(props.onBlockChoiceChange).not.toHaveBeenCalled()
+
+    await user.click(replacement)
+    expect(props.onBlockChoiceChange).toHaveBeenCalledExactlyOnceWith(0, 'a')
+    rerender(<BuildClassLevelsPanel {...props} classEquipmentBlockChoices={['a']} />)
+    expect(
+      screen.getByRole('button', { name: /Starting Equipment.*All choices made/ }),
+    ).toBeTruthy()
+  })
+
   test('dormant saved spell intent stays editable while only active choices count toward completion', () => {
     const fixture = makeManagedClassSpellFixtures()
     const initial = makeCharacterFixture({
