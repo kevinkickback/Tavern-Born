@@ -8,6 +8,7 @@ import {
   BEAR_ASPECT_TARGET,
   CLASSIC_ASPECT_TARGET,
   getCurrentBarbarianJourneyFeature,
+  getInheritedBarbarianJourneyFeature,
   hasCurrentBearAspect,
 } from '@/lib/5etools/barbarianJourneySources'
 import {
@@ -31,6 +32,7 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import {
   getCurrentMonkBaseRules,
+  getInheritedMonkBaseRules,
   getMonkAbilityIncrease,
   getMonkUnarmoredDefense,
   getMonkUnarmoredMovement,
@@ -670,7 +672,7 @@ export function createCharacterCalculationContext(
           }),
         )
       : []),
-    ...deriveMonkUnarmoredEffects(character, choiceCatalogs, monk, abilityScores.modifiers),
+    ...allMonkUnarmoredEffects(character, choiceCatalogs, abilityScores.modifiers, monk),
     ...deriveMonkSubclassSenses(character, choiceCatalogs?.classes),
     ...deriveBarbarianPassiveEffects(
       character,
@@ -974,7 +976,9 @@ function deriveBarbarianPassiveEffects(
   prerequisites: ClassChoicePrerequisiteContext,
 ): CharacterEffect[] {
   const results: CharacterEffect[] = []
-  const defense = getCurrentBarbarianJourneyFeature(character, catalogs, 'unarmored defense')
+  const defense =
+    getCurrentBarbarianJourneyFeature(character, catalogs, 'unarmored defense') ??
+    getInheritedBarbarianJourneyFeature(character, catalogs, 'unarmored defense')
   if (defense) {
     const effect = unarmoredBaseEffect(
       character.equipment,
@@ -989,7 +993,9 @@ function deriveBarbarianPassiveEffects(
     )
     if (effect) results.push(effect)
   }
-  const movement = getCurrentBarbarianJourneyFeature(character, catalogs, 'fast movement')
+  const movement =
+    getCurrentBarbarianJourneyFeature(character, catalogs, 'fast movement') ??
+    getInheritedBarbarianJourneyFeature(character, catalogs, 'fast movement')
   const wearsHeavyArmor = character.equipment?.some(
     (item) => item.equipped && getNormalizedItemTraits(item).armorCategory === 'heavy',
   )
@@ -1096,6 +1102,33 @@ function deriveMonkUnarmoredEffects(
         ]
       : []),
   ]
+}
+
+function allMonkUnarmoredEffects(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  modifiers: AbilityScores,
+  native: ReturnType<typeof getCurrentMonkBaseRules>,
+) {
+  const candidates = [
+    ...deriveMonkUnarmoredEffects(character, catalogs, native, modifiers),
+    ...character.classProgression.flatMap((entry) => {
+      const rules = getInheritedMonkBaseRules(character, entry, catalogs)
+      return deriveMonkUnarmoredEffects(character, catalogs, rules, modifiers)
+    }),
+  ]
+  return candidates.filter(
+    (effect, index) =>
+      !candidates.some(
+        (row, other) =>
+          row.target.kind === effect.target.kind &&
+          row.operation.kind === effect.operation.kind &&
+          'value' in row.operation &&
+          'value' in effect.operation &&
+          (row.operation.value > effect.operation.value ||
+            (row.operation.value === effect.operation.value && other < index)),
+      ),
+  )
 }
 
 function unarmoredBaseEffect(

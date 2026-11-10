@@ -261,6 +261,8 @@ export function retainEarnedManagedClassSpells(
     (entry) =>
       (isArcaneArcherCantripOwner(entry) ||
         isArcaneDabblerOwner(entry) ||
+        (!!entry.subclass &&
+          isCatalogCastingCopyOwner(['class', norm(entry.name), norm(entry.source)])) ||
         clericDomainCantrips.some((rule) => belongsTo(entry, rule))) &&
       !nextProgression.some(
         (next) => ownerKey(next) === ownerKey(entry) && next.levels >= entry.levels,
@@ -285,6 +287,7 @@ export function retainEarnedManagedClassSpells(
     choice.slot[1] === 'feature-cantrip' ||
     choice.slot[1] === 'feature-prepared' ||
     isCatalogDerivedClassSpellSlot(choice.slot) ||
+    getSavantSpellbookGain(choice.slot) ||
     getClericArcanaSpellRule(choice.slot)
       ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
         !nextProgression.some(

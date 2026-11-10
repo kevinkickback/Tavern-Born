@@ -1,11 +1,20 @@
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
+import { findClassReference } from './classReference'
+import { getCurrentSelectedClass, permitsClassRuleSource } from './earnedClassFeatureSource'
+import { getFeatureSourceDigest } from './featureSourceAudit'
 import { getNativeSubclassIntroFeature } from './nativeSubclassFeatureSource'
 import { getCurrentNativeSubclassGain } from './nativeSubclassGain'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
+import { getOwnedSubclassFeature } from './ownedSubclassFeature'
 
 const counts = new Map(
   ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'].map(
@@ -107,6 +116,54 @@ export function getFighterSuperiorityDice(
   return maxPerLevel
     ? {
         id: 'fighter-battle-master-superiority-dice',
+        label: 'Superiority Dice',
+        maxPerLevel,
+        restType: 'short',
+      }
+    : undefined
+}
+
+export function getInheritedSuperiorityDice(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs?: ClassChoiceFeatureCatalogs,
+): ClassResourceDef | undefined {
+  if (
+    !catalogs ||
+    !permitsClassRuleSource(character, entry.subclassSource) ||
+    (norm(entry.name) === 'fighter' &&
+      norm(entry.source) === 'xphb' &&
+      norm(entry.subclassSource) === 'xphb')
+  )
+    return undefined
+  const cls = getCurrentSelectedClass(character, entry, catalogs)
+  const subclasses = cls?.subclasses?.filter((row) =>
+    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
+  )
+  if (!cls || subclasses?.length !== 1) return undefined
+  const [subclass] = subclasses
+  const target = 'subclass-feature|combat superiority|fighter|xphb|battle master|xphb|3|xphb'
+  const current = getOwnedSubclassFeature(
+    cls,
+    subclass,
+    target,
+    scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source),
+    ),
+  )
+  if (
+    !current ||
+    current.level > entry.levels ||
+    !permitsClassRuleSource(character, 'XPHB') ||
+    getFeatureSourceDigest(current.feature.entries ?? [], false) !==
+      '35d03a1874a81dc77dcb3851bf511daf2667181236496b3073227019303b6615'
+  )
+    return undefined
+  const maxPerLevel = readDiceSchedule(current.feature.entries ?? [], true, current.level)
+  return maxPerLevel
+    ? {
+        id: `subclass-feature-resource:${JSON.stringify([norm(entry.name), norm(entry.source), norm(subclass.name), norm(subclass.source), target])}`,
         label: 'Superiority Dice',
         maxPerLevel,
         restType: 'short',

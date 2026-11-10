@@ -22,11 +22,14 @@ import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassResources } from '@/lib/calculations/classResources'
+import { getWalkingSpeed } from '@/lib/calculations/movement'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
+  getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
@@ -39,6 +42,7 @@ import {
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { getDirectClassPreparedSpellGrants } from '@/lib/character/directClassPreparedSpells'
 import {
   getEpicBoonSlots,
   projectEpicBoonSlots,
@@ -85,7 +89,12 @@ describe.runIf(available)('configured inherited class progression', () => {
   let lookups: ReturnType<typeof buildGameDataLookups>
   let catalogs: ReturnType<typeof buildClassChoiceFeatureCatalogs>
 
-  const loadWithCopy = (parent: 'Cleric' | 'Druid', actor = 'Lightkeeper', source = 'EXAMPLE') =>
+  const loadWithCopy = (
+    parent: 'Cleric' | 'Druid',
+    actor = 'Lightkeeper',
+    source = 'EXAMPLE',
+    conflictingFeatureText = false,
+  ) =>
     new FiveEToolsDataLoader(
       { type: 'local', path: 'data', isValid: true },
       {
@@ -134,6 +143,32 @@ describe.runIf(available)('configured inherited class progression', () => {
             for (const name of ['sacred flame', 'cure wounds']) {
               document.xphb[name].class.EXAMPLE = { Lightkeeper: true, Wardkeeper: true }
             }
+          }
+          if (actor === 'Lightkeeper' && file === 'class/class-fighter.json') {
+            document._meta.internalCopies ??= []
+            if (!document._meta.internalCopies.includes('class'))
+              document._meta.internalCopies.push('class')
+            document.class.push({
+              name: 'Tactician',
+              source,
+              _copy: { name: 'Fighter', source: 'XPHB' },
+            })
+          }
+          if (conflictingFeatureText && file === 'class/class-druid.json') {
+            const terrain = document.subclassFeature.find(
+              (row: { name: string; source: string }) =>
+                row.name === 'Circle of the Land Spells' && row.source === 'XPHB',
+            )
+            terrain.entries[0] = terrain.entries[0].replace('land: arid, polar', 'land: polar')
+          }
+          if (conflictingFeatureText && file === 'class/class-barbarian.json') {
+            const echo = document.subclassFeature.find(
+              (row: { name: string }) => row.name === 'Echo of the Elements',
+            )
+            echo.entries[0] = echo.entries[0].replace(
+              'Wind Wall|XPHB}.',
+              'Wind Wall|XPHB} by also expending a spell slot.',
+            )
           }
           return document
         },
@@ -197,6 +232,256 @@ describe.runIf(available)('configured inherited class progression', () => {
       ),
     )
   }
+
+  const reachLevel = (character: Character, level: number) => {
+    const [entry] = character.classProgression
+    const die = classRow(entry.name, entry.source).hd!.faces
+    while (character.classProgression[0].levels < level) character = levelUp(character, die)
+    return character
+  }
+  const chooseSubclass = (character: Character, name: string) =>
+    reopen(
+      character,
+      selectSubclass(character, character.provenance, name, 'WoW', undefined, {
+        classChoiceFeatureCatalogs: catalogs,
+      }),
+    )
+  const fixedSpells = (character: Character) =>
+    calculation(character)
+      .character.spells.spellProfiles.flatMap((profile) => profile.fixedSpells ?? [])
+      .map((reference) => reference.toLowerCase())
+
+  test('copied class grants follow their earned features and authored replacements', () => {
+    const druid = start('Druid')
+    expect(fixedSpells(druid)).toEqual(['speak with animals|xphb'])
+    const withoutOriginal = data.classes.filter(
+      (row) => row.name !== 'Druid' || row.source !== 'XPHB',
+    )
+    expect(
+      getDirectClassPreparedSpellGrants(druid, withoutOriginal, {
+        ...catalogs,
+        classes: withoutOriginal,
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        owner: ['class', 'druid', 'wow'],
+        reference: 'Speak with Animals|XPHB',
+      }),
+    ])
+    expect(fixedSpells(start('Hunter'))).toEqual(["hunter's mark|xphb"])
+    const paladin = start('Paladin')
+    expect(fixedSpells(paladin)).toEqual([])
+    expect(fixedSpells(reachLevel(paladin, 2))).toEqual(['divine smite|xphb'])
+    expect(fixedSpells(reachLevel(paladin, 5))).toEqual(['divine smite|xphb', 'find steed|xphb'])
+    expect(fixedSpells({ ...paladin, allowedSources: ['XPHB'] })).toEqual([])
+
+    const hunter = reachLevel(start('Hunter'), 6)
+    expect(getWalkingSpeed(calculation(chooseSubclass(hunter, 'Hunter')).movement)).toBe(40)
+    expect(getWalkingSpeed(calculation(chooseSubclass(hunter, 'Beast Master')).movement)).toBe(30)
+    const monk = reachLevel(start('Monk'), 6)
+    expect(getWalkingSpeed(calculation({ ...monk, equipment: [] }).movement)).toBe(45)
+    const shaman = reachLevel(start('Shaman'), 5)
+    expect(getWalkingSpeed(calculation({ ...shaman, equipment: [] }).movement)).toBe(40)
+    for (const row of [monk, shaman]) {
+      const unarmored = {
+        ...row,
+        equipment: [],
+        abilityScores: {
+          strength: 10,
+          dexterity: 16,
+          constitution: 16,
+          intelligence: 10,
+          wisdom: 16,
+          charisma: 10,
+        },
+      }
+      const context = calculation(unarmored)
+      expect(
+        computeEffectiveCharacterArmorClass(
+          unarmored,
+          context.abilityScores.total,
+          context.effects.sourceDeclarations,
+        ),
+      ).toBe(16)
+    }
+  })
+
+  test('inherited feature counters use exact owners and earned levels', () => {
+    const resource = (character: Character, label: string) => {
+      const [entry] = character.classProgression
+      const context = calculation(character)
+      return getCharacterClassResources(character, () => classRow(entry.name, entry.source), {
+        catalogs,
+        charismaModifier: 0,
+        abilityModifiers: context.abilityScores.modifiers,
+        effects: context.effects.declarations,
+        effectContext: context.effects.resolutionContext,
+        unlimitedWildShape: false,
+      }).find((row) => row.label === label)
+    }
+    expect(resource(start('Evoker'), 'Innate Sorcery')).toMatchObject({ max: 2 })
+    expect(resource(start('Mage'), 'Arcane Recovery')).toMatchObject({ max: 1 })
+    expect(resource(reachLevel(start('Paladin'), 5), 'Lay on Hands (HP)')).toMatchObject({
+      max: 25,
+    })
+    const warrior = reachLevel(start('Warrior'), 17)
+    expect(resource(warrior, 'Action Surge')).toMatchObject({ max: 2 })
+    expect(resource(chooseSubclass(warrior, 'Battle Master'), 'Superiority Dice')).toMatchObject({
+      max: 6,
+    })
+    const tactician = start('Tactician', 'EXAMPLE')
+    expect(resource(tactician, 'Action Surge')).toBeUndefined()
+    const veteran = reachLevel(tactician, 2)
+    const surge = resource(veteran, 'Action Surge')
+    expect(surge).toMatchObject({ max: 1 })
+    expect(surge?.id).not.toBe(resource(warrior, 'Action Surge')?.id)
+    expect(resource({ ...veteran, allowedSources: ['XPHB'] }, 'Action Surge')).toBeUndefined()
+  })
+
+  test.each([
+    {
+      className: 'Druid',
+      subclass: 'Circle of the Land',
+      label: 'Terrain',
+      option: 'Arid Land',
+      selected: 'fire bolt|xphb',
+      common: [],
+    },
+    {
+      className: 'Evoker',
+      subclass: 'Draconic Sorcery',
+      label: 'Specialization',
+      option: 'Devastation',
+      selected: 'azure strike|wow',
+      common: ['chromatic orb|xphb', "dragon's breath|xphb"],
+    },
+  ])('a $className named spell choice can be saved, reopened, and cleared', ({
+    className,
+    subclass,
+    label,
+    option,
+    selected,
+    common,
+  }) => {
+    let character = chooseSubclass(reachLevel(start(className), 3), subclass)
+    const cls = classRow(className)
+    const sc = cls.subclasses!.find((row) => row.name === subclass)!
+    const choice = getClassChoiceCandidates(cls, sc, catalogs).find((row) => row.label === label)!
+    const view = resolveClassChoiceOptions(
+      choice,
+      createClassChoiceCatalogs(catalogs),
+      [],
+      3,
+      character,
+    ).find((row) => row.reference.name === option)!
+    expect(view.availability).toBe('eligible')
+    expect(fixedSpells(character)).toEqual(expect.arrayContaining(common))
+    expect(fixedSpells(character)).not.toContain(selected)
+    const authority = {
+      classes: data.classes,
+      catalogs,
+      feats: data.feats,
+      spellContext: spellContext(character),
+    }
+    character = reopen(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choice,
+        [view.reference],
+        authority,
+      ),
+    )
+    expect(character.classChoiceSelections).toEqual([
+      expect.objectContaining({ choiceId: choice.id }),
+    ])
+    expect(fixedSpells(character)).toEqual(expect.arrayContaining([...common, selected]))
+    expect(fixedSpells({ ...character, allowedSources: ['XPHB'] })).not.toContain(selected)
+    character = reopen(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choice,
+        [],
+        authority,
+      ),
+    )
+    expect(fixedSpells(character)).toEqual(expect.arrayContaining(common))
+    expect(fixedSpells(character)).not.toContain(selected)
+  })
+
+  test('Savant gains use the copied owner while restricted subclass spells stay cast-only', () => {
+    const mage = chooseSubclass(reachLevel(start('Mage'), 3), 'Evoker')
+    const mageSlots = getManagedClassSpellSlots(mage.classProgression[0], mage, catalogs).filter(
+      (slot) => slot[3] === 3 && slot[0][0] === 'subclass',
+    )
+    expect(mageSlots).toHaveLength(2)
+    const saved = reopen(
+      mage,
+      setManagedClassSpellChoicesCommand(
+        mage,
+        mage.provenance,
+        [
+          {
+            slot: mageSlots[0],
+            expected: null,
+            expectedEmptyRevision: mage.managedClassSpellRevision ?? 0,
+            target: { name: 'Scorching Ray', source: 'XPHB' },
+            policy: 'default',
+          },
+        ],
+        spellContext(mage),
+      ),
+    )
+    expect(
+      calculation(saved).character.spells.spellProfiles.flatMap((profile) => profile.spellsKnown),
+    ).toContain('Scorching Ray|XPHB')
+
+    const shaman = reachLevel(start('Shaman'), 10)
+    const elements = chooseSubclass(shaman, 'Path of the Elements')
+    expect(fixedSpells(elements)).toContain('elementalism|xphb')
+    const casts = (character: Character) =>
+      calculation(character).fixedClassSpellStatuses.filter((row) => row.active && row.castOnly)
+    expect(casts(elements).map((row) => row.reference.toLowerCase())).toEqual([
+      'daylight|xphb',
+      'water walk|xphb',
+      'wind wall|xphb',
+    ])
+    expect(casts(elements)[0].castingNote).toContain('Spend one use of Rage')
+    expect(fixedSpells(elements)).not.toContain('daylight|xphb')
+    const guardians = casts(chooseSubclass(shaman, 'Path of the Spiritual Guardian'))
+    expect(guardians.map((row) => row.reference.toLowerCase())).toEqual([
+      'augury|xphb',
+      'clairvoyance|xphb',
+    ])
+    expect(guardians[0].castingNote).toContain('One shared use per Short or Long Rest')
+    expect(guardians[0].castOnly).toEqual({ ignoresMaterial: true })
+  })
+
+  test('authored option and casting restrictions must agree with the structured schedule', async () => {
+    const conflicting = composeGameDataLayers([
+      await loadWithCopy('Cleric', 'Lightkeeper', 'EXAMPLE', true),
+    ])
+    const current = buildClassChoiceFeatureCatalogs(conflicting)
+    const druid = conflicting.classes.find((row) => row.name === 'Druid' && row.source === 'WoW')!
+    const land = druid.subclasses!.find((row) => row.name === 'Circle of the Land')
+    expect(
+      getClassChoiceCandidates(druid, land, current).some((row) => row.label === 'Terrain'),
+    ).toBe(false)
+
+    const shaman = chooseSubclass(reachLevel(start('Shaman'), 6), 'Path of the Elements')
+    const [entry] = shaman.classProgression
+    const cls = conflicting.classes.find(
+      (row) => row.name === entry.name && row.source === entry.source,
+    )
+    const grants = getEarnedSubclassSpellGrants(cls, entry, 6, {
+      character: shaman,
+      catalogs: current,
+    })
+    expect(grants?.map((grant) => grant.spellName)).toEqual(['elementalism|xphb'])
+  }, 45_000)
 
   test('the roster displays exact inherited class and subclass features and earns Epic Boons', () => {
     const cohort = data.classes.filter((cls) => cls.source === 'WoW')

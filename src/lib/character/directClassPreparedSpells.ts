@@ -6,7 +6,11 @@ import {
 import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
-import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
+import {
+  getCurrentDirectFixedClassRules,
+  getCurrentFixedClassFeatureRule,
+} from '@/lib/5etools/directFixedProficiencySource'
+import { getEarnedDirectClassFeature } from '@/lib/5etools/earnedClassFeatureSource'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import {
   ELDRITCH_HEX_REFERENCE,
@@ -32,6 +36,7 @@ const warlock = { name: 'warlock', source: 'xphb' }
 export const CONTACT_PATRON_TARGET = 'class-feature|contact patron|warlock|xphb|9|xphb'
 const favoredEnemy = 'class-feature|favored enemy|ranger|xphb|1|xphb'
 const huntersMark = "hunter's mark|xphb"
+const druidic = 'class-feature|druidic|druid|xphb|1|xphb'
 const preparedFeatureFields = new Set([
   'name',
   'source',
@@ -129,6 +134,76 @@ function matchesPreparedSchedule(
     getSpellReferenceKey(token[0]) === getSpellReferenceKey(reference) &&
     Object.keys(schedule).filter((key) => Number(key) === level).length === 1
   )
+}
+
+function inheritedPreparedGrants(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+  schedule: NonNullable<AdditionalSpellBlock['prepared']>,
+): ClassPreparedSpellGrant[] {
+  const owner = ['class', norm(entry.name), norm(entry.source)] as const
+  const grants: ClassPreparedSpellGrant[] = []
+  const add = (
+    target: string,
+    reference: string,
+    level: number,
+    spellLevel: number,
+    digest?: string,
+  ) => {
+    if (!matchesPreparedSchedule(schedule, level, reference)) return
+    const current = getEarnedDirectClassFeature(character, entry, catalogs, target, (row) => {
+      if (digest)
+        return (
+          hasFeatureSourceShape(row, preparedFeatureFields) &&
+          Array.isArray(row.entries) &&
+          getFeatureSourceDigest(row.entries, false) === digest
+        )
+      return (
+        row.entries?.some((line) => {
+          const match =
+            typeof line === 'string' &&
+            /^You always have the \{@spell ([^|#{}]+\|[^|#{}]+)\} spell prepared\./i.exec(line)
+          return !!match && getSpellReferenceKey(match[1]) === getSpellReferenceKey(reference)
+        }) === true
+      )
+    })
+    if (current)
+      grants.push({
+        owner: [...owner],
+        target,
+        featureName: current.feature.name,
+        level,
+        reference,
+        spellLevel,
+      })
+  }
+  add(favoredEnemy, huntersMark, 1, 1)
+  for (const [name, level, reference, spellLevel, digest] of paladinSpells)
+    add(
+      `class-feature|${norm(name)}|paladin|xphb|${level}|xphb`,
+      reference,
+      level,
+      spellLevel,
+      digest,
+    )
+  const template = getCurrentFixedClassFeatureRule(druidic, catalogs)
+  if (
+    template?.alwaysPreparedSpell &&
+    matchesPreparedSchedule(schedule, template.level, template.alwaysPreparedSpell)
+  ) {
+    const current = getEarnedDirectClassFeature(character, entry, catalogs, druidic)
+    if (current)
+      grants.push({
+        owner: [...owner],
+        target: druidic,
+        featureName: current.feature.name,
+        level: template.level,
+        reference: template.alwaysPreparedSpell,
+        spellLevel: 1,
+      })
+  }
+  return grants
 }
 
 function getEldritchHexGrant(
@@ -354,8 +429,15 @@ export function getDirectClassPreparedSpellGrants(
     }
 
     // Other scheduled gains require their own corroborating feature.
-    return grants.filter(({ level, reference }) =>
+    const current = grants.filter(({ level, reference }) =>
       matchesPreparedSchedule(schedule, level, reference),
     )
+    if (
+      findClassReference(ranger, [cls]) ||
+      findClassReference(paladin, [cls]) ||
+      (norm(cls.name) === 'druid' && norm(cls.source) === 'xphb')
+    )
+      return current
+    return [...current, ...inheritedPreparedGrants(character, entry, catalogs, schedule)]
   })
 }

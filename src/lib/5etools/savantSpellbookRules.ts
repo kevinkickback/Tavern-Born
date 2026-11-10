@@ -14,6 +14,7 @@ import {
   decodeOptionalDeclaration,
   exactOptionalDeclarationReference,
 } from './optionalClassDeclarationStructure'
+import { getDeclaredSubclassGains, getOwnedSubclassFeature } from './ownedSubclassFeature'
 import { collectSubclassProficiencyPaths } from './subclassProficiencyCertificates'
 
 const traditions = [
@@ -130,19 +131,46 @@ export function getSavantSpellbookGain(slot: ManagedClassSpellSlot) {
     ({ owner, target }) =>
       slot[2] === target &&
       slot[0].length === owner.length &&
-      owner.every((part, index) => slot[0][index] === part),
+      slot[0][0] === 'subclass' &&
+      (slot[0][1] === 'wizard' && slot[0][2] === 'xphb'
+        ? owner.every((part, index) => slot[0][index] === part)
+        : slot[0]
+            .slice(1)
+            .every(
+              (part) =>
+                typeof part === 'string' && part && part === norm(part) && !/[|#{}]/.test(part),
+            )),
   )
   const gain = earned.find((row) => row.level === slot[3] && slot[4] < row.count)
   return rule && gain ? { ...gain, rule } : undefined
 }
 
-export function getSavantSpellbookSlots(entry: CharacterClassEntry): ManagedClassSpellSlot[] {
-  if (norm(entry.name) !== 'wizard' || norm(entry.source) !== 'xphb') return []
-  const rule = rules.find(
-    ({ owner }) => norm(entry.subclass) === owner[3] && norm(entry.subclassSource) === owner[4],
-  )
+export function getSavantSpellbookSlots(
+  entry: CharacterClassEntry,
+  cls?: Class5e,
+  catalogs?: SavantCatalog,
+): ManagedClassSpellSlot[] {
+  const owner = [
+    'subclass',
+    norm(entry.name),
+    norm(entry.source),
+    norm(entry.subclass),
+    norm(entry.subclassSource),
+  ] as const
+  const rule =
+    owner[1] === 'wizard' && owner[2] === 'xphb'
+      ? rules.find((rule) => rule.owner.every((part, index) => owner[index] === part))
+      : cls &&
+        catalogs &&
+        rules.find(({ target }) =>
+          getCurrentSavantSpellbookGrant(
+            [[...owner], 'class-spellbook', target, 3, 0],
+            cls,
+            catalogs,
+          ),
+        )
   if (!rule) return []
-  const { owner, target } = rule
+  const { target } = rule
   return earned.flatMap((gain) =>
     gain.level <= entry.levels
       ? Array.from(
@@ -205,7 +233,9 @@ export function getCurrentSavantSpellbookGrant(
 ) {
   const gain = getSavantSpellbookGain(slot)
   if (!gain) return undefined
-  const { owner, target, introduction, body, school, name } = gain.rule
+  const { target, introduction, body, school, name } = gain.rule
+  const owner = slot[0]
+  const native = gain.rule.owner.every((part, index) => owner[index] === part)
   if (
     cls.sourceIdentityConflict ||
     cls._copy ||
@@ -218,13 +248,19 @@ export function getCurrentSavantSpellbookGrant(
   const first = boundaries[levels.indexOf(3)]
   const firstTarget = 'class-feature|wizard subclass|wizard|xphb|3|xphb'
   if (
-    levels.some((level) => level === undefined || level < 3) ||
-    levels.filter((level) => level === 3).length !== 1 ||
-    !first?.feature ||
-    first.feature.sourceIdentityConflict ||
-    getClassFeatureIdentity(decodeClassFeatureReference(first.ref)) !== firstTarget ||
-    getClassFeatureIdentity(first.feature) !== firstTarget ||
-    !exactOptionalDeclarationReference(first as unknown as RecordValue, first.ref, 'classFeature')
+    native
+      ? levels.some((level) => level === undefined || level < 3) ||
+        levels.filter((level) => level === 3).length !== 1 ||
+        !first?.feature ||
+        first.feature.sourceIdentityConflict ||
+        getClassFeatureIdentity(decodeClassFeatureReference(first.ref)) !== firstTarget ||
+        getClassFeatureIdentity(first.feature) !== firstTarget ||
+        !exactOptionalDeclarationReference(
+          first as unknown as RecordValue,
+          first.ref,
+          'classFeature',
+        )
+      : Math.min(...getDeclaredSubclassGains(cls)) !== 3
   )
     return undefined
   const matches = cls.subclasses?.filter(
@@ -238,9 +274,10 @@ export function getCurrentSavantSpellbookGrant(
   if (
     !subclass ||
     subclass.sourceIdentityConflict ||
-    subclass._copy ||
-    norm(subclass.shortName) !== owner[3] ||
-    subclass.subclassFeatures?.filter((ref) => ref === introduction).length !== 1
+    (native &&
+      (subclass._copy ||
+        norm(subclass.shortName) !== owner[3] ||
+        subclass.subclassFeatures?.filter((ref) => ref === introduction).length !== 1))
   )
     return undefined
 
@@ -263,23 +300,32 @@ export function getCurrentSavantSpellbookGrant(
       ? first
       : undefined
   }
-  const paths = collectSubclassProficiencyPaths(
-    subclass.subclassFeatureRefs ?? [],
-    resolve,
-    (key, attached) => {
-      const current = resolve(key)
-      const signature = current && getFeatureSourceDigest([current])
-      return !!signature && matchesFeature(attached, key, signature)
-    },
-  )
+  const paths = native
+    ? collectSubclassProficiencyPaths(
+        subclass.subclassFeatureRefs ?? [],
+        resolve,
+        (key, attached) => {
+          const current = resolve(key)
+          const signature = current && getFeatureSourceDigest([current])
+          return !!signature && matchesFeature(attached, key, signature)
+        },
+      )
+    : []
   const declarations = paths.filter((path) => path.target === target)
-  const declaration = declarations.length === 1 ? declarations[0] : undefined
+  const declaration = native
+    ? declarations.length === 1
+      ? declarations[0]
+      : undefined
+    : getOwnedSubclassFeature(cls, subclass, target, catalogs)
   const feature = resolve(target)
   if (
     !declaration ||
     declaration.level !== 3 ||
     declaration.refs.length !== 2 ||
-    declaration.refs[0] !== introduction ||
+    (native
+      ? declaration.refs[0] !== introduction
+      : decodeOptionalDeclaration(declaration.refs[0], 'subclassFeature')?.target !==
+        gain.rule.introTarget) ||
     decodeOptionalDeclaration(declaration.refs[1], 'subclassFeature')?.target !== target ||
     !feature ||
     !hasFeatureSourceShape(feature, featureFields) ||

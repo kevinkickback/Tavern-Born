@@ -13,11 +13,15 @@ import {
   getClericArcanaSpellSlots,
 } from '@/lib/5etools/clericArcanaSpells'
 import { getArcaneDabblerSlots, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
-import { getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
+import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
 import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
-import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from './classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from './classChoiceIdentity'
 import { sources as characterSources, permitted } from './classSpellAuthority'
 import type { ClassChoicePrerequisiteContext } from './effectiveClassChoiceFeatures'
 import { getManagedClassSpellOwnerEntry, managedClassSpellId } from './managedClassSpellIdentity'
@@ -31,7 +35,7 @@ export function getManagedClassSpellSlots(
   prerequisites?: ClassChoicePrerequisiteContext,
 ): ManagedClassSpellSlot[] {
   const sources = catalogs?.classCastingSources
-  const { rule, owner } = getClassSpellProfilePolicy(entry, sources)
+  const { rule, owner, mode } = getClassSpellProfilePolicy(entry, sources)
   const allowed = character && characterSources(character)
   const currentRule = (producer: CastingProducerRule) => {
     if (!catalogs || !isCatalogCastingCopyOwner(owner)) return true
@@ -81,6 +85,7 @@ export function getManagedClassSpellSlots(
               choice.slot[1] === 'feature-cantrip' ||
               isArcaneDabblerSlot(choice.slot) ||
               getClericArcanaSpellRule(choice.slot) ||
+              getSavantSpellbookGain(choice.slot) ||
               getManagedClassSpellRule(choice.slot),
           )
           .map((choice) => choice.slot),
@@ -107,6 +112,13 @@ export function getManagedClassSpellSlots(
     )
   const matches = catalogs?.classes?.filter((cls) => findClassReference(entry, [cls]))
   const currentClass = matches?.length === 1 ? matches[0] : undefined
+  const savantCatalog =
+    catalogs && entry.subclass && rule && mode === 'spellbook' && currentRule(rule)
+      ? scopeClassChoiceFeatureCatalogs(
+          catalogs,
+          getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
+        )
+      : undefined
   return [
     ...new Map(
       [
@@ -116,7 +128,7 @@ export function getManagedClassSpellSlots(
         ...getBardLoreSpellSlots(entry),
         ...getClericArcanaSpellSlots(entry, currentClass),
         ...(character ? getArcaneDabblerSlots(character, entry, catalogs?.classes) : []),
-        ...getSavantSpellbookSlots(entry),
+        ...getSavantSpellbookSlots(entry, currentClass, savantCatalog),
         ...getSpellbookSpecialtySlots(entry),
       ].map((slot) => [managedClassSpellId(slot), slot]),
     ).values(),

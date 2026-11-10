@@ -1,11 +1,12 @@
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassResourceDef } from '@/types/classRules'
 import { getClassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
+import { getCurrentSelectedClass, getEarnedDirectClassFeature } from './earnedClassFeatureSource'
 import type { ClassFeatureSourceCatalog } from './featureSourceAudit'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
 import { parseSpellToken } from './spellTokens'
@@ -57,6 +58,28 @@ export function getCurrentMonkBaseRules(
   }
 }
 
+/** Equivalent inherited monk rules keep their source vocabulary and use the actor's table. */
+export function getInheritedMonkBaseRules(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: Parameters<typeof getCurrentMonkBaseRules>[1],
+) {
+  if (findClassReference({ name: 'Monk', source: 'XPHB' }, [entry])) return undefined
+  const cls = getCurrentSelectedClass(character, entry, catalogs)
+  if (!cls) return undefined
+  return {
+    owner: entry,
+    cls,
+    getFeature(name: string) {
+      const level = name === 'Unarmored Defense' ? 1 : name === 'Unarmored Movement' ? 2 : undefined
+      if (!level) return undefined
+      const target = `class-feature|${name.toLowerCase()}|monk|xphb|${level}|xphb`
+      const current = getEarnedDirectClassFeature(character, entry, catalogs, target)
+      return current && { feature: current.feature, target, level }
+    },
+  }
+}
+
 type MonkBaseRules = ReturnType<typeof getCurrentMonkBaseRules>
 
 export function getMonkAbilityIncrease(monk: MonkBaseRules) {
@@ -79,14 +102,15 @@ export function getMonkUnarmoredDefense(monk: MonkBaseRules) {
   const text = row?.feature.entries?.[0]
   if (!row || typeof text !== 'string') return undefined
   const match =
-    monk?.cls.source === 'PHB'
+    row.feature.classSource === 'PHB'
       ? /^Beginning at (\d+)(?:st|nd|rd|th) level, while you are wearing no armor and not wielding a shield, your AC equals ([1-9]\d*) \+ your (\w+) modifier \+ your (\w+) modifier\.$/.exec(
           text,
         )
       : /^While you aren't wearing armor or wielding a \{@item Shield\|XPHB\}, your base \{@variantrule Armor Class\|XPHB\} equals ([1-9]\d*) plus your (\w+) and (\w+) modifiers\.$/.exec(
           text,
         )
-  if (!match || (monk?.cls.source === 'PHB' && Number(match[1]) !== row.level)) return undefined
+  if (!match || (row.feature.classSource === 'PHB' && Number(match[1]) !== row.level))
+    return undefined
   const [base, first, second] = match.slice(-3)
   const firstAbility = toAbilityName(first)
   const secondAbility = toAbilityName(second)

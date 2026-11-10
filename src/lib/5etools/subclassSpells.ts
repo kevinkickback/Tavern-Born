@@ -3,6 +3,11 @@ import {
   getSpellNameKey,
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
@@ -19,6 +24,8 @@ import {
   hasRevisedGravePreparedCantrip,
 } from './clericDomainCantripSources'
 import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
+import { permitsClassRuleSource } from './earnedClassFeatureSource'
+import { getFeatureLiteralChoiceId } from './featureOptionIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   getFighterBanneretRitualGrants,
@@ -45,6 +52,10 @@ import {
   getLegacySorcererSpec,
 } from './legacySorcererSubclassRules'
 import { getMonkSubclassSpellGrants } from './monkSubclassRules'
+import {
+  getNamedSubclassSpellSource,
+  isValidNamedSubclassSpellSelection,
+} from './namedSubclassSpells'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
 import {
@@ -62,6 +73,7 @@ import {
 import { getRoguePhantomSpellGrants } from './roguePhantomSpells'
 import { getChosenScionAllegiance, isScionOwner } from './rogueScion'
 import { parseSpellToken } from './spellTokens'
+import { getLimitedSubclassCasts } from './subclassLimitedCasting'
 import {
   getChosenWarlockSpellBlock,
   hasWarlockPatronSpellConfiguration,
@@ -79,6 +91,8 @@ export interface SubclassSpellGrant {
   expectedSpellLevel?: number
   requiresClassicReprint?: true
   feature?: { name: string; target: string; castingNote?: string }
+  namedChoice?: true
+  requiresVisibleSpellRank?: true
   castOnly?: FeatureCastOnlyRules
   mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
 }
@@ -102,6 +116,12 @@ export function hasCurrentSubclassSpellGrant(
           includedDomainReprints?.get(key) !== reprintRank)))
   )
     return false
+  if (grant.namedChoice || grant.requiresVisibleSpellRank)
+    return (
+      references?.has(key) === true &&
+      reprintRank !== undefined &&
+      (reprintRank === 0) === grant.isCantrip
+    )
   return grant.expectedSpellLevel === undefined
     ? references?.has(key) === true
     : spellLevels?.get(key) === grant.expectedSpellLevel
@@ -116,6 +136,7 @@ export function getEarnedSubclassSpellGrants(
     selections?: Character['classChoiceSelections']
     spells?: ReadonlyMap<string, number>
     character?: Character
+    catalogs?: ClassChoiceFeatureCatalogs
   },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
@@ -311,6 +332,54 @@ export function getEarnedSubclassSpellGrants(
         ? []
         : rituals
     const blocks = subclasses[0].additionalSpells
+    const scoped =
+      landContext?.catalogs &&
+      scopeClassChoiceFeatureCatalogs(
+        landContext.catalogs,
+        getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
+      )
+    const named = getNamedSubclassSpellSource(classData, subclasses[0], scoped)
+    const character = landContext?.character
+    if (
+      named &&
+      (!character ||
+        [
+          entry.source,
+          entry.subclassSource,
+          named.feature.source,
+          named.feature.classSource,
+          named.feature.subclassSource,
+        ].every((value) => permitsClassRuleSource(character, value)))
+    ) {
+      const id = getFeatureLiteralChoiceId(
+        {
+          name: entry.name,
+          source: entry.source,
+          subclassName: entry.subclass,
+          subclassSource: entry.subclassSource,
+        },
+        named.target,
+        'named-subclass-spells',
+        named.target,
+        named.level,
+      )
+      const selections = landContext?.selections?.filter((row) => row.choiceId === id) ?? []
+      const selected =
+        selections.length === 1 &&
+        !selections[0].inactive &&
+        isValidNamedSubclassSpellSelection(selections[0]) &&
+        named.named.find(({ name }) => norm(name) === norm(selections[0].selected[0].name))
+      return parseSubclassSpells(
+        [{ prepared: selected ? selected.prepared : named.common }],
+        classLevel,
+      ).map((grant) => ({
+        ...grant,
+        isCantrip:
+          grant.isCantrip || landContext?.spells?.get(getSpellReferenceKey(grant.spellName)) === 0,
+        namedChoice: true,
+        feature: { name: named.feature.name, target: named.target },
+      }))
+    }
     const isNamed = (block: SubclassAdditionalSpells) =>
       typeof block?.name === 'string' && block.name.trim().length > 0
     // Known configuration handlers choose their block above. Unresolved named schedules
@@ -319,7 +388,17 @@ export function getEarnedSubclassSpellGrants(
       Array.isArray(blocks) && blocks.filter(isNamed).length > 1
         ? blocks.filter((block) => !isNamed(block))
         : blocks
-    const grants = parseSubclassSpells(unambiguous, classLevel)
+    const grants = [
+      ...parseSubclassSpells(unambiguous, classLevel),
+      ...getLimitedSubclassCasts(
+        classData,
+        subclasses[0],
+        entry,
+        classLevel,
+        landContext?.character,
+        scoped,
+      ),
+    ]
     const alchemist = getAlchemistFeatureCasts(classData, subclasses[0], classLevel)
     if (alchemist) return [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
     if (norm(entry.name) === 'cleric') {

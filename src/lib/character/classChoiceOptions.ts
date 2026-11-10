@@ -103,6 +103,7 @@ import {
   isDivineSoulConfigurationGroup,
   resolveDivineSoulConfigurationOption,
 } from '@/lib/5etools/divineSoulConfiguration'
+import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
@@ -118,6 +119,11 @@ import {
   resolveFeatureTableOption,
 } from '@/lib/5etools/featureTableOptions'
 import { getItemPropertyLabel, getItemPropertyReferences } from '@/lib/5etools/itemProperties'
+import {
+  getNamedSubclassSpellRule,
+  getNamedSubclassSpellSetup,
+  getNamedSubclassSpellSource,
+} from '@/lib/5etools/namedSubclassSpells'
 import {
   hasNaturalExplorerGrant,
   resolveNaturalExplorerOption,
@@ -931,6 +937,58 @@ export function resolveClassChoiceOptions(
   character?: Character,
   knownWarlockCantrips?: readonly Spell5e[],
 ): ClassChoiceOptionView[] {
+  const named = getNamedSubclassSpellRule(choice.id)
+  if (named) {
+    const { owner } = named
+    const classes = catalogs.classes?.filter((row) => findClassReference(owner, [row]))
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const subclasses = cls?.subclasses?.filter((row) =>
+      findClassReference({ name: owner.subclassName, source: owner.subclassSource }, [row]),
+    )
+    const subclass = subclasses?.length === 1 ? subclasses[0] : undefined
+    const scoped = scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(owner.name, owner.source, owner.subclassName, owner.subclassSource),
+    )
+    const current =
+      cls &&
+      subclass &&
+      classLevel >= named.level &&
+      (!character ||
+        [owner.source, owner.subclassSource, named.source].every((source) =>
+          permitsClassRuleSource(character, source),
+        ))
+        ? getNamedSubclassSpellSource(cls, subclass, scoped)
+        : undefined
+    const setup =
+      cls &&
+      subclass &&
+      current &&
+      (!character ||
+        [current.feature.classSource, current.feature.subclassSource].every((source) =>
+          permitsClassRuleSource(character, source),
+        ))
+        ? getNamedSubclassSpellSetup(cls, subclass, scoped)
+        : undefined
+    const options = setup?.id === choice.id ? setup.options : []
+    const active = new Set(options.map(getClassChoiceOptionKey))
+    return [...options, ...saved.filter((row) => !active.has(getClassChoiceOptionKey(row)))].map(
+      (reference) => ({
+        reference,
+        availability: active.has(getClassChoiceOptionKey(reference)) ? 'eligible' : 'retained',
+        ...(active.has(getClassChoiceOptionKey(reference)) && {
+          sourceGroup: { group: 'named-subclass-spells' },
+        }),
+        entries: Object.entries(
+          current?.named.find(({ name }) => normalized(name) === normalized(reference.name))
+            ?.prepared ?? {},
+        ).map(
+          ([level, spells]) =>
+            `Level ${level}: ${spells.map((spell) => `{@spell ${spell.replace(/#c$/i, '')}}`).join(', ')}.`,
+        ),
+      }),
+    )
+  }
   if (
     choice.kind === 'optional-feature' &&
     getProgressiveChoiceGainCount(choice, choice.level) !== undefined
@@ -1763,6 +1821,33 @@ function getCurrentLandTerrainSetup(
   return owner && subclasses?.length === 1 ? getLandTerrainSetup(owner, subclasses[0]) : undefined
 }
 
+function getCurrentNamedSpellSetup(
+  actor: { name?: string; source?: string },
+  selection: { name?: string; source?: string } | undefined,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (
+    !catalogs ||
+    !selection ||
+    isCircleOfTheLand(actor.name ?? '', actor.source ?? '', selection.name ?? '', selection.source)
+  )
+    return undefined
+  const matches = catalogs.classes?.filter((row) => findClassReference(actor, [row]))
+  if (matches?.length !== 1) return undefined
+  const [cls] = matches
+  const subclasses = cls.subclasses?.filter((row) => findClassReference(selection, [row]))
+  if (subclasses?.length !== 1) return undefined
+  const [subclass] = subclasses
+  return getNamedSubclassSpellSetup(
+    cls,
+    subclass,
+    scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source),
+    ),
+  )
+}
+
 /** Source-only candidates include both sides; no permission or character intent is inferred. */
 export function getClassChoiceCandidates(
   classData: {
@@ -1885,6 +1970,7 @@ export function getClassChoiceCandidates(
     ...getWarlockPatronConfigurations(classData, subclass, catalogs?.classes),
     ...[
       getCurrentLandTerrainSetup(classData, subclass, catalogs),
+      getCurrentNamedSpellSetup(classData, subclass, catalogs),
       getRevisedAffinitySetup(classData, subclass, catalogs),
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
       getScionConfiguration(classData, subclass, catalogs?.classes),

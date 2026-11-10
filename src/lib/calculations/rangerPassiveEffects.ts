@@ -1,3 +1,8 @@
+import { findClassReference } from '@/lib/5etools/classReference'
+import {
+  getEarnedDirectClassFeature,
+  hasCurrentSubclassFeatureReplacement,
+} from '@/lib/5etools/earnedClassFeatureSource'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import { getCurrentRangerFeatures } from '@/lib/5etools/rangerFeatureSource'
 import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
@@ -17,6 +22,7 @@ const classicSight =
   /^At \d+(?:st|nd|rd|th) level, you gain \{@sense darkvision\} out to a range of (\d+) feet\. If you already have \{@sense darkvision\} from your race, its range increases by (\d+) feet\.$/
 const revisedSight =
   /^You gain \{@sense Darkvision\|XPHB\} with a range of (\d+) feet\. If you already have \{@sense Darkvision\|XPHB\} when you gain this feature, its range increases by (\d+) feet\.$/
+const rovingTarget = 'class-feature|roving|ranger|xphb|6|xphb'
 
 function effectIdentity(
   rule: { target: string; name: string; source: string },
@@ -41,7 +47,6 @@ export function deriveRangerPassiveEffects(
   precedingEffects: readonly CharacterEffect[],
 ): CharacterEffect[] {
   const rules = getCurrentRangerFeatures(character, catalogs)
-  if (!rules) return []
 
   const effects: CharacterEffect[] = []
   const addEffect = (
@@ -52,28 +57,58 @@ export function deriveRangerPassiveEffects(
   ) => effects.push({ ...effectIdentity(rule, target), target, operation: { kind, value } })
 
   const baseRule = (name: string, pattern: RegExp) => {
-    const feature = rules.base(name)
+    const feature = rules?.base(name)
     const entry = feature?.entries[0]
     const match = feature?.entries.length === 1 && typeof entry === 'string' && pattern.exec(entry)
     return feature && match ? { ...feature, distance: Number(match[1]) } : undefined
   }
-  if (rules.source === 'xphb') {
+  if (rules?.source === 'xphb') {
     const feral = baseRule('Feral Senses', blindsight)
     if (feral) addEffect(feral, { kind: 'sense', sense: 'blindsight' }, feral.distance, 'minimum')
-    const moving = baseRule('Roving', roving)
-    if (moving) {
-      const heavy = character.equipment?.some(
-        (item) => item.equipped && getNormalizedItemTraits(item).armorCategory === 'heavy',
-      )
-      if (!heavy) addEffect(moving, { kind: 'speed', mode: 'walk' }, moving.distance)
-      const walk = getWalkingSpeed(
-        getEffectiveCharacterMovement(character, [...precedingEffects, ...effects]),
-      )
-      for (const mode of ['climb', 'swim'])
-        addEffect(moving, { kind: 'speed', mode }, walk, 'minimum')
-    }
   }
-  if (!rules.specialization) return effects
+  const inherited = character.classProgression
+    .flatMap((entry) => {
+      if (findClassReference({ name: 'Ranger', source: 'XPHB' }, [entry])) return []
+      const current = getEarnedDirectClassFeature(character, entry, catalogs, rovingTarget)
+      const line = current?.feature.entries?.[0]
+      const match =
+        current?.feature.entries?.length === 1 && typeof line === 'string' && roving.exec(line)
+      if (
+        !current ||
+        !match ||
+        hasCurrentSubclassFeatureReplacement(
+          character,
+          entry,
+          catalogs,
+          current.cls,
+          rovingTarget,
+          6,
+        )
+      )
+        return []
+      return [
+        {
+          target: rovingTarget,
+          name: current.feature.name,
+          source: current.feature.source,
+          distance: Number(match[1]),
+        },
+      ]
+    })
+    .sort((a, b) => b.distance - a.distance)[0]
+  const moving = (rules?.source === 'xphb' ? baseRule('Roving', roving) : undefined) ?? inherited
+  if (moving) {
+    const heavy = character.equipment?.some(
+      (item) => item.equipped && getNormalizedItemTraits(item).armorCategory === 'heavy',
+    )
+    if (!heavy) addEffect(moving, { kind: 'speed', mode: 'walk' }, moving.distance)
+    const walk = getWalkingSpeed(
+      getEffectiveCharacterMovement(character, [...precedingEffects, ...effects]),
+    )
+    for (const mode of ['climb', 'swim'])
+      addEffect(moving, { kind: 'speed', mode }, walk, 'minimum')
+  }
+  if (!rules?.specialization) return effects
   const { subclass, origin, earned } = rules.specialization
   if (subclass.shortName === 'Fey Wanderer') {
     const glamour = earned('Otherworldly Glamour')

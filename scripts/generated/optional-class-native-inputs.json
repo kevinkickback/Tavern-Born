@@ -118,7 +118,7 @@
     },
     {
       "file": "src/lib/5etools/barbarianJourneySources.ts",
-      "sha256": "4f4df3826f9d99d2157471f95ab0055467600b9cad8ad3043a3500304fda3e93"
+      "sha256": "958ac2446a0c4a0c3a821038b883a24ab7b5a049336deac9a921af542e13b974"
     },
     {
       "file": "src/lib/5etools/barbarianPathChoiceIdentity.ts",
@@ -274,7 +274,7 @@
     },
     {
       "file": "src/lib/5etools/directFixedProficiencySource.ts",
-      "sha256": "d2b8027f64674d1c062e1f22677f43051e2dacd47a2a64738a67b48e26105d37"
+      "sha256": "0cea3f26ab7dca2fa73d22593c8b8d4e27800bb65cc98f3f1e39a10edf88ffaf"
     },
     {
       "file": "src/lib/5etools/directSubclassSource.ts",
@@ -291,6 +291,10 @@
     {
       "file": "src/lib/5etools/draconicSubclassFeatureSource.ts",
       "sha256": "043bf749b3c883351c526bf85733f0a4ea7c7431ca4a3e6462bd939886381f9c"
+    },
+    {
+      "file": "src/lib/5etools/earnedClassFeatureSource.ts",
+      "sha256": "9afb50a82a6d25e86de82e5db78bc371b5ca2bc12c9c8b1cbd00c38bce79c112"
     },
     {
       "file": "src/lib/5etools/entityIdentity.ts",
@@ -409,6 +413,10 @@
       "sha256": "24da1bbfbb584373416e42551c59992675afcd5ee3ba1a0826248edf9941200e"
     },
     {
+      "file": "src/lib/5etools/namedSubclassSpells.ts",
+      "sha256": "95e9e6fca21760475c6541433ac2b3e5f5b980fa8208dad6788e2125e0a51421"
+    },
+    {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
       "sha256": "9977a3b9691075aef20d2d0b54690473f4b530af6a2fb2088d6c162a04b8112d"
     },
@@ -467,6 +475,10 @@
     {
       "file": "src/lib/5etools/optionalClassSectionStructure.ts",
       "sha256": "69a7d3e3ee164f71f9e457a8aba39e039ab4477d763cccec2a1c9023075a7a5d"
+    },
+    {
+      "file": "src/lib/5etools/ownedSubclassFeature.ts",
+      "sha256": "cf3605fdf0ba1afeefbbb42eb498a94220db6c90ce3c06c46f52a3397adc3f47"
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
@@ -538,7 +550,7 @@
     },
     {
       "file": "src/lib/5etools/savantSpellbookRules.ts",
-      "sha256": "4687028cb01dd6edb47be45039e5904e64f36a1a77c16386ad1fd02e8a762d09"
+      "sha256": "9973a92550804b68bbe280c5c2be9323fe158a2a46b2b22c914c692c1d9a9583"
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
@@ -597,6 +609,10 @@
       "sha256": "1578cb9ab934befe7c57e1b65a3b1405cd8b9314feae19af7810c1b2bab8ccaa"
     },
     {
+      "file": "src/lib/5etools/subclassLimitedCasting.ts",
+      "sha256": "50241525ab9389020a6af5e310fc1e0c1c9f0048b80b193eecf4f1a4bec0e802"
+    },
+    {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.ts",
       "sha256": "c778b26c1192d05c643ec0ce1fa9f4afae31b6224a05004c9c4a9d38d1496fc1"
     },
@@ -626,7 +642,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "a6e82c59dd891f3ea41aac808641dc9704b2730af5f8cb8f2a2e4faa354b7e42"
+      "sha256": "1c7cab2e41fe76c732ca993ed06a15c5c140de9ab9b1d984bfc75536c564930f"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",

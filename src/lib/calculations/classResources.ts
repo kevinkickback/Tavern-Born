@@ -9,7 +9,11 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getFighterSubclassResources } from '@/lib/5etools/fighterSubclassResources'
-import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
+import {
+  getFighterSuperiorityDice,
+  getInheritedSuperiorityDice,
+} from '@/lib/5etools/fighterSuperiorityDice'
+import { getInheritedClassResources } from '@/lib/5etools/inheritedClassResources'
 import { getCurrentMonkBaseRules, getMonkBaseResources } from '@/lib/5etools/monkBaseRules'
 import { getMonkSubclassResources } from '@/lib/5etools/monkSubclassRules'
 import {
@@ -130,6 +134,7 @@ export function getCharacterClassResources(
           (resource) => !resource.declarationTarget,
         )
     const earned = [...definitions]
+    earned.push(...getInheritedClassResources(character, entry, catalogs))
     if (current && catalogs)
       earned.push(
         ...getClassResourceDefs(current, level).filter(
@@ -172,7 +177,9 @@ export function getCharacterClassResources(
     )
       earned.push(healingLight)
     if (hasCurrentWarriorOfTheGods(current, entry)) earned.push(warriorOfTheGods)
-    const superiority = getFighterSuperiorityDice(character, entry, catalogs?.classes)
+    const superiority =
+      getFighterSuperiorityDice(character, entry, catalogs?.classes) ??
+      getInheritedSuperiorityDice(character, entry, catalogs)
     if (superiority) earned.push(superiority)
     earned.push(
       ...getFighterSubclassResources(

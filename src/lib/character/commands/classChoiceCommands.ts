@@ -47,6 +47,7 @@ import {
 } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { getLegacySubclassFamily } from '@/lib/5etools/legacySubclassChoices'
 import { buildClassLookup } from '@/lib/5etools/lookups'
+import { getNamedSubclassSpellRule } from '@/lib/5etools/namedSubclassSpells'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
 import { resolvePsionic } from '@/lib/5etools/psionics'
@@ -501,6 +502,32 @@ function currentLiteralChoice(
     getRevisedHunterRule(choice.id) ||
     getSubclassFeatureConfigurationRule(choice.id)
   const owner = subclassLiteral && findOwner(character, choice)
+  const named = getNamedSubclassSpellRule(choice.id)
+  if (
+    named &&
+    (!owner ||
+      choice.level !== named.level ||
+      getFeatureOwnerKey(owner.name, owner.source, owner.subclass, owner.subclassSource) !==
+        getFeatureOwnerKey(
+          named.owner.name,
+          named.owner.source,
+          named.owner.subclassName,
+          named.owner.subclassSource,
+        ) ||
+      getFeatureOwnerKey(
+        choice.owner.name,
+        choice.owner.source,
+        choice.owner.subclassName,
+        choice.owner.subclassSource,
+      ) !==
+        getFeatureOwnerKey(
+          named.owner.name,
+          named.owner.source,
+          named.owner.subclassName,
+          named.owner.subclassSource,
+        ))
+  )
+    throw new RangeError('This spell choice does not belong to the selected subclass.')
   if (getSubclassFeatureConfigurationRule(choice.id) && !selected.length) return choice
   const current =
     classData &&
@@ -522,6 +549,7 @@ function currentLiteralChoice(
         ? selected.map((o) => ({ ...o, slotLevel: choice.level }))
         : [],
       findOwner(character, current)?.levels ?? 0,
+      character,
     )
       .filter((option) => option.availability === 'eligible')
       .map((option) => getClassChoiceOptionKey(option.reference)),

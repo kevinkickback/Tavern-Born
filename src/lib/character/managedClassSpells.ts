@@ -146,9 +146,14 @@ function resolveSlot(
   const lore = getBardLoreSpellRule(slot)
   const arcana = getClericArcanaSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
+  const inheritedSavant =
+    savantGain && !savantGain.rule.owner.every((part, index) => slot[0][index] === part)
   const baseCasting =
     (savantGain || lore || arcana) && entry
-      ? getClassSpellProfilePolicy({ name: entry.name, source: entry.source, levels: entry.levels })
+      ? getClassSpellProfilePolicy(
+          { name: entry.name, source: entry.source, levels: entry.levels },
+          inheritedSavant ? context?.catalogs?.classCastingSources : undefined,
+        )
       : undefined
   const rule = baseCasting ? baseCasting.rule : getManagedClassSpellRule(slot)?.rule
   if (!rule) return 'The saved class spell ownership is invalid.'
@@ -165,15 +170,23 @@ function resolveSlot(
   )
   const { declaration } = rule
   const castingOwner = baseCasting?.owner ?? owner
-  const authority = arcana
-    ? getClassCastingLevelAccess(
-        catalog,
-        castingOwner,
-        declaration.target,
-        declaration.level,
-        slot[3],
-      )
-    : gainAuthority(catalog, castingOwner, declaration.target, declaration.level, slot[1], slot[3])
+  const authority =
+    arcana || inheritedSavant
+      ? getClassCastingLevelAccess(
+          catalog,
+          castingOwner,
+          declaration.target,
+          declaration.level,
+          slot[3],
+        )
+      : gainAuthority(
+          catalog,
+          castingOwner,
+          declaration.target,
+          declaration.level,
+          slot[1],
+          slot[3],
+        )
   const allowed = sources(character)
   if (
     !authority ||
@@ -202,9 +215,15 @@ function resolveSlot(
   const owners = classes.filter(
     (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
   )
-  const classData = arcana && owners.length !== 1 ? undefined : owners[0]
+  const classData = (arcana || inheritedSavant) && owners.length !== 1 ? undefined : owners[0]
   const savant = savantGain && classData && getCurrentSavantSpellbookGrant(slot, classData, catalog)
-  if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
+  if (
+    savantGain &&
+    (!savant ||
+      (inheritedSavant &&
+        (baseCasting?.mode !== 'spellbook' || !permitted(allowed, savantGain.rule.owner[4]))) ||
+      authority.maxSpellLevel !== savantGain.tier)
+  )
     return `Restore the current ${savantGain.rule.name} feature and its spellbook schedule.`
   const arcanaRank = arcana?.rank
   const arcanaChoice =
@@ -243,6 +262,7 @@ function resolveSlot(
   const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
     character,
+    catalogs: context?.catalogs,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const fixedCantrip =
@@ -378,6 +398,7 @@ function targetError(
       (grant) =>
         grant.mode !== 'expanded' &&
         grant.mode !== 'cast-only' &&
+        !(saved && grant.namedChoice) &&
         getSpellNameKey(grant.spellName) === getSpellNameKey(spell.name),
     )
   )
@@ -733,6 +754,7 @@ export function projectManagedClassSpellState(
         visibleSpellLevels,
         oathReprints,
         includedDomainReprints,
+        classChoiceFeatureCatalogs: context?.catalogs,
       }),
     },
   }
@@ -877,6 +899,7 @@ export function projectManagedClassSpellState(
       selections: character.classChoiceSelections,
       spells: visibleSpellLevels,
       character,
+      catalogs: context?.catalogs,
     })
     const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
       if (
@@ -940,6 +963,16 @@ export function projectManagedClassSpellState(
       provenance = addSpellGrant(provenance, grant.spellName, {
         ...makeSourceTag('subclass', entry.subclass, 'fixed', entry.subclassSource),
         grantSource: parseSpellReference(grant.spellName).source,
+        ...(grant.namedChoice && {
+          grantVariant: JSON.stringify([
+            entry.name,
+            entry.source,
+            entry.subclass,
+            entry.subclassSource,
+            grant.feature?.target,
+            grant.level,
+          ]),
+        }),
       })
     }
   }
