@@ -51,6 +51,14 @@ const MPMB_BUTTON_KEEP_PATTERNS = [
 ]
 const AMMO_CHECKBOX_PATTERN = /^Ammo(Left|Right)\.(Top|Base|Bullet|Icon)\./
 const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus', 'HP Max'] as const
+const OFFICIAL_2024_CENTERED_FIELDS = new Set([
+  'Text_6', // Level
+  'Text_7', // XP
+  'Text_10', // Temporary HP
+  'Text_11', // Maximum HP
+  'Text_12', // Spent Hit Dice
+  'Text_13', // Maximum Hit Dice
+])
 const MPMB_RULED_TEXT_FIELDS = new Set([
   'Class Features',
   'Personality Trait',
@@ -217,7 +225,12 @@ export async function fillCharacterSheetDocument(
     hideUnwantedFields(form)
   } else {
     if (options.templateId?.startsWith('2024'))
-      fit2024TextAppearances(pdfDoc, onTextTruncated, options.paragraphsReservedForOverflow)
+      fit2024TextAppearances(
+        pdfDoc,
+        options.templateId === '2024-official',
+        onTextTruncated,
+        options.paragraphsReservedForOverflow,
+      )
     if (options.templateId === '2014-official')
       normalizeOfficial2014TextAppearances(form, onTextTruncated)
     updateDirtyFieldAppearances(form)
@@ -385,14 +398,21 @@ function normalizeOfficial2014TextAppearances(
 
     let fontSize = bounds.max
     {
-      const fitted = fitPdfText(
-        field.getText() ?? '',
-        font,
-        width,
-        height,
-        { ...bounds, multiline: field.isMultiline() },
-        widget.getBorderStyle()?.getWidth() ?? 0,
-      )
+      const value = field.getText() ?? ''
+      const multiline = field.isMultiline()
+      const borderWidth = widget.getBorderStyle()?.getWidth() ?? 0
+      let fitted = fitPdfText(value, font, width, height, { ...bounds, multiline }, borderWidth)
+      if (field.getName() === 'ProficienciesLang' && multiline && value.includes('\n')) {
+        const spaced = fitPdfText(
+          value.replace(/\n/g, '\n\n'),
+          font,
+          width,
+          height,
+          { min: fitted.fontSize, max: fitted.fontSize, multiline },
+          borderWidth,
+        )
+        if (!spaced.truncated) fitted = spaced
+      }
       fontSize = fitted.fontSize
       if (fitted.text !== field.getText()) field.setText(fitted.text)
       if (fitted.truncated) onTextTruncated?.(field.getName())
@@ -408,6 +428,7 @@ function normalizeOfficial2014TextAppearances(
 
 function fit2024TextAppearances(
   pdfDoc: PDFDocument,
+  official: boolean,
   onTextTruncated?: (fieldName: string) => void,
   paragraphsReservedForOverflow?: ReadonlySet<string>,
 ) {
@@ -425,6 +446,8 @@ function fit2024TextAppearances(
     else field.disableMultiline()
     const value = field.getText()
     if (!value) continue
+    if (official && OFFICIAL_2024_CENTERED_FIELDS.has(field.getName()))
+      field.setAlignment(TextAlignment.Center)
     const page = pdfDoc.getPages().find((candidate) => candidate.ref === widget.P())
     // Lost Loot uses a 1700-unit page. Match readable physical sizes to its larger coordinates.
     const scale = page && page.getWidth() > 1000 ? page.getWidth() / 603 : 1

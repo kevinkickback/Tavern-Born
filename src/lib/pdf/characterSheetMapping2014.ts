@@ -255,7 +255,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Ideal: character.details.ideals || '',
     Bond: character.details.bonds || '',
     Flaw: character.details.flaws || '',
-    Background_History: viewModel.historyAndPersonalitySummary,
+    Background_History: viewModel.backstorySummary,
     'Class Features': withClassResourceText(
       viewModel.classResourceRows,
       viewModel.classFeaturesSummary2014,
