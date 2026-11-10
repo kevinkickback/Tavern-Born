@@ -338,13 +338,10 @@ export async function generateFilledCharacterSheetPdf(
   const summarizedResources = custom2014
     ? original.classResourceRows.slice(0, resourceCapacity)
     : original.classResourceRows
-  const inheritedLabels = new Set(
-    original.classResourceRows.filter((row) => row.inherited).map((row) => row.label),
-  )
   const resourceLabelNotes = new Set<string>()
   const missingResources = summarizedResources.flatMap((row, index) => {
     const field = `Limited Feature ${index + 1}`
-    if (clippedResourceLabels.has(field) && inheritedLabels.has(row.label)) {
+    if (clippedResourceLabels.has(field) && row.inherited) {
       const id = `text-limit:${field}`
       const section = {
         id,

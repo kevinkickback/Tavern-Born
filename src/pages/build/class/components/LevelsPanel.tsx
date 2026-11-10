@@ -23,6 +23,7 @@ import {
   getProgressiveChoiceReviewLevel,
   getRequiredChoiceSelectionCount,
 } from '@/lib/5etools/classChoiceNormalization'
+import { getClassDefaultEquipmentBlocks } from '@/lib/5etools/startingEquipment'
 import { isRevisedDruidStartingOwner } from '@/lib/5etools/startingEquipmentPolicy'
 import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
 import {
@@ -256,7 +257,9 @@ export function BuildClassLevelsPanel({
     initialClass.name === viewingClass &&
     initialClass.source === viewingClassSource
   const showEquipmentWithoutLevels =
-    viewingInitialClass && isRevisedDruidStartingOwner({ ...initialClass, kind: 'class' })
+    viewingInitialClass &&
+    (getClassDefaultEquipmentBlocks(viewingClassData?.startingEquipment).length > 0 ||
+      isRevisedDruidStartingOwner({ ...initialClass, kind: 'class' }))
   const [openSections, setOpenSections] = useState<string[]>([])
   const configurations = getSubclassConfigurations(
     classChoices,

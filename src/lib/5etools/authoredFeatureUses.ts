@@ -1,5 +1,4 @@
 import { toAbilityName } from '@/lib/calculations/abilityNames'
-import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
@@ -76,9 +75,8 @@ export function getAuthoredFeatureUses(
   ): ClassResourceDef[] => {
     const rule = readUses(feature.entries)
     if (!rule || names.has(norm(feature.name)) || level > entry.levels) return []
-    const modifier = rule.ability
-      ? (modifiers?.[rule.ability] ?? getAbilityModifier(character.abilityScores[rule.ability]))
-      : 0
+    const modifier = rule.ability ? modifiers?.[rule.ability] : 0
+    if (modifier === undefined) return []
     const maximum = Math.max(1, modifier + rule.offset)
     const owner = [norm(entry.name), norm(entry.source)]
     if (target.startsWith('subclass-feature|'))

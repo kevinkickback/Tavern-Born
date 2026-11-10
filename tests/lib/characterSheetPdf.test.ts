@@ -85,6 +85,31 @@ function buildCharacterSheetFieldMap(
 }
 
 describe('characterSheetPdf', () => {
+  test('preserves only the clipped inherited counter in required Notes for a shared label', async () => {
+    const viewModel = prepareViewModel(makeCharacterFixture())
+    const label = 'A very long feature name for the resource counter '.repeat(4).trim()
+    const counter = { label, max: 2, used: 1, recovery: 'Long Rest', restType: 'long' as const }
+    viewModel.classResourceRows = [
+      { ...counter, id: 'native', owner: { name: 'Fighter', source: 'XPHB' } },
+      {
+        ...counter,
+        id: 'inherited',
+        owner: { name: 'Tactician', source: 'EXAMPLE' },
+        inherited: true,
+      },
+    ]
+    const preserved: string[] = []
+    const bytes = await generateTestCharacterSheet(viewModel, '2014-custom', {
+      pages: { spells: false },
+      text: { descriptions: 'names', overflow: 'ellipsis' },
+      onReport: (report) => preserved.push(...report.preserved.map((section) => section.id)),
+    })
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(form.getTextField('Limited Feature 1').getText()).not.toBe(`${label} (Fighter)`)
+    expect(preserved).toContain('text-limit:Limited Feature 2')
+    expect(preserved).not.toContain('text-limit:Limited Feature 1')
+  })
+
   test('should map key identity and stat fields for 2024 template', () => {
     const character = makeCharacterFixture({
       name: 'Aria Stormborn',

@@ -1,5 +1,4 @@
 import { toAbilityName } from '@/lib/calculations/abilityNames'
-import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
   type ClassChoiceFeatureCatalogs,
@@ -205,13 +204,11 @@ export function getAuthoredSubclassResource(
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   modifiers: AbilityScores | undefined,
 ): ClassResourceDef | undefined {
+  if (!modifiers) return undefined
   const current = getResourceContext(character, entry, catalogs)
   if (!current) return undefined
   const { cls, subclass, scoped, refs, pool } = current
-  const base = Math.max(
-    pool.minimum,
-    modifiers?.[pool.ability] ?? getAbilityModifier(character.abilityScores[pool.ability]),
-  )
+  const base = Math.max(pool.minimum, modifiers[pool.ability])
   const initiative = refs.some(({ target, level, reference }) => {
     if (level > entry.levels) return false
     const text = reference.feature?.entries

@@ -368,6 +368,7 @@ function computeClassSelectionEffects(
         ledger,
         primaryClassEntry,
         character.classProgression.filter((row) => row !== primaryClassEntry),
+        character,
       )
     : ledger
   let provenanceUpdate = applyClassGrants(cls, subclass, retainedLedger)

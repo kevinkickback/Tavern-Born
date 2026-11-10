@@ -1313,6 +1313,60 @@ describe.runIf(available)('configured inherited class progression', () => {
     }
   })
 
+  test.each([
+    ['Priest', 'WoW', 'Cleric', 'XPHB'],
+    ['Cleric', 'XPHB', 'Priest', 'WoW'],
+  ])('replacing %s keeps the other parent’s fixed subclass spell attribution', (name, source, retainedName, retainedSource) => {
+    const shadowDomain = { subclass: 'Shadow Domain', subclassSource: 'WoW', levels: 3 }
+    const retained = { ...shadowDomain, name: retainedName, source: retainedSource }
+    const draft = makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: sources,
+      classProgression: [{ ...shadowDomain, name, source }, retained],
+      initialClass: { name, source },
+    })
+    const slot = getManagedClassSpellSlots(retained, draft, catalogs).find(
+      (row) => row[1] === 'class-cantrip',
+    )!
+    const chosen = reopen(
+      draft,
+      setManagedClassSpellChoiceCommand(
+        draft,
+        draft.provenance,
+        {
+          slot,
+          expected: null,
+          expectedEmptyRevision: 0,
+          target: { name: 'Guidance', source: 'XPHB' },
+          policy: 'default',
+        },
+        spellContext(draft),
+      ),
+    )
+    const before = chosen.provenance.spells['crown of madness']
+    expect(before).toMatchObject([
+      { sourceType: 'subclass', sourceRef: 'WoW', grantSource: 'xphb' },
+    ])
+    const after = reopen(
+      chosen,
+      applyClassSelectionCommand(
+        chosen,
+        chosen.provenance,
+        classRow('Fighter', 'XPHB'),
+        undefined,
+        lookups.itemLookup,
+        { classChoiceFeatureCatalogs: catalogs, spellContext: spellContext(chosen) },
+      ),
+    )
+    expect(after.classProgression).toContainEqual(retained)
+    expect(after.provenance.spells['crown of madness']).toEqual(before)
+    expect(
+      projectManagedClassSpellState(after, undefined).character.provenance.spells[
+        'crown of madness'
+      ],
+    ).toBeUndefined()
+  })
+
   test('inherited feature counters use exact owners and earned levels', () => {
     const resource = (character: Character, label: string) => {
       const [entry] = character.classProgression

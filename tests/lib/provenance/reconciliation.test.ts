@@ -173,4 +173,78 @@ describe('provenance/reconciliation', () => {
     expect(reconciled.spells['magic missile']).toBeUndefined()
     expect(reconciled.spells['cure wounds']).toEqual([classTagCleric])
   })
+
+  test.each([
+    [' artificer ', false],
+    [' wizard ', true],
+  ])('retains a matching subclass grant only within its parent class (%s)', (name, retained) => {
+    const tag = { ...subclassTag, sourceRef: 'EXAMPLE' }
+    const ledger = addGrant(emptyProvenance(), 'features', 'sculpt spells', tag)
+    const reconciled = reconcileClassChange(
+      ledger,
+      {
+        name: 'Wizard',
+        source: 'PHB',
+        levels: 3,
+        subclass: 'Evocation',
+        subclassSource: 'EXAMPLE',
+      },
+      [{ name, source: 'XPHB', levels: 3, subclass: ' evocation ', subclassSource: 'example' }],
+    )
+
+    expect(reconciled.features['sculpt spells']).toEqual(retained ? [tag] : undefined)
+  })
+
+  test.each([
+    [
+      'exact retained owner',
+      'EXAMPLE',
+      'subclass-feature|evocation|wizard|xphb|evocation|xphb|3|xphb',
+      5,
+      true,
+    ],
+    [
+      'conflicting printing',
+      'OTHER',
+      'subclass-feature|evocation|wizard|xphb|evocation|xphb|3|xphb',
+      5,
+      false,
+    ],
+    ['incomplete feature', 'EXAMPLE', 'subclass-feature|', 5, false],
+    [
+      'invalid gain level',
+      'EXAMPLE',
+      'subclass-feature|evocation|wizard|xphb|evocation|xphb|3|xphb',
+      -1,
+      false,
+    ],
+  ])('checks a named spell’s retained subclass attribution (%s)', (_, source, target, level, kept) => {
+    const tag: SourceTag = {
+      ...subclassTag,
+      sourceRef: 'EXAMPLE',
+      grantVariant: JSON.stringify(['Mage', 'EXAMPLE', 'Evocation', source, target, level]),
+    }
+    const ledger = addSpellGrant(emptyProvenance(), 'Fireball|XPHB', tag)
+    const reconciled = reconcileClassChange(
+      ledger,
+      {
+        name: 'Wizard',
+        source: 'XPHB',
+        levels: 5,
+        subclass: 'Evocation',
+        subclassSource: 'EXAMPLE',
+      },
+      [
+        {
+          name: 'Mage',
+          source: 'EXAMPLE',
+          levels: 5,
+          subclass: 'Evocation',
+          subclassSource: source,
+        },
+      ],
+    )
+
+    expect(!!reconciled.spells.fireball).toBe(kept)
+  })
 })
