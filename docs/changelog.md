@@ -9,6 +9,7 @@
 * Choose optional class features individually, including replacements and expanded spell lists
 * Improved race, subrace, and feat selections so granted spells, ability bonuses, and other benefits follow your choices
 * Redesigned character creation with easier-to-find options, clearer rule previews, and improved ability score summaries. Clicks outside the creator no longer discard your work
+* Search and filter sourcebooks in Rules → Additional Content, just like in the character creator
 * Improved starting equipment with clearer Class and Background packages, more accurate gold and item grants, and searchable item choices that support picking multiples
 * Improved spell and tool pickers with clearer choices, more relevant filters, and better guidance when a saved option is unavailable
 * Improved equipment rules and descriptions, including magic weapon bonuses and more +1, +2, and +3 shield options
