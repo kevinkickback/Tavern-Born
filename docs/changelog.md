@@ -1,4 +1,23 @@
 <details>
+<summary><strong>v0.7.0</strong></summary>
+
+## ✨ Changes
+
+* Expanded level 1–20 progression for 2014 and 2024 characters. More choices for spells, class feats, proficiencies, and companions
+* PDFs show more earned rules and selections, including resource totals, recovery rules, and correctly scaled companion stats
+* Updated the Skills page so you can see where proficiency and Expertise choices come from and edit them separately
+* Choose optional class features individually, including replacements and expanded spell lists
+* Improved race, subrace, and feat selections so granted spells, ability bonuses, and other benefits follow your choices
+* Redesigned character creation with easier-to-find options, clearer rule previews, and improved ability score summaries. Clicks outside the creator no longer discard your work
+* Improved starting equipment with clearer Class and Background packages, more accurate gold and item grants, and searchable item choices that support picking multiples
+* Improved spell and tool pickers with clearer choices, more relevant filters, and better guidance when a saved option is unavailable
+* Improved equipment rules and descriptions, including magic weapon bonuses and more +1, +2, and +3 shield options
+* Added missing hazards and statuses and a Disease category to the Compendium, and fixed previews of related rules
+* Improved offline startup. If a remote source is unavailable, Tavern Born automatically uses a compatible saved copy for that source. If there is no matching copy, you can use the included SRD for that session. You can open characters with missing content in limited access, keep their saved choices, and see a warning in Review
+
+</details>
+
+<details>
 <summary><strong>v0.6.0</strong></summary>
 
 ## ✨ Changes
