@@ -586,7 +586,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipmentPolicy.ts",
-      "sha256": "5348810dc9277d4a6540ebb9425c4a87988b8fcb3a126c5bb5d04d094d07a9a0"
+      "sha256": "2da8698dff11dcc3aa1749a27c93db214b632786efabff1ee8b580188fd1642c"
     },
     {
       "file": "src/lib/5etools/startingItemCategory.ts",

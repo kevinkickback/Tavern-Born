@@ -211,7 +211,7 @@ const entryRecord = (value: unknown) =>
 const itemReference = (value: unknown) =>
   typeof value === 'string' ? startingItemUid(value) : undefined
 
-export const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owner']) =>
+const isRevisedDruidStartingOwner = (owner: StartingEquipmentPolicy['owner']) =>
   owner.kind === 'class' && sameStartingReference(owner, { name: 'Druid', source: 'XPHB' })
 
 const focusEntry = 3
