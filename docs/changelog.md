@@ -13,7 +13,7 @@
 * Improved spell and tool pickers with clearer choices, more relevant filters, and better guidance when a saved option is unavailable
 * Improved equipment rules and descriptions, including magic weapon bonuses and more +1, +2, and +3 shield options
 * Added missing hazards and statuses and a Disease category to the Compendium, and fixed previews of related rules
-* Improved offline startup. If a remote source is unavailable, Tavern Born automatically uses a compatible saved copy for that source. If there is no matching copy, you can use the included SRD for that session. You can open characters with missing content in limited access, keep their saved choices, and see a warning in Review
+* Faster startup and better handling of game data files so upstream changes are less likely to disrupt the app
 
 </details>
 
