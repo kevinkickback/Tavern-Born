@@ -50,6 +50,12 @@ A cast-only or at-will Invocation does not add a Pact slot or automatically sati
 An Invocation targeting an existing cantrip checks that independent current target and retains
 recoverable intent if it disappears. Full PDF sheets include supported casting terms.
 
+A one-use slot-free class grant needs a current direct feature, the revised Long Rest rule
+reference, and a matching source-qualified prepared schedule. The exact spell entry supplies
+its rank. The grant sits outside ordinary preparation capacity. Spells, Actions and full PDF
+sheets identify the class that owns each use. Independent daily preparation remains saved if it
+overlaps.
+
 ## Selected feature cantrips
 
 `feature-cantrip` keeps the actual choice and declaring feature block/descriptor identity. The

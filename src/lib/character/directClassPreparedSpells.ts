@@ -10,7 +10,11 @@ import {
   getCurrentDirectFixedClassRules,
   getCurrentFixedClassFeatureRule,
 } from '@/lib/5etools/directFixedProficiencySource'
-import { getEarnedDirectClassFeature } from '@/lib/5etools/earnedClassFeatureSource'
+import {
+  getCurrentSelectedClass,
+  getEarnedDirectClassFeature,
+  permitsClassRuleSource,
+} from '@/lib/5etools/earnedClassFeatureSource'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import {
   ELDRITCH_HEX_REFERENCE,
@@ -19,12 +23,15 @@ import {
   getCurrentNativeWarlockPatronRules,
   getNativeEldritchHexOwner,
 } from '@/lib/5etools/nativeWarlockPatronRules'
-import { decodeOptionalDeclaration } from '@/lib/5etools/optionalClassDeclarationStructure'
+import {
+  decodeOptionalDeclaration,
+  optionalDeclarationObject as record,
+} from '@/lib/5etools/optionalClassDeclarationStructure'
 import { getCurrentRangerFeatures } from '@/lib/5etools/rangerFeatureSource'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm, stripItemTag } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
@@ -67,9 +74,150 @@ const paladinSpells = [
 ] as const
 
 type ClassPreparedSpellGrant = ClassFixedSpellGrant & {
-  spellLevel: number
+  spellLevel: number | 'leveled'
   castingNote?: string
   sourceReason?: string
+}
+
+function getPreparedSchedule(cls: Class5e) {
+  const blocks = cls.additionalSpells as AdditionalSpellBlock[] | undefined
+  const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
+  const prepared = block?.prepared
+  return block &&
+    Object.keys(block).length === 1 &&
+    prepared &&
+    typeof prepared === 'object' &&
+    !Array.isArray(prepared)
+    ? prepared
+    : undefined
+}
+
+const inlineSlotFree =
+  /^You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a \{@variantrule Long Rest\|XPHB(?:\|Long Rest)?\}\.$/i
+const separateSlotFree =
+  /^You can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a \{@variantrule Long Rest\|XPHB(?:\|Long Rest)?\}\.$/i
+
+function hasClassFeatureTagTarget(value: string) {
+  const fields = value.split('|')
+  return (
+    fields.length <= 6 && !!decodeOptionalDeclaration(fields.slice(0, 5).join('|'), 'classFeature')
+  )
+}
+
+function isIndependentMovementEffect(value: unknown) {
+  const effect = record(value)
+  const entries = effect.entries
+  return (
+    effect.type === 'entries' &&
+    typeof effect.name === 'string' &&
+    /^[\p{L} '’-]+ \([\p{L} '’-]+ Only; Recharges After a Long Rest\)$/u.test(effect.name) &&
+    Object.keys(effect).every((key) => key === 'type' || key === 'name' || key === 'entries') &&
+    Array.isArray(entries) &&
+    entries.length === 1 &&
+    typeof entries[0] === 'string' &&
+    /^The ([\p{L} '’-]+) and its rider can move through other creatures and objects this turn as if they were \{@variantrule Difficult Terrain\|XPHB\}\. Both \1 and rider take [1-9]\d* \(\{@damage [1-9]\d*d[1-9]\d*\}\) [\p{L}]+ damage if they end their turn inside an object\.$/iu.test(
+      entries[0],
+    )
+  )
+}
+
+function confirmsSlotFreePreparation(feature: ClassFeature, reference: string) {
+  if (feature._copy || !Array.isArray(feature.entries)) return false
+  const entries = [...feature.entries]
+  const replacement =
+    typeof entries[0] === 'string' &&
+    /^This feature replaces the [\p{L} '’-]+ \{@classFeature ([^{}]+)\} feature of the [\p{L} '’-]+ class\.$/u.exec(
+      entries[0],
+    )
+  if (replacement) {
+    if (!hasClassFeatureTagTarget(replacement[1])) return false
+    entries.shift()
+  }
+  const [preparation, recovery, ...tail] = entries
+  if (typeof preparation !== 'string') return false
+  const statement =
+    /^(?:You can call on the aid of (?:a|an|the) [\p{L}'’-]+(?: [\p{L}'’-]+)?\. )?You always have the \{@spell ([^|#{}]+\|[^|#{}]+)\} spell prepared\.(?: (.+))?$/u.exec(
+      preparation,
+    )
+  if (!statement || getSpellReferenceKey(statement[1]) !== getSpellReferenceKey(reference))
+    return false
+  if (statement[2]) return entries.length === 1 && inlineSlotFree.test(statement[2])
+  if (typeof recovery !== 'string' || !separateSlotFree.test(recovery)) return false
+  if (!tail.length) return true
+
+  // An independent effect of the cast may follow. Conditional casting terms are unsupported.
+  const [addition, effect] = tail
+  const effectClause =
+    typeof addition === 'string' &&
+    /^In addition to the benefits of the [\p{L} '’-]+ \{@classFeature ([^{}]+)\} feature, when you cast \{@spell ([^|#{}]+\|[^|#{}]+)\}, the \{@b [\p{L} '’-]+\} can be ([\p{L}-]+)\. (?:A|An|The) \3 [\p{L}-]+ deals [\p{L}-]+ damage with its [A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)* action and has this \{@variantrule Bonus Action\|XPHB\}:$/u.exec(
+      addition,
+    )
+  return (
+    !!effectClause &&
+    tail.length === 2 &&
+    hasClassFeatureTagTarget(effectClause[1]) &&
+    getSpellReferenceKey(effectClause[2]) === getSpellReferenceKey(reference) &&
+    isIndependentMovementEffect(effect)
+  )
+}
+
+/** Verify both the selected class schedule and its unique exact direct feature for a one-use grant. */
+function getSlotFreePreparedGrants(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+): ClassPreparedSpellGrant[] {
+  const cls = getCurrentSelectedClass(character, entry, catalogs)
+  const schedule = cls && getPreparedSchedule(cls)
+  if (!cls || !schedule || !permitsClassRuleSource(character, 'XPHB')) return []
+  return Object.entries(schedule).flatMap(([rawLevel, row]) => {
+    if (!/^(?:[1-9]|1[0-9]|20)$/.test(rawLevel)) return []
+    const level = Number(rawLevel)
+    if (
+      level > entry.levels ||
+      Object.keys(schedule).filter((key) => Number(key) === level).length !== 1
+    )
+      return []
+    const use = record(row)
+    const daily = record(use.daily)
+    const items = daily['1']
+    if (
+      Object.keys(use).length !== 1 ||
+      Object.keys(daily).length !== 1 ||
+      !Array.isArray(items) ||
+      items.length !== 1 ||
+      typeof items[0] !== 'string' ||
+      !/^[^|#{}]+\|[^|#{}]+$/.test(items[0]) ||
+      !items[0].split('|').every((part) => part.trim())
+    )
+      return []
+    const [reference] = items
+    const features = (cls.classFeatureRefs ?? []).flatMap((ref) => {
+      const declaration = decodeOptionalDeclaration(ref.ref, 'classFeature')
+      if (declaration?.decoded.level !== level) return []
+      const current = getEarnedDirectClassFeature(
+        character,
+        entry,
+        catalogs,
+        declaration.target,
+        (feature) => confirmsSlotFreePreparation(feature, reference),
+      )
+      return current ? [current] : []
+    })
+    if (features.length !== 1) return []
+    const [{ feature, target }] = features
+    return [
+      {
+        owner: ['class', norm(entry.name), norm(entry.source)],
+        target,
+        featureName: feature.name,
+        level,
+        reference,
+        spellLevel: 'leveled',
+        castingNote: `${feature.name} (${entry.name} · ${entry.source}) — Cast this spell once without expending a spell slot. Regain this use when you finish a Long Rest.`,
+      },
+    ]
+  })
 }
 
 function getRangerGrant(
@@ -335,9 +483,14 @@ export function getDirectClassPreparedSpellGrants(
     const cls = findClassReference(entry, classes)
     const hex = getEldritchHexGrant(character, entry, cls, catalogs)
     if (!cls) return hex ? [hex] : []
+    const schedule = getPreparedSchedule(cls)
+    const slotFree =
+      schedule && Object.values(schedule).some((row) => record(row).daily !== undefined)
+        ? getSlotFreePreparedGrants(character, entry, catalogs)
+        : []
     if (norm(cls.name) === 'bard' && norm(cls.source) === 'xphb' && entry.levels === 20) {
       const current = hasCurrentBardWordsOfCreation(cls, catalogs)
-      return ['Power Word Heal|XPHB', 'Power Word Kill|XPHB'].map(
+      const words = ['Power Word Heal|XPHB', 'Power Word Kill|XPHB'].map(
         (reference): ClassPreparedSpellGrant => ({
           owner: ['class', 'bard', 'xphb'],
           target: WORDS_OF_CREATION_TARGET,
@@ -356,22 +509,13 @@ export function getDirectClassPreparedSpellGrants(
               }),
         }),
       )
+      return [...words, ...slotFree]
     }
-    const blocks = cls.additionalSpells as AdditionalSpellBlock[] | undefined
-    const block = Array.isArray(blocks) && blocks.length === 1 ? blocks[0] : undefined
-    const prepared = block?.prepared
-    const schedule =
-      block &&
-      Object.keys(block).length === 1 &&
-      prepared &&
-      typeof prepared === 'object' &&
-      !Array.isArray(prepared)
-        ? prepared
-        : undefined
     if (findClassReference(warlock, [cls]))
       return [
         ...(entry.levels >= 9 ? [getContactPatronGrant(cls, catalogs, schedule)] : []),
         ...(hex ? [hex] : []),
+        ...slotFree,
       ]
     if (!schedule || !Array.isArray(cls.classFeatures) || !Array.isArray(cls.classFeatureRefs))
       return []
@@ -437,7 +581,11 @@ export function getDirectClassPreparedSpellGrants(
       findClassReference(paladin, [cls]) ||
       (norm(cls.name) === 'druid' && norm(cls.source) === 'xphb')
     )
-      return current
-    return [...current, ...inheritedPreparedGrants(character, entry, catalogs, schedule)]
+      return [...current, ...slotFree]
+    return [
+      ...current,
+      ...inheritedPreparedGrants(character, entry, catalogs, schedule),
+      ...slotFree,
+    ]
   })
 }

@@ -100,7 +100,7 @@ describe.runIf(available)('configured inherited class progression', () => {
     parent: 'Cleric' | 'Druid',
     actor = 'Lightkeeper',
     source = 'EXAMPLE',
-    conflictingFeatureText = false,
+    conflictingFeatureText?: 'nested' | 'inline',
   ) =>
     new FiveEToolsDataLoader(
       { type: 'local', path: 'data', isValid: true },
@@ -168,6 +168,12 @@ describe.runIf(available)('configured inherited class progression', () => {
               },
             )
           }
+          if (actor === 'Lightkeeper' && file === 'class/class-deathknight.json') {
+            const template = document.class.find(
+              (row: { name: string }) => row.name === 'Death Knight',
+            )
+            document.class.push({ ...structuredClone(template), name: 'Wardblade', source })
+          }
           if (conflictingFeatureText && file === 'class/class-druid.json') {
             const terrain = document.subclassFeature.find(
               (row: { name: string; source: string }) =>
@@ -207,6 +213,27 @@ describe.runIf(available)('configured inherited class progression', () => {
               (row: { name: string }) => row.name === 'Runeforging',
             )
             forging.entries[2].name = 'Frost #2'
+            const smite = document.classFeature.find(
+              (row: { name: string }) => row.name === 'Runic Smite',
+            )
+            smite.entries[1] = smite.entries[1].replace(
+              'Long Rest|XPHB',
+              conflictingFeatureText === 'inline' ? 'Long Rest|XPHB|Short Rest' : 'Long Rest|WoW',
+            )
+            const steed = document.classFeature.find(
+              (row: { name: string; className: string }) =>
+                row.name === 'Faithful Steed' && row.className === 'Death Knight',
+            )
+            if (conflictingFeatureText === 'inline') {
+              steed.entries[2] = steed.entries[2].replace(
+                'can be Undead.',
+                'can be Undead; you can cast the spell without a slot only while you have the Undead creature type.',
+              )
+            } else {
+              steed.entries[3].entries.push(
+                'You can only cast Find Steed in this way while you have the Undead creature type.',
+              )
+            }
           }
           return document
         },
@@ -289,6 +316,175 @@ describe.runIf(available)('configured inherited class progression', () => {
       .character.spells.spellProfiles.flatMap((profile) => profile.fixedSpells ?? [])
       .map((reference) => reference.toLowerCase())
 
+  test('earned base spells are always prepared and keep their own slot-free use through save and export', async () => {
+    const initial = start('Death Knight')
+    const profileId = 'class:Death Knight|WoW'
+    const prepared = (character: Character) =>
+      calculation(character)
+        .character.spells.spellProfiles.find((row) => row.id === profileId)
+        ?.alwaysPreparedSpells?.map((reference) => reference.toLowerCase()) ?? []
+    expect(prepared(initial)).toEqual([])
+    const second = reachLevel(initial, 2)
+    expect(prepared(second)).toEqual(['rune strike|wow'])
+    expect(prepared(reachLevel(second, 4))).toEqual(['rune strike|wow'])
+    const fifth = reachLevel(second, 5)
+    expect(prepared(fifth)).toEqual(['rune strike|wow', 'find steed|xphb'])
+    expect(calculation(fifth).fixedClassSpellStatuses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          owner: ['class', 'death knight', 'wow'],
+          featureName: 'Runic Smite',
+          active: true,
+          prepared: true,
+          castingNote: expect.stringContaining('once without expending a spell slot'),
+        }),
+        expect.objectContaining({
+          owner: ['class', 'death knight', 'wow'],
+          featureName: 'Faithful Steed',
+          active: true,
+          prepared: true,
+          castingNote: expect.stringContaining('finish a Long Rest'),
+        }),
+      ]),
+    )
+    const ordinaryPrepare = (
+      character: Character,
+      reference: string,
+      current = spellContext(character),
+    ) =>
+      setDailyClassSpellPreparedCommand(
+        character,
+        character.provenance,
+        profileId,
+        reference,
+        true,
+        current,
+      )
+    expect(() => ordinaryPrepare(fifth, 'Find Steed|XPHB')).toThrow('already always prepared')
+    const withoutSteed = {
+      ...spellContext(fifth),
+      catalogs: {
+        ...catalogs,
+        classFeatures: catalogs.classFeatures.filter(
+          (row) => row.name !== 'Faithful Steed' || row.className !== 'Death Knight',
+        ),
+      },
+    }
+    const stored = reopen(fifth, ordinaryPrepare(fifth, 'Find Steed|XPHB', withoutSteed))
+    expect(prepared(stored)).toContain('find steed|xphb')
+    const withdrawn = projectManagedClassSpellState(stored, withoutSteed)
+    expect(
+      withdrawn.character.spells.spellProfiles.find((row) => row.id === profileId),
+    ).toMatchObject({ preparedSpells: ['Find Steed|XPHB'] })
+    expect(
+      withdrawn.fixedClassSpellStatuses.some((row) => row.featureName === 'Faithful Steed'),
+    ).toBe(false)
+    expect(
+      prepared(reopen(fifth, applyLevelDown(fifth, fifth.provenance, calculation(fifth)))),
+    ).toEqual(['rune strike|wow'])
+    expect(prepared({ ...fifth, allowedSources: ['XPHB'] })).toEqual([])
+    expect(prepared(fifth)).toContain('find steed|xphb')
+
+    const restored = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const vm = createCharacterSheetViewModel(stored, restored, restored)
+    expect(vm.spellRows.find((row) => row.name === 'Rune Strike')).toMatchObject({
+      level: '1',
+      prepared: true,
+      castingNote: expect.stringContaining('Long Rest'),
+    })
+    expect(vm.spellRows.find((row) => row.name === 'Find Steed')).toMatchObject({
+      level: '2',
+      prepared: true,
+      castingNote: expect.stringContaining('Long Rest'),
+    })
+    expect(vm.actions.some((action) => action.name === 'Rune Strike')).toBe(true)
+    for (const template of ['2024-official', '2014-custom'] as const) {
+      const doc = await PDFDocument.load(
+        await generateTestCharacterSheet(vm, template, {
+          text: { descriptions: 'full', overflow: 'notes' },
+        }),
+      )
+      const text = doc
+        .getForm()
+        .getFields()
+        .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+      expect(text, template).toContain(
+        'Runic Smite (Death Knight · WoW) — Cast this spell once without expending a spell slot.',
+      )
+      expect(text, template).toContain(
+        'Faithful Steed (Death Knight · WoW) — Cast this spell once without expending a spell slot.',
+      )
+    }
+  }, 60_000)
+
+  test('the daily schedule uses the actual selected owner under a different source', () => {
+    const actor = makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: ['EXAMPLE', 'WoW', 'XPHB'],
+      classProgression: [{ name: 'Wardblade', source: 'EXAMPLE', levels: 5 }],
+    })
+    const status = calculation(actor).fixedClassSpellStatuses
+    expect(status).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          owner: ['class', 'wardblade', 'example'],
+          reference: 'rune strike|wow',
+          active: true,
+        }),
+        expect.objectContaining({
+          owner: ['class', 'wardblade', 'example'],
+          reference: 'find steed|xphb',
+          active: true,
+        }),
+      ]),
+    )
+    const mixed = {
+      ...actor,
+      classProgression: [
+        ...actor.classProgression,
+        { name: 'Death Knight', source: 'WoW', levels: 5 },
+      ],
+    }
+    const rules = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const sheet = createCharacterSheetViewModel(mixed, rules, rules)
+    const notes = [
+      sheet.spellRows.find((row) => row.name === 'Find Steed')?.castingNote,
+      sheet.actions.find((row) => row.name === 'Find Steed')?.description,
+    ]
+    for (const note of notes) {
+      expect(note).toContain('Faithful Steed (Wardblade · EXAMPLE)')
+      expect(note).toContain('Faithful Steed (Death Knight · WoW)')
+    }
+  })
+
+  test('mislabelled rest and conditional spell text withhold slot-free preparation', async () => {
+    const conflicting = composeGameDataLayers([
+      await loadWithCopy('Cleric', 'Lightkeeper', 'EXAMPLE', 'inline'),
+    ])
+    const actor = makeCharacterFixture({
+      originSystem: '2024',
+      allowedSources: sources,
+      classProgression: [{ name: 'Death Knight', source: 'WoW', levels: 5 }],
+    })
+    expect(
+      getDirectClassPreparedSpellGrants(
+        actor,
+        conflicting.classes,
+        buildClassChoiceFeatureCatalogs(conflicting),
+      ),
+    ).toEqual([])
+  }, 45_000)
+
   test('inscribed spells follow the marked inventory row and the subclass’s earned schedule', () => {
     let character: Character = chooseSubclass(
       reachLevel(start('Death Knight'), 3),
@@ -343,10 +539,14 @@ describe.runIf(available)('configured inherited class progression', () => {
       expect.arrayContaining(['sword-a', 'sword-b']),
     )
     expect(setup()?.weapons.map((row) => row.id)).not.toContain('bow')
-    expect(fixedSpells(character)).toEqual(['death grip|wow'])
+    expect(fixedSpells(character)).toEqual(['death grip|wow', 'rune strike|wow'])
     expect(() => edit('Frost', 'bow')).toThrow(/melee weapon/)
     edit('Frost', 'sword-a')
-    expect(fixedSpells(character)).toEqual(['death grip|wow', 'chains of ice|wow'])
+    expect(fixedSpells(character)).toEqual([
+      'death grip|wow',
+      'chains of ice|wow',
+      'rune strike|wow',
+    ])
     expect(setup()?.active).toBe(true)
     const marked = character
     const previousPrinting = characterPersistenceSchema.parse(
@@ -370,7 +570,7 @@ describe.runIf(available)('configured inherited class progression', () => {
     )
     expect(dormant?.saved?.mark.target).toContain('|runic power|')
     expect(dormant?.active).toBe(false)
-    expect(fixedSpells(previousPrinting)).toEqual(['death grip|wow'])
+    expect(fixedSpells(previousPrinting)).toEqual(['death grip|wow', 'rune strike|wow'])
     const oldMark = dormant?.saved?.mark
     const currentTarget = dormant?.current?.target
     expect(
@@ -419,7 +619,13 @@ describe.runIf(available)('configured inherited class progression', () => {
       character,
       removeManualEquipmentCommand(character, character.provenance, 'sword-b'),
     )
-    expect(fixedSpells(removed)).toEqual(['death grip|wow', 'death and decay|wow'])
+    const retainedSpells = [
+      'death grip|wow',
+      'death and decay|wow',
+      'rune strike|wow',
+      'find steed|xphb',
+    ]
+    expect(fixedSpells(removed)).toEqual(retainedSpells)
     expect(
       fixedSpells({
         ...removed,
@@ -435,14 +641,14 @@ describe.runIf(available)('configured inherited class progression', () => {
           },
         ],
       }),
-    ).toEqual(['death grip|wow', 'death and decay|wow'])
+    ).toEqual(retainedSpells)
     const rolledBack = reopen(
       marked,
       applyLevelDown(marked, marked.provenance, calculation(marked)),
     )
     expect(rolledBack.equipment.every((item) => !item.weaponInscriptions?.length)).toBe(true)
     edit()
-    expect(fixedSpells(character)).toEqual(['death grip|wow', 'death and decay|wow'])
+    expect(fixedSpells(character)).toEqual(retainedSpells)
   })
 
   test('copied class grants follow their earned features and authored replacements', () => {
@@ -817,7 +1023,7 @@ describe.runIf(available)('configured inherited class progression', () => {
 
   test('authored option and casting restrictions must agree with the structured schedule', async () => {
     const conflicting = composeGameDataLayers([
-      await loadWithCopy('Cleric', 'Lightkeeper', 'EXAMPLE', true),
+      await loadWithCopy('Cleric', 'Lightkeeper', 'EXAMPLE', 'nested'),
     ])
     const current = buildClassChoiceFeatureCatalogs(conflicting)
     const druid = conflicting.classes.find((row) => row.name === 'Druid' && row.source === 'WoW')!
@@ -845,6 +1051,7 @@ describe.runIf(available)('configured inherited class progression', () => {
       }),
     )
     const [owner] = deathKnight.classProgression
+    expect(getDirectClassPreparedSpellGrants(deathKnight, conflicting.classes, current)).toEqual([])
     const setup = getWeaponInscriptionSetup(deathKnight, owner, current)
     expect(setup?.current?.runes).toContain('Frost #2')
     if (!setup?.current || !setup.weapons.length) throw Error('Missing an eligible melee weapon')

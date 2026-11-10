@@ -412,9 +412,15 @@ function targetError(
     return 'This spell is outside the schools available for this choice.'
 }
 
-function isAvailableDirectPreparedSpell(spell: Spell5e, spellLevel: number, target: string) {
+function isAvailableDirectPreparedSpell(
+  spell: Spell5e,
+  spellLevel: number | 'leveled',
+  target: string,
+) {
   if (
-    spell.level !== spellLevel ||
+    (spellLevel === 'leveled'
+      ? !Number.isInteger(spell.level) || spell.level < 1 || spell.level > 9
+      : spell.level !== spellLevel) ||
     (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1
   )
     return false
