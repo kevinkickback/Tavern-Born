@@ -929,6 +929,7 @@ export function projectManagedClassSpellState(
         visibleSpellLevels,
         oathReprints,
         includedDomainReprints,
+        grant.requiresSpellTrigger ? targets.get(getSpellReferenceKey(grant.spellName)) : undefined,
       )
       if (
         (!active && (namedPreparation || grant.feature)) ||

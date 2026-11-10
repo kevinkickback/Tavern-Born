@@ -8,12 +8,52 @@ import {
   optionalDeclarationDigest,
   optionalDeclarationObject as record,
 } from './optionalClassDeclarationStructure'
-import { collectSubclassProficiencyPaths } from './subclassProficiencyCertificates'
+import {
+  collectSubclassProficiencyPaths,
+  isExactSubclassProficiencyReference,
+} from './subclassProficiencyCertificates'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
 
 type SubclassCatalog = {
   subclassFeatures: readonly SubclassFeature[]
   subclassFeatureCandidates?: ReadonlyMap<string, readonly SubclassFeature[]>
+}
+
+const validFeature = (key: string, feature: SubclassFeature) =>
+  getSubclassFeatureIdentity(feature) === key &&
+  !!feature.source?.trim() &&
+  !!feature.classSource?.trim() &&
+  !!feature.subclassSource?.trim() &&
+  !feature._copy &&
+  !feature.sourceIdentityConflict &&
+  !feature.featureOptionSourceConflict &&
+  !feature.isClassFeatureVariant
+
+/** Verify a child of an already authorized, non-selection menu against its exact current source. */
+export function getCurrentSubclassMenuReference(value: unknown, catalogs: SubclassCatalog) {
+  const reference = record(value)
+  const uid = reference.subclassFeature
+  if (
+    reference.type !== 'refSubclassFeature' ||
+    typeof uid !== 'string' ||
+    !isExactSubclassProficiencyReference(reference, uid) ||
+    Object.keys(reference).some((key) => !['type', 'subclassFeature', 'feature'].includes(key))
+  )
+    return undefined
+  const target = decodeOptionalDeclaration(uid, 'subclassFeature')?.target
+  const attached = reference.feature as SubclassFeature | undefined
+  if (!target || !attached || !validFeature(target, attached)) return undefined
+  const candidates = catalogs.subclassFeatureCandidates
+    ? (catalogs.subclassFeatureCandidates.get(target) ?? [])
+    : catalogs.subclassFeatures.filter((feature) => getSubclassFeatureIdentity(feature) === target)
+  const digest = optionalDeclarationDigest(attached)
+  return digest &&
+    candidates.length &&
+    candidates.every(
+      (feature) => validFeature(target, feature) && optionalDeclarationDigest(feature) === digest,
+    )
+    ? { target, feature: candidates[0] }
+    : undefined
 }
 
 export function getDeclaredSubclassGains(cls: Pick<Class5e, 'classFeatures' | 'classFeatureRefs'>) {
@@ -71,15 +111,6 @@ export function getOwnedSubclassFeature(
     const decoded = decodeOptionalDeclaration(ref.ref, 'subclassFeature')
     return !!decoded && getDirectSubclassFeatureReference(subclass, decoded.target) === ref
   })
-  const valid = (key: string, feature: SubclassFeature) =>
-    getSubclassFeatureIdentity(feature) === key &&
-    !!feature.source?.trim() &&
-    !!feature.classSource?.trim() &&
-    !!feature.subclassSource?.trim() &&
-    !feature._copy &&
-    !feature.sourceIdentityConflict &&
-    !feature.featureOptionSourceConflict &&
-    !feature.isClassFeatureVariant
   const attached = collectUnconditionalFeatureReferences(refs, 'subclassFeature')
   const resolve = (key: string) => {
     const candidates = catalogs
@@ -93,7 +124,9 @@ export function getOwnedSubclassFeature(
     const [first] = candidates
     const signature = first && optionalDeclarationDigest(first)
     return signature &&
-      candidates.every((row) => valid(key, row) && optionalDeclarationDigest(row) === signature)
+      candidates.every(
+        (row) => validFeature(key, row) && optionalDeclarationDigest(row) === signature,
+      )
       ? first
       : undefined
   }
@@ -101,7 +134,7 @@ export function getOwnedSubclassFeature(
     const current = resolve(key)
     return (
       !!current &&
-      valid(key, feature) &&
+      validFeature(key, feature) &&
       optionalDeclarationDigest(current) === optionalDeclarationDigest(feature)
     )
   }).filter((row) => row.target === target)

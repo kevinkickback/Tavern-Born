@@ -10,7 +10,7 @@ import {
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
-import type { Class5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
+import type { Class5e, Spell5e, Subclass5e, SubclassAdditionalSpells } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { FeatureCastOnlyRules } from '@/types/classCasting'
 import { isArcaneArcherCantripOwner } from './arcaneArcherCantripSource'
@@ -74,6 +74,7 @@ import { getRoguePhantomSpellGrants } from './roguePhantomSpells'
 import { getChosenScionAllegiance, isScionOwner } from './rogueScion'
 import { parseSpellToken } from './spellTokens'
 import { getLimitedSubclassCasts } from './subclassLimitedCasting'
+import { getSharedSubclassResourceCasts } from './subclassResourceCasting'
 import {
   getChosenWarlockSpellBlock,
   hasWarlockPatronSpellConfiguration,
@@ -94,6 +95,7 @@ export interface SubclassSpellGrant {
   feature?: { name: string; target: string; castingNote?: string }
   namedChoice?: true
   requiresVisibleSpellRank?: true
+  requiresSpellTrigger?: true
   castOnly?: FeatureCastOnlyRules
   mode: 'prepared' | 'known' | 'expanded' | 'innate' | 'cast-only'
 }
@@ -106,6 +108,7 @@ export function hasCurrentSubclassSpellGrant(
   spellLevels: ReadonlyMap<string, number> | undefined,
   oathReprints?: ReadonlyMap<string, number | undefined>,
   includedDomainReprints?: ReadonlyMap<string, number | undefined>,
+  exactSpell?: Spell5e,
 ) {
   const key = getSpellReferenceKey(grant.spellName)
   const reprintRank = grant.expectedSpellLevel ?? spellLevels?.get(key)
@@ -115,6 +118,18 @@ export function hasCurrentSubclassSpellGrant(
       (oathReprints?.get(key) !== reprintRank &&
         (grant.feature?.target !== INHERITED_DOMAIN_SPELLS ||
           includedDomainReprints?.get(key) !== reprintRank)))
+  )
+    return false
+  if (
+    grant.requiresSpellTrigger &&
+    (!Array.isArray(exactSpell?.time) ||
+      !exactSpell.time.some(
+        (time) =>
+          time?.unit === 'reaction' &&
+          time.number === 1 &&
+          typeof time.condition === 'string' &&
+          time.condition.trim(),
+      ))
   )
     return false
   if (grant.namedChoice || grant.requiresVisibleSpellRank)
@@ -341,6 +356,12 @@ export function getEarnedSubclassSpellGrants(
       )
     const named = getNamedSubclassSpellSource(classData, subclasses[0], scoped)
     const character = landContext?.character
+    const resourceCasts = getSharedSubclassResourceCasts(
+      character,
+      entry,
+      classLevel,
+      landContext?.catalogs,
+    )
     if (
       named &&
       (!character ||
@@ -393,7 +414,7 @@ export function getEarnedSubclassSpellGrants(
         named.inscriptionTarget && selected
           ? [{ prepared: named.common }, { prepared: selected.prepared }]
           : [{ prepared: selected ? selected.prepared : named.common }]
-      return parseSubclassSpells(schedules, classLevel).flatMap((grant) => {
+      const prepared = parseSubclassSpells(schedules, classLevel).flatMap((grant) => {
         const key = getSpellReferenceKey(grant.spellName)
         const visibleRank = landContext?.spells?.get(key)
         if (named.inscriptionTarget && grant.isCantrip && visibleRank !== 0) return []
@@ -406,6 +427,7 @@ export function getEarnedSubclassSpellGrants(
           },
         ]
       })
+      return [...prepared, ...resourceCasts]
     }
     const isNamed = (block: SubclassAdditionalSpells) =>
       typeof block?.name === 'string' && block.name.trim().length > 0
@@ -417,6 +439,7 @@ export function getEarnedSubclassSpellGrants(
         : blocks
     const grants = [
       ...parseSubclassSpells(unambiguous, classLevel),
+      ...resourceCasts,
       ...getLimitedSubclassCasts(
         classData,
         subclasses[0],

@@ -316,6 +316,233 @@ describe.runIf(available)('configured inherited class progression', () => {
       .character.spells.spellProfiles.flatMap((profile) => profile.fixedSpells ?? [])
       .map((reference) => reference.toLowerCase())
 
+  test('shared resource casts and their counter follow earned subclass gains and survive reopen', async () => {
+    const lookup = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const view = (character: Character) => createCharacterSheetViewModel(character, lookup, lookup)
+    const paid = (character: Character) =>
+      calculation(character).fixedClassSpellStatuses.filter((row) => row.active && row.castOnly)
+    const resource = (character: Character) =>
+      view(character).classResourceRows.find((row) => row.label === 'Soul Fragments')
+    const initial = start('Demon Hunter')
+    const weak = { ...initial, abilityScores: { ...initial.abilityScores, wisdom: 8 } }
+    const second = reachLevel(weak, 2)
+    expect(resource(second)).toBeUndefined()
+    const third = chooseSubclass(reachLevel(second, 3), 'Demon Hunter')
+    expect(paid(third).map((row) => row.reference)).toEqual(['feather fall|xphb', 'jump|xphb'])
+    expect(resource(third)).toMatchObject({ max: 1, used: 0, restType: 'long' })
+    expect(view(third).spellRows.find((row) => row.name === 'Feather Fall')).toMatchObject({
+      castingTime: expect.stringMatching(/reaction/i),
+      castingNote: expect.stringContaining('Spend 1 soul fragment'),
+    })
+    const wrongPrinting = Object.fromEntries(
+      Object.entries(lookups.spellsByKey).filter(
+        ([, spell]) => spell.name !== 'Feather Fall' || spell.source !== 'XPHB',
+      ),
+    )
+    const missingSpell = projectManagedClassSpellState(third, {
+      ...spellContext(third),
+      spellsByKey: wrongPrinting,
+    }).fixedClassSpellStatuses
+    expect(missingSpell.find((row) => row.reference === 'feather fall|xphb')?.active).toBe(false)
+    expect(missingSpell.find((row) => row.reference === 'jump|xphb')?.active).toBe(true)
+    expect(paid(third).some((row) => row.reference === 'feather fall|xphb')).toBe(true)
+
+    const tenth = reachLevel(third, 10)
+    expect(paid(tenth).map((row) => row.reference)).toEqual(['feather fall|xphb', 'jump|xphb'])
+    const eleventh = reachLevel(tenth, 11)
+    const cls = classRow('Demon Hunter')
+    const choice = getClassChoiceCandidates(cls, cls.subclasses![0], catalogs).find(
+      (row) => row.label === 'Specialization',
+    )!
+    const options = resolveClassChoiceOptions(
+      choice,
+      createClassChoiceCatalogs(catalogs),
+      [],
+      11,
+      eleventh,
+    )
+    expect(options.filter((row) => row.availability === 'eligible')).toHaveLength(3)
+    for (const option of options.filter((row) => row.availability === 'eligible')) {
+      const specialized = reopen(
+        eleventh,
+        applyClassChoiceSelectionWithGrantsCommand(
+          eleventh,
+          eleventh.provenance,
+          choice,
+          [option.reference],
+          {
+            classes: data.classes,
+            catalogs,
+            spellContext: spellContext(eleventh),
+          },
+        ),
+      )
+      expect(paid(specialized)).toEqual(paid(eleventh))
+    }
+    const sheet = view(eleventh)
+    expect(sheet.spellRows.find((row) => row.name === 'Throw Glaive')).toMatchObject({
+      prepared: true,
+      castingTime: 'Action',
+      castingNote: expect.stringContaining('Spend 1 soul fragment to cast as a Bonus Action'),
+    })
+    expect(sheet.spellRows.find((row) => row.name === 'Counterspell')).toMatchObject({
+      castingNote: expect.stringContaining(
+        'Spend 2 soul fragments to cast in response to the spell’s normal trigger',
+      ),
+    })
+    const wrongTiming = Object.fromEntries(
+      Object.entries(lookups.spellsByKey).map(([key, spell]) => [
+        key,
+        spell.name === 'Counterspell' && spell.source === 'XPHB'
+          ? { ...spell, time: [{ number: 1, unit: 'action' }] }
+          : spell,
+      ]),
+    )
+    const mistimed = projectManagedClassSpellState(eleventh, {
+      ...spellContext(eleventh),
+      spellsByKey: wrongTiming,
+    }).fixedClassSpellStatuses
+    expect(mistimed.find((row) => row.reference === 'counterspell|xphb')?.active).toBe(false)
+    expect(mistimed.find((row) => row.reference === 'throw glaive|wow')?.active).toBe(true)
+    const missingColumn = {
+      ...data,
+      classes: data.classes.map((row) =>
+        row === cls
+          ? {
+              ...row,
+              subclasses: row.subclasses?.map((subclass) => ({
+                ...subclass,
+                additionalSpells: subclass.additionalSpells?.filter(
+                  (block) => block.name !== 'Havoc',
+                ),
+              })),
+            }
+          : row,
+      ),
+    }
+    const incompleteLookup = {
+      ...lookups,
+      classChoiceClasses: missingColumn.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(missingColumn),
+    }
+    const incompleteSheet = createCharacterSheetViewModel(
+      eleventh,
+      incompleteLookup,
+      incompleteLookup,
+    )
+    expect(incompleteSheet.spellRows.filter((row) => row.castOnly)).toEqual([])
+    expect(
+      incompleteSheet.classResourceRows.find((row) => row.label === 'Soul Fragments'),
+    ).toMatchObject({ max: 1 })
+    expect(
+      sheet.actions
+        .filter((row) => row.name === 'Throw Glaive')
+        .map((row) => row.kind)
+        .sort(),
+    ).toEqual(['action', 'bonus-action'])
+    const thirteenth = reachLevel(eleventh, 13)
+    expect(resource(thirteenth)).toMatchObject({ max: 2 })
+    const wrongProgression = JSON.parse(
+      JSON.stringify(cls)
+        .replace(/your Ranger spell save DC/g, 'your Wizard spell save DC')
+        .replace(/reach Ranger levels/g, 'reach Wizard levels'),
+    ) as typeof cls
+    const wrongClasses = data.classes.map((row) => (row === cls ? wrongProgression : row))
+    const unrelatedLookup = {
+      ...lookups,
+      classChoiceClasses: wrongClasses,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs({
+        ...data,
+        classes: wrongClasses,
+      }),
+    }
+    const unrelated = createCharacterSheetViewModel(thirteenth, unrelatedLookup, unrelatedLookup)
+    expect(unrelated.classResourceRows.some((row) => row.label === 'Soul Fragments')).toBe(false)
+    expect(unrelated.spellRows.find((row) => row.name === 'Throw Glaive')).toMatchObject({
+      prepared: true,
+    })
+    expect(resource(thirteenth)?.usageText).not.toContain('Initiative')
+    expect(resource(reachLevel(thirteenth, 15))?.usageText).toContain('Initiative with none')
+    const veteran = reachLevel(thirteenth, 17)
+    const { id } = resource(third)!
+    expect(resource(veteran)).toMatchObject({ id, max: 3 })
+    const stored: Character = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...veteran,
+          abilityScores: { ...veteran.abilityScores, wisdom: 18 },
+          classResources: { [id]: 2 },
+        }),
+      ),
+    )
+    expect(resource(stored)).toMatchObject({ id, max: 6, used: 4 })
+    const filtered = { ...stored, allowedSources: ['XPHB'] }
+    expect(resource(filtered)).toBeUndefined()
+    expect(paid(filtered)).toEqual([])
+    expect(resource({ ...filtered, allowedSources: sources })).toEqual(resource(stored))
+    const doc = await PDFDocument.load(
+      await generateTestCharacterSheet(view(stored), '2024-official', {
+        text: { descriptions: 'full', overflow: 'notes' },
+      }),
+    )
+    const text = doc
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(text).toMatch(/Soul Fragments\s*[—-]\s*2\/6 available/)
+    expect(text).toContain('Spend 1 soul fragment to cast as a Bonus Action')
+  }, 60_000)
+
+  test('a renamed authored pool works and an unresolved inline attachment cannot grant a paid cast', async () => {
+    const source = await new FiveEToolsDataLoader(
+      { type: 'local', path: 'data', isValid: true },
+      {
+        type: 'local',
+        readJson: async (file) => {
+          let text = await readFile(`data/${file}`, 'utf8')
+          if (file !== 'class/class-demonhunter.json') return JSON.parse(text)
+          text = text
+            .replace(/Soul Fragment/g, 'Spirit Shard')
+            .replace(/soul fragment/g, 'spirit shard')
+            .replace('minimum of one fragment', 'minimum of one shard')
+          const document = JSON.parse(text)
+          const index = document.subclassFeature.findIndex(
+            (row: { name: string }) => row.name === 'Disrupt',
+          )
+          const [disrupt] = document.subclassFeature.splice(index, 1)
+          const knowledge = document.subclassFeature.find(
+            (row: { name: string }) => row.name === 'Illidari Knowledge',
+          )
+          knowledge.entries[1].entries[0].feature = disrupt
+          return document
+        },
+      },
+    ).loadAllData()
+    const current = composeGameDataLayers([source])
+    const lookup = {
+      ...buildGameDataLookups(current),
+      classChoiceClasses: current.classes,
+      classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(current),
+    }
+    const character = chooseSubclass(reachLevel(start('Demon Hunter'), 11), 'Demon Hunter')
+    const view = createCharacterSheetViewModel(character, lookup, lookup)
+    expect(view.classResourceRows.find((row) => row.label === 'Spirit Shards')).toBeDefined()
+    expect(view.spellRows.find((row) => row.name === 'Feather Fall')?.castingNote).toContain(
+      'Spend 1 spirit shard',
+    )
+    expect(view.spellRows.some((row) => row.name === 'Counterspell')).toBe(false)
+    expect(view.spellRows.find((row) => row.name === 'Throw Glaive')).toMatchObject({
+      prepared: true,
+      castingNote: expect.stringContaining('Spend 1 spirit shard'),
+    })
+  }, 60_000)
+
   test('earned base spells are always prepared and keep their own slot-free use through save and export', async () => {
     const initial = start('Death Knight')
     const profileId = 'class:Death Knight|WoW'

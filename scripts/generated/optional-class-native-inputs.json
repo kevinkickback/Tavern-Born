@@ -478,11 +478,11 @@
     },
     {
       "file": "src/lib/5etools/ownedSubclassFeature.ts",
-      "sha256": "cf3605fdf0ba1afeefbbb42eb498a94220db6c90ce3c06c46f52a3397adc3f47"
+      "sha256": "ffd15d27efbfc1ff73aba15c34449bbba93d0f59293691426b3574b4dc2c3d85"
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "558caff2de948b4b06d7f3389d22bd0c05fc1359ce72e4fa5c9908bf0cd0df83"
+      "sha256": "d1b80e0bf31ddfa8adfdfaae58160b7ade4b3f7100debe6873c3d2df281206f3"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -637,12 +637,16 @@
       "sha256": "a9fe686d070f10b1544f7e3c733ccd0d5e5de03a50023c7b580c9715524f7bdd"
     },
     {
+      "file": "src/lib/5etools/subclassResourceCasting.ts",
+      "sha256": "5b7076180293ed00b678984eb196127f0a762628f148dd9c04f8bbb0a03edbae"
+    },
+    {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
       "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "ea2a80338916a89c09783e32543039472770dd20344b2090f48481c1b23ce3b7"
+      "sha256": "3ffa87270eec68c7e881c9370fc3124bdbc75c5d5b5e7e40a8eae7823318ef98"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",

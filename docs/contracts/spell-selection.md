@@ -50,6 +50,12 @@ A cast-only or at-will Invocation does not add a Pact slot or automatically sati
 An Invocation targeting an existing cantrip checks that independent current target and retains
 recoverable intent if it disappears. Full PDF sheets include supported casting terms.
 
+A resource-paid subclass schedule can grant casts independently of a named prepared spell column
+when every column declares the same costs and the earned feature text confirms the spell, cost,
+and casting terms. An uncounted list of authorized uses does not create a build choice. An
+independent prepared grant remains available through its ordinary casting route. Players adjust
+the resource counter manually, and a Long Rest restores it when specified by the feature.
+
 A one-use slot-free class grant needs a current direct feature, the revised Long Rest rule
 reference, and a matching source-qualified prepared schedule. The exact spell entry supplies
 its rank. The grant sits outside ordinary preparation capacity. Spells, Actions and full PDF

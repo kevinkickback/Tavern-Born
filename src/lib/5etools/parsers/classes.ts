@@ -435,9 +435,10 @@ export function parseClassFluffSummaries(
 function resolveInlineSubclassFeatureRef(
   entry: ParsedObject,
   subclassFeatureRecords: unknown[],
+  requiresSourceRecord: boolean,
 ): ParsedObject {
   const refStr = typeof entry.subclassFeature === 'string' ? entry.subclassFeature : ''
-  if (!refStr) return entry
+  if (!refStr && !requiresSourceRecord) return entry
   const parsedRef = { ...decodeSubclassFeatureReference(refStr) }
   const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
     parsedRef,
@@ -454,7 +455,10 @@ function resolveInlineSubclassFeatureRef(
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
     if (
       'feature' in entry &&
-      (isNativeResilienceTarget(target) || declaredCoreSubclass || directArtificer)
+      (requiresSourceRecord ||
+        isNativeResilienceTarget(target) ||
+        declaredCoreSubclass ||
+        directArtificer)
     ) {
       // Raw inline data cannot stand in for the missing declared source record.
       const { feature: _attachment, ...declaration } = entry
@@ -482,17 +486,23 @@ function enrichEntriesSubclassRefs(
   entries: unknown[],
   subclassFeatureRecords: unknown[],
   includeListItems = false,
+  requiresSourceRecord = false,
 ): unknown[] {
   return entries.map((e) => {
     if (typeof e !== 'object' || e === null) return e
     const obj = e as ParsedObject
     if (obj.type === 'refSubclassFeature') {
-      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords)
+      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords, requiresSourceRecord)
     }
     if (Array.isArray(obj.entries)) {
       return {
         ...obj,
-        entries: enrichEntriesSubclassRefs(obj.entries, subclassFeatureRecords, includeListItems),
+        entries: enrichEntriesSubclassRefs(
+          obj.entries,
+          subclassFeatureRecords,
+          includeListItems,
+          obj.type === 'options' && obj.style === 'list-hang-notitle' && !('count' in obj),
+        ),
       }
     }
     if (includeListItems && obj.type === 'list' && Array.isArray(obj.items)) {
