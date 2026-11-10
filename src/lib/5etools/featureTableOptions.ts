@@ -15,7 +15,7 @@ import {
 } from './featureOptionIdentity'
 import { featureOptionRulesSignature } from './featureRulesSignature'
 import { STORM_TARGETS } from './stormAuraIdentity'
-import { isAuditedStormFeature } from './stormAuraSource'
+import { canonicalStormRuleEntries, isAuditedStormFeature } from './stormAuraSource'
 import type { UnconditionalFeatureReference } from './unconditionalFeatureReferences'
 
 export const DRAGON_ANCESTOR_REF = 'Dragon Ancestor|Sorcerer|PHB|Draconic|PHB|1|PHB'
@@ -67,7 +67,9 @@ export function auditFeatureOptionSources(
     if (target && audited.has(target)) {
       const values = signatures.get(target) ?? new Set<string | undefined>()
       values.add(
-        Array.isArray(feature.entries) ? featureOptionRulesSignature(feature.entries) : undefined,
+        Array.isArray(feature.entries)
+          ? featureOptionRulesSignature(canonicalStormRuleEntries(target, feature.entries))
+          : undefined,
       )
       signatures.set(target, values)
     }

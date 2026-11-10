@@ -6,6 +6,7 @@ import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { CopyResolutionError, resolveCopiedRecords } from '@/lib/5etools/copyResolution'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument, parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import { createIndexedSubclassFeatureResolver } from '@/lib/5etools/subclassSourcePreparation'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   buildClassChoiceFeatureCatalogs,
@@ -329,19 +330,24 @@ describe('subclass-feature copy materialization', () => {
     'materializes all configured raw copies and actual Nature nested declarations',
     () => {
       const index = JSON.parse(readFileSync('data/class/index.json', 'utf8'))
+      const documents = new Map(
+        [...new Set<string>(Object.values(index))].map((file) => [
+          file,
+          JSON.parse(readFileSync(join('data/class', file), 'utf8')),
+        ]),
+      )
+      const prepareFeatures = createIndexedSubclassFeatureResolver(index, documents)
       let copies = 0
-      for (const file of new Set<string>(Object.values(index))) {
-        const raw = JSON.parse(readFileSync(join('data/class', file), 'utf8')),
-          rows = raw.subclassFeature ?? [],
-          before = structuredClone(raw),
-          r = resolve(rows)
-        expect(r.diagnostics).toEqual([])
+      for (const [file, raw] of documents) {
+        const rows = raw.subclassFeature ?? []
+        const before = structuredClone(raw)
+        const prepared = prepareFeatures(file)
         for (const [i, f] of rows.entries())
           if (f._copy) {
             copies++
-            expect(r.records[i]).not.toHaveProperty('_copy')
-            expect(r.records[i].entries).toBeDefined()
-            expect(getSubclassFeatureIdentity(r.records[i])).toBe(getSubclassFeatureIdentity(f))
+            expect(prepared[i]).not.toHaveProperty('_copy')
+            expect(prepared[i].entries).toBeDefined()
+            expect(getSubclassFeatureIdentity(prepared[i])).toBe(getSubclassFeatureIdentity(f))
           }
         if (file === 'class-cleric.json') {
           const c = (parseClasses(raw) as Class5e[]).find((c) => c.source === 'XPHB')!,

@@ -88,7 +88,7 @@ test.runIf(available)(
         policy(),
       ),
     )
-    expect(slots().find((slot) => slot.token === 'Gaming Set')!.candidates).toEqual([])
+    expect(slots().find((slot) => slot.token === 'setGaming')!.candidates).toEqual([])
     expect(focus().candidates).toEqual([
       { name: 'Crystal', source: 'XPHB' },
       { name: 'Wand', source: 'XPHB' },
@@ -135,7 +135,7 @@ test.runIf(available)(
         tool.id,
       ),
     )
-    const gaming = slots().find((slot) => slot.token === 'Gaming Set')!
+    const gaming = slots().find((slot) => slot.token === 'setGaming')!
     expect(gaming.candidates).toEqual([{ name: 'Dice Set', source: 'XPHB' }])
     apply(
       applyBackgroundSelectionCommand(

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ensureStartupPromptResolved } from './helpers/startup'
+import { ensureStartupPromptResolved, MINIMAL_GAME_DATA, seedAppState } from './helpers/startup'
 
 const CHARACTER_ROUTES = [
   '/build',
@@ -30,6 +30,54 @@ const CHARACTER_ROUTES = [
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-route-guard-seed')
+})
+
+test('Compendium source search stays above the app footer with a scrollable list', async ({
+  page,
+}) => {
+  const sources = Array.from({ length: 60 }, (_, index) => ({
+    abbreviation: `TEST${index}`,
+    name: `Source ${index}`,
+    group: 'supplement' as const,
+  }))
+  await seedAppState(page, {
+    sourcePath: 'e2e-compendium-sources',
+    gameData: {
+      ...MINIMAL_GAME_DATA,
+      sources,
+      conditions: sources.map((source) => ({
+        name: `Condition ${source.name}`,
+        source: source.abbreviation,
+      })),
+    },
+  })
+  await page.reload()
+  await page.goto('/#/compendium')
+  const button = page.getByRole('button', { name: 'Sources' })
+  const picker = page.getByRole('dialog', { name: 'Filter by source' })
+  const search = picker.getByRole('textbox', { name: 'Search sources' })
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 900, height: 480 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await button.click()
+    await expect(search).toBeFocused()
+    await expect
+      .poll(async () => {
+        const [menu, main] = await Promise.all([
+          picker.boundingBox(),
+          page.locator('main').boundingBox(),
+        ])
+        return menu && main ? main.y + main.height - menu.y - menu.height : 0
+      })
+      .toBeGreaterThanOrEqual(11)
+    await search.fill('test59')
+    await expect(picker.getByRole('checkbox')).toHaveCount(1)
+    await expect(picker.getByRole('checkbox', { name: /Source 59/ })).toBeVisible()
+    await search.press('Escape')
+    await expect(picker).toBeHidden()
+  }
 })
 
 test('every character-only route redirects to the empty library without an active character', async ({

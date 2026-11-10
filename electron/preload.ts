@@ -32,6 +32,8 @@ const electronAPI = {
     node: process.versions.node,
   },
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
+  saveCharacterFile: (filename: string, text: string): Promise<boolean> =>
+    ipcRenderer.invoke('character:save-file', filename, text),
   discardLocalDataRoot: (root: string): void => ipcRenderer.send('fs:discardDataRoot', root),
   approveLocalDataRoot: (root: string): Promise<void> =>
     ipcRenderer.invoke('fs:approveDataRoot', root),

@@ -260,6 +260,22 @@ test.skipIf(!hasCatalog).each(editions)(
     expect(fixed(3)).toEqual(exact([...first, ...second, 'sacred flame']))
     expect(fixed(gain, absent)).toEqual([])
     expect(fixed(gain)).toEqual(exact(firstNames))
+    const owner = actor(gain).classProgression[0]
+    const cls = primary.classChoiceFeatureCatalogs.classes.find(
+      (row) => row.name === owner.name && row.source === owner.source,
+    )
+    if (!cls) throw new Error('Missing Lunar Sorcery owner')
+    const malformed = {
+      ...cls,
+      subclasses: cls.subclasses?.map((subclass) =>
+        subclass.name === owner.subclass && subclass.source === owner.subclassSource
+          ? { ...subclass, additionalSpells: [null] as unknown as typeof subclass.additionalSpells }
+          : subclass,
+      ),
+    }
+    expect(
+      getEarnedSubclassSpellGrants(malformed, owner)?.map((spell) => spell.spellName.toLowerCase()),
+    ).toEqual(exact(['sacred flame']))
     const earned = [...first, ...second, 'sacred flame']
     for (const [level, spells] of [
       [5, ['dispel magic', 'vampiric touch', 'phantom steed']],

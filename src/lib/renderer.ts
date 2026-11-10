@@ -93,6 +93,7 @@ export function renderEntry(entry: unknown): string {
       colLabels?: string[]
       rows?: unknown[][]
       subclassFeature?: string
+      optionalfeature?: string
     }
     if (entryObj.type === 'entries') {
       if (entryObj.entries !== undefined && !Array.isArray(entryObj.entries)) return ''
@@ -119,6 +120,23 @@ export function renderEntry(entry: unknown): string {
         .map((item) => `<li>${renderEntry(item)}</li>`)
         .join('')
       return sanitizeRenderedHtml(`<ul>${items}</ul>`)
+    }
+
+    if (entryObj.type === 'options') {
+      const options = entryArray(entryObj.entries).map(renderEntry).filter(Boolean)
+      return options.length
+        ? sanitizeRenderedHtml(`<ul>${options.map((option) => `<li>${option}</li>`).join('')}</ul>`)
+        : ''
+    }
+
+    if (entryObj.type === 'refOptionalfeature' && typeof entryObj.optionalfeature === 'string') {
+      const [name, source = '', display = '', ...rest] = entryObj.optionalfeature
+        .split('|')
+        .map((field) => field.trim())
+      if (!name || rest.length || /[{}]/.test(entryObj.optionalfeature)) return ''
+      const label = typeof entryObj.name === 'string' ? entryObj.name.trim() : ''
+      const displayName = label && !/[{}]/.test(label) ? label : display
+      return renderEntry(`{@optfeature ${name}|${source}|${displayName}}`)
     }
 
     if (entryObj.type === 'table') {

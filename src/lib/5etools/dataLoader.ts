@@ -26,12 +26,12 @@ import {
 import { buildGameDataLookups } from './lookups'
 import { appendMagicVariantReferences, parseMagicVariantTemplates } from './magicVariants'
 import { parseOptionalClassSections } from './optionalClassSectionSource'
+import { createIndexedClassDocumentParser } from './parsers/classes'
 import {
   buildSourcesList,
   parseActions,
   parseBackgroundFluff,
   parseBackgrounds,
-  parseClassDocument,
   parseClassFluff,
   parseConditions,
   parseCreatures,
@@ -64,11 +64,6 @@ import { createJsonResourceReader, type JsonResourceReader } from './resourceRea
 import { CreatureDataSchema, OptionalClassBookDataSchema } from './schemas'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
-import {
-  createIndexedClassResolver,
-  createIndexedSubclassFeatureResolver,
-  createIndexedSubclassResolver,
-} from './subclassSourcePreparation'
 import {
   prepareToolProficiencySources,
   preserveToolSourcePresentation,
@@ -639,29 +634,22 @@ export class FiveEToolsDataLoader {
             options?.onResourceFailure?.(fluffFile, { required: false })
           }
           documents.set(file, classData)
-          return { file, classData, fluff }
+          return { file, fluff }
         } catch (error) {
           reportIndexedFailure(`class/${file}`, error, options)
         }
       },
     )
 
-    const prepareFeatures = createIndexedSubclassFeatureResolver(indexData, documents)
-    const prepareClasses = createIndexedClassResolver(indexData, documents)
-    const prepareSubclasses = createIndexedSubclassResolver(indexData, documents)
+    const parseIndexed = createIndexedClassDocumentParser(indexData, documents)
     const optionalClassFeatureSources: NonNullable<GameData['optionalClassFeatureSources']> = []
     const classCastingSources: NonNullable<GameData['classCastingSources']> = []
     for (const loaded of loadedClasses) {
       if (!loaded) continue
       throwIfAborted(options?.signal)
-      const { file, classData, fluff } = loaded
+      const { file, fluff } = loaded
       try {
-        const parsedDocument = parseClassDocument(
-          classData,
-          `class/${file}`,
-          prepareFeatures(file),
-          { classes: prepareClasses(file), subclasses: prepareSubclasses(file) },
-        )
+        const parsedDocument = parseIndexed(file)
         const fluffByKey = new Map(fluff.map((item) => [`${item.name}|${item.source}`, item]))
         const classes = parsedDocument.classes as GameData['classes']
         for (const item of classes) {

@@ -258,6 +258,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const deleteCharacters = useCharacterStore((state) => state.deleteCharacters)
   const duplicateCharacter = useCharacterStore((state) => state.duplicateCharacter)
   const { isPending: isLibraryPending, run: runLibraryAction } = useAsyncAction()
+  const { run: runCharacterExport } = useAsyncAction()
   const unsupportedCharacters = useCharacterStore((state) => state.unsupportedCharacters)
   const dismissUnsupportedCharacters = useCharacterStore(
     (state) => state.dismissUnsupportedCharacters,
@@ -418,10 +419,28 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     })
   }
 
-  const handleExportCharacter = useCallback((character: Character) => {
-    downloadPreparedFile(prepareCharacterDownload(character))
-    toast.success('Character exported successfully')
-  }, [])
+  const handleExportCharacter = useCallback(
+    (character: Character) =>
+      runCharacterExport(
+        async () => {
+          const file = prepareCharacterDownload(character)
+          if (!window.electronAPI?.saveCharacterFile) {
+            downloadPreparedFile(file)
+            return
+          }
+          if (await window.electronAPI.saveCharacterFile(file.filename, file.text)) {
+            toast.success('Character exported successfully')
+          }
+        },
+        (error) => {
+          toast.error(
+            'Could not export the character.',
+            error instanceof Error ? { description: error.message } : undefined,
+          )
+        },
+      ),
+    [runCharacterExport],
+  )
 
   const handleExportUnsupportedCharacters = useCallback(() => {
     try {

@@ -35,6 +35,16 @@ function makeUsedCharacter() {
 }
 
 describe('character transfer', () => {
+  test.each([
+    ['War\u0000forged', 'War_forged.tbc'],
+    ['CON', '_CON.tbc'],
+    ['LPT².backup', '_LPT².backup.tbc'],
+  ])('suggests a portable filename for %j while keeping the saved name', (name, filename) => {
+    const file = prepareCharacterDownload(makeCharacterFixture({ name }))
+    expect(file.filename).toBe(filename)
+    expect(JSON.parse(file.text).name).toBe(name)
+  })
+
   test('creates an independent exact copy with fresh identity metadata', () => {
     const source = makeUsedCharacter()
     const copy = duplicateCharacter(source, {

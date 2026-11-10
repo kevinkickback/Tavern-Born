@@ -3,6 +3,7 @@ export interface ParsedFilterTag {
   label: string
   entityType: ChoiceOptionEntityType
   filter: NormalizedChoiceOptionFilter
+  extendSourceDefaults?: true
   /** Starting-equipment policy cannot silently discard an unimplemented source constraint. */
   unsupportedClauses?: string[]
 }
@@ -51,6 +52,7 @@ export function parseFilterTags(text: string): ParsedFilterTag[] {
     const filter: NormalizedChoiceOptionFilter = { entityType }
     const unsupportedClauses: string[] = []
     const seenClauses = new Map<string, string>()
+    let extendSourceDefaults: true | undefined
     for (const clause of clauses) {
       const separator = clause.indexOf('=')
       if (separator < 0) {
@@ -58,8 +60,29 @@ export function parseFilterTags(text: string): ParsedFilterTag[] {
         continue
       }
       const key = clause.slice(0, separator).trim().toLowerCase()
-      const values = clause
+      const [valueList, meta, options, ...extra] = clause
         .slice(separator + 1)
+        .split('=')
+        .map((value) => value.trim())
+      // Renderer.getFilterSubhashes uses filter=value=metadata=options.
+      if (
+        entityType === 'optionalFeature' &&
+        key === 'source' &&
+        !valueList &&
+        !meta &&
+        options === 'extend' &&
+        !extra.length
+      ) {
+        if (seenClauses.has(key)) unsupportedClauses.push(clause)
+        seenClauses.set(key, 'extend')
+        extendSourceDefaults = true
+        continue
+      }
+      if (meta !== undefined || options !== undefined) {
+        unsupportedClauses.push(clause)
+        continue
+      }
+      const values = valueList
         .split(';')
         .map((value) => value.trim())
         .filter(Boolean)
@@ -115,6 +138,7 @@ export function parseFilterTags(text: string): ParsedFilterTag[] {
       label,
       entityType,
       filter,
+      ...(extendSourceDefaults && { extendSourceDefaults }),
       ...(unsupportedClauses.length ? { unsupportedClauses } : {}),
     })
   }

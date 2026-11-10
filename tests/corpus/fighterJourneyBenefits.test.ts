@@ -11,6 +11,10 @@ import { createCharacterCalculationContext } from '@/lib/calculations/characterC
 import { deriveFighterPassiveEffects } from '@/lib/calculations/fighterPassiveEffects'
 import { deriveAllSkills } from '@/lib/calculations/skills'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import {
+  createClassChoiceCatalogs,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
@@ -350,18 +354,59 @@ configuredTest('both Psi Warrior printings honor their exact Telekinetic Master 
   }
 })
 
-configuredTest('revised Battle Master preserves the explicit maneuver source filter', () => {
-  const classes = parse(read(fighterDocument))
-  const choice = archetype(
-    fighter(classes, 'XPHB'),
-    'Battle Master',
-    'XPHB',
-  ).normalizedRules?.choices.find((row) => row.label === 'Maneuvers')
-  expect(choice?.optionFilter).toMatchObject({
-    entityType: 'optionalFeature',
-    featureTypes: ['MV:B'],
-    source: 'XPHB',
-  })
+configuredTest('revised Battle Master honors the authored maneuver sources and count', () => {
+  const document = read(fighterDocument)
+  const getChoice = () => {
+    const choice = archetype(
+      fighter(parse(document), 'XPHB'),
+      'Battle Master',
+      'XPHB',
+    ).normalizedRules?.choices.find((row) => row.label === 'Maneuvers')
+    if (!choice) throw new Error('Missing authored Maneuvers choice')
+    return choice
+  }
+  const choice = getChoice()
+  expect(getClassChoiceSlotLevels(choice)).toEqual([3, 3, 3, 7, 7, 10, 10, 15, 15])
+  const pool = document.subclassFeature.find(
+    (row: { name: string; source: string }) =>
+      row.name === 'Maneuver Options' && row.source === 'XPHB',
+  )
+  const authored = pool.entries.find((row: { type: string }) => row.type === 'options').entries
+  if (!choice.optionFilter?.restrictToListedOptions) {
+    expect(choice.optionFilter).toMatchObject({
+      entityType: 'optionalFeature',
+      featureTypes: ['MV:B'],
+      source: 'XPHB',
+    })
+  } else {
+    expect(choice.optionFilter).toMatchObject({
+      entityType: 'optionalFeature',
+      featureTypes: ['MV:B'],
+    })
+    expect(choice.options.map((option) => `${option.name}|${option.source}`)).toEqual(
+      authored.map((entry: { optionalfeature: string }) => entry.optionalfeature),
+    )
+    const optionalfeatures = [
+      { name: 'Precision Attack', source: 'XPHB', featureType: ['MV:B'] },
+      { name: 'Fighting Style: Archery', source: 'XPHB', featureType: ['FS:F'] },
+      { name: 'Unlisted Maneuver', source: 'XPHB', featureType: ['MV:B'] },
+    ]
+    const catalogs = createClassChoiceCatalogs(
+      buildClassChoiceFeatureCatalogs(makeGameDataFixture({ optionalfeatures })),
+    )
+    authored[0].optionalfeature = 'Fighting Style: Archery|XPHB'
+    expect(
+      resolveClassChoiceOptions(getChoice(), catalogs).map((row) => row.reference.name),
+    ).toEqual(['Precision Attack'])
+    authored[0].prerequisite = [{ level: 20 }]
+    expect(resolveClassChoiceOptions(getChoice(), catalogs)).toEqual([])
+    delete authored[0].prerequisite
+    pool.prerequisite = [{ level: 20 }]
+    expect(resolveClassChoiceOptions(getChoice(), catalogs)).toEqual([])
+    delete pool.prerequisite
+    pool.entries = { type: 'entries', entries: [authored] }
+    expect(resolveClassChoiceOptions(getChoice(), catalogs)).toEqual([])
+  }
 })
 
 configuredTest('revised Psi Warrior reads the count and recovery from its source table', () => {

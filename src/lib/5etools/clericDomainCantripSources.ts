@@ -2,7 +2,7 @@ import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { getSubclassFeatureIdentity, isExactSubclassFeatureReference } from './classFeatureIdentity'
-import { getFeatureSourceDigest } from './featureSourceAudit'
+import { getFeatureSourceDigest, matchesFeatureEntryDigest } from './featureSourceAudit'
 import {
   getExactClericDomainIntro,
   hasRevisedInheritedDomainSpellRoot,
@@ -241,7 +241,7 @@ function hasNestedCantripSource(
     !feature.isClassFeatureVariant &&
     !('_copy' in feature) &&
     Array.isArray(feature.entries) &&
-    getFeatureSourceDigest(normalize(feature.entries)) === digest
+    matchesFeatureEntryDigest(normalize(feature.entries), digest)
   )
 }
 

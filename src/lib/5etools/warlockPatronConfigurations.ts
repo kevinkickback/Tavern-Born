@@ -9,7 +9,7 @@ import {
   encodeSourceGroupOptionReference,
   getFeatureLiteralChoiceId,
 } from './featureOptionIdentity'
-import { getFeatureSourceDigest } from './featureSourceAudit'
+import { getFeatureSourceDigest, matchesFeatureEntryDigest } from './featureSourceAudit'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
 import {
@@ -238,7 +238,7 @@ function getConfigurationFeature(cls: Class5e, subclass: Subclass5e, rule: Patro
     !feature.isClassFeatureVariant &&
     Array.isArray(feature.entries) &&
     feature.entries.length &&
-    (!digest || getFeatureSourceDigest(feature.entries) === digest)
+    (!digest || matchesFeatureEntryDigest(feature.entries, digest))
     ? feature
     : undefined
 }

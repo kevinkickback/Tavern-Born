@@ -1,6 +1,7 @@
 import type { ClassFeature } from '@/types/5etools'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+import { STORM_AURA_TARGET, stormTarget } from './stormAuraIdentity'
 
 // Audited data/class/class-barbarian.json SHA25615b090c2ede1cc5a522817bf41d83a890aa194f3d7827f98787e1b05d057f319.
 // Genuine ordered entries only; future source revisions require an explicit rules re-audit.
@@ -50,14 +51,35 @@ const SOURCE_FIELDS = new Set([
   'featureOptionSourceConflict',
   'sourceIdentityConflict',
 ])
+const AUDITED_SINGLE_OPTION_GROUPS = new Set([
+  STORM_AURA_TARGET,
+  stormTarget('Storm Soul', 6),
+  stormTarget('Raging Storm', 14),
+])
+
+export function isStormEnvironmentGroupTarget(target: string | undefined): boolean {
+  return target !== undefined && AUDITED_SINGLE_OPTION_GROUPS.has(target)
+}
+
+/** The audited prose already selects one environment. Accept either encoding of that count. */
+export function canonicalStormRuleEntries(target: string | undefined, entries: unknown[]) {
+  if (!isStormEnvironmentGroupTarget(target)) return entries
+  const groups = entries.filter(
+    (entry): entry is Record<string, unknown> =>
+      !!entry && typeof entry === 'object' && 'type' in entry && entry.type === 'options',
+  )
+  if (groups.length !== 1 || groups[0].count !== 1) return entries
+  const { count: _count, ...group } = groups[0]
+  return entries.map((entry) => (entry === groups[0] ? group : entry))
+}
 export function hasStormSourceShape(feature: ClassFeature | Record<string, unknown>): boolean {
   return hasFeatureSourceShape(feature, SOURCE_FIELDS)
 }
 export function getAuditedStormSourceDigest(target: string): string | undefined {
   return AUDITED_DIGESTS.get(target)
 }
-export function getStormRulesDigest(entries: unknown[]): string | undefined {
-  return getFeatureSourceDigest(entries)
+export function getStormRulesDigest(entries: unknown[], target?: string): string | undefined {
+  return getFeatureSourceDigest(canonicalStormRuleEntries(target, entries))
 }
 /** A body is trusted for one complete target only; metadata cannot hide extra conditions. */
 export function isAuditedStormFeature(
@@ -73,5 +95,25 @@ export function isAuditedStormFeature(
     return false
   const target = getSubclassFeatureIdentity(feature)
   const expected = target ? getAuditedStormSourceDigest(target) : undefined
-  return expected !== undefined && getStormRulesDigest(feature.entries) === expected
+  return expected !== undefined && getStormRulesDigest(feature.entries, target) === expected
+}
+
+/** Identical audited group records can differ by the explicit one-of count. */
+export function areEquivalentStormEnvironmentGroups(
+  target: string,
+  rows: Record<string, unknown>[],
+) {
+  if (!isStormEnvironmentGroupTarget(target)) return false
+  const records = new Set<string>()
+  for (const row of rows) {
+    if (row.sourceIdentityConflict || !isAuditedStormFeature(row) || !Array.isArray(row.entries))
+      return false
+    const digest = getFeatureSourceDigest(
+      [{ ...row, entries: canonicalStormRuleEntries(target, row.entries) }],
+      false,
+    )
+    if (!digest) return false
+    records.add(digest)
+  }
+  return records.size === 1
 }
