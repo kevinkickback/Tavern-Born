@@ -4,7 +4,16 @@ import type { CharacterClassChoiceSelection, CharacterClassEntry } from '@/types
 import type { ClassCastingSourceProof } from '@/types/classCasting'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import { getClassCastingCopyParent } from './classCastingRules'
-import { getNormalizedClassChoiceId } from './classChoiceId'
+import {
+  getRevisedInvocationPoolId,
+  isRevisedInvocationPoolId,
+} from './revisedInvocationPoolIdentity'
+
+export {
+  getRevisedInvocationPoolId,
+  isRevisedInvocationPoolId,
+} from './revisedInvocationPoolIdentity'
+
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { DAMAGE_TYPE_LABELS } from './constants'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
@@ -31,19 +40,6 @@ export type InvocationCantripsByOwner = ReadonlyMap<string, readonly Spell5e[]>
 type InvocationCatalog = ClassFeatureSourceCatalog & {
   classes?: readonly Class5e[]
   classCastingSources?: readonly ClassCastingSourceProof[]
-}
-
-export function isRevisedInvocationPoolId(id: string | undefined) {
-  return (
-    typeof id === 'string' &&
-    /^class:[a-z0-9]+(?:-[a-z0-9]+)*\|[a-z0-9]+(?:-[a-z0-9]+)*\|choice:eldritch-invocations\|1$/.test(
-      id,
-    )
-  )
-}
-
-export function getRevisedInvocationPoolId(owner: InvocationOwner) {
-  return getNormalizedClassChoiceId({ ...owner, type: 'class' }, 'Eldritch Invocations', 1)
 }
 
 export function getInvocationActorKey(owner: InvocationOwner) {

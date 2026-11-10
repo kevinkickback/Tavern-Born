@@ -251,6 +251,8 @@ export function getClassResourceRecoveryAtLevel(
 export function formatClassResourceRecovery(recovery: ClassResourceRecovery): string {
   const shortAmount = recovery.shortRest
   const longAmount = recovery.longRest
+  if (recovery.unit === 'dice' && longAmount === 'all' && shortAmount === undefined)
+    return 'Restores all dice on a long rest'
   if (recovery.unit === 'points' && longAmount === 'all') {
     if (recovery.shortRestOncePerLongRest) {
       return `Restores up to ${shortAmount} points on a short rest (once per long rest). Restores all points on a long rest`

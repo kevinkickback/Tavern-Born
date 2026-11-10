@@ -57,6 +57,7 @@ import {
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
+import { isCompanionFamilyMastery } from './companionFamilies'
 import {
   getDeclaredInvocationLeaf,
   isDeclaredRevisedInvocationOption,
@@ -98,6 +99,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
   const featureIds = new Set<string>(),
     choiceIds = new Set<string>()
   const masteredWeapons = new Map<string, Set<string>>()
+  const masteredCompanionFamilies = new Map<string, Set<string>>()
   const seenMastery = new Set<string>()
   const featureNamesByChoice = new Map<string, Set<string>>()
   const selectedOptions: Array<{
@@ -151,6 +153,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
     if (mastery) {
       if (seenMastery.has(selection.choiceId)) {
         masteredWeapons.delete(selection.choiceId)
+        masteredCompanionFamilies.delete(selection.choiceId)
         continue
       }
       seenMastery.add(selection.choiceId)
@@ -241,9 +244,12 @@ function buildEffectiveClassChoiceFeatureRoutes(
       )
         continue
       if (mastery) {
-        const keys = masteredWeapons.get(choice.id) ?? new Set<string>()
+        const mastered = isCompanionFamilyMastery(option)
+          ? masteredCompanionFamilies
+          : masteredWeapons
+        const keys = mastered.get(choice.id) ?? new Set<string>()
         keys.add(getClassChoiceOptionKey(option))
-        masteredWeapons.set(choice.id, keys)
+        mastered.set(choice.id, keys)
         continue
       }
       const atWillInvocation = invocationPool
@@ -340,6 +346,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
     choiceIds,
     progressiveChoiceIds,
     masteredWeapons,
+    masteredCompanionFamilies,
     featureNamesByChoice,
     contributions: [...accepted].map((index) => contributions[index]),
     selectedOptions: selectedOptions.filter(

@@ -7,7 +7,7 @@ export function getAdditionalSpellChoiceKey(choice: {
   source?: 'known' | 'innate' | 'prepared'
   usage?: string
   dailyUses?: number | 'pb'
-  filter?: { level: number; classes: string[] }
+  filter?: { level: number; classes: string[]; ritual?: true }
   pool?: string[]
 }): string {
   return JSON.stringify([
@@ -21,6 +21,7 @@ export function getAdditionalSpellChoiceKey(choice: {
       ? [
           choice.filter.level,
           [...new Set(choice.filter.classes.map((name) => name.trim().toLowerCase()))].sort(),
+          ...(choice.filter.ritual ? ['ritual'] : []),
         ]
       : null,
     choice.pool

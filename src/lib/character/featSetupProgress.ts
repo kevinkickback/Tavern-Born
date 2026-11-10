@@ -3,10 +3,7 @@ import {
   isAuditedFeatExpertise,
   isKnownFeatExpertiseTarget,
 } from '@/lib/5etools/featExpertiseRules'
-import {
-  getClassFeatureSpellSemantics,
-  hasCurrentFeatureSpellSemantics,
-} from '@/lib/5etools/featureSpellSemantics'
+import { hasCurrentFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { deriveFeatOptionSteps } from '@/lib/5etools/parsers/featOptions'
 import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
@@ -14,6 +11,7 @@ import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Feat5e } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character, FeatOptionSelections } from '@/types/character'
+import { hasClassFeatSpellSetup } from './classFeatChoices'
 import {
   type FeatOptionTarget,
   getFeatOptionOwnerKey,
@@ -71,7 +69,7 @@ export function getFeatSetupStatus(
   const options = owner?.options
   if (
     target.classFeatChoiceId &&
-    getClassFeatureSpellSemantics('feat', target.name, target.source ?? '')
+    hasClassFeatSpellSetup(saved, target.classFeatChoiceId, target.name, target.source)
   ) {
     const selected = saved.classFeatChoices?.filter((row) => row.id === target.classFeatChoiceId)
     const classOwner = selected?.length === 1 ? selected[0] : undefined
@@ -110,7 +108,11 @@ export function getFeatSetupStatus(
       active.length > 0 ||
       (!!classOwner &&
         !!owner?.data &&
-        hasCurrentFeatureSpellSemantics('feat', owner.data, classOwner.className))
+        (classOwner.feats.some(
+          (feat) =>
+            feat.classSpellSetup && getFeatSelectionKey(feat) === getFeatSelectionKey(target),
+        ) ||
+          hasCurrentFeatureSpellSemantics('feat', owner.data, classOwner.className)))
     return {
       options,
       saved: choices.length > 0,

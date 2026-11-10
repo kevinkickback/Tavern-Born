@@ -360,7 +360,8 @@ export interface ClassFeatChoice {
   subclassSource?: string
   progressionName: string
   categories: string[]
-  feats: Feat[]
+  /** Routing intent on class-owned feats, verified against current declarations when granting. */
+  feats: Array<Feat & { classSpellSetup?: true }>
 }
 
 export interface AsiChoice {

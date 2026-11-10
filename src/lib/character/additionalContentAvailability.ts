@@ -4,7 +4,7 @@ import { type EntityLookupSet, resolveRaceReference } from '@/lib/5etools/entity
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
 import { buildRaceLookup, getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolvePsionic } from '@/lib/5etools/psionics'
-import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
@@ -18,6 +18,12 @@ import type { Character, CharacterClassChoiceOption, Equipment, Feat } from '@/t
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
 import { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
+import {
+  getCompanionFamilyRules,
+  isCompanionFamilyMastery,
+  isCompanionFamilyOption,
+} from './companionFamilies'
+import { getCompanionSelectionStates } from './companionSelections'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
@@ -60,7 +66,7 @@ export function createGameDataAvailabilityIndex(gameData: GameData): GameDataAva
     feats: entityKeys(gameData.feats),
     items: entityKeys([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
     optionalFeatures: entityKeys(gameData.optionalfeatures),
-    spells: entityKeys(gameData.spells),
+    spells: new Set(gameData.spells.map((spell) => getSpellReferenceKey(spell.name, spell.source))),
   }
 }
 
@@ -163,6 +169,13 @@ export function* getUnavailableCharacterContent(
   }
 
   const classes = index.choiceClasses ?? []
+  const availableFamilies = character.classChoiceSelections?.some((row) =>
+    row.selected.some(isCompanionFamilyOption),
+  )
+    ? getCompanionSelectionStates(character, classes, index.featureOptions)
+    : []
+  const spellMissing = ({ name, source }: { name?: string; source?: string }) =>
+    !!name?.trim() && !!source?.trim() && !index.spells.has(getSpellReferenceKey(name, source))
   for (const { name, source, subclass, subclassSource } of character.classProgression) {
     if (name.trim() && source.trim() && !resolveClassProgressionRules({ name, source }, classes))
       yield { name, source }
@@ -219,7 +232,34 @@ export function* getUnavailableCharacterContent(
       : undefined
     for (const option of selection.selected) {
       const target = option.invocationCantrip
-      if (target && referenceIsMissing(target.name, target.source, index.spells)) yield target
+      if (target && spellMissing(target)) yield target
+      if (isCompanionFamilyOption(option)) {
+        if (
+          !availableFamilies.some(
+            (row) => row.selection.choiceId === selection.choiceId && row.creature,
+          )
+        )
+          yield option
+        continue
+      }
+      if (isCompanionFamilyMastery(option)) {
+        const owner = character.classProgression.find(
+          (entry) =>
+            getFeatureOwnerKey(entry.name, entry.source) ===
+            getFeatureOwnerKey(selection.className, selection.classSource),
+        )
+        const rules =
+          owner &&
+          index.featureOptions &&
+          getCompanionFamilyRules(character, owner, index.featureOptions)
+        if (
+          !rules?.mastery ||
+          getFeatureOwnerKey(rules.reference.name, rules.reference.source) !==
+            getFeatureOwnerKey(option.name, option.source)
+        )
+          yield option
+        continue
+      }
       if (choiceIsMissing(option, index, owner)) yield option
     }
   }
@@ -251,10 +291,10 @@ export function* getUnavailableCharacterContent(
     ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
   ]) {
     const spell = parseSpellReference(reference)
-    if (referenceIsMissing(spell.name, spell.source, index.spells)) yield spell
+    if (spellMissing(spell)) yield spell
   }
   for (const { target } of character.managedClassSpellChoices ?? []) {
-    if (referenceIsMissing(target.name, target.source, index.spells)) yield target
+    if (spellMissing(target)) yield target
   }
 }
 

@@ -818,12 +818,12 @@ export function createCharacterSheetViewModel(
     character,
     companionCatalogs?.classes ?? calculationContext.classChoices.classes,
     companionCatalogs,
-  ).flatMap(({ creature, selection, classicRangerLevel }) =>
+  ).flatMap(({ creature, selection, classicRangerLevel, family }) =>
     creature
       ? [
           {
-            name: creature.name,
-            source: creature.source,
+            name: family?.family.name ?? creature.name,
+            source: family?.source.source ?? creature.source,
             className: selection.className,
             classSource: selection.classSource,
             creature,

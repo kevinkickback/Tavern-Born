@@ -7,8 +7,13 @@ import { optionalDeclarationObject as record } from './optionalClassDeclarationS
 
 const qualified = '[^|#{}]+\\|[^|#{}]+'
 const learning = new RegExp(
-  `^You learn the \\{@spell (${qualified})\\} spell and can cast it as a \\{@action Magic\\|XPHB\\} action without expending a spell slot\\. When you cast the spell, you summon (?:a|an) \\{@creature ${qualified}\\} familiar\\.$`,
+  `^You learn the \\{@spell (${qualified})\\} spell and can cast it as a \\{@action Magic\\|XPHB\\} action without expending a spell slot\\.( When you cast the spell, you summon (?:a|an) \\{@creature ${qualified}\\} familiar\\.)?$`,
 )
+const familiarForms = new RegExp(
+  `^When you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: \\{@creature ${qualified}\\}(?:, \\{@creature ${qualified}\\})*, or \\{@creature ${qualified}\\} \\(see appendix [A-Z] for the familiar's stat block\\)\\.$`,
+)
+const familiarAttack =
+  /^Additionally, when you take the \{@action Attack\|XPHB\} action, you can forgo one of your own attacks to allow your familiar to make one attack(?: of its own)? with its \{@variantrule Reaction\|XPHB\}\.$/
 const daily = new RegExp(
   `^You can cast \\{@spell (${qualified})\\} without expending a spell slot\\. When you do, you summon (.+), and that [A-Z][a-z]+ becomes the target of the spell\\. Once you cast the spell in this way, you can't do so again until you finish a \\{@variantrule Long Rest\\|XPHB\\}\\.$`,
 )
@@ -34,14 +39,20 @@ export function readDeclaredInvocationCast(feature: OptionalFeatureLike | undefi
   const match = learned ?? limited
   if (!match || (limited && (feature.entries.length !== 1 || !creatureList.test(limited[2]))))
     return undefined
-  if (
-    learned &&
-    feature.entries.length !== 1 &&
-    (feature.entries.length !== 2 ||
-      feature.entries[1] !==
-        'Additionally, when you take the {@action Attack|XPHB} action, you can forgo one of your own attacks to allow your familiar to make one attack with its {@variantrule Reaction|XPHB}.')
-  )
-    return undefined
+  const [, forms, attack] = feature.entries
+  const choosesFamiliar =
+    !!learned && !learned[2] && typeof forms === 'string' && familiarForms.test(forms)
+  if (learned) {
+    const rider = choosesFamiliar ? attack : forms
+    const baseLength = choosesFamiliar ? 2 : 1
+    if (
+      feature.entries.length !== baseLength &&
+      (feature.entries.length !== baseLength + 1 ||
+        typeof rider !== 'string' ||
+        !familiarAttack.test(rider))
+    )
+      return undefined
+  }
 
   const raw = record(feature.additionalSpells[0])
   const ability = typeof raw.ability === 'string' && toAbilityName(raw.ability)
@@ -50,12 +61,16 @@ export function readDeclaredInvocationCast(feature: OptionalFeatureLike | undefi
     return undefined
   const schedule = innate._
   const rest = record(record(schedule).daily)
-  const tokens = learned ? schedule : rest['1']
+  const ritual = record(schedule).ritual
+  // Some sources encode an out-of-slot familiar cast under ritual. The feature
+  // text supplies its actual casting time and whether it teaches the spell.
+  const tokens = learned ? (choosesFamiliar ? ritual : schedule) : rest['1']
   if (
     !Array.isArray(tokens) ||
     tokens.length !== 1 ||
     typeof tokens[0] !== 'string' ||
     !new RegExp(`^${qualified}$`).test(tokens[0]) ||
+    (choosesFamiliar && Object.keys(record(schedule)).length !== 1) ||
     (limited && (Object.keys(record(schedule)).length !== 1 || Object.keys(rest).length !== 1))
   )
     return undefined
@@ -71,7 +86,12 @@ export function readDeclaredInvocationCast(feature: OptionalFeatureLike | undefi
       grant.dailyUses !== (limited ? 1 : undefined)
     )
       return undefined
-    return { reference, ability, learned: !!learned, rules: clause }
+    return {
+      reference,
+      ability,
+      learned: !!learned,
+      rules: choosesFamiliar ? `${clause} ${forms}` : clause,
+    }
   } catch {
     return undefined
   }

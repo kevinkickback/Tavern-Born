@@ -1,5 +1,4 @@
 import { isKnownFeatExpertiseTarget } from '@/lib/5etools/featExpertiseRules'
-import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
@@ -12,7 +11,11 @@ import {
 } from '@/lib/calculations/spellIdentity'
 import { isSpecialSpellGrant } from '@/lib/calculations/spellOwnership'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import { type ClassFeatChoiceOwner, getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
+import {
+  type ClassFeatChoiceOwner,
+  getClassFeatChoiceId,
+  hasClassFeatSpellSetup,
+} from '@/lib/character/classFeatChoices'
 import {
   getSpecialSpellKind,
   resolveSpecialSpellKind,
@@ -42,7 +45,7 @@ import type {
   SourceTag,
 } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
-import type { Character, Feat, FeatOptionSelections, SpellProfile } from '@/types/character'
+import type { Character, FeatOptionSelections, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import {
@@ -602,7 +605,7 @@ export function commitFeatOptionsCommand(
 ): CharacterCommandResult {
   if (
     feat.classFeatChoiceId &&
-    getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '') &&
+    hasClassFeatSpellSetup(character, feat.classFeatChoiceId, feat.name, feat.source) &&
     selections.spells?.length
   )
     throw new RangeError('Configure this feature’s cantrips in the Class spell choices.')
@@ -683,7 +686,7 @@ function commitResolvedFeatOptions(
 ): CharacterCommandResult {
   if (
     feat.classFeatChoiceId &&
-    getClassFeatureSpellSemantics('feat', feat.name, feat.source ?? '') &&
+    hasClassFeatSpellSetup(character, feat.classFeatChoiceId, feat.name, feat.source) &&
     selections.spells?.length
   )
     throw new RangeError('Configure this feature’s cantrips in the Class spell choices.')
@@ -943,7 +946,7 @@ export function replaceClassFeatSelectionsCommand(
   character: Character,
   ledger: ProvenanceLedger,
   owner: ClassFeatChoiceOwner & { slotLevels: number[] },
-  selectedFeats: Array<{ name: string; source?: string }>,
+  selectedFeats: Array<{ name: string; source?: string; classSpellSetup?: boolean }>,
 ): CharacterCommandResult {
   const choiceId = getClassFeatChoiceId(owner)
   const existingChoice = character.classFeatChoices?.find((choice) => choice.id === choiceId)
@@ -954,7 +957,13 @@ export function replaceClassFeatSelectionsCommand(
   let provenanceUpdate = ledger
 
   for (const feat of (existingChoice?.feats ?? []).filter(
-    (entry) => entry.options != null && !selectedKeys.has(getFeatSelectionKey(entry)),
+    (entry) =>
+      entry.options != null &&
+      (!selectedKeys.has(getFeatSelectionKey(entry)) ||
+        selectedFeats.some(
+          (feat) =>
+            feat.classSpellSetup && getFeatSelectionKey(feat) === getFeatSelectionKey(entry),
+        )),
   )) {
     const result = retractFeatOptionsCommand(
       workingCharacter,
@@ -997,7 +1006,7 @@ export function replaceClassFeatSelectionsCommand(
     owner.slotLevels[owner.slotLevels.length - 1] ?? 1,
   )
 
-  const feats: Feat[] = selectedFeats.map((feat, index) => {
+  const feats = selectedFeats.map((feat, index) => {
     const existing = existingChoice?.feats.find(
       (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
     )
@@ -1007,7 +1016,10 @@ export function replaceClassFeatSelectionsCommand(
       name: feat.name,
       source: feat.source ?? '',
       description: existing?.description ?? '',
-      options: existing?.options,
+      options: feat.classSpellSetup ? undefined : existing?.options,
+      ...((feat.classSpellSetup ?? existing?.classSpellSetup) && {
+        classSpellSetup: true as const,
+      }),
       className: owner.className,
       classSource: owner.classSource,
       classLevel: assignedSlotLevels[index],

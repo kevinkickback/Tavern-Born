@@ -10,6 +10,10 @@ import {
   matchesClericCantripTarget,
   maximumDomainCantrips,
 } from './clericDomainCantripSources'
+import {
+  getRevisedInvocationPoolId,
+  isRevisedInvocationPoolId,
+} from './revisedInvocationPoolIdentity'
 import { wizardIllusionCantrips } from './wizardTraditionSpellSources'
 
 export type SelectedFeatureSpellAddress = [
@@ -256,8 +260,10 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
     ((owner.length === 3 && owner[0] === 'class') ||
       (owner.length === 5 && owner[0] === 'subclass')) &&
     owner.slice(1).every(normalized) &&
-    domain === 'feature-cantrip' &&
     !!address &&
+    (domain === 'feature-cantrip' ||
+      (domain === 'feature-prepared' &&
+        isSelectedInvocationRitualSlot(value as ManagedClassSpellSlot))) &&
     (address[1] !== 'classFeature' ||
       (owner[0] === 'class' &&
         owner[1] === getClassOrderById(address[0])?.owner &&
@@ -271,5 +277,23 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
     level <= 20 &&
     Number.isSafeInteger(ordinal) &&
     ordinal >= 0
+  )
+}
+
+export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
+  const [owner, domain, producer, level, ordinal] = slot
+  if (domain !== 'feature-prepared' || owner[0] !== 'class') return false
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  return (
+    !!address &&
+    address[1] === 'optionalFeature' &&
+    isRevisedInvocationPoolId(address[0]) &&
+    address[0] === getRevisedInvocationPoolId({ name: owner[1], source: owner[2] }) &&
+    Number.isInteger(level) &&
+    level >= 1 &&
+    level <= 20 &&
+    Number.isInteger(ordinal) &&
+    ordinal >= 0 &&
+    ordinal < 2
   )
 }

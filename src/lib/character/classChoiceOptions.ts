@@ -96,6 +96,7 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
 import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
@@ -110,10 +111,7 @@ import {
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
 import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
-import {
-  getClassFeatureSpellSemantics,
-  hasDeclaredClassFeatSpellContext,
-} from '@/lib/5etools/featureSpellSemantics'
+import { hasDeclaredClassFeatSpellContext } from '@/lib/5etools/featureSpellSemantics'
 import {
   type FeatureTableDefinition,
   type FeatureTableOption,
@@ -217,9 +215,16 @@ import {
 import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
 import {
+  getCompanionFamilyMasteryOption,
+  getCompanionFamilyOptions,
+  getCompanionFamilyRules,
+  hasAuthoredCompanionFamilies,
+  isCompanionFamilyOption,
+} from './companionFamilies'
+import {
   getDeclaredInvocationLeaf,
   getDeclaredInvocationRequirement,
-  hasDeclaredInvocationCast,
+  hasDeclaredInvocationSpells,
 } from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
@@ -1176,6 +1181,48 @@ export function resolveClassChoiceOptions(
   const currentFilter = declarationUnavailable ? undefined : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
+  const families = character ? getCompanionFamilyOptions(character, choice, catalogs) : []
+  const authoredFamilies =
+    families.length > 0 || (character && hasAuthoredCompanionFamilies(character, choice, catalogs))
+  const companionOwner =
+    families.length &&
+    character?.classProgression.find((entry) => findClassReference(choice.owner, [entry]))
+  const currentFamily =
+    character && companionOwner
+      ? getCompanionFamilyRules(character, companionOwner, catalogs)
+      : undefined
+  for (const { family, creature, reference } of families) {
+    const view = toView('creature', creature, catalogs)
+    resolved.push({
+      ...view,
+      reference,
+      displayLabel: `${family.name} — ${creature.name}`,
+      searchText: `${family.name} ${creature.name} ${family.specialization} ${family.mastery.name}`,
+      entries: [
+        `${family.specialization} family. Mastery property: ${family.mastery.name}.`,
+        ...(currentFamily?.specialization &&
+        getClassChoiceOptionKey(currentFamily.reference) === getClassChoiceOptionKey(reference)
+          ? ['While your companion is within 60 feet:', currentFamily.specialization]
+          : []),
+        ...view.entries,
+      ],
+      ...(family.unusual && {
+        availability: 'retained',
+        unavailableReason: 'This unusual family requires a special taming ability.',
+      }),
+    })
+  }
+  const petMastery =
+    character &&
+    !declarationUnavailable &&
+    getCompanionFamilyMasteryOption(character, choice, catalogs)
+  if (petMastery)
+    resolved.push({
+      reference: petMastery.reference,
+      displayLabel: `${petMastery.reference.name} companion — ${petMastery.mastery.name}`,
+      entries: petMastery.mastery.entries ?? [],
+      availability: 'eligible',
+    })
   const tableItems =
     choice.kind === 'item' &&
     choice.source.kind === 'class-table' &&
@@ -1189,6 +1236,16 @@ export function resolveClassChoiceOptions(
       ...choice.options
         .filter(
           (option) => choice.fixedOptions?.length || (option.minimumClassLevel ?? 1) <= classLevel,
+        )
+        .filter(
+          (option) =>
+            !authoredFamilies ||
+            option.entityType !== 'creature' ||
+            saved.some(
+              (row) =>
+                !isCompanionFamilyOption(row) &&
+                getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option),
+            ),
         )
         .map((option) => {
           const view = resolveProgressionOption(
@@ -1224,6 +1281,7 @@ export function resolveClassChoiceOptions(
         : [],
     )
     for (const entity of getFilteredCatalog(currentFilter, catalogs)) {
+      if (authoredFamilies && currentFilter.entityType === 'creature') continue
       const matches = (candidate: NormalizedChoiceOptionFilter) =>
         matchesClassChoiceFilter(
           entity,
@@ -1377,10 +1435,8 @@ export function resolveClassChoiceOptions(
         if (
           !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
           option.reference.entityType !== 'feat' ||
-          !getClassFeatureSpellSemantics(
-            'feat',
-            option.reference.name,
-            option.reference.source ?? '',
+          !choice.options.some(
+            (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
           )
         )
           return option
@@ -1389,7 +1445,8 @@ export function resolveClassChoiceOptions(
             normalized(feat.name) === normalized(option.reference.name) &&
             normalized(feat.source) === normalized(option.reference.source),
         )
-        return candidates.length === 1 &&
+        return (!character || permitsClassRuleSource(character, option.reference.source)) &&
+          candidates.length === 1 &&
           hasDeclaredClassFeatSpellContext(choice, candidates[0], declaration)
           ? { ...option, prerequisite: undefined }
           : { ...option, availability: 'retained' as const }
@@ -1460,18 +1517,18 @@ export function resolveClassChoiceOptions(
         if (!isRevisedInvocationPoolId(choice.id)) return [option]
         if (!isRevisedTargetedInvocation(option.reference)) {
           const rule = getDeclaredInvocationRequirement(choice, option.reference, catalogs)
-          const fixedCast = hasDeclaredInvocationCast(option.reference, catalogs)
-          if (rule === undefined && !fixedCast) return [option]
+          const declaredSpells = hasDeclaredInvocationSpells(option.reference, catalogs)
+          if (rule === undefined && !declaredSpells) return [option]
+          const leaf =
+            declaredSpells && getDeclaredInvocationLeaf(choice, option.reference, catalogs)
           if (
             rule === null ||
             !invocationSourcesAvailable ||
             (character &&
               (!permitsClassRuleSource(character, option.reference.source) ||
                 (rule?.required && !permitsClassRuleSource(character, rule.required.source)))) ||
-            (fixedCast &&
-              !readDeclaredInvocationCast(
-                getDeclaredInvocationLeaf(choice, option.reference, catalogs),
-              ))
+            (declaredSpells &&
+              (!leaf || (!readDeclaredInvocationCast(leaf) && !readDeclaredInvocationBook(leaf))))
           )
             return [
               {

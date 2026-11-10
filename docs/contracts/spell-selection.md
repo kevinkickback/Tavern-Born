@@ -63,6 +63,12 @@ its terms. A Magic Action cast may accompany a fixed learned spell. A Long Rest 
 separate casting route, including when the character independently knows the same spell. These
 grants leave the ordinary known-spell quota and casting components in place.
 
+A learned familiar spell can use the published ritual schedule when its feature expressly
+provides the alternate slot-free Magic Action. Both routes keep their exact owning Invocations.
+A declared spellbook can supply a separate cantrip group and a first-level ritual group.
+The qualified choice excludes independently prepared spells when choosing, preserves other
+providers on removal, and displays the book's possession requirement.
+
 A resource-paid subclass schedule can grant casts independently of a named prepared spell column
 when every column declares the same costs and the earned feature text confirms the spell, cost,
 and casting terms. An uncounted list of authorized uses does not create a build choice. An
@@ -81,6 +87,10 @@ overlaps.
 current earned source determines its targets, ability and count. Qualification starts from
 independently available spells and abilities so no feature can enable itself or a cycle. Each
 entitlement owns its grant separately, even if both pick the same exact spell.
+
+Explicitly linked style feats share the granting feature's filtered choice quota. When the
+feat supplies its own cantrip list and the casting ability matches, the selected class owns
+those choices. The feat's listed spell pool determines eligibility.
 
 ## Existing daily preparation
 

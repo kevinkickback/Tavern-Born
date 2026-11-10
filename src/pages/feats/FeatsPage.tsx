@@ -383,6 +383,7 @@ export function FeatsPage() {
                                   }
                                   optionsConfigured={
                                     (!!feat.options ||
+                                      feat.classSpellSetup ||
                                       !!getClassFeatureSpellSemantics(
                                         'feat',
                                         feat.name,

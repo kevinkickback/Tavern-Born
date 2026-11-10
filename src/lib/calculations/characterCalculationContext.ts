@@ -609,6 +609,7 @@ export function createCharacterCalculationContext(
       ...managedSpellContext,
       abilityScores: abilityScores.total,
       independentSpellProfiles: managedSpells.independentSpellProfiles,
+      bookPreparationProfiles: managedSpells.bookPreparationProfiles,
     },
   }
   const currentSpells = applySpellbookSpecialtyPreparation(

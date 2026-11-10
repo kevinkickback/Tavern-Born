@@ -126,6 +126,7 @@ export function reconcileOptionalClassFeatureChoicesCommand(
       provenanceUpdate,
       choice,
       selection,
+      catalogs.classChoiceFeatureCatalogs,
     )
     characterPatch = { ...characterPatch, ...featMirror.characterPatch }
     provenanceUpdate = featMirror.provenanceUpdate

@@ -1,5 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
+import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import { type JsonResourceReader, ResourceHttpError } from './resourceReader'
 import {
   ActionDataSchema,
@@ -26,6 +27,11 @@ interface FileValidationConfig {
 }
 
 const CANDIDATE_FILES: FileValidationConfig[] = [
+  {
+    name: COMPANION_FAMILY_BOOK,
+    schema: GenericDataSchema.refine((data) => parseCompanionFamilySources(data, 'WoW').length > 0),
+    optionalSupport: true,
+  },
   {
     name: 'book/book-tce.json',
     schema: OptionalClassBookDataSchema,

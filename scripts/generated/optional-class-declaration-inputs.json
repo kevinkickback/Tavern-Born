@@ -154,7 +154,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "cce85ad44a33691ef867427f80d894df4f137942a15ce95299346bc1872f1e9f"
+      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
     },
     {
       "file": "src/types/actions.ts",
@@ -166,7 +166,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "1e893ffcd9d95748d1d12221065bf2f8c6bdd2899c7fc0adabb3a028464cbbaa"
+      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -174,7 +174,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "77a9382e4f4456c78e8930db23856cbdf495d8eca06903e7d2983c679a71ffc1"
+      "sha256": "3aa3ae61c212e76dd185a8fc45f9de0a51744da7691210eb1b94baf861edfdd3"
     },
     {
       "file": "src/types/effects.ts",

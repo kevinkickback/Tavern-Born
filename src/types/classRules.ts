@@ -137,7 +137,7 @@ type ClassResourceRecoveryAmount = number | 'all'
 export interface ClassResourceRecovery {
   shortRest?: ClassResourceRecoveryAmount
   longRest?: ClassResourceRecoveryAmount
-  unit?: 'points'
+  unit?: 'points' | 'dice'
   shortRestOncePerLongRest?: true
 }
 

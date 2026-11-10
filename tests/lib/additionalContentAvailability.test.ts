@@ -271,7 +271,7 @@ describe('additional content availability', () => {
             className: 'Fighter',
             classSource: 'PHB',
             cantrips: [],
-            spellsKnown: ['Magic Missile|PHB'],
+            spellsKnown: ['magic missile|phb'],
             preparedSpells: [],
           },
         ],

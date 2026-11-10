@@ -171,11 +171,11 @@
     },
     {
       "file": "src/lib/5etools/additionalSpellIdentity.ts",
-      "sha256": "5a87fe56db474ae571a0c2b13cd36922d497bb23877ede64071fb6622a578428"
+      "sha256": "ae0a4908a4202d8816d1d61fad54124efb9201dfc74f0eeee1ba7c9dff39ff88"
     },
     {
       "file": "src/lib/5etools/additionalSpells.ts",
-      "sha256": "bf40758b247a3593480ef1903bcbd9d34f00ce69dd0442074fc8585ebf8752ff"
+      "sha256": "686f61629f2add2e781ba44fcdd123139ad72e11aa05b70c0cdf6d54fc05e489"
     },
     {
       "file": "src/lib/5etools/arcaneArcherCantripSource.ts",
@@ -259,7 +259,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "754d3b1a2dfa06b09bd6b1aeab9785313f1336ecc5bdf38a7c35197589614a56"
+      "sha256": "7168cb1e198fe8b8bc67d33516da930ab61cb283dde71782a600472a38cd1714"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -299,7 +299,7 @@
     },
     {
       "file": "src/lib/5etools/classRuleNormalization.ts",
-      "sha256": "0173e10b103061a99d667bc21e737a3fc5fdde6ec0d44572cbf5211b1cb5bc28"
+      "sha256": "b0511e962f4afae50c575af9e8a9d3090b0cb04b969fc335ed2542c5136fde21"
     },
     {
       "file": "src/lib/5etools/classSpellSlotTable.ts",
@@ -375,7 +375,7 @@
     },
     {
       "file": "src/lib/5etools/earnedClassFeatureSource.ts",
-      "sha256": "9afb50a82a6d25e86de82e5db78bc371b5ca2bc12c9c8b1cbd00c38bce79c112"
+      "sha256": "11b003c2426afd279c2fe20e31315742d92e66c494169b51f97f0ff62148c67b"
     },
     {
       "file": "src/lib/5etools/entityIdentity.ts",
@@ -427,7 +427,7 @@
     },
     {
       "file": "src/lib/5etools/filteredFeatAlternative.ts",
-      "sha256": "d447361b6afd71012b71158abe3a6fa8cf8566a634426ebf4ae0cda9de41668a"
+      "sha256": "8344ccca6b2f44d904bc4f4e1301a0f08e3ac0edec29b23eb59d27a2ef1a82ee"
     },
     {
       "file": "src/lib/5etools/filters.ts",
@@ -618,6 +618,10 @@
       "sha256": "3a2250ef2757dfc1933b45a6dd340f67cf63b1a0272e26bba59b1bf529700ad4"
     },
     {
+      "file": "src/lib/5etools/revisedInvocationPoolIdentity.ts",
+      "sha256": "33a9bb4721e8aaaecd2bec155227bf6f93ade315c699928226406da4c5f36217"
+    },
+    {
       "file": "src/lib/5etools/roguePhantomSpells.ts",
       "sha256": "9ba5db384702702fe0c1c3843cf177739ad02f8cdf6d062784b66e58645da348"
     },
@@ -635,7 +639,7 @@
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "890109ccead433e0ba21e0ece9f2a26a9b8ae68f6d41e1f31832206852041567"
+      "sha256": "3ceb823392ccf1920dbb22d60a6bd094fd5e9bfd8a97d68124e649aa5edb66ff"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -823,7 +827,7 @@
     },
     {
       "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
-      "sha256": "a923333aa872d8ab8a046bf6d298c83c8406549117e047fef9b4c5885365a0b2"
+      "sha256": "3427cbd134ce40480c0791d6e3414d9b6faa1994722d2e0e5c69aeb7817265ae"
     },
     {
       "file": "src/lib/character/classChoiceFilters.ts",
@@ -863,7 +867,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "cce85ad44a33691ef867427f80d894df4f137942a15ce95299346bc1872f1e9f"
+      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
     },
     {
       "file": "src/types/actions.ts",
@@ -875,7 +879,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "1e893ffcd9d95748d1d12221065bf2f8c6bdd2899c7fc0adabb3a028464cbbaa"
+      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -883,7 +887,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "77a9382e4f4456c78e8930db23856cbdf495d8eca06903e7d2983c679a71ffc1"
+      "sha256": "3aa3ae61c212e76dd185a8fc45f9de0a51744da7691210eb1b94baf861edfdd3"
     },
     {
       "file": "src/types/effects.ts",

@@ -82,6 +82,7 @@ export function hasCurrentSubclassFeatureReplacement(
   cls: Class5e,
   target: string,
   level: number,
+  replacementTarget?: string,
 ) {
   if (!catalogs || !permitsClassRuleSource(character, entry.subclassSource)) return false
   const subclasses = cls.subclasses?.filter(
@@ -97,6 +98,7 @@ export function hasCurrentSubclassFeatureReplacement(
       const replacement = getClassFeatureIdentity(ref)
       if (
         !replacement ||
+        (replacementTarget !== undefined && replacement !== replacementTarget) ||
         ref.level !== level ||
         replacement === target ||
         catalogs.ambiguousClassFeatureTargets?.has(replacement)

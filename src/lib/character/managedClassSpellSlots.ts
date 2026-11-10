@@ -14,6 +14,7 @@ import {
 } from '@/lib/5etools/clericArcanaSpells'
 import { getArcaneDabblerSlots, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtySlots } from '@/lib/5etools/spellbookSpecialtyRules'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ManagedClassSpellDomain, ManagedClassSpellSlot } from '@/types/classCasting'
@@ -83,6 +84,7 @@ export function getManagedClassSpellSlots(
           .filter(
             (choice) =>
               choice.slot[1] === 'feature-cantrip' ||
+              isSelectedInvocationRitualSlot(choice.slot) ||
               isArcaneDabblerSlot(choice.slot) ||
               getClericArcanaSpellRule(choice.slot) ||
               getSavantSpellbookGain(choice.slot) ||

@@ -1,5 +1,6 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
 import { getArtificerClassResources } from '@/lib/5etools/artificerJourneyRules'
+import { getAuthoredFeatureUses } from '@/lib/5etools/authoredFeatureUses'
 import { hasCurrentWarriorOfTheGods } from '@/lib/5etools/barbarianJourneySources'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -212,6 +213,9 @@ export function getCharacterClassResources(
       options.abilityModifiers,
     )
     if (authored) earned.push(authored)
+    earned.push(
+      ...getAuthoredFeatureUses(character, entry, catalogs, options.abilityModifiers, earned),
+    )
     return earned.flatMap((definition) => {
       if (
         options.unlimitedWildShape &&

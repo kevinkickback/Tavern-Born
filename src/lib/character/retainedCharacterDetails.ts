@@ -46,6 +46,12 @@ import { isRevisedAtWillInvocationOption } from './atWillInvocationRules'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
+import {
+  getCompanionFamilyRules,
+  isCompanionFamilyMastery,
+  isCompanionFamilyOption,
+} from './companionFamilies'
+import { getCompanionSelectionStates } from './companionSelections'
 import { isDeclaredRevisedInvocationOption } from './declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
@@ -277,7 +283,42 @@ export function buildRetainedCharacterDetails(
     }
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
+  const companions = getCompanionSelectionStates(character, primary.classes, primaryCatalogs)
   for (const selection of character.classChoiceSelections ?? []) {
+    if (
+      selection.selected.some(
+        (option) => isCompanionFamilyOption(option) || isCompanionFamilyMastery(option),
+      )
+    ) {
+      const entry = findClassReference(
+        { name: selection.className, source: selection.classSource },
+        character.classProgression,
+      )
+      const rules = entry && getCompanionFamilyRules(character, entry, primaryCatalogs)
+      const companion = companions.find((row) => row.selection === selection)
+      const details = choiceDetailsById.get(selection.choiceId) ?? []
+      selection.selected.forEach((option, index) => {
+        if (isCompanionFamilyOption(option))
+          details[index] = {
+            availability: companion?.creature ? 'available' : 'inactive',
+            entries: companion?.details[index]?.entries ?? [],
+          }
+        if (isCompanionFamilyMastery(option)) {
+          const mastery = routes.masteredCompanionFamilies
+            .get(selection.choiceId)
+            ?.has(getClassChoiceOptionKey(option))
+            ? rules?.mastery
+            : undefined
+          details[index] = {
+            availability: mastery ? 'available' : 'inactive',
+            entries: mastery
+              ? [`Beast's Strike mastery: ${mastery.name}.`, ...(mastery.entries ?? [])]
+              : [],
+          }
+        }
+      })
+      choiceDetailsById.set(selection.choiceId, details)
+    }
     if (selection.choiceId === BLESSED_STRIKES_ID || selection.choiceId === ELEMENTAL_FURY_ID) {
       const retained = choiceDetailsById.get(selection.choiceId)
       choiceDetailsById.set(

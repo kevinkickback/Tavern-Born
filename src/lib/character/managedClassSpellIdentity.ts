@@ -4,7 +4,10 @@ import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { ARCANE_DABBLER } from '@/lib/5etools/mysticFeatureIdentity'
 import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
-import { decodeSelectedFeatureSpellAddress } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  decodeSelectedFeatureSpellAddress,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
@@ -45,6 +48,10 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
 
 export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
   if (isArcaneDabblerSlot(slot)) return ARCANE_DABBLER
+  if (isSelectedInvocationRitualSlot(slot))
+    return decodeSelectedFeatureSpellAddress(slot[2])?.[2].replace(/\b[a-z]/g, (letter) =>
+      letter.toUpperCase(),
+    )
   if (slot[1] === 'class-spellbook-specialty') return getSpellbookSpecialtyRule(slot)?.name
   if (slot[1] !== 'class-arcanum')
     return (
@@ -102,6 +109,7 @@ export function makeManagedClassSpellTag(
   return {
     ...makeSourceTag(owner[0], name, 'choice', source),
     ...(choice.slot[1] === 'feature-cantrip' ||
+    isSelectedInvocationRitualSlot(choice.slot) ||
     isArcaneDabblerSlot(choice.slot) ||
     choice.slot[1] === 'class-arcanum' ||
     getBardLoreSpellRule(choice.slot) ||
@@ -134,6 +142,7 @@ export function matchesManagedClassSpellTag(
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
     (choice.slot[1] === 'class-arcanum' ||
+    isSelectedInvocationRitualSlot(choice.slot) ||
     isArcaneDabblerSlot(choice.slot) ||
     getBardLoreSpellRule(choice.slot) ||
     getClericArcanaSpellRule(choice.slot) ||

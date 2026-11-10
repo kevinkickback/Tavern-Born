@@ -32,6 +32,10 @@ import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { getWalkingSpeed } from '@/lib/calculations/movement'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
 import {
+  createGameDataAvailabilityIndex,
+  getUnavailableCharacterContent,
+} from '@/lib/character/additionalContentAvailability'
+import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getCharacterClassChoices,
@@ -40,9 +44,13 @@ import {
   isClassChoiceOptionEligibleInDraft,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
-import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import {
+  applyClassChoiceSelectionWithGrantsCommand,
+  retainSavedFeatureOptionsCommand,
+} from '@/lib/character/commands/classChoiceCommands'
 import { reconcileOptionalClassFeatureChoicesCommand } from '@/lib/character/commands/classChoiceVariantCommands'
 import {
+  addMulticlass,
   applyClassSelectionCommand,
   applyLevelDown,
   applyLevelUp,
@@ -51,12 +59,14 @@ import {
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { removeManualEquipmentCommand } from '@/lib/character/commands/equipmentCommands'
+import { commitFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import {
   setManagedClassSpellChoiceCommand,
   setManagedClassSpellChoicesCommand,
 } from '@/lib/character/commands/managedClassSpellCommands'
 import { setWeaponInscription } from '@/lib/character/commands/weaponInscriptionCommands'
 import { getDirectClassPreparedSpellGrants } from '@/lib/character/directClassPreparedSpells'
+import { getEffectiveClassChoiceFeatureRoutes } from '@/lib/character/effectiveClassChoiceFeatures'
 import {
   getEpicBoonSlots,
   projectEpicBoonSlots,
@@ -337,6 +347,354 @@ describe.runIf(available)('configured inherited class progression', () => {
     calculation(character)
       .character.spells.spellProfiles.flatMap((profile) => profile.fixedSpells ?? [])
       .map((reference) => reference.toLowerCase())
+
+  const classChoice = (character: Character, label: string) => {
+    const [entry] = character.classProgression
+    const cls = classRow(entry.name, entry.source)
+    return getCharacterClassChoices(
+      cls,
+      cls.subclasses?.find(
+        (row) => row.name === entry.subclass && row.source === entry.subclassSource,
+      ),
+      createOptionalClassFeatureActivity(character, catalogs),
+      catalogs,
+    ).find((row) => row.label === label)!
+  }
+  const selectOptions = (
+    character: Character,
+    label: string,
+    ...options: Parameters<typeof applyClassChoiceSelectionWithGrantsCommand>[3]
+  ) => {
+    const choice = classChoice(character, label)
+    const saved = character.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+    return reopen(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choice,
+        options,
+        {
+          classes: data.classes,
+          catalogs,
+          spellContext: calculation(character).classChoices.spellContext,
+        },
+        undefined,
+        label === 'Eldritch Invocations'
+          ? saved
+            ? getOptionalPoolSelectionHandle(saved)
+            : ''
+          : undefined,
+      ),
+    )
+  }
+  const spellPicks = (character: Character, slots: ManagedClassSpellSlot[], names: string[]) =>
+    reopen(
+      character,
+      setManagedClassSpellChoicesCommand(
+        character,
+        character.provenance,
+        slots.map((slot, index) => ({
+          slot,
+          expected: null,
+          expectedEmptyRevision: character.managedClassSpellRevision ?? 0,
+          target: { name: names[index], source: 'XPHB' },
+          policy: 'default',
+        })),
+        calculation(character).classChoices.spellContext,
+      ),
+    )
+  const followupSheet = (character: Character) => {
+    const primary = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    return createCharacterSheetViewModel(character, primary, primary)
+  }
+
+  test.each([
+    ['Druidic Warrior', 'XPHB', ['Guidance', 'Starry Wisp']],
+    ['Void Warrior', 'WoW', ['Chill Touch', 'Mind Sliver']],
+  ] as const)('explicit Fighting Style %s owns two exact class cantrips', (name, source, spells) => {
+    const second = reachLevel(start('Demon Hunter'), 2)
+    const selected = selectOptions(second, 'Fighting Style', { entityType: 'feat', name, source })
+    const mirror = selected.classFeatChoices?.find(
+      (row) => row.progressionName === 'Fighting Style',
+    )
+    if (!mirror) throw new Error('Expected the selected class feat owner.')
+    expect(mirror.feats).toMatchObject([{ name, source, classSpellSetup: true }])
+    expect(() =>
+      commitFeatOptionsCommand(
+        selected,
+        selected.provenance,
+        { name, source, classFeatChoiceId: mirror.id },
+        { spells: [spells[0]] },
+      ),
+    ).toThrow(/Class spell choices/)
+    const slots = getManagedClassSpellSlots(
+      selected.classProgression[0],
+      selected,
+      catalogs,
+    ).filter((row) => row[1] === 'feature-cantrip')
+    expect(slots).toHaveLength(2)
+    const picked = spellPicks(selected, slots, [...spells])
+    expect(
+      calculation(picked).managedClassSpellStatuses.map((row) => [
+        row.choice.target.name,
+        row.active,
+      ]),
+    ).toEqual(spells.map((spell) => [spell, true]))
+    const cleared = selectOptions(picked, 'Fighting Style', {
+      entityType: 'feat',
+      name: 'Defense',
+      source: 'XPHB',
+    })
+    expect(cleared.managedClassSpellChoices).toEqual([])
+  })
+
+  test.each([
+    'WoW',
+    'XPHB',
+  ])('%s Warlock derives Chain and owns both Tome spell pools', (source) => {
+    const actor = { ...start('Warlock', source), allowedSources: ['XPHB', 'WoW'] }
+    const option = (name: string, printing = 'XPHB') => ({
+      entityType: 'optionalFeature' as const,
+      name,
+      source: printing,
+    })
+    const chain = option('Pact of the Chain')
+    const legion = option('Pact of the Legion', 'WoW')
+    const tome = option('Pact of the Tome')
+    const second = reachLevel(actor, 2)
+    const combined = selectOptions(second, 'Eldritch Invocations', chain, legion)
+    expect(
+      calculation(combined).fixedClassSpellStatuses.filter(
+        (row) => row.active && row.reference === 'Find Familiar|XPHB',
+      ),
+    ).toHaveLength(2)
+    expect(
+      followupSheet(combined).actions.filter(
+        (row) => row.name === 'Find Familiar' && row.kind === 'action',
+      ),
+    ).toHaveLength(1)
+    const justLegion = selectOptions(combined, 'Eldritch Invocations', legion)
+    expect(
+      calculation(justLegion)
+        .fixedClassSpellStatuses.filter((row) => row.active)
+        .map((row) => row.featureName),
+    ).toContain(legion.name)
+    const selected = selectOptions(actor, 'Eldritch Invocations', tome)
+    const slots = getManagedClassSpellSlots(
+      selected.classProgression[0],
+      selected,
+      catalogs,
+    ).filter((row) => row[1] === 'feature-cantrip' || row[1] === 'feature-prepared')
+    expect(slots.map((row) => row[1])).toEqual([
+      'feature-cantrip',
+      'feature-cantrip',
+      'feature-cantrip',
+      'feature-prepared',
+      'feature-prepared',
+    ])
+    expect(() => spellPicks(selected, [slots[3]], ['Magic Missile'])).toThrow(/eligible spell/)
+    const normal = getManagedClassSpellSlots(selected.classProgression[0], selected, catalogs).find(
+      (row) => row[1] === 'class-cantrip',
+    )!
+    expect(() =>
+      spellPicks(selected, [normal, slots[0]], ['Eldritch Blast', 'Eldritch Blast']),
+    ).toThrow(/already have prepared/)
+    const withChain = selectOptions(second, 'Eldritch Invocations', tome, chain)
+    expect(() => spellPicks(withChain, [slots[3]], ['Find Familiar'])).toThrow(
+      /already have prepared/,
+    )
+    const bookBlast = spellPicks(
+      selectOptions(second, 'Eldritch Invocations', tome),
+      [slots[0]],
+      ['Eldritch Blast'],
+    )
+    const agonizing = {
+      ...option('Agonizing Blast'),
+      invocationCantrip: { name: 'Eldritch Blast', source: 'XPHB' },
+    }
+    expect(() => selectOptions(bookBlast, 'Eldritch Invocations', agonizing)).toThrow(
+      /current eligible known Warlock cantrip/,
+    )
+    const targeting = selectOptions(bookBlast, 'Eldritch Invocations', tome, agonizing)
+    expect(
+      calculation(targeting).character.features.some((row) => row.name === agonizing.name),
+    ).toBe(true)
+    const withoutBook = selectOptions(targeting, 'Eldritch Invocations', agonizing)
+    expect(
+      calculation(withoutBook).character.features.some((row) => row.name === agonizing.name),
+    ).toBe(false)
+    if (source === 'WoW') {
+      const bard = classRow('Bard', 'XPHB')
+      const multiclass = reopen(
+        selected,
+        addMulticlass(selected, selected.provenance, bard.name, bard, bard.source),
+      )
+      const bardSlot = getManagedClassSpellSlots(
+        multiclass.classProgression[1],
+        multiclass,
+        catalogs,
+      ).find((row) => row[1] === 'class-known')!
+      const bardPrepared = spellPicks(multiclass, [bardSlot], ['Detect Magic'])
+      expect(() => spellPicks(bardPrepared, [slots[3]], ['Detect Magic'])).toThrow(
+        /already have prepared/,
+      )
+    }
+    const learned = spellPicks(selected, [normal], ['Eldritch Blast'])
+    const filled = spellPicks(learned, slots, [
+      'Guidance',
+      'Shocking Grasp',
+      'Druidcraft',
+      'Detect Magic',
+      'Comprehend Languages',
+    ])
+    const context = calculation(filled)
+    expect(context.managedClassSpellStatuses.filter((row) => row.active)).toHaveLength(6)
+    expect(
+      context.character.spells.spellProfiles.find((row) => row.classSource === source)
+        ?.alwaysPreparedSpells,
+    ).toEqual(expect.arrayContaining(['Detect Magic|XPHB', 'Comprehend Languages|XPHB']))
+    expect(
+      followupSheet(filled).spellRows.filter((row) => row.castingNote?.includes(tome.name)),
+    ).toHaveLength(5)
+    const cleared = selectOptions(filled, 'Eldritch Invocations')
+    expect(
+      calculation(cleared).managedClassSpellStatuses.map((row) => row.choice.target.name),
+    ).toEqual(['Eldritch Blast'])
+  })
+
+  test('standalone feature uses use effective abilities and earned recovery', () => {
+    const ability = (character: Character) => ({
+      ...character,
+      abilityScores: { ...character.abilityScores, wisdom: 16, charisma: 16 },
+    })
+    const knight = ability(start('Death Knight'))
+    const coil = followupSheet(knight).classResourceRows.find((row) => row.label === 'Death Coil')!
+    expect(coil).toMatchObject({
+      max: 4,
+      recovery: 'Restores all dice on a long rest',
+      usageText: 'Up to 3 d8s per use',
+    })
+    const saved = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...knight,
+          classResources: { [coil.id]: 1 },
+        }),
+      ),
+    )
+    expect(followupSheet(saved).classResourceRows.find((row) => row.id === coil.id)?.used).toBe(3)
+    const shadow = chooseSubclass(ability(reachLevel(start('Priest'), 3)), 'Shadow Domain')
+    expect(followupSheet(shadow).classResourceRows.map((row) => row.label)).not.toContain(
+      'Dispersion',
+    )
+    const sixth = followupSheet(reachLevel(shadow, 6))
+    expect(sixth.classResourceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Devouring Plague',
+          max: 3,
+          recovery: 'Restores all uses on a long rest',
+        }),
+        expect.objectContaining({
+          label: 'Dispersion',
+          max: 1,
+          recovery: 'Restores all uses on a short or long rest',
+        }),
+      ]),
+    )
+  })
+
+  test.runIf(existsSync('data/book/book-wow.json'))(
+    'companion family, specialization and mastery keep independent identities',
+    () => {
+      const hunter = chooseSubclass(reachLevel(start('Hunter'), 6), 'Beast Master')
+      const pool = classChoice(hunter, 'Primal Companion')
+      const choices = resolveClassChoiceOptions(
+        pool,
+        createClassChoiceCatalogs(catalogs),
+        [],
+        6,
+        hunter,
+      )
+      const option = (name: string) => choices.find((row) => row.reference.name === name)!.reference
+      expect(choices.filter((row) => row.reference.name === 'Serpent')).toHaveLength(2)
+      expect(() =>
+        selectOptions(hunter, 'Primal Companion', {
+          entityType: 'creature',
+          name: 'Beast of the Land',
+          source: 'XPHB',
+        }),
+      ).toThrow(/pet family/)
+      expect(() => selectOptions(hunter, 'Primal Companion', option('Blood Beast'))).toThrow(
+        /companion source/,
+      )
+      const cat = selectOptions(hunter, 'Primal Companion', option('Cat'))
+      const mastery = classChoice(cat, 'Weapon Mastery')
+      const options = resolveClassChoiceOptions(
+        mastery,
+        createClassChoiceCatalogs(catalogs),
+        [],
+        6,
+        cat,
+      )
+      const pet = options.find((row) => row.reference.name === 'Cat')!.reference
+      const ordinary = options.find(
+        (row) => row.reference.entityType === 'item' && row.availability === 'eligible',
+      )!.reference
+      const assigned = selectOptions(cat, 'Weapon Mastery', ordinary, pet)
+      const unavailableCats = (gameData: GameData) =>
+        [
+          ...getUnavailableCharacterContent(assigned, createGameDataAvailabilityIndex(gameData)),
+        ].filter((row) => row.name === 'Cat')
+      expect(unavailableCats(data)).toEqual([])
+      expect(unavailableCats({ ...data, companionFamilySources: [] })).toHaveLength(2)
+      const companion = followupSheet(assigned).companions[0]
+      expect(companion).toMatchObject({ name: 'Cat', creature: { name: 'Beast of the Land' } })
+      expect(
+        companion.creature?.trait?.some((row) => row.name === 'Pet Specialization: Ferocity'),
+      ).toBe(true)
+      expect(JSON.stringify(companion.creature?.action)).toContain('Mastery: Graze.')
+      const routes = getEffectiveClassChoiceFeatureRoutes(assigned, catalogs)
+      expect(routes.masteredWeapons.get(mastery.id)?.size).toBe(1)
+      expect(routes.masteredCompanionFamilies.get(mastery.id)?.size).toBe(1)
+      const switched = chooseSubclass(assigned, 'Hunter')
+      expect(
+        switched.classChoiceSelections?.find((row) => row.choiceId === mastery.id)?.selected,
+      ).toMatchObject([{ name: ordinary.name, source: ordinary.source }])
+      const savedCompanion = assigned.classChoiceSelections?.find((row) => row.choiceId === pool.id)
+      if (!savedCompanion) throw new Error('Expected the saved companion.')
+      const offline = reopen(
+        assigned,
+        retainSavedFeatureOptionsCommand(
+          assigned,
+          assigned.provenance,
+          pool.id,
+          [],
+          undefined,
+          getOptionalPoolSelectionHandle(savedCompanion),
+        ),
+      )
+      expect(
+        offline.classChoiceSelections?.find((row) => row.choiceId === mastery.id)?.selected,
+      ).toMatchObject([{ name: ordinary.name, source: ordinary.source }])
+      const bear = selectOptions(assigned, 'Primal Companion', option('Bear'))
+      expect(
+        bear.classChoiceSelections?.find((row) => row.choiceId === mastery.id)?.selected,
+      ).toMatchObject([{ name: ordinary.name, source: ordinary.source }])
+      expect(followupSheet(bear).companions[0]).toMatchObject({
+        name: 'Bear',
+        creature: { name: 'Beast of the Land' },
+      })
+      expect(JSON.stringify(followupSheet(bear).companions[0].creature?.trait)).toContain(
+        'Pet Specialization: Tenacity',
+      )
+    },
+  )
 
   test('shared resource casts and their counter follow earned subclass gains and survive reopen', async () => {
     const lookup = {

@@ -15,6 +15,7 @@ import {
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import {
   formatSpellReference,
   getSpellReferenceKey,
@@ -161,12 +162,14 @@ export function ManagedClassSpellsDialog({
     !selectedArcana &&
     !(selected && getBardLoreSpellRule(selected.slot))
   const pickerKind =
-    (selected &&
-      (isBookSpecialty || savantGain || selected.slot[1] === 'feature-prepared') &&
-      getManagedClassSpellFeatureLabel(selected.slot)) ||
-    (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
-      ? 'cantrip'
-      : 'spell')
+    selected && isSelectedInvocationRitualSlot(selected.slot)
+      ? 'ritual spell'
+      : (selected &&
+          (isBookSpecialty || savantGain || selected.slot[1] === 'feature-prepared') &&
+          getManagedClassSpellFeatureLabel(selected.slot)) ||
+        (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
+          ? 'cantrip'
+          : 'spell')
   const pool = useMemo(
     () =>
       selected &&
@@ -296,8 +299,9 @@ export function ManagedClassSpellsDialog({
               const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const arcana = getClericArcanaSpellRule(row.slot)
-              const kind =
-                row.slot[1] === 'class-arcanum'
+              const kind = isSelectedInvocationRitualSlot(row.slot)
+                ? 'Ritual Spell'
+                : row.slot[1] === 'class-arcanum'
                   ? 'Mystic Arcanum'
                   : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
                     ? 'Cantrip'

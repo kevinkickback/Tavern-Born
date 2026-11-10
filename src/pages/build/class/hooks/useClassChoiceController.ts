@@ -17,7 +17,6 @@ import { findClassReference } from '@/lib/5etools/classReference'
 import { ELEMENTAL_FURY_ID } from '@/lib/5etools/elementalFurySource'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
-import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { REVISED_AFFINITY_ID } from '@/lib/5etools/revisedElementalAffinity'
@@ -40,6 +39,7 @@ import {
   isClassChoiceOptionEligibleInDraft,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { hasClassFeatSpellSetup } from '@/lib/character/classFeatChoices'
 import {
   hasClassProficiencyRecovery,
   refreshClassProficiencyState,
@@ -624,7 +624,12 @@ export function useClassChoiceController({
       if (
         feat &&
         hasFeatOptions(feat) &&
-        !getClassFeatureSpellSemantics('feat', feat.name, feat.source)
+        !hasClassFeatSpellSetup(
+          useCharacterStore.getState().activeCharacter,
+          current.id,
+          feat.name,
+          feat.source,
+        )
       )
         onFeatOptionsRequired(feat, current.id)
     }

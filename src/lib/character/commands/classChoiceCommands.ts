@@ -44,6 +44,7 @@ import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
+import { hasDeclaredClassFeatSpellContext } from '@/lib/5etools/featureSpellSemantics'
 import { getFixedProficiencyId } from '@/lib/5etools/fixedProficiencyIdentity'
 import {
   decodeLegacySubclassChoice,
@@ -89,6 +90,7 @@ import {
   type ClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
   getCharacterClassChoices,
+  getCurrentClassChoiceDeclaration,
   isClassChoiceOptionEligible,
   resolveClassChoiceFeatureEntity,
   resolveClassChoiceOptions,
@@ -102,6 +104,12 @@ import {
 } from '@/lib/character/classProficiencyOwnership'
 import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { hasProficiencyCatalogTarget } from '@/lib/character/classProficiencyVocabulary'
+import {
+  hasAuthoredCompanionFamilies,
+  isCompanionFamilyMastery,
+  isCompanionFamilyOption,
+  retainCompanionFamilyMastery,
+} from '@/lib/character/companionFamilies'
 import {
   getCompanionSelectionStates,
   isRegisteredCompanionSelection,
@@ -122,6 +130,7 @@ import {
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
 import { isPlainSpellIdentityPart } from '@/lib/character/managedClassSpellIdentity'
+import { retainSelectedFeatureSpellIntent } from '@/lib/character/managedClassSpellState'
 import {
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
@@ -447,6 +456,7 @@ function currentLiteralChoice(
         selected.some(
           (option) =>
             (mastery &&
+              !isCompanionFamilyMastery(option) &&
               (option.entityType !== 'item' ||
                 !option.source?.trim() ||
                 option.ref !== undefined)) ||
@@ -735,12 +745,16 @@ export function retainSavedFeatureOptionsCommand(
     remaining.has(getClassChoiceOptionKey(option)),
   )
   verifyRevisedInvocationWithdrawal(character, selection, selected, authority?.catalogs)
-  const next = (character.classChoiceSelections ?? []).flatMap((row) =>
-    row.choiceId !== choiceId
-      ? [row]
-      : selected.length || row.proficiencyAtGain
-        ? [{ ...row, selected }]
-        : [],
+  const next = retainCompanionFamilyMastery(
+    (character.classChoiceSelections ?? []).flatMap((row) =>
+      row.choiceId !== choiceId
+        ? [row]
+        : selected.length || row.proficiencyAtGain
+          ? [{ ...row, selected }]
+          : [],
+    ),
+    selection,
+    { ...selection, selected },
   )
   const ownedProficiencies = isClassProficiencyChoiceId(selection.choiceId)
     ? retainClassProficiencyGrants(character, ledger, selection, selected)
@@ -828,7 +842,13 @@ function validateSelectedOptions(
   }
   if (choice.options.length === 0 || choice.optionFilter) return
   const allowed = new Set([...choice.options, ...previouslySelected].map(getClassChoiceOptionKey))
-  if (keys.some((key) => !allowed.has(key))) {
+  if (
+    selected.some(
+      (option, index) =>
+        !allowed.has(keys[index]) &&
+        !(choice.kind === 'creature' && isCompanionFamilyOption(option)),
+    )
+  ) {
     throw new RangeError(`A selected option is not available for ${choice.label}.`)
   }
 }
@@ -894,7 +914,23 @@ function verifyInvocationCantripEdit(
       isRevisedTargetedInvocation(option) && !oldKeys.has(getClassChoiceOptionKey(option)),
   )
   if (newTargets.length) {
-    const { knownWarlockCantrips } = projectManagedClassSpellState(character, {
+    const kept = new Set(selected.map(getClassChoiceOptionKey))
+    const proposed = previous
+      ? retainSelectedFeatureSpellIntent(character, {
+          ...character,
+          classChoiceSelections: character.classChoiceSelections?.map((row) =>
+            row === previous
+              ? {
+                  ...row,
+                  selected: row.selected.filter((option) =>
+                    kept.has(getClassChoiceOptionKey(option)),
+                  ),
+                }
+              : row,
+          ),
+        })
+      : character
+    const { knownWarlockCantrips } = projectManagedClassSpellState(proposed, {
       ...authority?.spellContext,
       catalogs,
     })
@@ -904,7 +940,7 @@ function verifyInvocationCantripEdit(
         createClassChoiceCatalogs(catalogs),
         [],
         owner.levels,
-        character,
+        proposed,
         knownWarlockCantrips,
       )
         .filter((row) => row.availability === 'eligible')
@@ -1435,18 +1471,35 @@ export function applyClassChoiceSelectionCommand(
   const retained = (character.classChoiceSelections ?? []).filter(
     (existing) => existing.choiceId !== choice.id,
   )
-  const next =
+  const next = retainCompanionFamilyMastery(
     selection.selected.length > 0 || selection.proficiencyAtGain || selection.favoredEnemy
       ? [...retained, selection]
-      : retained
+      : retained,
+    existingSelection,
+    selection,
+  )
+  const family = selection.selected.some(isCompanionFamilyOption)
   if (
-    authority?.catalogs?.creatures &&
-    isRegisteredCompanionSelection(selection) &&
-    !getCompanionSelectionStates(
-      { ...character, classChoiceSelections: next },
-      authority.classes,
-      authority.catalogs,
-    ).some((state) => state.selection.choiceId === choice.id && state.creature)
+    !family &&
+    choice.kind === 'creature' &&
+    authority?.catalogs &&
+    selection.selected.some(
+      (option) =>
+        !existingSelection?.selected.some(
+          (previous) => getClassChoiceOptionKey(previous) === getClassChoiceOptionKey(option),
+        ),
+    ) &&
+    hasAuthoredCompanionFamilies(character, choice, authority.catalogs)
+  )
+    throw new RangeError('Choose a pet family from the current companion rules.')
+  if (
+    (family || (authority?.catalogs?.creatures && isRegisteredCompanionSelection(selection))) &&
+    (!authority?.catalogs ||
+      !getCompanionSelectionStates(
+        { ...character, classChoiceSelections: next },
+        authority.classes,
+        authority.catalogs,
+      ).some((state) => state.selection.choiceId === choice.id && state.creature))
   )
     throw new RangeError('The companion source changed. Review the available creatures.')
   if (isKenseiChoiceId(choice.id) && getInvalidKenseiSelectionIds(next).size)
@@ -1555,11 +1608,13 @@ export function reconcileClassChoiceFeatMirror(
   ledger: ProvenanceLedger,
   choice: NormalizedCharacterChoice,
   selection: CharacterClassChoiceSelection | undefined,
+  catalogs?: ClassChoiceFeatureCatalogs,
 ): CharacterCommandResult {
   if (choice.kind !== 'feat' || isClassProficiencyChoiceId(choice.id))
     return { characterPatch: {}, provenanceUpdate: ledger }
   const owner = findOwner(character, choice)
   const categories = choice.optionFilter?.categories ?? []
+  const declaration = catalogs && getCurrentClassChoiceDeclaration(choice, catalogs)
   return replaceClassFeatSelectionsCommand(
     character,
     ledger,
@@ -1573,7 +1628,18 @@ export function reconcileClassChoiceFeatMirror(
       categories,
       slotLevels: selection?.selected.map((option) => option.slotLevel) ?? [],
     },
-    selection?.selected.map((option) => ({ name: option.name, source: option.source })) ?? [],
+    selection?.selected.map((option) => {
+      const feats = catalogs?.featExpertiseFeats?.filter(
+        (feat) =>
+          normalizeOwnerIdentity(feat.name) === normalizeOwnerIdentity(option.name) &&
+          normalizeOwnerIdentity(feat.source) === normalizeOwnerIdentity(option.source),
+      )
+      const classSpellSetup =
+        declaration && feats?.length === 1
+          ? hasDeclaredClassFeatSpellContext(choice, feats[0], declaration)
+          : undefined
+      return { name: option.name, source: option.source, classSpellSetup }
+    }) ?? [],
   )
 }
 
@@ -1909,6 +1975,10 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     grants.provenanceUpdate,
     choice,
     classChoiceSelections.find((selection) => selection.choiceId === choice.id),
+    authority?.catalogs && {
+      ...authority.catalogs,
+      featExpertiseFeats: authority.feats ?? authority.catalogs.featExpertiseFeats,
+    },
   )
   const projected = authority?.catalogs
     ? refreshClassProficiencyState(
@@ -1948,7 +2018,7 @@ export function reconcileClassChoiceSelections(
   selections: readonly CharacterClassChoiceSelection[] | undefined,
   progression: readonly CharacterClassEntry[],
 ): CharacterClassChoiceSelection[] {
-  return (selections ?? []).flatMap((selection) => {
+  let retained = (selections ?? []).flatMap((selection) => {
     const owner = progression.find(
       (entry) =>
         entry.name === selection.className &&
@@ -1967,4 +2037,14 @@ export function reconcileClassChoiceSelections(
       ? [{ ...selection, selected }]
       : []
   })
+  for (const previous of selections ?? []) {
+    if (!previous.selected.some(isCompanionFamilyOption)) continue
+    const current = retained.find((row) => row.choiceId === previous.choiceId)
+    retained = retainCompanionFamilyMastery(
+      retained,
+      previous,
+      current ?? { ...previous, selected: [] },
+    )
+  }
+  return retained
 }

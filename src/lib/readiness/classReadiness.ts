@@ -407,7 +407,8 @@ export function validateClassChoices(
               ? 1
               : 0
             : choice.optionFilter?.requiresMastery
-              ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0)
+              ? (effectiveRoutes.masteredWeapons.get(choice.id)?.size ?? 0) +
+                (effectiveRoutes.masteredCompanionFamilies.get(choice.id)?.size ?? 0)
               : fighterStyle && routeCatalogs?.classes
                 ? effectiveRoutes.selectedOptions.filter(
                     ({ selection }) => selection.choiceId === choice.id,

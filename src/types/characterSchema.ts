@@ -478,7 +478,7 @@ const classFeatChoiceSchema = z
     subclassSource: z.string().min(1).optional(),
     progressionName: z.string().min(1),
     categories: z.array(z.string()),
-    feats: z.array(featSchema),
+    feats: z.array(featSchema.extend({ classSpellSetup: z.literal(true).optional() })),
   })
   .superRefine((choice, ctx) => {
     if (!getFighterStylePair(choice.id)) return
