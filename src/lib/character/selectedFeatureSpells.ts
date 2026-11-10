@@ -41,6 +41,7 @@ import {
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
+import { isRevisedInvocationSelection } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   hasCurrentWizardIllusionCantrip,
   knowsIndependentMinorIllusion,
@@ -55,7 +56,11 @@ import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import type { Character } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
-import { getAtWillInvocationContract, isNativeInvocationPool } from './atWillInvocationRules'
+import {
+  getAtWillInvocationContract,
+  isInvocationPool,
+  isRevisedAtWillInvocationOption,
+} from './atWillInvocationRules'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
@@ -128,12 +133,11 @@ export function getSelectedFeatureCantripSetups(
       )
         return []
       if (
-        getAtWillInvocationContract(selection, option, feature) &&
+        (getAtWillInvocationContract(selection, option, feature) ||
+          (isRevisedInvocationSelection(selection) && isRevisedAtWillInvocationOption(option))) &&
         !active.some(
           (row) =>
-            row.selection === selection &&
-            row.option === option &&
-            !isNativeInvocationPool(row.choice),
+            row.selection === selection && row.option === option && !isInvocationPool(row.choice),
         )
       )
         return []

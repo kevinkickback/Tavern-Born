@@ -72,7 +72,11 @@ import {
   getEarnedSubclassSpellGrants,
   hasCurrentSubclassSpellGrant,
 } from '@/lib/5etools/subclassSpells'
-import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
+import {
+  getInvocationActorKey,
+  hasCurrentCelestialInvocationCantrips,
+  inheritsRevisedInvocations,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
 import {
   getWizardIllusionCantripOwner,
@@ -875,14 +879,20 @@ export function projectManagedClassSpellState(
     norm(entry.name) === 'warlock' && norm(entry.source) === 'xphb'
   const warlocks = character.classProgression.filter(isRevisedWarlock)
   const warlock = warlocks.length === 1 ? warlocks[0] : undefined
-  const knownWarlockCantrips = new Map<string, Spell5e>()
+  const invocationTargets = new Map<string, Map<string, Spell5e>>()
+  const addInvocationTarget = (entry: CharacterClassEntry, spell: Spell5e) => {
+    const id = getInvocationActorKey(entry)
+    const prior = invocationTargets.get(id) ?? new Map<string, Spell5e>()
+    prior.set(getSpellReferenceKey(spell.name, spell.source), spell)
+    invocationTargets.set(id, prior)
+  }
   for (const { choice, spell, entry } of active) {
     if (
-      entry === warlock &&
       choice.slot[1] === 'class-cantrip' &&
+      inheritsRevisedInvocations(entry, context?.catalogs?.classCastingSources) &&
       hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, { directOnly: true })
     )
-      knownWarlockCantrips.set(getSpellReferenceKey(spell.name, spell.source), spell)
+      addInvocationTarget(entry, spell)
   }
   for (const entry of character.classProgression) {
     if (!entry.subclass) continue
@@ -964,7 +974,7 @@ export function projectManagedClassSpellState(
             checked.classSpellRouteSource?.input?.targetOccurrences?.length === 1 &&
             checked.classSpellRouteDiagnostics?.length === 0
           )
-            knownWarlockCantrips.set(spellKey, checked)
+            addInvocationTarget(entry, checked)
         }
       }
       provenance = addSpellGrant(provenance, grant.spellName, {
@@ -1395,7 +1405,9 @@ export function projectManagedClassSpellState(
       spells: { ...daily.character.spells, spellProfiles: profiles },
     },
     independentSpellProfiles,
-    knownWarlockCantrips: [...knownWarlockCantrips.values()],
+    knownWarlockCantrips: new Map(
+      [...invocationTargets].map(([id, rows]) => [id, [...rows.values()]]),
+    ),
     statuses,
     dailyStatuses: daily.statuses,
     fixedClassSpellStatuses,

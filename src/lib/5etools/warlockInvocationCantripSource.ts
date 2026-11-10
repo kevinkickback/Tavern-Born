@@ -1,7 +1,10 @@
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, OptionalFeatureLike, Spell5e, SubclassFeature } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { CharacterClassChoiceSelection, CharacterClassEntry } from '@/types/character'
+import type { ClassCastingSourceProof } from '@/types/classCasting'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
+import { getClassCastingCopyParent } from './classCastingRules'
+import { getNormalizedClassChoiceId } from './classChoiceId'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { DAMAGE_TYPE_LABELS } from './constants'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
@@ -23,6 +26,52 @@ import {
 } from './optionalClassDeclarationStructure'
 
 export const REVISED_INVOCATION_POOL = 'class:warlock|xphb|choice:eldritch-invocations|1'
+type InvocationOwner = { name: string; source: string }
+export type InvocationCantripsByOwner = ReadonlyMap<string, readonly Spell5e[]>
+type InvocationCatalog = ClassFeatureSourceCatalog & {
+  classes?: readonly Class5e[]
+  classCastingSources?: readonly ClassCastingSourceProof[]
+}
+
+export function isRevisedInvocationPoolId(id: string | undefined) {
+  return (
+    typeof id === 'string' &&
+    /^class:[a-z0-9]+(?:-[a-z0-9]+)*\|[a-z0-9]+(?:-[a-z0-9]+)*\|choice:eldritch-invocations\|1$/.test(
+      id,
+    )
+  )
+}
+
+export function getRevisedInvocationPoolId(owner: InvocationOwner) {
+  return getNormalizedClassChoiceId({ ...owner, type: 'class' }, 'Eldritch Invocations', 1)
+}
+
+export function getInvocationActorKey(owner: InvocationOwner) {
+  return JSON.stringify([norm(owner.name), norm(owner.source)])
+}
+
+export function isRevisedInvocationSelection(selection: CharacterClassChoiceSelection) {
+  return (
+    isRevisedInvocationPoolId(selection.choiceId) &&
+    selection.choiceId ===
+      getRevisedInvocationPoolId({ name: selection.className, source: selection.classSource }) &&
+    selection.kind === 'optional-feature' &&
+    selection.classLevel === 1 &&
+    !selection.subclassName &&
+    !selection.subclassSource
+  )
+}
+
+export function inheritsRevisedInvocations(
+  owner: InvocationOwner,
+  sources?: readonly ClassCastingSourceProof[],
+) {
+  const name = norm(owner.name)
+  const source = norm(owner.source)
+  if (name === 'warlock' && source === 'xphb') return true
+  const parent = getClassCastingCopyParent(['class', name, source], sources ?? [])
+  return parent?.[0] === 'class' && parent[1] === 'warlock' && parent[2] === 'xphb'
+}
 
 // The authored choice filter omits the range floor and the repeated target's uniqueness.
 // Only the exact current prose and prerequisite combination supports these rules.
@@ -71,12 +120,11 @@ export function isRevisedTargetedInvocation(option: NormalizedChoiceOptionRefere
 
 function isRevisedInvocationCantripPool(choice: NormalizedCharacterChoice) {
   return (
-    choice.id === REVISED_INVOCATION_POOL &&
+    isRevisedInvocationPoolId(choice.id) &&
+    choice.id === getRevisedInvocationPoolId(choice.owner) &&
     choice.kind === 'optional-feature' &&
     choice.level === 1 &&
     choice.owner.type === 'class' &&
-    norm(choice.owner.name) === 'warlock' &&
-    norm(choice.owner.source) === 'xphb' &&
     !choice.owner.subclassName &&
     !choice.owner.subclassSource &&
     choice.source.kind === 'optional-feature-progression' &&
@@ -89,17 +137,29 @@ function isRevisedInvocationCantripPool(choice: NormalizedCharacterChoice) {
 
 export function isCurrentRevisedInvocationCantripPool(
   choice: NormalizedCharacterChoice,
-  catalogs: (ClassFeatureSourceCatalog & { classes?: readonly Class5e[] }) | undefined,
+  catalogs: InvocationCatalog | undefined,
 ) {
-  if (!catalogs || !isRevisedInvocationCantripPool(choice)) return false
+  return !!getCurrentRevisedInvocationClass(choice, catalogs)
+}
+
+function getCurrentRevisedInvocationClass(
+  choice: NormalizedCharacterChoice,
+  catalogs: InvocationCatalog | undefined,
+) {
+  if (
+    !catalogs ||
+    !isRevisedInvocationCantripPool(choice) ||
+    !inheritsRevisedInvocations(choice.owner, catalogs.classCastingSources)
+  )
+    return undefined
   const owners = catalogs.classes?.filter(
-    (cls) => norm(cls.name) === 'warlock' && norm(cls.source) === 'xphb',
+    (cls) =>
+      norm(cls.name) === norm(choice.owner.name) && norm(cls.source) === norm(choice.owner.source),
   )
   const owner = owners?.length === 1 ? owners[0] : undefined
-  if (!owner || owner.sourceIdentityConflict || '_copy' in owner) return false
+  if (!owner || owner.sourceIdentityConflict || '_copy' in owner) return undefined
   const current = owner.normalizedRules?.choices.filter((row) => row.id === choice.id)
-  return (
-    current?.length === 1 &&
+  return current?.length === 1 &&
     (current[0] === choice ||
       featureOptionRulesSignature(current, false) ===
         featureOptionRulesSignature([choice], false)) &&
@@ -112,11 +172,72 @@ export function isCurrentRevisedInvocationCantripPool(
       owner,
       catalogs,
       'class-feature|eldritch invocations|warlock|xphb|1|xphb',
-      (row) =>
-        Array.isArray(row.entries) &&
-        getFeatureSourceDigest(row.entries, false) ===
-          '6dd42ca613df38fd3cb19e56fbe7c0b0ec85f5a71b18487d06c911e7e6f3b9aa',
+      (row) => {
+        if (!Array.isArray(row.entries)) return false
+        const [first, ...rest] = row.entries
+        return (
+          typeof first === 'string' &&
+          getFeatureSourceDigest(
+            [
+              first.replace(
+                '{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source===extend}',
+                '{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source=XPHB}',
+              ),
+              ...rest,
+            ],
+            false,
+          ) === '6dd42ca613df38fd3cb19e56fbe7c0b0ec85f5a71b18487d06c911e7e6f3b9aa'
+        )
+      },
     )
+    ? owner
+    : undefined
+}
+
+/** The configured menu may extend the bundled list. Each used option still needs its exact link. */
+export function hasCurrentRevisedInvocationOption(
+  choice: NormalizedCharacterChoice,
+  catalogs: InvocationCatalog | undefined,
+  option: Pick<NormalizedChoiceOptionReference, 'name' | 'source'>,
+) {
+  const owner = getCurrentRevisedInvocationClass(choice, catalogs)
+  if (!owner || !catalogs) return false
+  const key = `${norm(option.name)}|${norm(option.source)}`
+  return !!getCurrentDirectClassFeature(
+    owner,
+    catalogs,
+    'class-feature|eldritch invocation options|warlock|xphb|1|xphb',
+    (feature) => {
+      if (!Array.isArray(feature.entries)) return false
+      const [intro, value, ...extra] = feature.entries
+      const menu = record(value)
+      if (
+        intro !== 'Eldritch Invocation options appear in alphabetical order.' ||
+        extra.length ||
+        menu.type !== 'options' ||
+        menu.count !== 1 ||
+        !Array.isArray(menu.entries) ||
+        Object.keys(menu).some((field) => !['type', 'count', 'entries'].includes(field))
+      )
+        return false
+      const rows = menu.entries
+        .map(record)
+        .filter(
+          (row) =>
+            typeof row.optionalfeature === 'string' &&
+            row.optionalfeature.split('|').map(norm).join('|') === key,
+        )
+      const [row] = rows
+      return (
+        rows.length === 1 &&
+        row.type === 'refOptionalfeature' &&
+        Object.keys(row).every((field) =>
+          ['type', 'optionalfeature', 'preserve'].includes(field),
+        ) &&
+        record(row.preserve).prerequisite === true &&
+        Object.keys(record(row.preserve)).length === 1
+      )
+    },
   )
 }
 

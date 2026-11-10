@@ -24,6 +24,7 @@ import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { getRevisedInvocationPoolId } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getWeaponInscriptionSetup } from '@/lib/5etools/weaponInscribedSpells'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -32,6 +33,7 @@ import { getWalkingSpeed } from '@/lib/calculations/movement'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
+  getCharacterClassChoices,
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
@@ -45,7 +47,10 @@ import {
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { removeManualEquipmentCommand } from '@/lib/character/commands/equipmentCommands'
-import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import {
+  setManagedClassSpellChoiceCommand,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
 import { setWeaponInscription } from '@/lib/character/commands/weaponInscriptionCommands'
 import { getDirectClassPreparedSpellGrants } from '@/lib/character/directClassPreparedSpells'
 import {
@@ -58,6 +63,9 @@ import {
   getManagedClassSpellPool,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
+import { buildRetainedCharacterDetails } from '@/lib/character/retainedCharacterDetails'
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getSelectedFeatureCantripSlots } from '@/lib/character/selectedFeatureSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
@@ -150,6 +158,7 @@ describe.runIf(available)('configured inherited class progression', () => {
             for (const name of ['sacred flame', 'cure wounds']) {
               document.xphb[name].class.EXAMPLE = { Lightkeeper: true, Wardkeeper: true }
             }
+            document.xphb['eldritch blast'].class.EXAMPLE = { Hexbinder: true }
           }
           if (actor === 'Lightkeeper' && file === 'class/class-fighter.json') {
             document._meta.internalCopies ??= []
@@ -167,6 +176,13 @@ describe.runIf(available)('configured inherited class progression', () => {
                 _copy: { name: 'Fighter', source: 'XPHB' },
               },
             )
+          }
+          if (actor === 'Lightkeeper' && file === 'class/class-warlock.json') {
+            document.class.push({
+              name: 'Hexbinder',
+              source,
+              _copy: { name: 'Warlock', source: 'XPHB' },
+            })
           }
           if (actor === 'Lightkeeper' && file === 'class/class-deathknight.json') {
             const template = document.class.find(
@@ -1754,6 +1770,242 @@ describe.runIf(available)('configured inherited class progression', () => {
       })?.hasSpellcastingFeature,
     ).toBeUndefined()
   }, 25_000)
+
+  test.each([
+    ['Warlock', 'XPHB'],
+    ['Warlock', 'WoW'],
+    ['Hexbinder', 'EXAMPLE'],
+  ])(
+    '%s %s earns its own Invocation targets, Pact and at-will spell',
+    async (name, source) => {
+      const actor = reachLevel(start(name, source), 5)
+      const [entry] = actor.classProgression
+      const poolId = getRevisedInvocationPoolId(entry)
+      const cls = classRow(name, source)
+      const choice = getCharacterClassChoices(
+        cls,
+        undefined,
+        createOptionalClassFeatureActivity(actor, catalogs),
+        catalogs,
+      ).find((row) => row.id === poolId)!
+      const slot = getManagedClassSpellSlots(entry, actor, catalogs).find(
+        (row) => row[1] === 'class-cantrip',
+      )!
+      const eldritchBlast = { name: 'Eldritch Blast', source: 'XPHB' }
+      const cantrip = (character: Character, target?: typeof eldritchBlast) =>
+        reopen(
+          character,
+          setManagedClassSpellChoiceCommand(
+            character,
+            character.provenance,
+            {
+              slot,
+              target,
+              expected: character.managedClassSpellChoices?.[0] ?? null,
+              expectedEmptyRevision: character.managedClassSpellRevision ?? 0,
+              ...(target && { policy: 'default' as const }),
+            },
+            calculation(character).classChoices.spellContext,
+          ),
+        )
+      const learned = cantrip(actor, eldritchBlast)
+      const option = (name: string) => ({
+        entityType: 'optionalFeature' as const,
+        name,
+        source: 'XPHB',
+      })
+      const agonizing = option('Agonizing Blast')
+      const targeted = { ...agonizing, invocationCantrip: eldritchBlast }
+      const pact = option('Pact of the Blade')
+      const blade = option('Thirsting Blade')
+      const misty = option('Misty Visions')
+      const selection = (character: Character) =>
+        character.classChoiceSelections?.find((row) => row.choiceId === poolId)
+      const choose = (character: Character, ...options: Array<typeof targeted | typeof blade>) =>
+        reopen(
+          character,
+          applyClassChoiceSelectionWithGrantsCommand(
+            character,
+            character.provenance,
+            choice,
+            options,
+            {
+              classes: data.classes,
+              catalogs,
+              spellContext: calculation(character).classChoices.spellContext,
+            },
+            undefined,
+            selection(character) ? getOptionalPoolSelectionHandle(selection(character)!) : '',
+          ),
+        )
+      const views = resolveClassChoiceOptions(
+        choice,
+        createClassChoiceCatalogs(catalogs),
+        [],
+        5,
+        learned,
+        calculation(learned).classChoices.prerequisites.knownWarlockCantrips,
+      )
+      for (const name of ['Agonizing Blast', 'Repelling Blast', 'Eldritch Spear']) {
+        expect(
+          views
+            .filter((view) => view.reference.name === name && view.reference.source === 'XPHB')
+            .map((view) => view.reference.invocationCantrip),
+        ).toEqual([eldritchBlast])
+      }
+      expect(() => choose(learned, agonizing)).toThrow(/current eligible known Warlock cantrip/)
+      expect(() => choose(learned, blade)).toThrow(/current Pact of the Blade/)
+      expect(() => choose(actor, targeted)).toThrow(/current eligible known Warlock cantrip/)
+      for (const single of [pact, misty]) {
+        const only = choose(actor, single)
+        const details = buildRetainedCharacterDetails(
+          only,
+          data,
+          data,
+          undefined,
+          calculation(only).classChoices.prerequisites,
+        ).choiceDetailsById.get(poolId)
+        expect(details).toMatchObject([{ availability: 'available' }])
+        expect(details?.[0]?.entries.length).toBeGreaterThan(0)
+      }
+      const saved = choose(learned, pact, targeted, misty, blade)
+      expect(
+        selection(saved)?.selected.find((option) => option.name === agonizing.name),
+      ).toMatchObject({ invocationCantrip: eldritchBlast, slotLevel: 2 })
+      expect(() => choose(saved, targeted, misty, blade)).toThrow(/dependent Invocations/)
+      const projected = calculation(saved)
+      expect(projected.atWillInvocationSpellStatuses).toMatchObject([
+        {
+          profileId: `class:${name}|${source}`,
+          reference: 'Silent Image|XPHB',
+          spell: { name: 'Silent Image' },
+        },
+      ])
+      expect(calculation(choose(saved, targeted, pact)).atWillInvocationSpellStatuses).toEqual([])
+      const current = {
+        ...lookups,
+        classChoiceClasses: data.classes,
+        classChoiceFeatureCatalogs: catalogs,
+      }
+      const view = (character: Character) =>
+        createCharacterSheetViewModel(character, current, current)
+      const sheet = view(saved)
+      expect(sheet.classFeaturesSummary2014).toContain('Agonizing Blast — Eldritch Blast (XPHB)')
+      expect(sheet.classFeaturesSummary2014).toContain(
+        'Thirsting Blade: You gain the Extra Attack feature',
+      )
+      expect(sheet.spellRows).toContainEqual(
+        expect.objectContaining({
+          name: 'Silent Image',
+          castingNote: expect.stringContaining('Misty Visions'),
+        }),
+      )
+      const cleared = cantrip(saved)
+      expect(
+        selection(cleared)?.selected.find((option) => option.name === agonizing.name)
+          ?.invocationCantrip,
+      ).toEqual(eldritchBlast)
+      expect(view(cleared).classFeaturesSummary2014).not.toContain(
+        'Agonizing Blast — Eldritch Blast (XPHB)',
+      )
+      expect(view(cantrip(cleared, eldritchBlast)).classFeaturesSummary2014).toContain(
+        'Agonizing Blast — Eldritch Blast (XPHB)',
+      )
+      if (source !== 'XPHB') {
+        const withoutCopy = {
+          ...current,
+          classChoiceFeatureCatalogs: {
+            ...catalogs,
+            classCastingSources: catalogs.classCastingSources.filter(
+              (proof) =>
+                proof.kind !== 'casting-copy' ||
+                proof.target !==
+                  JSON.stringify(['class', name.toLowerCase(), source.toLowerCase()]),
+            ),
+          },
+        }
+        const unavailable = createCharacterCalculationContext(saved, withoutCopy, current)
+        expect(unavailable.atWillInvocationSpellStatuses).toEqual([])
+        expect(
+          unavailable.character.features.some((feature) => feature.name === 'Thirsting Blade'),
+        ).toBe(false)
+      }
+      if (source === 'WoW') {
+        const disabled = { ...saved, allowedSources: ['XPHB'] }
+        const hidden = calculation(disabled)
+        expect(hidden.atWillInvocationSpellStatuses).toEqual([])
+        expect(
+          hidden.character.features.some((feature) =>
+            [agonizing.name, pact.name, blade.name, misty.name].includes(feature.name),
+          ),
+        ).toBe(false)
+        expect(selection(disabled)).toEqual(selection(saved))
+        expect(() => choose({ ...learned, allowedSources: ['XPHB'] }, misty)).toThrow(
+          /earned at-will Invocation/,
+        )
+        const withoutGain = reopen(
+          saved,
+          applyLevelDown(saved, saved.provenance, calculation(saved)),
+        )
+        expect(selection(withoutGain)?.selected.map((option) => option.name)).toEqual([
+          pact.name,
+          agonizing.name,
+          misty.name,
+        ])
+        expect(calculation(withoutGain).atWillInvocationSpellStatuses[0]?.reference).toBe(
+          'Silent Image|XPHB',
+        )
+        const replaced = choose(learned, pact, blade)
+        const lower = reopen(
+          replaced,
+          applyLevelDown(replaced, replaced.provenance, calculation(replaced)),
+        )
+        expect(selection(lower)?.selected.some((option) => option.name === blade.name)).toBe(true)
+        expect(view(lower).classFeaturesSummary2014).not.toContain(
+          'Thirsting Blade: You gain the Extra Attack feature',
+        )
+        expect(view(reachLevel(lower, 5)).classFeaturesSummary2014).toContain(
+          'Thirsting Blade: You gain the Extra Attack feature',
+        )
+        const legacy = characterPersistenceSchema.parse({
+          ...saved,
+          classChoiceSelections: saved.classChoiceSelections?.map((row) =>
+            row.choiceId === poolId
+              ? {
+                  ...row,
+                  selected: row.selected.map((option) =>
+                    option.name === agonizing.name
+                      ? { ...option, invocationCantrip: undefined }
+                      : option,
+                  ),
+                }
+              : row,
+          ),
+        })
+        const repaired = choose(legacy, targeted, pact, misty, blade)
+        expect(
+          selection(repaired)?.selected.find((option) => option.name === agonizing.name),
+        ).toMatchObject({
+          slotLevel: selection(legacy)?.selected.find((option) => option.name === agonizing.name)
+            ?.slotLevel,
+          invocationCantrip: eldritchBlast,
+        })
+        const pdf = await PDFDocument.load(
+          await generateTestCharacterSheet(sheet, '2024-official', {
+            text: { descriptions: 'full', overflow: 'notes' },
+          }),
+        )
+        const text = pdf
+          .getForm()
+          .getFields()
+          .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+          .join(' ')
+        expect(text).toMatch(/Misty Visions/)
+        expect(text).toMatch(/Silent Image/)
+      }
+    },
+    60_000,
+  )
 
   test('Warlock earns Pact Magic and Mystic Arcanum with its own list, profile and inverse', () => {
     let character: Character = start('Warlock')

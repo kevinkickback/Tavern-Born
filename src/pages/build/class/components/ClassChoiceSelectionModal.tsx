@@ -21,7 +21,7 @@ import {
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
-import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
+import { isRevisedInvocationPoolId } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -346,7 +346,7 @@ export function ClassChoiceSelectionModal({
   enemySetup,
 }: ClassChoiceSelectionModalProps) {
   const [editingHistory, setEditingHistory] = useState(false)
-  const invocationCantrips = choice.id === REVISED_INVOCATION_POOL
+  const invocationCantrips = isRevisedInvocationPoolId(choice.id)
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
     () =>
       removalOnly

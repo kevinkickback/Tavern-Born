@@ -1,17 +1,20 @@
 import { parseAdditionalSpellBlocks } from '@/lib/5etools/additionalSpells'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
+import {
+  getRevisedInvocationPoolId,
+  hasCurrentRevisedInvocationOption,
+  isRevisedInvocationPoolId,
+  isRevisedInvocationSelection,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { formatSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { OptionalFeatureLike } from '@/types/5etools'
 import type { CharacterClassChoiceOption, CharacterClassChoiceSelection } from '@/types/character'
-import type { NormalizedCharacterChoice } from '@/types/classRules'
+import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceOptionKey } from './classChoiceIdentity'
 
-const nativePools = {
-  phb: 'class:warlock|phb|choice:eldritch-invocations|2',
-  xphb: 'class:warlock|xphb|choice:eldritch-invocations|1',
-} as const
+const classicPool = 'class:warlock|phb|choice:eldritch-invocations|2'
 
 // The innate spell token does not encode self-only or component restrictions.
 // Certify the complete native text and retain it as a static rule reference.
@@ -54,13 +57,13 @@ const allowedFields = new Set([
 ])
 const revisedWarlockLevel2 = 'fe50f2dc7e1abb2e025f9bb324f1a5ad74a38925e033723a593925704c94dd7f'
 
-export function isNativeInvocationPoolId(id: string): boolean {
-  return id === nativePools.phb || id === nativePools.xphb
+export function isInvocationPoolId(id: string): boolean {
+  return id === classicPool || isRevisedInvocationPoolId(id)
 }
 
-export function isNativeInvocationPool(choice: NormalizedCharacterChoice): boolean {
+export function isInvocationPool(choice: NormalizedCharacterChoice): boolean {
   return (
-    isNativeInvocationPoolId(choice.id) &&
+    (choice.id === classicPool || choice.id === getRevisedInvocationPoolId(choice.owner)) &&
     choice.owner.type === 'class' &&
     choice.source.kind === 'optional-feature-progression' &&
     /^optionalfeatureProgression\[\d+\]$/.test(choice.source.field) &&
@@ -70,21 +73,44 @@ export function isNativeInvocationPool(choice: NormalizedCharacterChoice): boole
   )
 }
 
+export function isRevisedAtWillInvocationOption(option: NormalizedChoiceOptionReference) {
+  return (
+    option.entityType === 'optionalFeature' &&
+    norm(option.source) === 'xphb' &&
+    contracts.some((row) => norm(row.name) === norm(option.name))
+  )
+}
+
 export function getAtWillInvocationContract(
   selection: CharacterClassChoiceSelection,
   option: CharacterClassChoiceOption,
   feature: OptionalFeatureLike | undefined,
 ) {
-  const source = norm(selection.classSource)
+  const revised = isRevisedInvocationSelection(selection)
+  const source = revised ? 'xphb' : 'phb'
   if (
-    (source !== 'phb' && source !== 'xphb') ||
-    selection.choiceId !== nativePools[source] ||
+    (!revised &&
+      (selection.choiceId !== classicPool ||
+        norm(selection.className) !== 'warlock' ||
+        norm(selection.classSource) !== 'phb')) ||
     selection.kind !== 'optional-feature' ||
-    norm(selection.className) !== 'warlock' ||
     selection.subclassName ||
-    selection.subclassSource ||
+    selection.subclassSource
+  )
+    return undefined
+  return readAtWillInvocation(source, option, feature)
+}
+
+function readAtWillInvocation(
+  source: 'phb' | 'xphb',
+  option: NormalizedChoiceOptionReference,
+  feature: OptionalFeatureLike | undefined,
+) {
+  if (
     option.entityType !== 'optionalFeature' ||
     norm(option.source) !== source ||
+    option.ref ||
+    option.invocationCantrip ||
     !feature ||
     norm(feature.name) !== norm(option.name) ||
     norm(feature.source) !== source
@@ -119,9 +145,8 @@ export function getAtWillInvocationContract(
   return { reference: formatSpellReference(rule.spell, source.toUpperCase()), grant, minimumLevel }
 }
 
-export function getCurrentAtWillInvocation(
-  selection: CharacterClassChoiceSelection,
-  option: CharacterClassChoiceOption,
+function getInvocationLeaf(
+  option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
   const target = getClassChoiceOptionKey(option)
@@ -130,7 +155,31 @@ export function getCurrentAtWillInvocation(
     : (catalogs?.optionalFeatures ?? []).filter(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
-  const feature = candidates.length === 1 ? candidates[0] : undefined
-  const contract = getAtWillInvocationContract(selection, option, feature)
-  return contract && feature ? { ...contract, feature, target } : undefined
+  return candidates.length === 1 ? { feature: candidates[0], target } : undefined
+}
+
+export function getCurrentRevisedAtWillInvocation(
+  choice: NormalizedCharacterChoice,
+  option: NormalizedChoiceOptionReference,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+) {
+  const leaf = getInvocationLeaf(option, catalogs)
+  const contract = leaf && readAtWillInvocation('xphb', option, leaf.feature)
+  return leaf && contract && hasCurrentRevisedInvocationOption(choice, catalogs, option)
+    ? { ...contract, ...leaf }
+    : undefined
+}
+
+export function getCurrentAtWillInvocation(
+  choice: NormalizedCharacterChoice,
+  selection: CharacterClassChoiceSelection,
+  option: CharacterClassChoiceOption,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  ambiguousPool: boolean,
+) {
+  if (isRevisedInvocationSelection(selection) && !ambiguousPool)
+    return getCurrentRevisedAtWillInvocation(choice, option, catalogs)
+  const leaf = getInvocationLeaf(option, catalogs)
+  const contract = getAtWillInvocationContract(selection, option, leaf?.feature)
+  return contract && leaf ? { ...contract, ...leaf } : undefined
 }

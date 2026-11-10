@@ -49,6 +49,10 @@ declarations. Distinguish a list addition, learned spell, always-prepared grant 
 A cast-only or at-will Invocation does not add a Pact slot or automatically satisfy prerequisites.
 An Invocation targeting an existing cantrip checks that independent current target and retains
 recoverable intent if it disappears. Full PDF sheets include supported casting terms.
+When a copied class inherits the revised Eldritch Invocations progression, its own class level,
+learned cantrips, and selected Pact govern eligibility. Its supported options still require the
+current source-qualified Invocation declarations. The copy keeps its own saved choices and spell
+profile. Earlier untargeted choices can be assigned a target without changing their earned slot.
 
 A resource-paid subclass schedule can grant casts independently of a named prepared spell column
 when every column declares the same costs and the earned feature text confirms the spell, cost,

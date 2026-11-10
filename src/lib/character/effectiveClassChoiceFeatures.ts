@@ -18,9 +18,10 @@ import {
   IMPROVED_ELEMENTAL_FURY_NAME,
 } from '@/lib/5etools/elementalFurySource'
 import {
+  type InvocationCantripsByOwner,
   isCurrentRevisedInvocationCantripPool,
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisiteRules'
 import { buildEffectivePrerequisiteSnapshot } from '@/lib/calculations/prerequisiteSnapshot'
@@ -30,7 +31,6 @@ import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { getInvalidPsionicSelectionIds } from '@/lib/schema/psionicValidation'
-import type { Spell5e } from '@/types/5etools'
 import type {
   AbilityScores,
   Character,
@@ -40,7 +40,11 @@ import type {
   SpellProfile,
 } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
-import { getCurrentAtWillInvocation, isNativeInvocationPool } from './atWillInvocationRules'
+import {
+  getCurrentAtWillInvocation,
+  isInvocationPool,
+  isRevisedAtWillInvocationOption,
+} from './atWillInvocationRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import {
   getClassChoiceFeatureId,
@@ -65,7 +69,7 @@ import {
 export interface ClassChoicePrerequisiteContext {
   effectiveAbilityScores?: AbilityScores
   effectiveSpellProfiles?: readonly SpellProfile[]
-  knownWarlockCantrips?: readonly Spell5e[]
+  knownWarlockCantrips?: InvocationCantripsByOwner
 }
 
 /** Exact current contributing routes retain shared IDs; unproved reserved IDs never become manual. */
@@ -193,9 +197,9 @@ function buildEffectiveClassChoiceFeatureRoutes(
         .filter((row) => row.availability === 'eligible')
         .map((row) => getClassChoiceOptionKey(row.reference)),
     )
-    const nativeInvocationPool = isNativeInvocationPool(choice)
+    const invocationPool = isInvocationPool(choice)
     const ambiguousInvocationPool =
-      nativeInvocationPool && choiceCandidates.filter((row) => row.id === choice.id).length > 1
+      invocationPool && choiceCandidates.filter((row) => row.id === choice.id).length > 1
     const validInvocationCantripSlots =
       isCurrentRevisedInvocationCantripPool(choice, catalogs) &&
       !ambiguousInvocationPool &&
@@ -209,9 +213,11 @@ function buildEffectiveClassChoiceFeatureRoutes(
       }
     }
     for (const option of selection.selected) {
+      const revisedAtWill =
+        isRevisedInvocationPoolId(choice.id) && isRevisedAtWillInvocationOption(option)
       if (
         (option.invocationCantrip ||
-          (choice.id === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option))) &&
+          (isRevisedInvocationPoolId(choice.id) && isRevisedTargetedInvocation(option))) &&
         !validInvocationCantripSlots
       )
         continue
@@ -223,7 +229,8 @@ function buildEffectiveClassChoiceFeatureRoutes(
             (getProgressiveChoiceGainCount(choice, option.slotLevel) ?? 0)) ||
         (getFighterStylePair(choice.id) && option.slotLevel !== choice.level) ||
         (mastery && !option.source?.trim()) ||
-        !eligible.has(getClassChoiceOptionKey(option))
+        (!eligible.has(getClassChoiceOptionKey(option)) &&
+          !(revisedAtWill && ambiguousInvocationPool))
       )
         continue
       if (mastery) {
@@ -232,12 +239,18 @@ function buildEffectiveClassChoiceFeatureRoutes(
         masteredWeapons.set(choice.id, keys)
         continue
       }
-      const atWillInvocation = nativeInvocationPool
-        ? getCurrentAtWillInvocation(selection, option, catalogs)
+      const atWillInvocation = invocationPool
+        ? getCurrentAtWillInvocation(choice, selection, option, catalogs, ambiguousInvocationPool)
         : undefined
+      if (
+        revisedAtWill &&
+        (!atWillInvocation || (!ambiguousInvocationPool && !validInvocationCantripSlots))
+      )
+        continue
       // Replacements can fill an earlier slot while requiring the current class level.
       if (atWillInvocation && owner.levels < atWillInvocation.minimumLevel) continue
       selectedOptions.push({ atWillInvocation, ambiguousInvocationPool, choice, selection, option })
+      if (revisedAtWill && ambiguousInvocationPool) continue
       if (
         ['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
           option.entityType,
@@ -323,10 +336,12 @@ function buildEffectiveClassChoiceFeatureRoutes(
     featureNamesByChoice,
     contributions: [...accepted].map((index) => contributions[index]),
     selectedOptions: selectedOptions.filter(
-      ({ selection, option }) =>
+      ({ selection, option, atWillInvocation, ambiguousInvocationPool }) =>
+        (!!atWillInvocation && ambiguousInvocationPool) ||
         !['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
           option.entityType,
-        ) || featureIds.has(getClassChoiceFeatureId(selection, option)),
+        ) ||
+        featureIds.has(getClassChoiceFeatureId(selection, option)),
     ),
   }
 }
@@ -339,7 +354,7 @@ const cache = new WeakMap<
     {
       profiles?: readonly SpellProfile[]
       scores?: AbilityScores
-      knownWarlockCantrips?: readonly Spell5e[]
+      knownWarlockCantrips?: InvocationCantripsByOwner
       result: ReturnType<typeof buildEffectiveClassChoiceFeatureRoutes>
     }
   >

@@ -37,12 +37,13 @@ import {
 } from '@/lib/5etools/subclassFeatureConfiguration'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
+  type InvocationCantripsByOwner,
   isCurrentRevisedInvocationCantripPool,
+  isRevisedInvocationSelection,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Class5e, ClassFeature, Spell5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Subclass5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassChoiceSelection,
@@ -113,19 +114,17 @@ export interface FeatureOptionSelectionState {
 
 function getRevisedInvocationState(
   character: Character,
+  selection: CharacterClassChoiceSelection,
   classes: readonly Class5e[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
-  known: readonly Spell5e[] | undefined,
+  known: InvocationCantripsByOwner | undefined,
 ): FeatureOptionSelectionState | undefined {
-  if (!known) return undefined
-  const selection = character.classChoiceSelections?.find(
-    (row) => row.choiceId === REVISED_INVOCATION_POOL,
-  )
   if (
-    !selection?.selected.some(
+    !known ||
+    !isRevisedInvocationSelection(selection) ||
+    !selection.selected.some(
       (row) =>
-        isRevisedTargetedInvocation(row) ||
-        isBladeDependentInvocation(REVISED_INVOCATION_POOL, row),
+        isRevisedTargetedInvocation(row) || isBladeDependentInvocation(selection.choiceId, row),
     )
   )
     return undefined
@@ -143,7 +142,7 @@ function getRevisedInvocationState(
           getSelectedSubclassData(classData, owner),
           createOptionalClassFeatureActivity(character, catalogs),
           catalogs,
-        ).filter((row) => row.id === REVISED_INVOCATION_POOL)
+        ).filter((row) => row.id === selection.choiceId)
       : []
   const choice =
     choices.length === 1 &&
@@ -349,7 +348,7 @@ export function getFeatureOptionSelectionStates(
   character: Character,
   classes: readonly Class5e[],
   catalogs?: ClassChoiceFeatureCatalogs,
-  knownWarlockCantrips?: readonly Spell5e[],
+  knownWarlockCantrips?: InvocationCantripsByOwner,
 ): FeatureOptionSelectionState[] {
   const literal = (character.classChoiceSelections ?? [])
     .filter(
@@ -541,12 +540,16 @@ export function getFeatureOptionSelectionStates(
         ]
       : []
   })
-  const revisedInvocations = getRevisedInvocationState(
-    character,
-    classes,
-    catalogs,
-    knownWarlockCantrips,
-  )
+  const revisedInvocations = (character.classChoiceSelections ?? []).flatMap((selection) => {
+    const state = getRevisedInvocationState(
+      character,
+      selection,
+      classes,
+      catalogs,
+      knownWarlockCantrips,
+    )
+    return state ? [state] : []
+  })
   return [
     ...literal,
     ...orderRecovery,
@@ -569,7 +572,7 @@ export function getFeatureOptionSelectionStates(
     ...getFavoredEnemySelectionStates(character, classes, catalogs),
     ...getClassProficiencySelectionStates(character, classes, catalogs),
     ...getOptionalClassPoolSelectionStates(character, classes, catalogs),
-    ...(revisedInvocations ? [revisedInvocations] : []),
+    ...revisedInvocations,
   ]
 }
 

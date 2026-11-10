@@ -30,6 +30,7 @@ import {
 } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { isDivineSoulConfigurationGroup } from '@/lib/5etools/divineSoulConfiguration'
+import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   ELEMENTAL_FURY_ID,
   getCurrentElementalFury,
@@ -61,13 +62,18 @@ import { SCION_GROUP } from '@/lib/5etools/rogueScion'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import {
+  getRevisedInvocationPoolId,
   isCurrentRevisedInvocationCantripPool,
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { isWarlockPatronConfigurationGroup } from '@/lib/5etools/warlockPatronConfigurations'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  getCurrentRevisedAtWillInvocation,
+  isRevisedAtWillInvocationOption,
+} from '@/lib/character/atWillInvocationRules'
 import {
   getClassChoiceCatalogOptionKey,
   getClassChoiceDeclaration,
@@ -578,7 +584,7 @@ function verifyRevisedPactWithdrawal(
   options: readonly NormalizedChoiceOptionReference[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
-  if (selection?.choiceId !== REVISED_INVOCATION_POOL) return
+  if (!selection || !isRevisedInvocationPoolId(selection.choiceId)) return
   if (
     !selection.selected.some((row) => isPactBladeOption(row, 'xphb')) ||
     options.some((row) => isPactBladeOption(row, 'xphb'))
@@ -597,7 +603,10 @@ function verifyRevisedPactWithdrawal(
     throw new RangeError(
       'Restore the current Invocation source before replacing Pact of the Blade.',
     )
-  const pact = getCurrentPactBladeState(character, catalogs, 'xphb')
+  const pact = getCurrentPactBladeState(character, catalogs, 'xphb', {
+    name: selection.className,
+    source: selection.classSource,
+  })
   if (!pact?.option) return
   const views = resolveClassChoiceOptions(
     pact.choice,
@@ -1057,22 +1066,21 @@ export function applyClassChoiceSelectionCommand(
     choice = gain.choice
     selected = gain.options
   }
-  if (choice.id !== REVISED_INVOCATION_POOL && selected.some((option) => option.invocationCantrip))
+  if (!isRevisedInvocationPoolId(choice.id) && selected.some((option) => option.invocationCantrip))
     throw new RangeError(
       'Choose a cantrip target through the exact revised Eldritch Invocations pool.',
     )
-  const previousInvocations =
-    choice.id === REVISED_INVOCATION_POOL
-      ? character.classChoiceSelections?.find((row) => row.choiceId === choice.id)
-      : undefined
+  const previousInvocations = isRevisedInvocationPoolId(choice.id)
+    ? character.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+    : undefined
   const editsInvocationCantrips =
-    choice.id === REVISED_INVOCATION_POOL &&
+    isRevisedInvocationPoolId(choice.id) &&
     [...(previousInvocations?.selected ?? []), ...selected].some(
       (option) => option.invocationCantrip || isRevisedTargetedInvocation(option),
     )
   if (
     !editsInvocationCantrips &&
-    choice.id === REVISED_INVOCATION_POOL &&
+    isRevisedInvocationPoolId(choice.id) &&
     expectedSelectionHandle !== undefined &&
     (previousInvocations ? getOptionalPoolSelectionHandle(previousInvocations) : '') !==
       expectedSelectionHandle &&
@@ -1201,7 +1209,7 @@ export function applyClassChoiceSelectionCommand(
   const pactSource =
     choice.id === CLASSIC_PACT_BOON_POOL
       ? 'phb'
-      : choice.id === REVISED_INVOCATION_POOL
+      : isRevisedInvocationPoolId(choice.id)
         ? 'xphb'
         : undefined
   const nativeBladeSource = bladeInvocationSource ?? pactSource
@@ -1209,8 +1217,12 @@ export function applyClassChoiceSelectionCommand(
     nativeBladeSource &&
     (choice.kind !== 'optional-feature' ||
       choice.owner.type !== 'class' ||
-      normalizeOwnerIdentity(owner.name) !== 'warlock' ||
-      normalizeOwnerIdentity(owner.source) !== nativeBladeSource ||
+      (nativeBladeSource === 'phb'
+        ? normalizeOwnerIdentity(owner.name) !== 'warlock' ||
+          normalizeOwnerIdentity(owner.source) !== 'phb'
+        : choice.id !== getRevisedInvocationPoolId(owner) ||
+          normalizeOwnerIdentity(choice.owner.name) !== normalizeOwnerIdentity(owner.name) ||
+          normalizeOwnerIdentity(choice.owner.source) !== normalizeOwnerIdentity(owner.source)) ||
       choice.owner.subclassName ||
       choice.owner.subclassSource)
   )
@@ -1219,8 +1231,9 @@ export function applyClassChoiceSelectionCommand(
     nativeBladeSource &&
     existingSelection?.kind === choice.kind &&
     existingSelection.classLevel === choice.level &&
-    normalizeOwnerIdentity(existingSelection.className) === 'warlock' &&
-    normalizeOwnerIdentity(existingSelection.classSource) === nativeBladeSource &&
+    normalizeOwnerIdentity(existingSelection.className) === normalizeOwnerIdentity(owner.name) &&
+    normalizeOwnerIdentity(existingSelection.classSource) ===
+      normalizeOwnerIdentity(owner.source) &&
     !existingSelection.subclassName &&
     !existingSelection.subclassSource &&
     character.classChoiceSelections?.filter((row) => row.choiceId === choice.id).length === 1
@@ -1232,6 +1245,25 @@ export function applyClassChoiceSelectionCommand(
         pactSource &&
         normalizeOwnerIdentity(option.name) === normalizeOwnerIdentity(PACT_BLADE_NAME)
       const isDependent = isBladeDependentInvocation(choice.id, option)
+      const isNew = !previousBladeOptions.some(
+        (prior) =>
+          prior.ref === option.ref &&
+          getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+      )
+      if (nativeBladeSource === 'xphb' && isNew) {
+        if (isPact && !getCurrentPactBladeState(character, authority?.catalogs, 'xphb', owner))
+          throw new RangeError('Choose the current Pact of the Blade from its exact source.')
+        if (isRevisedAtWillInvocationOption(option)) {
+          const rule = getCurrentRevisedAtWillInvocation(choice, option, authority?.catalogs)
+          if (
+            !rule ||
+            owner.levels < rule.minimumLevel ||
+            !permitsClassRuleSource(character, owner.source) ||
+            !permitsClassRuleSource(character, 'XPHB')
+          )
+            throw new RangeError('Choose an earned at-will Invocation from its current source.')
+        }
+      }
       if (!isPact && !isDependent) continue
       if (
         isPact
@@ -1611,7 +1643,7 @@ export function reconcileClassChoiceSelectionGrants(
   const preservedGrants = new Map<string, Set<string>>()
   let spellReferences: Set<string> | undefined
   for (const selection of selections) {
-    const isRevisedInvocation = selection.choiceId === REVISED_INVOCATION_POOL
+    const isRevisedInvocation = isRevisedInvocationPoolId(selection.choiceId)
     if (!catalogs && !isRevisedInvocation) continue
     const previous = character.classChoiceSelections?.find(
       (row) => row.choiceId === selection.choiceId,
@@ -1691,12 +1723,14 @@ export function reconcileClassChoiceSelectionGrants(
             }),
           }
         : saved
-      if (selection.choiceId === REVISED_INVOCATION_POOL)
+      if (isRevisedInvocationPoolId(selection.choiceId))
         return {
           ...selection,
           selected: selection.selected.filter(
             (option) =>
-              !isRevisedTargetedInvocation(option) ||
+              (!isRevisedTargetedInvocation(option) &&
+                !isRevisedAtWillInvocationOption(option) &&
+                !isPactBladeOption(option, 'xphb')) ||
               routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
           ),
         }

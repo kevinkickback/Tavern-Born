@@ -23,7 +23,10 @@ import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { REVISED_AFFINITY_ID } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
-import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
+import {
+  type InvocationCantripsByOwner,
+  isRevisedInvocationPoolId,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import { getFeatureOwnerKey, getInvocationCantripLabel } from '@/lib/character/classChoiceIdentity'
@@ -67,7 +70,7 @@ import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoo
 import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Race5e, Spell5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, Race5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry, FavoredEnemySetup } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
@@ -77,7 +80,7 @@ interface ClassChoiceControllerParams {
   viewingClassEntry?: CharacterClassEntry
   viewingSubclassData?: Subclass5e
   viewingClassLevel: number
-  knownWarlockCantrips?: readonly Spell5e[]
+  knownWarlockCantrips?: InvocationCantripsByOwner
   includeClassFeatureVariants?: boolean
   catalogs: Omit<
     ClassChoiceCatalogs,
@@ -382,7 +385,7 @@ export function useClassChoiceController({
     if (request && request.contextKey !== contextKey) setRequest(null)
     if (request?.savedHandle !== undefined) {
       const latest = (
-        request.id === REVISED_INVOCATION_POOL || request.progressionGainLevel !== undefined
+        isRevisedInvocationPoolId(request.id) || request.progressionGainLevel !== undefined
           ? savedCharacter
           : character
       )?.classChoiceSelections?.find((row) => row.choiceId === request.id)
@@ -557,16 +560,15 @@ export function useClassChoiceController({
     }
     const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
     const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
-    const confirmedSelections =
-      current.id === REVISED_INVOCATION_POOL
-        ? selected
-        : [
-            ...eligibleSelections,
-            ...retainedSelections.slice(
-              0,
-              Math.max(0, activeRequiredCount - eligibleSelections.length),
-            ),
-          ]
+    const confirmedSelections = isRevisedInvocationPoolId(current.id)
+      ? selected
+      : [
+          ...eligibleSelections,
+          ...retainedSelections.slice(
+            0,
+            Math.max(0, activeRequiredCount - eligibleSelections.length),
+          ),
+        ]
     const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
     try {
       const unchanged =
@@ -586,7 +588,7 @@ export function useClassChoiceController({
           undefined,
           activeGainLevel !== undefined ||
             current.id === BLESSED_STRIKES_ID ||
-            current.id === REVISED_INVOCATION_POOL ||
+            isRevisedInvocationPoolId(current.id) ||
             current.id === ELEMENTAL_FURY_ID ||
             current.id === REVISED_AFFINITY_ID ||
             getClassOrderById(current.id)
@@ -783,7 +785,7 @@ export function useClassChoiceController({
     open: (choice: NormalizedCharacterChoice, progressionGainLevel?: number) => {
       setQueue(null)
       const saved = (
-        choice.id === REVISED_INVOCATION_POOL || progressionGainLevel !== undefined
+        isRevisedInvocationPoolId(choice.id) || progressionGainLevel !== undefined
           ? savedCharacter
           : character
       )?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
@@ -803,7 +805,7 @@ export function useClassChoiceController({
                     ? getOptionalPoolSelectionHandle(saved)
                     : ''
                   : choice.kind === 'creature' ||
-                      choice.id === REVISED_INVOCATION_POOL ||
+                      isRevisedInvocationPoolId(choice.id) ||
                       choice.id === BLESSED_STRIKES_ID ||
                       choice.id === ELEMENTAL_FURY_ID ||
                       choice.id === REVISED_AFFINITY_ID ||

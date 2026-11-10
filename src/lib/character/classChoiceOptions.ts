@@ -165,11 +165,13 @@ import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatu
 import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
+  getInvocationActorKey,
   getRevisedInvocationCantripRule,
-  isCurrentRevisedInvocationCantripPool,
+  hasCurrentRevisedInvocationOption,
+  type InvocationCantripsByOwner,
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
   meetsInvocationCantripCondition,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   getWarlockPatronConfigurationRules,
@@ -190,7 +192,6 @@ import type {
   ItemMastery5e,
   OptionalFeatureLike,
   Raw5ePrereq,
-  Spell5e,
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
@@ -201,6 +202,10 @@ import type {
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
+import {
+  getCurrentRevisedAtWillInvocation,
+  isRevisedAtWillInvocationOption,
+} from './atWillInvocationRules'
 import {
   getClassChoiceCatalogOptionKey,
   getClassChoiceFeatureTarget,
@@ -222,6 +227,7 @@ import {
   getCurrentBladeInvocationRule,
   getCurrentPactBladeState,
   isBladeDependentInvocation,
+  isPactBladeOption,
 } from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
@@ -935,7 +941,7 @@ export function resolveClassChoiceOptions(
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
   character?: Character,
-  knownWarlockCantrips?: readonly Spell5e[],
+  knownWarlockCantrips?: InvocationCantripsByOwner,
 ): ClassChoiceOptionView[] {
   const named = getNamedSubclassSpellRule(choice.id)
   if (named) {
@@ -1329,14 +1335,16 @@ export function resolveClassChoiceOptions(
       : count
     return count === 1 && candidateCount === 1
   }
-  const targetCantrips =
-    knownWarlockCantrips?.length && isCurrentRevisedInvocationCantripPool(choice, catalogs)
-      ? knownWarlockCantrips
-      : []
+  const targetCantrips = knownWarlockCantrips?.get(getInvocationActorKey(choice.owner)) ?? []
   const bladeSource = getBladeInvocationSource(choice.id)
+  const invocationSourcesAvailable =
+    bladeSource === 'xphb' &&
+    (!character ||
+      (permitsClassRuleSource(character, choice.owner.source) &&
+        permitsClassRuleSource(character, bladeSource)))
   const bladePact =
-    bladeSource && character && classLevel >= 5
-      ? getCurrentPactBladeState(character, catalogs, bladeSource)
+    bladeSource && character && (bladeSource === 'xphb' || classLevel >= 5)
+      ? getCurrentPactBladeState(character, catalogs, bladeSource, choice.owner)
       : undefined
   const bladeSlots =
     bladeSource &&
@@ -1344,6 +1352,11 @@ export function resolveClassChoiceOptions(
       1 &&
     hasEarnedRevisedInvocationSlots(choice, saved, classLevel)
   const bladeUnavailable = 'Restore the exact Invocation source and its earned Pact of the Blade.'
+  const invocationLevel = (level: number) => ({
+    prerequisite: [
+      { level: { level, class: { name: choice.owner.name, source: choice.owner.source } } },
+    ],
+  })
   const byKey = new Map(
     resolved
       .map((option) =>
@@ -1372,6 +1385,35 @@ export function resolveClassChoiceOptions(
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
       .flatMap((option) => {
+        if (bladeSource === 'xphb' && isPactBladeOption(option.reference, bladeSource)) {
+          return bladePact
+            ? [{ ...option, entries: bladePact.entries }]
+            : [
+                {
+                  ...option,
+                  entries: [],
+                  availability: 'retained' as const,
+                  unavailableReason: 'Restore the exact Pact of the Blade source.',
+                },
+              ]
+        }
+        if (bladeSource === 'xphb' && isRevisedAtWillInvocationOption(option.reference)) {
+          const rule = invocationSourcesAvailable
+            ? getCurrentRevisedAtWillInvocation(choice, option.reference, catalogs)
+            : undefined
+          if (!rule || classLevel < rule.minimumLevel)
+            return [
+              {
+                ...option,
+                entries: [],
+                availability: 'retained' as const,
+                unavailableReason: rule
+                  ? `Requires Warlock level ${rule.minimumLevel}.`
+                  : 'Restore the exact Invocation source.',
+              },
+            ]
+          return [{ ...option, ...invocationLevel(rule.minimumLevel) }]
+        }
         if (isBladeDependentInvocation(choice.id, option.reference)) {
           const rule =
             character &&
@@ -1384,6 +1426,7 @@ export function resolveClassChoiceOptions(
               availability: active ? ('eligible' as const) : ('retained' as const),
               entries: rule?.entries ?? [],
               prerequisite: rule ? [{ level: rule.level }] : undefined,
+              ...(rule?.source === 'xphb' && invocationLevel(rule.level.level)),
               ...(earned &&
                 rule.source === 'xphb' &&
                 bladePact && {
@@ -1400,9 +1443,14 @@ export function resolveClassChoiceOptions(
             },
           ]
         }
-        if (choice.id !== REVISED_INVOCATION_POOL || !isRevisedTargetedInvocation(option.reference))
+        if (!isRevisedInvocationPoolId(choice.id) || !isRevisedTargetedInvocation(option.reference))
           return [option]
-        if (!targetCantrips.length) return []
+        if (
+          !invocationSourcesAvailable ||
+          !targetCantrips.length ||
+          !hasCurrentRevisedInvocationOption(choice, catalogs, option.reference)
+        )
+          return []
         const key = getClassChoiceCatalogOptionKey(option.reference)
         const candidates = catalogs.optionalFeatureCandidates
           ? (catalogs.optionalFeatureCandidates.get(key) ?? [])
@@ -1441,7 +1489,7 @@ export function resolveClassChoiceOptions(
               reference,
               displayLabel,
               searchText: displayLabel,
-              prerequisite: [{ level: rule.prerequisite }],
+              ...invocationLevel(rule.prerequisite.level),
               ...(trueStrikeMismatch && {
                 availability: 'retained' as const,
                 entries: [

@@ -8,8 +8,8 @@ import {
 } from '@/lib/5etools/featureOptionIdentity'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import {
+  isRevisedInvocationSelection,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -35,13 +35,7 @@ export function getInvalidFeatureOptionSelectionPaths(
       if (!spell) continue
       const key = JSON.stringify([norm(option.name), getSpellNameKey(spell.name)])
       if (
-        selection.choiceId !== REVISED_INVOCATION_POOL ||
-        selection.kind !== 'optional-feature' ||
-        selection.classLevel !== 1 ||
-        norm(selection.className) !== 'warlock' ||
-        norm(selection.classSource) !== 'xphb' ||
-        selection.subclassName ||
-        selection.subclassSource ||
+        !isRevisedInvocationSelection(selection) ||
         option.ref ||
         !isRevisedTargetedInvocation(option) ||
         targeted.has(key)

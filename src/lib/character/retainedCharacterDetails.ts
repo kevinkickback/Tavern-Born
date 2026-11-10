@@ -12,8 +12,8 @@ import {
 } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import {
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
@@ -41,6 +41,8 @@ import type {
   Race5e,
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import type { NormalizedChoiceOptionReference } from '@/types/classRules'
+import { isRevisedAtWillInvocationOption } from './atWillInvocationRules'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
 import {
@@ -53,11 +55,21 @@ import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
-import { isBladeDependentInvocation } from './warlockInvocationSource'
+import { isBladeDependentInvocation, isPactBladeOption } from './warlockInvocationSource'
 
 export interface RetainedChoiceDetails {
   availability: 'available' | 'source-unavailable' | 'missing' | 'inactive'
   entries: unknown[]
+}
+
+function isGuardedInvocation(choiceId: string, option: NormalizedChoiceOptionReference) {
+  return (
+    isBladeDependentInvocation(choiceId, option) ||
+    (isRevisedInvocationPoolId(choiceId) &&
+      (isRevisedTargetedInvocation(option) ||
+        isRevisedAtWillInvocationOption(option) ||
+        isPactBladeOption(option, 'xphb')))
+  )
 }
 
 function classFeatures(classData: Class5e | undefined): ClassFeature[] {
@@ -225,10 +237,7 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
-        if (
-          (choice.choiceId === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option)) ||
-          isBladeDependentInvocation(choice.choiceId, option)
-        ) {
+        if (isGuardedInvocation(choice.choiceId, option)) {
           details[index] ??= { availability: 'missing', entries: [] }
           return
         }
@@ -275,14 +284,15 @@ export function buildRetainedCharacterDetails(
       continue
     }
     const fighterStyle = getFighterStylePair(selection.choiceId)
-    const scopedBlade = selection.selected.some((option) =>
-      isBladeDependentInvocation(selection.choiceId, option),
+    const scopedInvocation = selection.selected.some((option) =>
+      isGuardedInvocation(selection.choiceId, option),
     )
-    if (!scopedBlade && !fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
+    if (!scopedInvocation && !fighterStyle && !getOptionalClassPoolSelectionSection(selection))
+      continue
     const details = choiceDetailsById.get(selection.choiceId)
     selection.selected.forEach((option, index) => {
       const detail = details?.[index]
-      if (details && isBladeDependentInvocation(selection.choiceId, option)) {
+      if (details && isGuardedInvocation(selection.choiceId, option)) {
         const id = getClassChoiceFeatureId(selection, option)
         const active = routes.contributions.find(
           (row) => row.choiceId === selection.choiceId && row.id === id,
@@ -293,7 +303,11 @@ export function buildRetainedCharacterDetails(
               availability: 'inactive',
               entries: detail?.entries.length
                 ? detail.entries
-                : ['Restore the earned Warlock level and current Pact of the Blade.'],
+                : [
+                    isBladeDependentInvocation(selection.choiceId, option)
+                      ? 'Restore the earned Warlock level and current Pact of the Blade.'
+                      : 'Restore the current Invocation source and its prerequisites.',
+                  ],
             }
         return
       }
