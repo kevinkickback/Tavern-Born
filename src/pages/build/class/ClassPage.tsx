@@ -51,6 +51,7 @@ import { BuildClassDetailsPanel } from '@/pages/build/class/components/DetailsPa
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { getVisibleOptionalClassFeatures } from '@/pages/build/class/components/OptionalClassFeatures'
+import { WeaponInscriptionControl } from '@/pages/build/class/components/WeaponInscriptionControl'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
@@ -59,6 +60,7 @@ import {
   buildLevelsToShow,
   type ClassDetailsSelection,
   getClassChoiceGainCount,
+  getDisplayedClassFeatures,
   projectClassLevelFeatures,
   resolveSubclassDetailsSelection,
 } from '@/pages/build/class/model/pageUtils'
@@ -83,7 +85,6 @@ export function BuildClassPage() {
   const calculation = useCharacterCalculationContext(character)
   const {
     classes,
-    classFeatures,
     creatures,
     races,
     optionalfeatures,
@@ -194,9 +195,15 @@ export function BuildClassPage() {
           entries: addition.current.entries ?? [],
         }
       if (!activity.declared(origin.owner, origin.target, origin.earnedLevel)) return null
+      const currentClass = findClassReference(
+        { name: origin.owner[1], source: origin.owner[2] },
+        featureCatalogs.classes ?? [],
+      )
       const rows =
         origin.owner[0] === 'class'
-          ? featureCatalogs.classFeatures
+          ? currentClass
+            ? getDisplayedClassFeatures(currentClass, featureCatalogs)
+            : []
           : scopeClassChoiceFeatureCatalogs(
               featureCatalogs,
               getFeatureOwnerKey(
@@ -245,11 +252,6 @@ export function BuildClassPage() {
   }, [
     featureSelection,
     viewingClassDisplayData,
-    viewingClassData,
-    includeClassFeatureVariants,
-    classFeatures,
-    viewingClass,
-    viewingClassSource,
     activity,
     featureCatalogs,
     classChoiceCatalogs,
@@ -407,11 +409,8 @@ export function BuildClassPage() {
   const allClassFeatures = useMemo(() => {
     if (!viewingClass || !activity || !viewingClassData) return []
     const owner = optionalClassOwner(viewingClassData)
-    const src = viewingClassSource ?? viewingClassData?.source
-    return classFeatures
+    return getDisplayedClassFeatures(viewingClassData, featureCatalogs)
       .filter((f) => {
-        if (f.className !== viewingClass) return false
-        if (src && f.classSource !== src) return false
         const target = getClassFeatureIdentity(f)
         if (target === PRIMAL_ORDER.training.target || target === PRIMAL_ORDER.caster.target)
           return false
@@ -442,15 +441,7 @@ export function BuildClassPage() {
         ),
       }))
       .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
-  }, [
-    classFeatures,
-    viewingClass,
-    viewingClassSource,
-    viewingClassData,
-    includeClassFeatureVariants,
-    activity,
-    featureCatalogs,
-  ])
+  }, [viewingClass, viewingClassData, activity, featureCatalogs])
 
   const { subclassLevel, subclassFeatureName } = useMemo(() => {
     return getSubclassSelectionInfo(viewingClassData)
@@ -605,6 +596,22 @@ export function BuildClassPage() {
           leftWidth="var(--workspace-master-width)"
           left={
             <BuildClassLevelsPanel
+              weaponInscriptionControl={
+                viewingEntry && (
+                  <WeaponInscriptionControl
+                    key={JSON.stringify([
+                      character.id,
+                      viewingEntry.name,
+                      viewingEntry.source,
+                      viewingEntry.subclass,
+                      viewingEntry.subclassSource,
+                    ])}
+                    character={character}
+                    entry={viewingEntry}
+                    catalogs={featureCatalogs}
+                  />
+                )
+              }
               managedSpellStatuses={calculation?.managedClassSpellStatuses}
               optionalClassActivity={activity ?? undefined}
               classProgression={classProgression}

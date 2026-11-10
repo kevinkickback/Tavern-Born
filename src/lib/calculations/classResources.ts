@@ -1,5 +1,6 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID, isClassicDruid } from '@/lib/5etools/archdruidSource'
 import { getArtificerClassResources } from '@/lib/5etools/artificerJourneyRules'
+import { getAuthoredFeatureUses } from '@/lib/5etools/authoredFeatureUses'
 import { hasCurrentWarriorOfTheGods } from '@/lib/5etools/barbarianJourneySources'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -7,8 +8,13 @@ import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getFighterSubclassResources } from '@/lib/5etools/fighterSubclassResources'
-import { getFighterSuperiorityDice } from '@/lib/5etools/fighterSuperiorityDice'
+import {
+  getFighterSuperiorityDice,
+  getInheritedSuperiorityDice,
+} from '@/lib/5etools/fighterSuperiorityDice'
+import { getInheritedClassResources } from '@/lib/5etools/inheritedClassResources'
 import { getCurrentMonkBaseRules, getMonkBaseResources } from '@/lib/5etools/monkBaseRules'
 import { getMonkSubclassResources } from '@/lib/5etools/monkSubclassRules'
 import {
@@ -32,6 +38,7 @@ import {
   getSorcererResourceDefs,
   isNativeSorcerer,
 } from '@/lib/5etools/sorcererSource'
+import { getAuthoredSubclassResource } from '@/lib/5etools/subclassResourceCasting'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
@@ -120,12 +127,25 @@ export function getCharacterClassResources(
   return character.classProgression.flatMap((entry) => {
     const level = entry.levels ?? 1
     const levelIndex = Math.max(0, Math.min(19, level - 1))
+    const current = getCurrentResourceClass(character, entry, catalogs)
     const definitions = isNativeSorcerer(entry)
       ? currentSorcerer?.owner === entry
         ? getSorcererResourceDefs(currentSorcerer)
         : []
-      : getClassResourceDefs(resolveClass(entry), level)
+      : getClassResourceDefs(resolveClass(entry), level).filter(
+          (resource) => !resource.declarationTarget,
+        )
     const earned = [...definitions]
+    earned.push(...getInheritedClassResources(character, entry, catalogs))
+    if (current && catalogs)
+      earned.push(
+        ...getClassResourceDefs(current, level).filter(
+          ({ declarationTarget }) =>
+            !!declarationTarget &&
+            !catalogs.ambiguousClassFeatureTargets?.has(declarationTarget) &&
+            !!getCurrentDirectClassFeature(current, catalogs, declarationTarget),
+        ),
+      )
     earned.push(
       ...getArtificerClassResources(
         character,
@@ -148,7 +168,6 @@ export function getCharacterClassResources(
           proficiencyBonus,
         ),
       )
-    const current = getCurrentResourceClass(character, entry, catalogs)
     if (
       catalogs &&
       current &&
@@ -160,7 +179,9 @@ export function getCharacterClassResources(
     )
       earned.push(healingLight)
     if (hasCurrentWarriorOfTheGods(current, entry)) earned.push(warriorOfTheGods)
-    const superiority = getFighterSuperiorityDice(character, entry, catalogs?.classes)
+    const superiority =
+      getFighterSuperiorityDice(character, entry, catalogs?.classes) ??
+      getInheritedSuperiorityDice(character, entry, catalogs)
     if (superiority) earned.push(superiority)
     earned.push(
       ...getFighterSubclassResources(
@@ -184,6 +205,16 @@ export function getCharacterClassResources(
         options.abilityModifiers,
         proficiencyBonus,
       ),
+    )
+    const authored = getAuthoredSubclassResource(
+      character,
+      entry,
+      catalogs,
+      options.abilityModifiers,
+    )
+    if (authored) earned.push(authored)
+    earned.push(
+      ...getAuthoredFeatureUses(character, entry, catalogs, options.abilityModifiers, earned),
     )
     return earned.flatMap((definition) => {
       if (
@@ -216,6 +247,8 @@ export function getCharacterClassResources(
                 ? `Psi Limit is ${psiLimit}.`
                 : definition.usageText,
           className: entry.name,
+          classSource: entry.source,
+          inherited: !!(definition.inheritedFeature || definition.declarationTarget),
         },
       ]
     })

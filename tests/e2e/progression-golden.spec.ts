@@ -19,6 +19,7 @@ function progressionClass(name: string, source: string, subclass: string): Class
   const refs = parent.classFeatureRefs!.filter(
     (row) => row.gainSubclassFeature || row.name === 'Ability Score Improvement',
   )
+  const classFeatures: string[] = []
   if (name === 'Fighter') {
     refs.push({
       ref: 'Ability Score Improvement|Fighter|XPHB|19',
@@ -29,6 +30,7 @@ function progressionClass(name: string, source: string, subclass: string): Class
       level: 19,
     })
     const mastery = parent.classFeatureRefs!.find((row) => row.name === 'Weapon Mastery')!
+    classFeatures.push(mastery.ref)
     refs.push({
       ...mastery,
       feature: {
@@ -45,7 +47,7 @@ function progressionClass(name: string, source: string, subclass: string): Class
   }
   const current = {
     ...parent,
-    classFeatures: [],
+    classFeatures,
     classFeatureRefs: refs,
     startingEquipment: undefined,
     startingProficiencies: { ...parent.startingProficiencies, skills: [] },

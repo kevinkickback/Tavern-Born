@@ -79,6 +79,7 @@ import { featCategoryToFull, optFeatureTypeToFull } from '@/lib/5etools/classDat
 import {
   decodeClassFeatureReference,
   getClassFeatureIdentity,
+  getClassFeatureReferenceLevel,
   getSubclassFeatureIdentity,
 } from '@/lib/5etools/classFeatureIdentity'
 import {
@@ -95,26 +96,33 @@ import {
   buildCreatureChoiceSummary,
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
+import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
+import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getDivineSoulConfiguration,
   getDivineSoulOwnerRule,
   isDivineSoulConfigurationGroup,
   resolveDivineSoulConfigurationOption,
 } from '@/lib/5etools/divineSoulConfiguration'
+import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   decodeFeatureOptionReference,
   isFeatureLiteralChoiceId,
 } from '@/lib/5etools/featureOptionIdentity'
-import {
-  getClassFeatureSpellSemantics,
-  hasDeclaredClassFeatSpellContext,
-} from '@/lib/5etools/featureSpellSemantics'
+import { getFeatureSourceDigest } from '@/lib/5etools/featureSourceAudit'
+import { hasDeclaredClassFeatSpellContext } from '@/lib/5etools/featureSpellSemantics'
 import {
   type FeatureTableDefinition,
   type FeatureTableOption,
   resolveFeatureTableOption,
 } from '@/lib/5etools/featureTableOptions'
 import { getItemPropertyLabel, getItemPropertyReferences } from '@/lib/5etools/itemProperties'
+import {
+  getNamedSubclassSpellRule,
+  getNamedSubclassSpellSetup,
+  getNamedSubclassSpellSource,
+} from '@/lib/5etools/namedSubclassSpells'
 import {
   hasNaturalExplorerGrant,
   resolveNaturalExplorerOption,
@@ -156,11 +164,13 @@ import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatu
 import { getSubclassProficiencyDiagnostics } from '@/lib/5etools/subclassProficiencyChoices'
 import { collectUnconditionalFeatureReferences } from '@/lib/5etools/unconditionalFeatureReferences'
 import {
+  getInvocationActorKey,
   getRevisedInvocationCantripRule,
-  isCurrentRevisedInvocationCantripPool,
+  hasCurrentRevisedInvocationOption,
+  type InvocationCantripsByOwner,
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
   meetsInvocationCantripCondition,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   getWarlockPatronConfigurationRules,
@@ -181,7 +191,6 @@ import type {
   ItemMastery5e,
   OptionalFeatureLike,
   Raw5ePrereq,
-  Spell5e,
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
@@ -193,6 +202,10 @@ import type {
   NormalizedChoiceOptionReference,
 } from '@/types/classRules'
 import {
+  getCurrentRevisedAtWillInvocation,
+  isRevisedAtWillInvocationOption,
+} from './atWillInvocationRules'
+import {
   getClassChoiceCatalogOptionKey,
   getClassChoiceFeatureTarget,
   getClassChoiceOptionKey,
@@ -201,6 +214,18 @@ import {
 } from './classChoiceIdentity'
 import { getCurrentOwnedProficiencyCandidates } from './classProficiencyAuthority'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
+import {
+  getCompanionFamilyMasteryOption,
+  getCompanionFamilyOptions,
+  getCompanionFamilyRules,
+  hasAuthoredCompanionFamilies,
+  isCompanionFamilyOption,
+} from './companionFamilies'
+import {
+  getDeclaredInvocationLeaf,
+  getDeclaredInvocationRequirement,
+  hasDeclaredInvocationSpells,
+} from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import {
@@ -213,6 +238,7 @@ import {
   getCurrentBladeInvocationRule,
   getCurrentPactBladeState,
   isBladeDependentInvocation,
+  isPactBladeOption,
 } from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
@@ -229,7 +255,7 @@ export interface ClassChoiceOptionView {
   searchText?: string
   featureOption?: { damageType: string }
   sourceGroup?: { group: string }
-  bladePactDraftKey?: string
+  invocationPrerequisite?: { key: string; name: string }
   unavailableReason?: string
   minimumClassLevel?: number
 }
@@ -258,19 +284,24 @@ export function isClassChoiceOptionEligibleInDraft(
   option: ClassChoiceOptionView,
   selectedIds: ReadonlySet<string>,
 ) {
-  return option.bladePactDraftKey
-    ? selectedIds.has(option.bladePactDraftKey)
+  return option.invocationPrerequisite
+    ? selectedIds.has(option.invocationPrerequisite.key)
     : isClassChoiceOptionEligible(option)
 }
 
-export function retainsBladeInvocationWithoutPact(
+export function retainsInvocationWithoutPrerequisite(
   options: readonly ClassChoiceOptionView[],
   previous: ReadonlySet<string>,
   next: ReadonlySet<string>,
 ) {
   return options.some((option) => {
-    const pact = option.bladePactDraftKey
-    if (!pact || !isClassChoiceOptionEligible(option) || !previous.has(pact) || next.has(pact))
+    const prerequisite = option.invocationPrerequisite?.key
+    if (
+      !prerequisite ||
+      !isClassChoiceOptionEligible(option) ||
+      !previous.has(prerequisite) ||
+      next.has(prerequisite)
+    )
       return false
     const key = getClassChoiceOptionKey(option.reference)
     return previous.has(key) && next.has(key)
@@ -873,6 +904,52 @@ export function getEarnedFixedClassChoiceOptions(
   })
 }
 
+export function getCurrentClassChoiceDeclaration(
+  choice: NormalizedCharacterChoice,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  if (choice.owner.type !== 'class') return undefined
+  const owners = catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
+  if (owners?.length !== 1 || owners[0].sourceIdentityConflict) return undefined
+  const refs = owners[0].classFeatureRefs?.filter(
+    (ref) =>
+      normalized(ref.name) === normalized(choice.owner.featureName) &&
+      normalized(ref.source) === normalized(choice.owner.featureSource) &&
+      getClassFeatureReferenceLevel(ref) === choice.level,
+  )
+  if (refs?.length !== 1) return undefined
+  const [ref] = refs
+  const target = getClassFeatureIdentity(ref)
+  if (
+    !target ||
+    typeof ref.ref !== 'string' ||
+    getClassFeatureIdentity(decodeClassFeatureReference(ref.ref)) !== target ||
+    catalogs.ambiguousClassFeatureTargets?.has(target)
+  )
+    return undefined
+  const digest = getFeatureSourceDigest([ref.feature], false)
+  return getCurrentDirectClassFeature(
+    owners[0],
+    catalogs,
+    target,
+    (feature) => getFeatureSourceDigest([feature], false) === digest,
+  )
+}
+
+function satisfyFightingStyleRequirement(option: ClassChoiceOptionView): ClassChoiceOptionView {
+  if (option.reference.entityType !== 'feat' || !option.prerequisite?.length) return option
+  let satisfied = false
+  const prerequisite = option.prerequisite.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
+    const { feature, ...rest } = entry
+    if (!Array.isArray(feature) || feature.length !== 1 || feature[0] !== 'Fighting Style')
+      return entry
+    satisfied ||= Object.keys(rest).length === 0
+    return rest
+  })
+  return { ...option, prerequisite: satisfied ? undefined : prerequisite }
+}
+
 /** Resolves one normalized choice against filtered catalogs without source-specific option lists. */
 export function resolveClassChoiceOptions(
   choice: NormalizedCharacterChoice,
@@ -880,8 +957,60 @@ export function resolveClassChoiceOptions(
   saved: readonly CharacterClassChoiceOption[] = [],
   classLevel = 20,
   character?: Character,
-  knownWarlockCantrips?: readonly Spell5e[],
+  knownWarlockCantrips?: InvocationCantripsByOwner,
 ): ClassChoiceOptionView[] {
+  const named = getNamedSubclassSpellRule(choice.id)
+  if (named) {
+    const { owner } = named
+    const classes = catalogs.classes?.filter((row) => findClassReference(owner, [row]))
+    const cls = classes?.length === 1 ? classes[0] : undefined
+    const subclasses = cls?.subclasses?.filter((row) =>
+      findClassReference({ name: owner.subclassName, source: owner.subclassSource }, [row]),
+    )
+    const subclass = subclasses?.length === 1 ? subclasses[0] : undefined
+    const scoped = scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(owner.name, owner.source, owner.subclassName, owner.subclassSource),
+    )
+    const current =
+      cls &&
+      subclass &&
+      classLevel >= named.level &&
+      (!character ||
+        [owner.source, owner.subclassSource, named.source].every((source) =>
+          permitsClassRuleSource(character, source),
+        ))
+        ? getNamedSubclassSpellSource(cls, subclass, scoped)
+        : undefined
+    const setup =
+      cls &&
+      subclass &&
+      current &&
+      (!character ||
+        [current.feature.classSource, current.feature.subclassSource].every((source) =>
+          permitsClassRuleSource(character, source),
+        ))
+        ? getNamedSubclassSpellSetup(cls, subclass, scoped)
+        : undefined
+    const options = setup?.id === choice.id ? setup.options : []
+    const active = new Set(options.map(getClassChoiceOptionKey))
+    return [...options, ...saved.filter((row) => !active.has(getClassChoiceOptionKey(row)))].map(
+      (reference) => ({
+        reference,
+        availability: active.has(getClassChoiceOptionKey(reference)) ? 'eligible' : 'retained',
+        ...(active.has(getClassChoiceOptionKey(reference)) && {
+          sourceGroup: { group: 'named-subclass-spells' },
+        }),
+        entries: Object.entries(
+          current?.named.find(({ name }) => normalized(name) === normalized(reference.name))
+            ?.prepared ?? {},
+        ).map(
+          ([level, spells]) =>
+            `Level ${level}: ${spells.map((spell) => `{@spell ${spell.replace(/#c$/i, '')}}`).join(', ')}.`,
+        ),
+      }),
+    )
+  }
   if (
     choice.kind === 'optional-feature' &&
     getProgressiveChoiceGainCount(choice, choice.level) !== undefined
@@ -1038,34 +1167,62 @@ export function resolveClassChoiceOptions(
     ]
   }
   const filter = choice.optionFilter
-  const masteryOwners = filter?.requiresMastery
-    ? catalogs.classes?.filter((cls) => findClassReference(choice.owner, [cls]))
-    : undefined
-  const masteryTarget = filter?.requiresMastery
-    ? getClassFeatureIdentity({
-        name: choice.owner.featureName,
-        source: choice.owner.featureSource,
-        className: choice.owner.name,
-        classSource: choice.owner.source,
-        level: choice.level,
-      })
-    : undefined
-  const masteryFeatures = masteryTarget
-    ? (catalogs.classFeatureCandidates?.get(masteryTarget) ??
-      catalogs.classFeatures.filter(
-        (feature) => getClassFeatureIdentity(feature) === masteryTarget,
-      ))
-    : []
-  const currentFilter =
-    masteryOwners &&
-    (masteryOwners.length !== 1 ||
-      masteryOwners[0].sourceIdentityConflict ||
-      masteryFeatures.length !== 1 ||
-      masteryFeatures[0].sourceIdentityConflict)
-      ? undefined
-      : filter
+  const fightingStyle =
+    filter?.entityType === 'feat' &&
+    filter.categories?.length === 1 &&
+    filter.categories[0] === 'FS' &&
+    normalized(choice.owner.featureName) === 'fighting style'
+  const declaration =
+    filter?.requiresMastery || fightingStyle
+      ? getCurrentClassChoiceDeclaration(choice, catalogs)
+      : undefined
+  const declarationUnavailable =
+    (filter?.requiresMastery || fightingStyle) && !!catalogs.classes && !declaration
+  const currentFilter = declarationUnavailable ? undefined : filter
   const tableDefinitions = new Map<string, FeatureTableDefinition | undefined>()
   const resolved: ClassChoiceOptionView[] = []
+  const families = character ? getCompanionFamilyOptions(character, choice, catalogs) : []
+  const authoredFamilies =
+    families.length > 0 || (character && hasAuthoredCompanionFamilies(character, choice, catalogs))
+  const companionOwner =
+    families.length &&
+    character?.classProgression.find((entry) => findClassReference(choice.owner, [entry]))
+  const currentFamily =
+    character && companionOwner
+      ? getCompanionFamilyRules(character, companionOwner, catalogs)
+      : undefined
+  for (const { family, creature, reference } of families) {
+    const view = toView('creature', creature, catalogs)
+    resolved.push({
+      ...view,
+      reference,
+      displayLabel: `${family.name} — ${creature.name}`,
+      searchText: `${family.name} ${creature.name} ${family.specialization} ${family.mastery.name}`,
+      entries: [
+        `${family.specialization} family. Mastery property: ${family.mastery.name}.`,
+        ...(currentFamily?.specialization &&
+        getClassChoiceOptionKey(currentFamily.reference) === getClassChoiceOptionKey(reference)
+          ? ['While your companion is within 60 feet:', currentFamily.specialization]
+          : []),
+        ...view.entries,
+      ],
+      ...(family.unusual && {
+        availability: 'retained',
+        unavailableReason: 'This unusual family requires a special taming ability.',
+      }),
+    })
+  }
+  const petMastery =
+    character &&
+    !declarationUnavailable &&
+    getCompanionFamilyMasteryOption(character, choice, catalogs)
+  if (petMastery)
+    resolved.push({
+      reference: petMastery.reference,
+      displayLabel: `${petMastery.reference.name} companion — ${petMastery.mastery.name}`,
+      entries: petMastery.mastery.entries ?? [],
+      availability: 'eligible',
+    })
   const tableItems =
     choice.kind === 'item' &&
     choice.source.kind === 'class-table' &&
@@ -1074,11 +1231,21 @@ export function resolveClassChoiceOptions(
     choice.source.kind === 'optional-feature-progression' &&
     filter?.featureTypes?.length === 1 &&
     filter.featureTypes[0] === 'AI'
-  if (choice.options.length > 0 && !filter?.requiresMastery) {
+  if (choice.options.length > 0 && !filter?.requiresMastery && !declarationUnavailable) {
     resolved.push(
       ...choice.options
         .filter(
           (option) => choice.fixedOptions?.length || (option.minimumClassLevel ?? 1) <= classLevel,
+        )
+        .filter(
+          (option) =>
+            !authoredFamilies ||
+            option.entityType !== 'creature' ||
+            saved.some(
+              (row) =>
+                !isCompanionFamilyOption(row) &&
+                getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option),
+            ),
         )
         .map((option) => {
           const view = resolveProgressionOption(
@@ -1114,6 +1281,7 @@ export function resolveClassChoiceOptions(
         : [],
     )
     for (const entity of getFilteredCatalog(currentFilter, catalogs)) {
+      if (authoredFamilies && currentFilter.entityType === 'creature') continue
       const matches = (candidate: NormalizedChoiceOptionFilter) =>
         matchesClassChoiceFilter(
           entity,
@@ -1236,14 +1404,16 @@ export function resolveClassChoiceOptions(
       : count
     return count === 1 && candidateCount === 1
   }
-  const targetCantrips =
-    knownWarlockCantrips?.length && isCurrentRevisedInvocationCantripPool(choice, catalogs)
-      ? knownWarlockCantrips
-      : []
+  const targetCantrips = knownWarlockCantrips?.get(getInvocationActorKey(choice.owner)) ?? []
   const bladeSource = getBladeInvocationSource(choice.id)
+  const invocationSourcesAvailable =
+    bladeSource === 'xphb' &&
+    (!character ||
+      (permitsClassRuleSource(character, choice.owner.source) &&
+        permitsClassRuleSource(character, bladeSource)))
   const bladePact =
-    bladeSource && character && classLevel >= 5
-      ? getCurrentPactBladeState(character, catalogs, bladeSource)
+    bladeSource && character && (bladeSource === 'xphb' || classLevel >= 5)
+      ? getCurrentPactBladeState(character, catalogs, bladeSource, choice.owner)
       : undefined
   const bladeSlots =
     bladeSource &&
@@ -1251,16 +1421,22 @@ export function resolveClassChoiceOptions(
       1 &&
     hasEarnedRevisedInvocationSlots(choice, saved, classLevel)
   const bladeUnavailable = 'Restore the exact Invocation source and its earned Pact of the Blade.'
+  const invocationLevel = (level: number) => ({
+    prerequisite: [
+      { level: { level, class: { name: choice.owner.name, source: choice.owner.source } } },
+    ],
+  })
   const byKey = new Map(
     resolved
+      .map((option) =>
+        fightingStyle && declaration ? satisfyFightingStyleRequirement(option) : option,
+      )
       .map((option) => {
         if (
           !choice.source.field.endsWith(':entries.filter-alternative-v1') ||
           option.reference.entityType !== 'feat' ||
-          !getClassFeatureSpellSemantics(
-            'feat',
-            option.reference.name,
-            option.reference.source ?? '',
+          !choice.options.some(
+            (row) => getClassChoiceOptionKey(row) === getClassChoiceOptionKey(option.reference),
           )
         )
           return option
@@ -1269,12 +1445,43 @@ export function resolveClassChoiceOptions(
             normalized(feat.name) === normalized(option.reference.name) &&
             normalized(feat.source) === normalized(option.reference.source),
         )
-        return candidates.length === 1 && hasDeclaredClassFeatSpellContext(choice, candidates[0])
+        return (!character || permitsClassRuleSource(character, option.reference.source)) &&
+          candidates.length === 1 &&
+          hasDeclaredClassFeatSpellContext(choice, candidates[0], declaration)
           ? { ...option, prerequisite: undefined }
           : { ...option, availability: 'retained' as const }
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
       .flatMap((option) => {
+        if (bladeSource === 'xphb' && isPactBladeOption(option.reference, bladeSource)) {
+          return bladePact
+            ? [{ ...option, entries: bladePact.entries }]
+            : [
+                {
+                  ...option,
+                  entries: [],
+                  availability: 'retained' as const,
+                  unavailableReason: 'Restore the exact Pact of the Blade source.',
+                },
+              ]
+        }
+        if (bladeSource === 'xphb' && isRevisedAtWillInvocationOption(option.reference)) {
+          const rule = invocationSourcesAvailable
+            ? getCurrentRevisedAtWillInvocation(choice, option.reference, catalogs)
+            : undefined
+          if (!rule || classLevel < rule.minimumLevel)
+            return [
+              {
+                ...option,
+                entries: [],
+                availability: 'retained' as const,
+                unavailableReason: rule
+                  ? `Requires Warlock level ${rule.minimumLevel}.`
+                  : 'Restore the exact Invocation source.',
+              },
+            ]
+          return [{ ...option, ...invocationLevel(rule.minimumLevel) }]
+        }
         if (isBladeDependentInvocation(choice.id, option.reference)) {
           const rule =
             character &&
@@ -1287,10 +1494,14 @@ export function resolveClassChoiceOptions(
               availability: active ? ('eligible' as const) : ('retained' as const),
               entries: rule?.entries ?? [],
               prerequisite: rule ? [{ level: rule.level }] : undefined,
+              ...(rule?.source === 'xphb' && invocationLevel(rule.level.level)),
               ...(earned &&
                 rule.source === 'xphb' &&
                 bladePact && {
-                  bladePactDraftKey: getClassChoiceOptionKey(bladePact.reference),
+                  invocationPrerequisite: {
+                    key: getClassChoiceOptionKey(bladePact.reference),
+                    name: bladePact.reference.name,
+                  },
                 }),
               ...(!active && {
                 unavailableReason:
@@ -1303,9 +1514,67 @@ export function resolveClassChoiceOptions(
             },
           ]
         }
-        if (choice.id !== REVISED_INVOCATION_POOL || !isRevisedTargetedInvocation(option.reference))
-          return [option]
-        if (!targetCantrips.length) return []
+        if (!isRevisedInvocationPoolId(choice.id)) return [option]
+        if (!isRevisedTargetedInvocation(option.reference)) {
+          const rule = getDeclaredInvocationRequirement(choice, option.reference, catalogs)
+          const declaredSpells = hasDeclaredInvocationSpells(option.reference, catalogs)
+          if (rule === undefined && !declaredSpells) return [option]
+          const leaf =
+            declaredSpells && getDeclaredInvocationLeaf(choice, option.reference, catalogs)
+          if (
+            rule === null ||
+            !invocationSourcesAvailable ||
+            (character &&
+              (!permitsClassRuleSource(character, option.reference.source) ||
+                (rule?.required && !permitsClassRuleSource(character, rule.required.source)))) ||
+            (declaredSpells &&
+              (!leaf || (!readDeclaredInvocationCast(leaf) && !readDeclaredInvocationBook(leaf))))
+          )
+            return [
+              {
+                ...option,
+                availability: 'retained' as const,
+                entries: [],
+                unavailableReason: 'Restore the exact Invocation and prerequisite sources.',
+              },
+            ]
+          if (!rule) return [option]
+          const requirement = rule.required && {
+            name: rule.required.name,
+            key: getClassChoiceOptionKey(rule.required),
+          }
+          const meetsLevel = classLevel >= rule.level
+          const meetsPrerequisite =
+            !requirement ||
+            saved.some(
+              (row) =>
+                row.slotLevel <= classLevel &&
+                row.ref === undefined &&
+                row.invocationCantrip === undefined &&
+                getClassChoiceOptionKey(row) === requirement.key,
+            )
+          const eligible = meetsLevel && meetsPrerequisite
+          return [
+            {
+              ...option,
+              ...invocationLevel(rule.level),
+              availability: eligible ? ('eligible' as const) : ('retained' as const),
+              ...(meetsLevel && requirement && { invocationPrerequisite: requirement }),
+              ...(!eligible && {
+                unavailableReason:
+                  meetsLevel && requirement
+                    ? `Requires ${requirement.name} in this Invocation pool.`
+                    : `Requires ${choice.owner.name} level ${rule.level}.`,
+              }),
+            },
+          ]
+        }
+        if (
+          !invocationSourcesAvailable ||
+          !targetCantrips.length ||
+          !hasCurrentRevisedInvocationOption(choice, catalogs, option.reference)
+        )
+          return []
         const key = getClassChoiceCatalogOptionKey(option.reference)
         const candidates = catalogs.optionalFeatureCandidates
           ? (catalogs.optionalFeatureCandidates.get(key) ?? [])
@@ -1344,7 +1613,7 @@ export function resolveClassChoiceOptions(
               reference,
               displayLabel,
               searchText: displayLabel,
-              prerequisite: [{ level: rule.prerequisite }],
+              ...invocationLevel(rule.prerequisite.level),
               ...(trueStrikeMismatch && {
                 availability: 'retained' as const,
                 entries: [
@@ -1433,21 +1702,7 @@ export function resolveClassChoiceOptions(
         rows?.length === 1 &&
         !('sourceIdentityConflict' in rows[0] && rows[0].sourceIdentityConflict === true)
       ) {
-        if (currentStyle && option.reference.entityType === 'feat' && option.prerequisite?.length) {
-          let satisfied = false
-          const prerequisite = option.prerequisite.map((entry) => {
-            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
-            const { feature, ...rest } = entry
-            if (!Array.isArray(feature) || feature.length !== 1 || feature[0] !== 'Fighting Style')
-              return entry
-            satisfied ||= Object.keys(rest).length === 0
-            return rest
-          })
-          byKey.set(key, {
-            ...option,
-            prerequisite: satisfied ? undefined : prerequisite,
-          })
-        }
+        if (currentStyle) byKey.set(key, satisfyFightingStyleRequirement(option))
         continue
       }
       if (savedStyleKeys.has(key)) byKey.set(key, { ...option, availability: 'retained' })
@@ -1738,6 +1993,33 @@ function getCurrentLandTerrainSetup(
   return owner && subclasses?.length === 1 ? getLandTerrainSetup(owner, subclasses[0]) : undefined
 }
 
+function getCurrentNamedSpellSetup(
+  actor: { name?: string; source?: string },
+  selection: { name?: string; source?: string } | undefined,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (
+    !catalogs ||
+    !selection ||
+    isCircleOfTheLand(actor.name ?? '', actor.source ?? '', selection.name ?? '', selection.source)
+  )
+    return undefined
+  const matches = catalogs.classes?.filter((row) => findClassReference(actor, [row]))
+  if (matches?.length !== 1) return undefined
+  const [cls] = matches
+  const subclasses = cls.subclasses?.filter((row) => findClassReference(selection, [row]))
+  if (subclasses?.length !== 1) return undefined
+  const [subclass] = subclasses
+  return getNamedSubclassSpellSetup(
+    cls,
+    subclass,
+    scopeClassChoiceFeatureCatalogs(
+      catalogs,
+      getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source),
+    ),
+  )
+}
+
 /** Source-only candidates include both sides; no permission or character intent is inferred. */
 export function getClassChoiceCandidates(
   classData: {
@@ -1860,6 +2142,7 @@ export function getClassChoiceCandidates(
     ...getWarlockPatronConfigurations(classData, subclass, catalogs?.classes),
     ...[
       getCurrentLandTerrainSetup(classData, subclass, catalogs),
+      getCurrentNamedSpellSetup(classData, subclass, catalogs),
       getRevisedAffinitySetup(classData, subclass, catalogs),
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
       getScionConfiguration(classData, subclass, catalogs?.classes),

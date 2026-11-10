@@ -5,6 +5,10 @@ import {
   getDivineSoulConfigurationRule,
   isValidDivineSoulSelection,
 } from './divineSoulConfiguration'
+import {
+  getNamedSubclassSpellRule,
+  isValidNamedSubclassSpellSelection,
+} from './namedSubclassSpells'
 import { getScionConfigurationRule, isValidScionSelection } from './rogueScion'
 import {
   getWarlockPatronConfigurationRule,
@@ -16,7 +20,8 @@ export const getSubclassFeatureConfigurationRule = (id: string) =>
   getWarlockPatronConfigurationRule(id) ??
   getDivineSoulConfigurationRule(id) ??
   getScionConfigurationRule(id) ??
-  getArmorModelRule(id)
+  getArmorModelRule(id) ??
+  getNamedSubclassSpellRule(id)
 
 export const isValidSubclassFeatureConfigurationSelection = (row: CharacterClassChoiceSelection) =>
   getLandChoiceRule(row.choiceId)
@@ -24,4 +29,5 @@ export const isValidSubclassFeatureConfigurationSelection = (row: CharacterClass
     : isValidWarlockPatronConfiguration(row) ||
       isValidDivineSoulSelection(row) ||
       isValidScionSelection(row) ||
-      isValidArmorModelSelection(row)
+      isValidArmorModelSelection(row) ||
+      isValidNamedSubclassSpellSelection(row)

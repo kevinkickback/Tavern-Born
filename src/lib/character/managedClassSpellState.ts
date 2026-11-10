@@ -1,6 +1,7 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
@@ -18,7 +19,8 @@ import {
 const automaticallyPrepared = (choice: ManagedClassSpellChoice) =>
   getBardLoreSpellRule(choice.slot)?.source === 'xphb' ||
   !!getClericArcanaSpellRule(choice.slot) ||
-  isArcaneDabblerSlot(choice.slot)
+  isArcaneDabblerSlot(choice.slot) ||
+  isSelectedInvocationRitualSlot(choice.slot)
 
 const choiceReference = (choice: ManagedClassSpellChoice) =>
   getSpellReferenceKey(choice.target.name, choice.target.source)
@@ -98,7 +100,8 @@ export function retainSelectedFeatureSpellIntent(before: Character, next: Charac
   const lost = [...getSavedSelectedFeatureSpellProducers(before)].some((key) => !current.has(key))
   const removed = (next.managedClassSpellChoices ?? []).filter(
     (choice) =>
-      choice.slot[1] === 'feature-cantrip' && !hasSavedSelectedFeatureSpellOwner(next, choice.slot),
+      (choice.slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(choice.slot)) &&
+      !hasSavedSelectedFeatureSpellOwner(next, choice.slot),
   )
   if (!lost && !removed.length) return next
   const stripped = removeManagedClassSpellMaterialization(next, removed)

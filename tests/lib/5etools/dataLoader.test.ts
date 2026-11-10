@@ -18,6 +18,143 @@ function makeJsonResponse(jsonData: unknown, ok = true) {
 describe('5etools/dataLoader', () => {
   const originalFetch = globalThis.fetch
 
+  test.each([
+    'indexed dependency',
+    'internal copy',
+    'undeclared parent',
+    'ambiguous parent',
+    'wrong parent printing',
+    'wrong subclass parent printing',
+    'internal subclass printing mismatch',
+    'undeclared local subclass parent',
+    'subclass parent identity collision',
+    'copied subclass parent',
+  ])('qualifies the exact class copy scope: %s', async (scenario) => {
+    const base = {
+      name: 'Guardian',
+      source: 'XPHB',
+      edition: 'one',
+      page: 23,
+      hd: { number: 1, faces: 10 },
+      proficiency: ['wis', 'cha'],
+      startingProficiencies: { armor: ['heavy'], weapons: ['martial'], tools: ['smith tools'] },
+      classFeatures: ['Defend|Guardian|XPHB|1'],
+    }
+    const subclass = {
+      name: 'Sentinel',
+      shortName: 'Sentinel',
+      className: 'Guardian',
+      classSource: 'XPHB',
+      source: 'XPHB',
+    }
+    const parentSubclass = {
+      ...subclass,
+      ...(scenario === 'subclass parent identity collision'
+        ? { shortName: 'Sentinel', className: 'Guard|Guardian' }
+        : {}),
+      ...(scenario === 'copied subclass parent' ? { _copy: subclass } : {}),
+      subclassFeatures: ['Watch|Guardian|XPHB|Sentinel|XPHB|3'],
+    }
+    const copy = {
+      name: 'Outrider',
+      source: 'SETTING',
+      _copy: {
+        name: base.name,
+        source: scenario === 'wrong parent printing' ? 'PHB' : base.source,
+      },
+      classFeatures: ['Scout|Outrider|SETTING|1'],
+    }
+    const internal = [
+      'internal copy',
+      'internal subclass printing mismatch',
+      'undeclared local subclass parent',
+      'subclass parent identity collision',
+      'copied subclass parent',
+    ].includes(scenario)
+    const ambiguous = scenario === 'ambiguous parent'
+    const declared = scenario !== 'undeclared parent' && !internal
+    const parentIds = ['guardian', 'alias', ...(ambiguous ? ['duplicate'] : [])]
+    const child = {
+      _meta: {
+        ...(internal
+          ? {
+              internalCopies:
+                scenario === 'undeclared local subclass parent' ? ['class'] : ['class', 'subclass'],
+            }
+          : {}),
+        ...(declared ? { dependencies: { class: parentIds, subclass: parentIds } } : {}),
+      },
+      class: internal ? [base, copy] : [copy],
+      subclass: [
+        ...(internal ? [parentSubclass] : []),
+        {
+          ...subclass,
+          className: copy.name,
+          classSource: copy.source,
+          source: copy.source,
+          _copy: {
+            ...subclass,
+            ...(['wrong subclass parent printing', 'internal subclass printing mismatch'].includes(
+              scenario,
+            )
+              ? { source: 'PHB' }
+              : {}),
+            ...(scenario === 'subclass parent identity collision'
+              ? { shortName: 'Sentinel|Guard' }
+              : {}),
+          },
+        },
+      ],
+    }
+    const documents: Record<string, unknown> = {
+      'class/index.json': {
+        outrider: 'class-outrider.json',
+        ...(!internal ? { guardian: 'class-guardian.json', alias: 'class-guardian.json' } : {}),
+        ...(ambiguous ? { duplicate: 'class-duplicate.json' } : {}),
+      },
+      'class/class-outrider.json': child,
+      'class/class-guardian.json': { class: [base], subclass: [parentSubclass] },
+      'class/class-duplicate.json': { class: [base] },
+    }
+    const onResourceFailure = vi.fn()
+    const readJson = vi.fn(async (file: string) => documents[file] ?? {})
+    const data = await new FiveEToolsDataLoader(
+      { type: 'local', path: 'C:/data', isValid: true, availableResources: ['class/index.json'] },
+      { type: 'local', readJson },
+    ).loadAllData({ onResourceFailure })
+    const imported = data.classes.find((row) => row.name === copy.name)
+
+    if (scenario === 'indexed dependency' || scenario === 'internal copy') {
+      expect(onResourceFailure).not.toHaveBeenCalled()
+      expect(imported).toMatchObject({
+        name: copy.name,
+        source: copy.source,
+        edition: 'one',
+        hd: base.hd,
+        proficiency: base.proficiency,
+        startingProficiencies: base.startingProficiencies,
+        classFeatures: copy.classFeatures,
+        subclasses: [
+          {
+            className: copy.name,
+            classSource: copy.source,
+            source: copy.source,
+            subclassFeatures: parentSubclass.subclassFeatures,
+          },
+        ],
+      })
+      expect(imported).not.toHaveProperty('_copy')
+      expect(imported).not.toHaveProperty('page')
+    } else {
+      expect(imported).toBeUndefined()
+      expect(onResourceFailure).toHaveBeenCalledWith('class/class-outrider.json', {
+        required: true,
+      })
+    }
+    expect(copy._copy.name).toBe(base.name)
+    expect(copy).not.toHaveProperty('proficiency')
+  })
+
   test('audits duplicate spell targets across indexed files before lookups and preserves cached ambiguity', async () => {
     const fixture = JSON.parse(readFileSync('tests/fixtures/spellRouteSources.json', 'utf8'))
     const readJson = vi.fn(async (file: string) =>

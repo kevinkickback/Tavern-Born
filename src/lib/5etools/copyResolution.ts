@@ -35,6 +35,7 @@ type CopyKind =
   | 'race'
   | 'subrace'
   | 'itemType'
+  | 'class'
   | 'subclassFeature'
 
 export interface CopyResolutionDiagnostic {
@@ -169,6 +170,12 @@ function key(value: Record<string, unknown>, kind?: CopyKind): string {
       own.level,
       field('source', subclassSource),
     ])
+  }
+  if (kind === 'class') {
+    const fields = ['name', 'source'].map((field) => ownValue(value, field))
+    return fields.every((field) => typeof field === 'string' && field.trim())
+      ? JSON.stringify(fields.map((field) => (field as string).trim().toLowerCase()))
+      : ''
   }
   if (kind === 'itemType' || kind === 'magicvariant')
     return JSON.stringify(
@@ -696,10 +703,12 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
 ): { records: T[]; diagnostics: CopyResolutionDiagnostic[] } {
   const byKey = new Map<string, T>()
   const ambiguous = new Set<string>()
+  const requiresExactIdentity = kind === 'class' || kind === 'subclassFeature'
+  const kindLabel = kind === 'subclassFeature' ? 'subclass-feature' : kind
   for (const record of records) {
     const identity = key(record, kind)
-    if (kind === 'subclassFeature' && !identity) continue
-    if (kind === 'subclassFeature' && byKey.has(identity)) ambiguous.add(identity)
+    if (requiresExactIdentity && !identity) continue
+    if (requiresExactIdentity && byKey.has(identity)) ambiguous.add(identity)
     byKey.set(identity, record)
   }
   const resolvedTemplates = templates.length ? resolveCopiedRecords(templates, kind).records : []
@@ -710,7 +719,7 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
 
   const visit = (record: T): T => {
     const identity = key(record, kind)
-    const memoKey = kind === 'subclassFeature' ? record : identity
+    const memoKey = requiresExactIdentity ? record : identity
     if (resolved.has(memoKey)) return resolved.get(memoKey) as T
     if (!Object.getOwnPropertyDescriptor(record, '_copy')) return record
     try {
@@ -718,14 +727,19 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       assertSafeData(record)
       const own = clone(record) as Record5e
       const copy = directive(ownValue(own, '_copy'))
-      if (kind === 'subclassFeature') {
-        if (!identity) throw new Error('invalid subclass-feature identity')
-        if (ambiguous.has(identity)) throw new Error('ambiguous subclass-feature identity')
+      if (
+        kind === 'class' &&
+        Object.keys(copy).some((field) => !['name', 'source', '_preserve', '_mod'].includes(field))
+      )
+        throw new Error('unsupported class copy transformation')
+      if (requiresExactIdentity) {
+        if (!identity) throw new Error(`invalid ${kindLabel} identity`)
+        if (ambiguous.has(identity)) throw new Error(`ambiguous ${kindLabel} identity`)
         if (
           copy._templates !== undefined ||
           Object.getOwnPropertyDescriptor(object(copy._mod), '*')
         )
-          throw new Error('unsupported subclass-feature wildcard or template transformation')
+          throw new Error(`unsupported ${kindLabel} wildcard or template transformation`)
       }
       if (active.has(identity)) throw new Error('copy cycle')
       active.add(identity)
@@ -733,14 +747,14 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       if (
         typeof copy[parentField] !== 'string' ||
         typeof copy.source !== 'string' ||
-        ((kind === 'itemType' || kind === 'magicvariant' || kind === 'subclassFeature') &&
+        ((kind === 'itemType' || kind === 'magicvariant' || requiresExactIdentity) &&
           (!(copy[parentField] as string).trim() || !copy.source.trim()))
       )
         throw new Error('invalid parent reference')
       const parentKey = key(copy, kind)
-      if (kind === 'subclassFeature' && !parentKey) throw new Error('invalid parent identity')
-      if (kind === 'subclassFeature' && ambiguous.has(parentKey))
-        throw new Error('ambiguous subclass-feature parent')
+      if (requiresExactIdentity && !parentKey) throw new Error('invalid parent identity')
+      if (requiresExactIdentity && ambiguous.has(parentKey))
+        throw new Error(`ambiguous ${kindLabel} parent`)
       const parent = byKey.get(parentKey)
       if (!parent)
         throw new Error(
@@ -751,6 +765,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       if (ownValue(inherited, '_copy'))
         throw new Error(`unresolved parent ${copy[parentField]}|${copy.source}`)
       materializeCopy(own, inherited, kind, templateByKey)
+      if (kind === 'class' && (own.name !== record.name || own.source !== record.source))
+        throw new Error('class copy changed its declared identity')
       resolved.set(memoKey, own as T)
       return own as T
     } catch (error) {

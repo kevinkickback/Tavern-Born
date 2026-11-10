@@ -159,11 +159,11 @@
     },
     {
       "file": "scripts/lib/class-casting-semantics.json",
-      "sha256": "6ad86d8b62b8d8c48f63b5d701ee722017d1c0917f98f2e9183b941af78e0da4"
+      "sha256": "2ea3008ecae838aa7127a7e5e782841cadb48eb0d1bbce734f2566ce34b1da48"
     },
     {
       "file": "scripts/lib/class-casting-source.mjs",
-      "sha256": "6f262915d95ed01dc92f8077443c21828e08a4c42f0844bb088b52573f4ad549"
+      "sha256": "09c28ff57f8cf2af31fde14ec39538f319f02d837d1b69e8cb5f04d57e629b58"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
@@ -171,11 +171,11 @@
     },
     {
       "file": "src/lib/5etools/additionalSpellIdentity.ts",
-      "sha256": "5a87fe56db474ae571a0c2b13cd36922d497bb23877ede64071fb6622a578428"
+      "sha256": "ae0a4908a4202d8816d1d61fad54124efb9201dfc74f0eeee1ba7c9dff39ff88"
     },
     {
       "file": "src/lib/5etools/additionalSpells.ts",
-      "sha256": "bf40758b247a3593480ef1903bcbd9d34f00ce69dd0442074fc8585ebf8752ff"
+      "sha256": "686f61629f2add2e781ba44fcdd123139ad72e11aa05b70c0cdf6d54fc05e489"
     },
     {
       "file": "src/lib/5etools/arcaneArcherCantripSource.ts",
@@ -195,7 +195,7 @@
     },
     {
       "file": "src/lib/5etools/barbarianJourneySources.ts",
-      "sha256": "4f4df3826f9d99d2157471f95ab0055467600b9cad8ad3043a3500304fda3e93"
+      "sha256": "958ac2446a0c4a0c3a821038b883a24ab7b5a049336deac9a921af542e13b974"
     },
     {
       "file": "src/lib/5etools/barbarianPathChoiceIdentity.ts",
@@ -234,20 +234,24 @@
       "sha256": "1d5a02dd7446c4655fc458623e6462264a385402adf9e5857b012ae867cb7cc0"
     },
     {
+      "file": "src/lib/5etools/classCastingCopyOwners.generated.ts",
+      "sha256": "4ea3b624f128d70fc73419af46692547b33b66f278b8788582cadb2e8c01c00f"
+    },
+    {
       "file": "src/lib/5etools/classCastingRules.ts",
-      "sha256": "9ec76b9bf6852551bfd5c0ba37cf240887a0024f986a866d99b5fe7fd8175c40"
+      "sha256": "5879331f736a54f71bc48783e20efa30c40b44032705806119995e661efd5a75"
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "a2ed47a188e713c76dc1f909d5438aac40fb819d60c97112f40cc939aa83ae44"
+      "sha256": "67d7e47f05a5dd8506e7f5fb3d23a980fdec3ef344a6ab101660397bdbfd3965"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
-      "sha256": "54a7cc870885db1f436f7c2b1cc2cb88d5450e3209f6518b8a276258215a09b7"
+      "sha256": "66f59cb4652a582c07695df6eb38fe6cd23edf80b245c18ca0e940618e1e7849"
     },
     {
       "file": "src/lib/5etools/classCastingStructure.ts",
-      "sha256": "a3e98ca8b70272ca0cda89add916577197779d4ffec55bf9abb67f5a01bd5fe0"
+      "sha256": "adc0f6a16e46144cfe85714449c30fcfa4c15844e8183edf6b582aabcfbd9952"
     },
     {
       "file": "src/lib/5etools/classChoiceId.ts",
@@ -255,7 +259,7 @@
     },
     {
       "file": "src/lib/5etools/classChoiceNormalization.ts",
-      "sha256": "3c233774912455051fc31e3bf87cda7d863ec29c0a3f0028acc20ae528bfc57e"
+      "sha256": "7168cb1e198fe8b8bc67d33516da930ab61cb283dde71782a600472a38cd1714"
     },
     {
       "file": "src/lib/5etools/classData.ts",
@@ -295,7 +299,7 @@
     },
     {
       "file": "src/lib/5etools/classRuleNormalization.ts",
-      "sha256": "88f244b14bc940a314a0e3d3b722923d60d58ad14329c41820f8ba7874bb9d68"
+      "sha256": "b0511e962f4afae50c575af9e8a9d3090b0cb04b969fc335ed2542c5136fde21"
     },
     {
       "file": "src/lib/5etools/classSpellSlotTable.ts",
@@ -339,19 +343,19 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
+      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
-      "sha256": "5608f8eff0e6e8d292e5b4a753db912e7bc976da8722cdb9596212c49b9f5298"
+      "sha256": "e07eb19d263f22fa8f0068c6a58288504cd3804c424675163e650696cac4a4d3"
     },
     {
       "file": "src/lib/5etools/directClassFeatureSource.ts",
-      "sha256": "816cc669c065aecb0534d93fd03deefe937fb2b7c98e499349702e769a3b6b83"
+      "sha256": "1e2071fe9a33633d29a9e2722c5b89dad6a56b6d39cb45303a13e40087a0133e"
     },
     {
       "file": "src/lib/5etools/directFixedProficiencySource.ts",
-      "sha256": "d2b8027f64674d1c062e1f22677f43051e2dacd47a2a64738a67b48e26105d37"
+      "sha256": "0cea3f26ab7dca2fa73d22593c8b8d4e27800bb65cc98f3f1e39a10edf88ffaf"
     },
     {
       "file": "src/lib/5etools/directSubclassSource.ts",
@@ -370,12 +374,16 @@
       "sha256": "043bf749b3c883351c526bf85733f0a4ea7c7431ca4a3e6462bd939886381f9c"
     },
     {
+      "file": "src/lib/5etools/earnedClassFeatureSource.ts",
+      "sha256": "11b003c2426afd279c2fe20e31315742d92e66c494169b51f97f0ff62148c67b"
+    },
+    {
       "file": "src/lib/5etools/entityIdentity.ts",
       "sha256": "01ea66819047ff0d97ace224f34667ef1d2e7bcba3b255dad0d4a746babca47b"
     },
     {
       "file": "src/lib/5etools/epicBoonAdvancement.ts",
-      "sha256": "34b07485301975240cc5c4f2c09fd7a1e3549594a0935079e923c46d9abbde2c"
+      "sha256": "efff0fca4972a4d737152cc4da60fa26e08028947f311728b31d266541afb27b"
     },
     {
       "file": "src/lib/5etools/favoredEnemyChoices.ts",
@@ -419,7 +427,7 @@
     },
     {
       "file": "src/lib/5etools/filteredFeatAlternative.ts",
-      "sha256": "3a60bf58c3dce392548c58d2cf5d9957a5ad51a13d1c877da8edaa3d0f9077da"
+      "sha256": "8344ccca6b2f44d904bc4f4e1301a0f08e3ac0edec29b23eb59d27a2ef1a82ee"
     },
     {
       "file": "src/lib/5etools/filters.ts",
@@ -486,6 +494,10 @@
       "sha256": "24da1bbfbb584373416e42551c59992675afcd5ee3ba1a0826248edf9941200e"
     },
     {
+      "file": "src/lib/5etools/namedSubclassSpells.ts",
+      "sha256": "1428e92343131a83d0f861d9dcf8586eaeea14d4c7ea6e4e8b0a3d29a104d6b7"
+    },
+    {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
       "sha256": "9977a3b9691075aef20d2d0b54690473f4b530af6a2fb2088d6c162a04b8112d"
     },
@@ -519,7 +531,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
+      "sha256": "14408fa00a8950867e0b0886e0d722ba8819616ed137ec7c54b0fc69408f64d3"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
@@ -546,8 +558,12 @@
       "sha256": "69a7d3e3ee164f71f9e457a8aba39e039ab4477d763cccec2a1c9023075a7a5d"
     },
     {
+      "file": "src/lib/5etools/ownedSubclassFeature.ts",
+      "sha256": "ffd15d27efbfc1ff73aba15c34449bbba93d0f59293691426b3574b4dc2c3d85"
+    },
+    {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "116eadfe617106c4199b7a12fbdd31b3a70128d83cda284e97f6a02e43b74d15"
+      "sha256": "d1b80e0bf31ddfa8adfdfaae58160b7ade4b3f7100debe6873c3d2df281206f3"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -602,6 +618,10 @@
       "sha256": "3a2250ef2757dfc1933b45a6dd340f67cf63b1a0272e26bba59b1bf529700ad4"
     },
     {
+      "file": "src/lib/5etools/revisedInvocationPoolIdentity.ts",
+      "sha256": "33a9bb4721e8aaaecd2bec155227bf6f93ade315c699928226406da4c5f36217"
+    },
+    {
       "file": "src/lib/5etools/roguePhantomSpells.ts",
       "sha256": "9ba5db384702702fe0c1c3843cf177739ad02f8cdf6d062784b66e58645da348"
     },
@@ -615,11 +635,11 @@
     },
     {
       "file": "src/lib/5etools/savantSpellbookRules.ts",
-      "sha256": "4687028cb01dd6edb47be45039e5904e64f36a1a77c16386ad1fd02e8a762d09"
+      "sha256": "9973a92550804b68bbe280c5c2be9323fe158a2a46b2b22c914c692c1d9a9583"
     },
     {
       "file": "src/lib/5etools/selectedFeatureSpellIdentity.ts",
-      "sha256": "890109ccead433e0ba21e0ece9f2a26a9b8ae68f6d41e1f31832206852041567"
+      "sha256": "3ceb823392ccf1920dbb22d60a6bd094fd5e9bfd8a97d68124e649aa5edb66ff"
     },
     {
       "file": "src/lib/5etools/spellRouteSources.ts",
@@ -635,7 +655,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "35d1e68c414925d5222d8828200f78ae74cbe8959369ee3d1c3ef0ccebeb341f"
+      "sha256": "2a0acb6ee16587ae74e5614b376cea277e2ce5504719becd4f808d447ca25cd5"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
@@ -674,12 +694,16 @@
       "sha256": "1578cb9ab934befe7c57e1b65a3b1405cd8b9314feae19af7810c1b2bab8ccaa"
     },
     {
+      "file": "src/lib/5etools/subclassLimitedCasting.ts",
+      "sha256": "50241525ab9389020a6af5e310fc1e0c1c9f0048b80b193eecf4f1a4bec0e802"
+    },
+    {
       "file": "src/lib/5etools/subclassProficiencyCertificates.generated.ts",
       "sha256": "c778b26c1192d05c643ec0ce1fa9f4afae31b6224a05004c9c4a9d38d1496fc1"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "b4e6d88800300dd5b3553bcef745a97407cfa5fbb34b8e8e2af8fd4895ace0a1"
+      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
@@ -698,12 +722,16 @@
       "sha256": "a9fe686d070f10b1544f7e3c733ccd0d5e5de03a50023c7b580c9715524f7bdd"
     },
     {
+      "file": "src/lib/5etools/subclassResourceCasting.ts",
+      "sha256": "a1165235f7fe1db6b86da8dd6124ee4540267548f864396973b8c0133a242714"
+    },
+    {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "19d5c430b24e7692310ba5f94c231f424bc44f6a60156821a6c500cfd260007e"
+      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "9b1b2b14858ba9fb8280a2842325a027fce69c768ffd1948084153fdd11a5e64"
+      "sha256": "3ffa87270eec68c7e881c9370fc3124bdbc75c5d5b5e7e40a8eae7823318ef98"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
@@ -724,6 +752,14 @@
     {
       "file": "src/lib/5etools/warlockPatronFeatureSource.ts",
       "sha256": "980eb6f5aafd5a8cea31b16e3a2d3394bba125b62c27549b7633068adf1c7f88"
+    },
+    {
+      "file": "src/lib/5etools/weaponInscribedSpells.ts",
+      "sha256": "66886fdf89f8efeb08b9e079292d8af8bfbe868d981c389f2c1ed91928ab2e7a"
+    },
+    {
+      "file": "src/lib/5etools/weaponInscriptionIdentity.ts",
+      "sha256": "3316b68f73a5831f5150d082f6644169e5ab7278a5f0f7931178cf9acbf15af0"
     },
     {
       "file": "src/lib/5etools/wizardTraditionSpellSources.ts",
@@ -775,7 +811,7 @@
     },
     {
       "file": "src/lib/calculations/spellSlots.ts",
-      "sha256": "6faa1a9716ed8241c7ab80ebf0e87aafc457e61c84624a242d68cc56dce42649"
+      "sha256": "7c490012697c4d8b878eda8bb61daa6be1265be8caac057ad78fed2dffffd5b4"
     },
     {
       "file": "src/lib/calculations/spellUtils.ts",
@@ -791,7 +827,7 @@
     },
     {
       "file": "src/lib/character/classChoiceFeatureCatalogs.ts",
-      "sha256": "a1ad8d7141c849b43111d06d2bb739b5924a7dd4eff7abdb1e38929277fb5486"
+      "sha256": "3427cbd134ce40480c0791d6e3414d9b6faa1994722d2e0e5c69aeb7817265ae"
     },
     {
       "file": "src/lib/character/classChoiceFilters.ts",
@@ -831,7 +867,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "cce85ad44a33691ef867427f80d894df4f137942a15ce95299346bc1872f1e9f"
+      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
     },
     {
       "file": "src/types/actions.ts",
@@ -843,15 +879,15 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "40c9483350278bebe748951006f981867684ff5e4f83522244fe463ec974b948"
+      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "5113ca247dd0b85856c34f1f0415bfd2d1aa168dec7a808119659a6ade798667"
+      "sha256": "18c79ee8bb25374b843b4d350f29462d5ed9ebb2dbf3699c329f016607648d60"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "c753eb8baf898dce3bc86b566c901f21984f1c1d48993a809831650601760113"
+      "sha256": "3aa3ae61c212e76dd185a8fc45f9de0a51744da7691210eb1b94baf861edfdd3"
     },
     {
       "file": "src/types/effects.ts",

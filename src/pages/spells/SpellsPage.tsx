@@ -221,8 +221,8 @@ export function SpellsPage() {
         (row) => toClassProfileId(row.name, row.source) === profile.id,
       )
       if (!entry || !calculationContext) continue
-      const mode = getClassSpellProfilePolicy(entry).mode
       const context = calculationContext.classChoices.spellContext
+      const mode = getClassSpellProfilePolicy(entry, context?.catalogs?.classCastingSources).mode
       const daily =
         mode === 'daily'
           ? getDailyClassSpellAccess(calculationContext.character, profile, context)

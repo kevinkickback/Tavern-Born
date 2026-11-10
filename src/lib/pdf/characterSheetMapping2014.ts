@@ -7,8 +7,12 @@ import {
   formatViewModelModifier,
   usesCustomOrganization,
 } from '@/lib/pdf/characterSheetViewModel'
+import {
+  printsResourceRecovery,
+  sheetResourceLabel,
+  withClassResourceText,
+} from '@/lib/pdf/classResourceSheetRules'
 import { getCompanionSheetValues, renderCompanionEntries } from '@/lib/pdf/companionSheet'
-import { isSorcererResource, withSorcererResourceText } from '@/lib/pdf/sorcererSheetRules'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 import type { CharacterAction } from '@/types/actions'
 
@@ -252,10 +256,10 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Bond: character.details.bonds || '',
     Flaw: character.details.flaws || '',
     Background_History: viewModel.historyAndPersonalitySummary,
-    'Class Features': withSorcererResourceText(
-      viewModel.classResourceRows.slice(0, CAPACITY.classResources),
+    'Class Features': withClassResourceText(
+      viewModel.classResourceRows,
       viewModel.classFeaturesSummary2014,
-      false,
+      CAPACITY.classResources,
     ),
     'Racial Traits': racialTraits,
     'Background Feature': viewModel.backgroundFeature.name,
@@ -440,11 +444,13 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
 
   for (let index = 0; index < CAPACITY.classResources; index += 1) {
     const row = viewModel.classResourceRows[index]
-    textFields[`Limited Feature ${index + 1}`] = row?.label ?? ''
+    textFields[`Limited Feature ${index + 1}`] = row
+      ? sheetResourceLabel(row, viewModel.classResourceRows)
+      : ''
     textFields[`Limited Feature Max Usages ${index + 1}`] = row ? String(row.max) : ''
-    // The recovery dropdown is only 24 points wide. Full Sorcerer rules print in Class Features.
+    // The recovery dropdown is narrow. Full inherited recovery rules print in Class Features.
     textFields[`Limited Feature Recovery ${index + 1}`] =
-      row && isSorcererResource(row)
+      row && printsResourceRecovery(row)
         ? row.restType === 'short'
           ? 'S/L'
           : 'LR'

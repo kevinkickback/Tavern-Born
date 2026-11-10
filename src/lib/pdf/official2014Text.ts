@@ -1,5 +1,5 @@
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
-import { withSorcererResourceText } from './sorcererSheetRules'
+import { withClassResourceText } from './classResourceSheetRules'
 
 /** Limits for the printed 2014 official form's free-text sections. */
 export const OFFICIAL_2014_SECTION_LIMITS = {
@@ -56,7 +56,7 @@ export function getOfficial2014SectionText(
 ): Record<Official2014SectionName, string> {
   return {
     Equipment: viewModel.equipmentSummary,
-    'Features and Traits': withSorcererResourceText(
+    'Features and Traits': withClassResourceText(
       viewModel.classResourceRows,
       viewModel.featuresSummary,
     ),

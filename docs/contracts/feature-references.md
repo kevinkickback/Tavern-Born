@@ -20,6 +20,17 @@ selected owner, declaring feature and target identities separate. Intro presenta
 declared intro references. Raw unavailable details may remain readable without granting rules.
 Legacy stored name/source descriptions can enrich only on one unique owner/level match.
 
+Builder follows the selected class and subclass's direct references, including exact targets
+printed under another class. This keeps inherited descriptions and the Epic Boon choice tied
+to the selected owner. Supported resource counters also require a matching declared feature
+and the selected class's own table. Their saved counters are separate across printings.
+An inherited Epic Boon claim retains its exact declaration so it can suspend or be cleared
+when the class source is withdrawn.
+
+Exact standalone use clauses can supply an ability-based maximum, a single-use pool, or a dice
+pool with its per-use limit and recovery. Existing counters take precedence. Saved remaining
+uses belong to the actual class or subclass owner and the qualified feature.
+
 ## Internal subclass-feature copies
 
 Resolve copies before reference expansion, with the shared data-only copy engine. Match all seven
@@ -35,6 +46,13 @@ selected owner and earned slot. Current exact rules determine its pool and deriv
 Classic Dragon Ancestor uses a table row. Revised Elemental Affinity uses an authored damage
 type. Conflicting, absent or filtered declarations preserve saved selections for recovery without
 granting benefits. Opening and cancelling leave the save alone. Clear removes the addressed owner.
+
+An authored companion table keeps the pet family separate from its qualified creature stat
+block. The family may occupy one ordinary Weapon Mastery slot for its Beast's Strike. Changing
+the family releases that allocation, and changing forms within one family preserves it. Earned
+specialization rules show their conditions with the companion. Existing generic companions
+remain valid without a family. A family that requires a separate taming ability displays that
+prerequisite.
 
 ## Required setup diagnostics
 

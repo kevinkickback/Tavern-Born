@@ -90,7 +90,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
+      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
     },
     {
       "file": "src/lib/5etools/featureRulesSignature.ts",
@@ -106,7 +106,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "38d4e414414a500d09d3d6b55af3abe93443e220c6543b7e32b5f643b5f77514"
+      "sha256": "14408fa00a8950867e0b0886e0d722ba8819616ed137ec7c54b0fc69408f64d3"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
@@ -130,11 +130,11 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "b4e6d88800300dd5b3553bcef745a97407cfa5fbb34b8e8e2af8fd4895ace0a1"
+      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "19d5c430b24e7692310ba5f94c231f424bc44f6a60156821a6c500cfd260007e"
+      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
     },
     {
       "file": "src/lib/calculations/abilityNames.ts",
@@ -154,7 +154,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "cce85ad44a33691ef867427f80d894df4f137942a15ce95299346bc1872f1e9f"
+      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
     },
     {
       "file": "src/types/actions.ts",
@@ -166,15 +166,15 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "40c9483350278bebe748951006f981867684ff5e4f83522244fe463ec974b948"
+      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "5113ca247dd0b85856c34f1f0415bfd2d1aa168dec7a808119659a6ade798667"
+      "sha256": "18c79ee8bb25374b843b4d350f29462d5ed9ebb2dbf3699c329f016607648d60"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "c753eb8baf898dce3bc86b566c901f21984f1c1d48993a809831650601760113"
+      "sha256": "3aa3ae61c212e76dd185a8fc45f9de0a51744da7691210eb1b94baf861edfdd3"
     },
     {
       "file": "src/types/effects.ts",

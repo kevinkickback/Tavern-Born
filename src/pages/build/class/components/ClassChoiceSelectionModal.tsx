@@ -21,7 +21,7 @@ import {
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
-import { REVISED_INVOCATION_POOL } from '@/lib/5etools/warlockInvocationCantripSource'
+import { isRevisedInvocationPoolId } from '@/lib/5etools/warlockInvocationCantripSource'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -31,7 +31,7 @@ import {
   getClassChoiceOptionKey,
   isClassChoiceOptionEligible,
   isClassChoiceOptionEligibleInDraft,
-  retainsBladeInvocationWithoutPact,
+  retainsInvocationWithoutPrerequisite,
 } from '@/lib/character/classChoiceOptions'
 import { getInvocationRepeatKey } from '@/lib/character/warlockInvocationChoices'
 import { cn } from '@/lib/utils'
@@ -346,7 +346,7 @@ export function ClassChoiceSelectionModal({
   enemySetup,
 }: ClassChoiceSelectionModalProps) {
   const [editingHistory, setEditingHistory] = useState(false)
-  const invocationCantrips = choice.id === REVISED_INVOCATION_POOL
+  const invocationCantrips = isRevisedInvocationPoolId(choice.id)
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
     () =>
       removalOnly
@@ -370,7 +370,7 @@ export function ClassChoiceSelectionModal({
         met: result.met,
         reasons: result.failures,
       })
-      if (!result.met || option.bladePactDraftKey || option.unavailableReason) hasUnmet = true
+      if (!result.met || option.invocationPrerequisite || option.unavailableReason) hasUnmet = true
     }
     return { prerequisiteByOptionKey: results, hasUnmetPrerequisites: hasUnmet }
   }, [characterSnapshot, className, classSource, options])
@@ -500,9 +500,9 @@ export function ClassChoiceSelectionModal({
     }
     return sections
   }, [hasUnmetPrerequisites, options])
-  const matchBladeDraftItem = useCallback(
+  const matchInvocationDraftItem = useCallback(
     (option: ClassChoiceOptionView, ids: ReadonlySet<string>, filters: ActiveFilters) =>
-      (!option.bladePactDraftKey && !option.unavailableReason) ||
+      (!option.invocationPrerequisite && !option.unavailableReason) ||
       filters.prerequisite?.has('showUnmet') ||
       initialSelectedIds.includes(getClassChoiceOptionKey(option.reference)) ||
       ids.has(getClassChoiceOptionKey(option.reference)) ||
@@ -580,13 +580,13 @@ export function ClassChoiceSelectionModal({
       ids: ReadonlySet<string>,
     ) => {
       const live =
-        !removalOnly && option.bladePactDraftKey
+        !removalOnly && option.invocationPrerequisite
           ? {
               ...option,
               availability: isClassChoiceOptionEligibleInDraft(option, ids)
                 ? ('eligible' as const)
                 : ('retained' as const),
-              unavailableReason: 'Requires your current Pact of the Blade.',
+              unavailableReason: `Requires ${option.invocationPrerequisite.name} in this Invocation pool.`,
             }
           : option
       return (
@@ -725,8 +725,8 @@ export function ClassChoiceSelectionModal({
       matchItem={matchItem}
       matchDraftItem={
         !removalOnly &&
-        options.some((option) => option.bladePactDraftKey || option.unavailableReason)
-          ? matchBladeDraftItem
+        options.some((option) => option.invocationPrerequisite || option.unavailableReason)
+          ? matchInvocationDraftItem
           : undefined
       }
       filterSections={filterSections}
@@ -772,8 +772,8 @@ export function ClassChoiceSelectionModal({
         ) : undefined
       }
       getConfirmationError={(ids) => {
-        if (retainsBladeInvocationWithoutPact(options, new Set(initialSelectedIds), ids))
-          return 'Remove the dependent Invocations before replacing Pact of the Blade.'
+        if (retainsInvocationWithoutPrerequisite(options, new Set(initialSelectedIds), ids))
+          return 'Remove the dependent Invocations before replacing their prerequisite.'
         return [...ids].some(
           (id) =>
             !options.some(

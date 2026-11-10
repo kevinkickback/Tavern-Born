@@ -1,4 +1,8 @@
-import { isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import {
+  isCatalogCastingCopyOwner,
+  isCatalogDerivedClassSpellSlot,
+  isManagedClassSpellSlot,
+} from '@/lib/5etools/classCastingRules'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { clericDomainCantrips } from '@/lib/5etools/clericDomainCantripSources'
 import { isArcaneDabblerOwner } from '@/lib/5etools/mysticArcaneDabbler'
@@ -257,16 +261,33 @@ export function retainEarnedManagedClassSpells(
     (entry) =>
       (isArcaneArcherCantripOwner(entry) ||
         isArcaneDabblerOwner(entry) ||
+        (!!entry.subclass &&
+          isCatalogCastingCopyOwner(['class', norm(entry.name), norm(entry.source)])) ||
         clericDomainCantrips.some((rule) => belongsTo(entry, rule))) &&
       !nextProgression.some(
         (next) => ownerKey(next) === ownerKey(entry) && next.levels >= entry.levels,
       ),
   )
+  // A catalog-defined copy can have earned empty slots even when its source is unavailable.
+  const lostClassLevel = character.classProgression.some(
+    (entry) =>
+      isCatalogCastingCopyOwner(['class', norm(entry.name), norm(entry.source)]) &&
+      !nextProgression.some(
+        (next) =>
+          norm(next.name) === norm(entry.name) &&
+          norm(next.source) === norm(entry.source) &&
+          next.levels >= entry.levels,
+      ),
+  )
   const lostSlot =
-    lostDynamicProgress || [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
+    lostClassLevel ||
+    lostDynamicProgress ||
+    [...earnedIds(character.classProgression)].some((id) => !nextIds.has(id))
   const removed = (character.managedClassSpellChoices ?? []).filter((choice) =>
     choice.slot[1] === 'feature-cantrip' ||
     choice.slot[1] === 'feature-prepared' ||
+    isCatalogDerivedClassSpellSlot(choice.slot) ||
+    getSavantSpellbookGain(choice.slot) ||
     getClericArcanaSpellRule(choice.slot)
       ? !getManagedClassSpellOwnerEntry(choice.slot, nextProgression) ||
         !nextProgression.some(

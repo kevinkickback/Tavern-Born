@@ -20,6 +20,8 @@ export function useClassChoiceFeatureCatalogs() {
     optionalfeatures,
     optionalClassFeatureSources,
     optionalClassSections,
+    companionFamilySources,
+    itemMasteries,
     classCastingSources,
   } = useFilteredGameData()
   return useMemo(
@@ -40,6 +42,8 @@ export function useClassChoiceFeatureCatalogs() {
         optionalfeatures,
         optionalClassFeatureSources,
         optionalClassSections,
+        companionFamilySources,
+        itemMasteries,
         classCastingSources,
       }),
     [
@@ -58,6 +62,8 @@ export function useClassChoiceFeatureCatalogs() {
       optionalfeatures,
       optionalClassFeatureSources,
       optionalClassSections,
+      companionFamilySources,
+      itemMasteries,
       classCastingSources,
     ],
   )

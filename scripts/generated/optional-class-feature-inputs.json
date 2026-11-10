@@ -98,11 +98,11 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "19d5c430b24e7692310ba5f94c231f424bc44f6a60156821a6c500cfd260007e"
+      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "b4e6d88800300dd5b3553bcef745a97407cfa5fbb34b8e8e2af8fd4895ace0a1"
+      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
     },
     {
       "file": "src/lib/5etools/subclassContent.ts",
@@ -110,7 +110,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
+      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
     }
   ]
 }

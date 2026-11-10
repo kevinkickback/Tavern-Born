@@ -1,6 +1,7 @@
 import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import { retainEarnedWeaponInscriptions } from '@/lib/5etools/weaponInscriptionIdentity'
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 /**
@@ -10,7 +11,6 @@ import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSp
  * return a single result object for callers to apply.
  */
 
-import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import {
   assertStartingEquipmentSelections,
   getClassDefaultEquipmentBlocks,
@@ -48,7 +48,6 @@ import {
   addGrant,
   applyClassGrants,
   applyMulticlassGrants,
-  diffProficiencyGrants,
   makeSourceTag,
   reconcileClassChange,
   removeGrantsBySourceRef,
@@ -71,7 +70,7 @@ import {
   reconcileClassChoiceSelectionGrants,
   reconcileClassChoiceSelections,
 } from './classChoiceCommands'
-import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
+import { mergeClassToolProficiencies, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 import { reconcileExpertiseOwnership } from './expertiseCommands'
 import { getFeatSelectionKey } from './featCommandIdentity'
@@ -364,18 +363,25 @@ function computeClassSelectionEffects(
     character.classProgression.find((entry) =>
       sameStartingReference(entry, character.initialClass),
     ) ?? getCharacterClassEntries(character)[0]
-  const oldClassName = primaryClassEntry?.name
-  const oldSubclassName = primaryClassEntry?.subclass
-
-  let provenanceUpdate = reconcileClassChange(ledger, oldClassName, oldSubclassName)
-  provenanceUpdate = applyClassGrants(cls, subclass, provenanceUpdate)
+  const retainedLedger = primaryClassEntry
+    ? reconcileClassChange(
+        ledger,
+        primaryClassEntry,
+        character.classProgression.filter((row) => row !== primaryClassEntry),
+        character,
+      )
+    : ledger
+  let provenanceUpdate = applyClassGrants(cls, subclass, retainedLedger)
 
   let proficiencies = { ...character.proficiencies }
 
-  if (oldClassName) {
+  if (primaryClassEntry) {
     const domains = ['armor', 'weapons', 'tools', 'skills', 'savingThrows'] as const
     for (const domain of domains) {
-      const { toRemove } = diffProficiencyGrants(ledger, domain, 'class', oldClassName)
+      const retained = retainedLedger.proficiencies[domain]
+      const toRemove = Object.keys(ledger.proficiencies[domain]).filter(
+        (name) => !retained[name]?.length,
+      )
       if (toRemove.length === 0) continue
       if (domain === 'savingThrows') {
         proficiencies = {
@@ -394,14 +400,6 @@ function computeClassSelectionEffects(
   }
 
   const startingProficiencies = cls.startingProficiencies ?? {}
-  const toolsFromArray = (startingProficiencies.tools ?? [])
-    .filter((tool): tool is string => typeof tool === 'string')
-    .map(stripItemTag)
-    .filter((tool) => tool && !isNarrativeTool(tool))
-  const toolsFromBlocks = extractProficiencyBlockNames(
-    startingProficiencies.toolProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
 
   proficiencies = {
     ...proficiencies,
@@ -421,7 +419,7 @@ function computeClassSelectionEffects(
           .map(stripItemTag),
       ]),
     ],
-    tools: [...new Set([...proficiencies.tools, ...toolsFromArray, ...toolsFromBlocks])],
+    tools: mergeClassToolProficiencies(proficiencies.tools, startingProficiencies),
     savingThrows: [
       ...new Set([
         ...proficiencies.savingThrows,
@@ -619,6 +617,7 @@ export function applyClassProgressionUpdate(
     character.classChoiceSelections,
     nextProgression,
   )
+  const equipment = retainEarnedWeaponInscriptions(workingCharacter.equipment, nextProgression)
   const classChoiceGrants = reconcileClassChoiceSelectionGrants(
     {
       ...workingCharacter,
@@ -642,6 +641,7 @@ export function applyClassProgressionUpdate(
 
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
+    ...(equipment !== workingCharacter.equipment && { equipment }),
     optionalClassFeatureAdoptions: retainEarnedOptionalClassAdoptions(character, nextProgression),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
@@ -935,9 +935,11 @@ export function selectBaseClass(
     })
   }
 
+  const equipment = retainEarnedWeaponInscriptions(character.equipment, updatedProgression)
   const characterPatch: Partial<Character> = {
     proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
+    ...(equipment !== character.equipment && { equipment }),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
     initialClass: { name: className, source: classSource },
   }
@@ -1167,18 +1169,14 @@ export function addMulticlass(
     },
   ]
 
-  const gained = classEntity.multiclassing?.proficienciesGained
-  const fallback = classEntity.startingProficiencies ?? {}
-  const toolsFromBlocks = extractProficiencyBlockNames(gained?.toolProficiencies ?? [], {
-    includeAnyStandard: false,
-  })
+  const gained = classEntity.multiclassing?.proficienciesGained ?? {}
 
   const updatedProficiencies = {
     ...character.proficiencies,
     armor: [
       ...new Set([
         ...(character.proficiencies.armor ?? []),
-        ...(gained?.armor ?? fallback.armor ?? [])
+        ...(gained.armor ?? [])
           .filter((armor): armor is string => typeof armor === 'string')
           .map((armor) => stripItemTag(armor)),
       ]),
@@ -1186,25 +1184,17 @@ export function addMulticlass(
     weapons: [
       ...new Set([
         ...(character.proficiencies.weapons ?? []),
-        ...(gained?.weapons ?? [])
+        ...(gained.weapons ?? [])
           .filter((weapon): weapon is string => typeof weapon === 'string')
           .map((weapon) => stripItemTag(weapon)),
       ]),
     ],
-    tools: [
-      ...new Set([
-        ...(character.proficiencies.tools ?? []),
-        ...(gained?.tools ?? fallback.tools ?? [])
-          .filter((tool): tool is string => typeof tool === 'string')
-          .map((tool) => stripItemTag(tool)),
-        ...toolsFromBlocks,
-      ]),
-    ],
+    tools: mergeClassToolProficiencies(character.proficiencies.tools ?? [], gained),
     savingThrows: [...(character.proficiencies.savingThrows ?? [])],
     skills: [
       ...new Set([
         ...(character.proficiencies.skills ?? []),
-        ...(fallback.skills ?? []).filter((skill): skill is string => typeof skill === 'string'),
+        ...(gained.skills ?? []).filter((skill): skill is string => typeof skill === 'string'),
       ]),
     ],
   }

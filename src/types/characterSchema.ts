@@ -1,5 +1,8 @@
 import { z } from 'zod'
+import { findClassReference } from '@/lib/5etools/classReference'
+import { EPIC_BOON_LEVEL, isEpicBoonTarget } from '@/lib/5etools/epicBoonAdvancement'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
+import { isEarnedWeaponInscription } from '@/lib/5etools/weaponInscriptionIdentity'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
@@ -463,6 +466,7 @@ const featSchema = z.object({
   className: z.string().optional(),
   classSource: z.string().optional(),
   classLevel: z.number().int().min(1).optional(),
+  epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
 })
 
 const classFeatChoiceSchema = z
@@ -474,7 +478,7 @@ const classFeatChoiceSchema = z
     subclassSource: z.string().min(1).optional(),
     progressionName: z.string().min(1),
     categories: z.array(z.string()),
-    feats: z.array(featSchema),
+    feats: z.array(featSchema.extend({ classSpellSetup: z.literal(true).optional() })),
   })
   .superRefine((choice, ctx) => {
     if (!getFighterStylePair(choice.id)) return
@@ -488,6 +492,10 @@ const classFeatChoiceSchema = z
     })
   })
 
+const inscriptionText = z
+  .string()
+  .min(1)
+  .refine((value) => value === value.trim().toLowerCase())
 const equipmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -514,6 +522,23 @@ const equipmentSchema = z.object({
   wondrous: z.boolean().optional(),
   tattoo: z.boolean().optional(),
   focus: z.array(z.string()).optional(),
+  weaponInscriptions: z
+    .array(
+      z
+        .object({
+          owner: z.tuple([
+            z.literal('subclass'),
+            inscriptionText,
+            inscriptionText,
+            inscriptionText,
+            inscriptionText,
+          ]),
+          target: z.string(),
+          rune: inscriptionText,
+        })
+        .strict(),
+    )
+    .optional(),
 })
 
 const currencySchema = z.object({
@@ -866,6 +891,7 @@ const spellProfileSchema = z
     cantrips: z.array(z.string()).default([]),
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),
+    dailyCastingTarget: z.string().min(1).optional(),
     alwaysPrepared: z.boolean().optional(),
   })
   .strict()
@@ -915,6 +941,7 @@ const asiChoiceSchema = z.object({
   level: z.number().int(),
   className: z.string(),
   classSource: z.string().min(1),
+  epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
@@ -1048,6 +1075,53 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    const inscriptions = new Set<string>()
+    char.equipment.forEach((item, index) => {
+      item.weaponInscriptions?.forEach((mark, markIndex) => {
+        const key = JSON.stringify(mark.owner)
+        if (
+          inscriptions.has(key) ||
+          item.quantity <= 0 ||
+          char.equipment.filter((row) => row.id === item.id).length !== 1 ||
+          !isEarnedWeaponInscription(mark, char.classProgression)
+        )
+          ctx.addIssue({
+            code: 'custom',
+            path: ['equipment', index, 'weaponInscriptions', markIndex],
+            message: 'Invalid or duplicate weapon inscription.',
+          })
+        inscriptions.add(key)
+      })
+    })
+    const invalidEpicBoon = (path: Array<string | number>) =>
+      ctx.addIssue({
+        code: 'custom',
+        path: [...path, 'epicBoonTarget'],
+        message: 'Invalid Epic Boon owner.',
+      })
+    const earnedEpicBoon = (name?: string, source?: string, level?: number) =>
+      !!name?.trim() &&
+      !!source?.trim() &&
+      level === EPIC_BOON_LEVEL &&
+      char.classProgression.filter(
+        (entry) => entry.levels >= level && findClassReference({ name, source }, [entry]),
+      ).length === 1
+    char.feats.forEach((feat, index) => {
+      if (feat.epicBoonTarget && !earnedEpicBoon(feat.className, feat.classSource, feat.classLevel))
+        invalidEpicBoon(['feats', index])
+    })
+    char.asiChoices?.forEach((asi, index) => {
+      if (asi.epicBoonTarget && !earnedEpicBoon(asi.className, asi.classSource, asi.level))
+        invalidEpicBoon(['asiChoices', index])
+    })
+    char.specialFeats?.forEach((feat, index) => {
+      if (feat.epicBoonTarget) invalidEpicBoon(['specialFeats', index])
+    })
+    char.classFeatChoices?.forEach((choice, index) => {
+      choice.feats.forEach((feat, featIndex) => {
+        if (feat.epicBoonTarget) invalidEpicBoon(['classFeatChoices', index, 'feats', featIndex])
+      })
+    })
     for (const path of getInvalidStartingEquipmentPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

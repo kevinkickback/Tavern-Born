@@ -12,8 +12,8 @@ import {
 } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import {
+  isRevisedInvocationPoolId,
   isRevisedTargetedInvocation,
-  REVISED_INVOCATION_POOL,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import {
@@ -41,8 +41,18 @@ import type {
   Race5e,
 } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import type { NormalizedChoiceOptionReference } from '@/types/classRules'
+import { isRevisedAtWillInvocationOption } from './atWillInvocationRules'
 import { getEffectiveClassChoiceSelections } from './classChoiceActivity'
+import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getProficiencyOptionEntries } from './classProficiencyVocabulary'
+import {
+  getCompanionFamilyRules,
+  isCompanionFamilyMastery,
+  isCompanionFamilyOption,
+} from './companionFamilies'
+import { getCompanionSelectionStates } from './companionSelections'
+import { isDeclaredRevisedInvocationOption } from './declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -53,11 +63,26 @@ import { getFighterStylePair } from './fighterStyleChoices'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
-import { isBladeDependentInvocation } from './warlockInvocationSource'
+import { isBladeDependentInvocation, isPactBladeOption } from './warlockInvocationSource'
 
 export interface RetainedChoiceDetails {
   availability: 'available' | 'source-unavailable' | 'missing' | 'inactive'
   entries: unknown[]
+}
+
+function isGuardedInvocation(
+  choiceId: string,
+  option: NormalizedChoiceOptionReference,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  return (
+    isBladeDependentInvocation(choiceId, option) ||
+    isDeclaredRevisedInvocationOption(choiceId, option, catalogs) ||
+    (isRevisedInvocationPoolId(choiceId) &&
+      (isRevisedTargetedInvocation(option) ||
+        isRevisedAtWillInvocationOption(option) ||
+        isPactBladeOption(option, 'xphb')))
+  )
 }
 
 function classFeatures(classData: Class5e | undefined): ClassFeature[] {
@@ -225,10 +250,7 @@ export function buildRetainedCharacterDetails(
       }
       const details = choiceDetailsById.get(choice.choiceId) ?? []
       choice.selected.forEach((option, index) => {
-        if (
-          (choice.choiceId === REVISED_INVOCATION_POOL && isRevisedTargetedInvocation(option)) ||
-          isBladeDependentInvocation(choice.choiceId, option)
-        ) {
+        if (isGuardedInvocation(choice.choiceId, option, catalogs)) {
           details[index] ??= { availability: 'missing', entries: [] }
           return
         }
@@ -261,7 +283,42 @@ export function buildRetainedCharacterDetails(
     }
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
+  const companions = getCompanionSelectionStates(character, primary.classes, primaryCatalogs)
   for (const selection of character.classChoiceSelections ?? []) {
+    if (
+      selection.selected.some(
+        (option) => isCompanionFamilyOption(option) || isCompanionFamilyMastery(option),
+      )
+    ) {
+      const entry = findClassReference(
+        { name: selection.className, source: selection.classSource },
+        character.classProgression,
+      )
+      const rules = entry && getCompanionFamilyRules(character, entry, primaryCatalogs)
+      const companion = companions.find((row) => row.selection === selection)
+      const details = choiceDetailsById.get(selection.choiceId) ?? []
+      selection.selected.forEach((option, index) => {
+        if (isCompanionFamilyOption(option))
+          details[index] = {
+            availability: companion?.creature ? 'available' : 'inactive',
+            entries: companion?.details[index]?.entries ?? [],
+          }
+        if (isCompanionFamilyMastery(option)) {
+          const mastery = routes.masteredCompanionFamilies
+            .get(selection.choiceId)
+            ?.has(getClassChoiceOptionKey(option))
+            ? rules?.mastery
+            : undefined
+          details[index] = {
+            availability: mastery ? 'available' : 'inactive',
+            entries: mastery
+              ? [`Beast's Strike mastery: ${mastery.name}.`, ...(mastery.entries ?? [])]
+              : [],
+          }
+        }
+      })
+      choiceDetailsById.set(selection.choiceId, details)
+    }
     if (selection.choiceId === BLESSED_STRIKES_ID || selection.choiceId === ELEMENTAL_FURY_ID) {
       const retained = choiceDetailsById.get(selection.choiceId)
       choiceDetailsById.set(
@@ -275,14 +332,15 @@ export function buildRetainedCharacterDetails(
       continue
     }
     const fighterStyle = getFighterStylePair(selection.choiceId)
-    const scopedBlade = selection.selected.some((option) =>
-      isBladeDependentInvocation(selection.choiceId, option),
+    const scopedInvocation = selection.selected.some((option) =>
+      isGuardedInvocation(selection.choiceId, option, primaryCatalogs),
     )
-    if (!scopedBlade && !fighterStyle && !getOptionalClassPoolSelectionSection(selection)) continue
+    if (!scopedInvocation && !fighterStyle && !getOptionalClassPoolSelectionSection(selection))
+      continue
     const details = choiceDetailsById.get(selection.choiceId)
     selection.selected.forEach((option, index) => {
       const detail = details?.[index]
-      if (details && isBladeDependentInvocation(selection.choiceId, option)) {
+      if (details && isGuardedInvocation(selection.choiceId, option, primaryCatalogs)) {
         const id = getClassChoiceFeatureId(selection, option)
         const active = routes.contributions.find(
           (row) => row.choiceId === selection.choiceId && row.id === id,
@@ -293,7 +351,11 @@ export function buildRetainedCharacterDetails(
               availability: 'inactive',
               entries: detail?.entries.length
                 ? detail.entries
-                : ['Restore the earned Warlock level and current Pact of the Blade.'],
+                : [
+                    isBladeDependentInvocation(selection.choiceId, option)
+                      ? 'Restore the earned Warlock level and current Pact of the Blade.'
+                      : 'Restore the current Invocation source and its prerequisites.',
+                  ],
             }
         return
       }

@@ -11,18 +11,17 @@ import {
   decodeClassFeatureReference,
   decodeSubclassFeatureReference,
   getClassFeatureIdentity,
+  getClassFeatureReferenceLevel,
   getSubclassFeatureIdentity,
   getSubclassFeatureReferenceLevel,
   isExactSubclassFeatureReference,
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getDirectSubclassFeatureReference } from '@/lib/5etools/nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
-import {
-  getPsaKnowledgeIntroDependency,
-  isPsaKnowledgeDependency,
-} from '@/lib/5etools/psaKnowledgeFeatures'
+import { getPsaKnowledgeIntroDependency } from '@/lib/5etools/psaKnowledgeFeatures'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getClassChoiceOptionKey } from '@/lib/character/classChoiceIdentity'
@@ -94,6 +93,26 @@ export function resolveSubclassDetailsSelection(
 }
 
 const normalized = (value: string | undefined) => value?.trim().toLowerCase()
+
+/** Resolve the selected owner's declarations, which may point to another printing. */
+export function getDisplayedClassFeatures(cls: Class5e, catalogs: ClassChoiceFeatureCatalogs) {
+  if (cls.sourceIdentityConflict) return []
+  const refs = cls.classFeatureRefs
+  if (!refs) {
+    if (cls.classFeatures !== undefined) return []
+    return catalogs.classFeatures.filter((feature) =>
+      findClassReference({ name: feature.className, source: feature.classSource }, [cls]),
+    )
+  }
+  return refs.flatMap((ref) => {
+    const target = getClassFeatureIdentity(ref)
+    if (!target || catalogs.ambiguousClassFeatureTargets?.has(target)) return []
+    const feature = getCurrentDirectClassFeature(cls, catalogs, target, undefined, {
+      includeDisplayOnly: true,
+    })
+    return feature ? [feature] : []
+  })
+}
 
 /** Slots displayed at this level, including gains that keep using a shared editor. */
 export function getClassChoiceGainCount(choice: NormalizedCharacterChoice, level: number) {
@@ -195,7 +214,11 @@ export function projectClassLevelFeatures(
     cls.sourceIdentityConflict ||
     subclass.sourceIdentityConflict ||
     sourceSubclass.sourceIdentityConflict ||
-    !findClassReference({ name: subclass.className, source: subclass.classSource }, [cls])
+    !findClassReference({ name: subclass.className, source: subclass.classSource }, [cls]) ||
+    !findClassReference({ name: sourceSubclass.className, source: sourceSubclass.classSource }, [
+      cls,
+    ]) ||
+    !findClassReference(subclass, [sourceSubclass])
   )
     return featuresByLevel
 
@@ -210,17 +233,9 @@ export function projectClassLevelFeatures(
     const targets = refs.flatMap((ref) => {
       const decoded = decodeSubclassFeatureReference(ref.ref)
       const target = getSubclassFeatureIdentity(decoded)
-      return !ref.sourceIdentityConflict &&
-        isExactSubclassFeatureReference({ ...ref }, ref.ref) &&
-        normalized(decoded.className) === normalized(cls.name) &&
-        (normalized(decoded.classSource) === normalized(cls.source) ||
-          (normalized(cls.source) === 'xphb' &&
-            normalized(decoded.classSource) === 'phb' &&
-            normalized(subclass.source) !== 'xphb')) &&
-        ((normalized(decoded.subclassShortName) === normalized(subclass.shortName) &&
-          normalized(decoded.subclassSource) === normalized(subclass.source)) ||
-          (isPsaKnowledgeDependency(subclass, target) &&
-            isPsaKnowledgeDependency(sourceSubclass, target)))
+      return target &&
+        getDirectSubclassFeatureReference(sourceSubclass, target) &&
+        getDirectSubclassFeatureReference(subclass, target)
         ? [target]
         : []
     })
@@ -235,7 +250,6 @@ export function projectClassLevelFeatures(
       )
     })
     const laterGain = level > (subclassLevel ?? Infinity)
-    const clericDomainGain = normalized(cls.name) === 'cleric' && level === subclassLevel
     const intro = subclass.introFeatureRef
       ? getSubclassFeatureIdentity(decodeSubclassFeatureReference(subclass.introFeatureRef))
       : undefined
@@ -243,7 +257,7 @@ export function projectClassLevelFeatures(
       ? exact
       : exact.filter(
           (feature) =>
-            (clericDomainGain && intro && getSubclassFeatureIdentity(feature) !== intro) ||
+            (level === subclassLevel && intro && getSubclassFeatureIdentity(feature) !== intro) ||
             choices.some(
               (choice) =>
                 level > choice.level &&
@@ -253,13 +267,23 @@ export function projectClassLevelFeatures(
         )
     if (!displayed.length) continue
     const current = result.get(level) ?? []
+    const gainMarkers = cls.classFeatureRefs?.filter(
+      (ref) => ref.gainSubclassFeature === true && getClassFeatureReferenceLevel(ref) === level,
+    )
+    const gainMarker =
+      gainMarkers?.length === 1 ? getClassFeatureIdentity(gainMarkers[0]) : undefined
     const classFeatures =
       laterGain && refs.length === exact.length
         ? current.filter(
             (feature) =>
               feature.origin?.kind !== 'declared' ||
               !isGenericSubclassGain(feature.entries) ||
-              !matchesNativeSubclassGain(cls, feature.origin.target, level, 'at-level'),
+              !(catalogs
+                ? feature.origin.target === gainMarker &&
+                  getCurrentDirectClassFeature(cls, catalogs, gainMarker, undefined, {
+                    includeDisplayOnly: true,
+                  })
+                : matchesNativeSubclassGain(cls, feature.origin.target, level, 'at-level')),
           )
         : current
     result.set(level, [...classFeatures, ...displayed])

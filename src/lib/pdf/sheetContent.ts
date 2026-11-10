@@ -3,6 +3,7 @@ import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
 import { getOptionalCharacterSheetPages } from './characterSheetPages'
 import { getCharacterSheetTemplate } from './characterSheetTemplates'
 import type { CharacterSheetViewModel } from './characterSheetViewModel'
+import { formatSheetResource } from './classResourceSheetRules'
 import type {
   CharacterSheetPageOptions,
   CharacterSheetTemplateId,
@@ -289,7 +290,7 @@ export function planSheetContent(
         title: 'Additional resources',
         text: vm.classResourceRows
           .slice(8)
-          .map((row) => `${row.label}: ${row.max} total; ${row.used} used; ${row.recovery}`)
+          .map((row) => formatSheetResource(row, vm.classResourceRows))
           .join('\n'),
       })
   }

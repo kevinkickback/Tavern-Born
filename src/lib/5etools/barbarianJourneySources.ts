@@ -4,6 +4,7 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
+import { getEarnedDirectClassFeature } from './earnedClassFeatureSource'
 import { type ClassFeatureSourceCatalog, getFeatureSourceDigest } from './featureSourceAudit'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
@@ -188,4 +189,25 @@ export function getCurrentBarbarianJourneyFeature(
     (row) => !('_copy' in row) && getFeatureSourceDigest(row.entries ?? []) === spec[source],
   )
   return feature ? { feature, target, source } : undefined
+}
+
+export function getInheritedBarbarianJourneyFeature(
+  character: Character,
+  catalogs: Parameters<typeof getCurrentBarbarianJourneyFeature>[1],
+  name: 'unarmored defense' | 'fast movement',
+) {
+  const spec = bodies[name]
+  const source = 'xphb'
+  const target = `class-feature|${name}|barbarian|${source}|${spec.level}|${source}`
+  for (const entry of character.classProgression) {
+    if (findClassReference({ name: 'Barbarian', source }, [entry])) continue
+    const current = getEarnedDirectClassFeature(
+      character,
+      entry,
+      catalogs,
+      target,
+      (row) => !('_copy' in row) && getFeatureSourceDigest(row.entries ?? []) === spec[source],
+    )
+    if (current) return { ...current, source }
+  }
 }

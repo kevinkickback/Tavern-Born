@@ -6,6 +6,7 @@ import {
   hasCurrentSubclassSpellGrant,
 } from '@/lib/5etools/subclassSpells'
 import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { stripManagedClassSpellState } from '@/lib/character/managedClassSpellState'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
@@ -105,6 +106,7 @@ export function ensureSpellProfiles(
     /** Exact current visible targets; omitted authority cannot grant fixed spell benefits. */
     availableSpellReferences?: ReadonlySet<string>
     visibleSpellLevels?: ReadonlyMap<string, number>
+    classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
     oathReprints?: ReadonlyMap<string, number | undefined>
     includedDomainReprints?: ReadonlyMap<string, number | undefined>
   },
@@ -130,6 +132,7 @@ export function ensureSpellProfiles(
       selections: character.classChoiceSelections,
       spells: options?.visibleSpellLevels,
       character,
+      catalogs: options?.classChoiceFeatureCatalogs,
     })
     if (
       options?.preserveUnavailableClassProfiles &&
@@ -188,6 +191,9 @@ export function ensureSpellProfiles(
 
     next.push({
       ...metadata,
+      ...(existingProfile?.dailyCastingTarget && {
+        dailyCastingTarget: existingProfile.dailyCastingTarget,
+      }),
       cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips, spellKey),
       spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells, spellKey),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(

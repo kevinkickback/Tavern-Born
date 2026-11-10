@@ -35,6 +35,95 @@ function applyChange(character: Character, result: ReturnType<typeof applyClassP
 }
 
 describe('Class Commands', () => {
+  test('replacing one class printing preserves the other printing’s proficiency grants', () => {
+    const oldTag = makeSourceTag('class', 'Druid', 'fixed', 'SETTING')
+    const retainedTag = makeSourceTag('class', 'Druid', 'fixed', 'XPHB')
+    const legacyTag = makeSourceTag('class', 'Druid', 'fixed')
+    let ledger = addGrant(emptyProvenance(), 'armor', 'light', oldTag)
+    ledger = addGrant(ledger, 'armor', 'light', retainedTag)
+    ledger = addGrant(ledger, 'tools', 'herbalism kit', oldTag)
+    ledger = addGrant(ledger, 'weapons', 'simple', legacyTag)
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      classProgression: [
+        { name: 'Druid', source: 'SETTING', levels: 1 },
+        { name: 'Druid', source: 'XPHB', levels: 1 },
+      ],
+      provenance: ledger,
+    })
+    const current = {
+      ...character,
+      proficiencies: {
+        ...character.proficiencies,
+        armor: ['light'],
+        tools: ['Herbalism Kit'],
+        weapons: ['simple'],
+      },
+    }
+    const result = applyClassSelectionCommand(
+      current,
+      ledger,
+      { name: 'Wizard', source: 'XPHB' },
+      undefined,
+      new Map(),
+    )
+    expect(result.characterPatch.classProgression?.[1]).toMatchObject({
+      name: 'Druid',
+      source: 'XPHB',
+    })
+    expect(result.characterPatch.proficiencies).toMatchObject({
+      armor: ['light'],
+      tools: [],
+      weapons: ['simple'],
+    })
+    expect(result.provenanceUpdate.proficiencies.armor.light).toEqual([retainedTag])
+    expect(result.provenanceUpdate.proficiencies.weapons.simple).toEqual([legacyTag])
+  })
+
+  test('starting tool display text and structured proficiency give one fixed tool', () => {
+    const character = makeCharacterFixture({ classProgression: [] })
+    const result = applyClassSelectionCommand(
+      character,
+      character.provenance,
+      {
+        name: 'Herbalist',
+        source: 'SETTING',
+        startingProficiencies: {
+          tools: ['{@item Herbalism Kit|XPHB}'],
+          toolProficiencies: [{ 'herbalism kit': true }],
+        },
+      },
+      undefined,
+      new Map(),
+    )
+    expect(result.characterPatch.proficiencies?.tools).toEqual(['Herbalism Kit'])
+    expect(result.provenanceUpdate.proficiencies.tools['herbalism kit']).toHaveLength(1)
+  })
+
+  test('alternative starting tool categories offer one shared choice', () => {
+    const character = makeCharacterFixture({ classProgression: [] })
+    const result = applyClassSelectionCommand(
+      character,
+      character.provenance,
+      {
+        name: 'Apprentice',
+        source: 'SETTING',
+        startingProficiencies: {
+          toolProficiencies: [{ anyArtisansTool: 1 }, { anyMusicalInstrument: 1 }],
+        },
+      },
+      undefined,
+      new Map(),
+    )
+    expect(result.provenanceUpdate.choices.filter((choice) => choice.domain === 'tools')).toEqual([
+      expect.objectContaining({
+        chooseCount: 1,
+        optionPool: ["artisan's tools", 'musical instrument'],
+        sourceTag: expect.objectContaining({ sourceName: 'Apprentice', sourceRef: 'SETTING' }),
+      }),
+    ])
+  })
+
   test('selectBaseClass updates top-level class fields and progression', () => {
     const character = makeCharacterFixture({
       classProgression: [],
@@ -149,6 +238,47 @@ describe('Class Commands', () => {
 
     expect(result.characterPatch.classProgression).toHaveLength(2)
     expect(result.characterPatch.classProgression?.[1]?.name).toBe('Fighter')
+  })
+
+  test('multiclass proficiencies use declared gains and keep tool choices pending', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Wizard', source: 'XPHB', levels: 2 }],
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+        skills: [],
+        expertise: [],
+        savingThrows: [],
+      },
+    })
+    const result = addMulticlass(character, character.provenance, 'Scout', {
+      name: 'Scout',
+      source: 'SETTING',
+      startingProficiencies: { armor: ['heavy'], tools: ['Smith’s Tools'], skills: ['Athletics'] },
+      multiclassing: {
+        proficienciesGained: {
+          weapons: ['simple'],
+          tools: ["{@item Thieves' Tools|XPHB}", 'Display-only Tool'],
+          toolProficiencies: [{ "thieves' tools": true, anyMusicalInstrument: 1 }],
+        },
+      },
+    })
+    expect(result.characterPatch.proficiencies).toMatchObject({
+      armor: [],
+      weapons: ['simple'],
+      tools: ["Thieves' Tools"],
+      skills: [],
+    })
+    expect(Object.keys(result.provenanceUpdate.proficiencies.tools)).toEqual(["thieves' tools"])
+    expect(result.provenanceUpdate.choices).toContainEqual(
+      expect.objectContaining({
+        domain: 'tools',
+        optionPool: ['musical instrument'],
+        status: 'pending',
+      }),
+    )
   })
 
   test.each([

@@ -62,6 +62,7 @@ import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
 } from '@/lib/5etools/savantSpellbookRules'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import {
   getSpellbookSpecialtyRule,
   isCurrentSpellbookSpecialty,
@@ -72,7 +73,11 @@ import {
   getEarnedSubclassSpellGrants,
   hasCurrentSubclassSpellGrant,
 } from '@/lib/5etools/subclassSpells'
-import { hasCurrentCelestialInvocationCantrips } from '@/lib/5etools/warlockInvocationCantripSource'
+import {
+  getInvocationActorKey,
+  hasCurrentCelestialInvocationCantrips,
+  inheritsRevisedInvocations,
+} from '@/lib/5etools/warlockInvocationCantripSource'
 import { isVestigePatron } from '@/lib/5etools/warlockPatronConfigurations'
 import {
   getWizardIllusionCantripOwner,
@@ -95,7 +100,7 @@ import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import { getInvalidManagedClassSpellPaths } from '@/lib/schema/managedClassSpellValidation'
 import type { Class5e, Spell5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry, SpellProfile } from '@/types/character'
 import type { ManagedClassSpellChoice, ManagedClassSpellSlot } from '@/types/classCasting'
 import { scopeClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from './classChoiceIdentity'
@@ -118,7 +123,10 @@ import {
   getOptionalClassFixedSpellGrants,
   getOptionalClassFixedSpellNamesAtGain,
 } from './optionalClassFixedSpells'
-import { getSelectedFeatureCantripPool } from './selectedFeatureSpells'
+import {
+  getSelectedFeatureCantripPool,
+  getSelectedFeatureCantripSetups,
+} from './selectedFeatureSpells'
 
 export interface ManagedClassSpellStatus {
   choice: ManagedClassSpellChoice
@@ -146,11 +154,16 @@ function resolveSlot(
   const lore = getBardLoreSpellRule(slot)
   const arcana = getClericArcanaSpellRule(slot)
   const entry = getManagedClassSpellOwnerEntry(slot, character.classProgression)
-  const rule =
+  const inheritedSavant =
+    savantGain && !savantGain.rule.owner.every((part, index) => slot[0][index] === part)
+  const baseCasting =
     (savantGain || lore || arcana) && entry
-      ? getClassSpellProfilePolicy({ name: entry.name, source: entry.source, levels: entry.levels })
-          .rule
-      : getManagedClassSpellRule(slot)?.rule
+      ? getClassSpellProfilePolicy(
+          { name: entry.name, source: entry.source, levels: entry.levels },
+          inheritedSavant ? context?.catalogs?.classCastingSources : undefined,
+        )
+      : undefined
+  const rule = baseCasting ? baseCasting.rule : getManagedClassSpellRule(slot)?.rule
   if (!rule) return 'The saved class spell ownership is invalid.'
   if (!entry || entry.levels < slot[3] || entry.levels < rule.declaration.level)
     return 'This spell choice is not earned by the selected class or subclass.'
@@ -164,22 +177,24 @@ function resolveSlot(
       : undefined,
   )
   const { declaration } = rule
-  const authority = arcana
-    ? getClassCastingLevelAccess(
-        catalog,
-        declaration.owner,
-        declaration.target,
-        declaration.level,
-        slot[3],
-      )
-    : gainAuthority(
-        catalog,
-        declaration.owner,
-        declaration.target,
-        declaration.level,
-        slot[1],
-        slot[3],
-      )
+  const castingOwner = baseCasting?.owner ?? owner
+  const authority =
+    arcana || inheritedSavant
+      ? getClassCastingLevelAccess(
+          catalog,
+          castingOwner,
+          declaration.target,
+          declaration.level,
+          slot[3],
+        )
+      : gainAuthority(
+          catalog,
+          castingOwner,
+          declaration.target,
+          declaration.level,
+          slot[1],
+          slot[3],
+        )
   const allowed = sources(character)
   if (
     !authority ||
@@ -187,6 +202,7 @@ function resolveSlot(
       owner[2],
       ...(owner[0] === 'subclass' ? [owner[4]] : []),
       authority.declaration.feature.source,
+      ...(authority.templateSources ?? []),
       ...(authority.provider ? [authority.provider.source] : []),
     ].every((source) => permitted(allowed, source))
   )
@@ -207,9 +223,15 @@ function resolveSlot(
   const owners = classes.filter(
     (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
   )
-  const classData = arcana && owners.length !== 1 ? undefined : owners[0]
+  const classData = (arcana || inheritedSavant) && owners.length !== 1 ? undefined : owners[0]
   const savant = savantGain && classData && getCurrentSavantSpellbookGrant(slot, classData, catalog)
-  if (savantGain && (!savant || authority.maxSpellLevel !== savantGain.tier))
+  if (
+    savantGain &&
+    (!savant ||
+      (inheritedSavant &&
+        (baseCasting?.mode !== 'spellbook' || !permitted(allowed, savantGain.rule.owner[4]))) ||
+      authority.maxSpellLevel !== savantGain.tier)
+  )
     return `Restore the current ${savantGain.rule.name} feature and its spellbook schedule.`
   const arcanaRank = arcana?.rank
   const arcanaChoice =
@@ -248,6 +270,7 @@ function resolveSlot(
   const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
     character,
+    catalogs: context?.catalogs,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const fixedCantrip =
@@ -383,6 +406,7 @@ function targetError(
       (grant) =>
         grant.mode !== 'expanded' &&
         grant.mode !== 'cast-only' &&
+        !(saved && grant.namedChoice) &&
         getSpellNameKey(grant.spellName) === getSpellNameKey(spell.name),
     )
   )
@@ -396,9 +420,15 @@ function targetError(
     return 'This spell is outside the schools available for this choice.'
 }
 
-function isAvailableDirectPreparedSpell(spell: Spell5e, spellLevel: number, target: string) {
+function isAvailableDirectPreparedSpell(
+  spell: Spell5e,
+  spellLevel: number | 'leveled',
+  target: string,
+) {
   if (
-    spell.level !== spellLevel ||
+    (spellLevel === 'leveled'
+      ? !Number.isInteger(spell.level) || spell.level < 1 || spell.level > 9
+      : spell.level !== spellLevel) ||
     (spell.classSpellRouteSource?.input?.targetOccurrences?.length ?? 0) > 1
   )
     return false
@@ -587,8 +617,17 @@ export function getManagedClassSpellPool(
   sourceContext?: ManagedClassSpellContext,
   projectedStatuses?: readonly ManagedClassSpellStatus[],
 ) {
-  if (slot[1] === 'feature-cantrip')
-    return getSelectedFeatureCantripPool(character, slot, sourceContext)
+  if (slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(slot)) {
+    const saved = character.managedClassSpellChoices?.find(
+      (row) => managedClassSpellId(row.slot) === managedClassSpellId(slot),
+    )
+    return getSelectedFeatureCantripPool(
+      character,
+      slot,
+      sourceContext,
+      saved && getSpellReferenceKey(saved.target.name, saved.target.source),
+    )
+  }
   if (slot[1] === 'feature-prepared')
     return getFeaturePreparedSpellPool(character, slot, sourceContext)
   if (slot[1] === 'class-spellbook-specialty') {
@@ -738,6 +777,7 @@ export function projectManagedClassSpellState(
         visibleSpellLevels,
         oathReprints,
         includedDomainReprints,
+        classChoiceFeatureCatalogs: context?.catalogs,
       }),
     },
   }
@@ -852,14 +892,20 @@ export function projectManagedClassSpellState(
     norm(entry.name) === 'warlock' && norm(entry.source) === 'xphb'
   const warlocks = character.classProgression.filter(isRevisedWarlock)
   const warlock = warlocks.length === 1 ? warlocks[0] : undefined
-  const knownWarlockCantrips = new Map<string, Spell5e>()
+  const invocationTargets = new Map<string, Map<string, Spell5e>>()
+  const addInvocationTarget = (entry: CharacterClassEntry, spell: Spell5e) => {
+    const id = getInvocationActorKey(entry)
+    const prior = invocationTargets.get(id) ?? new Map<string, Spell5e>()
+    prior.set(getSpellReferenceKey(spell.name, spell.source), spell)
+    invocationTargets.set(id, prior)
+  }
   for (const { choice, spell, entry } of active) {
     if (
-      entry === warlock &&
       choice.slot[1] === 'class-cantrip' &&
+      inheritsRevisedInvocations(entry, context?.catalogs?.classCastingSources) &&
       hasCurrentClassSpellListRoute(character, entry, spell, context ?? {}, { directOnly: true })
     )
-      knownWarlockCantrips.set(getSpellReferenceKey(spell.name, spell.source), spell)
+      addInvocationTarget(entry, spell)
   }
   for (const entry of character.classProgression) {
     if (!entry.subclass) continue
@@ -882,6 +928,7 @@ export function projectManagedClassSpellState(
       selections: character.classChoiceSelections,
       spells: visibleSpellLevels,
       character,
+      catalogs: context?.catalogs,
     })
     const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
       if (
@@ -905,6 +952,7 @@ export function projectManagedClassSpellState(
         visibleSpellLevels,
         oathReprints,
         includedDomainReprints,
+        grant.requiresSpellTrigger ? targets.get(getSpellReferenceKey(grant.spellName)) : undefined,
       )
       if (
         (!active && (namedPreparation || grant.feature)) ||
@@ -939,12 +987,22 @@ export function projectManagedClassSpellState(
             checked.classSpellRouteSource?.input?.targetOccurrences?.length === 1 &&
             checked.classSpellRouteDiagnostics?.length === 0
           )
-            knownWarlockCantrips.set(spellKey, checked)
+            addInvocationTarget(entry, checked)
         }
       }
       provenance = addSpellGrant(provenance, grant.spellName, {
         ...makeSourceTag('subclass', entry.subclass, 'fixed', entry.subclassSource),
         grantSource: parseSpellReference(grant.spellName).source,
+        ...(grant.namedChoice && {
+          grantVariant: JSON.stringify([
+            entry.name,
+            entry.source,
+            entry.subclass,
+            entry.subclassSource,
+            grant.feature?.target,
+            grant.level,
+          ]),
+        }),
       })
     }
   }
@@ -1084,7 +1142,10 @@ export function projectManagedClassSpellState(
       choice.slot[1] === 'class-arcanum' ? authority.declaration.feature.name : undefined,
     )
   }
-  for (const status of statuses.filter(({ choice }) => choice.slot[1] === 'feature-prepared')) {
+  for (const status of statuses.filter(
+    ({ choice }) =>
+      choice.slot[1] === 'feature-prepared' && !isSelectedInvocationRitualSlot(choice.slot),
+  )) {
     const { choice } = status
     const reference = getSpellReferenceKey(choice.target.name, choice.target.source)
     const pool = getFeaturePreparedSpellPool(character, choice.slot, context, reference)
@@ -1227,23 +1288,45 @@ export function projectManagedClassSpellState(
       grantSource: cls.source,
     })
   }
-  for (const status of statuses.filter((row) => row.choice.slot[1] === 'feature-cantrip')) {
+  const selectedFeatureStatuses = statuses.filter(
+    ({ choice }) =>
+      choice.slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(choice.slot),
+  )
+  const books = new Set(
+    selectedFeatureStatuses.length
+      ? getSelectedFeatureCantripSetups(character, context?.catalogs, {
+          effectiveAbilityScores: context?.abilityScores,
+          effectiveSpellProfiles: independentSpellProfiles,
+        })
+          .filter((setup) => setup.book)
+          .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level]))
+      : [],
+  )
+  const isBook = ({ choice }: ManagedClassSpellStatus) =>
+    books.has(JSON.stringify([choice.slot[0], choice.slot[2], choice.slot[3]]))
+  selectedFeatureStatuses.sort((left, right) => Number(isBook(left)) - Number(isBook(right)))
+  let bookPreparationProfiles: readonly SpellProfile[] | undefined
+  for (const status of selectedFeatureStatuses) {
     const { choice } = status
+    if (isBook(status)) bookPreparationProfiles ??= profiles
     const deny = (reason: string) => {
       status.reason = reason
     }
-    const key = JSON.stringify(choice.slot.slice(0, 4))
+    const requireUnprepared = newManagedSpellIds?.has(managedClassSpellId(choice.slot)) === true
+    const key = JSON.stringify([...choice.slot.slice(0, 4), requireUnprepared])
     let pool = featurePools.get(key)
     if (!pool) {
       pool = getSelectedFeatureCantripPool(
         character,
         [choice.slot[0], choice.slot[1], choice.slot[2], choice.slot[3], 0],
-        { ...context, independentSpellProfiles },
+        { ...context, independentSpellProfiles, bookPreparationProfiles },
+        undefined,
+        requireUnprepared,
       )
       featurePools.set(key, pool)
     }
     const entry = getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)
-    if (invalid || !entry || pool.reason) {
+    if (invalid || !entry || pool.reason || choice.policy !== 'default') {
       deny(
         invalid
           ? 'The saved class spell ownership is invalid.'
@@ -1255,17 +1338,30 @@ export function projectManagedClassSpellState(
       deny('This choice exceeds the feature’s current count.')
       continue
     }
-    if (
-      !pool.spells.some(
-        (spell) =>
-          getSpellReferenceKey(spell.name, spell.source) ===
-          getSpellReferenceKey(choice.target.name, choice.target.source),
+    const spell = pool.spells.find(
+      (row) =>
+        getSpellReferenceKey(row.name, row.source) ===
+        getSpellReferenceKey(choice.target.name, choice.target.source),
+    )
+    if (!spell) {
+      deny(
+        pool.book
+          ? 'Choose an eligible spell from a current class list that you do not already have prepared.'
+          : 'Restore the exact selected cantrip printing and its current feature spell list.',
       )
-    ) {
-      deny('Restore the exact selected cantrip printing and its current feature spell list.')
       continue
     }
     status.active = true
+    const ritual = isSelectedInvocationRitualSlot(choice.slot)
+    if (pool.book) {
+      status.prepared = true
+      status.castingNote = `${pool.featureName}: Prepared while you carry the book.`
+      if (!ritual) addInvocationTarget(entry, spell)
+    }
+    if (ritual) {
+      addManagedGrant(choice, entry, 'spellsKnown', true, pool.featureName)
+      continue
+    }
     if (pool.featureName === 'Giant Power')
       status.castingNote = 'Giant Power: Wisdom is your spellcasting ability for this cantrip.'
     if (pool.featureName === 'Arcane Archer Lore' && choice.slot[0][4] === 'au')
@@ -1360,7 +1456,10 @@ export function projectManagedClassSpellState(
       spells: { ...daily.character.spells, spellProfiles: profiles },
     },
     independentSpellProfiles,
-    knownWarlockCantrips: [...knownWarlockCantrips.values()],
+    bookPreparationProfiles: bookPreparationProfiles ?? profiles,
+    knownWarlockCantrips: new Map(
+      [...invocationTargets].map(([id, rows]) => [id, [...rows.values()]]),
+    ),
     statuses,
     dailyStatuses: daily.statuses,
     fixedClassSpellStatuses,

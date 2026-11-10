@@ -1,7 +1,19 @@
 import type { Class5e, ClassFeature, ClassFeatureReference } from '@/types/5etools'
 import { decodeClassFeatureReference, getClassFeatureIdentity } from './classFeatureIdentity'
+import {
+  exactOptionalDeclarationReference,
+  optionalDeclarationObject,
+} from './optionalClassDeclarationStructure'
 
 export const EPIC_BOON_LEVEL = 19
+
+export function isEpicBoonTarget(target: string): boolean {
+  return (
+    /^class-feature\|epic boon\|[^|]+\|[^|]+\|19\|[^|]+$/u.test(target) &&
+    target ===
+      getClassFeatureIdentity(decodeClassFeatureReference(target.slice('class-feature|'.length)))
+  )
+}
 
 const configuredAward =
   'You gain an {@filter Epic Boon feat|feats|category=EB} or another {@5etools feat|feats.html} of your choice for which you qualify. '
@@ -92,25 +104,45 @@ export function hasEpicBoonAdvancementReference(owner: Class5e): boolean {
 /** Resolve the direct gain independently of the currently available feature entity. */
 export function getEpicBoonAdvancementReference(
   refs: readonly ClassFeatureReference[],
-  owner: Pick<Class5e, 'name' | 'source' | 'sourceIdentityConflict' | 'edition'>,
+  owner: Pick<Class5e, 'name' | 'source' | 'sourceIdentityConflict' | 'edition' | 'classFeatures'>,
 ): ClassFeatureReference | undefined {
   if (owner.sourceIdentityConflict || !isRevisedEpicBoonOwner(owner)) return undefined
-  const target = getEpicBoonAdvancementTarget(owner)
-  if (!target) return undefined
 
   const gains = epicBoonGains(refs)
   if (gains.length !== 1) return undefined
 
   const { ref, uid } = gains[0]
+  const target = uid && getClassFeatureIdentity(uid)
   if (
     ref.gainSubclassFeature ||
-    !uid ||
-    getClassFeatureIdentity(uid) !== target ||
+    !target ||
+    !exactOptionalDeclarationReference(optionalDeclarationObject(ref), ref.ref, 'classFeature') ||
     getClassFeatureIdentity(ref) !== target ||
-    (ref.source !== undefined && identityPart(ref.source) !== identityPart(owner.source)) ||
     (ref.feature &&
       (ref.feature.sourceIdentityConflict || getClassFeatureIdentity(ref.feature) !== target))
   )
     return undefined
+  if (target !== getEpicBoonAdvancementTarget(owner)) {
+    const declared = owner.classFeatures?.filter((value) => {
+      const row = optionalDeclarationObject(value)
+      const uid = typeof value === 'string' ? value : row.classFeature
+      return (
+        typeof uid === 'string' &&
+        getClassFeatureIdentity(decodeClassFeatureReference(uid)) === target
+      )
+    })
+    if (declared?.length !== 1) return undefined
+    const [declaration] = declared
+    const row = optionalDeclarationObject(declaration)
+    const rawUid = typeof declaration === 'string' ? declaration : row.classFeature
+    if (
+      typeof rawUid !== 'string' ||
+      row.sourceIdentityConflict ||
+      row.gainSubclassFeature ||
+      row.isClassFeatureVariant ||
+      !exactOptionalDeclarationReference(row, rawUid, 'classFeature')
+    )
+      return undefined
+  }
   return ref
 }

@@ -1,15 +1,23 @@
 import { getClassChoiceSlotLevels } from '@/lib/5etools/classChoiceNormalization'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
+import {
+  getCurrentSelectedClass,
+  permitsClassRuleSource,
+} from '@/lib/5etools/earnedClassFeatureSource'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import {
-  isCurrentRevisedInvocationCantripPool,
-  REVISED_INVOCATION_POOL,
+  getRevisedInvocationPoolId,
+  hasCurrentRevisedInvocationOption,
+  isRevisedInvocationPoolId,
 } from '@/lib/5etools/warlockInvocationCantripSource'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
-import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
-import type { Character, CharacterClassChoiceSelection } from '@/types/character'
+import type {
+  Character,
+  CharacterClassChoiceSelection,
+  CharacterClassEntry,
+} from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceCatalogOptionKey } from './classChoiceIdentity'
@@ -23,6 +31,7 @@ export const CLASSIC_INVOCATION_POOL = 'class:warlock|phb|choice:eldritch-invoca
 export const PACT_BLADE_NAME = 'Pact of the Blade'
 const bladeKey = norm(PACT_BLADE_NAME)
 type NativeSource = 'phb' | 'xphb'
+type ActorReference = Pick<CharacterClassEntry, 'name' | 'source'>
 
 const classicBoonBodies = new Set([
   '877e4f7f9031d43f944ad634450b3a2d53416c175cc82d3523276d52a96821c9',
@@ -99,7 +108,7 @@ const dependentRules = new Map([
 
 export function getBladeInvocationSource(choiceId: string): NativeSource | undefined {
   if (choiceId === CLASSIC_INVOCATION_POOL) return 'phb'
-  if (choiceId === REVISED_INVOCATION_POOL) return 'xphb'
+  if (isRevisedInvocationPoolId(choiceId)) return 'xphb'
 }
 
 function isExactNativeOption(option: NormalizedChoiceOptionReference, source: NativeSource) {
@@ -137,15 +146,15 @@ function getCurrentWarlock(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs,
   source: NativeSource,
+  actor?: ActorReference,
 ) {
-  if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return undefined
-  const owns = (row: { name: string; source: string }) =>
-    norm(row.name) === 'warlock' && norm(row.source) === source
-  const owners = character.classProgression.filter(owns)
-  const classes = catalogs.classes?.filter(owns)
-  if (owners.length !== 1 || classes?.length !== 1) return undefined
-  const cls = classes[0]
-  return cls.sourceIdentityConflict || '_copy' in cls ? undefined : { cls, owner: owners[0] }
+  if (!permitsClassRuleSource(character, source)) return undefined
+  const target = source === 'xphb' && actor ? actor : { name: 'Warlock', source }
+  const owner = character.classProgression.find(
+    (row) => norm(row.name) === norm(target.name) && norm(row.source) === norm(target.source),
+  )
+  const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+  return cls && owner ? { cls, owner } : undefined
 }
 
 function getCurrentOptionalLeaf(
@@ -207,32 +216,33 @@ function getCurrentPactBladeAuthority(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   source: NativeSource,
+  actor?: ActorReference,
 ) {
   if (!catalogs) return undefined
-  const current = getCurrentWarlock(character, catalogs, source)
+  const current = getCurrentWarlock(character, catalogs, source, actor)
   if (!current) return undefined
   const { cls, owner } = current
   const revised = source === 'xphb'
-  const poolId = revised ? REVISED_INVOCATION_POOL : CLASSIC_PACT_BOON_POOL
+  const poolId = revised ? getRevisedInvocationPoolId(owner) : CLASSIC_PACT_BOON_POOL
   const choices = cls.normalizedRules?.choices.filter((row) => row.id === poolId)
   const choice = choices?.length === 1 ? choices[0] : undefined
-  if (
-    !choice ||
-    owner.levels < choice.level ||
-    norm(choice.owner.name) !== 'warlock' ||
-    norm(choice.owner.source) !== source ||
-    choice.owner.subclassName ||
-    choice.owner.subclassSource ||
-    !(revised
-      ? isCurrentRevisedInvocationCantripPool(choice, catalogs)
-      : getCurrentClassicPactBoon(cls, choice, catalogs))
-  )
-    return undefined
   const reference = {
     entityType: 'optionalFeature',
     name: PACT_BLADE_NAME,
-    source: cls.source,
+    source: source.toUpperCase(),
   } as const
+  if (
+    !choice ||
+    owner.levels < choice.level ||
+    norm(choice.owner.name) !== norm(owner.name) ||
+    norm(choice.owner.source) !== norm(owner.source) ||
+    choice.owner.subclassName ||
+    choice.owner.subclassSource ||
+    !(revised
+      ? hasCurrentRevisedInvocationOption(choice, catalogs, reference)
+      : getCurrentClassicPactBoon(cls, choice, catalogs))
+  )
+    return undefined
   const leaf = getCurrentOptionalLeaf(catalogs, reference, revised ? 'EI' : 'PB', bladeFields)
   const digest = leaf && getFeatureSourceDigest(leaf.entries, false)
   return leaf && (revised ? digest === revisedBladeBody : classicBladeBodies.has(digest ?? ''))
@@ -245,8 +255,9 @@ export function getCurrentPactBladeState(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   source: NativeSource,
+  actor?: ActorReference,
 ) {
-  const authority = getCurrentPactBladeAuthority(character, catalogs, source)
+  const authority = getCurrentPactBladeAuthority(character, catalogs, source, actor)
   if (!authority) return undefined
   const { choice, owner } = authority
   const selections = character.classChoiceSelections?.filter((row) => row.choiceId === choice.id)
@@ -254,11 +265,12 @@ export function getCurrentPactBladeState(
   const options = selection?.selected.filter((option) => isPactBladeOption(option, source))
   if (
     !selection ||
+    selection.inactive ||
     options?.length !== 1 ||
     selection.kind !== choice.kind ||
     selection.classLevel !== choice.level ||
-    norm(selection.className) !== 'warlock' ||
-    norm(selection.classSource) !== source ||
+    norm(selection.className) !== norm(owner.name) ||
+    norm(selection.classSource) !== norm(owner.source) ||
     selection.subclassName ||
     selection.subclassSource ||
     (source === 'xphb'
@@ -319,22 +331,13 @@ export function getCurrentBladeInvocationRule(
 ) {
   const source = getBladeInvocationSource(choice.id)
   if (!source || !isExactBladeInvocationOption(choice.id, option)) return undefined
-  const current = getCurrentWarlock(character, catalogs, source)
+  const current = getCurrentWarlock(character, catalogs, source, choice.owner)
   if (!current) return undefined
   const { owner, cls } = current
   if (
     !(source === 'phb'
       ? isCurrentClassicInvocationPool(cls, choice, catalogs)
-      : isCurrentRevisedInvocationCantripPool(choice, catalogs) &&
-        getCurrentDirectClassFeature(
-          cls,
-          catalogs,
-          'class-feature|eldritch invocation options|warlock|xphb|1|xphb',
-          (row) =>
-            Array.isArray(row.entries) &&
-            getFeatureSourceDigest(row.entries, false) ===
-              '23bac6db9b2b518a2e08674c3e7f31286575e05af2dd9b972ca23e1bf199eec9',
-        ))
+      : hasCurrentRevisedInvocationOption(choice, catalogs, option))
   )
     return undefined
   const expected = dependentRules.get(`${norm(option.name)}|${source}`)

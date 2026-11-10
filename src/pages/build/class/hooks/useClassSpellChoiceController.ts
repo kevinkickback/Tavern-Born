@@ -6,6 +6,7 @@ import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getArcaneDabbler, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
+import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
@@ -116,6 +117,7 @@ export function useClassSpellChoiceController(
           : undefined
       gain.maxSpellLevel = Math.max(
         gain.maxSpellLevel,
+        isSelectedInvocationRitualSlot(slot) ? 1 : 0,
         getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
         dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
           ? Math.max(...dabbler.ranks)

@@ -681,17 +681,31 @@ const weaponMastery = classChoice(
   [],
   'item',
 )
+weaponMastery.owner.featureSource = 'XPHB'
 weaponMastery.optionFilter = {
   entityType: 'item',
   itemTypes: ['M', 'R'],
   requiresProficiency: true,
   requiresMastery: true,
 }
+const weaponMasteryRef = 'Weapon Mastery|Fighter|XPHB|1'
+const weaponMasteryFeature = {
+  name: 'Weapon Mastery',
+  source: 'XPHB',
+  className: 'Fighter',
+  classSource: 'XPHB',
+  level: 1,
+  entries: ['Choose a weapon you can use with mastery.'],
+}
 const fighter2024 = {
   name: 'Fighter',
   source: 'XPHB',
   edition: 'one',
   hd: { faces: 10 },
+  classFeatures: [weaponMasteryRef],
+  classFeatureRefs: [
+    { ...weaponMasteryFeature, ref: weaponMasteryRef, feature: weaponMasteryFeature },
+  ],
   normalizedRules: { ...EMPTY_RULES, choices: [weaponMastery] },
 } as Class5e
 const masteryWeapon = {
@@ -789,15 +803,7 @@ const weaponMasteryData = withLookups(
   makeGameDataFixture({
     races: [{ name: 'Human', source: 'XPHB', speed: 30, size: ['M'] }],
     classes: [fighter2024],
-    classFeatures: [
-      {
-        name: 'Weapon Mastery',
-        source: 'XPHB',
-        className: 'Fighter',
-        classSource: 'XPHB',
-        level: 1,
-      },
-    ],
+    classFeatures: [weaponMasteryFeature],
     backgrounds: [
       {
         name: 'Soldier',

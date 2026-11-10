@@ -435,9 +435,10 @@ export function parseClassFluffSummaries(
 function resolveInlineSubclassFeatureRef(
   entry: ParsedObject,
   subclassFeatureRecords: unknown[],
+  requiresSourceRecord: boolean,
 ): ParsedObject {
   const refStr = typeof entry.subclassFeature === 'string' ? entry.subclassFeature : ''
-  if (!refStr) return entry
+  if (!refStr && !requiresSourceRecord) return entry
   const parsedRef = { ...decodeSubclassFeatureReference(refStr) }
   const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
     parsedRef,
@@ -454,7 +455,10 @@ function resolveInlineSubclassFeatureRef(
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
     if (
       'feature' in entry &&
-      (isNativeResilienceTarget(target) || declaredCoreSubclass || directArtificer)
+      (requiresSourceRecord ||
+        isNativeResilienceTarget(target) ||
+        declaredCoreSubclass ||
+        directArtificer)
     ) {
       // Raw inline data cannot stand in for the missing declared source record.
       const { feature: _attachment, ...declaration } = entry
@@ -482,17 +486,23 @@ function enrichEntriesSubclassRefs(
   entries: unknown[],
   subclassFeatureRecords: unknown[],
   includeListItems = false,
+  requiresSourceRecord = false,
 ): unknown[] {
   return entries.map((e) => {
     if (typeof e !== 'object' || e === null) return e
     const obj = e as ParsedObject
     if (obj.type === 'refSubclassFeature') {
-      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords)
+      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords, requiresSourceRecord)
     }
     if (Array.isArray(obj.entries)) {
       return {
         ...obj,
-        entries: enrichEntriesSubclassRefs(obj.entries, subclassFeatureRecords, includeListItems),
+        entries: enrichEntriesSubclassRefs(
+          obj.entries,
+          subclassFeatureRecords,
+          includeListItems,
+          obj.type === 'options' && obj.style === 'list-hang-notitle' && !('count' in obj),
+        ),
       }
     }
     if (includeListItems && obj.type === 'list' && Array.isArray(obj.items)) {
@@ -563,10 +573,16 @@ function auditNativeSubclassCopies(
 }
 
 /** Materialize internal feature copies before any reference enrichment; never mutate source JSON. */
+interface PreparedClassOwners {
+  classes: ParsedObject[]
+  subclasses: ParsedObject[]
+}
+
 function prepareClassDocument(
   data: unknown,
   sourceId?: string,
   preparedSubclassFeatures?: ParsedObject[],
+  preparedOwners?: PreparedClassOwners,
 ): unknown {
   if (Array.isArray(data)) return auditFixedLayerMultiplicity(data.map(asObject), 'classes')
   const obj = asObject(data)
@@ -581,7 +597,10 @@ function prepareClassDocument(
       subclassRecords,
       auditInheritedBarbarianRoots(
         subclassRecords,
-        auditInheritedSubclassRoots(subclassRecords, materializeSubclassCopies(subclassRecords)),
+        auditInheritedSubclassRoots(
+          subclassRecords,
+          preparedOwners?.subclasses ?? materializeSubclassCopies(subclassRecords),
+        ),
       ),
     ),
     records,
@@ -594,10 +613,12 @@ function prepareClassDocument(
     subclasses: materializedSubclasses,
     subclassFeatures: materialized,
   })
-  const classCastingSources = auditClassCastingSources(data, origin, {
-    subclasses: materializedSubclasses,
-    subclassFeatures: materialized,
-  })
+  const classCastingSources = auditClassCastingSources(
+    data,
+    origin,
+    { subclasses: materializedSubclasses, subclassFeatures: materialized },
+    preparedOwners?.classes,
+  )
   const classFeature = auditFixedClassFeatures(
     auditClassProficiencySources(
       auditFavoredEnemySources(
@@ -608,8 +629,17 @@ function prepareClassDocument(
     ),
     origin,
   )
+  const auditedClasses = auditDirectFixedClassDeclarations(classRecords, origin)
   const classes = auditFixedLayerMultiplicity(
-    auditDirectFixedClassDeclarations(classRecords, origin),
+    auditedClasses.map((row, index) => {
+      const preparedClass = preparedOwners?.classes[index]
+      if (!preparedClass || !Object.getOwnPropertyDescriptor(classRecords[index], '_copy'))
+        return row
+      // The materialized class has inherited data. Direct declarations still use raw evidence.
+      return Object.getOwnPropertyDescriptor(row, 'fixedProficiencySourceAudit')
+        ? { ...preparedClass, fixedProficiencySourceAudit: row.fixedProficiencySourceAudit }
+        : preparedClass
+    }),
     'classes',
   )
   const subclass = auditSubclassProficiencyRoots(
@@ -648,13 +678,14 @@ export function parseClassDocument(
   data: unknown,
   sourceId?: string,
   preparedSubclassFeatures?: ParsedObject[],
+  preparedOwners?: PreparedClassOwners,
 ): {
   classes: unknown[]
   classFeatures: unknown[]
   optionalClassFeatureSources: import('@/types/5etools').OptionalClassFeatureSourceProof[]
   classCastingSources: import('@/types/classCasting').ClassCastingSourceProof[]
 } {
-  const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures)
+  const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures, preparedOwners)
   return {
     classes: parsePreparedClasses(prepared),
     classFeatures: parsePreparedClassFeatures(prepared),

@@ -84,6 +84,8 @@ export function ClassSelectionDialog({
                   </div>
 
                   <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <span className="font-mono">{cls.source}</span>
+                    <span aria-hidden="true">·</span>
                     <span>d{cls.hd?.faces ?? 8}</span>
                     {cls.spellcastingAbility && (
                       <>
