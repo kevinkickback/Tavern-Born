@@ -78,7 +78,7 @@ export function isBlessedStrikesOptionTarget(identity: string) {
   return optionDigests.has(identity)
 }
 
-/** The pinned sources use a plain reference list; only this exact clause makes it a choice. */
+/** Both source forms must describe the same exact one-of choice. */
 export function getBlessedStrikesOptionBlock(feature: ClassFeature | undefined) {
   if (!feature || !matchesFeature(feature, BLESSED_STRIKES_TARGET)) return undefined
   const entries = feature.entries
@@ -88,22 +88,32 @@ export function getBlessedStrikesOptionBlock(feature: ClassFeature | undefined) 
     getFeatureSourceDigest([entries[0]]) !== introDigest ||
     group?.type !== 'entries' ||
     Object.keys(group).length !== 2 ||
-    !Array.isArray(group.entries) ||
-    group.entries.length !== optionDigests.size
+    !Array.isArray(group.entries)
   )
     return undefined
-  const options = group.entries.map(asRecord)
-  const identities = options.map((row) =>
-    row?.type === 'refClassFeature' && Object.keys(row).length === 2
-      ? uidTarget(row.classFeature)
-      : undefined,
+  const wrapper = group.entries.length === 1 ? asRecord(group.entries[0]) : undefined
+  if (
+    wrapper &&
+    (wrapper.type !== 'options' ||
+      wrapper.count !== 1 ||
+      Object.keys(wrapper).length !== 3 ||
+      !Array.isArray(wrapper.entries))
   )
+    return undefined
+  const options = wrapper ? (wrapper.entries as unknown[]) : group.entries
+  if (options.length !== optionDigests.size) return undefined
+  const identities = options.map((entry) => {
+    const row = asRecord(entry)
+    return row?.type === 'refClassFeature' && Object.keys(row).length === 2
+      ? uidTarget(row.classFeature)
+      : undefined
+  })
   if (
     new Set(identities).size !== optionDigests.size ||
     !identities.every((identity) => identity && optionDigests.has(identity))
   )
     return undefined
-  return { type: 'options', count: 1, entries: group.entries }
+  return { type: 'options', count: 1, entries: options }
 }
 
 export function isBlessedStrikesOption(option: NormalizedChoiceOptionReference) {

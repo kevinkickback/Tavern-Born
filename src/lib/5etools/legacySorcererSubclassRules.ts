@@ -145,9 +145,18 @@ function getCurrentLegacySorcererRules(cls: Class5e, subclass: Subclass5e) {
     getIntroFeature,
     getLaterFeature,
     get blocks() {
-      return Array.isArray(schedule) && getFeatureSourceDigest(schedule) === spec.schedule
-        ? schedule
-        : undefined
+      if (!Array.isArray(schedule)) return undefined
+      if (getFeatureSourceDigest(schedule) === spec.schedule) return schedule
+      if (spec !== lunarSorcery || schedule.length !== 1) return undefined
+      // The catalog may list the separately verified Moon Fire cantrip in the schedule too.
+      const [block] = schedule
+      if (!block || typeof block !== 'object' || Array.isArray(block)) return undefined
+      const known = block.known
+      if (!known || typeof known !== 'object' || Array.isArray(known)) return undefined
+      const first = known?.['1']
+      if (!Array.isArray(first) || first[0] !== 'sacred flame#c') return undefined
+      const phaseSpells = [{ ...block, known: { ...known, '1': first.slice(1) } }]
+      return getFeatureSourceDigest(phaseSpells) === spec.schedule ? phaseSpells : undefined
     },
   }
 }

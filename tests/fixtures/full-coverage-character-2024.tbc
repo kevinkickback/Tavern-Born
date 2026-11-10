@@ -80,7 +80,6 @@
       "deception",
       "history",
       "insight",
-      "intimidation",
       "investigation",
       "medicine",
       "nature",
@@ -90,7 +89,8 @@
       "religion",
       "sleight of hand",
       "stealth",
-      "survival"
+      "survival",
+      "intimidation"
     ],
     "languages": [
       "Common",
@@ -2230,6 +2230,12 @@
         ],
         "heavy": [
           {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          },
+          {
             "sourceType": "class",
             "sourceName": "Cleric",
             "sourceRef": "XPHB",
@@ -2313,6 +2319,14 @@
             "sourceRef": "XPHB",
             "grantType": "choice",
             "label": "Fighter"
+          },
+          {
+            "sourceType": "subclass",
+            "sourceName": "Battle Master",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Battle Master",
+            "grantVariant": "feature-proficiencies:%5B%5B%22fighter%22%2C%22xphb%22%2C%22battle%20master%22%2C%22xphb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cxphb%7Cbattle%20master%7Cxphb%7C3%7Cxphb%22%2C%22tools%22%2C3%5D"
           }
         ],
         "herbalism kit": [
@@ -2475,14 +2489,6 @@
             "label": "Cleric"
           }
         ],
-        "intimidation": [
-          {
-            "sourceType": "manual",
-            "sourceName": "Full-coverage test fixture",
-            "grantType": "choice",
-            "label": "User Choice"
-          }
-        ],
         "investigation": [
           {
             "sourceType": "class",
@@ -2573,6 +2579,16 @@
             "sourceName": "Full-coverage test fixture",
             "grantType": "choice",
             "label": "User Choice"
+          }
+        ],
+        "intimidation": [
+          {
+            "sourceType": "subclass",
+            "sourceName": "Battle Master",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Battle Master",
+            "grantVariant": "feature-proficiencies:%5B%5B%22fighter%22%2C%22xphb%22%2C%22battle%20master%22%2C%22xphb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cxphb%7Cbattle%20master%7Cxphb%7C3%7Cxphb%22%2C%22skills%22%2C3%5D"
           }
         ]
       },
@@ -4460,6 +4476,42 @@
           "entityType": "optionalFeature",
           "name": "Precision Attack",
           "source": "XPHB",
+          "slotLevel": 3
+        }
+      ]
+    },
+    {
+      "choiceId": "feature-proficiencies:%5B%5B%22fighter%22%2C%22xphb%22%2C%22battle%20master%22%2C%22xphb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cxphb%7Cbattle%20master%7Cxphb%7C3%7Cxphb%22%2C%22tools%22%2C3%5D",
+      "label": "Student of War tools",
+      "kind": "proficiency",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "subclassName": "Battle Master",
+      "subclassSource": "XPHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "proficiency",
+          "name": "Calligrapher's Supplies",
+          "ref": "[\"proficiency\",\"tools\",\"calligrapher's supplies\"]",
+          "slotLevel": 3
+        }
+      ]
+    },
+    {
+      "choiceId": "feature-proficiencies:%5B%5B%22fighter%22%2C%22xphb%22%2C%22battle%20master%22%2C%22xphb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cxphb%7Cbattle%20master%7Cxphb%7C3%7Cxphb%22%2C%22skills%22%2C3%5D",
+      "label": "Student of War skills",
+      "kind": "proficiency",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "subclassName": "Battle Master",
+      "subclassSource": "XPHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "proficiency",
+          "name": "Intimidation",
+          "ref": "[\"proficiency\",\"skills\",\"intimidation\"]",
           "slotLevel": 3
         }
       ]

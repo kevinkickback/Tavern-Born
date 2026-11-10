@@ -29,7 +29,7 @@ import {
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
-import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { createIndexedClassDocumentParser } from '@/lib/5etools/parsers/classes'
 import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -116,12 +116,19 @@ function loadIndexedPayloads(directory: 'class' | 'spells'): unknown[] {
   return Object.values(index).map((fileName) => readJson(join(dataRoot, directory, fileName)))
 }
 
-const classPayloads = hasConfiguredCorpus ? loadIndexedPayloads('class') : []
+const classIndex = hasConfiguredCorpus
+  ? (readJson(join(dataRoot, 'class', 'index.json')) as Record<string, string>)
+  : {}
+const classDocuments = new Map(
+  Object.values(classIndex).map((file) => [file, readJson(join(dataRoot, 'class', file))]),
+)
+const classPayloads = [...classDocuments.values()]
+const parseIndexedClass = createIndexedClassDocumentParser(classIndex, classDocuments)
 const spellPayloads = hasConfiguredCorpus ? loadIndexedPayloads('spells') : []
 const castingData = classPayloads.length
   ? composeGameDataLayers(
-      classPayloads.map((payload, index) => {
-        const parsed = parseClassDocument(payload, `fixture-corpus:${index}`)
+      [...classDocuments.keys()].map((file) => {
+        const parsed = parseIndexedClass(file)
         return {
           ...createEmptyGameData(),
           classes: parsed.classes as Class5e[],
@@ -224,6 +231,10 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
       feats: currentFeats,
       classFeatures: classFeatures.filter(fromAllowedSource),
       classCastingSources: castingData.classCastingSources,
+      optionalClassFeatureSources: castingData.optionalClassFeatureSources,
+      items: items.filter(fromAllowedSource),
+      itemsBase: itemsBase.filter(fromAllowedSource),
+      optionalfeatures: optionalFeatures.filter(fromAllowedSource),
       skills: collection(readJson(join(dataRoot, 'skills.json')), 'skill').filter((row) =>
         fromAllowedSource(row as { source?: string }),
       ),
@@ -233,10 +244,7 @@ function buildClassChoiceCatalogs(character: Character): ClassChoiceCatalogs {
     }),
     creatures: companionCreatures.filter(fromAllowedSource),
     feats: currentFeats,
-    items: items.filter(fromAllowedSource),
-    itemsBase: itemsBase.filter(fromAllowedSource),
     itemMasteries: itemMasteries.filter(fromAllowedSource),
-    optionalFeatures: optionalFeatures.filter(fromAllowedSource),
     itemPropertyByAbbr: {},
     itemTypeByAbbr,
     weaponProficiencies: character.proficiencies.weapons,

@@ -53,6 +53,7 @@ import {
 } from '@/lib/5etools/psionicSources'
 import { REVISED_AFFINITY_TARGET } from '@/lib/5etools/revisedElementalAffinity'
 import { isSavantSpellbookSourceTarget } from '@/lib/5etools/savantSpellbookRules'
+import { areEquivalentStormEnvironmentGroups } from '@/lib/5etools/stormAuraSource'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
 import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
 import {
@@ -61,6 +62,9 @@ import {
   auditSubclassProficiencyRoots,
 } from '@/lib/5etools/subclassProficiencySource'
 import {
+  createIndexedClassResolver,
+  createIndexedSubclassFeatureResolver,
+  createIndexedSubclassResolver,
   materializeSubclassCopies,
   materializeSubclassFeatureCopies,
 } from '@/lib/5etools/subclassSourcePreparation'
@@ -146,7 +150,7 @@ function resolveSubclassFeatureRecord(
   const matches = subclassFeatureRecords
     .map(asObject)
     .filter((feature) => getSubclassFeatureIdentity(feature) === identity)
-  return matches.length > 1
+  return matches.length > 1 && !areEquivalentStormEnvironmentGroups(identity, matches)
     ? { feature: { ...matches[0], sourceIdentityConflict: true }, sourceIdentityConflict: true }
     : { feature: matches[0] }
 }
@@ -696,6 +700,21 @@ export function parseClassDocument(
       asObject(prepared).classCastingSources,
     ) as import('@/types/classCasting').ClassCastingSourceProof[],
   }
+}
+
+/** Give each class file only its declared indexed dependencies, as in the runtime loader. */
+export function createIndexedClassDocumentParser(
+  index: unknown,
+  documents: ReadonlyMap<string, unknown>,
+) {
+  const features = createIndexedSubclassFeatureResolver(index, documents)
+  const classes = createIndexedClassResolver(index, documents)
+  const subclasses = createIndexedSubclassResolver(index, documents)
+  return (file: string) =>
+    parseClassDocument(documents.get(file), `class/${file}`, features(file), {
+      classes: classes(file),
+      subclasses: subclasses(file),
+    })
 }
 
 export function parseClasses(data: unknown): unknown[] {

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
-import { expect, test } from 'vitest'
+import { beforeAll, expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -72,6 +72,23 @@ function lookups(data: GameData) {
   }
 }
 
+const catalogs = new Map<
+  'bundled' | 'local',
+  { data: GameData; current: ReturnType<typeof lookups> }
+>()
+beforeAll(async () => {
+  for (const [type, root] of variants) {
+    const data = await load(type, root)
+    catalogs.set(type, { data, current: lookups(data) })
+  }
+})
+
+function getCatalog(type: 'bundled' | 'local') {
+  const catalog = catalogs.get(type)
+  if (!catalog) throw new Error('Missing Druid catalog for ' + type)
+  return catalog
+}
+
 test.skipIf(!existsSync('data/class/class-druid.json')).each([
   {
     subclass: 'Circle of Spores',
@@ -97,8 +114,7 @@ test.skipIf(!existsSync('data/class/class-druid.json')).each([
 ])(
   '$subclass keeps its earned spell schedule under the revised Druid',
   async ({ subclass, level3, laterSpells, later, cantrip }) => {
-    const data = await load('local', 'data')
-    const current = lookups(data)
+    const { data, current } = getCatalog('local')
     const actor = (source: 'PHB' | 'XPHB', levels: number) =>
       reopen(
         makeCharacterFixture({
@@ -202,9 +218,8 @@ test.skipIf(!existsSync('data/class/class-druid.json')).each([
 
 test.each(variants)(
   'Druidic earns exact language and revised prepared spell through save, Review and PDF (%s)',
-  async (type, root) => {
-    const data = await load(type, root)
-    const current = lookups(data)
+  async (type, _root) => {
+    const { data, current } = getCatalog(type)
     for (const source of ['PHB', 'XPHB']) {
       const isRevised = source === 'XPHB'
       const actor = makeCharacterFixture({

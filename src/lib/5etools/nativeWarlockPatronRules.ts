@@ -4,7 +4,7 @@ import type { Class5e, SubclassFeature } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
-import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
+import { hasFeatureSourceShape, matchesFeatureEntryDigest } from './featureSourceAudit'
 import {
   findNativeSubclass,
   getDirectSubclassFeatureReference,
@@ -124,7 +124,7 @@ export function getCurrentNativeWarlockPatronRules(
     getSubclassFeatureIdentity(feature) === target &&
     hasFeatureSourceShape(feature, subclassFields) &&
     Array.isArray(feature.entries) &&
-    getFeatureSourceDigest(feature.entries, false) === digest
+    matchesFeatureEntryDigest(feature.entries, digest, false)
   const verified = (attached: SubclassFeature | undefined, target: string, digest: string) => {
     const mirrors = candidates(target)
     return attached &&

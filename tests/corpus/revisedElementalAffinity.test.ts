@@ -14,6 +14,7 @@ import {
   REVISED_AFFINITY_ID,
 } from '@/lib/5etools/revisedElementalAffinity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import {
   buildClassChoiceFeatureCatalogs,
   type ClassChoiceFeatureCatalogs,
@@ -359,7 +360,14 @@ test.each(stacks)(
     expect(sheet(saved, missingSubclass).defensiveTraits).toEqual([])
     expect(state(reopen(saved))?.recovery).toBe(false)
 
-    const [candidate] = baseCatalog.subclassFeatureCandidates.get(target) ?? []
+    const ownerKey = getFeatureOwnerKey(
+      owner.name,
+      owner.source,
+      owner.subclass,
+      owner.subclassSource,
+    )
+    const [candidate] =
+      baseCatalog.subclassTargets?.candidatesByOwner.get(ownerKey)?.get(target) ?? []
     if (!candidate) throw new Error('Expected the owner-scoped Elemental Affinity feature')
     const conflict = {
       ...missing,
