@@ -1,5 +1,5 @@
 import { Sword } from '@phosphor-icons/react'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -17,14 +17,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
+import { useItemLookup } from '@/hooks/data/useGameData'
+import { useStartingEquipmentPolicy } from '@/hooks/data/useStartingEquipment'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
   getProgressiveChoiceGainCount,
   getProgressiveChoiceReviewLevel,
   getRequiredChoiceSelectionCount,
 } from '@/lib/5etools/classChoiceNormalization'
-import { getClassDefaultEquipmentBlocks } from '@/lib/5etools/startingEquipment'
-import { isRevisedDruidStartingOwner } from '@/lib/5etools/startingEquipmentPolicy'
+import { resolveClassEquipmentBlocks } from '@/lib/5etools/startingEquipment'
 import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
 import {
   getClassChoiceFeatureTarget,
@@ -257,10 +258,31 @@ export function BuildClassLevelsPanel({
     !!initialClass &&
     initialClass.name === viewingClass &&
     initialClass.source === viewingClassSource
-  const showEquipmentWithoutLevels =
-    viewingInitialClass &&
-    (getClassDefaultEquipmentBlocks(viewingClassData?.startingEquipment).length > 0 ||
-      isRevisedDruidStartingOwner({ ...initialClass, kind: 'class' }))
+  const itemLookup = useItemLookup()
+  const equipmentPolicy = useStartingEquipmentPolicy(
+    'class',
+    viewingInitialClass ? (viewingClassData ?? initialClass) : undefined,
+  )
+  const startingEquipment = viewingClassData?.startingEquipment
+  const equipmentBlocks = useMemo(
+    () =>
+      viewingInitialClass
+        ? resolveClassEquipmentBlocks(
+            startingEquipment,
+            itemLookup,
+            classEquipmentItemChoices,
+            equipmentPolicy,
+          )
+        : [],
+    [
+      viewingInitialClass,
+      startingEquipment,
+      itemLookup,
+      classEquipmentItemChoices,
+      equipmentPolicy,
+    ],
+  )
+  const showEquipment = equipmentBlocks.length > 0
   const [openSections, setOpenSections] = useState<string[]>([])
   const configurations = getSubclassConfigurations(
     classChoices,
@@ -448,7 +470,7 @@ export function BuildClassLevelsPanel({
                 Choose a Class
               </Button>
             </div>
-          ) : levelsToShow.length === 0 && !showEquipmentWithoutLevels ? (
+          ) : levelsToShow.length === 0 && !showEquipment ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No feature data available
             </p>
@@ -459,10 +481,12 @@ export function BuildClassLevelsPanel({
               onValueChange={setOpenSections}
               className="space-y-2"
             >
-              {viewingInitialClass && (
+              {showEquipment && (
                 <BuildClassEquipmentAccordion
                   character={character}
                   viewingClassData={viewingClassData}
+                  equipmentBlocks={equipmentBlocks}
+                  ownerAvailable={!!equipmentPolicy?.ownerAvailable}
                   blockChoices={classEquipmentBlockChoices}
                   itemChoices={classEquipmentItemChoices}
                   detailCollapsed={detailCollapsed}

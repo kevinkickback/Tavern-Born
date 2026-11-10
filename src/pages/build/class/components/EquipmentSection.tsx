@@ -1,14 +1,12 @@
-import { type Ref, useMemo } from 'react'
+import type { Ref } from 'react'
 import { StartingEquipmentBlocks } from '@/components/character/StartingEquipmentBlocks'
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useItemLookup } from '@/hooks/data/useGameData'
-import { useStartingEquipmentPolicy } from '@/hooks/data/useStartingEquipment'
 import {
   getEquipmentBlockSelection,
   getSelectedEquipmentPackage,
-  resolveClassEquipmentBlocks,
+  type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
 import { needsStartingEquipmentApplication } from '@/lib/character/startingEquipmentGrants'
 import { cn } from '@/lib/utils'
@@ -24,6 +22,8 @@ import type { SelectedFeatureState } from './DetailsPanel'
 interface BuildClassEquipmentAccordionProps {
   character: Character
   viewingClassData?: Class5e
+  equipmentBlocks: readonly ResolvedEquipmentBlock[]
+  ownerAvailable: boolean
   blockChoices: string[]
   itemChoices: Readonly<StartingEquipmentItemChoices>
   detailCollapsed: boolean
@@ -43,6 +43,8 @@ interface BuildClassEquipmentAccordionProps {
 export function BuildClassEquipmentAccordion({
   character,
   viewingClassData,
+  equipmentBlocks,
+  ownerAvailable,
   blockChoices,
   itemChoices,
   detailCollapsed,
@@ -53,18 +55,6 @@ export function BuildClassEquipmentAccordion({
   choiceRef,
   highlighted,
 }: BuildClassEquipmentAccordionProps) {
-  const itemLookup = useItemLookup()
-  const policy = useStartingEquipmentPolicy('class', viewingClassData ?? character.initialClass)
-  const equipmentBlocks = useMemo(
-    () =>
-      resolveClassEquipmentBlocks(
-        viewingClassData?.startingEquipment,
-        itemLookup,
-        itemChoices,
-        policy,
-      ),
-    [viewingClassData?.startingEquipment, itemLookup, itemChoices, policy],
-  )
   const selectedPackage = getSelectedEquipmentPackage(equipmentBlocks, blockChoices)
   let choiceCount = 0
   let pending = 0
@@ -81,7 +71,7 @@ export function BuildClassEquipmentAccordion({
   }
   const needsApplication =
     !hasWithdrawnPackage &&
-    !!policy?.ownerAvailable &&
+    ownerAvailable &&
     needsStartingEquipmentApplication(character, 'class', selectedPackage)
   const action = selectedPackage.issues?.length
     ? 'Needs attention'
@@ -115,57 +105,53 @@ export function BuildClassEquipmentAccordion({
           ref={choiceRef}
           className={cn('space-y-3 px-3 pb-2 pt-3', highlighted && 'animate-route-focus')}
         >
-          {equipmentBlocks.length > 0 && (
-            <>
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto p-0 text-xs"
-                onClick={() => {
-                  const source = viewingClassData?.startingEquipment as
-                    | { default?: unknown[]; entries?: unknown[]; goldAlternative?: string }
-                    | undefined
-                  onSelectFeature({
-                    name: 'Equipment rules',
-                    source: viewingClassData?.source ?? '',
-                    entries: [
-                      'Choose each independent package and its requested items. Your Background grants its own starting equipment.',
-                      ...(source?.default ?? source?.entries ?? []),
-                      ...(source?.goldAlternative
-                        ? [
-                            {
-                              type: 'entries',
-                              name: 'Rolled starting gold (manual setup)',
-                              entries: [source.goldAlternative],
-                            },
-                          ]
-                        : []),
-                    ],
-                  })
-                  if (detailCollapsed) onExpandDetails()
-                }}
-              >
-                Equipment rules and details
-              </Button>
-              <StartingEquipmentBlocks
-                blocks={equipmentBlocks}
-                choices={blockChoices}
-                itemChoices={itemChoices}
-                label="Class starting equipment"
-                onBlockChange={onBlockChoiceChange}
-                onItemChange={onItemChoiceChange}
-                needsApplication={needsApplication}
-                onApply={() => {
-                  const first = equipmentBlocks[0]
-                  if (first)
-                    onBlockChoiceChange(
-                      first.index,
-                      getEquipmentBlockSelection(first, blockChoices).optionKey,
-                    )
-                }}
-              />
-            </>
-          )}
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-xs"
+            onClick={() => {
+              const source = viewingClassData?.startingEquipment as
+                | { default?: unknown[]; entries?: unknown[]; goldAlternative?: string }
+                | undefined
+              onSelectFeature({
+                name: 'Equipment rules',
+                source: viewingClassData?.source ?? '',
+                entries: [
+                  'Choose each independent package and its requested items. Your Background grants its own starting equipment.',
+                  ...(source?.default ?? source?.entries ?? []),
+                  ...(source?.goldAlternative
+                    ? [
+                        {
+                          type: 'entries',
+                          name: 'Rolled starting gold (manual setup)',
+                          entries: [source.goldAlternative],
+                        },
+                      ]
+                    : []),
+                ],
+              })
+              if (detailCollapsed) onExpandDetails()
+            }}
+          >
+            Equipment rules and details
+          </Button>
+          <StartingEquipmentBlocks
+            blocks={equipmentBlocks}
+            choices={blockChoices}
+            itemChoices={itemChoices}
+            label="Class starting equipment"
+            onBlockChange={onBlockChoiceChange}
+            onItemChange={onItemChoiceChange}
+            needsApplication={needsApplication}
+            onApply={() => {
+              const first = equipmentBlocks[0]
+              if (first)
+                onBlockChoiceChange(
+                  first.index,
+                  getEquipmentBlockSelection(first, blockChoices).optionKey,
+                )
+            }}
+          />
         </div>
       </AccordionContent>
     </AccordionItem>
