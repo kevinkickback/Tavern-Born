@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { EPIC_BOON_LEVEL, isEpicBoonTarget } from '@/lib/5etools/epicBoonAdvancement'
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
+import { isEarnedWeaponInscription } from '@/lib/5etools/weaponInscriptionIdentity'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
@@ -491,6 +492,10 @@ const classFeatChoiceSchema = z
     })
   })
 
+const inscriptionText = z
+  .string()
+  .min(1)
+  .refine((value) => value === value.trim().toLowerCase())
 const equipmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -517,6 +522,23 @@ const equipmentSchema = z.object({
   wondrous: z.boolean().optional(),
   tattoo: z.boolean().optional(),
   focus: z.array(z.string()).optional(),
+  weaponInscriptions: z
+    .array(
+      z
+        .object({
+          owner: z.tuple([
+            z.literal('subclass'),
+            inscriptionText,
+            inscriptionText,
+            inscriptionText,
+            inscriptionText,
+          ]),
+          target: z.string(),
+          rune: inscriptionText,
+        })
+        .strict(),
+    )
+    .optional(),
 })
 
 const currencySchema = z.object({
@@ -1053,6 +1075,24 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    const inscriptions = new Set<string>()
+    char.equipment.forEach((item, index) => {
+      item.weaponInscriptions?.forEach((mark, markIndex) => {
+        const key = JSON.stringify(mark.owner)
+        if (
+          inscriptions.has(key) ||
+          item.quantity <= 0 ||
+          char.equipment.filter((row) => row.id === item.id).length !== 1 ||
+          !isEarnedWeaponInscription(mark, char.classProgression)
+        )
+          ctx.addIssue({
+            code: 'custom',
+            path: ['equipment', index, 'weaponInscriptions', markIndex],
+            message: 'Invalid or duplicate weapon inscription.',
+          })
+        inscriptions.add(key)
+      })
+    })
     const invalidEpicBoon = (path: Array<string | number>) =>
       ctx.addIssue({
         code: 'custom',

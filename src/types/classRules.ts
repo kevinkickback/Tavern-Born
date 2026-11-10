@@ -142,6 +142,7 @@ export interface ClassResourceRecovery {
 }
 
 export interface ClassResourceDef {
+  inheritedFeature?: true
   /** Exact source declaration required for a catalog-derived table resource. */
   declarationTarget?: string
   id: string

@@ -164,6 +164,7 @@ export function getInheritedSuperiorityDice(
   return maxPerLevel
     ? {
         id: `subclass-feature-resource:${JSON.stringify([norm(entry.name), norm(entry.source), norm(subclass.name), norm(subclass.source), target])}`,
+        inheritedFeature: true,
         label: 'Superiority Dice',
         maxPerLevel,
         restType: 'short',

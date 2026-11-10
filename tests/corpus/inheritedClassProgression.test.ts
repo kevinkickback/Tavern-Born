@@ -1,5 +1,7 @@
+// @vitest-environment jsdom
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { beforeAll, describe, expect, test } from 'vitest'
 import {
   getClassSpellProfilePolicy,
@@ -22,6 +24,7 @@ import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
+import { getWeaponInscriptionSetup } from '@/lib/5etools/weaponInscribedSpells'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassResources } from '@/lib/calculations/classResources'
@@ -41,7 +44,9 @@ import {
 } from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
+import { removeManualEquipmentCommand } from '@/lib/character/commands/equipmentCommands'
 import { setManagedClassSpellChoicesCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import { setWeaponInscription } from '@/lib/character/commands/weaponInscriptionCommands'
 import { getDirectClassPreparedSpellGrants } from '@/lib/character/directClassPreparedSpells'
 import {
   getEpicBoonSlots,
@@ -55,6 +60,7 @@ import {
 } from '@/lib/character/managedClassSpells'
 import { getRevisedClassFeatSlot } from '@/lib/character/revisedClassFeatSlot'
 import { getSelectedFeatureCantripSlots } from '@/lib/character/selectedFeatureSpells'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import {
   getDisplayedClassFeatures,
   projectClassLevelFeatures,
@@ -64,6 +70,7 @@ import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const sources = ['XPHB', 'WoW']
 const available = [
@@ -148,11 +155,18 @@ describe.runIf(available)('configured inherited class progression', () => {
             document._meta.internalCopies ??= []
             if (!document._meta.internalCopies.includes('class'))
               document._meta.internalCopies.push('class')
-            document.class.push({
-              name: 'Tactician',
-              source,
-              _copy: { name: 'Fighter', source: 'XPHB' },
-            })
+            document.class.push(
+              {
+                name: 'Tactician',
+                source,
+                _copy: { name: 'Fighter', source: 'XPHB' },
+              },
+              {
+                name: 'Tactician',
+                source: 'OTHER',
+                _copy: { name: 'Fighter', source: 'XPHB' },
+              },
+            )
           }
           if (conflictingFeatureText && file === 'class/class-druid.json') {
             const terrain = document.subclassFeature.find(
@@ -169,6 +183,30 @@ describe.runIf(available)('configured inherited class progression', () => {
               'Wind Wall|XPHB}.',
               'Wind Wall|XPHB} by also expending a spell slot.',
             )
+          }
+          if (conflictingFeatureText && file === 'class/class-deathknight.json') {
+            const oath = document.subclass.find(
+              (row: { name: string }) => row.name === 'Oath of the Ebon Blade',
+            )
+            const frost = oath.additionalSpells.find(
+              (row: { name: string }) => row.name === 'Frost',
+            )
+            const blood = oath.additionalSpells.find(
+              (row: { name: string }) => row.name === 'Blood',
+            )
+            oath.name = 'Oath of the Ebon Blade #2'
+            frost.name = 'Frost #2'
+            frost.prepared['3'][1] += '#c'
+            blood.prepared['3'][1] = 'chains of ice|wow'
+            const spellTable = document.subclassFeature.find(
+              (row: { name: string }) => row.name === 'Oath of the Ebon Blade Spells',
+            ).entries[1]
+            spellTable.colLabels[3] = 'Spells (Frost #2)'
+            spellTable.rows[0][2] = '{@spell Chains of Ice|WoW}'
+            const forging = document.subclassFeature.find(
+              (row: { name: string }) => row.name === 'Runeforging',
+            )
+            forging.entries[2].name = 'Frost #2'
           }
           return document
         },
@@ -250,6 +288,162 @@ describe.runIf(available)('configured inherited class progression', () => {
     calculation(character)
       .character.spells.spellProfiles.flatMap((profile) => profile.fixedSpells ?? [])
       .map((reference) => reference.toLowerCase())
+
+  test('inscribed spells follow the marked inventory row and the subclass’s earned schedule', () => {
+    let character: Character = chooseSubclass(
+      reachLevel(start('Death Knight'), 3),
+      'Oath of the Ebon Blade',
+    )
+    character = {
+      ...character,
+      equipment: [
+        ...character.equipment,
+        {
+          id: 'sword-a',
+          name: 'Longsword',
+          source: 'XPHB',
+          type: 'M',
+          quantity: 1,
+          equipped: false,
+        },
+        {
+          id: 'sword-b',
+          name: 'Longsword',
+          source: 'XPHB',
+          type: 'M',
+          quantity: 1,
+          equipped: true,
+        },
+        { id: 'bow', name: 'Longbow', source: 'XPHB', type: 'R', quantity: 1, equipped: true },
+      ],
+    }
+    const setup = () =>
+      getWeaponInscriptionSetup(character, character.classProgression[0], catalogs)
+    const edit = (rune?: string, weaponId?: string) => {
+      const draft = setup()
+      const expected = draft?.saved && {
+        weaponId: draft.saved.weapon.id,
+        rune: draft.saved.mark.rune,
+        target: draft.saved.mark.target,
+      }
+      const equipment = setWeaponInscription(
+        character,
+        character.classProgression[0],
+        rune && weaponId && draft?.current
+          ? { target: draft.current.target, rune, weaponId }
+          : undefined,
+        expected,
+        catalogs,
+      )
+      character = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify({ ...character, equipment })),
+      )
+    }
+    expect(setup()?.weapons.map((row) => row.id)).toEqual(
+      expect.arrayContaining(['sword-a', 'sword-b']),
+    )
+    expect(setup()?.weapons.map((row) => row.id)).not.toContain('bow')
+    expect(fixedSpells(character)).toEqual(['death grip|wow'])
+    expect(() => edit('Frost', 'bow')).toThrow(/melee weapon/)
+    edit('Frost', 'sword-a')
+    expect(fixedSpells(character)).toEqual(['death grip|wow', 'chains of ice|wow'])
+    expect(setup()?.active).toBe(true)
+    const marked = character
+    const previousPrinting = characterPersistenceSchema.parse(
+      JSON.parse(
+        JSON.stringify({
+          ...marked,
+          equipment: marked.equipment.map((weapon) => ({
+            ...weapon,
+            weaponInscriptions: weapon.weaponInscriptions?.map((mark) => ({
+              ...mark,
+              target: mark.target.replace('|runeforging|', '|runic power|'),
+            })),
+          })),
+        }),
+      ),
+    )
+    const dormant = getWeaponInscriptionSetup(
+      previousPrinting,
+      previousPrinting.classProgression[0],
+      catalogs,
+    )
+    expect(dormant?.saved?.mark.target).toContain('|runic power|')
+    expect(dormant?.active).toBe(false)
+    expect(fixedSpells(previousPrinting)).toEqual(['death grip|wow'])
+    const oldMark = dormant?.saved?.mark
+    const currentTarget = dormant?.current?.target
+    expect(
+      oldMark &&
+        currentTarget &&
+        setWeaponInscription(
+          previousPrinting,
+          previousPrinting.classProgression[0],
+          { target: currentTarget, weaponId: 'sword-b', rune: 'Blood' },
+          { target: oldMark.target, weaponId: 'sword-a', rune: oldMark.rune },
+          catalogs,
+        ).flatMap((item) => item.weaponInscriptions ?? []),
+    ).toEqual([expect.objectContaining({ target: currentTarget, rune: 'blood' })])
+    const classLookups = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const vm = createCharacterSheetViewModel(marked, classLookups, classLookups)
+    expect(vm.spellRows.find((row) => row.name === 'Chains of Ice')).toMatchObject({
+      prepared: true,
+    })
+    expect(
+      getEarnedSubclassSpellGrants(classRow('Death Knight'), marked.classProgression[0], 3, {
+        character: marked,
+        catalogs: { ...catalogs, items: [], itemsBase: [] },
+      })?.map((row) => row.spellName),
+    ).toEqual(['Death Grip|WoW'])
+    expect(fixedSpells({ ...character, allowedSources: ['XPHB'] })).toEqual([])
+    expect(fixedSpells(marked)).toContain('chains of ice|wow')
+
+    edit('Frost', 'sword-b')
+    expect(character.equipment.find((row) => row.id === 'sword-a')?.weaponInscriptions).toEqual([])
+    expect(fixedSpells(character)).toContain('chains of ice|wow')
+    character = reachLevel(character, 5)
+    expect(fixedSpells(character)).toEqual(
+      expect.arrayContaining(['death and decay|wow', 'frostscythe|wow']),
+    )
+    edit('Blood', 'sword-b')
+    expect(fixedSpells(character)).not.toContain('frostscythe|wow')
+    expect(fixedSpells(character)).toEqual(
+      expect.arrayContaining(['vampiric blood|wow', 'spiritual weapon|xphb']),
+    )
+
+    const removed = reopen(
+      character,
+      removeManualEquipmentCommand(character, character.provenance, 'sword-b'),
+    )
+    expect(fixedSpells(removed)).toEqual(['death grip|wow', 'death and decay|wow'])
+    expect(
+      fixedSpells({
+        ...removed,
+        equipment: [
+          ...removed.equipment,
+          {
+            id: 'sword-b',
+            name: 'Longsword',
+            source: 'XPHB',
+            type: 'M',
+            quantity: 1,
+            equipped: false,
+          },
+        ],
+      }),
+    ).toEqual(['death grip|wow', 'death and decay|wow'])
+    const rolledBack = reopen(
+      marked,
+      applyLevelDown(marked, marked.provenance, calculation(marked)),
+    )
+    expect(rolledBack.equipment.every((item) => !item.weaponInscriptions?.length)).toBe(true)
+    edit()
+    expect(fixedSpells(character)).toEqual(['death grip|wow', 'death and decay|wow'])
+  })
 
   test('copied class grants follow their earned features and authored replacements', () => {
     const druid = start('Druid')
@@ -337,6 +531,167 @@ describe.runIf(available)('configured inherited class progression', () => {
     expect(surge?.id).not.toBe(resource(warrior, 'Action Surge')?.id)
     expect(resource({ ...veteran, allowedSources: ['XPHB'] }, 'Action Surge')).toBeUndefined()
   })
+
+  test('prints inherited resource counts and recovery in the four shipped sheets', async () => {
+    const warrior = chooseSubclass(reachLevel(start('Warrior'), 17), 'Battle Master')
+    const cls = classRow('Warrior')
+    const definitions = getCharacterClassResources(warrior, () => cls, {
+      catalogs,
+      charismaModifier: 0,
+      unlimitedWildShape: false,
+    })
+    const spent = Object.fromEntries(
+      definitions.map((row) => [row.id, row.label === 'Action Surge' ? 1 : 2]),
+    )
+    const current = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const view = createCharacterSheetViewModel(
+      { ...warrior, classResources: spent },
+      current,
+      current,
+    )
+    expect(view.classResourceRows.find((row) => row.label === 'Superiority Dice')).toMatchObject({
+      used: 4,
+      max: 6,
+    })
+    for (const template of [
+      '2014-official',
+      '2014-custom',
+      '2024-official',
+      '2024-custom',
+    ] as const) {
+      const bytes = await generateTestCharacterSheet(view, template, {
+        pages: { spells: false },
+        text: { descriptions: 'names', overflow: 'ellipsis' },
+      })
+      const form = (await PDFDocument.load(bytes)).getForm()
+      const text = form
+        .getFields()
+        .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+      expect(text, template).toContain('Restores all uses on a short or long rest')
+      expect(text, template).toMatch(/Restores 1 use on a short rest; all uses on a long rest/i)
+      if (template === '2014-custom') {
+        const index =
+          view.classResourceRows.findIndex((row) => row.label === 'Superiority Dice') + 1
+        expect(form.getTextField(`Limited Feature ${index}`).getText()).toBe('Superiority Dice')
+        expect(form.getTextField(`Limited Feature Max Usages ${index}`).getText()).toBe('6')
+        expect(form.getTextField(`Limited Feature Used ${index}`).getText()).toBe('4')
+        expect(form.getDropdown(`Limited Feature Recovery ${index}`).getSelected()).toEqual(['S/L'])
+      } else {
+        expect(text, template).toMatch(/Action Surge\s*[—-]\s*1\/2 available/)
+        expect(text, template).toMatch(/Superiority Dice\s*[—-]\s*2\/6 available/)
+      }
+    }
+  }, 60_000)
+
+  test('keeps same-label resource owners and carries inherited overflow onto Notes', async () => {
+    const warrior = chooseSubclass(reachLevel(start('Warrior'), 17), 'Battle Master')
+    const actor: Character = {
+      ...warrior,
+      allowedSources: ['XPHB', 'WoW', 'EXAMPLE'],
+      classProgression: [
+        ...warrior.classProgression,
+        { name: 'Tactician', source: 'EXAMPLE', levels: 2 },
+      ],
+    }
+    const current = {
+      ...lookups,
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const first = createCharacterSheetViewModel(actor, current, current)
+    const sameName = first.classResourceRows.filter((row) => row.label === 'Action Surge')
+    expect(sameName.map((row) => row.owner?.name)).toEqual(['Warrior', 'Tactician'])
+    actor.classResources = Object.fromEntries(
+      sameName.map((row) => [row.id, row.owner?.name === 'Warrior' ? 1 : 0]),
+    )
+    const view = createCharacterSheetViewModel(actor, current, current)
+    const withoutCopy = {
+      ...current,
+      classChoiceFeatureCatalogs: {
+        ...catalogs,
+        classes: data.classes.filter((row) => row.name !== 'Tactician'),
+      },
+    }
+    expect(
+      createCharacterSheetViewModel(actor, current, withoutCopy)
+        .classResourceRows.filter((row) => row.label === 'Action Surge')
+        .map((row) => row.owner?.name),
+    ).toEqual(['Warrior'])
+    expect(
+      view.classResourceRows.filter((row) => row.label === 'Action Surge').map((row) => row.used),
+    ).toEqual([1, 1])
+    const overflowView = {
+      ...view,
+      classResourceRows: [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          ...view.classResourceRows[0],
+          id: `filler-${index}`,
+          label: `Filler ${index}`,
+          inherited: false,
+        })),
+        ...view.classResourceRows,
+      ],
+    }
+    const generate = (notes?: boolean) =>
+      generateTestCharacterSheet(overflowView, '2014-custom', {
+        pages: { notes, spells: false },
+        text: { descriptions: 'names', overflow: 'ellipsis' },
+        onReport: (report) => {
+          const sections = notes === false ? report.omitted : report.preserved
+          expect(sections.some((section) => section.id === 'capacity:class-resources')).toBe(true)
+        },
+      })
+    const form = (await PDFDocument.load(await generate())).getForm()
+    const notes = form
+      .getFields()
+      .flatMap((field) =>
+        field instanceof PDFTextField && /Notes\.(Left|Right)$/.test(field.getName())
+          ? [field.getText() ?? '']
+          : [],
+      )
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(notes).toContain('Action Surge (Warrior) — 1/2 available')
+    expect(notes).toContain('Action Surge (Tactician) — 0/1 available')
+    await generate(false)
+
+    const twoPrintings: Character = {
+      ...start('Tactician', 'EXAMPLE'),
+      allowedSources: ['XPHB', 'EXAMPLE', 'OTHER'],
+      classProgression: [
+        { name: 'Tactician', source: 'EXAMPLE', levels: 2 },
+        { name: 'Tactician', source: 'OTHER', levels: 2 },
+      ],
+    }
+    const counters = createCharacterSheetViewModel(twoPrintings, current, current).classResourceRows
+    twoPrintings.classResources = Object.fromEntries(
+      counters
+        .filter((row) => row.label === 'Action Surge')
+        .map((row) => [row.id, row.owner?.source === 'EXAMPLE' ? 0 : 1]),
+    )
+    const duplicateLabels = createCharacterSheetViewModel(twoPrintings, current, current)
+    const fitted = (
+      await PDFDocument.load(
+        await generateTestCharacterSheet(duplicateLabels, '2014-custom', {
+          pages: { spells: false },
+          text: { descriptions: 'names', overflow: 'ellipsis' },
+        }),
+      )
+    ).getForm()
+    const allText = fitted
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(allText).toContain('Action Surge (Tactician · EXAMPLE) — 0/1 available')
+    expect(allText).toContain('Action Surge (Tactician · OTHER) — 1/1 available')
+  }, 60_000)
 
   test.each([
     {
@@ -481,6 +836,60 @@ describe.runIf(available)('configured inherited class progression', () => {
       catalogs: current,
     })
     expect(grants?.map((grant) => grant.spellName)).toEqual(['elementalism|xphb'])
+
+    const knight = reachLevel(start('Death Knight'), 5)
+    const deathKnight = reopen(
+      knight,
+      selectSubclass(knight, knight.provenance, 'Oath of the Ebon Blade #2', 'WoW', undefined, {
+        classChoiceFeatureCatalogs: current,
+      }),
+    )
+    const [owner] = deathKnight.classProgression
+    const setup = getWeaponInscriptionSetup(deathKnight, owner, current)
+    expect(setup?.current?.runes).toContain('Frost #2')
+    if (!setup?.current || !setup.weapons.length) throw Error('Missing an eligible melee weapon')
+    const equipment = setWeaponInscription(
+      deathKnight,
+      owner,
+      { target: setup.current.target, rune: 'Frost #2', weaponId: setup.weapons[0].id },
+      undefined,
+      current,
+    )
+    const saved = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify({ ...deathKnight, equipment })),
+    )
+    const sourceClass = conflicting.classes.find(
+      (row) => row.name === owner.name && row.source === owner.source,
+    )
+    const ranks = new Map([
+      ['chains of ice|wow', 1],
+      ['frostscythe|wow', 2],
+    ])
+    const spells = getEarnedSubclassSpellGrants(sourceClass, owner, 5, {
+      character: saved,
+      catalogs: current,
+      spells: ranks,
+    })
+    expect(spells?.map((spell) => spell.spellName.toLowerCase())).toEqual([
+      'death grip|wow',
+      'death and decay|wow',
+      'frostscythe|wow',
+    ])
+    const blood = setWeaponInscription(
+      saved,
+      owner,
+      { target: setup.current.target, rune: 'Blood', weaponId: setup.weapons[0].id },
+      { target: setup.current.target, rune: 'frost #2', weaponId: setup.weapons[0].id },
+      current,
+    )
+    const bloodSpells = getEarnedSubclassSpellGrants(sourceClass, owner, 5, {
+      character: { ...saved, equipment: blood },
+      catalogs: current,
+      spells: ranks,
+    })
+    expect(
+      bloodSpells?.find((spell) => spell.spellName.toLowerCase() === 'chains of ice|wow'),
+    ).toMatchObject({ isCantrip: false })
   }, 45_000)
 
   test('the roster displays exact inherited class and subclass features and earns Epic Boons', () => {
@@ -891,7 +1300,11 @@ describe.runIf(available)('configured inherited class progression', () => {
         classChoiceFeatureCatalogs: catalogs,
       }),
     )
-    expect(getEarnedSubclassSpellGrants(cls, character.classProgression[0])).toEqual([])
+    expect(
+      getEarnedSubclassSpellGrants(cls, character.classProgression[0])?.map((grant) =>
+        grant.spellName.toLowerCase(),
+      ),
+    ).toEqual(['death grip|wow'])
     character = levelUp(character, 10)
     const featRequest = { name: 'Death Knight', source: 'WoW', level: 4 }
     expect(getRevisedClassFeatSlot(character, featRequest, catalogs)).toMatchObject({

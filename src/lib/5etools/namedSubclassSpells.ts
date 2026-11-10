@@ -10,7 +10,10 @@ import {
   encodeSourceGroupOptionReference,
   getFeatureLiteralChoiceId,
 } from './featureOptionIdentity'
-import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
+import {
+  decodeOptionalDeclaration,
+  optionalDeclarationObject as record,
+} from './optionalClassDeclarationStructure'
 import { getDeclaredSubclassGains, getOwnedSubclassFeature } from './ownedSubclassFeature'
 import { parseSpellToken } from './spellTokens'
 import { collectUnconditionalFeatureReferences } from './unconditionalFeatureReferences'
@@ -112,6 +115,23 @@ function agrees(table: Schedule | undefined, authored: Schedule, common: Schedul
   )
 }
 
+/** The optional column owns only its own rows. A tag in another column cannot change their kind. */
+function inscriptionColumn(printed: Schedule | undefined, authored: Schedule): Schedule {
+  return Object.fromEntries(
+    Object.entries(printed ?? {}).map(([level, spells]) => {
+      const cantrips = new Set(
+        (authored[level] ?? []).filter((spell) => parseSpellToken(spell).isCantrip).map(key),
+      )
+      return [
+        level,
+        spells.map((spell) =>
+          !parseSpellToken(spell).isCantrip && cantrips.has(key(spell)) ? `${spell}#c` : spell,
+        ),
+      ]
+    }),
+  )
+}
+
 export function getNamedSubclassSpellSource(
   cls: Class5e,
   subclass: Subclass5e,
@@ -180,12 +200,38 @@ export function getNamedSubclassSpellSource(
           ),
       )
     )
-      return [{ ...found, common: {} as Schedule, named, label: 'Terrain' }]
-    if (
-      tables.length !== 1 ||
-      !/^When you reach a [\w -]+ level specified in the .+ table, you thereafter always have the spells? in the Spells \(All\) column prepared\. You also have the additional spells listed in one other column of your choice\.$/.test(
+      return [
+        {
+          ...found,
+          common: {} as Schedule,
+          named,
+          label: 'Terrain',
+          inscriptionTarget: undefined,
+        },
+      ]
+    if (tables.length !== 1) return []
+    const specialization =
+      /^When you reach a [\w -]+ level specified in the .+ table, you thereafter always have the spells? in the Spells \(All\) column prepared\. You also have the additional spells listed in one other column of your choice\.$/.test(
         clause,
       )
+    const inscription =
+      /^The magic of your [\w -]+ and your \{@subclassFeature ([^{}]+)\} feature \(see below\) ensure you always have certain spells ready; when you reach a [\w -]+ level specified in the (.+) table, you thereafter always have the spells? in the Spells \(All\) column prepared\. You also have the additional spells listed in the column matching the rune you have inscribed on your weapon, if any\.$/.exec(
+        clause,
+      )
+    const linked =
+      inscription &&
+      inscription[2] === tables[0].caption &&
+      decodeOptionalDeclaration(inscription[1], kind)
+    const castingAbility = cls.spellcastingAbility
+    if (
+      !specialization &&
+      (!linked ||
+        linked.target === found.target ||
+        typeof castingAbility !== 'string' ||
+        blocks.some(
+          (block) =>
+            typeof block.ability !== 'string' || norm(block.ability) !== norm(castingAbility),
+        ))
     )
       return []
     const columns = tables[0].colLabels
@@ -197,15 +243,29 @@ export function getNamedSubclassSpellSource(
     )
       return []
     const common = readTables(tables, 1, columns.length)
+    const schedules = named.map(({ name }) => {
+      const index = columns.indexOf(`Spells (${name})`)
+      return index >= 2 ? readTables(tables, index, columns.length) : undefined
+    })
     if (
       !common ||
-      !named.every(({ name, prepared }) => {
-        const index = columns.indexOf(`Spells (${name})`)
-        return index >= 2 && agrees(readTables(tables, index, columns.length), prepared, common)
-      })
+      !named.every(({ prepared }, index) => agrees(schedules[index], prepared, common))
     )
       return []
-    return [{ ...found, common, named, label: 'Specialization' }]
+    return [
+      {
+        ...found,
+        common,
+        named: linked
+          ? named.map(({ name, prepared }, index) => ({
+              name,
+              prepared: inscriptionColumn(schedules[index], prepared),
+            }))
+          : named,
+        label: 'Specialization',
+        inscriptionTarget: linked ? linked.target : undefined,
+      },
+    ]
   })
   return sources.length === 1 &&
     sources[0].named.every(({ prepared }) =>
@@ -221,7 +281,7 @@ export function getNamedSubclassSpellSetup(
   catalogs?: Parameters<typeof getOwnedSubclassFeature>[3],
 ): NormalizedCharacterChoice | undefined {
   const current = getNamedSubclassSpellSource(cls, subclass, catalogs)
-  if (!current) return undefined
+  if (!current || current.inscriptionTarget) return undefined
   const { feature, target, level, label } = current
   const owner = {
     type: 'subclass' as const,

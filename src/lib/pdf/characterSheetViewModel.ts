@@ -157,6 +157,8 @@ interface CharacterSheetClassResourceRow {
   recovery: string
   usageText?: string
   restType: 'short' | 'long'
+  owner?: { name: string; source: string }
+  inherited?: boolean
 }
 
 interface CharacterSheetHitDieRow {
@@ -1098,15 +1100,30 @@ export function createCharacterSheetViewModel(
         effectContext: calculationContext.effects.resolutionContext,
         unlimitedWildShape: !!unlimitedWildShape,
       },
-    ).map(({ id, label, max, current, recoveryText, restType, usageText }) => ({
-      id,
-      label,
-      max,
-      used: max - current,
-      recovery: recoveryText,
-      restType,
-      ...(usageText && { usageText }),
-    })),
+    ).map(
+      ({
+        id,
+        label,
+        max,
+        current,
+        recoveryText,
+        restType,
+        usageText,
+        className,
+        classSource,
+        inherited,
+      }) => ({
+        id,
+        label,
+        max,
+        used: max - current,
+        recovery: recoveryText,
+        restType,
+        owner: { name: className, source: classSource },
+        inherited,
+        ...(usageText && { usageText }),
+      }),
+    ),
     weaponRows: buildWeaponRows(actions),
     actions,
     spellRows: buildSpellRows(

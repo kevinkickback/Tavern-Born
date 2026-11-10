@@ -41,3 +41,13 @@ The audited source exception registry separates fixed baselines from conditional
 rules. Special bearer, charge, target, ability or weapon-form mechanics stay manual unless
 explicitly supported. Actions, Review and PDF share one effect projection and preserve player
 prose and manual adjustments.
+
+## Subclass weapon inscriptions
+
+An inscription records the exact earned feature and rune on one inventory row for each subclass owner.
+The current subclass must declare both the inscription and its spell schedule. Only a currently
+resolved melee weapon is eligible. A marked stack retains one inscribed copy while its quantity
+is positive. Moving the inscription transfers it between inventory IDs. Unequipping keeps it.
+Removing the row or losing the earned owner clears it. Missing source rules suspend the affected
+spells while preserving the mark, and the unconditioned spell column remains independent.
+Builder edits the current inscription manually. Rest and level-up timing remain in the feature text.

@@ -235,6 +235,8 @@ export function getCharacterClassResources(
                 ? `Psi Limit is ${psiLimit}.`
                 : definition.usageText,
           className: entry.name,
+          classSource: entry.source,
+          inherited: !!(definition.inheritedFeature || definition.declarationTarget),
         },
       ]
     })

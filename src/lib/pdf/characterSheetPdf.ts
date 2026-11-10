@@ -34,6 +34,8 @@ import {
   type CharacterSheetSupplementBytes,
   getCharacterSheetAssetPlan,
 } from './characterSheetAssets'
+import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
+import { formatSheetResource } from './classResourceSheetRules'
 import { buildCompanionSheetData } from './companionSheet'
 import { createCompanionSheetDocument } from './companionSheetPdf'
 import { getOfficial2014SectionText } from './official2014Text'
@@ -193,6 +195,14 @@ export async function generateFilledCharacterSheetPdf(
   const shortened: string[] = []
   const noteReferences: string[] = []
   const representedMainTexts: string[] = []
+  const printedFeatureTexts: string[] = []
+  const clippedResourceLabels = new Set<string>()
+  const custom2014 = template.id === '2014-custom'
+  const summaryFields =
+    template.edition === '2024'
+      ? ['Text_57', 'Text_58']
+      : [custom2014 ? 'Class Features' : 'Features and Traits']
+  const resourceCapacity = CHARACTER_SHEET_CAPACITIES['2014-custom'].classResources
   const officialSpellMap = mapOfficial2014SpellPage(viewModel)
   const spellNames = new Set([
     ...Object.keys(officialSpellMap.textFields),
@@ -306,6 +316,15 @@ export async function generateFilledCharacterSheetPdf(
     })
     if (part.id === 'main') {
       for (const field of doc.getForm().getFields()) {
+        if (field instanceof PDFTextField && summaryFields.includes(field.getName()))
+          printedFeatureTexts.push(comparableNoteText(field.getText() ?? ''))
+        if (
+          custom2014 &&
+          field instanceof PDFTextField &&
+          /^Limited Feature \d+$/.test(field.getName()) &&
+          comparableNoteText(field.getText() ?? '') !== fields.textFields[field.getName()]
+        )
+          clippedResourceLabels.add(field.getName())
         if (
           field instanceof PDFTextField &&
           fields.textFields[field.getName()] !== undefined &&
@@ -316,6 +335,45 @@ export async function generateFilledCharacterSheetPdf(
     }
     await appendPdfForm(output, doc, prefix)
   }
+  const summarizedResources = custom2014
+    ? original.classResourceRows.slice(0, resourceCapacity)
+    : original.classResourceRows
+  const inheritedLabels = new Set(
+    original.classResourceRows.filter((row) => row.inherited).map((row) => row.label),
+  )
+  const resourceLabelNotes = new Set<string>()
+  const missingResources = summarizedResources.flatMap((row, index) => {
+    const field = `Limited Feature ${index + 1}`
+    if (clippedResourceLabels.has(field) && inheritedLabels.has(row.label)) {
+      const id = `text-limit:${field}`
+      const section = {
+        id,
+        title: `${field} — Resource counter`,
+        text: formatSheetResource(row, original.classResourceRows),
+      }
+      const position = overflow.findIndex((item) => item.id === id)
+      if (position < 0) overflow.push(section)
+      else overflow[position] = section
+      resourceLabelNotes.add(id)
+      return []
+    }
+    if (!row.inherited) return []
+    const text = formatSheetResource(row, original.classResourceRows, !custom2014)
+    const normalized = comparableNoteText(text)
+    const missing =
+      !printedFeatureTexts.some((value) => value.includes(normalized)) &&
+      !(
+        continueInNotes &&
+        overflow.some((section) => comparableNoteText(section.text).includes(normalized))
+      )
+    return missing ? [text] : []
+  })
+  if (missingResources.length)
+    overflow.push({
+      id: 'resource-counter-details',
+      title: 'Class resource counters and recovery',
+      text: missingResources.join('\n\n'),
+    })
   const uniqueOverflow = [
     ...new Map(
       overflow.filter((section) => section.text.trim()).map((section) => [section.id, section]),
@@ -325,6 +383,10 @@ export async function generateFilledCharacterSheetPdf(
     (section) =>
       section.id.startsWith('unknown-spell-levels:') ||
       section.id === 'capacity:spellcasting-profiles' ||
+      section.id === 'resource-counter-details' ||
+      resourceLabelNotes.has(section.id) ||
+      (section.id === 'capacity:class-resources' &&
+        original.classResourceRows.slice(resourceCapacity).some((row) => row.inherited)) ||
       actionDetails.some((detail) => detail.id === section.id),
   )
   const includeNotes =

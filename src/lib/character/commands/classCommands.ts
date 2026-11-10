@@ -1,6 +1,7 @@
 import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
+import { retainEarnedWeaponInscriptions } from '@/lib/5etools/weaponInscriptionIdentity'
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 /**
@@ -615,6 +616,7 @@ export function applyClassProgressionUpdate(
     character.classChoiceSelections,
     nextProgression,
   )
+  const equipment = retainEarnedWeaponInscriptions(workingCharacter.equipment, nextProgression)
   const classChoiceGrants = reconcileClassChoiceSelectionGrants(
     {
       ...workingCharacter,
@@ -638,6 +640,7 @@ export function applyClassProgressionUpdate(
 
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
+    ...(equipment !== workingCharacter.equipment && { equipment }),
     optionalClassFeatureAdoptions: retainEarnedOptionalClassAdoptions(character, nextProgression),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
@@ -931,9 +934,11 @@ export function selectBaseClass(
     })
   }
 
+  const equipment = retainEarnedWeaponInscriptions(character.equipment, updatedProgression)
   const characterPatch: Partial<Character> = {
     proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
+    ...(equipment !== character.equipment && { equipment }),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
     initialClass: { name: className, source: classSource },
   }

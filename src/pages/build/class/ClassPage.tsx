@@ -51,6 +51,7 @@ import { BuildClassDetailsPanel } from '@/pages/build/class/components/DetailsPa
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { getVisibleOptionalClassFeatures } from '@/pages/build/class/components/OptionalClassFeatures'
+import { WeaponInscriptionControl } from '@/pages/build/class/components/WeaponInscriptionControl'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
@@ -595,6 +596,22 @@ export function BuildClassPage() {
           leftWidth="var(--workspace-master-width)"
           left={
             <BuildClassLevelsPanel
+              weaponInscriptionControl={
+                viewingEntry && (
+                  <WeaponInscriptionControl
+                    key={JSON.stringify([
+                      character.id,
+                      viewingEntry.name,
+                      viewingEntry.source,
+                      viewingEntry.subclass,
+                      viewingEntry.subclassSource,
+                    ])}
+                    character={character}
+                    entry={viewingEntry}
+                    catalogs={featureCatalogs}
+                  />
+                )
+              }
               managedSpellStatuses={calculation?.managedClassSpellStatuses}
               optionalClassActivity={activity ?? undefined}
               classProgression={classProgression}

@@ -24,7 +24,7 @@ import {
   hasRevisedGravePreparedCantrip,
 } from './clericDomainCantripSources'
 import { getChosenDivineSoulSpell } from './divineSoulConfiguration'
-import { permitsClassRuleSource } from './earnedClassFeatureSource'
+import { getCurrentSelectedClass, permitsClassRuleSource } from './earnedClassFeatureSource'
 import { getFeatureLiteralChoiceId } from './featureOptionIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
@@ -78,6 +78,7 @@ import {
   getChosenWarlockSpellBlock,
   hasWarlockPatronSpellConfiguration,
 } from './warlockPatronConfigurations'
+import { getCurrentInscribedSpellColumn } from './weaponInscribedSpells'
 import {
   getWizardIllusionCantripOwner,
   WIZARD_THIRD_EYE_TARGET,
@@ -351,6 +352,13 @@ export function getEarnedSubclassSpellGrants(
           named.feature.subclassSource,
         ].every((value) => permitsClassRuleSource(character, value)))
     ) {
+      if (
+        named.inscriptionTarget &&
+        character &&
+        landContext?.catalogs &&
+        !getCurrentSelectedClass(character, entry, landContext.catalogs)
+      )
+        return []
       const id = getFeatureLiteralChoiceId(
         {
           name: entry.name,
@@ -364,21 +372,40 @@ export function getEarnedSubclassSpellGrants(
         named.level,
       )
       const selections = landContext?.selections?.filter((row) => row.choiceId === id) ?? []
-      const selected =
+      const choice =
         selections.length === 1 &&
         !selections[0].inactive &&
         isValidNamedSubclassSpellSelection(selections[0]) &&
         named.named.find(({ name }) => norm(name) === norm(selections[0].selected[0].name))
-      return parseSubclassSpells(
-        [{ prepared: selected ? selected.prepared : named.common }],
-        classLevel,
-      ).map((grant) => ({
-        ...grant,
-        isCantrip:
-          grant.isCantrip || landContext?.spells?.get(getSpellReferenceKey(grant.spellName)) === 0,
-        namedChoice: true,
-        feature: { name: named.feature.name, target: named.target },
-      }))
+      const selected = named.inscriptionTarget
+        ? character &&
+          landContext?.catalogs &&
+          getCurrentInscribedSpellColumn(
+            classData,
+            subclasses[0],
+            named,
+            entry,
+            character,
+            landContext.catalogs,
+          )
+        : choice
+      const schedules =
+        named.inscriptionTarget && selected
+          ? [{ prepared: named.common }, { prepared: selected.prepared }]
+          : [{ prepared: selected ? selected.prepared : named.common }]
+      return parseSubclassSpells(schedules, classLevel).flatMap((grant) => {
+        const key = getSpellReferenceKey(grant.spellName)
+        const visibleRank = landContext?.spells?.get(key)
+        if (named.inscriptionTarget && grant.isCantrip && visibleRank !== 0) return []
+        return [
+          {
+            ...grant,
+            isCantrip: grant.isCantrip || visibleRank === 0,
+            namedChoice: true as const,
+            feature: { name: named.feature.name, target: named.target },
+          },
+        ]
+      })
     }
     const isNamed = (block: SubclassAdditionalSpells) =>
       typeof block?.name === 'string' && block.name.trim().length > 0

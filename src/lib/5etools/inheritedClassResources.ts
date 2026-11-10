@@ -90,6 +90,7 @@ export function getInheritedClassResources(
     return [
       {
         id: `class-feature-resource:${JSON.stringify([norm(entry.name), norm(entry.source), template, norm(name)])}`,
+        inheritedFeature: true,
         label,
         maxPerLevel,
         restType,

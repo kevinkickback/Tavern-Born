@@ -120,6 +120,14 @@ The 2014 custom form keeps the counters in its limited-feature table and prints 
 rules in Class Features. The other forms include both in their feature fields. Full descriptions
 print the current selected Metamagic option's rules in its existing feature row. Names-only
 exports keep the option names and the resource counts and recovery.
+
+Inherited class and subclass counters use the same projection, including table-derived partial
+recovery. The 2014 custom form uses its limited-feature rows with abbreviated recovery, and the
+other forms include available and maximum counts in their feature fields. Full recovery text
+remains in the feature fields in both description modes. Overflowed inherited counters, cut-off
+recovery and clipped owner labels continue onto Notes when enabled. Counters with matching
+labels identify their owning class and, when needed, its source.
+
 Revised Draconic Sorcery prints the earned Dragon Companion rules in Class Features.
 The separate Summon Dragon spell row continues to show its prepared status.
 Native Draconic Sorcerers print the earned level-14 Dragon Wings rules for their edition.

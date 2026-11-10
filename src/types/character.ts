@@ -490,6 +490,14 @@ export interface Equipment {
   focus?: string[]
   /** True when a starting-equipment item reference could not be resolved from item data. */
   _unresolved?: boolean
+  weaponInscriptions?: WeaponInscription[]
+}
+
+/** One current inscription for an exact earned subclass feature, attached to one inventory row. */
+export interface WeaponInscription {
+  owner: Extract<OptionalClassFeatureOwner, ['subclass', ...string[]]>
+  target: string
+  rune: string
 }
 
 export interface Currency {

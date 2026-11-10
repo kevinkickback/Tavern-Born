@@ -166,7 +166,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "415d75d3af10b98c464d23380dc85d6e7d59555fd5c6ddc7633a3d862652aec3"
+      "sha256": "1e893ffcd9d95748d1d12221065bf2f8c6bdd2899c7fc0adabb3a028464cbbaa"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -174,7 +174,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "4e6eac32deb65309fbc10612b5b6838575c4f1bb02e6f5dbbcec248db128aed2"
+      "sha256": "77a9382e4f4456c78e8930db23856cbdf495d8eca06903e7d2983c679a71ffc1"
     },
     {
       "file": "src/types/effects.ts",

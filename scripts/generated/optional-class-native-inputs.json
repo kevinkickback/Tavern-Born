@@ -414,7 +414,7 @@
     },
     {
       "file": "src/lib/5etools/namedSubclassSpells.ts",
-      "sha256": "95e9e6fca21760475c6541433ac2b3e5f5b980fa8208dad6788e2125e0a51421"
+      "sha256": "1428e92343131a83d0f861d9dcf8586eaeea14d4c7ea6e4e8b0a3d29a104d6b7"
     },
     {
       "file": "src/lib/5etools/nativeSubclassFeatureSource.ts",
@@ -642,7 +642,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
-      "sha256": "1c7cab2e41fe76c732ca993ed06a15c5c140de9ab9b1d984bfc75536c564930f"
+      "sha256": "ea2a80338916a89c09783e32543039472770dd20344b2090f48481c1b23ce3b7"
     },
     {
       "file": "src/lib/5etools/toolProficiencyCopySemantics.generated.json",
@@ -663,6 +663,14 @@
     {
       "file": "src/lib/5etools/warlockPatronFeatureSource.ts",
       "sha256": "980eb6f5aafd5a8cea31b16e3a2d3394bba125b62c27549b7633068adf1c7f88"
+    },
+    {
+      "file": "src/lib/5etools/weaponInscribedSpells.ts",
+      "sha256": "66886fdf89f8efeb08b9e079292d8af8bfbe868d981c389f2c1ed91928ab2e7a"
+    },
+    {
+      "file": "src/lib/5etools/weaponInscriptionIdentity.ts",
+      "sha256": "3316b68f73a5831f5150d082f6644169e5ab7278a5f0f7931178cf9acbf15af0"
     },
     {
       "file": "src/lib/5etools/wizardTraditionSpellSources.ts",
@@ -774,7 +782,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "415d75d3af10b98c464d23380dc85d6e7d59555fd5c6ddc7633a3d862652aec3"
+      "sha256": "1e893ffcd9d95748d1d12221065bf2f8c6bdd2899c7fc0adabb3a028464cbbaa"
     },
     {
       "file": "src/types/classCasting.ts",
@@ -782,7 +790,7 @@
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "4e6eac32deb65309fbc10612b5b6838575c4f1bb02e6f5dbbcec248db128aed2"
+      "sha256": "77a9382e4f4456c78e8930db23856cbdf495d8eca06903e7d2983c679a71ffc1"
     },
     {
       "file": "src/types/effects.ts",

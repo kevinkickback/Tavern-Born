@@ -1,5 +1,5 @@
 import { Check, Sword } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -83,6 +83,7 @@ import { BuildClassSpellSection } from './SpellSection'
 import { BuildClassSubclassSection } from './SubclassSection'
 
 interface BuildClassLevelsPanelProps {
+  weaponInscriptionControl?: ReactNode
   managedSpellStatuses?: readonly ManagedClassSpellStatus[]
   optionalClassActivity?: OptionalClassFeatureActivity
   classProgression: CharacterClassEntry[]
@@ -195,6 +196,7 @@ function featureOwnsDiagnostic(
 }
 
 export function BuildClassLevelsPanel({
+  weaponInscriptionControl,
   managedSpellStatuses = [],
   optionalClassActivity,
   classProgression,
@@ -906,6 +908,8 @@ export function BuildClassLevelsPanel({
                             }
                           />
                         )}
+
+                        {isSubclassLevel && weaponInscriptionControl}
 
                         {isASILevel && (
                           <BuildClassAsiSection
