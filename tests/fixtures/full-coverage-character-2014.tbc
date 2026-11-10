@@ -52,7 +52,8 @@
       "Light Armor",
       "Medium Armor",
       "Heavy Armor",
-      "Shields"
+      "Shields",
+      "heavy"
     ],
     "weapons": [
       "Simple Weapons",
@@ -326,6 +327,7 @@
         "label": "Wizard (Lv 10)",
         "className": "Wizard",
         "classSource": "PHB",
+        "alwaysPrepared": false,
         "cantrips": [
           "Acid Splash|PHB",
           "Blade Ward|PHB",
@@ -372,8 +374,7 @@
           "Banishment|PHB",
           "Animate Objects|PHB",
           "Bigby's Hand|PHB"
-        ],
-        "alwaysPrepared": false
+        ]
       },
       {
         "id": "class:Fighter|PHB",
@@ -381,10 +382,10 @@
         "label": "Fighter (Lv 5)",
         "className": "Fighter",
         "classSource": "PHB",
+        "alwaysPrepared": false,
         "cantrips": [],
         "spellsKnown": [],
-        "preparedSpells": [],
-        "alwaysPrepared": false
+        "preparedSpells": []
       },
       {
         "id": "class:Cleric|PHB",
@@ -392,6 +393,7 @@
         "label": "Cleric (Lv 5)",
         "className": "Cleric",
         "classSource": "PHB",
+        "alwaysPrepared": false,
         "cantrips": [
           "Guidance|PHB",
           "Light|PHB",
@@ -431,8 +433,7 @@
           "spiritual weapon|PHB",
           "beacon of hope|PHB",
           "revivify|PHB"
-        ],
-        "alwaysPrepared": false
+        ]
       },
       {
         "id": "special:unrestricted",
@@ -2153,6 +2154,22 @@
             "grantType": "choice",
             "label": "Fighter"
           }
+        ],
+        "heavy": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          },
+          {
+            "sourceType": "subclass",
+            "sourceName": "Life Domain",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "Life Domain",
+            "grantVariant": "feature-fixed-proficiencies:%5B%5B%22cleric%22%2C%22phb%22%2C%22life%20domain%22%2C%22phb%22%5D%2C%22subclass-feature%7Cbonus%20proficiency%7Ccleric%7Cphb%7Clife%7Cphb%7C1%7Cphb%22%2C1%5D"
+          }
         ]
       },
       "weapons": {
@@ -2219,6 +2236,14 @@
             "sourceRef": "PHB",
             "grantType": "choice",
             "label": "Fighter"
+          },
+          {
+            "sourceType": "subclass",
+            "sourceName": "Battle Master",
+            "sourceRef": "PHB",
+            "grantType": "choice",
+            "label": "Battle Master",
+            "grantVariant": "feature-proficiencies:%5B%5B%22fighter%22%2C%22phb%22%2C%22battle%20master%22%2C%22phb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cphb%7Cbattle%20master%7Cphb%7C3%7Cphb%22%2C%22tools%22%2C3%5D"
           }
         ],
         "herbalism kit": [
@@ -4156,6 +4181,24 @@
           "entityType": "optionalFeature",
           "name": "Precision Attack",
           "source": "PHB",
+          "slotLevel": 3
+        }
+      ]
+    },
+    {
+      "choiceId": "feature-proficiencies:%5B%5B%22fighter%22%2C%22phb%22%2C%22battle%20master%22%2C%22phb%22%5D%2C%22subclass-feature%7Cstudent%20of%20war%7Cfighter%7Cphb%7Cbattle%20master%7Cphb%7C3%7Cphb%22%2C%22tools%22%2C3%5D",
+      "label": "Student of War tools",
+      "kind": "proficiency",
+      "className": "Fighter",
+      "classSource": "PHB",
+      "subclassName": "Battle Master",
+      "subclassSource": "PHB",
+      "classLevel": 3,
+      "selected": [
+        {
+          "entityType": "proficiency",
+          "name": "Calligrapher's Supplies",
+          "ref": "[\"proficiency\",\"tools\",\"calligrapher's supplies\"]",
           "slotLevel": 3
         }
       ]

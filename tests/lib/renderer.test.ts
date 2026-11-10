@@ -40,6 +40,38 @@ describe('renderEntry', () => {
     expect(result).toContain('<li><p>Item B</p></li>')
   })
 
+  test('renders option groups with nested entries and source-qualified optional features', () => {
+    const result = renderEntry({
+      type: 'options',
+      entries: [
+        { type: 'refOptionalfeature', optionalfeature: ' Brace | TCE ' },
+        { type: 'refOptionalfeature', optionalfeature: 'Precision Attack' },
+        {
+          type: 'refOptionalfeature',
+          name: 'Hill Rune (7th Level or Higher)',
+          optionalfeature: 'Hill Rune|TCE',
+        },
+        { type: 'entries', name: 'Another option', entries: ['Rules text.'] },
+        { type: 'refOptionalfeature', optionalfeature: '|TCE' },
+      ],
+    })
+    const list = document.createElement('div')
+    list.innerHTML = result
+    expect(list.querySelectorAll('ul > li')).toHaveLength(4)
+    expect(
+      [...list.querySelectorAll('[data-hover-type="optionalfeature"]')].map((option) => [
+        option.getAttribute('data-hover-name'),
+        option.getAttribute('data-hover-source'),
+      ]),
+    ).toEqual([
+      ['Brace', 'TCE'],
+      ['Precision Attack', 'PHB'],
+      ['Hill Rune', 'TCE'],
+    ])
+    expect(list.textContent).toContain('Hill Rune (7th Level or Higher)')
+    expect(list.textContent).toContain('Rules text.')
+  })
+
   test('renders a table with headers and rows', () => {
     const result = renderEntry({
       type: 'table',

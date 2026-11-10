@@ -63,6 +63,8 @@ export interface NormalizedChoiceOptionFilter {
   excludeCursed?: boolean
   weaponRanges?: Array<'melee' | 'ranged'>
   source?: string
+  /** Intersect this filter with the choice's exact listed references. */
+  restrictToListedOptions?: true
   requiresProficiency?: boolean
   requiresMastery?: boolean
   minimumClassLevel?: number

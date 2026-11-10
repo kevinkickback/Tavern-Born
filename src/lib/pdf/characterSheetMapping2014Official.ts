@@ -284,9 +284,13 @@ export function mapCharacterSheet2014Official(
   const { character } = viewModel
   const passivePerception =
     10 + (viewModel.skillByName.get('perception')?.modifier ?? viewModel.abilityModifiers.wisdom)
-  const attackOverflow = viewModel.weaponRows.map((row) =>
-    `${row.name} ${row.attackBonus}; ${row.damage} ${row.damageType}${row.notes ? `; ${row.notes}` : ''}`.trim(),
-  )
+  const attackOverflow = viewModel.weaponRows.flatMap((row, index) => {
+    const details = [row.range, row.notes].filter(Boolean).join('; ')
+    if (index < WEAPON_FIELDS.length) return details ? [`${row.name}: ${details}`] : []
+    const attack = [row.name, row.attackBonus].filter(Boolean).join(' ')
+    const damage = [row.damage, row.damageType].filter(Boolean).join(' ')
+    return [[attack, damage, details].filter(Boolean).join('; ')]
+  })
   const sections = getOfficial2014SectionText(viewModel)
   const textFields: Record<string, string> = {
     ClassLevel: character.classProgression
@@ -324,9 +328,7 @@ export function mapCharacterSheet2014Official(
     EP: String(character.currency?.ep ?? 0),
     GP: String(character.currency?.gp ?? 0),
     PP: String(character.currency?.pp ?? 0),
-    ProficienciesLang: [viewModel.proficienciesSummary, viewModel.languagesSummary]
-      .filter(Boolean)
-      .join('\n'),
+    ProficienciesLang: viewModel.proficienciesSummary,
     Equipment: limitOfficial2014SectionText('Equipment', sections.Equipment),
     'Features and Traits': limitOfficial2014SectionText(
       'Features and Traits',
@@ -344,7 +346,7 @@ export function mapCharacterSheet2014Official(
       .filter(Boolean)
       .map((value) => renderEntriesToText([value]))
       .join(' — '),
-    Backstory: viewModel.historyAndPersonalitySummary,
+    Backstory: viewModel.backstorySummary,
     'Feat+Traits': limitOfficial2014SectionText('Feat+Traits', sections['Feat+Traits']),
     Treasure: limitOfficial2014SectionText('Treasure', sections.Treasure),
   }

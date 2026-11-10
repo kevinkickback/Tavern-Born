@@ -1,4 +1,5 @@
-import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
@@ -316,6 +317,41 @@ app.on('ready', async () => {
     } finally {
       selectingLocalDataRoot = false
     }
+  })
+
+  ipcMain.handle('character:save-file', async (event, filename: unknown, text: unknown) => {
+    assertTrustedIpcSender(event)
+    const ownerWindow = mainWindow
+    if (!ownerWindow || event.sender !== ownerWindow.webContents) return false
+    if (
+      typeof filename !== 'string' ||
+      !filename.endsWith('.tbc') ||
+      /[<>:"/\\|?*]/.test(filename) ||
+      Array.from(filename).some((char) => char.charCodeAt(0) < 32) ||
+      typeof text !== 'string'
+    ) {
+      throw new TypeError('Invalid character export.')
+    }
+    const { canceled, filePath } = await dialog.showSaveDialog(ownerWindow, {
+      defaultPath: join(app.getPath('downloads'), filename),
+      filters: [{ name: 'Tavern Born Character', extensions: ['tbc'] }],
+    })
+    if (canceled || !filePath) return false
+
+    // Write beside the destination so a failed export cannot truncate a previous backup.
+    const temporaryPath = join(dirname(filePath), `.tavern-born-${randomUUID()}.tmp`)
+    const temporary = await open(temporaryPath, 'wx')
+    try {
+      try {
+        await temporary.writeFile(text, 'utf8')
+      } finally {
+        await temporary.close()
+      }
+      await rename(temporaryPath, filePath)
+    } finally {
+      await rm(temporaryPath, { force: true }).catch(() => undefined)
+    }
+    return true
   })
 
   ipcMain.on('fs:discardDataRoot', (event, root: unknown) => {

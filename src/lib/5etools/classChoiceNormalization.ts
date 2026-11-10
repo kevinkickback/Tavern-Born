@@ -49,6 +49,7 @@ import { normalizePsionicChoices } from './psionicChoices'
 import { PSIONIC_ROOT_TARGET } from './psionicIdentity'
 import { normalizeRequiredSetupDiagnostics } from './requiredSetupDiagnostics'
 import { normalizeStormAuraChoices } from './stormAuraChoices'
+import { isStormEnvironmentGroupTarget } from './stormAuraSource'
 import {
   getSubclassProficiencyDiagnostics,
   normalizeSubclassProficiencyChoices,
@@ -481,6 +482,7 @@ export function inferSelectionCounts(text: string, level: number, initialCount: 
 }
 
 function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
+  if (tags.some((tag) => tag.extendSourceDefaults)) return undefined
   const entityType = tags[0]?.entityType
   if (!entityType || tags.some((tag) => tag.entityType !== entityType)) return undefined
   const filters = [...new Map(tags.map((tag) => [JSON.stringify(tag.filter), tag.filter])).values()]
@@ -558,6 +560,11 @@ function normalizeFeatureOptionChoices(
     const level = getReferenceLevel(ref, owner.type)
     const feature = ref.feature
     if (!level || !feature) continue
+    if (
+      owner.type === 'subclass' &&
+      isStormEnvironmentGroupTarget(getSubclassFeatureIdentity(feature))
+    )
+      continue
     const blocks: Record<string, unknown>[] = []
     if (owner.type === 'class' && getClassFeatureIdentity(ref) === BLESSED_STRIKES_TARGET) {
       const verified = getBlessedStrikesOptionBlock(feature)
@@ -717,9 +724,65 @@ function getFighterProgressionOptions(
   const tags = parseFilterTags(text).filter(
     (tag) => tag.entityType === 'optionalFeature' && tag.filter.featureTypes?.includes(featureType),
   )
+  const [tag] = tags
+  if (tags.length === 1 && tag.extendSourceDefaults && !tag.unsupportedClauses?.length) {
+    const pool = getNativeSubclassIntroFeature(owner, subclass, introLevel, tag.label, origin)
+    const poolFields = [
+      'name',
+      'source',
+      'className',
+      'classSource',
+      'subclassShortName',
+      'subclassSource',
+      'level',
+      'entries',
+      'page',
+      'header',
+      'srd',
+      'srd52',
+      'basicRules',
+      'basicRules2024',
+    ]
+    const blocks =
+      pool?.feature &&
+      Object.keys(pool.feature).every((field) => poolFields.includes(field)) &&
+      Array.isArray(pool.entries)
+        ? pool.entries.map(asRecord).filter((row) => row?.type === 'options')
+        : []
+    const [block] = blocks
+    const entries =
+      blocks.length === 1 &&
+      block?.count === count &&
+      Object.keys(block).length === 3 &&
+      Array.isArray(block.entries)
+        ? block.entries
+        : []
+    const options = entries.flatMap((value) => {
+      const entry = asRecord(value)
+      if (
+        entry?.type !== 'refOptionalfeature' ||
+        Object.keys(entry).length !== 2 ||
+        typeof entry.optionalfeature !== 'string'
+      )
+        return []
+      const parts = entry.optionalfeature.split('|')
+      if (parts.length !== 2 || !parts[1].trim()) return []
+      const option = parseNamedEntityReference(entry.optionalfeature, 'optionalFeature', '')
+      return option ? [option] : []
+    })
+    const distinct = new Set(
+      options.map((option) => `${option.name}|${option.source}`.toLowerCase()),
+    )
+    return {
+      feature: featureRef,
+      replacement: inferReplacement(text),
+      options: distinct.size === entries.length ? options : [],
+      filter: { ...tag.filter, restrictToListedOptions: true },
+    }
+  }
   const filter =
-    tags.length === 1
-      ? tags[0].filter
+    tags.length === 1 && !tag.unsupportedClauses?.length
+      ? tag.filter
       : shot && tags.length === 0 && owner.subclassSource === 'XGE'
         ? {
             entityType: 'optionalFeature' as const,

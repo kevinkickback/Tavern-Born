@@ -1,7 +1,13 @@
 import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
-import { getFeatureSourceDigest } from './featureSourceAudit'
+import {
+  canonicalizeFeatureEntry,
+  getFeatureSourceDigest,
+  hasSourceCitationPage,
+  matchesFeatureEntryDigest,
+  withoutSourceCitationPage,
+} from './featureSourceAudit'
 import {
   collectSubclassProficiencyPaths,
   getSubclassCopyLookupKey,
@@ -55,6 +61,66 @@ const rootDerived = [
 ]
 const featureDerived = ['featureOptionSourceConflict', 'subclassProficiencySourceAudit']
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
+function isSourceReprintList(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((row) => typeof row === 'string' && /^[^|]+\|[^|]+\|[^|]+\|[^|]+$/.test(row))
+  )
+}
+
+function withoutRootReprints(row: Record<string, unknown>) {
+  const { reprintedAs: _reprintedAs, ...rules } = row
+  return rules
+}
+
+function matchesRootDigest(row: Record<string, unknown>, digest: string) {
+  return (
+    subclassProficiencyRootDigest(row) === digest ||
+    (hasSourceCitationPage(row.page) &&
+      subclassProficiencyRootDigest(withoutSourceCitationPage(row)) === digest) ||
+    (isSourceReprintList(row.reprintedAs) &&
+      subclassProficiencyRootDigest(withoutRootReprints(row)) === digest)
+  )
+}
+
+function matchesFeatureDigest(row: Record<string, unknown>, digest: string) {
+  if (subclassProficiencyFeatureDigest(row) === digest) return true
+  const canonical = Array.isArray(row.entries)
+    ? { ...row, entries: row.entries.map(canonicalizeFeatureEntry) }
+    : row
+  return (
+    subclassProficiencyFeatureDigest(canonical) === digest ||
+    (hasSourceCitationPage(row.page) &&
+      subclassProficiencyFeatureDigest(withoutSourceCitationPage(canonical)) === digest)
+  )
+}
+
+function matchesMetadata(row: Record<string, unknown>, digest: string, root = false) {
+  const metadata = subclassProficiencyMetadata(row, root)
+  return (
+    subclassProficiencyDigest(metadata) === digest ||
+    (hasSourceCitationPage(metadata.page) &&
+      subclassProficiencyDigest(withoutSourceCitationPage(metadata)) === digest) ||
+    (root &&
+      isSourceReprintList(metadata.reprintedAs) &&
+      subclassProficiencyDigest(withoutRootReprints(metadata)) === digest)
+  )
+}
+
+function hasUnverifiedFields(
+  row: Record<string, unknown>,
+  fields: readonly string[],
+  derived: readonly string[],
+) {
+  return Object.keys(row).some(
+    (key) =>
+      !fields.includes(key) &&
+      !derived.includes(key) &&
+      !(key === 'page' && hasSourceCitationPage(row.page)) &&
+      !(key === 'reprintedAs' && derived === rootDerived && isSourceReprintList(row.reprintedAs)),
+  )
+}
 const stamp = (
   certificate: unknown,
   origin: string,
@@ -166,16 +232,15 @@ export function auditSubclassProficiencyRoots(
     const valid =
       !!(ordinary || packaged) &&
       producers.length === 1 &&
-      subclassProficiencyRootDigest(raw[index]) === certificate.rawDigest &&
-      subclassProficiencyDigest(subclassProficiencyMetadata(row, true)) ===
-        certificate.metadataDigest &&
+      matchesRootDigest(raw[index], certificate.rawDigest) &&
+      matchesMetadata(row, certificate.metadataDigest, true) &&
       certificate.copies.every((copy) => {
         const matches = byCopy.get(copy.key) ?? []
         return (
           matches.length === 1 &&
           (byOwner.get(JSON.stringify(getSubclassProficiencyOwner(matches[0]))) ?? []).length ===
             1 &&
-          subclassProficiencyRootDigest(matches[0]) === copy.digest
+          matchesRootDigest(matches[0], copy.digest)
         )
       })
     return {
@@ -216,8 +281,8 @@ export function auditSubclassProficiencyFeatures(
     const valid =
       !!(ordinary || packaged) &&
       producers.length === 1 &&
-      subclassProficiencyFeatureDigest(raw[index]) === certificate.rawDigest &&
-      subclassProficiencyDigest(subclassProficiencyMetadata(row)) === certificate.metadataDigest &&
+      matchesFeatureDigest(raw[index], certificate.rawDigest) &&
+      matchesMetadata(row, certificate.metadataDigest) &&
       certificate.copies.every((copy) => {
         const matches = byTarget.get(copy.target) ?? []
         return matches.length === 1 && subclassProficiencyDigest(matches[0]) === copy.digest
@@ -255,18 +320,17 @@ function currentFeatureMatches(
   if (
     feature.featureOptionSourceConflict ||
     !isStamped(feature.subclassProficiencySourceAudit, certificate, packageKey) ||
-    Object.keys(feature).some(
-      (key) => !certificate.fields.includes(key) && !featureDerived.includes(key),
-    ) ||
-    subclassProficiencyDigest(subclassProficiencyMetadata(feature)) !==
-      certificate.metadataDigest ||
+    hasUnverifiedFields(feature, certificate.fields, featureDerived) ||
+    !matchesMetadata(feature, certificate.metadataDigest) ||
     !Array.isArray(feature.entries)
   )
     return false
   let cursor = 0
   for (const entry of getSubclassProficiencyEntries(feature)) {
-    const digest = getFeatureSourceDigest([entry])
-    while (cursor < certificate.entries.length && certificate.entries[cursor].digest !== digest) {
+    while (
+      cursor < certificate.entries.length &&
+      !matchesFeatureEntryDigest([entry], certificate.entries[cursor].digest)
+    ) {
       if (!certificate.entries[cursor].reference) return false
       cursor++
     }
@@ -342,11 +406,8 @@ export function getCurrentSubclassProficiencyCertificate(
     (packageSource && classData.sourceIdentityConflict) ||
     !isStamped(subclass.subclassProficiencySourceAudit, certificate, packageSource && packageKey) ||
     subclass.shortName !== certificate.shortName ||
-    Object.keys(subclass).some(
-      (key) => !certificate.fields.includes(key) && !rootDerived.includes(key),
-    ) ||
-    subclassProficiencyDigest(subclassProficiencyMetadata(subclass, true)) !==
-      certificate.metadataDigest ||
+    hasUnverifiedFields(subclass, certificate.fields, rootDerived) ||
+    !matchesMetadata(subclass, certificate.metadataDigest, true) ||
     subclass.introFeatureRef !== certificate.intro ||
     !Array.isArray(subclass.subclassFeatures) ||
     !orderedDeclarations(

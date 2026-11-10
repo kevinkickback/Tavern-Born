@@ -21,6 +21,9 @@ test.skipIf(!existsSync(path)).each(cases)(
     const fixture = makeStormAuraFixture(level, source, (document) =>
       Object.assign(document, JSON.parse(readFileSync(path, 'utf8'))),
     )
+    expect(fixture.subclass.normalizedRules?.choices.map((choice) => choice.id)).toEqual([
+      fixture.choice?.id,
+    ])
     const saved = selectStormAura(fixture, environment)
     expect(saved.classChoiceSelections![0].selected[0].ref).toBe(
       `${environment}|Barbarian|PHB|Storm Herald|XGE|3|XGE`,
@@ -63,6 +66,7 @@ test.skipIf(!existsSync(path)).each([
   { name: 'Path of the Storm Herald', level: 3, kind: 'condition', aura: false },
   { name: 'Sea', level: 6, kind: 'duplicate-metadata', aura: true },
   { name: 'Storm Aura', level: 3, kind: 'reorder', aura: false },
+  { name: 'Storm Aura', level: 3, kind: 'count', aura: false },
 ])(
   'configured source mutation $name $kind withdraws unsupported rules and restores exact IDs',
   ({ name, level, kind, aura }) => {
@@ -78,7 +82,13 @@ test.skipIf(!existsSync(path)).each([
       else if (kind === 'duplicate-metadata')
         doc.subclassFeature.push({ ...row, ...{ prerequisite: [{ condition: 'underwater' }] } })
       else if (kind === 'reorder') row.entries = [...row.entries!].reverse()
-      else if (kind === 'negation')
+      else if (kind === 'count') {
+        const block = row.entries!.find(
+          (entry) =>
+            entry && typeof entry === 'object' && 'type' in entry && entry.type === 'options',
+        )
+        Object.assign(block as object, { count: 2 })
+      } else if (kind === 'negation')
         row.entries = row.entries!.map((entry) =>
           typeof entry === 'string'
             ? entry.replace('You gain resistance', 'You do not gain resistance')
@@ -93,6 +103,7 @@ test.skipIf(!existsSync(path)).each([
         ]
     })
     const current = getStormAuraSelectionStates(saved, changed.data.classes, changed.catalogs)[0]
+    if (kind === 'count') expect(changed.subclass.normalizedRules?.choices).toEqual([])
     expect(current.storm?.stages[0].available).toBe(aura)
     expect(current.storm?.stages.find((stage) => stage.name === 'Storm Soul')?.available).toBe(
       false,
@@ -124,6 +135,17 @@ test.skipIf(!existsSync(path))(
       Object.assign(doc, JSON.parse(readFileSync(path, 'utf8')))
       const row = doc.subclassFeature.find((value) => value.name === 'Sea' && value.level === 6)!
       doc.subclassFeature.push(Object.fromEntries(Object.entries(row).reverse()) as typeof row)
+      const aura = doc.subclassFeature.find(
+        (value) => value.name === 'Storm Aura' && value.level === 3,
+      )!
+      const duplicate = structuredClone(aura)
+      const group = duplicate.entries?.find(
+        (entry) =>
+          entry && typeof entry === 'object' && 'type' in entry && entry.type === 'options',
+      ) as Record<string, unknown>
+      if (group.count === 1) delete group.count
+      else group.count = 1
+      doc.subclassFeature.push(duplicate)
     })
     const saved = selectStormAura(fixture)
     expect(

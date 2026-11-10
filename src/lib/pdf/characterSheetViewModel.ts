@@ -241,6 +241,7 @@ export interface CharacterSheetViewModel {
   carryingCapacity: number
   sizeSummary: string
   appearanceSummary: string
+  backstorySummary: string
   historyAndPersonalitySummary: string
   alliesAndOrganizationsSummary: string
   organizationDetailsSummary: string
@@ -501,13 +502,9 @@ function buildAppearanceSummary(character: Character): string {
     .join('\n\n')
 }
 
-function buildHistoryAndPersonalitySummary(character: Character): string {
+function buildBackstorySummary(character: Character): string {
   const details = character.details
   return buildLabeledSummary([
-    ['Personality', details.personalityTraits || details.personality],
-    ['Ideals', details.ideals],
-    ['Bonds', details.bonds],
-    ['Flaws', details.flaws],
     ['Backstory', details.backstory],
     ['Origin', details.origin],
     ['Family', details.family],
@@ -1061,6 +1058,13 @@ export function createCharacterSheetViewModel(
     managedSpellCastingSummaries,
     proficiencyCheckNotes,
   }
+  const backstorySummary = buildBackstorySummary(character)
+  const personalitySummary = buildLabeledSummary([
+    ['Personality', character.details.personalityTraits || character.details.personality],
+    ['Ideals', character.details.ideals],
+    ['Bonds', character.details.bonds],
+    ['Flaws', character.details.flaws],
+  ])
 
   return {
     ...featureSummaryModel,
@@ -1209,7 +1213,10 @@ export function createCharacterSheetViewModel(
     ),
     sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
     appearanceSummary: buildAppearanceSummary(character),
-    historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),
+    backstorySummary,
+    historyAndPersonalitySummary: [personalitySummary, backstorySummary]
+      .filter(Boolean)
+      .join('\n\n'),
     alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(
       character,
       rawLookups.organizations ?? [],

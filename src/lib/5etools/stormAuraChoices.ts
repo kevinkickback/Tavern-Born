@@ -9,7 +9,7 @@ import {
   stormFeatureRef,
   stormTarget,
 } from './stormAuraIdentity'
-import { isAuditedStormFeature } from './stormAuraSource'
+import { canonicalStormRuleEntries, isAuditedStormFeature } from './stormAuraSource'
 import type { UnconditionalFeatureReference } from './unconditionalFeatureReferences'
 
 const record = (value: unknown): Record<string, unknown> | undefined =>
@@ -23,7 +23,7 @@ export function resolveStormFeature(
   const first = candidates[0]
   const signature =
     first && Array.isArray(first.entries) && first.entries.length
-      ? featureOptionRulesSignature(first.entries)
+      ? featureOptionRulesSignature(canonicalStormRuleEntries(target, first.entries))
       : undefined
   return signature &&
     candidates.every(
@@ -33,7 +33,8 @@ export function resolveStormFeature(
         isAuditedStormFeature(feature) &&
         getSubclassFeatureIdentity(feature) === target &&
         Array.isArray(feature.entries) &&
-        featureOptionRulesSignature(feature.entries) === signature,
+        featureOptionRulesSignature(canonicalStormRuleEntries(target, feature.entries)) ===
+          signature,
     )
     ? first
     : undefined
@@ -46,7 +47,11 @@ export function stormOptionGroup(
 ): boolean {
   if (!feature || !resolveStormFeature(stormTarget(name, level), [feature])) return false
   const blocks = feature.entries!.map(record).filter((row) => row?.type === 'options')
-  if (blocks.length !== 1 || blocks[0]!.count !== undefined || !Array.isArray(blocks[0]!.entries))
+  if (
+    blocks.length !== 1 ||
+    (blocks[0]!.count !== undefined && blocks[0]!.count !== 1) ||
+    !Array.isArray(blocks[0]!.entries)
+  )
     return false
   const targets = (blocks[0]!.entries as unknown[]).map((value) => {
     const row = record(value)

@@ -9,6 +9,7 @@ import {
   PDFName,
   PDFRawStream,
   StandardFonts,
+  TextAlignment,
 } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import { buildClassLookup, buildRaceLookup, buildSpellLookup } from '@/lib/5etools/lookups'
@@ -495,7 +496,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     const name = id === '2014-official' ? 'Wpn1 Damage' : 'Text_76'
     const expected = id === '2014-official' ? '1d8 + 1 Slash.' : '1d6 + 1 Bludgeoning'
     if (id === '2014-official')
-      expect(map.textFields.AttacksSpellcasting).toContain('Slashing; V, Versatile 1d10')
+      expect(map.textFields.AttacksSpellcasting).toBe('Longsword: V, Versatile 1d10')
     map.textFields[name] = expected
     const truncated: string[] = []
     const saved = await PDFDocument.load(
@@ -523,6 +524,83 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     expect(baselines).toHaveLength(1)
     expect(baselines[0]).toBeGreaterThanOrEqual(0)
     expect(field.acroField.dict.has(PDFName.of('V'))).toBe(true)
+  }, 30_000)
+
+  test.each([
+    ['2014-official', ['PersonalityTraits ', 'Ideals', 'Bonds', 'Flaws'], 'Backstory'],
+    ['2014-custom', ['Personality Trait', 'Ideal', 'Bond', 'Flaw'], 'Background_History'],
+  ] as const)(
+    '%s keeps personality traits out of the saved backstory',
+    async (id, fields, history) => {
+      const character = createEmptyCharacter()
+      character.details.personalityTraits = 'Patient and curious'
+      character.details.ideals = 'Freedom'
+      character.details.bonds = 'My family'
+      character.details.flaws = 'Too trusting'
+      character.details.backstory = 'Raised in Waterdeep'
+      const vm = createCurrentCharacterSheetViewModel(character, lookups)
+      const form = (await PDFDocument.load(await generateTestCharacterSheet(vm, id))).getForm()
+      expect(fields.map((name) => form.getTextField(name).getText())).toEqual([
+        'Patient and curious',
+        'Freedom',
+        'My family',
+        'Too trusting',
+      ])
+      expect(form.getTextField(history).getText()).toBe('Backstory: Raised in Waterdeep')
+      expect(buildCharacterSheetFieldMap(vm, '2024-official').textFields.Text_89).toContain(
+        'Ideals: Freedom',
+      )
+    },
+    30_000,
+  )
+
+  test('2014 WotC preserves missing weapon details and spaces short proficiency groups', async () => {
+    const character = createEmptyCharacter()
+    character.proficiencies.weapons = ['Martial weapons']
+    character.proficiencies.tools = ['Herbalism Kit']
+    character.proficiencies.languages = ['Common', 'Elvish']
+    const vm = createCurrentCharacterSheetViewModel(character, lookups)
+    const attacks = [
+      { name: 'Longsword', range: '', notes: 'Versatile 1d10' },
+      { name: 'Dagger', range: '20/60 ft.', notes: 'Finesse, Light, Thrown' },
+      { name: 'Unarmed Strike', range: '', notes: '' },
+      { name: 'Greataxe', range: '', notes: 'Heavy' },
+    ]
+    vm.weaponRows = attacks.map((attack) => ({
+      ...attack,
+      attackBonus: '+5',
+      damage: '1d8 + 2',
+      damageType: 'Slashing',
+      description: '',
+    }))
+    const map = buildCharacterSheetFieldMap(vm, '2014-official')
+    expect(map.textFields.AttacksSpellcasting.split('\n')).toEqual([
+      'Longsword: Versatile 1d10',
+      'Dagger: 20/60 ft.; Finesse, Light, Thrown',
+      'Greataxe +5; 1d8 + 2 Slashing; Heavy',
+    ])
+    const form = (
+      await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-official'))
+    ).getForm()
+    expect(form.getTextField('Wpn1 AtkBonus').getText()).toBe('+5')
+    expect(form.getTextField('AttacksSpellcasting').getText()).toBe(
+      'Longsword: Versatile 1d10\nDagger: 20/60 ft.; Finesse, Light, Thrown',
+    )
+    expect(form.getTextField('ProficienciesLang').getText()).toBe(
+      'Weapons: Martial weapons\n\nTools: Herbalism Kit\n\nLanguages: Common, Elvish',
+    )
+  }, 30_000)
+
+  test('2024 WotC centers the six requested fields in the saved PDF', async () => {
+    const vm = createCurrentCharacterSheetViewModel(createEmptyCharacter(), lookups)
+    const form = (
+      await PDFDocument.load(await generateTestCharacterSheet(vm, '2024-official'))
+    ).getForm()
+    for (const id of [6, 7, 10, 11, 12, 13]) {
+      const field = form.getTextField(`Text_${id}`)
+      expect(field.getText()).toBeTruthy()
+      expect(field.getAlignment()).toBe(TextAlignment.Center)
+    }
   }, 30_000)
 
   test('reports shortening when notes continuation is selected but notes are disabled', async () => {

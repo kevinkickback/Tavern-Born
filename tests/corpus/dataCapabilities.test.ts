@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import {
   createClassChoiceCoverageMatrix,
@@ -12,32 +12,12 @@ import {
 import { findLayerDependencyIssues, loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
-import {
-  parseBackgrounds,
-  parseClasses,
-  parseConditions,
-  parseCreatures,
-  parseFeats,
-  parseItems,
-  parseMagicVariants,
-  parseOptionalFeatures,
-  parseRaces,
-  parseTrapHazards,
-} from '@/lib/5etools/parsers'
+import { parseConditions, parseTrapHazards } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 import { renderEntriesToText } from '@/lib/entryText'
-import type {
-  Background5e,
-  Class5e,
-  ClassFeature,
-  Creature5e,
-  Feat5e,
-  Item5e,
-  Race5e,
-} from '@/types/5etools'
-import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
+import type { GameData } from '@/types/5etools'
 
 const DATA_ROOT = resolve(process.cwd(), 'data')
 
@@ -52,49 +32,52 @@ function collection(payload: unknown, field: string): unknown[] {
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
-  it('loads the actual bundled and managed source stack with concrete shield item-choice targets', async () => {
-    const failures: string[] = []
-    vi.stubGlobal('electronAPI', {
-      readBundledJson: async (file: string) => readJson(resolve('resources/srd/data', file)),
-      readLocalJson: async (file: string) => readJson(file),
-    })
-    try {
-      const data = await loadGameDataSourceStack(
-        {
-          base: {
-            type: 'bundled',
-            path: 'srd/core',
-            packId: 'tavern-born-srd-core',
-            packVersion: 'test',
-            isValid: true,
-          },
-          additional: { type: 'local', path: DATA_ROOT, isValid: true },
+  let gameData: GameData
+  const failures: string[] = []
+  beforeAll(async () => {
+    gameData = await loadGameDataSourceStack(
+      {
+        base: {
+          type: 'bundled',
+          path: 'srd/core',
+          packId: 'tavern-born-srd-core',
+          packVersion: 'test',
+          isValid: true,
         },
-        {
-          onResourceFailure: (file) => {
-            failures.push(file)
-          },
+        additional: { type: 'local', path: DATA_ROOT, isValid: true },
+      },
+      {
+        baseReader: {
+          type: 'bundled',
+          readJson: async (file) => readJson(resolve('resources/srd/data', file)),
         },
-      )
-      expect(failures).toEqual([])
-      expect(findLayerDependencyIssues(data, data)).toEqual([])
-      expect(data.magicVariants).toHaveLength(230)
-      expect(
-        data.items
-          .filter((item) => item.magicVariantGenerated)
-          .map((item) => `${item.name}|${item.source}`)
-          .sort(),
-      ).toEqual([
-        '+1 Shield|DMG',
-        '+1 Shield|XDMG',
-        '+2 Shield|DMG',
-        '+2 Shield|XDMG',
-        '+3 Shield|DMG',
-        '+3 Shield|XDMG',
-      ])
-    } finally {
-      vi.unstubAllGlobals()
-    }
+        additionalReader: {
+          type: 'local',
+          readJson: async (file) => readJson(resolve(DATA_ROOT, file)),
+        },
+        onResourceFailure: (file) => {
+          failures.push(file)
+        },
+      },
+    )
+  })
+  it('loads the actual bundled and managed source stack with concrete shield item-choice targets', () => {
+    expect(failures).toEqual([])
+    expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
+    expect(gameData.magicVariants).toHaveLength(230)
+    expect(
+      gameData.items
+        .filter((item) => item.magicVariantGenerated)
+        .map((item) => `${item.name}|${item.source}`)
+        .sort(),
+    ).toEqual([
+      '+1 Shield|DMG',
+      '+1 Shield|XDMG',
+      '+2 Shield|DMG',
+      '+2 Shield|XDMG',
+      '+3 Shield|DMG',
+      '+3 Shield|XDMG',
+    ])
   })
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
@@ -193,24 +176,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect([rawConditions, rawTraps]).toEqual(before)
   })
   it('reports parsed capabilities and every observable gap', () => {
-    const classIndex = readJson(resolve(DATA_ROOT, 'class', 'index.json')) as Record<string, string>
-    const classPayloads = Object.values(classIndex).map((fileName) =>
-      readJson(resolve(DATA_ROOT, 'class', fileName)),
-    )
-    const classes = classPayloads.flatMap((payload) => parseClasses(payload)) as Class5e[]
-    const classFeatures = classPayloads.flatMap((payload) =>
-      collection(payload, 'classFeature'),
-    ) as ClassFeature[]
-    const races = parseRaces(readJson(resolve(DATA_ROOT, 'races.json'))) as Race5e[]
-    const backgrounds = parseBackgrounds(
-      readJson(resolve(DATA_ROOT, 'backgrounds.json')),
-    ) as Background5e[]
-    const feats = parseFeats(readJson(resolve(DATA_ROOT, 'feats.json'))) as Feat5e[]
-    const items = [
-      ...parseItems(readJson(resolve(DATA_ROOT, 'items.json'))),
-      ...parseMagicVariants(readJson(resolve(DATA_ROOT, 'magicvariants.json'))),
-    ] as Item5e[]
-    const itemsBase = parseItems(readJson(resolve(DATA_ROOT, 'items-base.json'))) as Item5e[]
+    const { classes, races, backgrounds, feats, items } = gameData
     const legacyCoreItems = filterCharacterItems(items, {
       allowedSources: ['PHB'],
       originSystem: '2014',
@@ -218,29 +184,6 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const revisedCoreItems = filterCharacterItems(items, {
       allowedSources: ['XPHB'],
       originSystem: '2024',
-    })
-    const optionalfeatures = parseOptionalFeatures(
-      readJson(resolve(DATA_ROOT, 'optionalfeatures.json')),
-    )
-    const bestiaryIndex = readJson(resolve(DATA_ROOT, 'bestiary', 'index.json')) as Record<
-      string,
-      string
-    >
-    const creatures = Object.values(bestiaryIndex).flatMap(
-      (fileName) =>
-        parseCreatures(readJson(resolve(DATA_ROOT, 'bestiary', fileName))) as Creature5e[],
-    )
-
-    const gameData = makeGameDataFixture({
-      classes,
-      classFeatures,
-      races,
-      backgrounds,
-      feats,
-      items,
-      itemsBase,
-      creatures,
-      optionalfeatures,
     })
     const report = createCorpusCapabilityReport(gameData)
     const compendiumEntries = buildCompendiumEntries(gameData)
@@ -320,41 +263,12 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.classes).toBeGreaterThan(0)
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
-    // Finished shields remain unavailable until materialization; (*) templates are not aliases.
     const setupIssues = report.issues.filter((issue) => issue.code === 'choice-diagnostic')
     // Mystic base and order-bonus setup now have source-qualified selectors; absence of
     // diagnostics here is structural coverage, not complete legal progression qualification.
     expect(setupIssues).toEqual([])
-    expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual([
-      {
-        code: 'unresolved-reference',
-        collection: 'classes',
-        entity: 'Artificer|EFA',
-        path: 'normalizedRules.choices[0].options[43]',
-        message: 'The item option +2 Shield|XDMG was not found in the parsed catalog.',
-      },
-      {
-        code: 'unresolved-reference',
-        collection: 'classes',
-        entity: 'Artificer|EFA',
-        path: 'normalizedRules.choices[0].options[9]',
-        message: 'The item option +1 Shield|XDMG was not found in the parsed catalog.',
-      },
-    ])
-    expect(layerDependencyIssues).toEqual([
-      {
-        owner: 'Artificer|EFA',
-        path: 'normalizedRules.choices[0].options[9]',
-        reference: '+1 Shield|XDMG',
-        required: false,
-      },
-      {
-        owner: 'Artificer|EFA',
-        path: 'normalizedRules.choices[0].options[43]',
-        reference: '+2 Shield|XDMG',
-        required: false,
-      },
-    ])
+    expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual([])
+    expect(layerDependencyIssues).toEqual([])
     const terrain = classes
       .find((row) => row.name === 'Ranger' && row.source === 'PHB')!
       .normalizedRules!.choices.filter((row) => row.label === 'Natural Explorer')

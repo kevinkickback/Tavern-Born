@@ -30,6 +30,7 @@ interface MockCharacterCardProps {
   onLoad: (id: string) => void
   onDelete: (id: string) => void
   onDuplicate: (character: { id: string; name: string }) => void
+  onExport: (character: { id: string; name: string }) => void
   selectionMode?: boolean
   onToggleSelect?: (id: string) => void
   usesAdditionalContent?: boolean
@@ -41,6 +42,7 @@ vi.mock('@/components/character/CharacterCard', () => ({
     onLoad,
     onDelete,
     onDuplicate,
+    onExport,
     selectionMode,
     onToggleSelect,
     usesAdditionalContent,
@@ -55,6 +57,9 @@ vi.mock('@/components/character/CharacterCard', () => ({
       </button>
       <button type="button" onClick={() => onDuplicate(character)}>
         duplicate-{character.id}
+      </button>
+      <button type="button" onClick={() => onExport(character)}>
+        export-{character.id}
       </button>
       {selectionMode && (
         <button type="button" onClick={() => onToggleSelect?.(character.id)}>
@@ -123,6 +128,7 @@ describe('home page integration workflows', () => {
 
   afterEach(() => {
     cleanup()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
     useCharacterStore.setState(libraryActions)
   })
@@ -628,6 +634,40 @@ describe('home page integration workflows', () => {
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
     expect(useCharacterStore.getState().characters).toHaveLength(2)
+  })
+
+  test('confirms a character export only after desktop save, with cancel and failure paths', async () => {
+    const user = userEvent.setup()
+    const character = makeCharacterFixture({ id: 'exported', name: 'War\u0000forged' })
+    useCharacterStore.setState({ characters: [character] })
+    let completeSave!: (saved: boolean) => void
+    const pendingSave = new Promise<boolean>((resolve) => {
+      completeSave = resolve
+    })
+    const saveCharacterFile = vi
+      .fn()
+      .mockReturnValueOnce(pendingSave)
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('Disk unavailable'))
+    vi.stubGlobal('electronAPI', { saveCharacterFile })
+
+    render(<HomePage />)
+    const exportButton = screen.getByRole('button', { name: 'export-exported' })
+    await user.click(exportButton)
+    await user.click(exportButton)
+    expect(saveCharacterFile).toHaveBeenCalledExactlyOnceWith(
+      'War_forged.tbc',
+      JSON.stringify(character, null, 2),
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+    await act(async () => completeSave(true))
+    expect(toast.success).toHaveBeenCalledWith('Character exported successfully')
+    await user.click(exportButton)
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    await user.click(exportButton)
+    expect(toast.error).toHaveBeenCalledWith('Could not export the character.', {
+      description: 'Disk unavailable',
+    })
   })
 
   test('exports the saved library or only selected characters as one backup', async () => {

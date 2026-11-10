@@ -1231,7 +1231,12 @@ export function resolveClassChoiceOptions(
     choice.source.kind === 'optional-feature-progression' &&
     filter?.featureTypes?.length === 1 &&
     filter.featureTypes[0] === 'AI'
-  if (choice.options.length > 0 && !filter?.requiresMastery && !declarationUnavailable) {
+  if (
+    choice.options.length > 0 &&
+    !filter?.requiresMastery &&
+    !filter?.restrictToListedOptions &&
+    !declarationUnavailable
+  ) {
     resolved.push(
       ...choice.options
         .filter(
@@ -1269,6 +1274,9 @@ export function resolveClassChoiceOptions(
     )
   }
   if (currentFilter) {
+    const listed = currentFilter.restrictToListedOptions
+      ? new Set(choice.options.map(getClassChoiceOptionKey))
+      : undefined
     const weapons =
       currentFilter.requiresMastery && currentFilter.requiresProficiency && character
         ? getCurrentWeaponProficiencies(character, catalogs.classes)
@@ -1293,6 +1301,7 @@ export function resolveClassChoiceOptions(
         )
       if (!matches(currentFilter)) continue
       const view = toView(currentFilter.entityType, entity, catalogs)
+      if (listed && !listed.has(getClassChoiceOptionKey(view.reference))) continue
       if (tableItems) {
         const minimum = (candidate: NormalizedChoiceOptionFilter): number =>
           Math.max(

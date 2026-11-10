@@ -1,17 +1,10 @@
 import { Book, Funnel, MagnifyingGlass } from '@phosphor-icons/react'
+import * as Popover from '@radix-ui/react-popover'
 import { useId, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
@@ -62,10 +55,13 @@ const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
   const editionLabelId = useId()
+  const sourceFilterId = useId()
   const [searchParams] = useSearchParams()
   const gameData = useGameDataStore((state) => state.gameData)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
+  const [sourceSearch, setSourceSearch] = useState('')
+  const [sourceTrigger, setSourceTrigger] = useState<HTMLButtonElement | null>(null)
   const [editionFilter, setEditionFilter] = useState<CompendiumEditionFilter>('both')
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
 
@@ -102,6 +98,10 @@ export function CompendiumPage() {
   )
 
   const activeFilterCount = activeSources.size
+  const sourceQuery = sourceSearch.trim().toLowerCase()
+  const matchingSources = allSources.filter((source) =>
+    `${sourceNameMap.get(source) ?? ''} ${source}`.toLowerCase().includes(sourceQuery),
+  )
 
   const toggleSource = (source: string) => {
     setActiveSources((previous) => {
@@ -193,9 +193,14 @@ export function CompendiumPage() {
                 Both
               </ToggleGroupItem>
             </ToggleGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <Popover.Root
+              onOpenChange={(open) => {
+                if (!open) setSourceSearch('')
+              }}
+            >
+              <Popover.Trigger asChild>
                 <Button
+                  ref={setSourceTrigger}
                   variant={activeFilterCount > 0 ? 'secondary' : 'ghost'}
                   size="sm"
                   className="h-9 gap-1.5 px-3"
@@ -211,34 +216,58 @@ export function CompendiumPage() {
                     </Badge>
                   )}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel>Filter by source</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {allSources.map((source) => (
-                  <DropdownMenuCheckboxItem
-                    key={source}
-                    checked={activeSources.has(source)}
-                    onCheckedChange={() => toggleSource(source)}
-                    onSelect={(event) => event.preventDefault()}
-                    className="cursor-pointer"
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {sourceNameMap.get(source) ?? source}
-                    </span>
-                    <span className="shrink-0 text-[10px] text-muted-foreground">{source}</span>
-                  </DropdownMenuCheckboxItem>
-                ))}
-                {activeFilterCount > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={clearFilters} className="cursor-pointer">
-                      Clear source filters
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  aria-label="Filter by source"
+                  align="end"
+                  sideOffset={6}
+                  collisionBoundary={sourceTrigger?.closest('main') ?? undefined}
+                  collisionPadding={12}
+                  className="z-50 flex max-h-[var(--radix-popover-content-available-height)] w-72 max-w-[var(--radix-popover-content-available-width)] flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                >
+                  <div className="shrink-0 border-b p-2">
+                    <Input
+                      aria-label="Search sources"
+                      placeholder="Search sources…"
+                      value={sourceSearch}
+                      onChange={(event) => setSourceSearch(event.target.value)}
+                    />
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+                    {matchingSources.map((source, index) => (
+                      <label
+                        key={source}
+                        htmlFor={`${sourceFilterId}-${index}`}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-secondary"
+                      >
+                        <Checkbox
+                          id={`${sourceFilterId}-${index}`}
+                          checked={activeSources.has(source)}
+                          onCheckedChange={() => toggleSource(source)}
+                        />
+                        <span className="min-w-0 flex-1 truncate">
+                          {sourceNameMap.get(source) ?? source}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">{source}</span>
+                      </label>
+                    ))}
+                    {!matchingSources.length && (
+                      <p className="px-2 py-2 text-sm text-muted-foreground">
+                        No matching sources.
+                      </p>
+                    )}
+                  </div>
+                  {activeFilterCount > 0 && (
+                    <div className="shrink-0 border-t p-1">
+                      <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                        Clear source filters
+                      </Button>
+                    </div>
+                  )}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </div>
         </WorkspaceToolbar>
       </div>

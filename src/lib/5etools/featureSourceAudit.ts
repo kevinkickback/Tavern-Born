@@ -47,3 +47,42 @@ export function getFeatureSourceDigest(
 export function hasFeatureSourceShape(feature: object, fields: ReadonlySet<string>): boolean {
   return Object.keys(feature).every((key) => fields.has(key))
 }
+
+/** A source can add a citation page without changing a verified rule. */
+export function hasSourceCitationPage(value: unknown): boolean {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+}
+
+export function withoutSourceCitationPage(row: Record<string, unknown>) {
+  if (!hasSourceCitationPage(row.page)) return row
+  const { page: _page, ...rules } = row
+  return rules
+}
+
+export function canonicalizeFeatureEntry(entry: unknown): unknown {
+  if (typeof entry === 'string') {
+    // These clauses already identify damage in prose. The tag only displays the dice formula.
+    return entry.replace(
+      /(\bdamage (?:equal to|of this feature increases by)\s)([^.!?]*)/gi,
+      (_, clause: string, formulas: string) =>
+        clause + formulas.replace(/\{@damage (\d+d\d+)}/g, '{@dice $1}'),
+    )
+  }
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry
+  const row = entry as Record<string, unknown>
+  if (row.type === 'statblock' && typeof row.name === 'string' && typeof row.tag === 'string')
+    return withoutSourceCitationPage(row)
+  if (row.type !== 'entries' || !Array.isArray(row.entries)) return entry
+  return { ...withoutSourceCitationPage(row), entries: row.entries.map(canonicalizeFeatureEntry) }
+}
+
+export function matchesFeatureEntryDigest(
+  entries: unknown[],
+  digest: string,
+  stripEnrichment = true,
+): boolean {
+  return (
+    getFeatureSourceDigest(entries, stripEnrichment) === digest ||
+    getFeatureSourceDigest(entries.map(canonicalizeFeatureEntry), stripEnrichment) === digest
+  )
+}

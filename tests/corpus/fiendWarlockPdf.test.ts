@@ -339,7 +339,7 @@ test.skipIf(!packs.includes('composed'))(
 
 test.skipIf(!packs.includes('composed'))(
   'revised Archfey keeps Misty Step prepared independently of its exact casting allowance',
-  async () => {
+  () => {
     const data = dataFor('composed')
     const filtered = current(data, 'XPHB')
     const retained = lookups(data)
@@ -392,27 +392,50 @@ test.skipIf(!packs.includes('composed'))(
         (row) => row.featureName === 'Steps of the Fey',
       ),
     ).toBe(false)
-    const view = createCharacterSheetViewModel(earned, retained, primary)
-    for (const template of ['2024-official', '2024-custom'] as const) {
-      for (const descriptions of ['full', 'names'] as const) {
-        const bytes = await generateTestCharacterSheet(view, template, {
-          text: { descriptions, overflow: 'notes' },
-        })
-        const text = (await PDFDocument.load(bytes))
-          .getForm()
-          .getFields()
-          .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
-          .join(' ')
-          .replace(/\s+/g, ' ')
-        expect(text).toContain('Steps of the Fey: 1 slot-free cast.')
-      }
+  },
+)
+
+const revisedPatronTemplates = ['2024-official', '2024-custom'] as const
+test.skipIf(!packs.includes('composed')).each(revisedPatronTemplates)(
+  'revised Archfey prints its casting allowance on %s',
+  async (template) => {
+    const data = dataFor('composed')
+    const view = createCharacterSheetViewModel(
+      actor(editions[1], 3, 'Archfey Patron'),
+      lookups(data),
+      lookups(current(data, 'XPHB')),
+    )
+    for (const descriptions of ['full', 'names'] as const) {
+      const bytes = await generateTestCharacterSheet(view, template, {
+        text: { descriptions, overflow: 'notes' },
+      })
+      const text = (await PDFDocument.load(bytes))
+        .getForm()
+        .getFields()
+        .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+      expect(text).toContain('Steps of the Fey: 1 slot-free cast.')
     }
   },
 )
 
+function spentHealingLight() {
+  const earned = actor(editions[1], 3, 'Celestial Patron')
+  return characterPersistenceSchema.parse(
+    JSON.parse(
+      JSON.stringify({
+        ...earned,
+        abilityScores: { ...earned.abilityScores, charisma: 16 },
+        classResources: { [HEALING_LIGHT_RESOURCE_ID]: 0 },
+      }),
+    ),
+  )
+}
+
 test.skipIf(!packs.includes('composed'))(
   'revised Celestial Healing Light uses the current exact owner and persistent remaining dice',
-  async () => {
+  () => {
     const data = dataFor('composed')
     const primary = lookups(current(data, 'XPHB'))
     const retained = lookups(data)
@@ -431,15 +454,7 @@ test.skipIf(!packs.includes('composed'))(
       usageText: 'Up to 1 die per use',
       restType: 'long',
     })
-    const saved = characterPersistenceSchema.parse(
-      JSON.parse(
-        JSON.stringify({
-          ...earned,
-          abilityScores: { ...earned.abilityScores, charisma: 16 },
-          classResources: { [HEALING_LIGHT_RESOURCE_ID]: 0 },
-        }),
-      ),
-    )
+    const saved = spentHealingLight()
     expect(pool(saved)).toMatchObject({ max: 4, used: 4, usageText: 'Up to 3 dice per use' })
     expect(pool(saved, absent)).toBeUndefined()
     const [owner] = saved.classProgression
@@ -456,20 +471,29 @@ test.skipIf(!packs.includes('composed'))(
       max: 21,
       used: 21,
     })
-    const view = sheet(saved)
-    for (const template of ['2024-official', '2024-custom'] as const) {
-      for (const descriptions of ['full', 'names'] as const) {
-        const bytes = await generateTestCharacterSheet(view, template, {
-          text: { descriptions, overflow: 'notes' },
-        })
-        const form = (await PDFDocument.load(bytes)).getForm()
-        const text = ['Text_57', 'Text_58']
-          .map((name) => form.getTextField(name).getText())
-          .join(' ')
-          .replace(/\s+/g, ' ')
-        expect(text).toContain('0/4 d6 remaining. Up to 3 dice per use.')
-        expect(text).toMatch(/long rest/i)
-      }
+  },
+)
+
+test.skipIf(!packs.includes('composed')).each(revisedPatronTemplates)(
+  'revised Celestial prints persistent Healing Light dice on %s',
+  async (template) => {
+    const data = dataFor('composed')
+    const view = createCharacterSheetViewModel(
+      spentHealingLight(),
+      lookups(data),
+      lookups(current(data, 'XPHB')),
+    )
+    for (const descriptions of ['full', 'names'] as const) {
+      const bytes = await generateTestCharacterSheet(view, template, {
+        text: { descriptions, overflow: 'notes' },
+      })
+      const form = (await PDFDocument.load(bytes)).getForm()
+      const text = ['Text_57', 'Text_58']
+        .map((name) => form.getTextField(name).getText())
+        .join(' ')
+        .replace(/\s+/g, ' ')
+      expect(text).toContain('0/4 d6 remaining. Up to 3 dice per use.')
+      expect(text).toMatch(/long rest/i)
     }
   },
 )

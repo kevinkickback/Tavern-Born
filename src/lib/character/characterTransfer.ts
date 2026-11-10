@@ -28,12 +28,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function safeFilenameBase(name: string): string {
-  return (
-    name
-      .trim()
-      .replace(/[<>:"/\\|?*]/g, '_')
-      .replace(/[. ]+$/g, '') || 'character'
-  )
+  const base = Array.from(name.trim(), (char) => (char.charCodeAt(0) < 32 ? '_' : char))
+    .join('')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/[. ]+$/g, '')
+  const reserved = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?: *\.|$)/i.test(base)
+  return reserved ? `_${base}` : base || 'character'
 }
 
 export function prepareCharacterDownload(character: Character): PreparedCharacterDownload {
