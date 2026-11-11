@@ -56,15 +56,16 @@ export function BuildClassSpellSection({
                       `${spellGain.savantSpellbook.name} (${spellGain.savantSpellbook.count} extra spellbook ${spellGain.savantSpellbook.count === 1 ? 'choice' : 'choices'}, up to ${getOrdinalForm(spellGain.savantSpellbook.maxSpellLevel)} level)`,
                     spellGain.spellbookSpecialty &&
                       `${spellGain.spellbookSpecialty.name} (${spellGain.spellbookSpecialty.count} choices)`,
+                    spellGain.canSwap && 'Optional bonus spell replacement',
                   ]
                     .filter(Boolean)
                     .join(' · ')
-                : 'Replace one spell you know'}
+                : 'Replace one bonus spell'}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          {hasNewSelections && (
+          {(hasNewSelections || spellGain.canSwap) && (
             <Button
               variant={chosenNames.length > 0 ? 'outline' : 'default'}
               size="sm"

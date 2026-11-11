@@ -81,6 +81,7 @@ export function setManagedClassSpellChoicesCommand(
       if (
         (request.slot[1] === 'feature-cantrip' ||
           request.slot[1] === 'feature-prepared' ||
+          request.slot[1] === 'subclass-spell-replacement' ||
           request.slot[1] === 'class-spellbook-specialty' ||
           getClericArcanaSpellRule(request.slot)) &&
         request.target &&
@@ -192,14 +193,16 @@ export function setManagedClassSpellChoicesCommand(
   if (getInvalidManagedClassSpellPaths(proposed).length)
     throw new RangeError('A class already owns that spell choice or its slot is invalid.')
   const grants = edits.filter((edit) => edit.request.target && !edit.withdraw)
-  const projected = grants.length
-    ? projectManagedClassSpellState(
-        proposed,
-        context,
-        proposed,
-        new Set(grants.filter((edit) => !edit.sameTarget).map((edit) => edit.id)),
-      )
-    : { character: proposed, statuses: [] }
+  const projected =
+    grants.length ||
+    (context?.catalogs && removed.some((choice) => choice.slot[1] === 'subclass-spell-replacement'))
+      ? projectManagedClassSpellState(
+          proposed,
+          context,
+          proposed,
+          new Set(grants.filter((edit) => !edit.sameTarget).map((edit) => edit.id)),
+        )
+      : { character: proposed, statuses: [] }
   for (const edit of grants) {
     if (
       edit.request.slot[1] !== 'feature-cantrip' &&

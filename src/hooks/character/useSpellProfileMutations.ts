@@ -7,6 +7,7 @@ import {
 } from '@/lib/calculations/characterCalculationContext'
 import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
 import {
+  getSpellNameKey,
   getSpellReferenceKey,
   isSourceQualifiedSpellReference,
 } from '@/lib/calculations/spellIdentity'
@@ -25,7 +26,10 @@ import {
   setRacialSpellChoice as setRacialSpellChoiceCommand,
   setRacialSpellSuite as setRacialSpellSuiteCommand,
 } from '@/lib/character/commands/spellCommands'
-import { isManagedClassSpellProfile } from '@/lib/character/managedClassSpellIdentity'
+import {
+  isManagedClassSpellProfile,
+  managedClassSpellId,
+} from '@/lib/character/managedClassSpellIdentity'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character, SpellProfile } from '@/types/character'
@@ -110,6 +114,10 @@ export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
       character?.managedClassSpellChoices?.find(
         (choice) =>
           choice.slot[1] !== 'class-spellbook-specialty' &&
+          (choice.slot[1] !== 'subclass-spell-replacement' ||
+            calculation?.character.provenance.spells[getSpellNameKey(reference)]?.some(
+              (tag) => tag.grantVariant === managedClassSpellId(choice.slot),
+            )) &&
           isManagedClassSpellProfile(choice.slot, profile) &&
           getSpellReferenceKey(choice.target.name, choice.target.source) ===
             getSpellReferenceKey(reference),

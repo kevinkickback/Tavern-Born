@@ -31,6 +31,7 @@ import {
   getClassCastingGainAuthority,
   getClassCastingLevelAccess,
 } from '@/lib/5etools/classCastingSource'
+import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClericArcanaSpellChoices,
@@ -128,6 +129,11 @@ import {
   getSelectedFeatureCantripPool,
   getSelectedFeatureCantripSetups,
 } from './selectedFeatureSpells'
+import {
+  getSorcererBonusSpellReplacementPool,
+  indexSorcererReplacementTargets,
+  replaySorcererBonusSpellReplacements,
+} from './sorcererBonusSpellReplacements'
 
 export interface ManagedClassSpellStatus {
   choice: ManagedClassSpellChoice
@@ -144,10 +150,12 @@ function resolveSlot(
   context?: ManagedClassSpellContext,
   classes: readonly Class5e[] = currentClasses(character, context),
   gainAuthority = getClassCastingGainAuthority,
+  spellTargets?: ReadonlyMap<string, Spell5e | undefined>,
 ) {
   if (
     slot[1] === 'feature-cantrip' ||
     slot[1] === 'feature-prepared' ||
+    slot[1] === 'subclass-spell-replacement' ||
     slot[1] === 'class-spellbook-specialty'
   )
     return 'Use this selected feature’s spell choices.'
@@ -268,13 +276,43 @@ function resolveSlot(
       : undefined
   if (classicSecrets && !secrets)
     return 'Restore the current Magical Secrets feature and its spell schedule.'
-  const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
+  let fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
     character,
     catalogs: context?.catalogs,
     artificerSpellReprints: context?.artificerSpellReprints,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
+  const bonus =
+    slot[1] === 'class-known' &&
+    character.managedClassSpellChoices?.find(
+      (choice) =>
+        choice.slot[1] === 'subclass-spell-replacement' &&
+        choice.slot[3] <= slot[3] &&
+        getManagedClassSpellOwnerEntry(choice.slot, [entry]),
+    )
+  if (bonus) {
+    const replay = replaySorcererBonusSpellReplacements(
+      character,
+      bonus.slot,
+      spellTargets ?? indexSorcererReplacementTargets(context),
+      context,
+      slot[3] + 1,
+    )
+    for (const choice of replay.current.values()) {
+      const replacement = getClassicSorcererReplacementRule(choice.slot)
+      if (!replacement) continue
+      fixedAtGain = fixedAtGain.filter(
+        (grant) => getSpellReferenceKey(grant.spellName) !== replacement.original,
+      )
+      fixedAtGain.push({
+        spellName: formatSpellReference(choice.target.name, choice.target.source),
+        isCantrip: false,
+        level: choice.slot[3],
+        mode: 'known',
+      })
+    }
+  }
   const fixedCantrip =
     slot[1] === 'class-cantrip' && norm(entry.name) === 'artificer'
       ? getArtificerGrantedCantrip(getCurrentArtificerRules(character, context?.catalogs))
@@ -619,6 +657,8 @@ export function getManagedClassSpellPool(
   sourceContext?: ManagedClassSpellContext,
   projectedStatuses?: readonly ManagedClassSpellStatus[],
 ) {
+  if (slot[1] === 'subclass-spell-replacement')
+    return getSorcererBonusSpellReplacementPool(character, slot, sourceContext)
   if (slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(slot)) {
     const saved = character.managedClassSpellChoices?.find(
       (row) => managedClassSpellId(row.slot) === managedClassSpellId(slot),
@@ -811,12 +851,13 @@ export function projectManagedClassSpellState(
     if (
       choice.slot[1] === 'feature-cantrip' ||
       choice.slot[1] === 'feature-prepared' ||
+      choice.slot[1] === 'subclass-spell-replacement' ||
       choice.slot[1] === 'class-spellbook-specialty'
     )
       continue
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
-      : resolveSlot(character, choice.slot, context, classes, gainAuthority)
+      : resolveSlot(character, choice.slot, context, classes, gainAuthority, targets)
     if (typeof state === 'string') {
       deny(state)
       continue
@@ -1136,6 +1177,60 @@ export function projectManagedClassSpellState(
       reference,
       makeManagedClassSpellTag(choice, entry, featureName),
     )
+  }
+  const firstReplacement = statuses.find(
+    ({ choice }) => choice.slot[1] === 'subclass-spell-replacement',
+  )
+  if (firstReplacement && !invalid) {
+    const replay = replaySorcererBonusSpellReplacements(
+      character,
+      firstReplacement.choice.slot,
+      targets,
+      context,
+    )
+    for (const status of statuses) {
+      if (!replay.statuses.has(status.choice)) continue
+      status.reason = replay.statuses.get(status.choice)
+      status.active = status.reason === undefined
+    }
+    if (replay.entry) {
+      const entry = replay.entry
+      const profileId = toClassProfileId(entry.name, entry.source)
+      const replaced = new Set(
+        [...replay.current.values()].flatMap((choice) => {
+          const rule = getClassicSorcererReplacementRule(choice.slot)
+          return rule ? [rule.original] : []
+        }),
+      )
+      const keep = (reference: string) => !replaced.has(getSpellReferenceKey(reference))
+      profiles = profiles.map((profile) =>
+        profile.id === profileId
+          ? {
+              ...profile,
+              spellsKnown: profile.spellsKnown.filter(keep),
+              fixedSpells: profile.fixedSpells?.filter(keep),
+            }
+          : profile,
+      )
+      provenance = {
+        ...provenance,
+        spells: Object.fromEntries(
+          Object.entries(provenance.spells).flatMap(([name, tags]) => {
+            const retained = tags.filter(
+              (tag) =>
+                tag.sourceType !== 'subclass' ||
+                tag.grantType !== 'fixed' ||
+                norm(tag.sourceName) !== norm(entry.subclass) ||
+                norm(tag.sourceRef) !== norm(entry.subclassSource) ||
+                !replaced.has(getSpellReferenceKey(name, tag.grantSource)),
+            )
+            return retained.length ? [[name, retained]] : []
+          }),
+        ),
+      }
+      for (const choice of replay.current.values())
+        addManagedGrant(choice, entry, 'spellsKnown', false)
+    }
   }
   for (const { choice, spell, entry, authority } of active) {
     const lore = getBardLoreSpellRule(choice.slot)

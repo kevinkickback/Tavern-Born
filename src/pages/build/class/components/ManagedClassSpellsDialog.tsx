@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
+import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
 import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -68,6 +69,7 @@ export function ManagedClassSpellsDialog({
   // The opening snapshot owns expected lifetimes and the captured source adapter until Finish or Cancel.
   const [opening] = useState(() => character)
   const prepareId = useId()
+  const bonusSpellId = useId()
   const [finish] = useState(() => onFinish)
   const [draft, setDraft] = useState(() => {
     const rows = getManagedClassSpellSlots(entry, character, context?.catalogs, {
@@ -96,6 +98,29 @@ export function ManagedClassSpellsDialog({
     }
   })
   const { rows, specialtySlots, bookEdits } = draft
+  const [replacementOrdinal, setReplacementOrdinal] = useState(
+    () => rows.find((row) => row.slot[1] === 'subclass-spell-replacement' && row.old)?.slot[4],
+  )
+  const replacementOptions = rows.flatMap((row) => {
+    const rule = getClassicSorcererReplacementRule(row.slot)
+    if (!rule) return []
+    const prior = statuses
+      .filter(
+        ({ choice, active }) =>
+          active &&
+          choice.slot[1] === 'subclass-spell-replacement' &&
+          choice.slot[2] === row.slot[2] &&
+          choice.slot[3] < row.slot[3] &&
+          choice.slot[4] === row.slot[4],
+      )
+      .sort((a, b) => b.choice.slot[3] - a.choice.slot[3])[0]
+    const original = Object.values(context?.spellsByKey ?? {}).find(
+      (spell) => getSpellReferenceKey(spell.name, spell.source) === rule.original,
+    )
+    const label =
+      prior?.choice.target.name ?? original?.name ?? parseSpellReference(rule.original).name
+    return [{ ordinal: row.slot[4], name: label, feature: rule.name }]
+  })
   const [pickerIndex, setPickerIndex] = useState<number | null>(null)
   const getRequest = (row: (typeof rows)[number]): ManagedClassSpellRequest => ({
     slot: row.slot,
@@ -152,10 +177,12 @@ export function ManagedClassSpellsDialog({
   )
   const selected = pickerIndex === null ? undefined : rows[pickerIndex]
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
+  const isBonusReplacement = selected?.slot[1] === 'subclass-spell-replacement'
   const savantGain = selected ? getSavantSpellbookGain(selected.slot) : undefined
   const selectedArcana = selected ? getClericArcanaSpellRule(selected.slot) : undefined
   const allowClassListBypass =
     !isBookSpecialty &&
+    !isBonusReplacement &&
     !savantGain &&
     selected?.slot[1] !== 'feature-cantrip' &&
     selected?.slot[1] !== 'feature-prepared' &&
@@ -165,7 +192,10 @@ export function ManagedClassSpellsDialog({
     selected && isSelectedInvocationRitualSlot(selected.slot)
       ? 'ritual spell'
       : (selected &&
-          (isBookSpecialty || savantGain || selected.slot[1] === 'feature-prepared') &&
+          (isBookSpecialty ||
+            isBonusReplacement ||
+            savantGain ||
+            selected.slot[1] === 'feature-prepared') &&
           getManagedClassSpellFeatureLabel(selected.slot)) ||
         (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
           ? 'cantrip'
@@ -268,7 +298,41 @@ export function ManagedClassSpellsDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+            {replacementOptions.length > 0 && (
+              <div className="space-y-1 rounded-lg border p-3">
+                <label className="block text-sm font-medium" htmlFor={bonusSpellId}>
+                  {replacementOptions[0].feature} replacement
+                </label>
+                <select
+                  id={bonusSpellId}
+                  className="w-full rounded border bg-background p-2 text-sm"
+                  value={replacementOrdinal ?? ''}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value
+                    const ordinal = value === '' ? undefined : Number(value)
+                    setReplacementOrdinal(ordinal)
+                    setDraft((current) => ({
+                      ...current,
+                      rows: current.rows.map((row) =>
+                        row.slot[1] === 'subclass-spell-replacement' && row.slot[4] !== ordinal
+                          ? { ...row, target: undefined }
+                          : row,
+                      ),
+                    }))
+                  }}
+                >
+                  <option value="">Keep current bonus spells</option>
+                  {replacementOptions.map(({ ordinal, name }) => (
+                    <option key={ordinal} value={ordinal}>
+                      Replace {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {rows.map((row, index) => {
+              const replacement = row.slot[1] === 'subclass-spell-replacement'
+              if (replacement && row.slot[4] !== replacementOrdinal) return null
               const isSpecialty = row.slot[1] === 'class-spellbook-specialty'
               const specialtyPreview = isSpecialty ? bookPreview : undefined
               const slotId = managedClassSpellId(row.slot)
@@ -306,9 +370,11 @@ export function ManagedClassSpellsDialog({
                   : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
                     ? 'Cantrip'
                     : (featureLabel ?? 'Spell')
-              const position = arcana
-                ? `Level ${arcana.rank}, choice ${row.slot[4] + 1}`
-                : row.slot[4] + 1
+              const position = replacement
+                ? ''
+                : arcana
+                  ? `Level ${arcana.rank}, choice ${row.slot[4] + 1}`
+                  : row.slot[4] + 1
               return (
                 <fieldset
                   key={managedClassSpellId(row.slot)}
@@ -393,9 +459,11 @@ export function ManagedClassSpellsDialog({
             if (!open) setPickerIndex(null)
           }}
           title={
-            selectedArcana
-              ? `Choose level ${selectedArcana.rank} spell ${selected.slot[4] + 1}`
-              : `Choose ${pickerKind} ${selected.slot[4] + 1}`
+            isBonusReplacement
+              ? 'Choose a replacement spell'
+              : selectedArcana
+                ? `Choose level ${selectedArcana.rank} spell ${selected.slot[4] + 1}`
+                : `Choose ${pickerKind} ${selected.slot[4] + 1}`
           }
           spells={pool.spells}
           className={entry.name}

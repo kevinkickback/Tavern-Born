@@ -54,7 +54,10 @@ export function useClassSpellChoiceController(
         slots.push(
           ...getSavantSpellbookSlots(savedEntry),
           ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
-            (slot) => getClericArcanaSpellRule(slot) || isArcaneDabblerSlot(slot),
+            (slot) =>
+              getClericArcanaSpellRule(slot) ||
+              isArcaneDabblerSlot(slot) ||
+              slot[1] === 'subclass-spell-replacement',
           ),
         )
       }
@@ -86,6 +89,10 @@ export function useClassSpellChoiceController(
         continue
       }
       const domain = slot[1]
+      if (domain === 'subclass-spell-replacement') {
+        gain.canSwap = true
+        continue
+      }
       if (domain === 'class-spellbook-specialty') {
         gain.spellbookSpecialty ??= {
           name: getManagedClassSpellFeatureLabel(slot) ?? 'Spellbook specialty',

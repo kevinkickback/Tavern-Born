@@ -2,6 +2,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { PDFDocument } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { DataFilter } from '@/lib/5etools/filters'
@@ -12,6 +13,8 @@ import { deriveWeaponActions } from '@/lib/calculations/actions'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { setDailyClassSpellPreparedCommand } from '@/lib/character/commands/dailyClassSpellCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
@@ -21,8 +24,129 @@ import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const hasCatalog = existsSync('data/class/class-bard.json')
+
+test.skipIf(!hasCatalog)(
+  'classic Sorcerer can replace one bonus spell per earned level without an ordinary spell choice',
+  async () => {
+    const { sources, primary, raw } = await loadStandardCatalog('2014')
+    const calculate = (actor: ReturnType<typeof makeCharacterFixture>) =>
+      createCharacterCalculationContext(actor, primary, raw)
+    for (const [subclass, first, second, original] of [
+      ['Aberrant Mind', 'Charm Person', 'Sleep', 'Arms of Hadar'],
+      ['Clockwork Soul', 'Mage Armor', 'Shield', 'Alarm'],
+    ] as const) {
+      const actor = makeCharacterFixture({
+        originSystem: '2014',
+        allowedSources: sources,
+        classProgression: [
+          { name: 'Sorcerer', source: 'PHB', subclass, subclassSource: 'TCE', levels: 3 },
+        ],
+      })
+      const slots = getManagedClassSpellSlots(
+        actor.classProgression[0],
+        actor,
+        primary.classChoiceFeatureCatalogs,
+      ).filter((slot) => slot[1] === 'subclass-spell-replacement')
+      expect(slots.filter((slot) => slot[3] === 1)).toHaveLength(0)
+      const atTwo = slots.find((slot) => slot[3] === 2 && slot[4] === 0)!
+      const anotherAtTwo = slots.find((slot) => slot[3] === 2 && slot[4] === 1)!
+      const atThree = slots.find((slot) => slot[3] === 3 && slot[4] === 0)!
+      const reopen = (
+        current: typeof actor,
+        result: ReturnType<typeof setManagedClassSpellChoiceCommand>,
+      ) =>
+        characterPersistenceSchema.parse(
+          JSON.parse(
+            JSON.stringify({
+              ...current,
+              ...result.characterPatch,
+              provenance: result.provenanceUpdate,
+            }),
+          ),
+        )
+      const edit = (
+        current: typeof actor,
+        slot: typeof atTwo,
+        target?: string,
+        policy: 'default' | 'ignore-class-list' = 'default',
+      ) =>
+        reopen(
+          current,
+          setManagedClassSpellChoiceCommand(
+            current,
+            current.provenance,
+            {
+              slot,
+              expected:
+                current.managedClassSpellChoices?.find(
+                  (choice) => JSON.stringify(choice.slot) === JSON.stringify(slot),
+                ) ?? null,
+              expectedEmptyRevision: current.managedClassSpellRevision ?? 0,
+              target: target ? { name: target, source: 'PHB' } : undefined,
+              policy,
+            },
+            calculate(current).classChoices.spellContext,
+          ),
+        )
+      const known = (character: typeof actor) =>
+        calculate(character)
+          .character.spells.spellProfiles.find((profile) => profile.id === 'class:Sorcerer|PHB')!
+          .spellsKnown.map((ref) => ref.toLowerCase())
+      const context = calculate(actor).classChoices.spellContext
+      const pool = getManagedClassSpellPool(actor, atTwo, context)
+      expect(pool.defaultReferences.has(`${first.toLowerCase()}|phb`)).toBe(true)
+      expect(pool.defaultReferences.has('fireball|phb')).toBe(false)
+      expect(pool.defaultReferences.has('burning hands|phb')).toBe(false)
+      expect(() => edit(actor, atTwo, 'Burning Hands')).toThrow()
+      expect(() => edit(actor, atTwo, first, 'ignore-class-list')).toThrow()
+      const originalRef = `${original.toLowerCase()}|phb`
+      const firstRef = `${first.toLowerCase()}|phb`
+      const secondRef = `${second.toLowerCase()}|phb`
+      expect(known(actor)).toContain(originalRef)
+      const changed = edit(actor, atTwo, first)
+      expect(known(changed)).toContain(firstRef)
+      expect(known(changed)).not.toContain(originalRef)
+      expect(known(changed)).toHaveLength(known(actor).length)
+      expect(changed.managedClassSpellChoices).toHaveLength(1)
+      const ordinary = getManagedClassSpellSlots(
+        actor.classProgression[0],
+        actor,
+        primary.classChoiceFeatureCatalogs,
+      ).find((slot) => slot[1] === 'class-known' && slot[3] === 3)!
+      expect(() => edit(changed, ordinary, first)).toThrow(/already grants/)
+      expect(known(edit(changed, ordinary, original, 'ignore-class-list'))).toContain(originalRef)
+      expect(() => edit(changed, anotherAtTwo, second)).toThrow()
+      const changedAgain = edit(changed, atThree, second)
+      expect(known(changedAgain)).toContain(secondRef)
+      expect(known(changedAgain)).not.toContain(firstRef)
+      expect(known(edit(changedAgain, atThree))).toContain(firstRef)
+      expect(known(edit(changed, atTwo))).toContain(originalRef)
+      const withMissingTarget = { ...primary.spellsByKey }
+      delete withMissingTarget[`${first}|PHB`]
+      const unavailable = createCharacterCalculationContext(
+        changed,
+        { ...primary, spellsByKey: withMissingTarget },
+        raw,
+      )
+      expect(unavailable.managedClassSpellStatuses).toMatchObject([{ active: false }])
+      expect(
+        unavailable.character.spells.spellProfiles[0].spellsKnown.map((ref) => ref.toLowerCase()),
+      ).toContain(originalRef)
+      const rollback = reopen(
+        changedAgain,
+        applyClassProgressionUpdate(changedAgain, changedAgain.provenance, [
+          { ...actor.classProgression[0], levels: 2 },
+        ]),
+      )
+      expect(rollback.managedClassSpellChoices).toHaveLength(1)
+      expect(known(rollback)).toContain(firstRef)
+    }
+  },
+  30_000,
+)
 
 async function loadStandardCatalog(edition: '2014' | '2024' = '2024') {
   const readJson = (root: string) => async (file: string) =>
@@ -237,6 +361,15 @@ test.skipIf(!hasCatalog).each(['2014', '2024'] as const)(
       expect(projected.actions[0].damage).toMatch(/\+ 6/)
       if (name === 'Artificer') {
         expect(projected).toMatchObject({ maxHp: '107', armorClass: '17', hitDice: '20d8' })
+        const pdf = await PDFDocument.load(
+          await generateTestCharacterSheet(
+            max,
+            edition === '2014' ? '2014-official' : '2024-official',
+            { pages: { companion: true } },
+          ),
+        )
+        expect(pdf.getForm().getTextField('Companion1__companion name').getText()).toBe(companion)
+        expect(pdf.getForm().getTextField('Companion1__MAX HP').getText()).toBe('107')
       }
     }
   },
@@ -385,6 +518,22 @@ test.skipIf(!hasCatalog)(
       ),
     )
     expect(calculate(reopened).managedClassSpellStatuses).toMatchObject([{ active: true }])
+    const prepared = setDailyClassSpellPreparedCommand(
+      reopened,
+      reopened.provenance,
+      'class:Artificer|TCE',
+      'Cure Wounds|XPHB',
+      true,
+      calculate(reopened).classChoices.spellContext,
+    )
+    const daily = characterPersistenceSchema.parse({
+      ...reopened,
+      ...prepared.characterPatch,
+      provenance: prepared.provenanceUpdate,
+    })
+    expect(calculate(daily).character.spells.spellProfiles[0].preparedSpells).toContain(
+      'Cure Wounds|XPHB',
+    )
     const withoutTce = { ...reopened, allowedSources: sources.filter((source) => source !== 'TCE') }
     expect(calculate(withoutTce).managedClassSpellStatuses.some((status) => status.active)).toBe(
       false,

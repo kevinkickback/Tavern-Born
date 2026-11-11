@@ -43,7 +43,9 @@ export function computeLevelDisplayData({
   const isASILevel = asiLevels.includes(level)
   const earnedSpells = spellChoicesByLevel.get(level)
   const spellGain =
-    earnedSpells && countSpellGainChoices(earnedSpells) > 0 ? earnedSpells : undefined
+    earnedSpells && (earnedSpells.canSwap || countSpellGainChoices(earnedSpells) > 0)
+      ? earnedSpells
+      : undefined
 
   const passiveFeatures = (featuresByLevel.get(level) ?? []).filter((feature) => {
     if (isSubclassLevel && subclassFeatureName && feature.name === subclassFeatureName) {

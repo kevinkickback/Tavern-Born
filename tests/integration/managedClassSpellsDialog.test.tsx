@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs'
 import {
   act,
   cleanup,
@@ -16,6 +17,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
@@ -25,10 +28,12 @@ import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClas
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { Class5e, ClassFeature, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeBundledClassCastingLayer } from '../fixtures/classCastingFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
 const fixture = makeManagedClassSpellFixtures()
@@ -115,6 +120,78 @@ afterEach(() => {
 })
 
 describe('Class spell Finish and current-state adapter', () => {
+  test.skipIf(!existsSync('data/class/class-sorcerer.json'))(
+    'classic Sorcerer replaces a bonus spell from the level dialog',
+    async () => {
+      const parsed = parseClassDocument(
+        JSON.parse(readFileSync('data/class/class-sorcerer.json', 'utf8')),
+      )
+      const document = JSON.parse(readFileSync('data/spells/spells-phb.json', 'utf8'))
+      const spells = parseSpells(
+        document.spell.filter((spell: Spell5e) =>
+          ['Charm Person', 'Arms of Hadar', 'Dissonant Whispers'].includes(spell.name),
+        ),
+        {
+          sourceLookup: JSON.parse(
+            readFileSync('data/generated/gendata-spell-source-lookup.json', 'utf8'),
+          ),
+        },
+      ) as Spell5e[]
+      const data = makeGameDataFixture({
+        classes: parsed.classes as Class5e[],
+        classFeatures: parsed.classFeatures as ClassFeature[],
+        classCastingSources: parsed.classCastingSources,
+        spells,
+      })
+      data.lookups = buildGameDataLookups(data)
+      const original = makeCharacterFixture({
+        allowedSources: ['PHB', 'TCE'],
+        classProgression: [
+          {
+            name: 'Sorcerer',
+            source: 'PHB',
+            levels: 2,
+            subclass: 'Aberrant Mind',
+            subclassSource: 'TCE',
+          },
+        ],
+      })
+      install(original)
+      useGameDataStore.setState({ gameData: data })
+      render(<Flow level={2} />)
+      fireEvent.change(screen.getByLabelText('Psionic Spells replacement'), {
+        target: { value: '0' },
+      })
+      const row = screen.getByRole('group', { name: /Psionic Spells/ })
+      fireEvent.click(within(row).getByRole('button', { name: 'Choose' }))
+      expect(screen.getByRole('dialog', { name: 'Choose a replacement spell' })).toBeTruthy()
+      expect(screen.queryByRole('switch', { name: 'Ignore class restrictions' })).toBeNull()
+      fireEvent.click(await screen.findByText('Charm Person', { exact: true }))
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+      const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+      expect(saved.managedClassSpellChoices?.map((choice) => choice.slot[1])).toEqual([
+        'subclass-spell-replacement',
+      ])
+      expect(saved.spells.spellProfiles[0].spellsKnown).toContain('Charm Person|PHB')
+      expect(
+        saved.spells.spellProfiles[0].spellsKnown.map((ref) => ref.toLowerCase()),
+      ).not.toContain('arms of hadar|phb')
+      fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+      fireEvent.change(screen.getByLabelText('Psionic Spells replacement'), {
+        target: { value: '' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+      const restored = characterPersistenceSchema.parse(
+        useCharacterStore.getState().activeCharacter,
+      )
+      expect(restored.managedClassSpellChoices).toEqual([])
+      expect(
+        restored.spells.spellProfiles[0].spellsKnown.map((ref) => ref.toLowerCase()),
+      ).toContain('arms of hadar|phb')
+    },
+  )
+
   test('Evocation Savant is a separate gain that learns and prepares from the shared Wizard book', async () => {
     const data = makeBundledClassCastingLayer('class/class-wizard.json')
     data.spells = fixture.spells
