@@ -14,9 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Mystic measured 7,000,790 B renderer and 1,693,356 B initial with its proficiency proofs.
-  rendererCode: 6837 * KIB,
-  initialRendererScript: 1654 * KIB,
+  // Standard subclass support measured 7,015,038 B renderer and 1,697,727 B initial
+  // on Node 24, up 20,022 B and 11,222 B from main. Retain the existing headroom.
+  rendererCode: 6857 * KIB,
+  initialRendererScript: 1665 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,
