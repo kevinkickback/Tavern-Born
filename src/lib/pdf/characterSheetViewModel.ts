@@ -72,6 +72,7 @@ import {
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import { getRangerCompanion } from '@/lib/character/rangerCompanion'
+import { getTceCompanions } from '@/lib/character/tceCompanions'
 import { isBladeDependentInvocation } from '@/lib/character/warlockInvocationSource'
 import {
   getCharacterClassEntries,
@@ -831,6 +832,9 @@ export function createCharacterSheetViewModel(
   )
   const drake = getRangerCompanion(character, companionCatalogs)
   if (drake) companions.push({ ...drake, classicRangerLevel: undefined })
+  for (const companion of getTceCompanions(character, companionCatalogs)) {
+    companions.push({ ...companion, classicRangerLevel: undefined })
+  }
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
