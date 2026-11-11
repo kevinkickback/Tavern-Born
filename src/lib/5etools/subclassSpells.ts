@@ -70,6 +70,10 @@ import {
   getRangerEtherealStep,
   getRevisedRangerSubclassSpells,
 } from './rangerSubclassSpells'
+import {
+  getRetainedSubclassSpellGrants,
+  isRevisedRetainedSubclassSpellOwner,
+} from './retainedSubclassSpells'
 import { getRoguePhantomSpellGrants } from './roguePhantomSpells'
 import { getChosenScionAllegiance, isScionOwner } from './rogueScion'
 import { parseSpellToken } from './spellTokens'
@@ -168,6 +172,7 @@ export function getEarnedSubclassSpellGrants(
     revisedCircle ||
     revisedDomain ||
     revisedOath ||
+    isRevisedRetainedSubclassSpellOwner(entry) ||
     legacySorcerer ||
     illusion ||
     hasWarlockPatronSpellConfiguration(entry)
@@ -354,6 +359,14 @@ export function getEarnedSubclassSpellGrants(
         landContext.catalogs,
         getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
       )
+    const retained = getRetainedSubclassSpellGrants(
+      classData,
+      subclasses[0],
+      entry,
+      classLevel,
+      scoped,
+    )
+    if (retained) return retained
     const named = getNamedSubclassSpellSource(classData, subclasses[0], scoped)
     const character = landContext?.character
     const resourceCasts = getSharedSubclassResourceCasts(
