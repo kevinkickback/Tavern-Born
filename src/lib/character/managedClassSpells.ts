@@ -272,6 +272,7 @@ function resolveSlot(
     selections: character.classChoiceSelections,
     character,
     catalogs: context?.catalogs,
+    artificerSpellReprints: context?.artificerSpellReprints,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const fixedCantrip =
@@ -778,6 +779,7 @@ export function projectManagedClassSpellState(
         availableSpellReferences,
         visibleSpellLevels,
         oathReprints,
+        artificerSpellReprints: context?.artificerSpellReprints,
         includedDomainReprints,
         classChoiceFeatureCatalogs: context?.catalogs,
       }),
@@ -931,6 +933,7 @@ export function projectManagedClassSpellState(
       spells: visibleSpellLevels,
       character,
       catalogs: context?.catalogs,
+      artificerSpellReprints: context?.artificerSpellReprints,
     })
     const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
       if (

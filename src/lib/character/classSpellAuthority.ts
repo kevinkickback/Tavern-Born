@@ -1,3 +1,8 @@
+import {
+  type ArtificerSpellReprints,
+  getArtificerReprintListRoutes,
+  isTceArtificer,
+} from '@/lib/5etools/artificerSpellReprints'
 import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
@@ -28,6 +33,7 @@ export interface ManagedClassSpellContext {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   /** Unfiltered classic producers prove inherited oath reprints. Grants still require a visible target. */
   oathSpellSourceByKey?: Readonly<Record<string, Spell5e>>
+  artificerSpellReprints?: ArtificerSpellReprints
   abilityScores?: AbilityScores
   /** Current non-feature spell providers used to qualify selected feature grants. */
   independentSpellProfiles?: readonly SpellProfile[]
@@ -156,6 +162,23 @@ export function hasCurrentClassSpellListRoute(
             options.allowOptional !== false,
           ),
       ),
+    )
+  )
+    return true
+  if (
+    character.originSystem === '2024' &&
+    isTceArtificer(entry) &&
+    owner[0] === 'class' &&
+    owner[1] === 'artificer' &&
+    owner[2] === 'tce' &&
+    checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+    permitted(allowed, entry.source) &&
+    getArtificerReprintListRoutes(spell, context.artificerSpellReprints).some(
+      (route) =>
+        route[3] === 'artificer' &&
+        route[4] === 'tce' &&
+        matchesJoinedSpellClassFilter(route, ['artificer']) &&
+        (route[6] === null || permitted(allowed, route[6])),
     )
   )
     return true

@@ -4,6 +4,7 @@ import {
   getArtificerAttunementLimit,
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
+import { getArtificerSpellReprints, isTceArtificer } from '@/lib/5etools/artificerSpellReprints'
 import {
   BEAR_ASPECT_TARGET,
   CLASSIC_ASPECT_TARGET,
@@ -455,6 +456,10 @@ export function createCharacterCalculationContext(
     catalogs: primaryLookups.classChoiceFeatureCatalogs,
     spellsByKey: primaryLookups.spellsByKey,
     oathSpellSourceByKey: rawLookups.spellsByKey,
+    artificerSpellReprints:
+      character.originSystem === '2024' && character.classProgression.some(isTceArtificer)
+        ? getArtificerSpellReprints(rawLookups.spellsByKey)
+        : undefined,
     currentRaceResolution: resolveRaceReference(
       {
         name: character.race,

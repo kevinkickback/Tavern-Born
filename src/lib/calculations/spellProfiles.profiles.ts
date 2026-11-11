@@ -1,3 +1,4 @@
+import type { ArtificerSpellReprints } from '@/lib/5etools/artificerSpellReprints'
 import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { findClassReference } from '@/lib/5etools/classReference'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
@@ -108,6 +109,7 @@ export function ensureSpellProfiles(
     visibleSpellLevels?: ReadonlyMap<string, number>
     classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
     oathReprints?: ReadonlyMap<string, number | undefined>
+    artificerSpellReprints?: ArtificerSpellReprints
     includedDomainReprints?: ReadonlyMap<string, number | undefined>
   },
 ): SpellProfile[] {
@@ -133,6 +135,7 @@ export function ensureSpellProfiles(
       spells: options?.visibleSpellLevels,
       character,
       catalogs: options?.classChoiceFeatureCatalogs,
+      artificerSpellReprints: options?.artificerSpellReprints,
     })
     if (
       options?.preserveUnavailableClassProfiles &&

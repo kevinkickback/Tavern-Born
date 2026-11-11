@@ -15,6 +15,11 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import type { FeatureCastOnlyRules } from '@/types/classCasting'
 import { isArcaneArcherCantripOwner } from './arcaneArcherCantripSource'
 import { getAlchemistFeatureCasts } from './artificerAlchemistSpells'
+import {
+  type ArtificerSpellReprints,
+  isTceArtificer,
+  reprintTceArtificerSubclassSpells,
+} from './artificerSpellReprints'
 import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
@@ -157,6 +162,7 @@ export function getEarnedSubclassSpellGrants(
     spells?: ReadonlyMap<string, number>
     character?: Character
     catalogs?: ClassChoiceFeatureCatalogs
+    artificerSpellReprints?: ArtificerSpellReprints
   },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
@@ -463,7 +469,17 @@ export function getEarnedSubclassSpellGrants(
       ),
     ]
     const alchemist = getAlchemistFeatureCasts(classData, subclasses[0], classLevel)
-    if (alchemist) return [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
+    const artificerGrants = alchemist
+      ? [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
+      : grants
+    if (landContext?.character?.originSystem === '2024' && isTceArtificer(entry))
+      return reprintTceArtificerSubclassSpells(
+        classData,
+        subclasses[0],
+        artificerGrants,
+        landContext.artificerSpellReprints,
+      )
+    if (alchemist) return artificerGrants
     if (norm(entry.name) === 'cleric') {
       if (
         norm(entry.source) === 'phb' &&
