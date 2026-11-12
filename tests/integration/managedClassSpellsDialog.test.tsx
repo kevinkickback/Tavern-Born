@@ -87,9 +87,11 @@ async function choose(index: number, name: string, kind = 'Cantrip') {
 }
 
 function installWizard(character: Character) {
-  const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
-  wizard.spells = fixture.spells
-  wizard.lookups = buildGameDataLookups(wizard)
+  const data = {
+    ...makeBundledClassCastingLayer('class/class-wizard.json'),
+    spells: fixture.spells,
+  }
+  const wizard = { ...data, lookups: buildGameDataLookups(data) }
   install(character)
   useGameDataStore.setState({ gameData: wizard })
   return wizard
