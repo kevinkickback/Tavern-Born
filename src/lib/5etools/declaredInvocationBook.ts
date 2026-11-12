@@ -76,6 +76,49 @@ export function readDeclaredInvocationBook(feature?: OptionalFeatureLike) {
   }
 }
 
+/** The classic boon grants bonus cantrips from any published class list. */
+export function readDeclaredPactCantrips(feature?: OptionalFeatureLike) {
+  if (feature?.featureType?.length !== 1 || feature.featureType[0] !== 'PB') return undefined
+  const [prose] = feature.entries ?? []
+  if (feature.entries?.length !== 1 || typeof prose !== 'string') return undefined
+  const note = prose.match(
+    /While the book is on your person, you can cast those cantrips at will\./,
+  )
+  if (
+    !note ||
+    !prose.includes(
+      "choose three {@filter cantrips|spells|level=0} from any class's spell list.",
+    ) ||
+    !prose.includes("They don't count against your number of cantrips known.") ||
+    !/\bwarlock (?:spells|cantrip) for you\./i.test(prose)
+  )
+    return undefined
+  try {
+    const blocks = parseAdditionalSpellBlocks(feature.additionalSpells as AdditionalSpellBlock[])
+    const [block] = blocks
+    const [cantrips] = block?.choices ?? []
+    if (
+      blocks.length !== 1 ||
+      !block.ability ||
+      block.name ||
+      block.grants.length ||
+      block.expanded?.length ||
+      block.choices.length !== 1 ||
+      cantrips.count !== 3 ||
+      cantrips.level !== 0 ||
+      cantrips.source !== 'known' ||
+      cantrips.usage !== 'direct' ||
+      cantrips.filter?.level !== 0 ||
+      cantrips.filter.classes.length ||
+      cantrips.filter.ritual
+    )
+      return undefined
+    return { ability: block.ability, cantrips, castingNote: note[0] }
+  } catch {
+    return undefined
+  }
+}
+
 /** The catalog supplies the initial ritual pool independently of prepared spell choices. */
 export function readDeclaredInvocationRituals(feature?: OptionalFeatureLike) {
   if (feature?.featureType?.length !== 1 || feature.featureType[0] !== 'EI') return undefined

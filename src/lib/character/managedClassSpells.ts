@@ -1482,6 +1482,7 @@ export function projectManagedClassSpellState(
       addManagedGrant(choice, entry, 'spellsKnown', true, pool.featureName)
       continue
     }
+    if (pool.castingNote) status.castingNote = pool.castingNote
     if (pool.featureName === 'Giant Power')
       status.castingNote = 'Giant Power: Wisdom is your spellcasting ability for this cantrip.'
     if (pool.featureName === 'Arcane Archer Lore' && choice.slot[0][4] === 'au')

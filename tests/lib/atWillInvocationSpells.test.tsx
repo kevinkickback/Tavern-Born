@@ -366,7 +366,22 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
 
   const ordinary = slots.find((slot) => slot[1] === 'class-known')
   if (!ordinary) throw new Error('Missing Pact Magic spell choice')
-  const learned = assign(book, pick(book, ordinary, 'Comprehend Languages'))
+  const boonSlots = slots.filter((slot) => slot[1] === 'feature-cantrip')
+  expect(boonSlots).toHaveLength(3)
+  expect(slots.some((slot) => slot[1] === 'class-cantrip')).toBe(true)
+  const bonusCantrips = ['Guidance', 'Sacred Flame', 'Shillelagh']
+  const boonPool = getManagedClassSpellPool(
+    book,
+    boonSlots[0],
+    calculation.classChoices.spellContext,
+  )
+  expect(boonPool.spells.map(({ name }) => name)).toEqual(expect.arrayContaining(bonusCantrips))
+  expect(boonPool.spells.every(({ level }) => level === 0)).toBe(true)
+  const learned = assign(
+    book,
+    pick(book, ordinary, 'Comprehend Languages'),
+    ...boonSlots.map((slot, index) => pick(book, slot, bonusCantrips[index])),
+  )
   const knownRitual = fixture
     .calc(learned)
     .fixedClassSpellStatuses.filter(({ featureName }) => featureName === name)
@@ -398,6 +413,7 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
     (row) => row.className === 'Warlock',
   )!
   expect(profile.spellsKnown).toEqual(['Comprehend Languages|PHB'])
+  expect(profile.cantrips).toEqual(bonusCantrips.map((name) => name + '|PHB'))
   expect(profile?.alwaysPreparedSpells ?? []).toEqual([])
   expect(
     validateSpells(ready, reopened, fixture.lookups.spellsByKey).some((issue) =>
@@ -460,6 +476,14 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
   )
   const vm = createCharacterSheetViewModel(expanded, fixture.lookups, fixture.lookups)
   expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Guidance',
+      level: 'C',
+      prepared: true,
+      castingNote: expect.stringContaining('cast those cantrips at will'),
+    }),
+  )
+  expect(vm.spellRows).toContainEqual(
     expect.objectContaining({ name: 'Water Breathing', castOnly: true, ritual: true }),
   )
   expect(vm.spellRows).toContainEqual(
@@ -478,14 +502,14 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
     const values = form
       .getFields()
       .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-    for (const spell of ['Find Familiar', 'Augury', 'Water Breathing'])
+    for (const spell of ['Find Familiar', 'Augury', 'Water Breathing', ...bonusCantrips])
       expect(values.some((text) => text.includes(spell))).toBe(true)
     expect(values.some((text) => text.includes('Book of Shadows in hand'))).toBe(true)
   }
 
   const cleared = fixture.select(expanded)
   const clearedCalculation = fixture.calc(cleared)
-  expect(cleared.managedClassSpellChoices).toHaveLength(1)
+  expect(cleared.managedClassSpellChoices).toHaveLength(4)
   expect(
     clearedCalculation.character.spells.spellProfiles.find((row) => row.className === 'Warlock')
       ?.spellsKnown,
@@ -494,9 +518,14 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
     false,
   )
   const switched = fixture.choose(ready, 'Pact Boon', ['Pact of the Blade'])
+  const switchedCalculation = fixture.calc(switched)
+  expect(switchedCalculation.fixedClassSpellStatuses.some((row) => row.featureName === name)).toBe(
+    false,
+  )
   expect(
-    fixture.calc(switched).fixedClassSpellStatuses.some((row) => row.featureName === name),
-  ).toBe(false)
+    switchedCalculation.character.spells.spellProfiles.find((row) => row.className === 'Warlock')
+      ?.cantrips,
+  ).toEqual([])
 }, 25_000)
 
 test('revised replacement may fill the first slot and still follows current Warlock level', () => {

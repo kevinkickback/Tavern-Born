@@ -23,6 +23,7 @@ import {
 import {
   readDeclaredInvocationBook,
   readDeclaredInvocationRituals,
+  readDeclaredPactCantrips,
 } from '@/lib/5etools/declaredInvocationBook'
 import {
   readDeclaredInvocationCast,
@@ -97,6 +98,7 @@ import {
   selectedFeatureSpellOwner,
 } from './selectedFeatureSpellOwnership'
 import { getSavedRevisedInvocationOwner } from './warlockInvocationChoices'
+import { CLASSIC_PACT_BOON_POOL, getCurrentClassicPactBoon } from './warlockInvocationSource'
 
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 
@@ -150,6 +152,40 @@ export function getSelectedFeatureCantripSetups(
         readFixedInvocationSpell(feature)?.limited
       )
         return []
+      const pactCantrips =
+        selection.choiceId === CLASSIC_PACT_BOON_POOL && readDeclaredPactCantrips(feature)
+      if (pactCantrips) {
+        const owner = character.classProgression.find(
+          (entry) =>
+            norm(entry.name) === norm(selection.className) &&
+            norm(entry.source) === norm(selection.classSource),
+        )
+        const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+        const valid = Boolean(
+          catalogs &&
+            activeRoute &&
+            cls &&
+            cls.spellcastingAbility === pactCantrips.ability &&
+            getCurrentClassicPactBoon(cls, activeRoute.choice, catalogs) &&
+            getInvocationLeaf(option, catalogs)?.feature === feature &&
+            permitted(allowed, selection.classSource) &&
+            permitted(allowed, option.source ?? ''),
+        )
+        return [
+          {
+            owner: selectedFeatureSpellOwner(selection),
+            producer,
+            level: option.slotLevel,
+            name: option.name,
+            offered: valid,
+            count: valid ? pactCantrips.cantrips.count : 0,
+            choice: pactCantrips.cantrips,
+            castingNote: pactCantrips.castingNote,
+            useDeclaredSpellLists: true as const,
+            ...(!valid && { reason: 'Restore the exact Pact Boon and its class casting rules.' }),
+          },
+        ]
+      }
       const classicRituals =
         selection.choiceId === CLASSIC_INVOCATION_POOL_ID && readDeclaredInvocationRituals(feature)
       if (classicRituals) {
@@ -853,11 +889,12 @@ export function getSelectedFeatureCantripPool(
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
           if (choice.pool) return true
           const filter = choice.filter
-          if (filter && !filter.classes.length && !setup?.book) return true
+          if (filter && !filter.classes.length && !setup?.book && !setup?.useDeclaredSpellLists)
+            return true
           const checked = auditSpellRouteMultiplicity([spell])[0]
           return (
             !!checked.classSpellRouteSource &&
-            (!setup?.book ||
+            ((!setup?.book && !setup?.useDeclaredSpellLists) ||
               (!checked.classSpellRouteDiagnostics?.length &&
                 checked.classSpellRouteSource.input.targetOccurrences.length === 1)) &&
             !!filter &&
