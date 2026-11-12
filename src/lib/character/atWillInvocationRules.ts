@@ -21,7 +21,7 @@ const classicPool = 'class:warlock|phb|choice:eldritch-invocations|2'
 type AtWillInvocationRule = {
   name: string
   spell: string
-  phb: string
+  phb?: string
   xphb?: string
   spellLevel?: number
   classicMinimum?: number
@@ -75,6 +75,48 @@ const contracts: readonly AtWillInvocationRule[] = [
     phb: '8ebb742380ef257a36beac773b38a0acadc3b0f568a9a5f2511a47837b277646',
     xphb: 'c2617fb4c715f0ea3e2764a8a6d4f7020153edec85fcae0e5bf9d2ecbf9b992b',
     revisedMinimum: 2,
+  },
+  {
+    name: 'Otherworldly Leap',
+    spell: 'Jump',
+    classicMinimum: 9,
+    revisedMinimum: 2,
+    phb: '3bb098ebc0d363efffbfa0a8e055cd08c7a31b54c5696c9268167ed8052e5aea',
+    xphb: '2402226ee56b97266919043aa98e07c001eaa3c5cfd3c80ce40960812c23c623',
+  },
+  {
+    name: 'Master of Myriad Forms',
+    spell: 'Alter Self',
+    spellLevel: 2,
+    classicMinimum: 15,
+    revisedMinimum: 5,
+    phb: '5b9a337aca3e92b0e08234c09182e98cec10f703412e40fa530feb509c967d97',
+    xphb: 'a707456d98c6fccdbc437c1d0a7d12e63076a40e307603457b77d865a3620e69',
+  },
+  {
+    name: 'One with Shadows',
+    spell: 'Invisibility',
+    spellLevel: 2,
+    revisedMinimum: 5,
+    xphb: '64de7c9a9f52d5da3ff46a6f64a1b776bdff779afd4cc05ca744860bb43aa54f',
+  },
+  {
+    name: 'Visions of Distant Realms',
+    spell: 'Arcane Eye',
+    spellLevel: 4,
+    classicMinimum: 15,
+    revisedMinimum: 9,
+    phb: 'eb308d81e292c66d83958e374db1c61bd5bbd1d99f5ddf99ef3370fc9c7404cf',
+    xphb: 'b6a3b4dc109799f0e69f7d318e699bc8f394ce9555c360ffd59682e44e380f1b',
+  },
+  {
+    name: 'Whispers of the Grave',
+    spell: 'Speak with Dead',
+    spellLevel: 3,
+    classicMinimum: 9,
+    revisedMinimum: 7,
+    phb: '305ee4c5ebf3f8faf32f8797ab21315c09b507b3a6db9d4d72cafb91389dc47a',
+    xphb: '5f711970e9f69eca7f618a526284aedbca258fd1a2c45f17236a9a4f15fa4fea',
   },
 ]
 const allowedFields = new Set([

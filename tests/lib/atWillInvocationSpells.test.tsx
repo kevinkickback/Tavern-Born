@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { renderHook } from '@testing-library/react'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
 import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
@@ -25,6 +26,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const cases = [
   ['2014', 'PHB', 'Armor of Shadows', 'Mage Armor', true],
@@ -33,6 +35,15 @@ const cases = [
   ['2024', 'XPHB', 'Armor of Shadows', 'Mage Armor', false],
   ['2024', 'XPHB', 'Mask of Many Faces', 'Disguise Self', false],
   ['2024', 'XPHB', 'Misty Visions', 'Silent Image', false],
+  ['2014', 'PHB', 'Otherworldly Leap', 'Jump', true, 9],
+  ['2024', 'XPHB', 'Otherworldly Leap', 'Jump', false, 2],
+  ['2014', 'PHB', 'Master of Myriad Forms', 'Alter Self', false, 15],
+  ['2024', 'XPHB', 'Master of Myriad Forms', 'Alter Self', false, 5],
+  ['2024', 'XPHB', 'One with Shadows', 'Invisibility', false, 5],
+  ['2014', 'PHB', 'Visions of Distant Realms', 'Arcane Eye', false, 15],
+  ['2024', 'XPHB', 'Visions of Distant Realms', 'Arcane Eye', false, 9],
+  ['2014', 'PHB', 'Whispers of the Grave', 'Speak with Dead', false, 9],
+  ['2024', 'XPHB', 'Whispers of the Grave', 'Speak with Dead', false, 7],
 ] as const
 const catalogsByEdition = new Map<string, GameData>()
 let allowedSources: string[]
@@ -154,9 +165,9 @@ function warlock(edition: '2014' | '2024', source: string) {
 
 test.each(
   cases,
-)('%s %s %s grants its exact spell and printing restrictions', (edition, source, invocation, spell, noMaterials) => {
+)('%s %s %s grants its exact spell and printing restrictions', (edition, source, invocation, spell, noMaterials, level = 2) => {
   const fixture = warlock(edition, source)
-  const original = fixture.level2(fixture.initial)
+  const original = atLevel(fixture.initial, level)
   const actor = fixture.select(original, invocation)
   const calculation = fixture.calc(actor)
   const reference = `${spell}|${source}`
@@ -166,7 +177,11 @@ test.each(
   const [grant] = calculation.atWillInvocationSpellStatuses
   expect(grant.rules).toMatch(/without expending a spell slot/)
   expect(grant.rules.includes('or material components')).toBe(noMaterials)
-  if (invocation === 'Armor of Shadows') expect(grant.rules).toMatch(/on yourself/)
+  if (invocation === 'Armor of Shadows' || invocation === 'Otherworldly Leap')
+    expect(grant.rules).toMatch(/on yourself/)
+  if (invocation === 'One with Shadows') expect(grant.rules).toMatch(/Dim Light or Darkness/)
+  if (level > 2)
+    expect(fixture.calc(atLevel(actor, level - 1)).atWillInvocationSpellStatuses).toEqual([])
   expect(calculation.classCasting).toEqual(fixture.calc(original).classCasting)
   expect(calculation.classChoices.prerequisites.effectiveSpellProfiles).toEqual(
     fixture.calc(original).classChoices.prerequisites.effectiveSpellProfiles,
@@ -192,6 +207,28 @@ test.each(
   )
   expect(fixture.calc(fixture.select(actor)).atWillInvocationSpellStatuses).toEqual([])
 })
+
+function atLevel(actor: Character, levels: number): Character {
+  return { ...actor, classProgression: [{ ...actor.classProgression[0], levels }] }
+}
+
+test.each([
+  ['2014', 'PHB', 9, '2014-official'],
+  ['2024', 'XPHB', 2, '2024-official'],
+] as const)(
+  '%s Otherworldly Leap exports Jump on the official spell page',
+  async (edition, source, level, template) => {
+    const fixture = warlock(edition, source)
+    const actor = fixture.select(atLevel(fixture.initial, level), 'Otherworldly Leap')
+    const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(
+      form.getFields().flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : [])),
+    ).toContain('Jump')
+  },
+  20_000,
+)
 
 test('revised replacement may fill the first slot and still follows current Warlock level', () => {
   const fixture = warlock('2024', 'XPHB')
