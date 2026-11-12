@@ -315,6 +315,26 @@ test.each([
   20_000,
 )
 
+test('revised Gift of the Depths follows walking speed while preserving a faster swim speed', () => {
+  const fixture = warlock('2024', 'XPHB')
+  const leveled = atLevel(fixture.initial, 5)
+  const actor = { ...leveled, movement: { ...leveled.movement, speeds: { walk: 35, swim: 20 } } }
+  const selected = fixture.select(actor, 'Gift of the Depths')
+  expect(fixture.calc(selected).movement.speeds.swim).toBe(35)
+  expect(
+    fixture.calc({ ...selected, movement: { ...actor.movement, speeds: { walk: 35, swim: 45 } } })
+      .movement.speeds.swim,
+  ).toBe(45)
+  const vm = createCharacterSheetViewModel(selected, fixture.lookups, fixture.lookups)
+  expect(vm.additionalMovementSummary).toBe('swim 35 ft.')
+  const noSpell = fixture.calc(selected, { ...fixture.lookups, spellsByKey: {} })
+  expect(noSpell.fixedClassSpellStatuses).toContainEqual(
+    expect.objectContaining({ featureName: 'Gift of the Depths', active: false }),
+  )
+  expect(noSpell.movement.speeds.swim).toBe(35)
+  expect(fixture.calc(fixture.select(selected)).movement.speeds.swim).toBe(20)
+})
+
 test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spells', async () => {
   const fixture = warlock('2014', 'PHB')
   const name = 'Book of Ancient Secrets'

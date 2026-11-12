@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { readdir, readFile } from 'node:fs/promises'
+import { relative, resolve } from 'node:path'
 import { renderHook } from '@testing-library/react'
 import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
 import { loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
@@ -15,7 +15,12 @@ import type { Character } from '@/types/character'
 const readJson = (root: string) => async (file: string) =>
   JSON.parse(await readFile(resolve(root, file), 'utf8'))
 
-export function loadStandardJourneyData() {
+export async function loadStandardJourneyData() {
+  const dataRoot = resolve('data')
+  const inventory = await readdir(dataRoot, { recursive: true, withFileTypes: true })
+  const availableResources = inventory
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => relative(dataRoot, resolve(entry.parentPath, entry.name)).replace(/\\/g, '/'))
   return loadGameDataSourceStack(
     {
       base: {
@@ -25,7 +30,7 @@ export function loadStandardJourneyData() {
         packVersion: '1.0.1',
         isValid: true,
       },
-      additional: { type: 'local', path: resolve('data'), isValid: true },
+      additional: { type: 'local', path: dataRoot, isValid: true, availableResources },
     },
     {
       baseReader: { type: 'bundled', readJson: readJson('resources/srd/data') },

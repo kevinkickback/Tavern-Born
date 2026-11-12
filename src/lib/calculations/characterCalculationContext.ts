@@ -130,6 +130,7 @@ import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { deriveFighterPassiveEffects } from './fighterPassiveEffects'
 import { getAbilityModifier, getProficiencyBonus } from './gameRules'
+import { deriveInvocationMovementEffects } from './invocationMovementEffects'
 import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement, getWalkingSpeed } from './movement'
 import { refreshNativeRacialSpellState } from './nativeRacialSpells'
@@ -725,6 +726,9 @@ export function createCharacterCalculationContext(
       abilityScores.modifiers.charisma,
       sourceEffects,
     ),
+  )
+  sourceEffects.push(
+    ...deriveInvocationMovementEffects(character, choiceCatalogs, prerequisites, sourceEffects),
   )
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 

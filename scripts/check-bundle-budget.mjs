@@ -14,10 +14,10 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Standard subclass support measured 7,015,038 B renderer and 1,697,727 B initial
-  // on Node 24, up 20,022 B and 11,222 B from main. Retain the existing headroom.
-  rendererCode: 6857 * KIB,
-  initialRendererScript: 1665 * KIB,
+  // Standard invocation and subclass support measured 7,029,567 B renderer and
+  // 1,710,345 B initial on Node 24. Keep approximately the prior 6–7 KiB headroom.
+  rendererCode: 6871 * KIB,
+  initialRendererScript: 1677 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
   pdfWorker: 2.2 * MIB,

@@ -135,7 +135,13 @@ async function exerciseJourney(data: StandardJourneyCatalog, cls: Class5e, subcl
   }
   const gain = getSubclassSelectionInfo(cls).subclassLevel
   const hitDie = cls.hd?.faces
-  if (!gain || !hitDie || !data.primary.itemLookup)
+  if (
+    !gain ||
+    !hitDie ||
+    !data.primary.itemLookup ||
+    !data.raw.startingEquipmentItems ||
+    !data.primary.startingEquipmentItems
+  )
     throw new Error(`${label}: missing class progression data`)
   const blank = createEmptyCharacter({
     name: 'Standard Journey',

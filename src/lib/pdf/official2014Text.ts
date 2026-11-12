@@ -65,6 +65,8 @@ export function getOfficial2014SectionText(
     'Features and Traits': [
       subclasses.length &&
         (subclasses.length === 1 ? 'Subclass: ' : 'Subclasses: ') + subclasses.join(', '),
+      viewModel.additionalMovementSummary !== '—' &&
+        'Additional movement: ' + viewModel.additionalMovementSummary,
       withClassResourceText(viewModel.classResourceRows, viewModel.featuresSummary),
     ]
       .filter(Boolean)
