@@ -34,8 +34,8 @@ lookups continue to use the character's filtered catalog.
 When a subclass has no specialized sheet projection, the sheet can print its earned,
 source-qualified feature descriptions. It resolves the literal feature references under
 the selected owner. Nested fixed rules follow their parent’s earned level and counted
-choice menus use the saved selections. Rules with unavailable or conflicting source
-references are withheld.
+choice menus use the saved selections. Fixed groups that introduce a list of benefits
+appear only when each referenced rule in the group is available, verified, and has printable text.
 
 ## Templates and page assembly
 

@@ -1419,7 +1419,10 @@ describe.runIf(available)('configured inherited class progression', () => {
     expect(text).toContain('Spend 1 soul fragment to cast as a Bonus Action')
   }, 60_000)
 
-  test('a renamed authored pool works and an unresolved inline attachment cannot grant a paid cast', async () => {
+  test.each([
+    'inline-only',
+    'blank',
+  ] as const)('a renamed authored pool keeps independent paid casts and withholds a %s fixed export group', async (caseName) => {
     const source = await new FiveEToolsDataLoader(
       { type: 'local', path: 'data', isValid: true },
       {
@@ -1435,11 +1438,13 @@ describe.runIf(available)('configured inherited class progression', () => {
           const index = document.subclassFeature.findIndex(
             (row: { name: string }) => row.name === 'Disrupt',
           )
-          const [disrupt] = document.subclassFeature.splice(index, 1)
-          const knowledge = document.subclassFeature.find(
-            (row: { name: string }) => row.name === 'Illidari Knowledge',
-          )
-          knowledge.entries[1].entries[0].feature = disrupt
+          if (caseName === 'inline-only') {
+            const [disrupt] = document.subclassFeature.splice(index, 1)
+            const knowledge = document.subclassFeature.find(
+              (row: { name: string }) => row.name === 'Illidari Knowledge',
+            )
+            knowledge.entries[1].entries[0].feature = disrupt
+          } else document.subclassFeature[index].entries = ['  ']
           return document
         },
       },
@@ -1452,6 +1457,14 @@ describe.runIf(available)('configured inherited class progression', () => {
     }
     const character = chooseSubclass(reachLevel(start('Demon Hunter'), 11), 'Demon Hunter')
     const view = createCharacterSheetViewModel(character, lookup, lookup)
+    const completeRules = followupSheet(character).declaredClassFeatureSummaries
+    expect(completeRules?.find((row) => row.compactText === 'Illidari Knowledge')?.text).toMatch(
+      /Disrupt.*Warglaive Mastery/,
+    )
+    expect(
+      view.declaredClassFeatureSummaries?.some((row) => row.compactText === 'Illidari Knowledge'),
+    ).toBe(false)
+    expect(view.classFeaturesSummary2014).toContain('Regaining Spirit Shards')
     expect(view.classResourceRows.find((row) => row.label === 'Spirit Shards')).toBeDefined()
     expect(view.spellRows.find((row) => row.name === 'Feather Fall')?.castingNote).toContain(
       'Spend 1 spirit shard',
