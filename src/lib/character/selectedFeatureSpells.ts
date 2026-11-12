@@ -20,7 +20,10 @@ import {
   clericDomainCantrips,
   getClericDomainCantripSource,
 } from '@/lib/5etools/clericDomainCantripSources'
-import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
+import {
+  readDeclaredInvocationBook,
+  readDeclaredInvocationRituals,
+} from '@/lib/5etools/declaredInvocationBook'
 import {
   readDeclaredInvocationCast,
   readFixedInvocationSpell,
@@ -34,6 +37,7 @@ import {
 import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
 import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
 import { getCurrentNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import { CLASSIC_INVOCATION_POOL_ID } from '@/lib/5etools/revisedInvocationPoolIdentity'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
@@ -65,6 +69,7 @@ import type { Character } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
 import {
   getAtWillInvocationContract,
+  getInvocationLeaf,
   isInvocationPool,
   isRevisedAtWillInvocationOption,
 } from './atWillInvocationRules'
@@ -99,7 +104,8 @@ export interface SelectedFeatureCantripSetup {
   name: string
   count: number
   domain?: 'feature-prepared'
-  book?: true
+  book?: 'prepared' | 'ritual-only'
+  castingNote?: string
   choice?: AdditionalSpellChoiceDescriptor
   useDeclaredSpellLists?: true
   spellSchool?: string
@@ -139,6 +145,40 @@ export function getSelectedFeatureCantripSetups(
         readFixedInvocationSpell(feature)?.limited
       )
         return []
+      const classicRituals =
+        selection.choiceId === CLASSIC_INVOCATION_POOL_ID && readDeclaredInvocationRituals(feature)
+      if (classicRituals) {
+        const owner = character.classProgression.find(
+          (entry) =>
+            norm(entry.name) === norm(selection.className) &&
+            norm(entry.source) === norm(selection.classSource),
+        )
+        const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+        const valid = Boolean(
+          activeRoute &&
+            isInvocationPool(activeRoute.choice) &&
+            !activeRoute.ambiguousInvocationPool &&
+            getInvocationLeaf(option, catalogs)?.feature === feature &&
+            permitted(allowed, selection.classSource) &&
+            permitted(allowed, option.source ?? '') &&
+            cls?.spellcastingAbility === classicRituals.ability,
+        )
+        return [
+          {
+            owner: selectedFeatureSpellOwner(selection),
+            producer,
+            level: option.slotLevel,
+            name: option.name,
+            offered: valid,
+            book: 'ritual-only' as const,
+            domain: 'feature-prepared' as const,
+            count: valid ? classicRituals.rituals.count : 0,
+            choice: classicRituals.rituals,
+            castingNote: classicRituals.castingNote,
+            ...(!valid && { reason: 'Restore the exact Invocation and its prerequisites.' }),
+          },
+        ]
+      }
       const book = isRevisedInvocationSelection(selection) && readDeclaredInvocationBook(feature)
       if (book) {
         const owner = getSavedRevisedInvocationOwner(character, selection)
@@ -157,7 +197,7 @@ export function getSelectedFeatureCantripSetups(
           level: option.slotLevel,
           name: option.name,
           offered: valid,
-          book: true as const,
+          book: 'prepared' as const,
         }
         return valid
           ? [
@@ -681,7 +721,9 @@ export function getSelectedFeatureCantripPool(
   const choice = setup?.choice
   const spellLevel = choice?.filter?.level ?? 0
   const prepared =
-    setup?.book && checkPrepared ? getIndependentPreparedNames(character, context) : undefined
+    setup?.book === 'prepared' && checkPrepared
+      ? getIndependentPreparedNames(character, context)
+      : undefined
   const ownerScoped = ['classFeature', 'subclassFeature'].includes(
     decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
   )
@@ -789,5 +831,6 @@ export function getSelectedFeatureCantripPool(
     featureName: setup?.name,
     count: setup?.count ?? 0,
     book: setup?.book,
+    castingNote: setup?.castingNote,
   }
 }

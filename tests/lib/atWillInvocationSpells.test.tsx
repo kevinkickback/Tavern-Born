@@ -16,8 +16,14 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { applyLevelDown, applyLevelUp } from '@/lib/character/commands/classCommands'
+import {
+  type ManagedClassSpellRequest,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
 import { setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
@@ -300,6 +306,111 @@ test.each([
   },
   20_000,
 )
+
+test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spells', async () => {
+  const fixture = warlock('2014', 'PHB')
+  const name = 'Book of Ancient Secrets'
+  const tome = fixture.choose(atLevel(fixture.initial, 3), 'Pact Boon', ['Pact of the Tome'])
+  const book = fixture.select(tome, name)
+  const calculation = fixture.calc(book)
+  const slots = getManagedClassSpellSlots(
+    book.classProgression[0],
+    book,
+    calculation.classChoices.catalogs,
+    calculation.classChoices.prerequisites,
+  )
+  const ritualSlots = slots.filter((slot) => slot[1] === 'feature-prepared')
+  expect(ritualSlots).toHaveLength(2)
+  const [first, second] = ritualSlots
+  expect(validateSpells(book, calculation, fixture.lookups.spellsByKey)).toContainEqual(
+    expect.objectContaining({ title: expect.stringContaining(name), severity: 'blocking' }),
+  )
+  const pool = getManagedClassSpellPool(book, first, calculation.classChoices.spellContext)
+  expect(pool.spells.length).toBeGreaterThan(2)
+  expect(pool.spells.every((spell) => spell.meta?.ritual && spell.level === 1)).toBe(true)
+  expect(pool.spells.map((spell) => spell.name)).toContain('Find Familiar')
+  const assign = (actor: Character, ...requests: ManagedClassSpellRequest[]) =>
+    patch(
+      actor,
+      setManagedClassSpellChoicesCommand(
+        actor,
+        actor.provenance,
+        requests,
+        fixture.calc(actor).classChoices.spellContext,
+      ),
+    )
+  const pick = (
+    actor: Character,
+    slot: ManagedClassSpellRequest['slot'],
+    spell: string,
+  ): ManagedClassSpellRequest => ({
+    slot,
+    expected: null,
+    expectedEmptyRevision: actor.managedClassSpellRevision ?? 0,
+    target: { name: spell, source: 'PHB' },
+    policy: 'default',
+  })
+  expect(() => assign(book, pick(book, first, 'Augury'))).toThrow(/eligible ritual/)
+  expect(() => assign(book, pick(book, first, 'Magic Missile'))).toThrow(/eligible ritual/)
+  expect(() =>
+    assign(book, pick(book, first, 'Find Familiar'), pick(book, second, 'Find Familiar')),
+  ).toThrow()
+
+  const ordinary = slots.find((slot) => slot[1] === 'class-known')
+  if (!ordinary) throw new Error('Missing Pact Magic spell choice')
+  const learned = assign(book, pick(book, ordinary, 'Comprehend Languages'))
+  const ready = assign(
+    learned,
+    pick(learned, first, 'Find Familiar'),
+    pick(learned, second, 'Comprehend Languages'),
+  )
+  const reopened = fixture.calc(ready)
+  const profile = reopened.character.spells.spellProfiles.find(
+    (row) => row.className === 'Warlock',
+  )!
+  expect(profile.spellsKnown).toEqual(['Comprehend Languages|PHB'])
+  expect(profile?.alwaysPreparedSpells ?? []).toEqual([])
+  expect(
+    validateSpells(ready, reopened, fixture.lookups.spellsByKey).some((issue) =>
+      issue.title.includes(name),
+    ),
+  ).toBe(false)
+  const vm = createCharacterSheetViewModel(ready, fixture.lookups, fixture.lookups)
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Find Familiar',
+      ritual: true,
+      prepared: false,
+      castOnly: true,
+      castingTime: 'Ritual only',
+      castingNote: expect.stringContaining('Book of Shadows in hand'),
+    }),
+  )
+  for (const template of ['2014-official', '2014-custom'] as const) {
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    const values = form
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    expect(values.some((text) => text.includes('Find Familiar'))).toBe(true)
+    expect(values.some((text) => text.includes('Book of Shadows in hand'))).toBe(true)
+  }
+
+  const cleared = fixture.select(ready)
+  const clearedCalculation = fixture.calc(cleared)
+  expect(cleared.managedClassSpellChoices).toHaveLength(1)
+  expect(
+    clearedCalculation.character.spells.spellProfiles.find((row) => row.className === 'Warlock')
+      ?.spellsKnown,
+  ).toEqual(['Comprehend Languages|PHB'])
+  expect(clearedCalculation.fixedClassSpellStatuses.some((row) => row.featureName === name)).toBe(
+    false,
+  )
+  const switched = fixture.choose(ready, 'Pact Boon', ['Pact of the Blade'])
+  expect(
+    fixture.calc(switched).fixedClassSpellStatuses.some((row) => row.featureName === name),
+  ).toBe(false)
+}, 25_000)
 
 test('revised replacement may fill the first slot and still follows current Warlock level', () => {
   const fixture = warlock('2024', 'XPHB')

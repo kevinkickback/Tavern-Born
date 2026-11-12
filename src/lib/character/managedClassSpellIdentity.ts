@@ -7,6 +7,7 @@ import { ARCANE_DABBLER } from '@/lib/5etools/mysticFeatureIdentity'
 import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
 import {
   decodeSelectedFeatureSpellAddress,
+  isSelectedClassicInvocationRitualSlot,
   isSelectedInvocationRitualSlot,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
@@ -141,6 +142,7 @@ export function matchesManagedClassSpellTag(
 ) {
   const [owner] = choice.slot
   return (
+    !isSelectedClassicInvocationRitualSlot(choice.slot) &&
     tag.grantVariant === managedClassSpellId(choice.slot) &&
     tag.sourceType === owner[0] &&
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&

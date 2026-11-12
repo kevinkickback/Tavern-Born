@@ -1398,7 +1398,7 @@ export function projectManagedClassSpellState(
           effectiveAbilityScores: context?.abilityScores,
           effectiveSpellProfiles: independentSpellProfiles,
         })
-          .filter((setup) => setup.book)
+          .filter((setup) => setup.book === 'prepared')
           .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level]))
       : [],
   )
@@ -1445,15 +1445,31 @@ export function projectManagedClassSpellState(
     )
     if (!spell) {
       deny(
-        pool.book
-          ? 'Choose an eligible spell from a current class list that you do not already have prepared.'
-          : 'Restore the exact selected cantrip printing and its current feature spell list.',
+        pool.book === 'ritual-only'
+          ? 'Choose an eligible ritual from a current class list.'
+          : pool.book
+            ? 'Choose an eligible spell from a current class list that you do not already have prepared.'
+            : 'Restore the exact selected cantrip printing and its current feature spell list.',
       )
       continue
     }
     status.active = true
     const ritual = isSelectedInvocationRitualSlot(choice.slot)
-    if (pool.book) {
+    if (pool.book === 'ritual-only') {
+      fixedClassSpellStatuses.push({
+        owner: choice.slot[0],
+        target: managedClassSpellId(choice.slot),
+        featureName: pool.featureName ?? 'Ritual spell choice',
+        level: choice.slot[3],
+        reference: formatSpellReference(spell.name, spell.source),
+        active: true,
+        prepared: false,
+        castOnly: { castingTime: 'Ritual only' },
+        castingNote: pool.castingNote ?? 'Cast only as a ritual.',
+      })
+      continue
+    }
+    if (pool.book === 'prepared') {
       status.prepared = true
       status.castingNote = `${pool.featureName}: Prepared while you carry the book.`
       if (!ritual) addInvocationTarget(entry, spell)

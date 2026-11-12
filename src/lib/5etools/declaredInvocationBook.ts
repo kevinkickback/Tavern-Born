@@ -75,3 +75,40 @@ export function readDeclaredInvocationBook(feature?: OptionalFeatureLike) {
     return undefined
   }
 }
+
+/** The catalog supplies the initial ritual pool independently of prepared spell choices. */
+export function readDeclaredInvocationRituals(feature?: OptionalFeatureLike) {
+  if (feature?.featureType?.length !== 1 || feature.featureType[0] !== 'EI') return undefined
+  try {
+    const blocks = parseAdditionalSpellBlocks(feature.additionalSpells as AdditionalSpellBlock[], {
+      allowRitual: true,
+    })
+    if (blocks.length !== 1) return undefined
+    const [block] = blocks
+    const [rituals] = block.choices
+    if (
+      !block.ability ||
+      block.name ||
+      block.grants.length ||
+      block.expanded?.length ||
+      block.choices.length !== 1 ||
+      rituals.level !== 0 ||
+      rituals.source !== 'innate' ||
+      rituals.usage !== 'ritual' ||
+      !rituals.filter?.ritual ||
+      rituals.isCantrip ||
+      rituals.count > 1000
+    )
+      return undefined
+    const castingNote = feature.entries
+      ?.flatMap((entry) =>
+        typeof entry === 'string'
+          ? (entry.match(/[^.!?]*\byou can cast the chosen spells as rituals[.!?]/i) ?? [])
+          : [],
+      )[0]
+      ?.trim()
+    return { ability: block.ability, rituals, castingNote }
+  } catch {
+    return undefined
+  }
+}

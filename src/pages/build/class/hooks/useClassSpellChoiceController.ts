@@ -11,6 +11,7 @@ import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeat
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
@@ -62,6 +63,17 @@ export function useClassSpellChoiceController(
         )
       }
     }
+    const ritualRanks = new Map(
+      character && slots.some(isSelectedInvocationRitualSlot)
+        ? getSelectedFeatureCantripSetups(
+            character,
+            catalogs,
+            calculation?.classChoices.prerequisites,
+          )
+            .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
+            .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const)
+        : [],
+    )
     const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
     for (const slot of slots) {
       if (
@@ -124,7 +136,7 @@ export function useClassSpellChoiceController(
           : undefined
       gain.maxSpellLevel = Math.max(
         gain.maxSpellLevel,
-        isSelectedInvocationRitualSlot(slot) ? 1 : 0,
+        isSelectedInvocationRitualSlot(slot) ? (ritualRanks.get(slot[2]) ?? 0) : 0,
         getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
         dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
           ? Math.max(...dabbler.ranks)

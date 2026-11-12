@@ -11,6 +11,7 @@ import {
   maximumDomainCantrips,
 } from './clericDomainCantripSources'
 import {
+  CLASSIC_INVOCATION_POOL_ID,
   getRevisedInvocationPoolId,
   isRevisedInvocationPoolId,
 } from './revisedInvocationPoolIdentity'
@@ -280,6 +281,17 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
   )
 }
 
+export function isSelectedClassicInvocationRitualSlot(slot: ManagedClassSpellSlot) {
+  const [owner, domain, producer] = slot
+  return (
+    domain === 'feature-prepared' &&
+    owner[0] === 'class' &&
+    owner[1] === 'warlock' &&
+    owner[2] === 'phb' &&
+    decodeSelectedFeatureSpellAddress(producer)?.[0] === CLASSIC_INVOCATION_POOL_ID
+  )
+}
+
 export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
   const [owner, domain, producer, level, ordinal] = slot
   if (domain !== 'feature-prepared' || owner[0] !== 'class') return false
@@ -287,13 +299,14 @@ export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
   return (
     !!address &&
     address[1] === 'optionalFeature' &&
-    isRevisedInvocationPoolId(address[0]) &&
-    address[0] === getRevisedInvocationPoolId({ name: owner[1], source: owner[2] }) &&
+    (isSelectedClassicInvocationRitualSlot(slot) ||
+      (isRevisedInvocationPoolId(address[0]) &&
+        address[0] === getRevisedInvocationPoolId({ name: owner[1], source: owner[2] }) &&
+        ordinal < 2)) &&
     Number.isInteger(level) &&
     level >= 1 &&
     level <= 20 &&
-    Number.isInteger(ordinal) &&
-    ordinal >= 0 &&
-    ordinal < 2
+    Number.isSafeInteger(ordinal) &&
+    ordinal >= 0
   )
 }

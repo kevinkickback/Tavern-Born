@@ -1,6 +1,7 @@
 import { readFixedInvocationSpell } from '@/lib/5etools/declaredInvocationCasting'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { CLASSIC_INVOCATION_POOL_ID } from '@/lib/5etools/revisedInvocationPoolIdentity'
 import {
   getRevisedInvocationPoolId,
   hasCurrentRevisedInvocationOption,
@@ -14,8 +15,6 @@ import type { CharacterClassChoiceOption, CharacterClassChoiceSelection } from '
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceOptionKey } from './classChoiceIdentity'
-
-const classicPool = 'class:warlock|phb|choice:eldritch-invocations|2'
 
 // The innate spell token does not encode self-only or component restrictions.
 // Certify the complete native text and retain it as a static rule reference.
@@ -94,12 +93,13 @@ const allowedFields = new Set([
 ])
 
 export function isInvocationPoolId(id: string): boolean {
-  return id === classicPool || isRevisedInvocationPoolId(id)
+  return id === CLASSIC_INVOCATION_POOL_ID || isRevisedInvocationPoolId(id)
 }
 
 export function isInvocationPool(choice: NormalizedCharacterChoice): boolean {
   return (
-    (choice.id === classicPool || choice.id === getRevisedInvocationPoolId(choice.owner)) &&
+    (choice.id === CLASSIC_INVOCATION_POOL_ID ||
+      choice.id === getRevisedInvocationPoolId(choice.owner)) &&
     choice.owner.type === 'class' &&
     choice.source.kind === 'optional-feature-progression' &&
     /^optionalfeatureProgression\[\d+\]$/.test(choice.source.field) &&
@@ -128,7 +128,7 @@ export function getAtWillInvocationContract(
   const source = revised ? 'xphb' : 'phb'
   if (
     (!revised &&
-      (selection.choiceId !== classicPool ||
+      (selection.choiceId !== CLASSIC_INVOCATION_POOL_ID ||
         norm(selection.className) !== 'warlock' ||
         norm(selection.classSource) !== 'phb')) ||
     selection.kind !== 'optional-feature' ||

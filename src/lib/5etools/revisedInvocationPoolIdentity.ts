@@ -1,5 +1,11 @@
 import { getNormalizedClassChoiceId } from './classChoiceId'
 
+export const CLASSIC_INVOCATION_POOL_ID = getNormalizedClassChoiceId(
+  { type: 'class', name: 'Warlock', source: 'PHB' },
+  'Eldritch Invocations',
+  2,
+)
+
 type InvocationOwner = { name: string; source: string }
 
 export function isRevisedInvocationPoolId(id: string | undefined) {
