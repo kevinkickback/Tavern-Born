@@ -109,6 +109,7 @@ export interface SelectedFeatureCantripSetup {
   domain?: 'feature-prepared'
   book?: 'prepared' | 'ritual-only'
   castingNote?: string
+  knownRitualCastingNote?: string
   transcription?: NonNullable<ReturnType<typeof readDeclaredInvocationRituals>>['transcription']
   choice?: AdditionalSpellChoiceDescriptor
   useDeclaredSpellLists?: true
@@ -179,6 +180,11 @@ export function getSelectedFeatureCantripSetups(
             count: valid ? classicRituals.rituals.count : 0,
             choice: classicRituals.rituals,
             castingNote: classicRituals.castingNote,
+            ...(valid &&
+              cls &&
+              norm(classicRituals.knownRituals?.printedClass) === norm(cls.name) && {
+                knownRitualCastingNote: classicRituals.knownRituals?.castingNote,
+              }),
             ...(valid &&
               cls &&
               norm(classicRituals.transcription?.printedClass) === norm(cls.name) && {

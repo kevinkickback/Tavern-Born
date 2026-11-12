@@ -131,10 +131,18 @@ export function readDeclaredInvocationRituals(feature?: OptionalFeatureLike) {
           ]
         : []
     })
+    const knownRituals = feature.entries?.flatMap((entry) => {
+      if (typeof entry !== 'string') return []
+      const rule = entry.match(
+        /You can also cast a ([a-z][a-z -]*) spell you know as a ritual if it has the ritual tag\./i,
+      )
+      return rule ? [{ printedClass: rule[1], castingNote: rule[0] }] : []
+    })
     return {
       ability: block.ability,
       rituals,
       castingNote,
+      knownRituals: knownRituals?.length === 1 ? knownRituals[0] : undefined,
       transcription: transcription?.length === 1 ? transcription[0] : undefined,
     }
   } catch {

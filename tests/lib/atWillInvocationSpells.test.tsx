@@ -367,6 +367,27 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
   const ordinary = slots.find((slot) => slot[1] === 'class-known')
   if (!ordinary) throw new Error('Missing Pact Magic spell choice')
   const learned = assign(book, pick(book, ordinary, 'Comprehend Languages'))
+  const knownRitual = fixture
+    .calc(learned)
+    .fixedClassSpellStatuses.filter(({ featureName }) => featureName === name)
+  expect(knownRitual).toEqual([
+    expect.objectContaining({
+      reference: 'Comprehend Languages|PHB',
+      active: true,
+      prepared: false,
+      castOnly: { castingTime: 'Ritual only' },
+      castingNote: expect.stringContaining('spell you know as a ritual'),
+    }),
+  ])
+  const knownRitualSheet = createCharacterSheetViewModel(learned, fixture.lookups, fixture.lookups)
+  expect(knownRitualSheet.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Comprehend Languages',
+      prepared: true,
+      ritual: true,
+      castingNote: expect.stringContaining('spell you know as a ritual'),
+    }),
+  )
   const ready = assign(
     learned,
     pick(learned, first, 'Find Familiar'),

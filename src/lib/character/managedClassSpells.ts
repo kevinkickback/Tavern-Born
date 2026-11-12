@@ -60,6 +60,7 @@ import {
 } from '@/lib/5etools/nativeWarlockPatronRules'
 import { isRevisedInheritedRangerSpellOwner } from '@/lib/5etools/rangerSubclassSpells'
 import { isRevisedRetainedSubclassSpellOwner } from '@/lib/5etools/retainedSubclassSpells'
+import { CLASSIC_INVOCATION_POOL_ID } from '@/lib/5etools/revisedInvocationPoolIdentity'
 import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
@@ -1392,15 +1393,18 @@ export function projectManagedClassSpellState(
     ({ choice }) =>
       choice.slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(choice.slot),
   )
-  const books = new Set(
-    selectedFeatureStatuses.length
+  const selectedFeatureSetups =
+    selectedFeatureStatuses.length ||
+    character.classChoiceSelections?.some(({ choiceId }) => choiceId === CLASSIC_INVOCATION_POOL_ID)
       ? getSelectedFeatureCantripSetups(character, context?.catalogs, {
           effectiveAbilityScores: context?.abilityScores,
           effectiveSpellProfiles: independentSpellProfiles,
         })
-          .filter((setup) => setup.book === 'prepared')
-          .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level]))
-      : [],
+      : []
+  const books = new Set(
+    selectedFeatureSetups
+      .filter((setup) => setup.book === 'prepared')
+      .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level])),
   )
   const isBook = ({ choice }: ManagedClassSpellStatus) =>
     books.has(JSON.stringify([choice.slot[0], choice.slot[2], choice.slot[3]]))
@@ -1497,6 +1501,43 @@ export function projectManagedClassSpellState(
       reference,
       makeManagedClassSpellTag(choice, entry, pool.featureName),
     )
+  }
+  for (const setup of selectedFeatureSetups) {
+    if (!setup.offered || !setup.knownRitualCastingNote) continue
+    const profile = independentSpellProfiles.find(
+      (row) =>
+        row.type === 'class' &&
+        norm(row.className) === setup.owner[1] &&
+        norm(row.classSource) === setup.owner[2],
+    )
+    for (const known of profile?.spellsKnown ?? []) {
+      const key = getSpellReferenceKey(known)
+      const spell = targets.get(key)
+      if (
+        !spell?.meta?.ritual ||
+        !visibleSpellLevels.has(key) ||
+        fixedClassSpellStatuses.some(
+          (row) =>
+            row.active &&
+            row.featureName === setup.name &&
+            row.owner[2] === setup.owner[2] &&
+            row.owner[1] === setup.owner[1] &&
+            getSpellReferenceKey(row.reference) === key,
+        )
+      )
+        continue
+      fixedClassSpellStatuses.push({
+        owner: setup.owner,
+        target: setup.producer,
+        featureName: setup.name,
+        level: setup.level,
+        reference: formatSpellReference(spell.name, spell.source),
+        active: true,
+        prepared: false,
+        castOnly: { castingTime: 'Ritual only' },
+        castingNote: setup.knownRitualCastingNote,
+      })
+    }
   }
   const lightDomain = character.classProgression.filter(
     (entry) =>
