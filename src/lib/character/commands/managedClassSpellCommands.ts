@@ -113,14 +113,6 @@ export function setManagedClassSpellChoicesCommand(
               getSpellReferenceKey(occupied.target.name, occupied.target.source)
       )
         throw new RangeError('This spell choice changed. Reopen it before confirming.')
-      if (
-        !occupied &&
-        request.target &&
-        isInvocationRitualTranscriptionSlot(request.slot) &&
-        getManagedClassSpellOwnerEntry(request.slot, character.classProgression)?.levels !==
-          request.slot[3]
-      )
-        throw new RangeError('Transcribe a ritual at the current class level.')
       if (request.prepare !== undefined && typeof request.prepare !== 'boolean')
         throw new RangeError('Preparation must be an explicit choice.')
       if (
@@ -140,6 +132,14 @@ export function setManagedClassSpellChoicesCommand(
         !!request.target &&
         getSpellReferenceKey(request.target.name, request.target.source) ===
           getSpellReferenceKey(occupied.target.name, occupied.target.source)
+      if (
+        !sameTarget &&
+        request.target &&
+        isInvocationRitualTranscriptionSlot(request.slot) &&
+        getManagedClassSpellOwnerEntry(request.slot, character.classProgression)?.levels !==
+          request.slot[3]
+      )
+        throw new RangeError('Transcribe a ritual at the current class level.')
       const noop = !request.target
         ? !occupied
         : sameTarget && request.policy === occupied?.policy && prepare === occupied?.prepare

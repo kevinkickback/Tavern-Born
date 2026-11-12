@@ -4,7 +4,7 @@ import {
   getArtificerAttunementLimit,
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
-import { getArtificerSpellReprints, isTceArtificer } from '@/lib/5etools/artificerSpellReprints'
+import { isTceArtificer } from '@/lib/5etools/artificerSpellReprints'
 import {
   BEAR_ASPECT_TARGET,
   CLASSIC_ASPECT_TARGET,
@@ -19,6 +19,7 @@ import {
 import { getCurrentWildHeartAspects } from '@/lib/5etools/barbarianPathChoices'
 import { hasCurrentBardDanceDefense } from '@/lib/5etools/bardCollegeFeatures'
 import { getCurrentBardJackOfAllTrades } from '@/lib/5etools/bardSpellSources'
+import { getClassicSpellReprints } from '@/lib/5etools/classicSpellReprints'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -458,7 +459,7 @@ export function createCharacterCalculationContext(
     oathSpellSourceByKey: rawLookups.spellsByKey,
     artificerSpellReprints:
       character.originSystem === '2024' && character.classProgression.some(isTceArtificer)
-        ? getArtificerSpellReprints(rawLookups.spellsByKey)
+        ? getClassicSpellReprints(rawLookups.spellsByKey)
         : undefined,
     currentRaceResolution: resolveRaceReference(
       {
@@ -632,6 +633,7 @@ export function createCharacterCalculationContext(
     choiceCatalogs,
     prerequisites,
     primaryLookups.spellsByKey,
+    rawLookups.spellsByKey,
   )
   character = projectEffectiveClassChoiceFeatures(
     invocationSpells.character,

@@ -54,12 +54,21 @@ export function getOfficial2014FontBounds(
 export function getOfficial2014SectionText(
   viewModel: CharacterSheetViewModel,
 ): Record<Official2014SectionName, string> {
+  const classes = viewModel.character.classProgression
+  const subclasses = classes.flatMap((entry) =>
+    entry.subclass
+      ? [classes.length === 1 ? entry.subclass : entry.name + ' — ' + entry.subclass]
+      : [],
+  )
   return {
     Equipment: viewModel.equipmentSummary,
-    'Features and Traits': withClassResourceText(
-      viewModel.classResourceRows,
-      viewModel.featuresSummary,
-    ),
+    'Features and Traits': [
+      subclasses.length &&
+        (subclasses.length === 1 ? 'Subclass: ' : 'Subclasses: ') + subclasses.join(', '),
+      withClassResourceText(viewModel.classResourceRows, viewModel.featuresSummary),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     // Keep player-selected feats visible when ancestry prose exceeds this fixed box.
     'Feat+Traits': [viewModel.featsSummary, viewModel.racialTraitsSummary]
       .filter(Boolean)

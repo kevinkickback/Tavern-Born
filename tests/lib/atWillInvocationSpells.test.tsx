@@ -451,6 +451,16 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
   )
   const transcribed = assign(ready, pick(ready, transcription, 'Augury'))
   const levelFive = atLevel(transcribed, 5)
+  const savedRitual = transcribed.managedClassSpellChoices?.find(
+    (row) => row.target.name === 'Augury',
+  )
+  if (!savedRitual) throw new Error('Missing saved transcription')
+  expect(() =>
+    assign(levelFive, {
+      ...pick(levelFive, savedRitual.slot, 'Animal Messenger'),
+      expected: { revision: savedRitual.revision, target: savedRitual.target },
+    }),
+  ).toThrow(/current class level/)
   const later = offer(levelFive)
   expect(() => assign(levelFive, pick(levelFive, later, 'Augury'))).toThrow(
     /owns that spell choice/,
@@ -505,6 +515,10 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
     for (const spell of ['Find Familiar', 'Augury', 'Water Breathing', ...bonusCantrips])
       expect(values.some((text) => text.includes(spell))).toBe(true)
     expect(values.some((text) => text.includes('Book of Shadows in hand'))).toBe(true)
+    if (template === '2014-official') {
+      expect(values).toContain('Augury (ritual only)')
+      expect(values).toContain('Comprehend Languages')
+    }
   }
 
   const cleared = fixture.select(expanded)

@@ -100,6 +100,7 @@ import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook
 import {
   readDeclaredInvocationCast,
   readFixedInvocationSpell,
+  readSupplementalInvocationCast,
 } from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
@@ -1543,7 +1544,8 @@ export function resolveClassChoiceOptions(
               (!leaf ||
                 (!readDeclaredInvocationCast(leaf) &&
                   !readDeclaredInvocationBook(leaf) &&
-                  !readFixedInvocationSpell(leaf)?.limited)))
+                  !readFixedInvocationSpell(leaf)?.limited &&
+                  !readSupplementalInvocationCast(leaf))))
           )
             return [
               {

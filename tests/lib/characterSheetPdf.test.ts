@@ -279,6 +279,28 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Ath).toBe('+6')
   })
 
+  test('prints a long subclass name without losing a multiclass entry in the official 2014 sheet', async () => {
+    const character = makeCharacterFixture({
+      originSystem: '2014',
+      classProgression: [
+        {
+          name: 'Barbarian',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Path of the Ancestral Guardian',
+          subclassSource: 'XGE',
+        },
+        { name: 'Fighter', source: 'PHB', levels: 1 },
+      ],
+    })
+    const bytes = await generateTestCharacterSheet(prepareViewModel(character), '2014-official')
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(form.getTextField('ClassLevel').getText()).toBe('Barbarian 3, Fighter 1')
+    expect(form.getTextField('Features and Traits').getText()?.replace(/\s+/gu, ' ')).toContain(
+      'Barbarian — Path of the Ancestral Guardian',
+    )
+  })
+
   test('2014 languages populate dedicated Language fields', () => {
     const character = makeCharacterFixture({
       proficiencies: {

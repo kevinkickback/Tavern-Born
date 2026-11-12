@@ -260,7 +260,9 @@ export function mapOfficial2014SpellPage(
   OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL.forEach((fieldNames, level) => {
     const rows = spellRows.filter((row) => (row.level === 'C' ? 0 : Number(row.level)) === level)
     fieldNames.forEach((fieldName, index) => {
-      textFields[fieldName] = rows[index]?.name ?? ''
+      const spell = rows[index]
+      const ritualOnly = spell?.castOnly && !spell.prepared && spell.castingTime === 'Ritual only'
+      textFields[fieldName] = spell ? spell.name + (ritualOnly ? ' (ritual only)' : '') : ''
       if (level > 0) {
         checkboxFields[`Check Box ${PREPARED_FIELDS_BY_LEVEL[level][index]}`] =
           rows[index]?.prepared ?? false

@@ -1,13 +1,17 @@
 import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
 import {
+  hasSupplementalInvocationSpellDeclaration,
   readDeclaredInvocationCast,
   readFixedInvocationSpell,
+  readSupplementalInvocationCast,
 } from '@/lib/5etools/declaredInvocationCasting'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
+  hasCurrentRevisedInvocationExtension,
   hasCurrentRevisedInvocationOption,
   isRevisedInvocationPoolId,
 } from '@/lib/5etools/warlockInvocationCantripSource'
+import { prereqPactToFull } from '@/lib/calculations/prerequisiteRules'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { OptionalFeatureLike } from '@/types/5etools'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -52,25 +56,35 @@ export function getDeclaredInvocationLeaf(
     !raw.featureOptionSourceConflict &&
     feature.featureType?.length === 1 &&
     feature.featureType[0] === 'EI' &&
-    hasCurrentRevisedInvocationOption(choice, catalogs, option)
+    (hasCurrentRevisedInvocationOption(choice, catalogs, option) ||
+      (readSupplementalInvocationCast(feature) &&
+        hasCurrentRevisedInvocationExtension(choice, catalogs)))
     ? feature
     : undefined
 }
 
 function readRequirement(feature: OptionalFeatureLike, owner: NormalizedCharacterChoice['owner']) {
+  const supplemental = readSupplementalInvocationCast(feature)
   const raw = feature.prerequisite
-  if (raw === undefined || (Array.isArray(raw) && !raw.length)) return { level: 1 }
+  if (raw === undefined || (Array.isArray(raw) && !raw.length))
+    return supplemental ? undefined : { level: 1 }
   if (!Array.isArray(raw) || raw.length !== 1) return undefined
   const clause = record(raw[0])
   const level = record(clause.level)
   const cls = record(level.class)
   const namedOwner =
     typeof cls.name === 'string' &&
-    typeof cls.source === 'string' &&
-    ((norm(cls.name) === 'warlock' && norm(cls.source) === 'xphb') ||
-      (norm(cls.name) === norm(owner.name) && norm(cls.source) === norm(owner.source)))
+    ((supplemental &&
+      norm(cls.name) === 'warlock' &&
+      (cls.source === undefined ||
+        (typeof cls.source === 'string' && norm(cls.source) === 'phb'))) ||
+      (typeof cls.source === 'string' &&
+        ((norm(cls.name) === 'warlock' && norm(cls.source) === 'xphb') ||
+          (norm(cls.name) === norm(owner.name) && norm(cls.source) === norm(owner.source)))))
   if (
-    !Object.keys(clause).every((key) => key === 'level' || key === 'optionalfeature') ||
+    !Object.keys(clause).every(
+      (key) => key === 'level' || key === 'optionalfeature' || (supplemental && key === 'pact'),
+    ) ||
     !Object.keys(level).every((key) => key === 'level' || key === 'class') ||
     !Object.keys(cls).every(
       (key) => key === 'name' || key === 'source' || key === 'visibleStats',
@@ -83,6 +97,18 @@ function readRequirement(feature: OptionalFeatureLike, owner: NormalizedCharacte
     level.level > 20
   )
     return undefined
+  if (supplemental && /\bBook of Shadows\b/i.test(supplemental.rules) && clause.pact !== 'Tome')
+    return undefined
+  if (supplemental && 'pact' in clause) {
+    if ('optionalfeature' in clause || typeof clause.pact !== 'string') return undefined
+    const pact = prereqPactToFull(clause.pact)
+    return pact !== clause.pact
+      ? {
+          level: level.level,
+          required: { entityType: 'optionalFeature' as const, name: pact, source: 'XPHB' },
+        }
+      : undefined
+  }
   if (!('optionalfeature' in clause)) return { level: level.level }
   const required = clause.optionalfeature
   if (
@@ -113,7 +139,15 @@ export function getDeclaredInvocationRequirement(
   const provider = getDeclaredInvocationLeaf(choice, rule.required, catalogs)
   const providerRule = provider && readRequirement(provider, choice.owner)
   // A single prerequisite-free or level-gated provider can support this direct dependency.
-  if (!provider || !providerRule || providerRule.required) return null
+  if (
+    !provider ||
+    !providerRule ||
+    providerRule.required ||
+    (readSupplementalInvocationCast(leaf) &&
+      norm(rule.required.name) === norm(prereqPactToFull('Tome')) &&
+      !readDeclaredInvocationBook(provider))
+  )
+    return null
   return {
     level: Math.max(rule.level, providerRule.level),
     required: {
@@ -129,15 +163,16 @@ function hasDeclaredInvocationRequirement(
   catalogs?: ClassChoiceFeatureCatalogs,
 ) {
   return candidates(option, catalogs).some(
-    ({ prerequisite }) =>
-      Array.isArray(prerequisite) &&
-      prerequisite.some((value) => {
-        const clause = record(value)
-        return (
-          'optionalfeature' in clause ||
-          (Object.keys(clause).length === 1 && 'class' in record(clause.level))
-        )
-      }),
+    (feature) =>
+      hasSupplementalInvocationSpellDeclaration(feature) ||
+      (Array.isArray(feature.prerequisite) &&
+        feature.prerequisite.some((value) => {
+          const clause = record(value)
+          return (
+            'optionalfeature' in clause ||
+            (Object.keys(clause).length === 1 && 'class' in record(clause.level))
+          )
+        })),
   )
 }
 
@@ -149,7 +184,8 @@ export function hasDeclaredInvocationSpells(
     (feature) =>
       readDeclaredInvocationCast(feature) ||
       readDeclaredInvocationBook(feature) ||
-      readFixedInvocationSpell(feature)?.limited,
+      readFixedInvocationSpell(feature)?.limited ||
+      hasSupplementalInvocationSpellDeclaration(feature),
   )
 }
 

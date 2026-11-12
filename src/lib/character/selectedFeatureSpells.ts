@@ -28,6 +28,7 @@ import {
 import {
   readDeclaredInvocationCast,
   readFixedInvocationSpell,
+  readSupplementalInvocationCast,
 } from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentSelectedClass } from '@/lib/5etools/earnedClassFeatureSource'
 import {
@@ -144,8 +145,13 @@ export function getSelectedFeatureCantripSetups(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
       const feature = candidates.length === 1 ? candidates[0] : undefined
-      if (isRevisedInvocationSelection(selection) && readDeclaredInvocationCast(feature)) return []
       const activeRoute = active.find((row) => row.selection === selection && row.option === option)
+      if (
+        isRevisedInvocationSelection(selection) &&
+        (readDeclaredInvocationCast(feature) ||
+          (activeRoute && readSupplementalInvocationCast(feature)))
+      )
+        return []
       if (
         activeRoute &&
         isInvocationPool(activeRoute.choice) &&
@@ -749,6 +755,7 @@ function getIndependentPreparedNames(character: Character, context?: ManagedClas
     context?.catalogs,
     { effectiveAbilityScores: context?.abilityScores, effectiveSpellProfiles: profiles },
     context?.spellsByKey,
+    context?.oathSpellSourceByKey,
   ).statuses.filter((row) => row.active && row.castOnly?.castingTime === 'Magic Action')
   return new Set(
     [
@@ -892,6 +899,11 @@ export function getSelectedFeatureCantripPool(
           if (filter && !filter.classes.length && !setup?.book && !setup?.useDeclaredSpellLists)
             return true
           const checked = auditSpellRouteMultiplicity([spell])[0]
+          if (transcription)
+            return (
+              checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+              !checked.classSpellRouteDiagnostics?.length
+            )
           return (
             !!checked.classSpellRouteSource &&
             ((!setup?.book && !setup?.useDeclaredSpellLists) ||

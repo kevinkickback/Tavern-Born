@@ -406,7 +406,8 @@ export function ManagedClassSpellsDialog({
               const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const arcana = getClericArcanaSpellRule(row.slot)
-              const kind = isInvocationRitualTranscriptionSlot(row.slot)
+              const transcription = isInvocationRitualTranscriptionSlot(row.slot)
+              const kind = transcription
                 ? 'Transcribed Ritual'
                 : isSelectedInvocationRitualSlot(row.slot)
                   ? 'Ritual Spell'
@@ -458,9 +459,11 @@ export function ManagedClassSpellsDialog({
                       )}
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openPicker(index)}>
-                        {row.target ? 'Change' : 'Choose'}
-                      </Button>
+                      {(!transcription || row.slot[3] === entry.levels) && (
+                        <Button size="sm" variant="outline" onClick={() => openPicker(index)}>
+                          {row.target ? 'Change' : 'Choose'}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"

@@ -1,5 +1,6 @@
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { OptionalFeatureLike } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
@@ -137,4 +138,54 @@ export function readFixedInvocationSpell(feature: OptionalFeatureLike | undefine
     return undefined
 
   return { reference, limited, rules }
+}
+
+const slotFreeCastClause =
+  /\byou can (?:also )?cast (?:the )?\{@spell [^}]+\}(?: at will,?| once(?: on yourself)?| spell, targeting a creature whose name is on the page,)? without (?:expending|using) a spell slot(?: and without using material components)?\./i
+
+/** Either catalog field can identify a fixed grant while the other is unavailable. */
+export function hasSupplementalInvocationSpellDeclaration(feature: OptionalFeatureLike) {
+  if (
+    !feature.source ||
+    norm(feature.source) === 'xphb' ||
+    !Array.isArray(feature.featureType) ||
+    !feature.featureType.includes('EI')
+  )
+    return false
+  const hasSchedule =
+    Array.isArray(feature.additionalSpells) &&
+    feature.additionalSpells.some((block) => {
+      const schedule = record(record(block).innate)._
+      return Array.isArray(schedule)
+        ? schedule.some((value) => typeof value === 'string')
+        : 'daily' in record(schedule)
+    })
+  const hasCastClause =
+    Array.isArray(feature.entries) &&
+    feature.entries.some((line) => typeof line === 'string' && slotFreeCastClause.test(line))
+  return hasSchedule || hasCastClause
+}
+
+/** Extending a revised pool does not revive an invocation with a declared newer printing. */
+export function readSupplementalInvocationCast(feature: OptionalFeatureLike | undefined) {
+  if (!feature || !feature.source || norm(feature.source) === 'xphb' || 'reprintedAs' in feature)
+    return undefined
+  const cast = readFixedInvocationSpell(feature)
+  const clause = cast?.rules.match(slotFreeCastClause)?.[0]
+  if (!cast || !clause) return undefined
+  if (
+    cast.limited &&
+    !(
+      /\b(?:once\b[^.!?]*without (?:expending|using) a spell slot|once you do so)\b/i.test(
+        cast.rules,
+      ) &&
+      /\b(?:regain the ability to do so when you finish|can't cast it in this way again until you finish) a long rest\b/i.test(
+        cast.rules,
+      )
+    )
+  )
+    return undefined
+  if (!cast.limited && !/\bat will\b/i.test(clause) && !/\bBook of Shadows\b/i.test(cast.rules))
+    return undefined
+  return cast
 }

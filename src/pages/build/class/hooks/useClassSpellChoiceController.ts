@@ -6,7 +6,10 @@ import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getArcaneDabbler, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
-import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  isInvocationRitualTranscriptionSlot,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
@@ -110,6 +113,10 @@ export function useClassSpellChoiceController(
         canSwap: false,
       }
       choices.set(slot[3], gain)
+      if (isInvocationRitualTranscriptionSlot(slot)) {
+        gain.hasTranscribedRituals = true
+        continue
+      }
       const savant = getSavantSpellbookGain(slot)
       if (savant) {
         gain.savantSpellbook ??= {

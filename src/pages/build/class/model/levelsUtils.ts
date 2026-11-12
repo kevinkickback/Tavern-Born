@@ -6,6 +6,7 @@ export interface SpellGain {
   maxSpellLevel: number
   canSwap: boolean
   canTranscribeRituals?: true
+  hasTranscribedRituals?: true
   savantSpellbook?: { name: string; count: number; maxSpellLevel: number }
   spellbookSpecialty?: { name: string; count: number }
 }
@@ -47,6 +48,7 @@ export function computeLevelDisplayData({
     earnedSpells &&
     (earnedSpells.canSwap ||
       earnedSpells.canTranscribeRituals ||
+      earnedSpells.hasTranscribedRituals ||
       countSpellGainChoices(earnedSpells) > 0)
       ? earnedSpells
       : undefined

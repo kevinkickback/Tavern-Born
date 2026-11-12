@@ -86,6 +86,7 @@ const allowedFields = new Set([
   'basicRules',
   'basicRules2024',
   'reprintedAs',
+  'isClassFeatureVariant',
   'featureType',
   'prerequisite',
   'entries',
