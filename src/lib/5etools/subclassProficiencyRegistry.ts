@@ -1,9 +1,14 @@
 import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { CONDITIONAL_PROFICIENCY_RULES } from './conditionalProficiencyRules'
+import retained from './retainedSubclassProficiencyCertificates.generated'
 import type { SubclassProficiencyCheckpoint } from './subclassProficiencyCertificates'
 import generated from './subclassProficiencyCertificates.generated'
 // The generator validates four-part owners. Inferred arrays do not preserve those tuples.
-export const SUBCLASS_PROFICIENCY_CHECKPOINT = generated as unknown as SubclassProficiencyCheckpoint
+export const SUBCLASS_PROFICIENCY_CHECKPOINT = {
+  ...generated,
+  features: [...generated.features, ...retained.features],
+  roots: [...generated.roots, ...retained.roots],
+} as unknown as SubclassProficiencyCheckpoint
 export const SUBCLASS_PROFICIENCY_PACKAGES = SUBCLASS_PROFICIENCY_CHECKPOINT.packages ?? []
 export const SUBCLASS_PROFICIENCY_ROOTS = [
   ...SUBCLASS_PROFICIENCY_CHECKPOINT.roots,

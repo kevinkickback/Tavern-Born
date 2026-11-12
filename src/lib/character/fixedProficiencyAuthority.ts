@@ -5,6 +5,7 @@ import {
   getClassProficiencyChoiceId,
 } from '@/lib/5etools/classProficiencyIdentity'
 import { getCurrentDirectFixedClassRules } from '@/lib/5etools/directFixedProficiencySource'
+import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   type FixedProficiencyRelation,
   getFixedProficiencyId,
@@ -13,11 +14,13 @@ import {
 import {
   type FixedProficiencyRule,
   fixedProficiencyRule,
+  getRetainedFixedClassCertificate,
 } from '@/lib/5etools/fixedProficiencyRules'
 import {
   getCurrentNativeSubclassGain,
   matchesNativeSubclassGain,
 } from '@/lib/5etools/nativeSubclassGain'
+import { matchesRetainedFirstSubclassGain } from '@/lib/5etools/ownedSubclassFeature'
 import { getSubclassProficiencyOwner } from '@/lib/5etools/subclassProficiencyCertificates'
 import { getCurrentSubclassProficiencyCertificate } from '@/lib/5etools/subclassProficiencySource'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
@@ -75,10 +78,20 @@ export function getCurrentFixedProficiencies(
           ...(trainingInactive && { trainingInactive }),
         })
     }
-    for (const rule of getCurrentDirectFixedClassRules(cls, catalogs))
+    const classOwner: [string, string] = [
+      cls.name.trim().toLowerCase(),
+      cls.source.trim().toLowerCase(),
+    ]
+    for (const rule of getCurrentDirectFixedClassRules(cls, catalogs)) {
+      if (
+        getRetainedFixedClassCertificate(classOwner, rule.target) &&
+        (!permitsClassRuleSource(character, cls.source) ||
+          !permitsClassRuleSource(character, rule.classSource))
+      )
+        continue
       push(
         {
-          owner: [cls.name.trim().toLowerCase(), cls.source.trim().toLowerCase()],
+          owner: classOwner,
           target: rule.target,
           level: rule.level,
         },
@@ -86,6 +99,7 @@ export function getCurrentFixedProficiencies(
         cls.name,
         cls.source,
       )
+    }
     if (!selected.subclass || !selected.subclassSource || !catalogs.subclassTargets) continue
     const owner = [cls.name, cls.source, selected.subclass, selected.subclassSource].map((value) =>
       value.trim().toLowerCase(),
@@ -110,11 +124,16 @@ export function getCurrentFixedProficiencies(
       const rule = fixedProficiencyRule(path.target, owner)
       if (!rule) continue
       if (rule.subclassGainPosition) {
-        const gain = getCurrentNativeSubclassGain(
-          cls,
-          rule.subclassGainPosition === 'at-level' ? path.level : undefined,
-        )
-        if (gain?.level !== path.level) continue
+        const validGain = rule.retainedSubclassGainTarget
+          ? permitsClassRuleSource(character, cls.source) &&
+            permitsClassRuleSource(character, selected.subclassSource) &&
+            permitsClassRuleSource(character, rule.classSource) &&
+            matchesRetainedFirstSubclassGain(cls, rule.retainedSubclassGainTarget, path.level)
+          : getCurrentNativeSubclassGain(
+              cls,
+              rule.subclassGainPosition === 'at-level' ? path.level : undefined,
+            )?.level === path.level
+        if (!validGain) continue
       }
       if (
         rule.languageFallback &&

@@ -32,6 +32,7 @@ import {
 } from '@/lib/5etools/favoredEnemyIdentity'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
 import { getFixedProficiencyId } from '@/lib/5etools/fixedProficiencyAddress'
+import { getRetainedFixedClassCertificate } from '@/lib/5etools/fixedProficiencyRules'
 import {
   decodeNaturalExplorerChoiceId,
   NATURAL_EXPLORER_GRANTS,
@@ -257,7 +258,24 @@ function buildOptionalClassFeatureActivity(
     )
       return false
     if (proficiency) {
-      const needed = classProficiencyRule(proficiency.target)?.domains.find(
+      const rule = classProficiencyRule(proficiency.target)
+      if (
+        (rule?.retainedSubclassGainTarget ||
+          getRetainedFixedClassCertificate(proficiency.owner, proficiency.target)) &&
+        [
+          owner[2],
+          ...(owner[0] === 'subclass' ? [owner[4]] : []),
+          proficiency.target.split('|')[3],
+          norm(row.owner.featureSource),
+        ].some(
+          (source) =>
+            !source ||
+            (allowed && !allowed.has(source)) ||
+            !getSourceCompatibility(source, character.originSystem ?? '2014').compatible,
+        )
+      )
+        return false
+      const needed = rule?.domains.find(
         (domain) => domain.domain === proficiency.domain,
       )?.requiresKnownLanguage
       if (needed) {

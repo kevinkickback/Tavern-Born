@@ -633,7 +633,11 @@ function prepareClassDocument(
     ),
     origin,
   )
-  const auditedClasses = auditDirectFixedClassDeclarations(classRecords, origin)
+  const auditedClasses = auditDirectFixedClassDeclarations(
+    classRecords,
+    origin,
+    preparedOwners?.classes,
+  )
   const classes = auditFixedLayerMultiplicity(
     auditedClasses.map((row, index) => {
       const preparedClass = preparedOwners?.classes[index]

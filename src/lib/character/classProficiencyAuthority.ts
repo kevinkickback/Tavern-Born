@@ -10,6 +10,7 @@ import {
   matchesNativeSubclassGain,
 } from '@/lib/5etools/nativeSubclassGain'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { matchesRetainedFirstSubclassGain } from '@/lib/5etools/ownedSubclassFeature'
 import {
   getSubclassProficiencyOwner,
   subclassProficiencyDigest,
@@ -118,11 +119,17 @@ export function getCurrentOwnedProficiencyCandidates(
         rule?.subclassGainTargets ??
         (rule?.subclassGainTarget ? [rule.subclassGainTarget] : undefined)
       if (rule?.subclassGainPosition) {
-        const gain = getCurrentNativeSubclassGain(
-          parents[0],
-          rule.subclassGainPosition === 'at-level' ? choice.level : undefined,
-        )
-        if (gain?.level !== choice.level) return []
+        const validGain = rule.retainedSubclassGainTarget
+          ? matchesRetainedFirstSubclassGain(
+              parents[0],
+              rule.retainedSubclassGainTarget,
+              choice.level,
+            )
+          : getCurrentNativeSubclassGain(
+              parents[0],
+              rule.subclassGainPosition === 'at-level' ? choice.level : undefined,
+            )?.level === choice.level
+        if (!validGain) return []
       }
       if (
         targets &&

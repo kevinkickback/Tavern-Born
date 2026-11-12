@@ -92,6 +92,18 @@ export function getDeclaredSubclassGains(cls: Pick<Class5e, 'classFeatures' | 'c
   })
 }
 
+/** A copied class can still declare the exact native first gain under its printed UID. */
+export function matchesRetainedFirstSubclassGain(cls: Class5e, target: string, level: number) {
+  const first = cls.classFeatureRefs?.find((ref) => ref.gainSubclassFeature)
+  return (
+    !cls._copy &&
+    !cls.sourceIdentityConflict &&
+    first?.level === level &&
+    getClassFeatureIdentity(first) === target &&
+    getDeclaredSubclassGains(cls)[0] === level
+  )
+}
+
 /** Resolve an exact reachable declaration while keeping selected and printed owners separate. */
 export function getOwnedSubclassFeature(
   cls: Class5e,

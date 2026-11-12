@@ -65,6 +65,7 @@ import type {
   OptionalClassFeatureOwner,
 } from '@/types/character'
 import {
+  getCopiedSubclassSheetFeature,
   getDeclaredSubclassStaticFeatures,
   getInheritedSubclassStaticFeatures,
 } from './declaredSubclassStaticFeatures'
@@ -561,6 +562,12 @@ export function getClassStaticFeatureSummaries(
   const progression = getCharacterClassEntries(character)
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
+    const copiedRule = getCopiedSubclassSheetFeature(character, entry, catalogs)
+    if (copiedRule)
+      return featureSummary(copiedRule).map((summary) => ({
+        ...summary,
+        replaces: savedClassLabel(character, entry, copiedRule),
+      }))
     const inheritedRules = (cls: Class5e) =>
       getInheritedSubclassStaticFeatures(character, cls, entry, catalogs)
     if (entry === sorcerer?.owner) {

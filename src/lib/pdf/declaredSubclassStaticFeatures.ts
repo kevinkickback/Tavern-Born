@@ -18,12 +18,16 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { getOwnedSubclassFeature } from '@/lib/5etools/ownedSubclassFeature'
 import {
   getPsaKnowledgeIntroDependency,
   isPsaKnowledgeDependency,
 } from '@/lib/5etools/psaKnowledgeFeatures'
 import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
-import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, SubclassFeature } from '@/types/5etools'
@@ -253,6 +257,69 @@ function fixedRuleEntries(entries: readonly unknown[]): unknown[] {
     }
     return Array.isArray(row.items) ? [{ ...row, items: fixedRuleEntries(row.items) }] : [entry]
   })
+}
+
+const mysticBrewTarget = 'subclass-feature|mystic brew|monk|xphb|mystic brews|wow|6|wow'
+const copiedSheetRules = new Map([
+  [getFeatureOwnerKey('Monk', 'WoW', 'Warrior of Mystic Brews', 'WoW'), mysticBrewTarget],
+  [
+    getFeatureOwnerKey('Priest', 'WoW', 'Shadow Domain', 'WoW'),
+    'subclass-feature|vampiric embrace|cleric|xphb|shadow|wow|17|wow',
+  ],
+  [
+    getFeatureOwnerKey('Death Knight', 'WoW', 'Oath of the Ebon Blade', 'WoW'),
+    'subclass-feature|aspect of the horsemen|death knight|wow|ebon blade|wow|20|wow',
+  ],
+])
+
+export function getCopiedSubclassSheetFeature(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  if (
+    !entry.subclass ||
+    !entry.subclassSource ||
+    !permitsClassRuleSource(character, entry.subclassSource)
+  )
+    return undefined
+  const key = getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource)
+  const target = copiedSheetRules.get(key)
+  if (!target) return undefined
+  const cls = getCurrentSelectedClass(character, entry, catalogs)
+  const selected = cls?.subclasses?.filter((row) =>
+    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
+  )
+  if (!cls || selected?.length !== 1 || !catalogs.subclassTargets) return undefined
+  const scoped = scopeClassChoiceFeatureCatalogs(catalogs, key)
+  const earned = getOwnedSubclassFeature(cls, selected[0], target, scoped)
+  if (
+    !earned ||
+    earned.level > entry.levels ||
+    !permitsClassRuleSource(character, earned.feature.source) ||
+    !permitsClassRuleSource(character, earned.feature.classSource)
+  )
+    return undefined
+  const entries = fixedRuleEntries(earned.feature.entries ?? [])
+  if (target === mysticBrewTarget) {
+    const enhancement = getOwnedSubclassFeature(
+      cls,
+      selected[0],
+      'subclass-feature|enhancing a magical beverage|monk|xphb|mystic brews|wow|6|wow',
+      scoped,
+    )
+    if (
+      enhancement?.level === earned.level &&
+      enhancement.refs.length === 2 &&
+      decodeOptionalDeclaration(enhancement.refs[0], 'subclassFeature')?.target === target
+    )
+      entries.push({
+        type: 'entries',
+        name: enhancement.feature.name,
+        entries: fixedRuleEntries(enhancement.feature.entries ?? []),
+      })
+  }
+  return { ...earned.feature, entries }
 }
 
 /** Resolve fixed rules from an exact, source-declared classic subclass on a revised class. */

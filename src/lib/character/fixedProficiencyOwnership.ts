@@ -150,6 +150,11 @@ export function grantFixedProficiencies(
       for (const name of names) {
         if (domain === 'tools') {
           if (!tools.has(name)) continue
+          if (
+            owner.rule.trainingToolIfUntrained &&
+            proficiencies.tools.some((value) => canonicalProficiencyName(value) === name)
+          )
+            continue
           if (owner.owner.length === 4 && owner.rule.trainingToolFallbacks?.includes(name)) {
             const [className, classSource, subclassName, subclassSource] = owner.owner
             const id = getClassProficiencyChoiceId(

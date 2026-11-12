@@ -210,7 +210,7 @@
     },
     {
       "file": "src/lib/5etools/classProficiencyRules.ts",
-      "sha256": "39aa5596cc05661ddb1368950e3c55f8dbc95dffb567444c91007d88ba615a87"
+      "sha256": "d8bcd47128db64d6e50c797b5d4e2e6f84077e7a7f1e3fb1eb82399ab3bf8661"
     },
     {
       "file": "src/lib/5etools/classReference.ts",
@@ -274,7 +274,7 @@
     },
     {
       "file": "src/lib/5etools/directFixedProficiencySource.ts",
-      "sha256": "0cea3f26ab7dca2fa73d22593c8b8d4e27800bb65cc98f3f1e39a10edf88ffaf"
+      "sha256": "6b8074a7b549978776a7eb752040e86f3b51d1f4db59b3e07b05665ebe860eed"
     },
     {
       "file": "src/lib/5etools/directSubclassSource.ts",
@@ -354,11 +354,11 @@
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.generated.json",
-      "sha256": "850b55dc24977d3f53239c1ecaff6268b082b8c29e0f1b71f71b7c64782f1bd7"
+      "sha256": "34c6cd3d1bed9531b37f8e9d4dea9e517a7b7e1e65867e469211fc5a2e1ea63d"
     },
     {
       "file": "src/lib/5etools/fixedProficiencyRules.ts",
-      "sha256": "c29c7f28467b94c7cb66270ac46e8763ce74195b3454ea34887a3383ade62db5"
+      "sha256": "2950dc99ddd9e47706ee05b7a162e0c574ca31b4a5bc62445d2d1a979bf5bacb"
     },
     {
       "file": "src/lib/5etools/fixedProficiencySource.ts",
@@ -478,11 +478,11 @@
     },
     {
       "file": "src/lib/5etools/ownedSubclassFeature.ts",
-      "sha256": "ffd15d27efbfc1ff73aba15c34449bbba93d0f59293691426b3574b4dc2c3d85"
+      "sha256": "64e7b612f5ed762995e89b95195eb192484cea011bb7066647dab3b23b4a9043"
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "d1b80e0bf31ddfa8adfdfaae58160b7ade4b3f7100debe6873c3d2df281206f3"
+      "sha256": "f6609c486c1a3df33cfe79e25553d245838051d70356d7d2c7d577a8078fd657"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -531,6 +531,10 @@
     {
       "file": "src/lib/5etools/requiredSetupDiagnostics.ts",
       "sha256": "49ff102f506302c1fb255720b4583f5dd1b3c6da5ae180e022f347168573690a"
+    },
+    {
+      "file": "src/lib/5etools/retainedSubclassProficiencyCertificates.generated.ts",
+      "sha256": "528bc3b38f969aec4de2b09f78e6f85e66d546ef26a4fb0755d4a112f9aab579"
     },
     {
       "file": "src/lib/5etools/revisedElementalAffinity.ts",
@@ -630,11 +634,11 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRegistry.ts",
-      "sha256": "746c13ff7121b24e62a7a70db97f0d07bb284a6012396a93df0ad4290e516bab"
+      "sha256": "c417e0acaeada9fba1ba9b75be0071e5f3062f33c8482054f2d50d98b8998168"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
-      "sha256": "69a3e05dec9a91fbcdc49c1699ac52417726a0b7253b83f0d977b091bb96990c"
+      "sha256": "faa137cf7f20f11d78ad701d249fcccc10ac45833b7976ebc239e960c31b4dc6"
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",

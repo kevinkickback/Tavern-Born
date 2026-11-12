@@ -138,6 +138,7 @@ import {
   NATURAL_EXPLORER_TARGET,
 } from '@/lib/5etools/naturalExplorerIdentity'
 import { getNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
+import { getOwnedSubclassFeature } from '@/lib/5etools/ownedSubclassFeature'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
 import {
   getRevisedAffinitySetup,
@@ -1694,9 +1695,34 @@ export function resolveClassChoiceOptions(
                 filter.categories[0] === 'FS'
         })
       : []
-  const currentStyle = currentStyles.find(
-    (row) => row.id === choice.id && row.level <= (styleOwner?.levels ?? 0),
-  )
+  const retainedStyle =
+    pair?.retainedAdditionalTarget && choice.id === pair.additional
+      ? pair.retainedAdditionalTarget
+      : undefined
+  const retainedFeature =
+    retainedStyle && styleClass && styleSubclass
+      ? getOwnedSubclassFeature(styleClass, styleSubclass, retainedStyle, catalogs)
+      : undefined
+  const baseStyle = retainedStyle && currentStyles.find((row) => row.id === pair?.base)
+  const retainedStyleVerified =
+    !retainedStyle ||
+    (!!character &&
+      !!styleSubclass &&
+      retainedFeature?.level === choice.level &&
+      [
+        choice.owner.source,
+        styleSubclass.source,
+        retainedFeature.feature.classSource,
+        retainedFeature.feature.source,
+      ].every((source) => permitsClassRuleSource(character, source)) &&
+      retainedFeature.feature.entries?.length === 1 &&
+      retainedFeature.feature.entries[0] ===
+        'You gain another {@filter Fighting Style feat|feats|category=FS} of your choice.' &&
+      !!baseStyle &&
+      !!getCurrentClassChoiceDeclaration(baseStyle, catalogs))
+  const currentStyle =
+    retainedStyleVerified &&
+    currentStyles.find((row) => row.id === choice.id && row.level <= (styleOwner?.levels ?? 0))
   const savedStyleKeys = pair ? new Set(saved.map(getClassChoiceOptionKey)) : undefined
   const earnedStyleKeys = pair
     ? new Set(
@@ -1714,6 +1740,10 @@ export function resolveClassChoiceOptions(
       const rows = styleCandidates.get(key)
       if (
         option.reference.source?.trim() &&
+        (!retainedStyle ||
+          (currentStyle &&
+            character &&
+            permitsClassRuleSource(character, option.reference.source))) &&
         (!character || !styleClasses || currentStyle) &&
         (!savedStyleKeys.has(key) || earnedStyleKeys?.has(key)) &&
         rows?.length === 1 &&
