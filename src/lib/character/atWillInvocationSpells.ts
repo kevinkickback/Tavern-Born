@@ -65,7 +65,7 @@ export function getAtWillInvocationSpellStatuses(
         : undefined
       const spell = resolved ? auditSpellRouteMultiplicity([resolved])[0] : undefined
       const exactSpell =
-        spell?.level === 1 &&
+        spell?.level === contract.spellLevel &&
         permitted(allowed, spell.source) &&
         getSpellReferenceKey(spell.name, spell.source) ===
           getSpellReferenceKey(contract.grant.spellName) &&

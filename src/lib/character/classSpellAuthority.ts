@@ -7,13 +7,13 @@ import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
-import { hasRevisedInheritedDomainSpells } from '@/lib/5etools/legacyClericDomainSpells'
 import {
   divineSoul,
   getCurrentDivineMagic,
   getLegacySorcererSpec,
 } from '@/lib/5etools/legacySorcererSubclassRules'
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
+import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { hasWarlockPatronSpellConfiguration } from '@/lib/5etools/warlockPatronConfigurations'
@@ -271,7 +271,15 @@ export function currentClasses(character: Character, context?: ManagedClassSpell
       subclasses: row.subclasses?.filter(
         (subclass) =>
           permitted(allowed, subclass.source) ||
-          (subclass.source === 'PHB' && hasRevisedInheritedDomainSpells(row, subclass)),
+          // Retained subclasses are selectable under 2024 rules. Their spell grants and
+          // individual spell sources still require the usual authority.
+          (character.originSystem === '2024' &&
+            !subclass.sourceIdentityConflict &&
+            subclass.className === row.name &&
+            subclass.classSource === row.source &&
+            XPHB_LEGACY_SUBCLASS_KEYS.has(
+              [row.name, row.source, subclass.name, subclass.source].join('|'),
+            )),
       ),
     }))
 }

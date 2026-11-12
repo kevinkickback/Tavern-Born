@@ -18,7 +18,17 @@ const classicPool = 'class:warlock|phb|choice:eldritch-invocations|2'
 
 // The innate spell token does not encode self-only or component restrictions.
 // Certify the complete native text and retain it as a static rule reference.
-const contracts = [
+type AtWillInvocationRule = {
+  name: string
+  spell: string
+  phb: string
+  xphb?: string
+  spellLevel?: number
+  classicMinimum?: number
+  revisedMinimum?: number
+}
+
+const contracts: readonly AtWillInvocationRule[] = [
   {
     name: 'Armor of Shadows',
     spell: 'Mage Armor',
@@ -40,7 +50,33 @@ const contracts = [
     xphb: '4984396dfa2b8078e5b96e0a18dd82cdfaca4e9c2606af0a2573e6adf244183b',
     revisedMinimum: 2,
   },
-] as const
+  {
+    name: 'Ascendant Step',
+    spell: 'Levitate',
+    spellLevel: 2,
+    classicMinimum: 9,
+    revisedMinimum: 5,
+    phb: '7993029811dda17983cc20320f7410780705a59dc4851f874ee650e7ad5c1f6d',
+    xphb: '3a87576e311d27a12a8c9c7e9bef08c37411449448e5dd3596fa00e383444171',
+  },
+  {
+    name: 'Beast Speech',
+    spell: 'Speak with Animals',
+    phb: '8186d37da2b7329b686f2bbbc45fa4ad841d1313505ab1fa7e9501c500c0fe87',
+  },
+  {
+    name: 'Eldritch Sight',
+    spell: 'Detect Magic',
+    phb: '3eea0d667a2a44e53a108d6b2c87b94bc8c01d579463c04b075985ec435153e4',
+  },
+  {
+    name: 'Fiendish Vigor',
+    spell: 'False Life',
+    phb: '8ebb742380ef257a36beac773b38a0acadc3b0f568a9a5f2511a47837b277646',
+    xphb: 'c2617fb4c715f0ea3e2764a8a6d4f7020153edec85fcae0e5bf9d2ecbf9b992b',
+    revisedMinimum: 2,
+  },
+]
 const allowedFields = new Set([
   'name',
   'source',
@@ -55,7 +91,6 @@ const allowedFields = new Set([
   'entries',
   'additionalSpells',
 ])
-const revisedWarlockLevel2 = 'fe50f2dc7e1abb2e025f9bb324f1a5ad74a38925e033723a593925704c94dd7f'
 
 export function isInvocationPoolId(id: string): boolean {
   return id === classicPool || isRevisedInvocationPoolId(id)
@@ -77,7 +112,7 @@ export function isRevisedAtWillInvocationOption(option: NormalizedChoiceOptionRe
   return (
     option.entityType === 'optionalFeature' &&
     norm(option.source) === 'xphb' &&
-    contracts.some((row) => norm(row.name) === norm(option.name))
+    contracts.some((row) => row.xphb && norm(row.name) === norm(option.name))
   )
 }
 
@@ -118,31 +153,53 @@ function readAtWillInvocation(
     return undefined
 
   const rule = contracts.find((candidate) => norm(candidate.name) === norm(feature.name))
+  const digest = rule?.[source]
+  const minimumLevel = source === 'phb' ? (rule?.classicMinimum ?? 2) : rule?.revisedMinimum
   if (
     !rule ||
+    !digest ||
+    !minimumLevel ||
     !hasFeatureSourceShape(feature, allowedFields) ||
     !Array.isArray(feature.featureType) ||
     feature.featureType.length !== 1 ||
     feature.featureType[0] !== 'EI' ||
     !Array.isArray(feature.entries) ||
-    getFeatureSourceDigest(feature.entries, false) !== rule[source]
+    getFeatureSourceDigest(feature.entries, false) !== digest
   )
     return undefined
 
-  const minimumLevel = source === 'phb' ? 2 : rule.revisedMinimum
-  const requiredPrerequisite = source === 'xphb' && minimumLevel === 2
+  const requiredPrerequisite =
+    source === 'phb' ? rule.classicMinimum !== undefined : minimumLevel > 1
+  const expectedPrerequisite = requiredPrerequisite
+    ? [
+        {
+          level: {
+            level: minimumLevel,
+            class: {
+              name: 'Warlock',
+              ...(source === 'xphb' && { source: 'XPHB', visibleStats: true }),
+            },
+          },
+        },
+      ]
+    : undefined
   if (
-    requiredPrerequisite
-      ? getFeatureSourceDigest([feature.prerequisite], false) !== revisedWarlockLevel2
+    expectedPrerequisite
+      ? getFeatureSourceDigest([feature.prerequisite], false) !==
+        getFeatureSourceDigest([expectedPrerequisite], false)
       : feature.prerequisite !== undefined
   )
     return undefined
-
   const token = rule.spell.toLowerCase() + (source === 'xphb' ? '|xphb' : '')
   if (JSON.stringify(feature.additionalSpells) !== JSON.stringify([{ innate: { _: [token] } }]))
     return undefined
   const grant = parseAdditionalSpellBlocks(feature.additionalSpells)[0].grants[0]
-  return { reference: formatSpellReference(rule.spell, source.toUpperCase()), grant, minimumLevel }
+  return {
+    reference: formatSpellReference(rule.spell, source.toUpperCase()),
+    grant,
+    minimumLevel,
+    spellLevel: rule.spellLevel ?? 1,
+  }
 }
 
 function getInvocationLeaf(
