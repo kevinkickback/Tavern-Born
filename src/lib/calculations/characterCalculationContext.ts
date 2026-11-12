@@ -46,6 +46,7 @@ import {
   getMysticImmortalDurability,
   isMysticJourneyOwner,
 } from '@/lib/5etools/mysticJourneyRules'
+import { getRetainedRankedExpansion } from '@/lib/5etools/retainedSubclassSpells'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { getScionResistance } from '@/lib/5etools/rogueScion'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
@@ -458,8 +459,21 @@ export function createCharacterCalculationContext(
     catalogs: primaryLookups.classChoiceFeatureCatalogs,
     spellsByKey: primaryLookups.spellsByKey,
     oathSpellSourceByKey: rawLookups.spellsByKey,
-    artificerSpellReprints:
-      character.originSystem === '2024' && character.classProgression.some(isTceArtificer)
+    classicSpellReprints:
+      character.originSystem === '2024' &&
+      character.classProgression.some(
+        (entry) =>
+          isTceArtificer(entry) ||
+          findClassReference(
+            entry,
+            primaryLookups.classChoiceFeatureCatalogs?.classes,
+          )?.subclasses?.some(
+            (subclass) =>
+              findClassReference({ name: entry.subclass, source: entry.subclassSource }, [
+                subclass,
+              ]) && getRetainedRankedExpansion(subclass),
+          ),
+      )
         ? getClassicSpellReprints(rawLookups.spellsByKey)
         : undefined,
     currentRaceResolution: resolveRaceReference(

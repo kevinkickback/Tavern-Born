@@ -108,8 +108,8 @@ export function ensureSpellProfiles(
     availableSpellReferences?: ReadonlySet<string>
     visibleSpellLevels?: ReadonlyMap<string, number>
     classChoiceFeatureCatalogs?: ClassChoiceFeatureCatalogs
-    oathReprints?: ReadonlyMap<string, number | undefined>
-    artificerSpellReprints?: ArtificerSpellReprints
+    oathReprints?: Pick<ReadonlyMap<string, number | undefined>, 'get'>
+    classicSpellReprints?: ArtificerSpellReprints
     includedDomainReprints?: ReadonlyMap<string, number | undefined>
   },
 ): SpellProfile[] {
@@ -135,7 +135,7 @@ export function ensureSpellProfiles(
       spells: options?.visibleSpellLevels,
       character,
       catalogs: options?.classChoiceFeatureCatalogs,
-      artificerSpellReprints: options?.artificerSpellReprints,
+      classicSpellReprints: options?.classicSpellReprints,
     })
     if (
       options?.preserveUnavailableClassProfiles &&

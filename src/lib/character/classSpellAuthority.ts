@@ -15,7 +15,10 @@ import {
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
 import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
-import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
+import {
+  auditSpellRouteMultiplicity,
+  hasUniqueSpellRouteSource,
+} from '@/lib/5etools/spellRouteSources'
 import { hasWarlockPatronSpellConfiguration } from '@/lib/5etools/warlockPatronConfigurations'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -33,7 +36,7 @@ export interface ManagedClassSpellContext {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   /** Unfiltered classic producers prove inherited oath reprints. Grants still require a visible target. */
   oathSpellSourceByKey?: Readonly<Record<string, Spell5e>>
-  artificerSpellReprints?: ArtificerSpellReprints
+  classicSpellReprints?: ArtificerSpellReprints
   abilityScores?: AbilityScores
   /** Current non-feature spell providers used to qualify selected feature grants. */
   independentSpellProfiles?: readonly SpellProfile[]
@@ -173,7 +176,7 @@ export function hasCurrentClassSpellListRoute(
     owner[2] === 'tce' &&
     checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
     permitted(allowed, entry.source) &&
-    getArtificerReprintListRoutes(spell, context.artificerSpellReprints).some(
+    getArtificerReprintListRoutes(spell, context.classicSpellReprints).some(
       (route) =>
         route[3] === 'artificer' &&
         route[4] === 'tce' &&
@@ -185,7 +188,7 @@ export function hasCurrentClassSpellListRoute(
   if (options.directOnly) return false
   if (
     options.expandedAtGain?.get(getSpellReferenceKey(spell.name, spell.source)) === spell.level &&
-    checked.classSpellRouteSource?.input.targetOccurrences.length === 1
+    hasUniqueSpellRouteSource(spell)
   )
     return true
   const currentParent = context.catalogs?.classes?.filter(

@@ -76,6 +76,7 @@ import {
   getRevisedRangerSubclassSpells,
 } from './rangerSubclassSpells'
 import {
+  getRetainedExpandedSubclassSpells,
   getRetainedSubclassSpellGrants,
   isRevisedRetainedSubclassSpellOwner,
 } from './retainedSubclassSpells'
@@ -115,7 +116,7 @@ export function hasCurrentSubclassSpellGrant(
   grant: SubclassSpellGrant,
   references: { has(reference: string): boolean } | undefined,
   spellLevels: ReadonlyMap<string, number> | undefined,
-  oathReprints?: ReadonlyMap<string, number | undefined>,
+  oathReprints?: Pick<ReadonlyMap<string, number | undefined>, 'get'>,
   includedDomainReprints?: ReadonlyMap<string, number | undefined>,
   exactSpell?: Spell5e,
 ) {
@@ -162,7 +163,7 @@ export function getEarnedSubclassSpellGrants(
     spells?: ReadonlyMap<string, number>
     character?: Character
     catalogs?: ClassChoiceFeatureCatalogs
-    artificerSpellReprints?: ArtificerSpellReprints
+    classicSpellReprints?: ArtificerSpellReprints
   },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
@@ -458,6 +459,14 @@ export function getEarnedSubclassSpellGrants(
         : blocks
     const grants = [
       ...parseSubclassSpells(unambiguous, classLevel),
+      ...getRetainedExpandedSubclassSpells(
+        classData,
+        subclasses[0],
+        classLevel,
+        character,
+        scoped,
+        landContext?.classicSpellReprints,
+      ),
       ...resourceCasts,
       ...getLimitedSubclassCasts(
         classData,
@@ -477,7 +486,7 @@ export function getEarnedSubclassSpellGrants(
         classData,
         subclasses[0],
         artificerGrants,
-        landContext.artificerSpellReprints,
+        landContext.classicSpellReprints,
       )
     if (alchemist) return artificerGrants
     if (norm(entry.name) === 'cleric') {

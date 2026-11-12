@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
   getBaseCharacterMovement,
   getEffectiveCharacterMovement,
 } from '@/lib/calculations/movement'
 import { getRacialSourceDisplayName } from '@/lib/calculations/raceDisplay'
-import { type MovementSettings, resolveMovementSettings } from '@/lib/calculations/statSettings'
+import { getMovementSettingsPatch, type MovementSettings } from '@/lib/calculations/statSettings'
 import { useCharacterStore } from '@/store/characterStore'
 import type { MovementAdjustment } from '@/types/character'
 
@@ -29,6 +30,21 @@ export function useMovement() {
     [character],
   )
 
+  const previewMovementSettings = useCallback(
+    (settings: MovementSettings) => {
+      if (!character) return fallbackMovement
+      const draft = { ...character, ...getMovementSettingsPatch(settings) }
+      if (!calculationContext) return getEffectiveCharacterMovement(draft)
+      const { primary, raw, rawItemsAuthoritative } = calculationContext.lookups
+      return createCharacterCalculationContext(
+        draft,
+        primary,
+        rawItemsAuthoritative ? raw : { ...raw, itemLookup: undefined },
+      ).movement
+    },
+    [character, calculationContext, fallbackMovement],
+  )
+
   return {
     baseMovement,
     baseMovementSourceLabel: getRacialSourceDisplayName(character, baseMovement.source),
@@ -36,21 +52,10 @@ export function useMovement() {
     adjustments: character?.movementAdjustments ?? EMPTY_ADJUSTMENTS,
     overrides: character?.movementOverrides ?? EMPTY_OVERRIDES,
     hoverOverride: character?.movementHoverOverride,
-    previewMovementSettings: (settings: MovementSettings) =>
-      character
-        ? resolveMovementSettings(
-            character,
-            settings,
-            calculationContext?.effects.sourceDeclarations,
-          )
-        : fallbackMovement,
+    previewMovementSettings,
     saveMovementSettings: (settings: MovementSettings) => {
       if (!character) return
-      updateCharacter(character.id, {
-        movementAdjustments: settings.adjustments,
-        movementOverrides: settings.overrides,
-        movementHoverOverride: settings.hoverOverride,
-      })
+      updateCharacter(character.id, getMovementSettingsPatch(settings))
     },
   }
 }

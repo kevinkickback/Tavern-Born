@@ -1,10 +1,16 @@
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
-import { beforeAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
+import { parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
+import { getRetainedRankedExpansion } from '@/lib/5etools/retainedSubclassSpells'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
+import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import {
   getCharacterClassChoices,
   resolveClassChoiceOptions,
@@ -19,19 +25,25 @@ import {
 } from '@/lib/character/commands/classCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { resolveProficiencyChoiceCommand } from '@/lib/character/commands/featCommands'
+import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
   getDeclaredInvocationRequirement,
   hasDeclaredInvocationSpells,
 } from '@/lib/character/declaredInvocationPrerequisites'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { CHARACTER_SHEET_TEMPLATES } from '@/lib/pdf/characterSheetTemplates'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
 import { getImplicitSource } from '@/lib/sourcePresets'
-import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Spell5e, Subclass5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 import {
   getStandardJourneyCatalog,
@@ -61,6 +73,17 @@ const classes = [
   'Warlock',
   'Wizard',
 ]
+
+const inheritedRules = [
+  ['Bard', 'College of Spirits', 'VRGR', 'Spiritual Focus', 'Spirit Session'],
+  ['Sorcerer', 'Shadow Magic', 'XGE', 'Strength of the Grave', 'Hound of Ill Omen'],
+  ['Warlock', 'The Undead', 'VRGR', 'Form of Dread', 'Grave Touched'],
+  ['Wizard', 'School of Conjuration', 'PHB', 'Minor Conjuration', 'Benign Transposition'],
+  ['Wizard', 'School of Enchantment', 'PHB', 'Hypnotic Gaze', 'Instinctive Charm'],
+  ['Wizard', 'School of Necromancy', 'PHB', 'Grim Harvest', 'Undead Thralls'],
+  ['Wizard', 'School of Transmutation', 'PHB', 'Minor Alchemy', "Transmuter's Stone"],
+  ['Wizard', 'Bladesinging', 'TCE', 'Bladesong', 'Extra Attack'],
+] as const
 
 function reopen(character: Character) {
   return characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
@@ -100,24 +123,40 @@ async function verifyJourneyExport(
   subclass: Subclass5e,
 ) {
   const view = createCharacterSheetViewModel(character, data.raw, data.primary)
-  const template = data.edition === '2014' ? '2014-official' : '2024-official'
-  const pdf = await PDFDocument.load(
-    await generateTestCharacterSheet(view, template, { text: { overflow: 'notes' } }),
-  )
-  const form = pdf.getForm()
-  const text = form
-    .getFields()
-    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-    .join('\n')
-    .replace(/\s+/gu, ' ')
-  if (data.edition === '2014') {
-    expect(form.getTextField('ClassLevel').getText()).toBe(cls.name + ' 20')
-  } else {
-    expect(form.getTextField('Text_4').getText()).toBe(cls.name)
-    expect(form.getTextField('Text_6').getText()).toBe('20')
+  for (const template of CHARACTER_SHEET_TEMPLATES.filter(
+    ({ edition }) => edition === data.edition,
+  )) {
+    const pdf = await PDFDocument.load(
+      await generateTestCharacterSheet(view, template.id, { text: { overflow: 'notes' } }),
+    )
+    const form = pdf.getForm()
+    const text = form
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+      .join('\n')
+      .replace(/\s+/gu, ' ')
+    if (template.id === '2014-official') {
+      expect(form.getTextField('ClassLevel').getText(), template.id).toBe(`${cls.name} 20`)
+    } else if (template.id === '2014-custom') {
+      expect(form.getTextField('Class and Levels').getText(), template.id).toContain(
+        `${cls.name} 20`,
+      )
+    } else {
+      expect(form.getTextField('Text_4').getText(), template.id).toBe(cls.name)
+      expect(form.getTextField('Text_6').getText(), template.id).toBe('20')
+    }
+    expect(text, template.id).toContain(subclass.name)
+    const rules =
+      data.edition === '2024' &&
+      inheritedRules.find(
+        ([name, subclassName, source]) =>
+          name === cls.name && subclassName === subclass.name && source === subclass.source,
+      )
+    if (rules)
+      for (const rule of rules.slice(3))
+        expect(text.replace(/’/gu, "'"), template.id).toContain(rule)
+    for (const spell of view.spellRows) expect(text, template.id).toContain(spell.name)
   }
-  expect(text).toContain(subclass.name)
-  for (const spell of view.spellRows) expect(text).toContain(spell.name)
 }
 
 async function exerciseJourney(data: StandardJourneyCatalog, cls: Class5e, subclass: Subclass5e) {
@@ -316,19 +355,206 @@ async function exerciseJourney(data: StandardJourneyCatalog, cls: Class5e, subcl
   ).toBe(false)
 }
 
-describe.skipIf(!hasCatalog)('Standard supplemental subclass journeys', () => {
-  let catalogs: Record<'2014' | '2024', StandardJourneyCatalog>
-  beforeAll(async () => {
-    const data = await loadStandardJourneyData()
-    catalogs = {
-      '2014': getStandardJourneyCatalog(data, '2014'),
-      '2024': getStandardJourneyCatalog(data, '2024'),
-    }
-  }, 60_000)
+const standardData = hasCatalog ? await loadStandardJourneyData() : undefined
 
-  test('covers the supplemental roster in both editions', () => {
-    expect(catalogs['2014'].paths).toHaveLength(66)
-    expect(catalogs['2024'].paths).toHaveLength(61)
+describe('Standard subclass journeys', () => {
+  if (!standardData) {
+    test.skip('requires the configured local sourcebooks', () => {})
+    return
+  }
+  const catalogs = {
+    '2014': getStandardJourneyCatalog(standardData, '2014'),
+    '2024': getStandardJourneyCatalog(standardData, '2024'),
+  }
+
+  test('covers the configured player roster in both editions', () => {
+    expect(catalogs['2014'].paths).toHaveLength(106)
+    expect(catalogs['2024'].paths).toHaveLength(109)
+    for (const { paths } of Object.values(catalogs))
+      expect([...new Set(paths.map(({ cls }) => cls.name))].sort()).toEqual(classes)
+  })
+
+  test('2024 inherited subclass rules follow earned levels and the selected source', () => {
+    const data = catalogs['2024']
+    for (const [name, subclass, subclassSource, first, later] of inheritedRules) {
+      const create = (levels: number, allowedSources = data.sources) =>
+        createEmptyCharacter({
+          name: 'Standard Inherited PDF',
+          originSystem: '2024',
+          allowedSources,
+          classProgression: [{ name, source: 'XPHB', levels, subclass, subclassSource }],
+        })
+      const summarize = (character: Character) =>
+        createCharacterSheetViewModel(
+          character,
+          data.raw,
+          data.primary,
+        ).declaredClassFeatureSummaries?.map((summary) => summary.compactText)
+      expect(summarize(create(2)), subclass).not.toContain(first)
+      expect(summarize(create(3)), subclass).toContain(first)
+      expect(summarize(create(5)), subclass).not.toContain(later)
+      expect(summarize(create(6)), subclass).toContain(later)
+      const narrowed = create(6, ['XPHB'])
+      const saved = reopen(narrowed)
+      if (subclassSource === 'PHB') expect(summarize(narrowed), subclass).toContain(later)
+      else expect(summarize(narrowed), subclass).not.toContain(first)
+      expect(narrowed).toEqual(saved)
+    }
+  }, 30_000)
+
+  test('2024 inherited PDF rules print a directly earned and nested feature once', async () => {
+    const document = JSON.parse(await readFile('data/class/class-bard.json', 'utf8')) as {
+      subclass: Array<
+        Pick<Subclass5e, 'name' | 'source' | 'classSource'> & { subclassFeatures?: string[] }
+      >
+    }
+    const [original, retained] = ['PHB', 'XPHB'].map((classSource) =>
+      document.subclass.find(
+        (row) =>
+          row.name === 'College of Spirits' &&
+          row.source === 'VRGR' &&
+          row.classSource === classSource,
+      ),
+    )
+    if (!original?.subclassFeatures || !retained)
+      throw new Error('Missing the authored Spirits owners')
+    retained.subclassFeatures = [
+      ...original.subclassFeatures,
+      'Spiritual Focus|Bard||Spirits|VRGR|3',
+    ]
+    const current = buildClassChoiceFeatureCatalogs({
+      classes: parseClasses(document) as Class5e[],
+      classFeatures: parseClassFeatures(document) as ClassFeature[],
+    })
+    const character = createEmptyCharacter({
+      name: 'Repeated Spiritual Focus',
+      originSystem: '2024',
+      allowedSources: ['XPHB', 'VRGR'],
+      classProgression: [
+        {
+          name: 'Bard',
+          source: 'XPHB',
+          levels: 3,
+          subclass: 'College of Spirits',
+          subclassSource: 'VRGR',
+        },
+      ],
+    })
+    expect(
+      getClassStaticFeatureSummaries(character, current, false).filter(
+        (row) => row.compactText === 'Spiritual Focus',
+      ),
+    ).toHaveLength(1)
+  })
+
+  test('2024 retained patron spell choices use earned subclass and spell ranks', async () => {
+    const data = catalogs['2024']
+    const actor = (levels: number) =>
+      createEmptyCharacter({
+        name: 'Retained Undead Spell List',
+        originSystem: '2024',
+        allowedSources: data.sources,
+        classProgression: [
+          {
+            name: 'Warlock',
+            source: 'XPHB',
+            levels,
+            subclass: 'The Undead',
+            subclassSource: 'VRGR',
+          },
+        ],
+      })
+    const pool = (character: Character, raw = data.raw) => {
+      const entry = character.classProgression[0]
+      const slot = getManagedClassSpellSlots(entry).find(
+        (row) => row[1] === 'class-known' && row[3] === entry.levels,
+      )
+      const context = createCharacterCalculationContext(character, data.primary, raw).classChoices
+        .spellContext
+      if (!slot || !context) throw new Error('Missing the current Warlock spell slot')
+      return { ...getManagedClassSpellPool(character, slot, context), slot, context }
+    }
+    expect(pool(actor(2)).defaultReferences.has('false life|xphb')).toBe(false)
+    const character = actor(3)
+    const available = pool(character)
+    expect(available.defaultReferences.has('false life|xphb')).toBe(true)
+    expect(available.defaultReferences.has('phantasmal force|xphb')).toBe(true)
+    expect(available.defaultReferences.has('death ward|xphb')).toBe(false)
+    expect(pool(actor(7)).defaultReferences.has('death ward|xphb')).toBe(true)
+    const withoutProof = {
+      ...data.raw,
+      spellsByKey: Object.fromEntries(
+        Object.entries(data.raw.spellsByKey ?? {}).filter(
+          ([, spell]) => spell.name !== 'False Life' || spell.source !== 'PHB',
+        ),
+      ),
+    }
+    expect(pool(character, withoutProof).defaultReferences.has('false life|xphb')).toBe(false)
+    const unselected = createCharacterSheetViewModel(character, data.raw, data.primary)
+    expect(unselected.spellRows.some(({ name }) => name === 'False Life')).toBe(false)
+    const selected = reopen(
+      applyCharacterCommandResult(
+        character,
+        setManagedClassSpellChoiceCommand(
+          character,
+          character.provenance,
+          {
+            slot: available.slot,
+            expected: null,
+            expectedEmptyRevision: 0,
+            target: { name: 'False Life', source: 'XPHB' },
+            policy: 'default',
+          },
+          available.context,
+        ),
+      ),
+    )
+    const sheet = createCharacterSheetViewModel(selected, data.raw, data.primary)
+    for (const template of CHARACTER_SHEET_TEMPLATES.filter(({ edition }) => edition === '2024')) {
+      const pdf = await PDFDocument.load(await generateTestCharacterSheet(sheet, template.id))
+      expect(
+        pdf
+          .getForm()
+          .getFields()
+          .some((field) => field instanceof PDFTextField && field.getText() === 'False Life'),
+        template.id,
+      ).toBe(true)
+    }
+  }, 30_000)
+
+  test('2024 retained expansion requires the classic source declaration', async () => {
+    const document = JSON.parse(await readFile('data/class/class-warlock.json', 'utf8')) as {
+      subclass: Subclass5e[]
+    }
+    const retained = document.subclass.find(
+      (row) => row.name === 'The Undead' && row.source === 'VRGR' && row.classSource === 'XPHB',
+    )
+    if (!retained) throw new Error('Missing the authored Undead copy')
+    const readExpansion = () => {
+      const warlock = (parseClasses(document) as Class5e[]).find(
+        (row) => row.name === 'Warlock' && row.source === 'XPHB',
+      )
+      const subclass = warlock?.subclasses?.find(
+        (row) => row.name === retained.name && row.source === retained.source,
+      )
+      if (!subclass) throw new Error('Missing the parsed Undead copy')
+      return getRetainedRankedExpansion(subclass)
+    }
+    expect(readExpansion()?.s1).toContain('false life')
+    retained.additionalSpells = [{ expanded: { s1: ['shield'] } }]
+    expect(readExpansion()).toBeUndefined()
+    delete retained.additionalSpells
+    const original = document.subclass.find(
+      (row) =>
+        row.name === retained.name && row.source === retained.source && row.classSource === 'PHB',
+    )
+    if (!original) throw new Error('Missing the classic Undead source')
+    document.subclass.push({ ...original, shortName: 'Other Undead' })
+    expect(readExpansion()).toBeUndefined()
+    document.subclass.pop()
+    expect(readExpansion()?.s1).toContain('false life')
+    original.additionalSpells = [{ expanded: { 3: ['false life'] } }]
+    expect(readExpansion()).toBeUndefined()
   })
 
   test('2024 Warlock uses supplemental fixed Invocation spells and exact Pact prerequisites', async () => {
@@ -447,6 +673,27 @@ describe.skipIf(!hasCatalog)('Standard supplemental subclass journeys', () => {
       createCharacterCalculationContext(selected, data.primary, rawWithoutSending)
         .fixedClassSpellStatuses,
     ).toContainEqual(expect.objectContaining({ featureName: 'Far Scribe', active: false }))
+    const competing = parseSpells({
+      spell: ['Sending', 'Other Spell'].map((spell) =>
+        makeSpellFixture({ name: 'Conflicting Printing', reprintedAs: [`${spell}|XPHB`] }),
+      ),
+    }) as Spell5e[]
+    const rawWithConflict = {
+      ...data.raw,
+      spellsByKey: {
+        ...data.raw.spellsByKey,
+        ...buildSpellLookup([...competing].reverse()),
+      },
+    }
+    expect(
+      createCharacterCalculationContext(selected, data.primary, rawWithConflict)
+        .fixedClassSpellStatuses,
+    ).toContainEqual(expect.objectContaining({ featureName: 'Far Scribe', active: false }))
+    expect(
+      createCharacterSheetViewModel(selected, rawWithConflict, data.primary).spellRows.map(
+        ({ name }) => name,
+      ),
+    ).not.toContain('Sending')
     const disabled = {
       ...selected,
       allowedSources: selected.allowedSources?.filter((source) => source !== 'TCE'),
@@ -470,23 +717,18 @@ describe.skipIf(!hasCatalog)('Standard supplemental subclass journeys', () => {
     for (const [, spell] of names) expect(values).toContain(spell)
   }, 30_000)
   test.each(
-    (['2014', '2024'] as const).flatMap((edition) => classes.map((name) => ({ edition, name }))),
-  )('$edition $name reaches level 20 with its Standard choices', async ({ edition, name }) => {
-    const data = catalogs[edition]
-    const paths = data.paths.filter(({ cls }) => cls.name === name)
-    expect(paths.length).toBeGreaterThan(0)
-    const failures: Error[] = []
-    for (const { cls, subclass } of paths) {
-      try {
-        await exerciseJourney(data, cls, subclass)
-      } catch (error) {
-        failures.push(
-          new Error(
-            `${edition} ${cls.name} / ${subclass.name}: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        )
-      }
-    }
-    if (failures.length) throw new Error(failures.map((error) => error.message).join('\n'))
-  }, 180_000)
+    (['2014', '2024'] as const).flatMap((edition) =>
+      catalogs[edition].paths.map(({ cls, subclass }) => ({
+        edition,
+        className: cls.name,
+        subclassName: subclass.name,
+        cls,
+        subclass,
+      })),
+    ),
+  )(
+    '$edition $className / $subclassName reaches level 20 with its Standard choices',
+    async ({ edition, cls, subclass }) => exerciseJourney(catalogs[edition], cls, subclass),
+    60_000,
+  )
 })

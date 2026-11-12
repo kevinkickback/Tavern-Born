@@ -1,12 +1,17 @@
+import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, Subclass5e } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
+import { getUnnamedRankedExpansion, parseAdditionalSpellBlocks } from './additionalSpells'
+import type { ClassicSpellReprints } from './classicSpellReprints'
+import { permitsClassRuleSource } from './earnedClassFeatureSource'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
   getDirectSubclassFeatureReference,
   isInheritedClassicSubclass,
 } from './nativeSubclassFeatureSource'
-import { matchesNativeSubclassGain } from './nativeSubclassGain'
+import { getCurrentNativeSubclassGain, matchesNativeSubclassGain } from './nativeSubclassGain'
+import { decodeOptionalDeclaration } from './optionalClassDeclarationStructure'
 import { getOwnedSubclassFeature } from './ownedSubclassFeature'
 import type { SubclassSpellGrant } from './subclassSpells'
 
@@ -52,6 +57,69 @@ function getRetainedGrant(entry: CharacterClassEntry) {
 
 export function isRevisedRetainedSubclassSpellOwner(entry: CharacterClassEntry) {
   return !!getRetainedGrant(entry)
+}
+
+export function getRetainedRankedExpansion(subclass: Subclass5e) {
+  if (
+    !isInheritedClassicSubclass(subclass) ||
+    subclass.sourceIdentityConflict ||
+    !subclass.retainedExpandedSpellSourceDigest
+  )
+    return undefined
+  const expansion = getUnnamedRankedExpansion(subclass.additionalSpells)
+  return expansion &&
+    getFeatureSourceDigest([expansion], false) === subclass.retainedExpandedSpellSourceDigest
+    ? expansion
+    : undefined
+}
+
+/** Rank-based lists inherited from classic subclasses extend the ordinary picker. */
+export function getRetainedExpandedSubclassSpells(
+  cls: Class5e,
+  subclass: Subclass5e,
+  classLevel: number,
+  character: Character | undefined,
+  catalogs: Parameters<typeof getOwnedSubclassFeature>[3],
+  reprints: ClassicSpellReprints | undefined,
+): SubclassSpellGrant[] {
+  const expanded = getRetainedRankedExpansion(subclass)
+  if (
+    !expanded ||
+    !character ||
+    !catalogs ||
+    !permitsClassRuleSource(character, cls.source) ||
+    !permitsClassRuleSource(character, subclass.source)
+  )
+    return []
+  const first = getCurrentNativeSubclassGain(cls)?.level
+  if (!first || classLevel < first) return []
+  const intro = decodeOptionalDeclaration(subclass.introFeatureRef ?? '', 'subclassFeature')
+  const earned = intro && getOwnedSubclassFeature(cls, subclass, intro.target, catalogs)
+  if (!earned || earned.level !== first || earned.refs.length !== 1) return []
+  let schedule: ReturnType<typeof parseAdditionalSpellBlocks>[number]['expanded']
+  try {
+    schedule = parseAdditionalSpellBlocks([{ expanded }])[0].expanded
+  } catch {
+    return []
+  }
+  return (schedule ?? []).flatMap(({ reference, spellLevel }) => {
+    const { source } = parseSpellReference(reference)
+    let spellName = reference
+    if (!source || norm(source) === 'phb') {
+      const reprint = reprints?.byClassic.get(getSpellReferenceKey(reference, 'PHB'))
+      if (!reprint || reprint.classic.level !== spellLevel) return []
+      spellName = reprint.revised
+    } else if (!permitsClassRuleSource(character, source)) return []
+    return [
+      {
+        spellName,
+        level: first,
+        isCantrip: spellLevel === 0,
+        expandedRank: spellLevel,
+        mode: 'expanded',
+      },
+    ]
+  })
 }
 
 export function getRetainedSubclassSpellGrants(

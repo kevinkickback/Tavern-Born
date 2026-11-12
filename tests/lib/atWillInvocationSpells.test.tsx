@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
-import { renderHook } from '@testing-library/react'
+import { render, renderHook, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
+import { MovementModal } from '@/components/modals/MovementModal'
 import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
 import { loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
@@ -36,6 +38,7 @@ import {
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -333,6 +336,35 @@ test('revised Gift of the Depths follows walking speed while preserving a faster
   )
   expect(noSpell.movement.speeds.swim).toBe(35)
   expect(fixture.calc(fixture.select(selected)).movement.speeds.swim).toBe(20)
+})
+
+test('previews source-derived swim speed before saving the walking override', async () => {
+  const fixture = warlock('2024', 'XPHB')
+  const leveled = atLevel(fixture.initial, 5)
+  const actor = { ...leveled, movement: { ...leveled.movement, speeds: { walk: 30 } } }
+  const selected = fixture.select(actor, 'Gift of the Depths')
+  const previous = useCharacterStore.getState()
+  useCharacterStore.setState({
+    activeCharacter: selected,
+    activeCharacterId: selected.id,
+    characters: [selected],
+  })
+  const modal = render(<MovementModal open onOpenChange={() => {}} />)
+  try {
+    const user = userEvent.setup()
+    expect(screen.getByText('walk 30 ft., swim 30 ft.')).toBeTruthy()
+    await user.click(screen.getByText('Exact movement overrides'))
+    await user.type(screen.getByLabelText(/^walk$/i), '40')
+    expect(screen.getByText('walk 40 ft., swim 40 ft.')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(selected)
+    await user.click(screen.getByRole('button', { name: 'Save movement' }))
+    const saved = useCharacterStore.getState().activeCharacter!
+    expect(saved.movementOverrides).toEqual({ walk: 40 })
+    expect(fixture.calc(saved).movement.speeds).toMatchObject({ walk: 40, swim: 40 })
+  } finally {
+    modal.unmount()
+    useCharacterStore.setState(previous)
+  }
 })
 
 test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spells', async () => {

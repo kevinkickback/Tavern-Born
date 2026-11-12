@@ -37,6 +37,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
     adjustments: persistedAdjustments,
     baseMovement,
     baseMovementSourceLabel,
+    effectiveMovement,
     hoverOverride,
     overrides: persistedOverrides,
     previewMovementSettings,
@@ -95,11 +96,25 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
       ),
     [overrides],
   )
-  const preview = previewMovementSettings({
-    adjustments: resolvedAdjustments,
-    overrides: resolvedOverrides,
-    hoverOverride: hoverOverrideEnabled ? hoverValue : undefined,
-  })
+  const draftHover = hoverOverrideEnabled ? hoverValue : undefined
+  const preview = useMemo(
+    () =>
+      open
+        ? previewMovementSettings({
+            adjustments: resolvedAdjustments,
+            overrides: resolvedOverrides,
+            hoverOverride: draftHover,
+          })
+        : effectiveMovement,
+    [
+      open,
+      previewMovementSettings,
+      resolvedAdjustments,
+      resolvedOverrides,
+      draftHover,
+      effectiveMovement,
+    ],
+  )
 
   const addAdjustment = () => {
     const label = newLabel.trim()
@@ -140,7 +155,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
     saveMovementSettings({
       adjustments: resolvedAdjustments,
       overrides: resolvedOverrides,
-      hoverOverride: hoverOverrideEnabled ? hoverValue : undefined,
+      hoverOverride: draftHover,
     })
     onOpenChange(false)
     toast.success('Movement updated.')

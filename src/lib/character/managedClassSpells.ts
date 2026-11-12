@@ -281,7 +281,7 @@ function resolveSlot(
     selections: character.classChoiceSelections,
     character,
     catalogs: context?.catalogs,
-    artificerSpellReprints: context?.artificerSpellReprints,
+    classicSpellReprints: context?.classicSpellReprints,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
   const bonus =
@@ -820,7 +820,7 @@ export function projectManagedClassSpellState(
         availableSpellReferences,
         visibleSpellLevels,
         oathReprints,
-        artificerSpellReprints: context?.artificerSpellReprints,
+        classicSpellReprints: context?.classicSpellReprints,
         includedDomainReprints,
         classChoiceFeatureCatalogs: context?.catalogs,
       }),
@@ -975,7 +975,7 @@ export function projectManagedClassSpellState(
       spells: visibleSpellLevels,
       character,
       catalogs: context?.catalogs,
-      artificerSpellReprints: context?.artificerSpellReprints,
+      classicSpellReprints: context?.classicSpellReprints,
     })
     const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
       if (

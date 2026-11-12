@@ -8,7 +8,7 @@ import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
 } from '@/lib/character/classChoiceOptions'
-import { getImplicitSource, SOURCE_PRESETS } from '@/lib/sourcePresets'
+import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
@@ -77,13 +77,7 @@ export function getStandardJourneyCatalog(
     },
     paths: filtered.classes
       .filter((cls) => !cls.isSidekick)
-      .flatMap((cls) =>
-        (cls.subclasses ?? []).flatMap((subclass) =>
-          cls.source === getImplicitSource(edition) && subclass.source === cls.source
-            ? []
-            : [{ cls, subclass }],
-        ),
-      ),
+      .flatMap((cls) => (cls.subclasses ?? []).map((subclass) => ({ cls, subclass }))),
   }
 }
 
