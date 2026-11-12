@@ -1,6 +1,6 @@
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { formatSpellReference, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
@@ -41,7 +41,12 @@ export function getAtWillInvocationSpellStatuses(
     prerequisites,
   ).selectedOptions.flatMap(
     ({ atWillInvocation: contract, ambiguousInvocationPool, selection, option }) => {
-      if (!contract || !permitted(allowed, selection.classSource)) return []
+      if (
+        !contract ||
+        !permitted(allowed, selection.classSource) ||
+        !permitted(allowed, option.source ?? '')
+      )
+        return []
       if (
         character.classChoiceSelections?.filter((row) => row.choiceId === selection.choiceId)
           .length !== 1
@@ -65,10 +70,14 @@ export function getAtWillInvocationSpellStatuses(
         : undefined
       const spell = resolved ? auditSpellRouteMultiplicity([resolved])[0] : undefined
       const exactSpell =
-        spell?.level === contract.spellLevel &&
+        spell &&
+        Number.isInteger(spell.level) &&
+        spell.level > 0 &&
+        spell.level <= 9 &&
+        (contract.spellLevel === undefined || spell.level === contract.spellLevel) &&
         permitted(allowed, spell.source) &&
         getSpellReferenceKey(spell.name, spell.source) ===
-          getSpellReferenceKey(contract.grant.spellName) &&
+          getSpellReferenceKey(contract.reference) &&
         (spell.classSpellRouteDiagnostics?.length ?? 0) === 0
           ? spell
           : undefined
@@ -77,7 +86,9 @@ export function getAtWillInvocationSpellStatuses(
           id: JSON.stringify([selection.choiceId, contract.target, option.slotLevel]),
           profileId: toClassProfileId(owner.name, owner.source),
           featureName: contract.feature.name,
-          reference: contract.reference,
+          reference: exactSpell
+            ? formatSpellReference(exactSpell.name, exactSpell.source)
+            : contract.reference,
           rules: renderEntriesToText(contract.feature.entries),
           spell: exactSpell,
           reason: sourceIssue,

@@ -4,6 +4,7 @@ import type { OptionalFeatureLike } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
+import { parseSpellToken } from './spellTokens'
 
 const qualified = '[^|#{}]+\\|[^|#{}]+'
 const learning = new RegExp(
@@ -95,4 +96,45 @@ export function readDeclaredInvocationCast(feature: OptionalFeatureLike | undefi
   } catch {
     return undefined
   }
+}
+
+/** Read a fixed spell grant and preserve the printed casting terms for the builder and PDF. */
+export function readFixedInvocationSpell(feature: OptionalFeatureLike | undefined) {
+  if (
+    feature?.featureType?.length !== 1 ||
+    feature.featureType[0] !== 'EI' ||
+    feature.additionalSpells?.length !== 1 ||
+    !Array.isArray(feature.entries) ||
+    !feature.entries.every((entry) => typeof entry === 'string')
+  )
+    return undefined
+
+  const block = record(feature.additionalSpells[0])
+  const innate = record(block.innate)
+  const schedule = innate._
+  const daily = record(record(schedule).daily)
+  const limited = !Array.isArray(schedule)
+  const tokens = limited ? (daily['1e'] ?? daily['1']) : schedule
+  if (
+    Object.keys(block).length !== 1 ||
+    Object.keys(innate).length !== 1 ||
+    (limited && (Object.keys(record(schedule)).length !== 1 || Object.keys(daily).length !== 1)) ||
+    !Array.isArray(tokens) ||
+    tokens.length !== 1 ||
+    typeof tokens[0] !== 'string' ||
+    !/^[^|#{}]+(?:\|[^|#{}]+)?$/.test(tokens[0])
+  )
+    return undefined
+
+  const rules = feature.entries.join(' ')
+  const casts = [...rules.matchAll(/\byou can (?:also )?cast (?:the )?\{@spell ([^}]+)\}/gi)]
+  const reference = parseSpellToken(tokens[0]).name
+  if (
+    casts.length !== 1 ||
+    getSpellReferenceKey(parseSpellToken(casts[0][1]).name) !== getSpellReferenceKey(reference) ||
+    (limited ? !/long rest/i.test(rules) : !/without (?:expending|using) a spell slot/i.test(rules))
+  )
+    return undefined
+
+  return { reference, limited, rules }
 }

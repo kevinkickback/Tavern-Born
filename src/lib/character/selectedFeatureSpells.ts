@@ -21,7 +21,10 @@ import {
   getClericDomainCantripSource,
 } from '@/lib/5etools/clericDomainCantripSources'
 import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
-import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import {
+  readDeclaredInvocationCast,
+  readFixedInvocationSpell,
+} from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentSelectedClass } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   getClassFeatureSpellSemantics,
@@ -130,6 +133,12 @@ export function getSelectedFeatureCantripSetups(
       const feature = candidates.length === 1 ? candidates[0] : undefined
       if (isRevisedInvocationSelection(selection) && readDeclaredInvocationCast(feature)) return []
       const activeRoute = active.find((row) => row.selection === selection && row.option === option)
+      if (
+        activeRoute &&
+        isInvocationPool(activeRoute.choice) &&
+        readFixedInvocationSpell(feature)?.limited
+      )
+        return []
       const book = isRevisedInvocationSelection(selection) && readDeclaredInvocationBook(feature)
       if (book) {
         const owner = getSavedRevisedInvocationOwner(character, selection)
@@ -182,7 +191,8 @@ export function getSelectedFeatureCantripSetups(
         return []
       if (
         (getAtWillInvocationContract(selection, option, feature) ||
-          (isRevisedInvocationSelection(selection) && isRevisedAtWillInvocationOption(option))) &&
+          (isRevisedInvocationSelection(selection) &&
+            isRevisedAtWillInvocationOption(option, catalogs))) &&
         !active.some(
           (row) =>
             row.selection === selection && row.option === option && !isInvocationPool(row.choice),

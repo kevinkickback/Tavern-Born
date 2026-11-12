@@ -124,14 +124,14 @@ function warlock(edition: '2014' | '2024', source: string) {
         calc(actor),
       ),
     )
-  const select = (actor: Character, ...names: string[]) => {
+  const choose = (actor: Character, label: string, names: string[]) => {
     const choice = getCharacterClassChoices(
       cls,
       undefined,
       createOptionalClassFeatureActivity(actor, catalogs),
       catalogs,
-    ).find((row) => row.label === 'Eldritch Invocations')
-    if (!choice) throw new Error('Missing native Invocation pool')
+    ).find((row) => row.label === label)
+    if (!choice) throw new Error(`Missing native Warlock choice ${label}`)
     return patch(
       actor,
       applyClassChoiceSelectionWithGrantsCommand(
@@ -160,7 +160,9 @@ function warlock(edition: '2014' | '2024', source: string) {
         lookups.spellsByKey,
       ),
     )
-  return { data, lookups, initial, level2, select, calc, bonus }
+  const select = (actor: Character, ...names: string[]) =>
+    choose(actor, 'Eldritch Invocations', names)
+  return { data, lookups, initial, level2, select, choose, calc, bonus }
 }
 
 test.each(
@@ -226,6 +228,75 @@ test.each([
     expect(
       form.getFields().flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : [])),
     ).toContain('Jump')
+  },
+  20_000,
+)
+
+test.each([
+  ['2014', 'PHB', 'Thief of Five Fates', 'Bane', 2, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Mire the Mind', 'Slow', 5, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Sign of Ill Omen', 'Bestow Curse', 5, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Bewitching Whispers', 'Compulsion', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Dreadful Word', 'Confusion', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Sculptor of Flesh', 'Polymorph', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Minions of Chaos', 'Conjure Elemental', 9, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Chains of Carceri', 'Hold Monster', 15, 'same creature again'],
+  ['2024', 'XPHB', 'Gift of the Depths', 'Water Breathing', 5, 'without expending a spell slot'],
+] as const)('%s %s %s grants the printed limited cast', (edition, source, invocation, spell, level, restriction) => {
+  const fixture = warlock(edition, source)
+  let original = atLevel(fixture.initial, level)
+  if (invocation === 'Chains of Carceri')
+    original = fixture.choose(original, 'Pact Boon', ['Pact of the Chain'])
+  const actor = fixture.select(original, invocation)
+  const calculation = fixture.calc(actor)
+  expect(calculation.fixedClassSpellStatuses).toContainEqual(
+    expect.objectContaining({
+      featureName: invocation,
+      active: true,
+      prepared: false,
+      castOnly: {},
+      castingNote: expect.stringContaining(restriction),
+    }),
+  )
+  expect(calculation.atWillInvocationSpellStatuses).toEqual([])
+  expect(calculation.character.spells.spellProfiles).toEqual(
+    fixture.calc(original).character.spells.spellProfiles,
+  )
+  expect(
+    validateSpells(actor, calculation, fixture.lookups.spellsByKey).some((row) =>
+      row.title.includes(invocation),
+    ),
+  ).toBe(false)
+  const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: spell,
+      castOnly: true,
+      prepared: false,
+      castingNote: expect.stringContaining(restriction),
+    }),
+  )
+  expect(
+    fixture
+      .calc(fixture.select(actor))
+      .fixedClassSpellStatuses.some((row) => row.featureName === invocation),
+  ).toBe(false)
+})
+
+test.each([
+  ['2014', 'PHB', 2, '2014-official', 'Thief of Five Fates', 'Bane'],
+  ['2024', 'XPHB', 5, '2024-official', 'Gift of the Depths', 'Water Breathing'],
+] as const)(
+  '%s exports the limited cast to the official PDF',
+  async (edition, source, level, template, invocation, spell) => {
+    const fixture = warlock(edition, source)
+    const actor = fixture.select(atLevel(fixture.initial, level), invocation)
+    const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(
+      form.getFields().flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : [])),
+    ).toContain(spell)
   },
   20_000,
 )

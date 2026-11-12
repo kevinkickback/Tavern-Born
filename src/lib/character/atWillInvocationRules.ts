@@ -1,5 +1,6 @@
-import { parseAdditionalSpellBlocks } from '@/lib/5etools/additionalSpells'
+import { readFixedInvocationSpell } from '@/lib/5etools/declaredInvocationCasting'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from '@/lib/5etools/featureSourceAudit'
+import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
   getRevisedInvocationPoolId,
   hasCurrentRevisedInvocationOption,
@@ -21,7 +22,7 @@ const classicPool = 'class:warlock|phb|choice:eldritch-invocations|2'
 type AtWillInvocationRule = {
   name: string
   spell: string
-  phb?: string
+  phb: string
   xphb?: string
   spellLevel?: number
   classicMinimum?: number
@@ -76,48 +77,6 @@ const contracts: readonly AtWillInvocationRule[] = [
     xphb: 'c2617fb4c715f0ea3e2764a8a6d4f7020153edec85fcae0e5bf9d2ecbf9b992b',
     revisedMinimum: 2,
   },
-  {
-    name: 'Otherworldly Leap',
-    spell: 'Jump',
-    classicMinimum: 9,
-    revisedMinimum: 2,
-    phb: '3bb098ebc0d363efffbfa0a8e055cd08c7a31b54c5696c9268167ed8052e5aea',
-    xphb: '2402226ee56b97266919043aa98e07c001eaa3c5cfd3c80ce40960812c23c623',
-  },
-  {
-    name: 'Master of Myriad Forms',
-    spell: 'Alter Self',
-    spellLevel: 2,
-    classicMinimum: 15,
-    revisedMinimum: 5,
-    phb: '5b9a337aca3e92b0e08234c09182e98cec10f703412e40fa530feb509c967d97',
-    xphb: 'a707456d98c6fccdbc437c1d0a7d12e63076a40e307603457b77d865a3620e69',
-  },
-  {
-    name: 'One with Shadows',
-    spell: 'Invisibility',
-    spellLevel: 2,
-    revisedMinimum: 5,
-    xphb: '64de7c9a9f52d5da3ff46a6f64a1b776bdff779afd4cc05ca744860bb43aa54f',
-  },
-  {
-    name: 'Visions of Distant Realms',
-    spell: 'Arcane Eye',
-    spellLevel: 4,
-    classicMinimum: 15,
-    revisedMinimum: 9,
-    phb: 'eb308d81e292c66d83958e374db1c61bd5bbd1d99f5ddf99ef3370fc9c7404cf',
-    xphb: 'b6a3b4dc109799f0e69f7d318e699bc8f394ce9555c360ffd59682e44e380f1b',
-  },
-  {
-    name: 'Whispers of the Grave',
-    spell: 'Speak with Dead',
-    spellLevel: 3,
-    classicMinimum: 9,
-    revisedMinimum: 7,
-    phb: '305ee4c5ebf3f8faf32f8797ab21315c09b507b3a6db9d4d72cafb91389dc47a',
-    xphb: '5f711970e9f69eca7f618a526284aedbca258fd1a2c45f17236a9a4f15fa4fea',
-  },
 ]
 const allowedFields = new Set([
   'name',
@@ -150,12 +109,14 @@ export function isInvocationPool(choice: NormalizedCharacterChoice): boolean {
   )
 }
 
-export function isRevisedAtWillInvocationOption(option: NormalizedChoiceOptionReference) {
-  return (
-    option.entityType === 'optionalFeature' &&
-    norm(option.source) === 'xphb' &&
-    contracts.some((row) => row.xphb && norm(row.name) === norm(option.name))
-  )
+export function isRevisedAtWillInvocationOption(
+  option: NormalizedChoiceOptionReference,
+  catalogs?: ClassChoiceFeatureCatalogs,
+) {
+  if (option.entityType !== 'optionalFeature' || norm(option.source) !== 'xphb') return false
+  if (contracts.some((row) => row.xphb && norm(row.name) === norm(option.name))) return true
+  const spell = readFixedInvocationSpell(getInvocationLeaf(option, catalogs)?.feature)
+  return !!spell && !spell.limited
 }
 
 export function getAtWillInvocationContract(
@@ -185,23 +146,32 @@ function readAtWillInvocation(
 ) {
   if (
     option.entityType !== 'optionalFeature' ||
-    norm(option.source) !== source ||
+    (source === 'xphb' && norm(option.source) !== source) ||
     option.ref ||
     option.invocationCantrip ||
     !feature ||
     norm(feature.name) !== norm(option.name) ||
-    norm(feature.source) !== source
+    norm(feature.source) !== norm(option.source) ||
+    !hasFeatureSourceShape(feature, allowedFields)
   )
     return undefined
 
-  const rule = contracts.find((candidate) => norm(candidate.name) === norm(feature.name))
-  const digest = rule?.[source]
+  const rule =
+    norm(feature.source) === source
+      ? contracts.find((candidate) => norm(candidate.name) === norm(feature.name))
+      : undefined
+  if (!rule) {
+    const grant = readFixedInvocationSpell(feature)
+    const minimumLevel = getInvocationSpellMinimumLevel(feature, source)
+    return grant && !grant.limited && minimumLevel
+      ? { reference: grant.reference, minimumLevel, spellLevel: undefined }
+      : undefined
+  }
+  const digest = rule[source]
   const minimumLevel = source === 'phb' ? (rule?.classicMinimum ?? 2) : rule?.revisedMinimum
   if (
-    !rule ||
     !digest ||
     !minimumLevel ||
-    !hasFeatureSourceShape(feature, allowedFields) ||
     !Array.isArray(feature.featureType) ||
     feature.featureType.length !== 1 ||
     feature.featureType[0] !== 'EI' ||
@@ -235,26 +205,61 @@ function readAtWillInvocation(
   const token = rule.spell.toLowerCase() + (source === 'xphb' ? '|xphb' : '')
   if (JSON.stringify(feature.additionalSpells) !== JSON.stringify([{ innate: { _: [token] } }]))
     return undefined
-  const grant = parseAdditionalSpellBlocks(feature.additionalSpells)[0].grants[0]
   return {
     reference: formatSpellReference(rule.spell, source.toUpperCase()),
-    grant,
     minimumLevel,
     spellLevel: rule.spellLevel ?? 1,
   }
 }
 
-function getInvocationLeaf(
+export function getInvocationSpellMinimumLevel(
+  feature: OptionalFeatureLike,
+  source: 'phb' | 'xphb',
+) {
+  if (feature.prerequisite === undefined) return source === 'phb' ? 2 : 1
+  if (!Array.isArray(feature.prerequisite) || feature.prerequisite.length !== 1) return undefined
+  const requirement = record(feature.prerequisite[0])
+  const level = record(requirement.level)
+  const cls = record(level.class)
+  if (
+    Object.keys(requirement).some((key) => key !== 'level' && key !== 'pact') ||
+    (requirement.pact !== undefined &&
+      !['Blade', 'Chain', 'Tome'].includes(String(requirement.pact))) ||
+    Object.keys(level).some((key) => key !== 'level' && key !== 'class') ||
+    Object.keys(cls).some((key) => !['name', 'source', 'visibleStats'].includes(key)) ||
+    norm(typeof cls.name === 'string' ? cls.name : undefined) !== 'warlock' ||
+    ((source === 'xphb' || cls.source !== undefined) &&
+      norm(typeof cls.source === 'string' ? cls.source : undefined) !== source) ||
+    typeof level.level !== 'number' ||
+    !Number.isInteger(level.level) ||
+    level.level < 1 ||
+    level.level > 20
+  )
+    return undefined
+  return level.level
+}
+export function getInvocationLeaf(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
+  if (option.entityType !== 'optionalFeature' || option.ref || option.invocationCantrip)
+    return undefined
   const target = getClassChoiceOptionKey(option)
   const candidates = catalogs?.optionalFeatureCandidates
     ? (catalogs.optionalFeatureCandidates.get(target) ?? [])
     : (catalogs?.optionalFeatures ?? []).filter(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
-  return candidates.length === 1 ? { feature: candidates[0], target } : undefined
+  if (candidates.length !== 1) return undefined
+  const [feature] = candidates
+  const raw = record(feature)
+  return norm(feature.name) === norm(option.name) &&
+    norm(feature.source) === norm(option.source) &&
+    !raw._copy &&
+    !raw.sourceIdentityConflict &&
+    !raw.featureOptionSourceConflict
+    ? { feature, target }
+    : undefined
 }
 
 export function getCurrentRevisedAtWillInvocation(

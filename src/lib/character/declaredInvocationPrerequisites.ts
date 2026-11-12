@@ -1,5 +1,8 @@
 import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
-import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import {
+  readDeclaredInvocationCast,
+  readFixedInvocationSpell,
+} from '@/lib/5etools/declaredInvocationCasting'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
   hasCurrentRevisedInvocationOption,
@@ -143,7 +146,10 @@ export function hasDeclaredInvocationSpells(
   catalogs?: ClassChoiceFeatureCatalogs,
 ) {
   return candidates(option, catalogs).some(
-    (feature) => readDeclaredInvocationCast(feature) || readDeclaredInvocationBook(feature),
+    (feature) =>
+      readDeclaredInvocationCast(feature) ||
+      readDeclaredInvocationBook(feature) ||
+      readFixedInvocationSpell(feature)?.limited,
   )
 }
 
@@ -154,7 +160,7 @@ export function isDeclaredRevisedInvocationOption(
 ) {
   return (
     isRevisedInvocationPoolId(choiceId) &&
-    !isRevisedAtWillInvocationOption(option) &&
+    !isRevisedAtWillInvocationOption(option, catalogs) &&
     (hasDeclaredInvocationRequirement(option, catalogs) ||
       hasDeclaredInvocationSpells(option, catalogs))
   )
