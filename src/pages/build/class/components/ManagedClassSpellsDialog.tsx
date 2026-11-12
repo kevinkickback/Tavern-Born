@@ -3,7 +3,6 @@ import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -79,7 +78,6 @@ export function ManagedClassSpellsDialog({
 }: Props) {
   // The opening snapshot owns expected lifetimes and the captured source adapter until Finish or Cancel.
   const [opening] = useState(() => character)
-  const prepareId = useId()
   const bonusSpellId = useId()
   const [finish] = useState(() => onFinish)
   const [draft, setDraft] = useState(() => {
@@ -97,7 +95,6 @@ export function ManagedClassSpellsDialog({
           old,
           target: old?.target,
           policy: old?.policy ?? ('default' as ClassSpellSelectionPolicy),
-          prepare: old?.prepare === true,
         }
       })
     return {
@@ -139,12 +136,15 @@ export function ManagedClassSpellsDialog({
     expectedEmptyRevision: opening.managedClassSpellRevision ?? 0,
     target: row.target,
     policy: row.policy,
-    ...(row.slot[1] === 'class-spellbook' ? { prepare: row.prepare } : {}),
+    // Preparation belongs to the previous spell, so a replacement starts unprepared.
+    ...(row.old?.prepare && row.target && targetKey(row.target) !== targetKey(row.old.target)
+      ? { prepare: false }
+      : {}),
   })
   const bookPreview = useMemo(() => {
     if (!bookEdits.length) return
     try {
-      // Preview eligible learned entries independently of draft daily preparation.
+      // Preview eligible learned entries for spellbook-dependent choices.
       const preview = setManagedClassSpellChoicesCommand(
         character,
         character.provenance,
@@ -263,7 +263,6 @@ export function ManagedClassSpellsDialog({
     patch: {
       target?: ManagedClassSpellChoice['target']
       policy?: ClassSpellSelectionPolicy
-      prepare?: boolean
     },
   ) =>
     setDraft((current) => {
@@ -277,7 +276,7 @@ export function ManagedClassSpellsDialog({
       ) {
         return { ...current, rows: nextRows }
       }
-      // Only learned-spell changes invalidate the preview, not specialty picks or preparation.
+      // Only learned-spell changes invalidate the preview.
       const nextBookEdits = nextRows
         .filter(
           (row) =>
@@ -285,7 +284,7 @@ export function ManagedClassSpellsDialog({
             (targetKey(row.target) !== targetKey(row.old?.target) ||
               (row.target && row.policy !== (row.old?.policy ?? 'default'))),
         )
-        .map((row) => ({ ...getRequest(row), prepare: false }))
+        .map(getRequest)
       return { ...current, rows: nextRows, bookEdits: nextBookEdits }
     })
   const openPicker = (index: number) => {
@@ -312,7 +311,6 @@ export function ManagedClassSpellsDialog({
       old: undefined,
       target: undefined,
       policy: 'default',
-      prepare: false,
     }
     setDraft((current) => ({ ...current, rows: [...current.rows, next] }))
     setPickerIndex(rows.length)
@@ -468,26 +466,12 @@ export function ManagedClassSpellsDialog({
                         size="sm"
                         variant="ghost"
                         disabled={!row.target}
-                        onClick={() => update(index, { target: undefined, prepare: false })}
+                        onClick={() => update(index, { target: undefined })}
                       >
                         Clear
                       </Button>
                     </div>
                   </div>
-                  {row.slot[1] === 'class-spellbook' && (
-                    <label
-                      htmlFor={`${prepareId}-${managedClassSpellId(row.slot)}`}
-                      className="mt-3 flex items-center gap-2 text-sm"
-                    >
-                      <Checkbox
-                        id={`${prepareId}-${managedClassSpellId(row.slot)}`}
-                        checked={row.prepare}
-                        disabled={!row.target}
-                        onCheckedChange={(value) => update(index, { prepare: value === true })}
-                      />
-                      Prepare this spell
-                    </label>
-                  )}
                 </fieldset>
               )
             })}

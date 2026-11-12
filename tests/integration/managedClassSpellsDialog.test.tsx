@@ -192,7 +192,7 @@ describe('Class spell Finish and current-state adapter', () => {
     },
   )
 
-  test('Evocation Savant is a separate gain that learns and prepares from the shared Wizard book', async () => {
+  test('Evocation Savant learns into the shared Wizard book and preparation stays on Spells', async () => {
     const data = makeBundledClassCastingLayer('class/class-wizard.json')
     data.spells = fixture.spells
     data.lookups = buildGameDataLookups(data)
@@ -225,7 +225,7 @@ describe('Class spell Finish and current-state adapter', () => {
     summary.rerender({ subclass: undefined })
     expect(summary.result.current.choicesByLevel.get(3)?.savantSpellbook).toEqual(earned)
     summary.unmount()
-    render(<Flow level={3} />)
+    const learning = render(<Flow level={3} />)
     await choose(1, 'Magic Missile', 'Spell')
 
     const savantRow = () => screen.getByRole('group', { name: 'Evocation Savant 1' })
@@ -241,7 +241,7 @@ describe('Class spell Finish and current-state adapter', () => {
     fireEvent.change(search, { target: { value: 'Scorching Ray' } })
     fireEvent.click(await screen.findByText('Scorching Ray'))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    fireEvent.click(within(savantRow()).getByRole('checkbox', { name: 'Prepare this spell' }))
+    expect(screen.queryByRole('checkbox', { name: 'Prepare this spell' })).toBeNull()
 
     fireEvent.click(
       within(screen.getByRole('group', { name: 'Spell 2' })).getByRole('button', {
@@ -264,11 +264,14 @@ describe('Class spell Finish and current-state adapter', () => {
       ]),
     ).toEqual([
       ['class', { name: 'Magic Missile', source: 'XPHB' }, undefined],
-      ['subclass', { name: 'Scorching Ray', source: 'XPHB' }, true],
+      ['subclass', { name: 'Scorching Ray', source: 'XPHB' }, undefined],
     ])
-    expect(
-      saved.spells.spellProfiles.find((profile) => profile.className === 'Wizard')?.preparedSpells,
-    ).toContain('Scorching Ray|XPHB')
+    const wizardProfile = (character: Character) =>
+      character.spells.spellProfiles.find((profile) => profile.className === 'Wizard')
+    expect(wizardProfile(saved)?.spellsKnown).toEqual(
+      expect.arrayContaining(['Magic Missile|XPHB', 'Scorching Ray|XPHB']),
+    )
+    expect(wizardProfile(saved)?.preparedSpells).toEqual([])
 
     const view = renderHook(() => useCharacterCalculationContext(saved))
     const readiness = validateSpells(saved, view.result.current!, data.lookups.spellsByKey)
@@ -281,13 +284,42 @@ describe('Class spell Finish and current-state adapter', () => {
         expect.objectContaining({ title: 'Finish Wizard spell choices at level 3' }),
       ]),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    view.unmount()
+    learning.unmount()
+    const spells = render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <SpellsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /Wizard/ }))
+    const prepareButtons = screen.getAllByTitle('Not prepared', { exact: true })
+    expect(prepareButtons).toHaveLength(2)
+    for (const button of prepareButtons) fireEvent.click(button)
+    const prepared = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(wizardProfile(prepared)?.preparedSpells).toHaveLength(2)
+    expect(wizardProfile(prepared)?.preparedSpells).toEqual(
+      expect.arrayContaining(['Magic Missile|XPHB', 'Scorching Ray|XPHB']),
+    )
+
+    spells.unmount()
+    render(<Flow level={3} />)
     expect(within(savantRow()).getByText('Scorching Ray (XPHB)')).toBeTruthy()
-    expect(
-      within(savantRow())
-        .getByRole('checkbox', { name: 'Prepare this spell' })
-        .getAttribute('aria-checked'),
-    ).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(useCharacterStore.getState().activeCharacter?.managedClassSpellChoices).toEqual(
+      prepared.managedClassSpellChoices,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    clearLearned()
+    await choose(1, 'Shield', 'Spell')
+    expect(screen.getByText('Shield (XPHB)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const replaced = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(wizardProfile(replaced)?.spellsKnown).toContain('Shield|XPHB')
+    expect(wizardProfile(replaced)?.spellsKnown).not.toContain('Magic Missile|XPHB')
+    expect(wizardProfile(replaced)?.preparedSpells).toEqual(['Scorching Ray|XPHB'])
   })
 
   test('Spell Mastery uses same-dialog draft learning and removal without saving the preview', async () => {
