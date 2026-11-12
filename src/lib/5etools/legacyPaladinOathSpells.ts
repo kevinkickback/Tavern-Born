@@ -1,12 +1,9 @@
-import {
-  getSpellReferenceKey,
-  isSourceQualifiedSpellReference,
-  parseSpellReference,
-} from '@/lib/calculations/spellIdentity'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, Spell5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { getClassicSpellReprints } from './classicSpellReprints'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
@@ -68,25 +65,13 @@ export function isRevisedInheritedOathOwner(entry: CharacterClassEntry) {
 
 /** Classic records prove the reprint relationship. Only the visible revised target can grant a spell. */
 export function getCurrentOathSpellReprints(spells: Readonly<Record<string, Spell5e>> | undefined) {
-  const proofs = new Map<string, number | undefined>()
-  for (const spell of Object.values(spells ?? {})) {
-    if (norm(spell.source) !== 'phb') continue
-    const key = getSpellReferenceKey(spell.name, 'XPHB')
-    const printings = Array.isArray(spell.reprintedAs)
-      ? spell.reprintedAs.filter(
-          (uid): uid is string =>
-            typeof uid === 'string' && norm(parseSpellReference(uid).source) === 'xphb',
-        )
-      : []
-    const valid =
-      !proofs.has(key) &&
-      spell.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
-      printings.length === 1 &&
-      isSourceQualifiedSpellReference(printings[0]) &&
-      getSpellReferenceKey(printings[0]) === key
-    proofs.set(key, valid ? spell.level : undefined)
+  const { byRevised } = getClassicSpellReprints(spells)
+  return {
+    get(key: string) {
+      const spell = byRevised.get(key)?.classic
+      return spell && getSpellReferenceKey(spell.name, 'XPHB') === key ? spell.level : undefined
+    },
   }
-  return proofs
 }
 
 export function isInheritedOathSourceFeature(target: string | undefined) {

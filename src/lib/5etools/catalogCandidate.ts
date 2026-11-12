@@ -17,6 +17,7 @@ import type { DataLoaderOptions } from './dataLoader'
 import { loadDataFromSource } from './dataLoader'
 import { createJsonResourceReader, type ReadSourceJson } from './resourceReader'
 import { resolveSourceRevision } from './sourceRevision'
+import { hasUniqueSpellRouteSource } from './spellRouteSources'
 import { inspectCatalogResources } from './validator'
 
 export interface PreparedCatalog {
@@ -32,7 +33,7 @@ export interface PreparedCatalog {
 function getMissingSubclassSpell(data: GameData, additional: GameData) {
   const available = new Set(
     data.spells
-      .filter((spell) => (spell.classSpellRouteSource?.input.targetOccurrences.length ?? 1) === 1)
+      .filter((spell) => !('classSpellRouteSource' in spell) || hasUniqueSpellRouteSource(spell))
       .map(({ name, source }) => getSpellReferenceKey(name, source)),
   )
   for (const owner of additional.classes) {

@@ -20,8 +20,16 @@ import {
   clericDomainCantrips,
   getClericDomainCantripSource,
 } from '@/lib/5etools/clericDomainCantripSources'
-import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
-import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import {
+  readDeclaredInvocationBook,
+  readDeclaredInvocationRituals,
+  readDeclaredPactCantrips,
+} from '@/lib/5etools/declaredInvocationBook'
+import {
+  readDeclaredInvocationCast,
+  readFixedInvocationSpell,
+  readSupplementalInvocationCast,
+} from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentSelectedClass } from '@/lib/5etools/earnedClassFeatureSource'
 import {
   getClassFeatureSpellSemantics,
@@ -31,14 +39,18 @@ import {
 import { getCurrentOathSpellReprints } from '@/lib/5etools/legacyPaladinOathSpells'
 import { getElementalDisciplineSpells } from '@/lib/5etools/monkSubclassRules'
 import { getCurrentNativeSubclassGain } from '@/lib/5etools/nativeSubclassGain'
+import { CLASSIC_INVOCATION_POOL_ID } from '@/lib/5etools/revisedInvocationPoolIdentity'
 import {
   BARD_PRIMAL_LORE_SPELL_SLOT,
   decodeSelectedFeatureSpellAddress,
   getArcaneArcherCantripSlot,
   getClericDomainCantripProducer,
+  getInvocationRitualBookProducer,
+  getInvocationRitualTranscriptionProducer,
   giantPowerSpellSlots,
   isArcaneArcherCantripSlot,
   isGiantPowerSpellSlot,
+  isInvocationRitualTranscriptionSlot,
   LAND_BONUS_SPELL_SLOT,
   wizardIllusionCantripSlots,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -58,10 +70,11 @@ import { isLevelOnlyPreparedCaster } from '@/lib/calculations/spellProfiles.cast
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
-import type { Character } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { ClassSpellOwner, ManagedClassSpellSlot } from '@/types/classCasting'
 import {
   getAtWillInvocationContract,
+  getInvocationLeaf,
   isInvocationPool,
   isRevisedAtWillInvocationOption,
 } from './atWillInvocationRules'
@@ -86,6 +99,7 @@ import {
   selectedFeatureSpellOwner,
 } from './selectedFeatureSpellOwnership'
 import { getSavedRevisedInvocationOwner } from './warlockInvocationChoices'
+import { CLASSIC_PACT_BOON_POOL, getCurrentClassicPactBoon } from './warlockInvocationSource'
 
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 
@@ -96,7 +110,10 @@ export interface SelectedFeatureCantripSetup {
   name: string
   count: number
   domain?: 'feature-prepared'
-  book?: true
+  book?: 'prepared' | 'ritual-only'
+  castingNote?: string
+  knownRitualCastingNote?: string
+  transcription?: NonNullable<ReturnType<typeof readDeclaredInvocationRituals>>['transcription']
   choice?: AdditionalSpellChoiceDescriptor
   useDeclaredSpellLists?: true
   spellSchool?: string
@@ -128,8 +145,97 @@ export function getSelectedFeatureCantripSetups(
         (row) => norm(row.name) === norm(option.name) && norm(row.source) === norm(option.source),
       )
       const feature = candidates.length === 1 ? candidates[0] : undefined
-      if (isRevisedInvocationSelection(selection) && readDeclaredInvocationCast(feature)) return []
       const activeRoute = active.find((row) => row.selection === selection && row.option === option)
+      if (
+        isRevisedInvocationSelection(selection) &&
+        (readDeclaredInvocationCast(feature) ||
+          (activeRoute && readSupplementalInvocationCast(feature)))
+      )
+        return []
+      if (
+        activeRoute &&
+        isInvocationPool(activeRoute.choice) &&
+        readFixedInvocationSpell(feature)?.limited
+      )
+        return []
+      const pactCantrips =
+        selection.choiceId === CLASSIC_PACT_BOON_POOL && readDeclaredPactCantrips(feature)
+      if (pactCantrips) {
+        const owner = character.classProgression.find(
+          (entry) =>
+            norm(entry.name) === norm(selection.className) &&
+            norm(entry.source) === norm(selection.classSource),
+        )
+        const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+        const valid = Boolean(
+          catalogs &&
+            activeRoute &&
+            cls &&
+            cls.spellcastingAbility === pactCantrips.ability &&
+            getCurrentClassicPactBoon(cls, activeRoute.choice, catalogs) &&
+            getInvocationLeaf(option, catalogs)?.feature === feature &&
+            permitted(allowed, selection.classSource) &&
+            permitted(allowed, option.source ?? ''),
+        )
+        return [
+          {
+            owner: selectedFeatureSpellOwner(selection),
+            producer,
+            level: option.slotLevel,
+            name: option.name,
+            offered: valid,
+            count: valid ? pactCantrips.cantrips.count : 0,
+            choice: pactCantrips.cantrips,
+            castingNote: pactCantrips.castingNote,
+            useDeclaredSpellLists: true as const,
+            ...(!valid && { reason: 'Restore the exact Pact Boon and its class casting rules.' }),
+          },
+        ]
+      }
+      const classicRituals =
+        selection.choiceId === CLASSIC_INVOCATION_POOL_ID && readDeclaredInvocationRituals(feature)
+      if (classicRituals) {
+        const owner = character.classProgression.find(
+          (entry) =>
+            norm(entry.name) === norm(selection.className) &&
+            norm(entry.source) === norm(selection.classSource),
+        )
+        const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+        const valid = Boolean(
+          activeRoute &&
+            isInvocationPool(activeRoute.choice) &&
+            !activeRoute.ambiguousInvocationPool &&
+            getInvocationLeaf(option, catalogs)?.feature === feature &&
+            permitted(allowed, selection.classSource) &&
+            permitted(allowed, option.source ?? '') &&
+            cls?.spellcastingAbility === classicRituals.ability,
+        )
+        return [
+          {
+            owner: selectedFeatureSpellOwner(selection),
+            producer,
+            level: option.slotLevel,
+            name: option.name,
+            offered: valid,
+            book: 'ritual-only' as const,
+            domain: 'feature-prepared' as const,
+            count: valid ? classicRituals.rituals.count : 0,
+            choice: classicRituals.rituals,
+            castingNote: classicRituals.castingNote,
+            ...(valid &&
+              cls &&
+              norm(classicRituals.knownRituals?.printedClass) === norm(cls.name) && {
+                knownRitualCastingNote: classicRituals.knownRituals?.castingNote,
+              }),
+            ...(valid &&
+              cls &&
+              norm(classicRituals.transcription?.printedClass) === norm(cls.name) && {
+                transcription: classicRituals.transcription,
+              }),
+            ...(!valid && { reason: 'Restore the exact Invocation and its prerequisites.' }),
+          },
+        ]
+      }
       const book = isRevisedInvocationSelection(selection) && readDeclaredInvocationBook(feature)
       if (book) {
         const owner = getSavedRevisedInvocationOwner(character, selection)
@@ -148,7 +254,7 @@ export function getSelectedFeatureCantripSetups(
           level: option.slotLevel,
           name: option.name,
           offered: valid,
-          book: true as const,
+          book: 'prepared' as const,
         }
         return valid
           ? [
@@ -182,7 +288,8 @@ export function getSelectedFeatureCantripSetups(
         return []
       if (
         (getAtWillInvocationContract(selection, option, feature) ||
-          (isRevisedInvocationSelection(selection) && isRevisedAtWillInvocationOption(option))) &&
+          (isRevisedInvocationSelection(selection) &&
+            isRevisedAtWillInvocationOption(option, catalogs))) &&
         !active.some(
           (row) =>
             row.selection === selection && row.option === option && !isInvocationPool(row.choice),
@@ -605,6 +712,39 @@ export function getSelectedFeatureCantripSlots(
   )
 }
 
+export function getInvocationRitualTranscriptionOffers(
+  character: Character,
+  entry: Pick<CharacterClassEntry, 'name' | 'source'>,
+  setups: readonly SelectedFeatureCantripSetup[],
+) {
+  const owner = character.classProgression.find(
+    (row) => norm(row.name) === norm(entry.name) && norm(row.source) === norm(entry.source),
+  )
+  if (!owner) return []
+  return setups.flatMap((setup) => {
+    const producer = setup.transcription && getInvocationRitualTranscriptionProducer(setup.producer)
+    return producer &&
+      setup.offered &&
+      setup.owner[0] === 'class' &&
+      setup.owner[1] === norm(owner.name) &&
+      setup.owner[2] === norm(owner.source) &&
+      setup.level <= owner.levels
+      ? [
+          {
+            name: setup.name,
+            slot: [
+              setup.owner,
+              'feature-prepared',
+              producer,
+              owner.levels,
+              0,
+            ] satisfies ManagedClassSpellSlot,
+          },
+        ]
+      : []
+  })
+}
+
 function getIndependentPreparedNames(character: Character, context?: ManagedClassSpellContext) {
   const profiles = context?.bookPreparationProfiles ?? context?.independentSpellProfiles ?? []
   const revisedPrepared = character.classProgression.filter((entry) =>
@@ -615,6 +755,7 @@ function getIndependentPreparedNames(character: Character, context?: ManagedClas
     context?.catalogs,
     { effectiveAbilityScores: context?.abilityScores, effectiveSpellProfiles: profiles },
     context?.spellsByKey,
+    context?.oathSpellSourceByKey,
   ).statuses.filter((row) => row.active && row.castOnly?.castingTime === 'Magic Action')
   return new Set(
     [
@@ -643,22 +784,27 @@ export function getSelectedFeatureCantripPool(
   established?: string,
   checkPrepared = true,
 ) {
+  const transcribed = isInvocationRitualTranscriptionSlot(slot)
+  const producer = getInvocationRitualBookProducer(slot[2])
   const setup = getSelectedFeatureCantripSetups(character, context?.catalogs, {
     effectiveAbilityScores: context?.abilityScores,
     effectiveSpellProfiles: context?.independentSpellProfiles,
   }).find(
     (row) =>
       same(row.owner, slot[0]) &&
-      row.producer === slot[2] &&
-      row.level === slot[3] &&
+      row.producer === producer &&
+      (transcribed ? row.level <= slot[3] : row.level === slot[3]) &&
       (row.domain ?? 'feature-cantrip') === slot[1],
   )
+  const transcription = transcribed ? setup?.transcription : undefined
   const reason = !hasSavedSelectedFeatureSpellOwner(character, slot)
     ? 'This granting feature selection is unavailable.'
-    : !setup
+    : !setup || (transcribed && !transcription)
       ? 'Restore the granting feature source.'
       : (setup.reason ??
-        (slot[4] >= setup.count ? 'This choice exceeds the feature’s current count.' : undefined))
+        (!transcribed && slot[4] >= setup.count
+          ? "This choice exceeds the feature's current count."
+          : undefined))
   const allowed = sources(character)
   const unique = new Map<
     string,
@@ -669,9 +815,16 @@ export function getSelectedFeatureCantripPool(
     unique.set(key, unique.has(key) ? undefined : spell)
   }
   const choice = setup?.choice
-  const spellLevel = choice?.filter?.level ?? 0
+  const spellLevel = transcription
+    ? Math.min(9, (transcription.roundUp ? Math.ceil : Math.floor)(slot[3] / 2))
+    : (choice?.filter?.level ?? 0)
+  const allowedLevels = transcription
+    ? Array.from({ length: spellLevel }, (_, index) => index + 1)
+    : [spellLevel]
   const prepared =
-    setup?.book && checkPrepared ? getIndependentPreparedNames(character, context) : undefined
+    setup?.book === 'prepared' && checkPrepared
+      ? getIndependentPreparedNames(character, context)
+      : undefined
   const ownerScoped = ['classFeature', 'subclassFeature'].includes(
     decodeSelectedFeatureSpellAddress(slot[2])?.[1] ?? '',
   )
@@ -694,7 +847,7 @@ export function getSelectedFeatureCantripPool(
     reason || !choice
       ? []
       : [...unique.values()].filter((spell): spell is NonNullable<typeof spell> => {
-          if (!spell || spell.level !== spellLevel || !permitted(allowed, spell.source))
+          if (!spell || !allowedLevels.includes(spell.level) || !permitted(allowed, spell.source))
             return false
           if (
             setup?.book &&
@@ -743,11 +896,17 @@ export function getSelectedFeatureCantripPool(
           if (illusionAlternate && getSpellNameKey(spell.name) === 'minor illusion') return false
           if (choice.pool) return true
           const filter = choice.filter
-          if (filter && !filter.classes.length && !setup?.book) return true
+          if (filter && !filter.classes.length && !setup?.book && !setup?.useDeclaredSpellLists)
+            return true
           const checked = auditSpellRouteMultiplicity([spell])[0]
+          if (transcription)
+            return (
+              checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+              !checked.classSpellRouteDiagnostics?.length
+            )
           return (
             !!checked.classSpellRouteSource &&
-            (!setup?.book ||
+            ((!setup?.book && !setup?.useDeclaredSpellLists) ||
               (!checked.classSpellRouteDiagnostics?.length &&
                 checked.classSpellRouteSource.input.targetOccurrences.length === 1)) &&
             !!filter &&
@@ -772,12 +931,14 @@ export function getSelectedFeatureCantripPool(
       spells.map((spell) => getSpellReferenceKey(spell.name, spell.source)),
     ),
     maxSpellLevel: spellLevel,
-    allowedLevels: [spellLevel],
+    allowedLevels,
     reason,
     schools: undefined,
     privileged: false,
     featureName: setup?.name,
-    count: setup?.count ?? 0,
+    count: transcribed ? undefined : (setup?.count ?? 0),
     book: setup?.book,
+    castingNote: setup?.castingNote,
+    transcription,
   }
 }

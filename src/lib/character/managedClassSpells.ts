@@ -31,6 +31,7 @@ import {
   getClassCastingGainAuthority,
   getClassCastingLevelAccess,
 } from '@/lib/5etools/classCastingSource'
+import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClericArcanaSpellChoices,
@@ -58,6 +59,8 @@ import {
   STEPS_OF_THE_FEY_TARGET,
 } from '@/lib/5etools/nativeWarlockPatronRules'
 import { isRevisedInheritedRangerSpellOwner } from '@/lib/5etools/rangerSubclassSpells'
+import { isRevisedRetainedSubclassSpellOwner } from '@/lib/5etools/retainedSubclassSpells'
+import { CLASSIC_INVOCATION_POOL_ID } from '@/lib/5etools/revisedInvocationPoolIdentity'
 import {
   getCurrentSavantSpellbookGrant,
   getSavantSpellbookGain,
@@ -127,6 +130,11 @@ import {
   getSelectedFeatureCantripPool,
   getSelectedFeatureCantripSetups,
 } from './selectedFeatureSpells'
+import {
+  getSorcererBonusSpellReplacementPool,
+  indexSorcererReplacementTargets,
+  replaySorcererBonusSpellReplacements,
+} from './sorcererBonusSpellReplacements'
 
 export interface ManagedClassSpellStatus {
   choice: ManagedClassSpellChoice
@@ -143,10 +151,12 @@ function resolveSlot(
   context?: ManagedClassSpellContext,
   classes: readonly Class5e[] = currentClasses(character, context),
   gainAuthority = getClassCastingGainAuthority,
+  spellTargets?: ReadonlyMap<string, Spell5e | undefined>,
 ) {
   if (
     slot[1] === 'feature-cantrip' ||
     slot[1] === 'feature-prepared' ||
+    slot[1] === 'subclass-spell-replacement' ||
     slot[1] === 'class-spellbook-specialty'
   )
     return 'Use this selected feature’s spell choices.'
@@ -267,12 +277,43 @@ function resolveSlot(
       : undefined
   if (classicSecrets && !secrets)
     return 'Restore the current Magical Secrets feature and its spell schedule.'
-  const fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
+  let fixedAtGain = getEarnedSubclassSpellGrants(classData, entry, slot[3], {
     selections: character.classChoiceSelections,
     character,
     catalogs: context?.catalogs,
+    classicSpellReprints: context?.classicSpellReprints,
   })
   if (!fixedAtGain) return 'Restore the selected subclass and its earned spell grants.'
+  const bonus =
+    slot[1] === 'class-known' &&
+    character.managedClassSpellChoices?.find(
+      (choice) =>
+        choice.slot[1] === 'subclass-spell-replacement' &&
+        choice.slot[3] <= slot[3] &&
+        getManagedClassSpellOwnerEntry(choice.slot, [entry]),
+    )
+  if (bonus) {
+    const replay = replaySorcererBonusSpellReplacements(
+      character,
+      bonus.slot,
+      spellTargets ?? indexSorcererReplacementTargets(context),
+      context,
+      slot[3] + 1,
+    )
+    for (const choice of replay.current.values()) {
+      const replacement = getClassicSorcererReplacementRule(choice.slot)
+      if (!replacement) continue
+      fixedAtGain = fixedAtGain.filter(
+        (grant) => getSpellReferenceKey(grant.spellName) !== replacement.original,
+      )
+      fixedAtGain.push({
+        spellName: formatSpellReference(choice.target.name, choice.target.source),
+        isCantrip: false,
+        level: choice.slot[3],
+        mode: 'known',
+      })
+    }
+  }
   const fixedCantrip =
     slot[1] === 'class-cantrip' && norm(entry.name) === 'artificer'
       ? getArtificerGrantedCantrip(getCurrentArtificerRules(character, context?.catalogs))
@@ -617,6 +658,8 @@ export function getManagedClassSpellPool(
   sourceContext?: ManagedClassSpellContext,
   projectedStatuses?: readonly ManagedClassSpellStatus[],
 ) {
+  if (slot[1] === 'subclass-spell-replacement')
+    return getSorcererBonusSpellReplacementPool(character, slot, sourceContext)
   if (slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(slot)) {
     const saved = character.managedClassSpellChoices?.find(
       (row) => managedClassSpellId(row.slot) === managedClassSpellId(slot),
@@ -757,6 +800,7 @@ export function projectManagedClassSpellState(
       (entry) =>
         isRevisedInheritedOathOwner(entry) ||
         isRevisedInheritedRangerSpellOwner(entry) ||
+        isRevisedRetainedSubclassSpellOwner(entry) ||
         isRevisedAncestralGuardian(entry) ||
         (norm(entry.name) === 'monk' &&
           norm(entry.source) === 'xphb' &&
@@ -776,6 +820,7 @@ export function projectManagedClassSpellState(
         availableSpellReferences,
         visibleSpellLevels,
         oathReprints,
+        classicSpellReprints: context?.classicSpellReprints,
         includedDomainReprints,
         classChoiceFeatureCatalogs: context?.catalogs,
       }),
@@ -807,12 +852,13 @@ export function projectManagedClassSpellState(
     if (
       choice.slot[1] === 'feature-cantrip' ||
       choice.slot[1] === 'feature-prepared' ||
+      choice.slot[1] === 'subclass-spell-replacement' ||
       choice.slot[1] === 'class-spellbook-specialty'
     )
       continue
     const state = invalid
       ? 'The saved class spell ownership is invalid.'
-      : resolveSlot(character, choice.slot, context, classes, gainAuthority)
+      : resolveSlot(character, choice.slot, context, classes, gainAuthority, targets)
     if (typeof state === 'string') {
       deny(state)
       continue
@@ -929,6 +975,7 @@ export function projectManagedClassSpellState(
       spells: visibleSpellLevels,
       character,
       catalogs: context?.catalogs,
+      classicSpellReprints: context?.classicSpellReprints,
     })
     const disciplines = disciplineRoutes.flatMap(({ choice, selection, option }) => {
       if (
@@ -1132,6 +1179,60 @@ export function projectManagedClassSpellState(
       makeManagedClassSpellTag(choice, entry, featureName),
     )
   }
+  const firstReplacement = statuses.find(
+    ({ choice }) => choice.slot[1] === 'subclass-spell-replacement',
+  )
+  if (firstReplacement && !invalid) {
+    const replay = replaySorcererBonusSpellReplacements(
+      character,
+      firstReplacement.choice.slot,
+      targets,
+      context,
+    )
+    for (const status of statuses) {
+      if (!replay.statuses.has(status.choice)) continue
+      status.reason = replay.statuses.get(status.choice)
+      status.active = status.reason === undefined
+    }
+    if (replay.entry) {
+      const entry = replay.entry
+      const profileId = toClassProfileId(entry.name, entry.source)
+      const replaced = new Set(
+        [...replay.current.values()].flatMap((choice) => {
+          const rule = getClassicSorcererReplacementRule(choice.slot)
+          return rule ? [rule.original] : []
+        }),
+      )
+      const keep = (reference: string) => !replaced.has(getSpellReferenceKey(reference))
+      profiles = profiles.map((profile) =>
+        profile.id === profileId
+          ? {
+              ...profile,
+              spellsKnown: profile.spellsKnown.filter(keep),
+              fixedSpells: profile.fixedSpells?.filter(keep),
+            }
+          : profile,
+      )
+      provenance = {
+        ...provenance,
+        spells: Object.fromEntries(
+          Object.entries(provenance.spells).flatMap(([name, tags]) => {
+            const retained = tags.filter(
+              (tag) =>
+                tag.sourceType !== 'subclass' ||
+                tag.grantType !== 'fixed' ||
+                norm(tag.sourceName) !== norm(entry.subclass) ||
+                norm(tag.sourceRef) !== norm(entry.subclassSource) ||
+                !replaced.has(getSpellReferenceKey(name, tag.grantSource)),
+            )
+            return retained.length ? [[name, retained]] : []
+          }),
+        ),
+      }
+      for (const choice of replay.current.values())
+        addManagedGrant(choice, entry, 'spellsKnown', false)
+    }
+  }
   for (const { choice, spell, entry, authority } of active) {
     const lore = getBardLoreSpellRule(choice.slot)
     addManagedGrant(
@@ -1292,15 +1393,18 @@ export function projectManagedClassSpellState(
     ({ choice }) =>
       choice.slot[1] === 'feature-cantrip' || isSelectedInvocationRitualSlot(choice.slot),
   )
-  const books = new Set(
-    selectedFeatureStatuses.length
+  const selectedFeatureSetups =
+    selectedFeatureStatuses.length ||
+    character.classChoiceSelections?.some(({ choiceId }) => choiceId === CLASSIC_INVOCATION_POOL_ID)
       ? getSelectedFeatureCantripSetups(character, context?.catalogs, {
           effectiveAbilityScores: context?.abilityScores,
           effectiveSpellProfiles: independentSpellProfiles,
         })
-          .filter((setup) => setup.book)
-          .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level]))
-      : [],
+      : []
+  const books = new Set(
+    selectedFeatureSetups
+      .filter((setup) => setup.book === 'prepared')
+      .map((setup) => JSON.stringify([setup.owner, setup.producer, setup.level])),
   )
   const isBook = ({ choice }: ManagedClassSpellStatus) =>
     books.has(JSON.stringify([choice.slot[0], choice.slot[2], choice.slot[3]]))
@@ -1334,7 +1438,7 @@ export function projectManagedClassSpellState(
       )
       continue
     }
-    if (choice.slot[4] >= pool.count) {
+    if (pool.count !== undefined && choice.slot[4] >= pool.count) {
       deny('This choice exceeds the feature’s current count.')
       continue
     }
@@ -1345,15 +1449,31 @@ export function projectManagedClassSpellState(
     )
     if (!spell) {
       deny(
-        pool.book
-          ? 'Choose an eligible spell from a current class list that you do not already have prepared.'
-          : 'Restore the exact selected cantrip printing and its current feature spell list.',
+        pool.book === 'ritual-only'
+          ? 'Choose an eligible ritual from a current class list.'
+          : pool.book
+            ? 'Choose an eligible spell from a current class list that you do not already have prepared.'
+            : 'Restore the exact selected cantrip printing and its current feature spell list.',
       )
       continue
     }
     status.active = true
     const ritual = isSelectedInvocationRitualSlot(choice.slot)
-    if (pool.book) {
+    if (pool.book === 'ritual-only') {
+      fixedClassSpellStatuses.push({
+        owner: choice.slot[0],
+        target: managedClassSpellId(choice.slot),
+        featureName: pool.featureName ?? 'Ritual spell choice',
+        level: choice.slot[3],
+        reference: formatSpellReference(spell.name, spell.source),
+        active: true,
+        prepared: false,
+        castOnly: { castingTime: 'Ritual only' },
+        castingNote: pool.castingNote ?? 'Cast only as a ritual.',
+      })
+      continue
+    }
+    if (pool.book === 'prepared') {
       status.prepared = true
       status.castingNote = `${pool.featureName}: Prepared while you carry the book.`
       if (!ritual) addInvocationTarget(entry, spell)
@@ -1362,6 +1482,7 @@ export function projectManagedClassSpellState(
       addManagedGrant(choice, entry, 'spellsKnown', true, pool.featureName)
       continue
     }
+    if (pool.castingNote) status.castingNote = pool.castingNote
     if (pool.featureName === 'Giant Power')
       status.castingNote = 'Giant Power: Wisdom is your spellcasting ability for this cantrip.'
     if (pool.featureName === 'Arcane Archer Lore' && choice.slot[0][4] === 'au')
@@ -1381,6 +1502,43 @@ export function projectManagedClassSpellState(
       reference,
       makeManagedClassSpellTag(choice, entry, pool.featureName),
     )
+  }
+  for (const setup of selectedFeatureSetups) {
+    if (!setup.offered || !setup.knownRitualCastingNote) continue
+    const profile = independentSpellProfiles.find(
+      (row) =>
+        row.type === 'class' &&
+        norm(row.className) === setup.owner[1] &&
+        norm(row.classSource) === setup.owner[2],
+    )
+    for (const known of profile?.spellsKnown ?? []) {
+      const key = getSpellReferenceKey(known)
+      const spell = targets.get(key)
+      if (
+        !spell?.meta?.ritual ||
+        !visibleSpellLevels.has(key) ||
+        fixedClassSpellStatuses.some(
+          (row) =>
+            row.active &&
+            row.featureName === setup.name &&
+            row.owner[2] === setup.owner[2] &&
+            row.owner[1] === setup.owner[1] &&
+            getSpellReferenceKey(row.reference) === key,
+        )
+      )
+        continue
+      fixedClassSpellStatuses.push({
+        owner: setup.owner,
+        target: setup.producer,
+        featureName: setup.name,
+        level: setup.level,
+        reference: formatSpellReference(spell.name, spell.source),
+        active: true,
+        prepared: false,
+        castOnly: { castingTime: 'Ritual only' },
+        castingNote: setup.knownRitualCastingNote,
+      })
+    }
   }
   const lightDomain = character.classProgression.filter(
     (entry) =>

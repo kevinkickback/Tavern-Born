@@ -7,6 +7,7 @@ import {
 } from '@/lib/5etools/classCastingRules'
 import { getCurrentClassCastingProducer } from '@/lib/5etools/classCastingSource'
 import type { CastingProducerRule } from '@/lib/5etools/classCastingStructure'
+import { getClassicSorcererReplacementSlots } from '@/lib/5etools/classicSorcererBonusSpells'
 import { findClassReference } from '@/lib/5etools/classReference'
 import {
   getClericArcanaSpellRule,
@@ -132,6 +133,7 @@ export function getManagedClassSpellSlots(
         ...(character ? getArcaneDabblerSlots(character, entry, catalogs?.classes) : []),
         ...getSavantSpellbookSlots(entry, currentClass, savantCatalog),
         ...getSpellbookSpecialtySlots(entry),
+        ...getClassicSorcererReplacementSlots(entry),
       ].map((slot) => [managedClassSpellId(slot), slot]),
     ).values(),
   ]

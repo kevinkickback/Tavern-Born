@@ -31,6 +31,7 @@ export function BuildClassSpellSection({
   onExpandDetails,
   getOrdinalForm,
 }: BuildClassSpellSectionProps) {
+  const hasRitualBook = spellGain.canTranscribeRituals || spellGain.hasTranscribedRituals
   const hasNewSelections = countSpellGainChoices(spellGain) > 0
 
   return (
@@ -40,7 +41,11 @@ export function BuildClassSpellSection({
           <MagicWand className="h-4 w-4 text-accent-secondary flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
             <div className="text-sm font-semibold">
-              {hasNewSelections ? 'Spell Selection' : 'Spell Replacement'}
+              {hasNewSelections
+                ? 'Spell Selection'
+                : hasRitualBook
+                  ? 'Ritual Book'
+                  : 'Spell Replacement'}
             </div>
             <div className="text-xs text-muted-foreground">
               {unavailableCount > 0
@@ -56,22 +61,31 @@ export function BuildClassSpellSection({
                       `${spellGain.savantSpellbook.name} (${spellGain.savantSpellbook.count} extra spellbook ${spellGain.savantSpellbook.count === 1 ? 'choice' : 'choices'}, up to ${getOrdinalForm(spellGain.savantSpellbook.maxSpellLevel)} level)`,
                     spellGain.spellbookSpecialty &&
                       `${spellGain.spellbookSpecialty.name} (${spellGain.spellbookSpecialty.count} choices)`,
+                    spellGain.canSwap && 'Optional bonus spell replacement',
+                    hasRitualBook &&
+                      (spellGain.canTranscribeRituals
+                        ? 'Transcribe rituals'
+                        : 'Review transcribed rituals'),
                   ]
                     .filter(Boolean)
                     .join(' · ')
-                : 'Replace one spell you know'}
+                : spellGain.canTranscribeRituals
+                  ? 'Transcribe rituals you’ve found'
+                  : spellGain.hasTranscribedRituals
+                    ? 'Review transcribed rituals'
+                    : 'Replace one bonus spell'}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          {hasNewSelections && (
+          {(hasNewSelections || spellGain.canSwap || hasRitualBook) && (
             <Button
               variant={chosenNames.length > 0 ? 'outline' : 'default'}
               size="sm"
               className="h-7 text-xs"
               onClick={() => onOpenSpellPicker(level)}
             >
-              {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+              {chosenNames.length > 0 || (!hasNewSelections && hasRitualBook) ? 'Edit' : 'Choose'}
             </Button>
           )}
         </div>

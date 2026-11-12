@@ -26,6 +26,7 @@ export interface SpellRouteInput {
   embedded: { kind: 'absent' } | { kind: 'present'; value: unknown }
   lookup: { kind: 'absent' } | { kind: 'present'; candidates: SpellRouteLookupCandidate[] }
   targetOccurrences: SpellRouteOccurrence[]
+  ambiguousReprintTargets?: string[]
 }
 export interface ClassSpellRouteAudit {
   version: 1

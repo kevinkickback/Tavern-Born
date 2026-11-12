@@ -5,7 +5,9 @@ import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { GIANT_POWER_TARGET } from './barbarianPathChoiceIdentity'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { getClaimedRevisedSpellReprints } from './classicSpellReprints'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import { getIncludedSrdSpellDigest } from './includedSrdSpellProof'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import { matchesNativeSubclassGain } from './nativeSubclassGain'
 import {
@@ -23,12 +25,6 @@ const includedSrdGiantSpells = new Set([
   '36c624dc226e2091417341b2f7106880fca4ad176b789efa1bc038cc5310f81e',
   'ea96e00f8aa18a2302179559a2e34d2f4705706ca439e2cb0bd43aefc2040ad3',
 ])
-const parsedSpellFields = new Set([
-  'classes',
-  'classSpellRoutes',
-  'classSpellRouteSource',
-  'classSpellRouteDiagnostics',
-])
 
 /** The Included SRD omits editorial reprint metadata. Require its exact classic record. */
 export function hasIncludedSrdGiantSpellProof(
@@ -40,12 +36,12 @@ export function hasIncludedSrdGiantSpellProof(
     (spell) => norm(spell.name) === key && norm(spell.source) === 'phb',
   )
   const classic = classics[0]
-  if (classics.length !== 1 || classic.classSpellRouteSource?.input.targetOccurrences.length !== 1)
-    return false
-  const original = Object.fromEntries(
-    Object.entries(classic).filter(([key]) => !parsedSpellFields.has(key)),
+  if (
+    classics.length !== 1 ||
+    getClaimedRevisedSpellReprints(spells).has(getSpellReferenceKey(name, 'XPHB'))
   )
-  const digest = getFeatureSourceDigest([original], false)
+    return false
+  const digest = getIncludedSrdSpellDigest(classic)
   return !!digest && includedSrdGiantSpells.has(digest)
 }
 export const ancestralPath = {

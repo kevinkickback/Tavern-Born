@@ -31,12 +31,10 @@ export function getCompanionSheetValues(
     /^(\d+)\s*(?:\+|plus)\s*(PB|your (strength|dexterity|constitution|intelligence|wisdom|charisma) modifier)$/iu.exec(
       (summary?.armorClass ?? '').replace(/\s*\(natural armor\)$/iu, ''),
     )
-  const classicArmorClass = classicLevel
-    ? getNumericCreatureArmorClass(creature?.ac?.[0])
-    : undefined
+  const numericArmorClass = getNumericCreatureArmorClass(creature?.ac?.[0])
   const armorClass =
-    classicArmorClass !== undefined
-      ? String(classicArmorClass)
+    numericArmorClass !== undefined
+      ? String(numericArmorClass)
       : armorFormula
         ? String(
             Number(armorFormula[1]) +
@@ -46,7 +44,7 @@ export function getCompanionSheetValues(
           )
         : (summary?.armorClass.match(/^\d+$/u)?.[0] ?? '')
   const hpFormula =
-    /^(\d+)\s*(?:\+|plus)\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten) times your (\w+) level\b/iu.exec(
+    /^(\d+)\s*(?:\+|plus)\s*(?:your (strength|dexterity|constitution|intelligence|wisdom|charisma) modifier\s*(?:\+|plus)\s*)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten) times your (\w+) level\b/iu.exec(
       creature?.hp?.special ?? '',
     )
   const numberWords = [
@@ -63,13 +61,16 @@ export function getCompanionSheetValues(
     'ten',
   ]
   const multiplier = hpFormula
-    ? Number(hpFormula[2]) || numberWords.indexOf(hpFormula[2].toLowerCase())
+    ? Number(hpFormula[3]) || numberWords.indexOf(hpFormula[3].toLowerCase())
+    : 0
+  const hpModifier = hpFormula?.[2]
+    ? viewModel.abilityModifiers[hpFormula[2].toLowerCase() as AbilityName]
     : 0
   const maxHp =
     creature?.hp?.average != null
       ? String(creature.hp.average)
-      : hpFormula && classEntry?.name.toLowerCase() === hpFormula[3].toLowerCase() && multiplier > 0
-        ? String(Number(hpFormula[1]) + multiplier * classEntry.levels)
+      : hpFormula && classEntry?.name.toLowerCase() === hpFormula[4].toLowerCase() && multiplier > 0
+        ? String(Number(hpFormula[1]) + hpModifier + multiplier * classEntry.levels)
         : ''
   const walkSpeed = creature?.speed?.walk
   const speed = typeof walkSpeed === 'number' ? `${walkSpeed} ft.` : (summary?.speed ?? '')
@@ -120,8 +121,11 @@ export function buildCompanionSheetData(
         ? value
         : ''
   const companionBonus = (value: unknown) => {
-    const match = typeof value === 'string' && /^([+-]?\d+)\s*\+\s*PB$/u.exec(value)
-    return match ? bonus(Number(match[1]) + vm.proficiencyBonus) : bonus(value)
+    const match =
+      typeof value === 'string' && /^([+-]?\d+)\s*(?:\+|plus)\s*PB(?:\s*×\s*(2))?$/u.exec(value)
+    return match
+      ? bonus(Number(match[1]) + vm.proficiencyBonus * Number(match[2] ?? 1))
+      : bonus(value)
   }
   const addsProficiencyToChecksAndSaves =
     !companion.classicRangerLevel &&
@@ -185,7 +189,7 @@ export function buildCompanionSheetData(
       )
     const damageParts = damage
       ? [
-          damage[1],
+          damage[1].replace(/\bPB\b/gu, String(vm.proficiencyBonus)),
           damage[2]
             ? `+ ${vm.proficiencyBonus}`
             : damage[3]

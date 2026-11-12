@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { renderHook } from '@testing-library/react'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
+import { render, renderHook, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
+import { MovementModal } from '@/components/modals/MovementModal'
 import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
 import { loadGameDataSourceStack } from '@/lib/5etools/contentLayers'
 import { buildGameDataLookups, buildSpellLookup } from '@/lib/5etools/lookups'
@@ -14,17 +17,33 @@ import {
   getCharacterClassChoices,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
-import { applyLevelDown, applyLevelUp } from '@/lib/character/commands/classCommands'
+import {
+  applyClassProgressionUpdate,
+  applyLevelDown,
+  applyLevelUp,
+} from '@/lib/character/commands/classCommands'
+import {
+  type ManagedClassSpellRequest,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
 import { setProfileSpells } from '@/lib/character/commands/spellCommands'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
+import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import {
+  getInvocationRitualTranscriptionOffers,
+  getSelectedFeatureCantripSetups,
+} from '@/lib/character/selectedFeatureSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 
 const cases = [
   ['2014', 'PHB', 'Armor of Shadows', 'Mage Armor', true],
@@ -33,6 +52,15 @@ const cases = [
   ['2024', 'XPHB', 'Armor of Shadows', 'Mage Armor', false],
   ['2024', 'XPHB', 'Mask of Many Faces', 'Disguise Self', false],
   ['2024', 'XPHB', 'Misty Visions', 'Silent Image', false],
+  ['2014', 'PHB', 'Otherworldly Leap', 'Jump', true, 9],
+  ['2024', 'XPHB', 'Otherworldly Leap', 'Jump', false, 2],
+  ['2014', 'PHB', 'Master of Myriad Forms', 'Alter Self', false, 15],
+  ['2024', 'XPHB', 'Master of Myriad Forms', 'Alter Self', false, 5],
+  ['2024', 'XPHB', 'One with Shadows', 'Invisibility', false, 5],
+  ['2014', 'PHB', 'Visions of Distant Realms', 'Arcane Eye', false, 15],
+  ['2024', 'XPHB', 'Visions of Distant Realms', 'Arcane Eye', false, 9],
+  ['2014', 'PHB', 'Whispers of the Grave', 'Speak with Dead', false, 9],
+  ['2024', 'XPHB', 'Whispers of the Grave', 'Speak with Dead', false, 7],
 ] as const
 const catalogsByEdition = new Map<string, GameData>()
 let allowedSources: string[]
@@ -113,14 +141,14 @@ function warlock(edition: '2014' | '2024', source: string) {
         calc(actor),
       ),
     )
-  const select = (actor: Character, ...names: string[]) => {
+  const choose = (actor: Character, label: string, names: string[]) => {
     const choice = getCharacterClassChoices(
       cls,
       undefined,
       createOptionalClassFeatureActivity(actor, catalogs),
       catalogs,
-    ).find((row) => row.label === 'Eldritch Invocations')
-    if (!choice) throw new Error('Missing native Invocation pool')
+    ).find((row) => row.label === label)
+    if (!choice) throw new Error(`Missing native Warlock choice ${label}`)
     return patch(
       actor,
       applyClassChoiceSelectionWithGrantsCommand(
@@ -149,14 +177,16 @@ function warlock(edition: '2014' | '2024', source: string) {
         lookups.spellsByKey,
       ),
     )
-  return { data, lookups, initial, level2, select, calc, bonus }
+  const select = (actor: Character, ...names: string[]) =>
+    choose(actor, 'Eldritch Invocations', names)
+  return { data, lookups, initial, level2, select, choose, calc, bonus }
 }
 
 test.each(
   cases,
-)('%s %s %s grants its exact spell and printing restrictions', (edition, source, invocation, spell, noMaterials) => {
+)('%s %s %s grants its exact spell and printing restrictions', (edition, source, invocation, spell, noMaterials, level = 2) => {
   const fixture = warlock(edition, source)
-  const original = fixture.level2(fixture.initial)
+  const original = atLevel(fixture.initial, level)
   const actor = fixture.select(original, invocation)
   const calculation = fixture.calc(actor)
   const reference = `${spell}|${source}`
@@ -166,7 +196,11 @@ test.each(
   const [grant] = calculation.atWillInvocationSpellStatuses
   expect(grant.rules).toMatch(/without expending a spell slot/)
   expect(grant.rules.includes('or material components')).toBe(noMaterials)
-  if (invocation === 'Armor of Shadows') expect(grant.rules).toMatch(/on yourself/)
+  if (invocation === 'Armor of Shadows' || invocation === 'Otherworldly Leap')
+    expect(grant.rules).toMatch(/on yourself/)
+  if (invocation === 'One with Shadows') expect(grant.rules).toMatch(/Dim Light or Darkness/)
+  if (level > 2)
+    expect(fixture.calc(atLevel(actor, level - 1)).atWillInvocationSpellStatuses).toEqual([])
   expect(calculation.classCasting).toEqual(fixture.calc(original).classCasting)
   expect(calculation.classChoices.prerequisites.effectiveSpellProfiles).toEqual(
     fixture.calc(original).classChoices.prerequisites.effectiveSpellProfiles,
@@ -192,6 +226,373 @@ test.each(
   )
   expect(fixture.calc(fixture.select(actor)).atWillInvocationSpellStatuses).toEqual([])
 })
+
+function atLevel(actor: Character, levels: number): Character {
+  return { ...actor, classProgression: [{ ...actor.classProgression[0], levels }] }
+}
+
+test.each([
+  ['2014', 'PHB', 9, '2014-official'],
+  ['2024', 'XPHB', 2, '2024-official'],
+] as const)(
+  '%s Otherworldly Leap exports Jump on the official spell page',
+  async (edition, source, level, template) => {
+    const fixture = warlock(edition, source)
+    const actor = fixture.select(atLevel(fixture.initial, level), 'Otherworldly Leap')
+    const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(
+      form.getFields().flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : [])),
+    ).toContain('Jump')
+  },
+  20_000,
+)
+
+test.each([
+  ['2014', 'PHB', 'Thief of Five Fates', 'Bane', 2, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Mire the Mind', 'Slow', 5, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Sign of Ill Omen', 'Bestow Curse', 5, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Bewitching Whispers', 'Compulsion', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Dreadful Word', 'Confusion', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Sculptor of Flesh', 'Polymorph', 7, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Minions of Chaos', 'Conjure Elemental', 9, 'using a warlock spell slot'],
+  ['2014', 'PHB', 'Chains of Carceri', 'Hold Monster', 15, 'same creature again'],
+  ['2024', 'XPHB', 'Gift of the Depths', 'Water Breathing', 5, 'without expending a spell slot'],
+] as const)('%s %s %s grants the printed limited cast', (edition, source, invocation, spell, level, restriction) => {
+  const fixture = warlock(edition, source)
+  let original = atLevel(fixture.initial, level)
+  if (invocation === 'Chains of Carceri')
+    original = fixture.choose(original, 'Pact Boon', ['Pact of the Chain'])
+  const actor = fixture.select(original, invocation)
+  const calculation = fixture.calc(actor)
+  expect(calculation.fixedClassSpellStatuses).toContainEqual(
+    expect.objectContaining({
+      featureName: invocation,
+      active: true,
+      prepared: false,
+      castOnly: {},
+      castingNote: expect.stringContaining(restriction),
+    }),
+  )
+  expect(calculation.atWillInvocationSpellStatuses).toEqual([])
+  expect(calculation.character.spells.spellProfiles).toEqual(
+    fixture.calc(original).character.spells.spellProfiles,
+  )
+  expect(
+    validateSpells(actor, calculation, fixture.lookups.spellsByKey).some((row) =>
+      row.title.includes(invocation),
+    ),
+  ).toBe(false)
+  const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: spell,
+      castOnly: true,
+      prepared: false,
+      castingNote: expect.stringContaining(restriction),
+    }),
+  )
+  expect(
+    fixture
+      .calc(fixture.select(actor))
+      .fixedClassSpellStatuses.some((row) => row.featureName === invocation),
+  ).toBe(false)
+})
+
+test.each([
+  ['2014', 'PHB', 2, '2014-official', 'Thief of Five Fates', 'Bane'],
+  ['2024', 'XPHB', 5, '2024-official', 'Gift of the Depths', 'Water Breathing'],
+] as const)(
+  '%s exports the limited cast to the official PDF',
+  async (edition, source, level, template, invocation, spell) => {
+    const fixture = warlock(edition, source)
+    const actor = fixture.select(atLevel(fixture.initial, level), invocation)
+    const vm = createCharacterSheetViewModel(actor, fixture.lookups, fixture.lookups)
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    expect(
+      form.getFields().flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : [])),
+    ).toContain(spell)
+  },
+  20_000,
+)
+
+test('revised Gift of the Depths follows walking speed while preserving a faster swim speed', () => {
+  const fixture = warlock('2024', 'XPHB')
+  const leveled = atLevel(fixture.initial, 5)
+  const actor = { ...leveled, movement: { ...leveled.movement, speeds: { walk: 35, swim: 20 } } }
+  const selected = fixture.select(actor, 'Gift of the Depths')
+  expect(fixture.calc(selected).movement.speeds.swim).toBe(35)
+  expect(
+    fixture.calc({ ...selected, movement: { ...actor.movement, speeds: { walk: 35, swim: 45 } } })
+      .movement.speeds.swim,
+  ).toBe(45)
+  const vm = createCharacterSheetViewModel(selected, fixture.lookups, fixture.lookups)
+  expect(vm.additionalMovementSummary).toBe('swim 35 ft.')
+  const noSpell = fixture.calc(selected, { ...fixture.lookups, spellsByKey: {} })
+  expect(noSpell.fixedClassSpellStatuses).toContainEqual(
+    expect.objectContaining({ featureName: 'Gift of the Depths', active: false }),
+  )
+  expect(noSpell.movement.speeds.swim).toBe(35)
+  expect(fixture.calc(fixture.select(selected)).movement.speeds.swim).toBe(20)
+})
+
+test('previews source-derived swim speed before saving the walking override', async () => {
+  const fixture = warlock('2024', 'XPHB')
+  const leveled = atLevel(fixture.initial, 5)
+  const actor = { ...leveled, movement: { ...leveled.movement, speeds: { walk: 30 } } }
+  const selected = fixture.select(actor, 'Gift of the Depths')
+  const previous = useCharacterStore.getState()
+  useCharacterStore.setState({
+    activeCharacter: selected,
+    activeCharacterId: selected.id,
+    characters: [selected],
+  })
+  const modal = render(<MovementModal open onOpenChange={() => {}} />)
+  try {
+    const user = userEvent.setup()
+    expect(screen.getByText('walk 30 ft., swim 30 ft.')).toBeTruthy()
+    await user.click(screen.getByText('Exact movement overrides'))
+    await user.type(screen.getByLabelText(/^walk$/i), '40')
+    expect(screen.getByText('walk 40 ft., swim 40 ft.')).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(selected)
+    await user.click(screen.getByRole('button', { name: 'Save movement' }))
+    const saved = useCharacterStore.getState().activeCharacter!
+    expect(saved.movementOverrides).toEqual({ walk: 40 })
+    expect(fixture.calc(saved).movement.speeds).toMatchObject({ walk: 40, swim: 40 })
+  } finally {
+    modal.unmount()
+    useCharacterStore.setState(previous)
+  }
+})
+
+test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spells', async () => {
+  const fixture = warlock('2014', 'PHB')
+  const name = 'Book of Ancient Secrets'
+  const tome = fixture.choose(atLevel(fixture.initial, 3), 'Pact Boon', ['Pact of the Tome'])
+  const book = fixture.select(tome, name)
+  const calculation = fixture.calc(book)
+  const slots = getManagedClassSpellSlots(
+    book.classProgression[0],
+    book,
+    calculation.classChoices.catalogs,
+    calculation.classChoices.prerequisites,
+  )
+  const ritualSlots = slots.filter((slot) => slot[1] === 'feature-prepared')
+  expect(ritualSlots).toHaveLength(2)
+  const [first, second] = ritualSlots
+  expect(validateSpells(book, calculation, fixture.lookups.spellsByKey)).toContainEqual(
+    expect.objectContaining({ title: expect.stringContaining(name), severity: 'blocking' }),
+  )
+  const pool = getManagedClassSpellPool(book, first, calculation.classChoices.spellContext)
+  expect(pool.spells.length).toBeGreaterThan(2)
+  expect(pool.spells.every((spell) => spell.meta?.ritual && spell.level === 1)).toBe(true)
+  expect(pool.spells.map((spell) => spell.name)).toContain('Find Familiar')
+  const assign = (actor: Character, ...requests: ManagedClassSpellRequest[]) =>
+    patch(
+      actor,
+      setManagedClassSpellChoicesCommand(
+        actor,
+        actor.provenance,
+        requests,
+        fixture.calc(actor).classChoices.spellContext,
+      ),
+    )
+  const pick = (
+    actor: Character,
+    slot: ManagedClassSpellRequest['slot'],
+    spell: string,
+  ): ManagedClassSpellRequest => ({
+    slot,
+    expected: null,
+    expectedEmptyRevision: actor.managedClassSpellRevision ?? 0,
+    target: { name: spell, source: 'PHB' },
+    policy: 'default',
+  })
+  expect(() => assign(book, pick(book, first, 'Augury'))).toThrow(/eligible ritual/)
+  expect(() => assign(book, pick(book, first, 'Magic Missile'))).toThrow(/eligible ritual/)
+  expect(() =>
+    assign(book, pick(book, first, 'Find Familiar'), pick(book, second, 'Find Familiar')),
+  ).toThrow()
+
+  const ordinary = slots.find((slot) => slot[1] === 'class-known')
+  if (!ordinary) throw new Error('Missing Pact Magic spell choice')
+  const boonSlots = slots.filter((slot) => slot[1] === 'feature-cantrip')
+  expect(boonSlots).toHaveLength(3)
+  expect(slots.some((slot) => slot[1] === 'class-cantrip')).toBe(true)
+  const bonusCantrips = ['Guidance', 'Sacred Flame', 'Shillelagh']
+  const boonPool = getManagedClassSpellPool(
+    book,
+    boonSlots[0],
+    calculation.classChoices.spellContext,
+  )
+  expect(boonPool.spells.map(({ name }) => name)).toEqual(expect.arrayContaining(bonusCantrips))
+  expect(boonPool.spells.every(({ level }) => level === 0)).toBe(true)
+  const learned = assign(
+    book,
+    pick(book, ordinary, 'Comprehend Languages'),
+    ...boonSlots.map((slot, index) => pick(book, slot, bonusCantrips[index])),
+  )
+  const knownRitual = fixture
+    .calc(learned)
+    .fixedClassSpellStatuses.filter(({ featureName }) => featureName === name)
+  expect(knownRitual).toEqual([
+    expect.objectContaining({
+      reference: 'Comprehend Languages|PHB',
+      active: true,
+      prepared: false,
+      castOnly: { castingTime: 'Ritual only' },
+      castingNote: expect.stringContaining('spell you know as a ritual'),
+    }),
+  ])
+  const knownRitualSheet = createCharacterSheetViewModel(learned, fixture.lookups, fixture.lookups)
+  expect(knownRitualSheet.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Comprehend Languages',
+      prepared: true,
+      ritual: true,
+      castingNote: expect.stringContaining('spell you know as a ritual'),
+    }),
+  )
+  const ready = assign(
+    learned,
+    pick(learned, first, 'Find Familiar'),
+    pick(learned, second, 'Comprehend Languages'),
+  )
+  const reopened = fixture.calc(ready)
+  const profile = reopened.character.spells.spellProfiles.find(
+    (row) => row.className === 'Warlock',
+  )!
+  expect(profile.spellsKnown).toEqual(['Comprehend Languages|PHB'])
+  expect(profile.cantrips).toEqual(bonusCantrips.map((name) => name + '|PHB'))
+  expect(profile?.alwaysPreparedSpells ?? []).toEqual([])
+  expect(
+    validateSpells(ready, reopened, fixture.lookups.spellsByKey).some((issue) =>
+      issue.title.includes(name),
+    ),
+  ).toBe(false)
+  const offer = (actor: Character) => {
+    const { catalogs, prerequisites } = fixture.calc(actor).classChoices
+    const setups = getSelectedFeatureCantripSetups(actor, catalogs, prerequisites)
+    const [current] = getInvocationRitualTranscriptionOffers(
+      actor,
+      actor.classProgression[0],
+      setups,
+    )
+    if (!current) throw new Error('Missing active transcription offer')
+    return current.slot
+  }
+  const transcription = offer(ready)
+  expect(transcription[3]).toBe(3)
+  expect(
+    getManagedClassSpellSlots(ready.classProgression[0], ready, reopened.classChoices.catalogs),
+  ).not.toContainEqual(transcription)
+  const eligible = getManagedClassSpellPool(
+    ready,
+    transcription,
+    reopened.classChoices.spellContext,
+  )
+  expect(eligible.allowedLevels).toEqual([1, 2])
+  expect(eligible).toMatchObject({ transcription: { hoursPerLevel: 2, goldPerLevel: 50 } })
+  expect(() => assign(ready, pick(ready, transcription, 'Water Breathing'))).toThrow(
+    /eligible ritual/,
+  )
+  expect(() => assign(ready, pick(ready, transcription, 'Find Familiar'))).toThrow(
+    /owns that spell choice/,
+  )
+  const transcribed = assign(ready, pick(ready, transcription, 'Augury'))
+  const levelFive = atLevel(transcribed, 5)
+  const savedRitual = transcribed.managedClassSpellChoices?.find(
+    (row) => row.target.name === 'Augury',
+  )
+  if (!savedRitual) throw new Error('Missing saved transcription')
+  expect(() =>
+    assign(levelFive, {
+      ...pick(levelFive, savedRitual.slot, 'Animal Messenger'),
+      expected: { revision: savedRitual.revision, target: savedRitual.target },
+    }),
+  ).toThrow(/current class level/)
+  const later = offer(levelFive)
+  expect(() => assign(levelFive, pick(levelFive, later, 'Augury'))).toThrow(
+    /owns that spell choice/,
+  )
+  expect(() =>
+    assign(
+      levelFive,
+      pick(
+        levelFive,
+        [...transcription.slice(0, 4), 1] as typeof transcription,
+        'Animal Messenger',
+      ),
+    ),
+  ).toThrow(/current class level/)
+  const expanded = assign(levelFive, pick(levelFive, later, 'Water Breathing'))
+  const rolledBack = patch(
+    expanded,
+    applyClassProgressionUpdate(expanded, expanded.provenance, transcribed.classProgression),
+  )
+  expect(rolledBack.managedClassSpellChoices?.map((row) => row.target.name)).toContain('Augury')
+  expect(rolledBack.managedClassSpellChoices?.map((row) => row.target.name)).not.toContain(
+    'Water Breathing',
+  )
+  const vm = createCharacterSheetViewModel(expanded, fixture.lookups, fixture.lookups)
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Guidance',
+      level: 'C',
+      prepared: true,
+      castingNote: expect.stringContaining('cast those cantrips at will'),
+    }),
+  )
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({ name: 'Water Breathing', castOnly: true, ritual: true }),
+  )
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({
+      name: 'Find Familiar',
+      ritual: true,
+      prepared: false,
+      castOnly: true,
+      castingTime: 'Ritual only',
+      castingNote: expect.stringContaining('Book of Shadows in hand'),
+    }),
+  )
+  for (const template of ['2014-official', '2014-custom'] as const) {
+    const bytes = await generateTestCharacterSheet(vm, template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    const values = form
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    for (const spell of ['Find Familiar', 'Augury', 'Water Breathing', ...bonusCantrips])
+      expect(values.some((text) => text.includes(spell))).toBe(true)
+    expect(values.some((text) => text.includes('Book of Shadows in hand'))).toBe(true)
+    if (template === '2014-official') {
+      expect(values).toContain('Augury (ritual only)')
+      expect(values).toContain('Comprehend Languages')
+    }
+  }
+
+  const cleared = fixture.select(expanded)
+  const clearedCalculation = fixture.calc(cleared)
+  expect(cleared.managedClassSpellChoices).toHaveLength(4)
+  expect(
+    clearedCalculation.character.spells.spellProfiles.find((row) => row.className === 'Warlock')
+      ?.spellsKnown,
+  ).toEqual(['Comprehend Languages|PHB'])
+  expect(clearedCalculation.fixedClassSpellStatuses.some((row) => row.featureName === name)).toBe(
+    false,
+  )
+  const switched = fixture.choose(ready, 'Pact Boon', ['Pact of the Blade'])
+  const switchedCalculation = fixture.calc(switched)
+  expect(switchedCalculation.fixedClassSpellStatuses.some((row) => row.featureName === name)).toBe(
+    false,
+  )
+  expect(
+    switchedCalculation.character.spells.spellProfiles.find((row) => row.className === 'Warlock')
+      ?.cantrips,
+  ).toEqual([])
+}, 25_000)
 
 test('revised replacement may fill the first slot and still follows current Warlock level', () => {
   const fixture = warlock('2024', 'XPHB')

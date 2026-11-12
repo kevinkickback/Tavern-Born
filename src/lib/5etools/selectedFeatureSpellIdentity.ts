@@ -11,6 +11,7 @@ import {
   maximumDomainCantrips,
 } from './clericDomainCantripSources'
 import {
+  CLASSIC_INVOCATION_POOL_ID,
   getRevisedInvocationPoolId,
   isRevisedInvocationPoolId,
 } from './revisedInvocationPoolIdentity'
@@ -241,7 +242,12 @@ export function decodeSelectedFeatureSpellAddress(
             !declaredSubclassSlots.some((slot) => slot[2] === value)
           : parts[4] !== null) ||
       parts[5] !== 0 ||
-      parts[6] !== 0 ||
+      (parts[6] !== 0 &&
+        !(
+          parts[6] === 1 &&
+          parts[0] === CLASSIC_INVOCATION_POOL_ID &&
+          parts[1] === 'optionalFeature'
+        )) ||
       selectedFeatureSpellAddress(parts as SelectedFeatureSpellAddress) !== value
     )
       return undefined
@@ -261,6 +267,7 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
       (owner.length === 5 && owner[0] === 'subclass')) &&
     owner.slice(1).every(normalized) &&
     !!address &&
+    (address[6] === 0 || domain === 'feature-prepared') &&
     (domain === 'feature-cantrip' ||
       (domain === 'feature-prepared' &&
         isSelectedInvocationRitualSlot(value as ManagedClassSpellSlot))) &&
@@ -280,6 +287,17 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
   )
 }
 
+export function isSelectedClassicInvocationRitualSlot(slot: ManagedClassSpellSlot) {
+  const [owner, domain, producer] = slot
+  return (
+    domain === 'feature-prepared' &&
+    owner[0] === 'class' &&
+    owner[1] === 'warlock' &&
+    owner[2] === 'phb' &&
+    decodeSelectedFeatureSpellAddress(producer)?.[0] === CLASSIC_INVOCATION_POOL_ID
+  )
+}
+
 export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
   const [owner, domain, producer, level, ordinal] = slot
   if (domain !== 'feature-prepared' || owner[0] !== 'class') return false
@@ -287,13 +305,33 @@ export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
   return (
     !!address &&
     address[1] === 'optionalFeature' &&
-    isRevisedInvocationPoolId(address[0]) &&
-    address[0] === getRevisedInvocationPoolId({ name: owner[1], source: owner[2] }) &&
+    (isSelectedClassicInvocationRitualSlot(slot) ||
+      (isRevisedInvocationPoolId(address[0]) &&
+        address[0] === getRevisedInvocationPoolId({ name: owner[1], source: owner[2] }) &&
+        ordinal < 2)) &&
     Number.isInteger(level) &&
     level >= 1 &&
     level <= 20 &&
-    Number.isInteger(ordinal) &&
-    ordinal >= 0 &&
-    ordinal < 2
+    Number.isSafeInteger(ordinal) &&
+    ordinal >= 0
   )
+}
+
+export function getInvocationRitualTranscriptionProducer(producer: string) {
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  if (address?.[0] !== CLASSIC_INVOCATION_POOL_ID || address[1] !== 'optionalFeature')
+    return undefined
+  address[6] = 1
+  return selectedFeatureSpellAddress(address)
+}
+
+export function getInvocationRitualBookProducer(producer: string) {
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  if (address?.[6] !== 1) return producer
+  address[6] = 0
+  return selectedFeatureSpellAddress(address)
+}
+
+export function isInvocationRitualTranscriptionSlot(slot: ManagedClassSpellSlot) {
+  return slot[1] === 'feature-prepared' && getInvocationRitualBookProducer(slot[2]) !== slot[2]
 }

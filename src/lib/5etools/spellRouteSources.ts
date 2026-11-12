@@ -1,3 +1,7 @@
+import {
+  getSpellReferenceKey,
+  isSourceQualifiedSpellReference,
+} from '@/lib/calculations/spellIdentity'
 import type { Spell5e } from '@/types/5etools'
 import type {
   ClassSpellRoute,
@@ -10,6 +14,7 @@ import type {
 } from '@/types/spellRoutes'
 import { featureOptionRulesSignature } from './featureRulesSignature'
 import { getFeatureSourceDigest } from './featureSourceAudit'
+import { getRevisedSpellReprintReferences } from './spellReprintReferences'
 
 type ObjectValue = Record<string, unknown>
 type Channel = ClassSpellRoute[5]
@@ -328,6 +333,7 @@ const auditFields = new Set([
   'diagnostics',
 ])
 const inputFields = new Set(['origin', 'embedded', 'lookup', 'targetOccurrences'])
+const inputFieldsWithReprints = new Set([...inputFields, 'ambiguousReprintTargets'])
 /** Source envelopes are plain data with every required own enumerable field. */
 function exactDataFields(value: ObjectValue, fields: ReadonlySet<string>) {
   const prototype = Object.getPrototypeOf(value)
@@ -356,13 +362,34 @@ function validated(spell: Spell5e): CheckedRoutes | undefined {
   const raw = object(value.input)
   if (
     !raw ||
-    !exactDataFields(raw, inputFields) ||
+    !exactDataFields(
+      raw,
+      own(raw, 'ambiguousReprintTargets') ? inputFieldsWithReprints : inputFields,
+    ) ||
     typeof raw.origin !== 'string' ||
     !raw.origin ||
     !Array.isArray(raw.targetOccurrences) ||
     !raw.targetOccurrences.length
   )
     return undefined
+  if (own(raw, 'ambiguousReprintTargets')) {
+    const targets = raw.ambiguousReprintTargets
+    if (
+      target[1] !== 'phb' ||
+      raw.targetOccurrences.length < 2 ||
+      !Array.isArray(targets) ||
+      !targets.length ||
+      targets.some(
+        (ref, index) =>
+          typeof ref !== 'string' ||
+          !isSourceQualifiedSpellReference(ref) ||
+          !ref.endsWith('|xphb') ||
+          getSpellReferenceKey(ref) !== ref ||
+          (index > 0 && targets[index - 1] >= ref),
+      )
+    )
+      return undefined
+  }
   const embedded = object(raw.embedded),
     lookup = object(raw.lookup)
   if (!embedded || !lookup) return undefined
@@ -508,6 +535,20 @@ function preserveCurrentRoutes<T extends Spell5e>(spell: T, checked: CheckedRout
   return result
 }
 
+/** Discarded duplicate rows can veto a reprint claim after catalog composition. */
+export function getAmbiguousSpellReprintTargets(spell: Spell5e): readonly string[] {
+  return spell.classSpellRouteSource?.input?.ambiguousReprintTargets
+    ? (validated(spell)?.audit.input.ambiguousReprintTargets ?? [])
+    : []
+}
+
+export function hasUniqueSpellRouteSource(spell: Spell5e): boolean {
+  return (
+    spell.classSpellRouteSource?.input?.targetOccurrences?.length === 1 &&
+    validated(spell)?.audit.input.targetOccurrences.length === 1
+  )
+}
+
 /** Parsed production rows always own a source package; prior derived output cannot self-certify. */
 export function parseSpellRouteSource<T extends Spell5e>(
   spell: T,
@@ -534,6 +575,9 @@ export function parseSpellRouteSource<T extends Spell5e>(
         ? { kind: 'absent' }
         : { kind: 'present', candidates: lookupCandidates(lookup, target) },
     targetOccurrences: [],
+    ...(previous?.input.ambiguousReprintTargets && {
+      ambiguousReprintTargets: previous.input.ambiguousReprintTargets,
+    }),
   }
   const previousRoutingDigest = previous && routingDigest(target, previous.input)
   const nextRoutingDigest = routingDigest(target, input)
@@ -572,12 +616,34 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
   const replacements = new Map<T, T>()
   for (const rows of groups.values()) {
     if (rows.length < 2) continue
+    const ambiguousReprintTargets = [
+      ...new Set(
+        rows.flatMap(({ spell }) =>
+          targetOf(spell)?.[1] === 'phb'
+            ? [
+                ...(checkedRows.get(spell)?.audit.input.ambiguousReprintTargets ?? []),
+                ...getRevisedSpellReprintReferences(spell.reprintedAs)
+                  .filter(isSourceQualifiedSpellReference)
+                  .map((reference) => getSpellReferenceKey(reference)),
+              ]
+            : [],
+        ),
+      ),
+    ].sort()
     const witnesses = new Map<string, SpellRouteOccurrence>()
     const parsed = rows.map(({ spell, index }) => {
-      if (own(spell, 'classSpellRouteSource')) return spell
-      const current = parseSpellRouteSource(spell, origin + '#' + index, String(index))
-      checkedRows.set(current, validated(current))
-      return current
+      if (checkedRows.get(spell)) return spell
+      const input = { ...spell }
+      if (own(input, 'classSpellRouteSource')) {
+        if (!ambiguousReprintTargets.length) return spell
+        // A malformed winner must still carry the group's negative evidence.
+        // Use an empty route input. The duplicate group will prohibit all routes.
+        delete input.classSpellRouteSource
+        delete input.classes
+      }
+      const current = parseSpellRouteSource(input, `${origin}#${index}`, String(index))
+      checkedRows.set(spell, validated(current))
+      return spell
     })
     for (const spell of parsed)
       for (const witness of checkedRows.get(spell)?.audit.input.targetOccurrences ?? [])
@@ -598,7 +664,14 @@ export function auditSpellRouteMultiplicity<T extends Spell5e>(
       replacements.set(
         rows[index].spell,
         audit
-          ? project(spell, build(audit.target, { ...audit.input, targetOccurrences: occurrences }))
+          ? project(
+              spell,
+              build(audit.target, {
+                ...audit.input,
+                targetOccurrences: occurrences,
+                ...(ambiguousReprintTargets.length && { ambiguousReprintTargets }),
+              }),
+            )
           : project(spell, undefined),
       )
     })

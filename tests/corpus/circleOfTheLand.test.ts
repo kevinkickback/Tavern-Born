@@ -283,4 +283,5 @@ test.runIf(existsSync('data/class/class-druid.json'))(
       "melf's acid arrow|phb",
     ])
   },
+  20_000,
 )

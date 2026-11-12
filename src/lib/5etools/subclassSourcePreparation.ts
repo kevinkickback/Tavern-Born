@@ -1,4 +1,7 @@
+import { getUnnamedRankedExpansion } from './additionalSpells'
+import { getSubclassOwnerIdentity } from './classFeatureIdentity'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
+import { getFeatureSourceDigest } from './featureSourceAudit'
 import { asArray } from './parsers/shared'
 import {
   getSubclassCopyIdentity,
@@ -16,6 +19,7 @@ export function materializeSubclassCopies(
   scope?: { dependencies: readonly unknown[]; allowLocal: boolean },
 ): SourceRecord[] {
   const byIdentity = new Map<string, SourceRecord[]>()
+  const ownerCounts = new Map<string, number>()
   const getKey = scope
     ? (row: SourceRecord) => {
         const identity = getSubclassCopyIdentity(row)
@@ -27,9 +31,14 @@ export function materializeSubclassCopies(
     const record = object(value)
     const key = getKey(record)
     if (key) byIdentity.set(key, [...(byIdentity.get(key) ?? []), record])
+    const owner = getSubclassOwnerIdentity(record)
+    if (owner) {
+      const ownerKey = JSON.stringify(owner)
+      ownerCounts.set(ownerKey, (ownerCounts.get(ownerKey) ?? 0) + 1)
+    }
   }
   return subclasses.map((value) => {
-    const record = object(value)
+    const { retainedExpandedSpellSourceDigest: _, ...record } = object(value)
     const key = getKey(object(record._copy))
     const matches = key ? byIdentity.get(key) : undefined
     if (scope && hasCopy(record) && (matches?.length !== 1 || hasCopy(matches[0])))
@@ -44,13 +53,27 @@ export function materializeSubclassCopies(
       )
     if (matches && matches.length > 1) return { ...record, sourceIdentityConflict: true }
     const base = matches?.[0]
-    return base
-      ? {
-          ...base,
-          ...record,
-          ...(base.sourceIdentityConflict === true ? { sourceIdentityConflict: true } : {}),
-        }
-      : record
+    if (!base) return record
+    const { retainedExpandedSpellSourceDigest: _base, ...original } = base
+    const expansion =
+      record.classSource === 'XPHB' &&
+      original.classSource === 'PHB' &&
+      !hasCopy(original) &&
+      !original.sourceIdentityConflict &&
+      ownerCounts.get(JSON.stringify(getSubclassOwnerIdentity(original))) === 1 &&
+      JSON.stringify(getSubclassCopyIdentity(original)) ===
+        JSON.stringify(getSubclassCopyIdentity(object(record._copy))) &&
+      !Object.getOwnPropertyDescriptor(record, 'additionalSpells')
+        ? getUnnamedRankedExpansion(original.additionalSpells)
+        : undefined
+    return {
+      ...original,
+      ...record,
+      ...(original.sourceIdentityConflict === true ? { sourceIdentityConflict: true } : {}),
+      ...(expansion
+        ? { retainedExpandedSpellSourceDigest: getFeatureSourceDigest([expansion], false) }
+        : {}),
+    }
   })
 }
 

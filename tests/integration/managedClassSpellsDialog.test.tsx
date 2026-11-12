@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs'
 import {
   act,
   cleanup,
@@ -16,8 +17,13 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseClassDocument } from '@/lib/5etools/parsers/classes'
+import { parseSpells } from '@/lib/5etools/parsers/spells'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
-import { setManagedClassSpellChoiceCommand } from '@/lib/character/commands/managedClassSpellCommands'
+import {
+  setManagedClassSpellChoiceCommand,
+  setManagedClassSpellChoicesCommand,
+} from '@/lib/character/commands/managedClassSpellCommands'
 import { projectManagedClassSpellState } from '@/lib/character/managedClassSpells'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
 import { ManagedClassSpellsDialog } from '@/pages/build/class/components/ManagedClassSpellsDialog'
@@ -25,10 +31,13 @@ import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClas
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { Class5e, ClassFeature, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import type { ManagedClassSpellSlot } from '@/types/classCasting'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeBundledClassCastingLayer } from '../fixtures/classCastingFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 
 const fixture = makeManagedClassSpellFixtures()
@@ -71,29 +80,71 @@ function Flow({ level = 1 }: { level?: number }) {
 async function choose(index: number, name: string, kind = 'Cantrip') {
   const group = screen.getByRole('group', { name: `${kind} ${index}` })
   fireEvent.click(within(group).getByRole('button', { name: /Choose|Change/ }))
-  fireEvent.change(screen.getByRole('textbox', { name: /Search/ }), { target: { value: name } })
-  await waitFor(() => expect(screen.getByText(name)).toBeTruthy())
-  fireEvent.click(screen.getByText(name))
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Finish' })).toBeTruthy())
+  const picker = within(screen.getByRole('dialog', { name: /^Choose/ }))
+  fireEvent.change(picker.getByRole('textbox', { name: /Search/ }), { target: { value: name } })
+  fireEvent.click(await picker.findByText(name, { exact: true }))
+  fireEvent.click(picker.getByRole('button', { name: 'Confirm' }))
 }
 
-function openWizardSpellbook() {
-  const wizard = makeBundledClassCastingLayer('class/class-wizard.json')
-  wizard.spells = fixture.spells
-  wizard.lookups = buildGameDataLookups(wizard)
-  const original = makeCharacterFixture({
+function installWizard(character: Character) {
+  const data = {
+    ...makeBundledClassCastingLayer('class/class-wizard.json'),
+    spells: fixture.spells,
+  }
+  const wizard = { ...data, lookups: buildGameDataLookups(data) }
+  install(character)
+  useGameDataStore.setState({ gameData: wizard })
+  return wizard
+}
+
+const classicWizard = () =>
+  makeCharacterFixture({
     allowedSources: ['PHB'],
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 18 }],
   })
-  install(original)
-  useGameDataStore.setState({ gameData: wizard })
-  const before = JSON.stringify(original)
-  render(<Flow level={18} />)
-  return before
+
+const evokerWizard = () =>
+  makeCharacterFixture({
+    originSystem: '2024',
+    allowedSources: ['XPHB'],
+    classProgression: [
+      { name: 'Wizard', source: 'XPHB', levels: 5, subclass: 'Evoker', subclassSource: 'XPHB' },
+    ],
+  })
+
+const wizardProfile = (character: Character) =>
+  character.spells.spellProfiles.find((profile) => profile.className === 'Wizard')
+
+function seedWizardBook(
+  character: Character,
+  spells: ReadonlyArray<readonly [ManagedClassSpellSlot, string]>,
+) {
+  const view = renderHook(() => useCharacterCalculationContext(character))
+  const context = view.result.current?.classChoices.spellContext
+  view.unmount()
+  const { characterPatch, provenanceUpdate } = setManagedClassSpellChoicesCommand(
+    character,
+    character.provenance,
+    spells.map(([slot, name]) => ({
+      slot,
+      expected: null,
+      expectedEmptyRevision: 0,
+      target: { name, source: character.classProgression[0].source },
+      policy: 'default',
+    })),
+    context,
+  )
+  const saved = characterPersistenceSchema.parse({
+    ...character,
+    ...characterPatch,
+    provenance: provenanceUpdate,
+  })
+  useCharacterStore.setState({ activeCharacter: saved, characters: [saved] })
+  return saved
 }
 
 const mastery = () => within(screen.getByRole('group', { name: 'Spell Mastery 1' }))
+const savantRow = () => screen.getByRole('group', { name: 'Evocation Savant 1' })
 const clearLearned = () =>
   fireEvent.click(
     within(screen.getByRole('group', { name: 'Spell 1' })).getByRole('button', { name: 'Clear' }),
@@ -115,19 +166,80 @@ afterEach(() => {
 })
 
 describe('Class spell Finish and current-state adapter', () => {
-  test('Evocation Savant is a separate gain that learns and prepares from the shared Wizard book', async () => {
-    const data = makeBundledClassCastingLayer('class/class-wizard.json')
-    data.spells = fixture.spells
-    data.lookups = buildGameDataLookups(data)
-    const original = makeCharacterFixture({
-      originSystem: '2024',
-      allowedSources: ['XPHB'],
-      classProgression: [
-        { name: 'Wizard', source: 'XPHB', levels: 5, subclass: 'Evoker', subclassSource: 'XPHB' },
-      ],
-    })
-    install(original)
-    useGameDataStore.setState({ gameData: data })
+  test.skipIf(!existsSync('data/class/class-sorcerer.json'))(
+    'classic Sorcerer replaces a bonus spell from the level dialog',
+    async () => {
+      const parsed = parseClassDocument(
+        JSON.parse(readFileSync('data/class/class-sorcerer.json', 'utf8')),
+      )
+      const document = JSON.parse(readFileSync('data/spells/spells-phb.json', 'utf8'))
+      const spells = parseSpells(
+        document.spell.filter((spell: Spell5e) =>
+          ['Charm Person', 'Arms of Hadar', 'Dissonant Whispers'].includes(spell.name),
+        ),
+        {
+          sourceLookup: JSON.parse(
+            readFileSync('data/generated/gendata-spell-source-lookup.json', 'utf8'),
+          ),
+        },
+      ) as Spell5e[]
+      const data = makeGameDataFixture({
+        classes: parsed.classes as Class5e[],
+        classFeatures: parsed.classFeatures as ClassFeature[],
+        classCastingSources: parsed.classCastingSources,
+        spells,
+      })
+      data.lookups = buildGameDataLookups(data)
+      const original = makeCharacterFixture({
+        allowedSources: ['PHB', 'TCE'],
+        classProgression: [
+          {
+            name: 'Sorcerer',
+            source: 'PHB',
+            levels: 2,
+            subclass: 'Aberrant Mind',
+            subclassSource: 'TCE',
+          },
+        ],
+      })
+      install(original)
+      useGameDataStore.setState({ gameData: data })
+      render(<Flow level={2} />)
+      fireEvent.change(screen.getByLabelText('Psionic Spells replacement'), {
+        target: { value: '0' },
+      })
+      const row = screen.getByRole('group', { name: /Psionic Spells/ })
+      fireEvent.click(within(row).getByRole('button', { name: 'Choose' }))
+      expect(screen.getByRole('dialog', { name: 'Choose a replacement spell' })).toBeTruthy()
+      expect(screen.queryByRole('switch', { name: 'Ignore class restrictions' })).toBeNull()
+      fireEvent.click(await screen.findByText('Charm Person', { exact: true }))
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+      const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+      expect(saved.managedClassSpellChoices?.map((choice) => choice.slot[1])).toEqual([
+        'subclass-spell-replacement',
+      ])
+      expect(saved.spells.spellProfiles[0].spellsKnown).toContain('Charm Person|PHB')
+      expect(
+        saved.spells.spellProfiles[0].spellsKnown.map((ref) => ref.toLowerCase()),
+      ).not.toContain('arms of hadar|phb')
+      fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+      fireEvent.change(screen.getByLabelText('Psionic Spells replacement'), {
+        target: { value: '' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+      const restored = characterPersistenceSchema.parse(
+        useCharacterStore.getState().activeCharacter,
+      )
+      expect(restored.managedClassSpellChoices).toEqual([])
+      expect(
+        restored.spells.spellProfiles[0].spellsKnown.map((ref) => ref.toLowerCase()),
+      ).toContain('arms of hadar|phb')
+    },
+  )
+
+  test('Evocation Savant learns into the shared Wizard book without preparing spells', async () => {
+    const data = installWizard(evokerWizard())
     const wizard = data.classes.find((row) => row.source === 'XPHB')!
     const evoker = wizard.subclasses?.find((row) => row.name === 'Evoker')
     expect(evoker).toBeDefined()
@@ -151,7 +263,6 @@ describe('Class spell Finish and current-state adapter', () => {
     render(<Flow level={3} />)
     await choose(1, 'Magic Missile', 'Spell')
 
-    const savantRow = () => screen.getByRole('group', { name: 'Evocation Savant 1' })
     fireEvent.click(within(savantRow()).getByRole('button', { name: 'Choose' }))
     const picker = screen.getByRole('dialog', { name: 'Choose Evocation Savant 1' })
     expect(picker.textContent).toContain('Evocation spell of up to 2nd level')
@@ -164,7 +275,7 @@ describe('Class spell Finish and current-state adapter', () => {
     fireEvent.change(search, { target: { value: 'Scorching Ray' } })
     fireEvent.click(await screen.findByText('Scorching Ray'))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    fireEvent.click(within(savantRow()).getByRole('checkbox', { name: 'Prepare this spell' }))
+    expect(screen.queryByRole('checkbox', { name: 'Prepare this spell' })).toBeNull()
 
     fireEvent.click(
       within(screen.getByRole('group', { name: 'Spell 2' })).getByRole('button', {
@@ -187,11 +298,12 @@ describe('Class spell Finish and current-state adapter', () => {
       ]),
     ).toEqual([
       ['class', { name: 'Magic Missile', source: 'XPHB' }, undefined],
-      ['subclass', { name: 'Scorching Ray', source: 'XPHB' }, true],
+      ['subclass', { name: 'Scorching Ray', source: 'XPHB' }, undefined],
     ])
-    expect(
-      saved.spells.spellProfiles.find((profile) => profile.className === 'Wizard')?.preparedSpells,
-    ).toContain('Scorching Ray|XPHB')
+    expect(wizardProfile(saved)?.spellsKnown).toEqual(
+      expect.arrayContaining(['Magic Missile|XPHB', 'Scorching Ray|XPHB']),
+    )
+    expect(wizardProfile(saved)?.preparedSpells).toEqual([])
 
     const view = renderHook(() => useCharacterCalculationContext(saved))
     const readiness = validateSpells(saved, view.result.current!, data.lookups.spellsByKey)
@@ -204,17 +316,74 @@ describe('Class spell Finish and current-state adapter', () => {
         expect.objectContaining({ title: 'Finish Wizard spell choices at level 3' }),
       ]),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+  })
+
+  test('preparing on Spells survives reopening the Wizard book and replacing a different choice', async () => {
+    const character = evokerWizard()
+    installWizard(character)
+    seedWizardBook(character, [
+      [
+        [
+          ['class', 'wizard', 'xphb'],
+          'class-spellbook',
+          'class-feature|spellcasting|wizard|xphb|1|xphb',
+          3,
+          0,
+        ],
+        'Magic Missile',
+      ],
+      [
+        [
+          ['subclass', 'wizard', 'xphb', 'evoker', 'xphb'],
+          'class-spellbook',
+          'subclass-feature|evocation savant|wizard|xphb|evoker|xphb|3|xphb',
+          3,
+          0,
+        ],
+        'Scorching Ray',
+      ],
+    ])
+    const spells = render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <SpellsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: /Wizard/ }))
+    const prepareButtons = screen.getAllByTitle('Not prepared', { exact: true })
+    expect(prepareButtons).toHaveLength(2)
+    for (const button of prepareButtons) fireEvent.click(button)
+    const prepared = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(wizardProfile(prepared)?.preparedSpells).toHaveLength(2)
+    expect(wizardProfile(prepared)?.preparedSpells).toEqual(
+      expect.arrayContaining(['Magic Missile|XPHB', 'Scorching Ray|XPHB']),
+    )
+
+    spells.unmount()
+    render(<Flow level={3} />)
     expect(within(savantRow()).getByText('Scorching Ray (XPHB)')).toBeTruthy()
-    expect(
-      within(savantRow())
-        .getByRole('checkbox', { name: 'Prepare this spell' })
-        .getAttribute('aria-checked'),
-    ).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    expect(useCharacterStore.getState().activeCharacter?.managedClassSpellChoices).toEqual(
+      prepared.managedClassSpellChoices,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    clearLearned()
+    await choose(1, 'Shield', 'Spell')
+    expect(screen.getByText('Shield (XPHB)')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const replaced = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(wizardProfile(replaced)?.spellsKnown).toContain('Shield|XPHB')
+    expect(wizardProfile(replaced)?.spellsKnown).not.toContain('Magic Missile|XPHB')
+    expect(wizardProfile(replaced)?.preparedSpells).toEqual(['Scorching Ray|XPHB'])
   })
 
   test('Spell Mastery uses same-dialog draft learning and removal without saving the preview', async () => {
-    const before = openWizardSpellbook()
+    const character = classicWizard()
+    installWizard(character)
+    const before = JSON.stringify(character)
+    render(<Flow level={18} />)
 
     await choose(1, 'Shield', 'Spell')
     await choose(1, 'Shield', 'Spell Mastery')
@@ -234,13 +403,32 @@ describe('Class spell Finish and current-state adapter', () => {
   })
 
   test('saved Spell Mastery distinguishes draft removal from a persisted unavailable spell', async () => {
-    openWizardSpellbook()
-    await choose(1, 'Shield', 'Spell')
-    await choose(1, 'Shield', 'Spell Mastery')
-    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
-    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    const character = classicWizard()
+    installWizard(character)
+    const saved = seedWizardBook(character, [
+      [
+        [
+          ['class', 'wizard', 'phb'],
+          'class-spellbook',
+          'class-feature|spellcasting|wizard|phb|1|phb',
+          18,
+          0,
+        ],
+        'Shield',
+      ],
+      [
+        [
+          ['class', 'wizard', 'phb'],
+          'class-spellbook-specialty',
+          'class-feature|spell mastery|wizard|phb|18|phb',
+          18,
+          0,
+        ],
+        'Shield',
+      ],
+    ])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reopen spell choices' }))
+    render(<Flow level={18} />)
     clearLearned()
     expect(mastery().queryByText('Chosen')).toBeNull()
     expect(mastery().getByText(/restore this spell in the draft spellbook/i)).toBeTruthy()

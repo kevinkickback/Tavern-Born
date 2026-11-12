@@ -1301,7 +1301,7 @@ export function applyClassChoiceSelectionCommand(
       if (nativeBladeSource === 'xphb' && isNew) {
         if (isPact && !getCurrentPactBladeState(character, authority?.catalogs, 'xphb', owner))
           throw new RangeError('Choose the current Pact of the Blade from its exact source.')
-        if (isRevisedAtWillInvocationOption(option)) {
+        if (isRevisedAtWillInvocationOption(option, authority?.catalogs)) {
           const rule = getCurrentRevisedAtWillInvocation(choice, option, authority?.catalogs)
           if (
             !rule ||
@@ -1819,7 +1819,7 @@ export function reconcileClassChoiceSelectionGrants(
           selected: selection.selected.filter(
             (option) =>
               (!isRevisedTargetedInvocation(option) &&
-                !isRevisedAtWillInvocationOption(option) &&
+                !isRevisedAtWillInvocationOption(option, catalogs) &&
                 !isPactBladeOption(option, 'xphb') &&
                 !isDeclaredRevisedInvocationOption(selection.choiceId, option, catalogs)) ||
               routes.featureIds.has(getClassChoiceFeatureId(selection, option)),

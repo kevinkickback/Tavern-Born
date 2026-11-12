@@ -15,6 +15,11 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import type { FeatureCastOnlyRules } from '@/types/classCasting'
 import { isArcaneArcherCantripOwner } from './arcaneArcherCantripSource'
 import { getAlchemistFeatureCasts } from './artificerAlchemistSpells'
+import {
+  type ArtificerSpellReprints,
+  isTceArtificer,
+  reprintTceArtificerSubclassSpells,
+} from './artificerSpellReprints'
 import { getBarbarianRitualGrants } from './barbarianRitualSpells'
 import { getBardCollegeSpellGrants } from './bardCollegeFeatures'
 import { getChosenLandTerrain, isCircleOfTheLand, landTerrainSpellToken } from './circleOfTheLand'
@@ -70,6 +75,11 @@ import {
   getRangerEtherealStep,
   getRevisedRangerSubclassSpells,
 } from './rangerSubclassSpells'
+import {
+  getRetainedExpandedSubclassSpells,
+  getRetainedSubclassSpellGrants,
+  isRevisedRetainedSubclassSpellOwner,
+} from './retainedSubclassSpells'
 import { getRoguePhantomSpellGrants } from './roguePhantomSpells'
 import { getChosenScionAllegiance, isScionOwner } from './rogueScion'
 import { parseSpellToken } from './spellTokens'
@@ -106,7 +116,7 @@ export function hasCurrentSubclassSpellGrant(
   grant: SubclassSpellGrant,
   references: { has(reference: string): boolean } | undefined,
   spellLevels: ReadonlyMap<string, number> | undefined,
-  oathReprints?: ReadonlyMap<string, number | undefined>,
+  oathReprints?: Pick<ReadonlyMap<string, number | undefined>, 'get'>,
   includedDomainReprints?: ReadonlyMap<string, number | undefined>,
   exactSpell?: Spell5e,
 ) {
@@ -153,6 +163,7 @@ export function getEarnedSubclassSpellGrants(
     spells?: ReadonlyMap<string, number>
     character?: Character
     catalogs?: ClassChoiceFeatureCatalogs
+    classicSpellReprints?: ArtificerSpellReprints
   },
 ): SubclassSpellGrant[] | undefined {
   if (!entry.subclass) return []
@@ -168,6 +179,7 @@ export function getEarnedSubclassSpellGrants(
     revisedCircle ||
     revisedDomain ||
     revisedOath ||
+    isRevisedRetainedSubclassSpellOwner(entry) ||
     legacySorcerer ||
     illusion ||
     hasWarlockPatronSpellConfiguration(entry)
@@ -354,6 +366,14 @@ export function getEarnedSubclassSpellGrants(
         landContext.catalogs,
         getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
       )
+    const retained = getRetainedSubclassSpellGrants(
+      classData,
+      subclasses[0],
+      entry,
+      classLevel,
+      scoped,
+    )
+    if (retained) return retained
     const named = getNamedSubclassSpellSource(classData, subclasses[0], scoped)
     const character = landContext?.character
     const resourceCasts = getSharedSubclassResourceCasts(
@@ -439,6 +459,14 @@ export function getEarnedSubclassSpellGrants(
         : blocks
     const grants = [
       ...parseSubclassSpells(unambiguous, classLevel),
+      ...getRetainedExpandedSubclassSpells(
+        classData,
+        subclasses[0],
+        classLevel,
+        character,
+        scoped,
+        landContext?.classicSpellReprints,
+      ),
       ...resourceCasts,
       ...getLimitedSubclassCasts(
         classData,
@@ -450,7 +478,17 @@ export function getEarnedSubclassSpellGrants(
       ),
     ]
     const alchemist = getAlchemistFeatureCasts(classData, subclasses[0], classLevel)
-    if (alchemist) return [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
+    const artificerGrants = alchemist
+      ? [...grants.filter((grant) => grant.mode !== 'innate'), ...alchemist]
+      : grants
+    if (landContext?.character?.originSystem === '2024' && isTceArtificer(entry))
+      return reprintTceArtificerSubclassSpells(
+        classData,
+        subclasses[0],
+        artificerGrants,
+        landContext.classicSpellReprints,
+      )
+    if (alchemist) return artificerGrants
     if (norm(entry.name) === 'cleric') {
       if (
         norm(entry.source) === 'phb' &&
