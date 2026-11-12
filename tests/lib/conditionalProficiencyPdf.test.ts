@@ -65,7 +65,7 @@ test.each(
   let report: SheetExportReport | undefined
   const bytes = await generateTestCharacterSheet(f.vm, template, {
     text: { descriptions, overflow: 'notes' },
-    pages: { notes: true },
+    pages: { notes: true, spells: false },
     onReport: (value) => {
       report = value
     },

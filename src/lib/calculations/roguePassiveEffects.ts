@@ -49,6 +49,7 @@ function rogueEffects(
         id: audacity.id,
         label: 'Rakish Audacity',
         source: source('Rakish Audacity', audacity),
+        stackingGroup: audacity.target,
         target: { kind: 'initiative' },
         operation: { kind: 'add', value: charisma },
       })
@@ -71,6 +72,7 @@ function rogueEffects(
           id: `${feature.id}:${mode}`,
           label: 'Superior Mobility',
           source: source('Superior Mobility', feature),
+          stackingGroup: feature.target,
           target: { kind: 'speed', mode },
           operation: { kind: 'add', value: Number(match[2]) },
         }),

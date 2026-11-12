@@ -56,6 +56,7 @@ export function getCurrentDirectSubclassSource(
   className: 'Artificer' | 'Fighter' | 'Mystic' | 'Rogue',
 ) {
   const classKey = norm(className)
+  const exactOwner = className === 'Mystic' || className === 'Rogue'
   if (
     norm(entry.name) !== classKey ||
     !entry.subclass ||
@@ -63,8 +64,7 @@ export function getCurrentDirectSubclassSource(
     !getSourceCompatibility(entry.source, character.originSystem).compatible ||
     character.classProgression.filter(
       (row) =>
-        norm(row.name) === classKey &&
-        (className !== 'Mystic' || norm(row.source) === norm(entry.source)),
+        norm(row.name) === classKey && (!exactOwner || norm(row.source) === norm(entry.source)),
     ).length !== 1
   )
     return undefined

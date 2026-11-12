@@ -282,7 +282,7 @@
     },
     {
       "file": "src/lib/5etools/directSubclassSource.ts",
-      "sha256": "cbe5e5f06f3e35f42ca2e443621413b8df7221e3c82d0363912be1c0584651c0"
+      "sha256": "9e156d69c7e69c1e559a0fbec41ac5e63627d65387850e77cb7439441962fbdf"
     },
     {
       "file": "src/lib/5etools/divineSoulConfiguration.ts",
@@ -710,7 +710,7 @@
     },
     {
       "file": "src/lib/calculations/effects.ts",
-      "sha256": "4cca33a6d00b08c20c3ebe0630c3ca8eeb8d2727583940100f57e8ba4e818514"
+      "sha256": "c7868261e61a91b6802c48f7992a4ef60507ef3df0b7b2cdd08f8f2ad8f2d1e2"
     },
     {
       "file": "src/lib/calculations/gameRules.ts",
@@ -810,7 +810,7 @@
     },
     {
       "file": "src/types/effects.ts",
-      "sha256": "a1559309e301829ca30714ee2f6f8853d2fe9875a55698ecfdcd8285f53fa6c8"
+      "sha256": "9297518959b78cccc0fe2f17b3b20791fd8ee6a0f03ff5fb1307640e7818c51d"
     },
     {
       "file": "src/types/feat.ts",

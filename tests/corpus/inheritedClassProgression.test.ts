@@ -60,6 +60,7 @@ import {
   applyClassSelectionCommand,
   applyLevelDown,
   applyLevelUp,
+  removeMulticlass,
   selectSubclass,
 } from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
@@ -765,6 +766,117 @@ describe.runIf(available)('configured inherited class progression', () => {
     expect(effects({ ...actor, allowedSources: ['XPHB'] }).some((row) => row.label === label)).toBe(
       false,
     )
+  })
+
+  test('same-name Rogue printings preserve earned owners and share identical initiative benefits', () => {
+    const native = classRow('Rogue', 'XPHB')
+    const copied = classRow('Rogue')
+    const begin = (subclass: string, source: string) => {
+      const initial = start(native.name, native.source)
+      const character = reachLevel(
+        {
+          ...initial,
+          allowedSources: sources,
+          abilityScores: { ...initial.abilityScores, charisma: 16 },
+        },
+        3,
+      )
+      return reopen(character, selectSubclass(character, character.provenance, subclass, source))
+    }
+    const addCopy = (character: Character, subclass: string) => {
+      const added = addMulticlass(
+        character,
+        character.provenance,
+        copied.name,
+        copied,
+        copied.source,
+      )
+      const hitDie = copied.hd!.faces
+      let result = reopen(
+        character,
+        applyLevelUp(
+          character,
+          added.provenanceUpdate,
+          added.characterPatch.classProgression!,
+          {
+            className: copied.name,
+            classSource: copied.source,
+            classLevel: 1,
+            hitDie,
+            dieResult: hitDie / 2 + 1,
+            method: 'average',
+          },
+          calculation(character),
+        ),
+      )
+      const first = result
+      for (const classLevel of [2, 3]) {
+        result = reopen(
+          result,
+          applyLevelUp(
+            result,
+            result.provenance,
+            result.classProgression.map((row) =>
+              row.source === copied.source ? { ...row, levels: classLevel } : row,
+            ),
+            {
+              className: copied.name,
+              classSource: copied.source,
+              classLevel,
+              hitDie,
+              dieResult: hitDie / 2 + 1,
+              method: 'average',
+            },
+            calculation(result),
+          ),
+        )
+      }
+      const second = reopen(
+        result,
+        selectSubclass(result, result.provenance, subclass, copied.source, undefined, {
+          viewingEntry: result.classProgression[1],
+          classChoiceFeatureCatalogs: catalogs,
+        }),
+      )
+      return [first, second] as const
+    }
+    const nativeSwashbuckler = begin('Swashbuckler', 'WoW')
+    const [unearned, swashbucklers] = addCopy(nativeSwashbuckler, 'Swashbuckler')
+    const initiative = calculation(nativeSwashbuckler).initiativeModifier
+    expect(calculation(unearned).initiativeModifier).toBe(initiative)
+    const current = calculation(swashbucklers)
+    const effects = current.effects.sourceDeclarations.filter(
+      (row) => row.label === 'Rakish Audacity',
+    )
+    expect(new Set(effects.map((row) => row.id)).size).toBe(2)
+    expect(current.initiativeModifier).toBe(initiative)
+    for (const row of effects)
+      expect(
+        calculation({ ...swashbucklers, suppressedEffectIds: [row.id] }).initiativeModifier,
+      ).toBe(initiative)
+    expect(
+      calculation({ ...swashbucklers, suppressedEffectIds: effects.map((row) => row.id) })
+        .initiativeModifier,
+    ).toBe(initiative - 3)
+    const removed = reopen(
+      swashbucklers,
+      removeMulticlass(swashbucklers, swashbucklers.provenance, copied.name, copied.source),
+    )
+    expect(calculation(removed).initiativeModifier).toBe(initiative)
+
+    const [beforeSoulknife, soulknives] = addCopy(begin('Soulknife', 'XPHB'), 'Soulknife')
+    const resources = (character: Character) =>
+      getCharacterClassResources(character, (row) => classRow(row.name, row.source), {
+        catalogs,
+        charismaModifier: 3,
+        unlimitedWildShape: false,
+      }).filter((row) => row.label === 'Psionic Energy Dice')
+    const [original] = resources(beforeSoulknife)
+    expect(original).toMatchObject({ classSource: 'XPHB', max: 4 })
+    const both = resources(soulknives)
+    expect(both.map((row) => row.classSource)).toEqual(['XPHB', 'WoW'])
+    expect(both[0].id).toBe(original.id)
+    expect(both[1].id).not.toBe(original.id)
   })
 
   test('a later feature from another printing preserves an earned passive', () => {
