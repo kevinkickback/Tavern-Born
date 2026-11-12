@@ -1,6 +1,13 @@
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
+import { getCurrentSelectedClass, permitsClassRuleSource } from './earnedClassFeatureSource'
 import { getDirectSubclassFeatureReference } from './nativeSubclassFeatureSource'
 import {
   decodeOptionalDeclaration,
@@ -105,11 +112,11 @@ export function matchesRetainedFirstSubclassGain(cls: Class5e, target: string, l
 }
 
 /** Resolve an exact reachable declaration while keeping selected and printed owners separate. */
-export function getOwnedSubclassFeature(
+function getOwnedSubclassFeatures(
   cls: Class5e,
   subclass: Subclass5e,
-  target: string,
   catalogs?: SubclassCatalog,
+  target?: string,
 ) {
   if (
     cls._copy ||
@@ -117,7 +124,7 @@ export function getOwnedSubclassFeature(
     subclass.sourceIdentityConflict ||
     !findClassReference(cls, [{ name: subclass.className, source: subclass.classSource }])
   )
-    return undefined
+    return []
   const gains = getDeclaredSubclassGains(cls)
   const refs = (subclass.subclassFeatureRefs ?? []).filter((ref) => {
     const decoded = decodeOptionalDeclaration(ref.ref, 'subclassFeature')
@@ -149,12 +156,61 @@ export function getOwnedSubclassFeature(
       validFeature(key, feature) &&
       optionalDeclarationDigest(current) === optionalDeclarationDigest(feature)
     )
-  }).filter((row) => row.target === target)
-  const [path] = paths
-  const feature = paths.length === 1 && resolve(target)
-  const rootLevel =
-    path && decodeOptionalDeclaration(path.refs[0], 'subclassFeature')?.decoded.level
-  return feature && rootLevel && gains.filter((level) => level === rootLevel).length === 1
-    ? { feature, level: path.level, target, refs: path.refs }
-    : undefined
+  })
+  const counts = new Map<string, number>()
+  for (const path of paths) counts.set(path.target, (counts.get(path.target) ?? 0) + 1)
+  return paths.flatMap((path) => {
+    if ((target && path.target !== target) || counts.get(path.target) !== 1) return []
+    const feature = resolve(path.target)
+    const rootLevel = decodeOptionalDeclaration(path.refs[0], 'subclassFeature')?.decoded.level
+    return feature && rootLevel && gains.filter((level) => level === rootLevel).length === 1
+      ? [{ ...path, feature }]
+      : []
+  })
+}
+
+export function getOwnedSubclassFeature(
+  cls: Class5e,
+  subclass: Subclass5e,
+  target: string,
+  catalogs?: SubclassCatalog,
+) {
+  return getOwnedSubclassFeatures(cls, subclass, catalogs, target)[0]
+}
+
+/** Find the selected owner and its current scoped declarations without rewriting printed UIDs. */
+export function getEarnedSubclassFeatureSource(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+) {
+  if (
+    !entry.subclass ||
+    !permitsClassRuleSource(character, entry.subclassSource) ||
+    !catalogs?.subclassTargets
+  )
+    return undefined
+  const cls = getCurrentSelectedClass(character, entry, catalogs)
+  const selected = cls?.subclasses?.filter((row) =>
+    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
+  )
+  if (!cls || selected?.length !== 1) return undefined
+  const [subclass] = selected
+  const key = getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source)
+  const scoped = scopeClassChoiceFeatureCatalogs(catalogs, key)
+  const features = getOwnedSubclassFeatures(cls, subclass, scoped).filter(
+    ({ level, refs }) =>
+      level <= entry.levels &&
+      refs.every((ref) => {
+        const decoded = decodeOptionalDeclaration(ref, 'subclassFeature')?.decoded
+        return (
+          !!decoded &&
+          'subclassSource' in decoded &&
+          [decoded.classSource, decoded.subclassSource, decoded.source].every((source) =>
+            permitsClassRuleSource(character, source),
+          )
+        )
+      }),
+  )
+  return { cls, subclass, key, features, scoped }
 }

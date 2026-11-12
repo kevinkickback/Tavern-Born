@@ -8,7 +8,7 @@ import type { AbilityScores, Character, CharacterClassEntry } from '@/types/char
 import type { ClassResourceDef } from '@/types/classRules'
 import { getCurrentSelectedClass, permitsClassRuleSource } from './earnedClassFeatureSource'
 import { isInheritedClassicSubclass } from './nativeSubclassFeatureSource'
-import { getOwnedSubclassFeature } from './ownedSubclassFeature'
+import { getEarnedSubclassFeatureSource, getOwnedSubclassFeature } from './ownedSubclassFeature'
 
 const rules = [
   ['warlock', 'phb', 'celestial', 'xge', 'Healing Light', 1, 'level-plus-one'],
@@ -72,7 +72,11 @@ export function getStandardSubclassResources(
   const relevant = rules.filter(
     ([name, , , source]) => name === className && source === norm(entry.subclassSource),
   )
-  if (!catalogs || !relevant.length) return []
+  if (!catalogs) return []
+  const retained = relevant.length
+    ? undefined
+    : getEarnedSubclassFeatureSource(character, entry, catalogs)
+  if (!relevant.length && !retained?.features.length) return []
   const cls = getCurrentSelectedClass(character, entry, catalogs)
   const subclasses = cls?.subclasses?.filter(
     (row) =>
@@ -82,7 +86,7 @@ export function getStandardSubclassResources(
   const [subclass] = subclasses
   const inherited = isInheritedClassicSubclass(subclass)
   if (
-    ('_copy' in subclass && !inherited) ||
+    (!retained && '_copy' in subclass && !inherited) ||
     (!permitsClassRuleSource(character, entry.subclassSource) &&
       !(inherited && className === 'cleric' && norm(subclass.source) === 'phb'))
   )
@@ -92,51 +96,56 @@ export function getStandardSubclassResources(
     catalogs,
     getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource),
   )
-  return relevant.flatMap(([, printing, shortName, source, label, printedLevel, formula]) => {
-    if (
-      origin !== printing ||
-      norm(subclass.shortName) !== shortName ||
-      entry.levels < printedLevel ||
-      existing.some((row) => norm(row.label) === norm(label))
-    )
-      return []
-    const target = `subclass-feature|${norm(label)}|${className}|${printing}|${shortName}|${source}|${printedLevel}|${source}`
-    const current = getOwnedSubclassFeature(cls, subclass, target, scoped)
-    if (!current || current.level > entry.levels) return []
-    const text = prose(current.feature.entries)
-    if (
-      !provesMaximum(text, formula) ||
-      !text.includes('when you finish a') ||
-      !text.includes('long rest.')
-    )
-      return []
-    const improved =
-      printing === 'xphb' && label === 'Warding Flare' && entry.levels >= 6
-        ? getOwnedSubclassFeature(cls, subclass, improvedFlare, scoped)
-        : undefined
-    const shortRest =
-      text.includes('short rest or long rest.') ||
-      (!!improved &&
-        prose(improved.feature.entries).includes(
-          'you regain all expended uses of your warding flare when you finish a short rest or long rest.',
-        ))
-    const dice = formula === 'level' || formula === 'level-plus-one'
-    const maximum =
-      formula === 'proficiency' || dice ? proficiency : Math.max(1, modifiers?.[formula] ?? 0)
-    return [
-      {
-        id: `feature-uses:${JSON.stringify([[className, norm(entry.source), norm(entry.subclass), source], target])}`,
-        label,
-        inheritedFeature: true,
-        restType: shortRest ? 'short' : 'long',
-        maxPerLevel: Array.from({ length: 20 }, (_, index) =>
-          index + 1 < current.level ? 0 : dice ? index + (formula === 'level' ? 1 : 2) : maximum,
-        ),
-        ...(dice && {
-          recovery: { longRest: 'all' as const, unit: 'dice' as const },
-          usageText: `Up to ${formula === 'level' ? Math.floor(entry.levels / 2) : Math.max(1, modifiers?.charisma ?? 0)} dice per use (d6)`,
-        }),
-      },
-    ]
-  })
+  return (retained ? rules : relevant).flatMap(
+    ([printedClass, printing, shortName, source, label, printedLevel, formula]) => {
+      if (
+        (!retained && (origin !== printing || norm(subclass.shortName) !== shortName)) ||
+        entry.levels < printedLevel ||
+        existing.some((row) => norm(row.label) === norm(label))
+      )
+        return []
+      const target = `subclass-feature|${norm(label)}|${printedClass}|${printing}|${shortName}|${source}|${printedLevel}|${source}`
+      const current = retained
+        ? retained.features.find((row) => row.target === target)
+        : getOwnedSubclassFeature(cls, subclass, target, scoped)
+      if (!current || current.level > entry.levels) return []
+      const text = prose(current.feature.entries)
+      if (
+        !provesMaximum(text, formula) ||
+        !text.includes('when you finish a') ||
+        !text.includes('long rest.')
+      )
+        return []
+      const improved =
+        printing === 'xphb' && label === 'Warding Flare' && entry.levels >= 6
+          ? retained
+            ? retained.features.find((row) => row.target === improvedFlare)
+            : getOwnedSubclassFeature(cls, subclass, improvedFlare, scoped)
+          : undefined
+      const shortRest =
+        text.includes('short rest or long rest.') ||
+        (!!improved &&
+          prose(improved.feature.entries).includes(
+            'you regain all expended uses of your warding flare when you finish a short rest or long rest.',
+          ))
+      const dice = formula === 'level' || formula === 'level-plus-one'
+      const maximum =
+        formula === 'proficiency' || dice ? proficiency : Math.max(1, modifiers?.[formula] ?? 0)
+      return [
+        {
+          id: `feature-uses:${JSON.stringify([[className, norm(entry.source), norm(entry.subclass), norm(entry.subclassSource)], target])}`,
+          label,
+          inheritedFeature: true,
+          restType: shortRest ? 'short' : 'long',
+          maxPerLevel: Array.from({ length: 20 }, (_, index) =>
+            index + 1 < current.level ? 0 : dice ? index + (formula === 'level' ? 1 : 2) : maximum,
+          ),
+          ...(dice && {
+            recovery: { longRest: 'all' as const, unit: 'dice' as const },
+            usageText: `Up to ${formula === 'level' ? Math.floor(entry.levels / 2) : Math.max(1, modifiers?.charisma ?? 0)} dice per use (d6)`,
+          }),
+        },
+      ]
+    },
+  )
 }

@@ -342,6 +342,10 @@
       "sha256": "9f0766e07f81fc8a57229847eb160c212f266fb516ce0049a67b457a428866fc"
     },
     {
+      "file": "src/lib/5etools/copiedSubclassProficiencyRoots.generated.ts",
+      "sha256": "f6af2a00f26671f116d2707a9af6f39ba21f14cfa3d8d58c5fa90877a9637eb2"
+    },
+    {
       "file": "src/lib/5etools/copyResolution.ts",
       "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
     },
@@ -359,7 +363,7 @@
     },
     {
       "file": "src/lib/5etools/directSubclassSource.ts",
-      "sha256": "f5be75435591a25ded2a380f968a50566568ace11352390493c1d8fda967de2b"
+      "sha256": "cbe5e5f06f3e35f42ca2e443621413b8df7221e3c82d0363912be1c0584651c0"
     },
     {
       "file": "src/lib/5etools/divineSoulConfiguration.ts",
@@ -367,7 +371,7 @@
     },
     {
       "file": "src/lib/5etools/draconicResilience.ts",
-      "sha256": "85bca53d3732fed7dfa13d72aa8a1c5caa2a58bcc213988fcbfcee61b98cbf07"
+      "sha256": "8ba77452ea4b8b908f491ad154248f49dfc9ffc04509333f7eb6ad9f64064bbc"
     },
     {
       "file": "src/lib/5etools/draconicSubclassFeatureSource.ts",
@@ -559,11 +563,11 @@
     },
     {
       "file": "src/lib/5etools/ownedSubclassFeature.ts",
-      "sha256": "64e7b612f5ed762995e89b95195eb192484cea011bb7066647dab3b23b4a9043"
+      "sha256": "9651064f88c6af4697df2ee102846e1a6d395f05f56569f9d9c661cb27eef611"
     },
     {
       "file": "src/lib/5etools/parsers/classes.ts",
-      "sha256": "f6609c486c1a3df33cfe79e25553d245838051d70356d7d2c7d577a8078fd657"
+      "sha256": "2aeb85120b33d5114153e517c4aecd94b36dafe45c9324392579d08b401f6bea"
     },
     {
       "file": "src/lib/5etools/parsers/featOptions.ts",
@@ -603,7 +607,7 @@
     },
     {
       "file": "src/lib/5etools/rangerSubclassSpells.ts",
-      "sha256": "2b3dcb357394736315ef755c8f5e8e0b3815ebf07066f5d0e0eb12bf3082b383"
+      "sha256": "749f61a172bdac654466126afdbdc3ce6376de005a47e9089d0dbcdcfe31d071"
     },
     {
       "file": "src/lib/5etools/reprints.ts",
@@ -619,7 +623,7 @@
     },
     {
       "file": "src/lib/5etools/revisedElementalAffinity.ts",
-      "sha256": "3a2250ef2757dfc1933b45a6dd340f67cf63b1a0272e26bba59b1bf529700ad4"
+      "sha256": "f57b85eca6f35170ef31925f4bd568c4725d8e4c2fe32b17102c2a0d2ad855d1"
     },
     {
       "file": "src/lib/5etools/revisedInvocationPoolIdentity.ts",
@@ -651,7 +655,7 @@
     },
     {
       "file": "src/lib/5etools/spellTokens.ts",
-      "sha256": "337e7fead68918118c3515eb188ae40ee8ef5cb538d933e8eb7eb95461637315"
+      "sha256": "9545d11b3672e33b4d274059cf22d5f27c7c31baae81053af551b39786e2951b"
     },
     {
       "file": "src/lib/5etools/spellbookSpecialtyRules.ts",
@@ -707,7 +711,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
+      "sha256": "7f696c1366e749341539d3bb19c7c14b992fb047ffe952cfa67e5167aec92228"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyChoices.ts",
@@ -715,7 +719,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRegistry.ts",
-      "sha256": "c417e0acaeada9fba1ba9b75be0071e5f3062f33c8482054f2d50d98b8998168"
+      "sha256": "8b0821f3db09b4789aacd352f7a8e8a102976f666ea2a79501d3111581604bfa"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyRules.generated.json",
@@ -723,7 +727,7 @@
     },
     {
       "file": "src/lib/5etools/subclassProficiencySource.ts",
-      "sha256": "a9fe686d070f10b1544f7e3c733ccd0d5e5de03a50023c7b580c9715524f7bdd"
+      "sha256": "8f30d34898dfb9cbdad86df28bdbdef847fa67f99647fca51a61dfe2faad7e15"
     },
     {
       "file": "src/lib/5etools/subclassResourceCasting.ts",
@@ -731,7 +735,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
+      "sha256": "dd7829a55a6070546cc347381d6767cc2e220cdfbd45c39d419792a75e70203e"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
@@ -871,7 +875,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
+      "sha256": "2685d9bfe4543352479da7324e31ff013b024078aac425e78dcddeb6cd257355"
     },
     {
       "file": "src/types/actions.ts",

@@ -1,9 +1,14 @@
-import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
+import {
+  type ClassChoiceFeatureCatalogs,
+  scopeClassChoiceFeatureCatalogs,
+} from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import type { Class5e, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { getSubclassSelectionInfo } from './classData'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { findClassReference } from './classReference'
+import { getCurrentSelectedClass, permitsClassRuleSource } from './earnedClassFeatureSource'
 import { getEntityLookupKey } from './entityIdentity'
 import { getFeatureSourceDigest, hasFeatureSourceShape } from './featureSourceAudit'
 import {
@@ -11,6 +16,7 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from './optionalClassDeclarationStructure'
+import { getOwnedSubclassFeature, matchesRetainedFirstSubclassGain } from './ownedSubclassFeature'
 
 const name = 'Draconic Resilience'
 const className = 'Sorcerer'
@@ -122,7 +128,7 @@ function verifiesIntro(feature: SubclassFeature | undefined, rule: NativeRule): 
   )
 }
 
-export function getEarnedDraconicResilience(
+function getEarnedNativeDraconicResilience(
   character: Character,
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ) {
@@ -193,10 +199,61 @@ export function getEarnedDraconicResilience(
   )
     return undefined
   return {
+    id: rule.leaf,
     name,
     source: rule.source,
     target: rule.leaf,
     levels: entry.levels,
     revised: rule === revised,
   }
+}
+
+export function getEarnedDraconicResilience(
+  character: Character,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+) {
+  const native = getEarnedNativeDraconicResilience(character, catalogs)
+  const results = native ? [native] : []
+  if (
+    character.originSystem !== '2024' ||
+    !catalogs?.subclassTargets ||
+    !permitsClassRuleSource(character, revised.source)
+  )
+    return results
+  for (const entry of character.classProgression) {
+    if (!entry.subclass || !permitsClassRuleSource(character, entry.subclassSource)) continue
+    const cls = getCurrentSelectedClass(character, entry, catalogs)
+    if (
+      !cls ||
+      getEntityLookupKey(cls.name, cls.source).toLowerCase() === revised.classKey ||
+      !matchesRetainedFirstSubclassGain(
+        cls,
+        'class-feature|sorcerer subclass|sorcerer|xphb|3|xphb',
+        revised.level,
+      )
+    )
+      continue
+    const subclasses = cls.subclasses?.filter((row) =>
+      findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
+    )
+    if (subclasses?.length !== 1) continue
+    const [subclass] = subclasses
+    const key = getFeatureOwnerKey(cls.name, cls.source, subclass.name, subclass.source)
+    const retained = getOwnedSubclassFeature(
+      cls,
+      subclass,
+      revised.leaf,
+      scopeClassChoiceFeatureCatalogs(catalogs, key),
+    )
+    if (retained && retained.level <= entry.levels && verifiesLeaf(retained.feature, revised))
+      results.push({
+        id: `${key}:${revised.leaf}`,
+        name,
+        source: revised.source,
+        target: revised.leaf,
+        levels: entry.levels,
+        revised: true,
+      })
+  }
+  return results
 }

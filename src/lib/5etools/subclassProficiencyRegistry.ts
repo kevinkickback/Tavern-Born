@@ -1,5 +1,6 @@
 import { decodeSubclassFeatureReference, getSubclassFeatureIdentity } from './classFeatureIdentity'
 import { CONDITIONAL_PROFICIENCY_RULES } from './conditionalProficiencyRules'
+import copied from './copiedSubclassProficiencyRoots.generated'
 import retained from './retainedSubclassProficiencyCertificates.generated'
 import type { SubclassProficiencyCheckpoint } from './subclassProficiencyCertificates'
 import generated from './subclassProficiencyCertificates.generated'
@@ -10,8 +11,11 @@ export const SUBCLASS_PROFICIENCY_CHECKPOINT = {
   roots: [...generated.roots, ...retained.roots],
 } as unknown as SubclassProficiencyCheckpoint
 export const SUBCLASS_PROFICIENCY_PACKAGES = SUBCLASS_PROFICIENCY_CHECKPOINT.packages ?? []
+export const COPIED_SUBCLASS_PROFICIENCY_ROOTS =
+  copied.roots as unknown as SubclassProficiencyCheckpoint['roots']
 export const SUBCLASS_PROFICIENCY_ROOTS = [
   ...SUBCLASS_PROFICIENCY_CHECKPOINT.roots,
+  ...COPIED_SUBCLASS_PROFICIENCY_ROOTS,
   ...SUBCLASS_PROFICIENCY_PACKAGES.flatMap((source) => source.roots),
 ]
 const roots = new Map(SUBCLASS_PROFICIENCY_ROOTS.map((root) => [JSON.stringify(root.owner), root]))

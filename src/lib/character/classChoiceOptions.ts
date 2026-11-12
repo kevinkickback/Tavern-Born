@@ -141,12 +141,11 @@ import { getNaturalExplorerSources } from '@/lib/5etools/naturalExplorerSource'
 import { getOwnedSubclassFeature } from '@/lib/5etools/ownedSubclassFeature'
 import { getActiveRequiredSetupDiagnostics } from '@/lib/5etools/requiredSetupDiagnostics'
 import {
+  getRevisedAffinityDiagnostic,
   getRevisedAffinitySetup,
-  isRevisedAffinityOwner,
+  isRevisedAffinityChoiceId,
   REVISED_AFFINITY_GROUP,
-  REVISED_AFFINITY_ID,
   resolveRevisedAffinityOption,
-  revisedAffinityDiagnostic,
 } from '@/lib/5etools/revisedElementalAffinity'
 import {
   getRevisedHunterSetup,
@@ -724,8 +723,11 @@ function resolveExplicitOption(
   catalogs: ClassChoiceCatalogs,
   availability: ClassChoiceOptionView['availability'] = 'eligible',
   cache?: Map<string, FeatureTableDefinition | undefined>,
+  affinityId?: string,
 ): ClassChoiceOptionView {
-  const match = resolveClassChoiceOptionEntity(option, catalogs, cache)
+  const match = affinityId
+    ? resolveRevisedAffinityOption(option, catalogs, affinityId)
+    : resolveClassChoiceOptionEntity(option, catalogs, cache)
   if (option.entityType === 'featureOption' && match) {
     const path = 'group' in match ? getBarbarianPathChoiceGroup(String(match.group)) : undefined
     return {
@@ -785,7 +787,13 @@ function resolveProgressionOption(
   classLevel: number,
   tables: Map<string, FeatureTableDefinition | undefined>,
 ): ClassChoiceOptionView {
-  const view = resolveExplicitOption(option, catalogs, 'eligible', tables)
+  const view = resolveExplicitOption(
+    option,
+    catalogs,
+    'eligible',
+    tables,
+    isRevisedAffinityChoiceId(choice.id) ? choice.id : undefined,
+  )
   if (!choice.fixedOptions?.length || view.availability !== 'eligible') return view
   const requirements = view.prerequisite ?? []
   const [rule] = requirements
@@ -1155,7 +1163,7 @@ export function resolveClassChoiceOptions(
     !getRevisedHunterRule(choice.id) &&
     !getBarbarianPathChoice(choice.id) &&
     !getSubclassFeatureConfigurationRule(choice.id) &&
-    choice.id !== REVISED_AFFINITY_ID &&
+    !isRevisedAffinityChoiceId(choice.id) &&
     (!literal ||
       !(enemy
         ? getFavoredEnemySources(catalogs).get(FAVORED_ENEMY_TARGET) &&
@@ -2505,15 +2513,12 @@ export function getClassChoiceDiagnosticCandidates(
       message: 'The exact Circle of the Land terrain rules are unavailable or unsupported.',
     })
   }
-  if (
-    isRevisedAffinityOwner(classData, subclass) &&
-    !getRevisedAffinitySetup(
-      classData,
-      subclass,
-      catalogs?.subclassFeatures ? (catalogs as ClassChoiceFeatureCatalogs) : undefined,
-    )
+  const affinity = getRevisedAffinityDiagnostic(
+    classData,
+    subclass,
+    catalogs?.subclassFeatures ? (catalogs as ClassChoiceFeatureCatalogs) : undefined,
   )
-    rows.push(revisedAffinityDiagnostic)
+  if (affinity) rows.push(affinity)
   const patronConfigurations = getWarlockPatronConfigurationRules(classData, subclass)
   const divineSoul = getDivineSoulOwnerRule(classData, subclass)
   const scionGain = classData.classFeatureRefs?.find((row) => row.gainSubclassFeature)?.level

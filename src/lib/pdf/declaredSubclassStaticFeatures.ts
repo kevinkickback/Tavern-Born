@@ -18,16 +18,17 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
-import { getOwnedSubclassFeature } from '@/lib/5etools/ownedSubclassFeature'
+import {
+  getCurrentSubclassMenuReference,
+  getEarnedSubclassFeatureSource,
+} from '@/lib/5etools/ownedSubclassFeature'
 import {
   getPsaKnowledgeIntroDependency,
   isPsaKnowledgeDependency,
 } from '@/lib/5etools/psaKnowledgeFeatures'
 import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
-import {
-  type ClassChoiceFeatureCatalogs,
-  scopeClassChoiceFeatureCatalogs,
-} from '@/lib/character/classChoiceFeatureCatalogs'
+import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, SubclassFeature } from '@/types/5etools'
@@ -259,67 +260,85 @@ function fixedRuleEntries(entries: readonly unknown[]): unknown[] {
   })
 }
 
-const mysticBrewTarget = 'subclass-feature|mystic brew|monk|xphb|mystic brews|wow|6|wow'
-const copiedSheetRules = new Map([
-  [getFeatureOwnerKey('Monk', 'WoW', 'Warrior of Mystic Brews', 'WoW'), mysticBrewTarget],
-  [
-    getFeatureOwnerKey('Priest', 'WoW', 'Shadow Domain', 'WoW'),
-    'subclass-feature|vampiric embrace|cleric|xphb|shadow|wow|17|wow',
-  ],
-  [
-    getFeatureOwnerKey('Death Knight', 'WoW', 'Oath of the Ebon Blade', 'WoW'),
-    'subclass-feature|aspect of the horsemen|death knight|wow|ebon blade|wow|20|wow',
-  ],
-])
-
-export function getCopiedSubclassSheetFeature(
+/** Print verified earned rules for a subclass without a specialized sheet projection. */
+export function getSourceDeclaredSubclassSheetFeatures(
   character: Character,
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
 ) {
-  if (
-    !entry.subclass ||
-    !entry.subclassSource ||
-    !permitsClassRuleSource(character, entry.subclassSource)
+  const current = getEarnedSubclassFeatureSource(character, entry, catalogs)
+  if (!current) return []
+  const earned = current.features.filter(
+    ({ refs }) => refs.length !== 1 || refs[0] !== current.subclass.introFeatureRef,
   )
-    return undefined
-  const key = getFeatureOwnerKey(entry.name, entry.source, entry.subclass, entry.subclassSource)
-  const target = copiedSheetRules.get(key)
-  if (!target) return undefined
-  const cls = getCurrentSelectedClass(character, entry, catalogs)
-  const selected = cls?.subclasses?.filter((row) =>
-    findClassReference({ name: entry.subclass, source: entry.subclassSource }, [row]),
-  )
-  if (!cls || selected?.length !== 1 || !catalogs.subclassTargets) return undefined
-  const scoped = scopeClassChoiceFeatureCatalogs(catalogs, key)
-  const earned = getOwnedSubclassFeature(cls, selected[0], target, scoped)
-  if (
-    !earned ||
-    earned.level > entry.levels ||
-    !permitsClassRuleSource(character, earned.feature.source) ||
-    !permitsClassRuleSource(character, earned.feature.classSource)
-  )
-    return undefined
-  const entries = fixedRuleEntries(earned.feature.entries ?? [])
-  if (target === mysticBrewTarget) {
-    const enhancement = getOwnedSubclassFeature(
-      cls,
-      selected[0],
-      'subclass-feature|enhancing a magical beverage|monk|xphb|mystic brews|wow|6|wow',
-      scoped,
-    )
-    if (
-      enhancement?.level === earned.level &&
-      enhancement.refs.length === 2 &&
-      decodeOptionalDeclaration(enhancement.refs[0], 'subclassFeature')?.target === target
-    )
-      entries.push({
-        type: 'entries',
-        name: enhancement.feature.name,
-        entries: fixedRuleEntries(enhancement.feature.entries ?? []),
+  const printed = new Set(earned.map(({ target }) => target))
+  const declaredEntries = (feature: SubclassFeature, source: readonly unknown[]): unknown[] =>
+    source.flatMap((value, index) => {
+      const group = record(value)
+      if (group.type !== 'options')
+        return Array.isArray(group.entries)
+          ? [{ ...group, entries: declaredEntries(feature, group.entries) }]
+          : [value]
+      const introduction = source[index - 1]
+      if (
+        group.style !== 'list-hang-notitle' ||
+        Object.keys(group).some((key) => !['type', 'style', 'entries'].includes(key)) ||
+        !Array.isArray(group.entries) ||
+        typeof introduction !== 'string' ||
+        !/(?:\bYou gain the following benefits\.|^You gain new mastery over [a-z ]+, granting you new ways to use [a-z ]+:|^You can use [a-z ]+ in the following ways:)$/.test(
+          introduction,
+        )
+      )
+        return []
+      const children = group.entries.map((value) =>
+        getCurrentSubclassMenuReference(value, current.scoped),
+      )
+      if (new Set(children.map((child) => child?.target)).size !== children.length) return []
+      return children.flatMap((child) => {
+        if (!child || printed.has(child.target)) return []
+        const leaf = child.feature
+        if (
+          !leaf.level ||
+          leaf.level > entry.levels ||
+          norm(leaf.className) !== norm(feature.className) ||
+          norm(leaf.subclassShortName) !== norm(feature.subclassShortName) ||
+          ![leaf.classSource, leaf.subclassSource, leaf.source].every((source) =>
+            permitsClassRuleSource(character, source),
+          )
+        )
+          return []
+        printed.add(child.target)
+        return [
+          { type: 'entries', name: leaf.name, entries: declaredEntries(leaf, leaf.entries ?? []) },
+        ]
       })
+    })
+  const entries = new Map(
+    earned.map(({ target, feature }) => [
+      target,
+      fixedRuleEntries(declaredEntries(feature, feature.entries ?? [])),
+    ]),
+  )
+  const nested = new Set<string>()
+  for (const { feature, target, refs } of earned) {
+    const parentRef = refs[refs.length - 2]
+    const parent = parentRef && decodeOptionalDeclaration(parentRef, 'subclassFeature')
+    const parentEntries = parent && entries.get(parent.target)
+    const childEntries = entries.get(target)
+    if (!parentEntries || !childEntries?.length) continue
+    parentEntries.push({ type: 'entries', name: feature.name, entries: childEntries })
+    nested.add(target)
   }
-  return { ...earned.feature, entries }
+  return earned.flatMap(({ target, feature }) =>
+    nested.has(target)
+      ? []
+      : [
+          {
+            feature: { ...feature, entries: entries.get(target) },
+            actionId: getFeatureActionGroupId(current.key, target, feature.entries ?? []),
+          },
+        ],
+  )
 }
 
 /** Resolve fixed rules from an exact, source-declared classic subclass on a revised class. */

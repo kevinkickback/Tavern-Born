@@ -14,6 +14,7 @@ import type {
   GameData,
   GameDataSourceStack,
   ItemEntry5e,
+  Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
 import { mergeClassCastingSources } from './classCastingSource'
@@ -68,7 +69,7 @@ import {
   resolvePrimaryItemTypes,
 } from './primaryItemTypes'
 import { auditPsionicMultiplicity, getPsionicKey } from './psionics'
-import { isRevisedAffinityOwner, REVISED_AFFINITY_TARGET } from './revisedElementalAffinity'
+import { isNativeAffinityOwner, REVISED_AFFINITY_TARGET } from './revisedElementalAffinity'
 import { auditSpellRouteMultiplicity } from './spellRouteSources'
 import { preserveStartingItemCategories } from './startingItemCategory'
 import { getSubclassIntroEntries } from './subclassContent'
@@ -199,6 +200,36 @@ function findLayerNativeSubclassFeature(
   }
 }
 
+function findEarlierOwnerSubclassFeature(
+  layers: readonly GameData[],
+  selectedClass: Class5e,
+  selectedSubclass: Subclass5e,
+  target: string,
+) {
+  let current = true
+  for (let index = layers.length - 1; index >= 0; index--) {
+    const classes = layers[index].classes.filter((row) => findClassReference(selectedClass, [row]))
+    if (!classes.length) continue
+    const [cls] = classes
+    if (classes.length !== 1 || cls.sourceIdentityConflict) return undefined
+    if (current) {
+      current = false
+      continue
+    }
+    const roots = cls.subclasses?.filter((row) => findClassReference(selectedSubclass, [row]))
+    if (roots?.length !== 1 || roots[0].sourceIdentityConflict) return undefined
+    const ref = getDirectSubclassFeatureReference(roots[0], target)
+    if (!ref) return undefined
+    if (
+      ref.feature &&
+      getSubclassFeatureIdentity(ref.feature) === target &&
+      !ref.feature.sourceIdentityConflict &&
+      !ref.feature.featureOptionSourceConflict
+    )
+      return ref.feature
+  }
+}
+
 function resolveComposedFeatureReferences(gameData: GameData, layers: readonly GameData[]): void {
   const features = new Map(
     gameData.classFeatures.map((feature) => [classFeatureIdentity(feature), feature]),
@@ -220,9 +251,16 @@ function resolveComposedFeatureReferences(gameData: GameData, layers: readonly G
       const subclassFeatureRefs = (subclass.subclassFeatureRefs ?? []).map((reference) => {
         if (reference.sourceIdentityConflict === true) return reference
         const identity = getSubclassFeatureIdentity(reference)
+        if (subclass.scopedSubclassFeatureDependencies) {
+          if (!identity || reference.feature) return reference
+          const feature = findEarlierOwnerSubclassFeature(layers, classData, subclass, identity)
+          if (!feature) return reference
+          subclassChanged = true
+          return { ...reference, feature }
+        }
         // A native intro and its nested declaration stay together.
         if (
-          (identity === REVISED_AFFINITY_TARGET && isRevisedAffinityOwner(classData, subclass)) ||
+          (identity === REVISED_AFFINITY_TARGET && isNativeAffinityOwner(classData, subclass)) ||
           isNativeResilienceIntro(classData, subclass, identity) ||
           isRevisedInheritedOathIntro(classData, subclass, identity)
         )

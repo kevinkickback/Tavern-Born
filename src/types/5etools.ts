@@ -144,6 +144,8 @@ export interface ClassFeatureReference {
 export interface Subclass5e {
   /** Parser/layer ambiguity remains explicit after identity Maps and copy materialization. */
   sourceIdentityConflict?: true
+  /** This indexed document explicitly scoped its subclass-feature producers. */
+  scopedSubclassFeatureDependencies?: true
   /** Exact ranked spell list inherited from the classic subclass source. */
   retainedExpandedSpellSourceDigest?: string
   /** Parser-derived source occurrence/copy certificate; never saved on a character. */

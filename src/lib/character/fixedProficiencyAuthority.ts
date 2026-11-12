@@ -124,11 +124,12 @@ export function getCurrentFixedProficiencies(
       const rule = fixedProficiencyRule(path.target, owner)
       if (!rule) continue
       if (rule.subclassGainPosition) {
-        const validGain = rule.retainedSubclassGainTarget
+        const retainedGain = certificate?.retainedGainTarget ?? rule.retainedSubclassGainTarget
+        const validGain = retainedGain
           ? permitsClassRuleSource(character, cls.source) &&
             permitsClassRuleSource(character, selected.subclassSource) &&
             permitsClassRuleSource(character, rule.classSource) &&
-            matchesRetainedFirstSubclassGain(cls, rule.retainedSubclassGainTarget, path.level)
+            matchesRetainedFirstSubclassGain(cls, retainedGain, path.level)
           : getCurrentNativeSubclassGain(
               cls,
               rule.subclassGainPosition === 'at-level' ? path.level : undefined,

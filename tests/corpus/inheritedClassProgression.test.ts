@@ -24,12 +24,14 @@ import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { getEarnedSubclassFeatureSource } from '@/lib/5etools/ownedSubclassFeature'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { getRevisedInvocationPoolId } from '@/lib/5etools/warlockInvocationCantripSource'
 import { getWeaponInscriptionSetup } from '@/lib/5etools/weaponInscribedSpells'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterClassResources } from '@/lib/calculations/classResources'
+import { deriveFighterPassiveEffects } from '@/lib/calculations/fighterPassiveEffects'
 import { getWalkingSpeed } from '@/lib/calculations/movement'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
@@ -589,10 +591,239 @@ describe.runIf(available)('configured inherited class progression', () => {
     ])
   })
 
+  test('Evoker gains the printed Draconic Resilience and owns its Elemental Affinity choice', () => {
+    const actor = chooseSubclass(reachLevel(start('Evoker'), 3), 'Draconic Sorcery')
+    const earnedEffects = (character: Character) =>
+      calculation(character).effects.sourceDeclarations
+    const resilience = (character: Character) =>
+      earnedEffects(character).filter((effect) => effect.label === 'Draconic Resilience')
+    expect(resilience(actor)).toContainEqual(
+      expect.objectContaining({
+        target: { kind: 'hit-point-maximum' },
+        operation: { kind: 'add', value: 3 },
+      }),
+    )
+    const fifth = reachLevel(actor, 5)
+    const sixth = reachLevel(fifth, 6)
+    expect(resilience(sixth)).toContainEqual(
+      expect.objectContaining({
+        target: { kind: 'hit-point-maximum' },
+        operation: { kind: 'add', value: 6 },
+      }),
+    )
+    const choice = classChoice(sixth, 'Elemental Affinity')
+    expect(choice.owner).toMatchObject({ name: 'Evoker', source: 'WoW', featureSource: 'XPHB' })
+    const options = resolveClassChoiceOptions(
+      choice,
+      createClassChoiceCatalogs(catalogs),
+      [],
+      6,
+      sixth,
+    ).filter(isClassChoiceOptionEligible)
+    expect(options.map((option) => option.reference.name)).toEqual([
+      'Acid',
+      'Cold',
+      'Fire',
+      'Lightning',
+      'Poison',
+    ])
+    const fire = options.find((option) => option.reference.name === 'Fire')!.reference
+    expect(classChoices(fifth).some((row) => row.id === choice.id)).toBe(false)
+    const selected = selectOptions(sixth, choice.label, fire)
+    const resistances = (character: Character) =>
+      earnedEffects(character).filter((effect) => effect.label === 'Elemental Affinity')
+    expect(resistances(selected)).toContainEqual(
+      expect.objectContaining({
+        target: { kind: 'damage-resistance', damageType: 'fire' },
+      }),
+    )
+    const withdrawn = { ...selected, allowedSources: ['XPHB'] }
+    expect(resilience(withdrawn)).toEqual([])
+    expect(resistances(withdrawn)).toEqual([])
+    expect(
+      resistances(
+        reopen(withdrawn, {
+          characterPatch: { allowedSources: sources },
+          provenanceUpdate: withdrawn.provenance,
+        }),
+      ),
+    ).toEqual(resistances(selected))
+    const rolledBack = reopen(
+      selected,
+      applyLevelDown(selected, selected.provenance, calculation(selected)),
+    )
+    expect(resistances(rolledBack)).toEqual([])
+  })
+
+  test('copied subclass roots retain their certified fixed grants and required proficiency choices', () => {
+    const trained = (cls: string, subclass: string) =>
+      chooseSubclass(reachLevel(start(cls), 3), subclass)
+    const assassin = trained('Rogue', 'Assassin')
+    expect(calculation(assassin).character.proficiencies.tools).toEqual(
+      expect.arrayContaining(['disguise kit', "poisoner's kit"]),
+    )
+    const mercy = calculation(trained('Monk', 'Warrior of Mercy')).character.proficiencies
+    expect(mercy.skills).toEqual(expect.arrayContaining(['insight', 'medicine']))
+    expect(mercy.tools).toContain('herbalism kit')
+    const warrior = trained('Warrior', 'Battle Master')
+    const skills = classChoice(warrior, 'Student of War skills')
+    const tools = classChoice(warrior, 'Student of War tools')
+    expect(skills.owner).toMatchObject({ name: 'Warrior', source: 'WoW', featureSource: 'XPHB' })
+    const options = resolveClassChoiceOptions(
+      skills,
+      createClassChoiceCatalogs(catalogs),
+      [],
+      3,
+      warrior,
+    )
+      .filter(isClassChoiceOptionEligible)
+      .map((row) => row.reference.name.toLowerCase())
+    expect(options.sort()).toEqual([
+      'acrobatics',
+      'animal handling',
+      'athletics',
+      'history',
+      'insight',
+      'intimidation',
+      'perception',
+      'persuasion',
+      'survival',
+    ])
+    const withHistory = selectOptions(
+      warrior,
+      skills.label,
+      getProficiencyOption('skills', 'History'),
+    )
+    const saved = selectOptions(
+      withHistory,
+      tools.label,
+      getProficiencyOption('tools', "Brewer's Supplies"),
+    )
+    const current = calculation(saved).character
+    expect(current.proficiencies.skills).toContain('history')
+    expect(current.proficiencies.tools).toContain("brewer's supplies")
+    const withdrawn = calculation({ ...saved, allowedSources: ['XPHB'] }).character
+    expect(withdrawn.proficiencies.skills).not.toContain('history')
+    expect(withdrawn.proficiencies.tools).not.toContain("brewer's supplies")
+  })
+
+  test.each([
+    ['Druid', 'Circle of the Stars', 6, 'Cosmic Omen', 3],
+    ['Priest', 'War Domain', 3, 'War Priest', 3],
+    ['Rogue', 'Soulknife', 20, 'Psionic Energy Dice', 12],
+    ['Rogue', 'Soulknife', 13, 'Psychic Veil', 1],
+    ['Rogue', 'Soulknife', 17, 'Rend Mind', 1],
+  ] as const)(
+    '%s derives the earned %s counter at level %i',
+    (name, subclass, level, label, maximum) => {
+      const actor = {
+        ...chooseSubclass(reachLevel(start(name), 3), subclass),
+        abilityScores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 16,
+          charisma: 16,
+        },
+      }
+      const current = reachLevel(actor, level)
+      const resources = (character: Character) =>
+        getCharacterClassResources(character, () => classRow(name), {
+          catalogs,
+          charismaModifier: 3,
+          abilityModifiers: calculation(character).abilityScores.modifiers,
+          unlimitedWildShape: false,
+        })
+      expect(resources(current).find((row) => row.label === label)?.max).toBe(maximum)
+      expect(
+        resources({ ...current, allowedSources: ['XPHB'] }).some((row) => row.label === label),
+      ).toBe(false)
+    },
+    12_000,
+  )
+
+  test.each([
+    [
+      'Warrior',
+      'Champion',
+      'Remarkable Athlete',
+      { kind: 'conditional-note', note: 'Advantage on Initiative rolls.' },
+    ],
+    ['Rogue', 'Swashbuckler', 'Rakish Audacity', { kind: 'add', value: 3 }],
+  ] as const)('%s derives %s initiative rules from the selected subclass', (name, subclass, label, operation) => {
+    const selected = chooseSubclass(reachLevel(start(name), 3), subclass)
+    const actor = { ...selected, abilityScores: { ...selected.abilityScores, charisma: 16 } }
+    const effects = (character: Character) => calculation(character).effects.sourceDeclarations
+    expect(effects(actor)).toContainEqual(
+      expect.objectContaining({
+        label,
+        target: { kind: 'initiative' },
+        operation,
+      }),
+    )
+    expect(effects({ ...actor, allowedSources: ['XPHB'] }).some((row) => row.label === label)).toBe(
+      false,
+    )
+  })
+
+  test('a later feature from another printing preserves an earned passive', () => {
+    const warrior = classRow('Warrior')
+    const champion = warrior.subclasses!.find((row) => row.shortName === 'Champion')!
+    const battleMaster = classRow('Fighter', 'XPHB').subclasses!.find(
+      (row) => row.shortName === 'Battle Master' && row.source === 'XPHB',
+    )!
+    const added = battleMaster.subclassFeatureRefs!.find((row) => row.name === 'Know Your Enemy')!
+    const classes = data.classes.map((row) =>
+      row === warrior
+        ? {
+            ...row,
+            subclasses: row.subclasses!.map((subclass) =>
+              subclass === champion
+                ? {
+                    ...subclass,
+                    subclassFeatures: [
+                      ...(subclass.subclassFeatures ?? []).filter((ref) => typeof ref === 'string'),
+                      added.ref,
+                    ],
+                    subclassFeatureRefs: [...(subclass.subclassFeatureRefs ?? []), added],
+                  }
+                : subclass,
+            ),
+          }
+        : row,
+    )
+    const mixedCatalogs = buildClassChoiceFeatureCatalogs({ ...data, classes })
+    const selected = chooseSubclass(reachLevel(start('Warrior'), 3), 'Champion')
+    const later = reachLevel(selected, 7)
+    const [entry] = later.classProgression
+    expect(
+      getEarnedSubclassFeatureSource(later, entry, mixedCatalogs)?.features.map(
+        ({ feature }) => feature.name,
+      ),
+    ).toContain('Know Your Enemy')
+    const effects = deriveFighterPassiveEffects(selected, mixedCatalogs)
+    expect(effects.map((row) => row.label)).toEqual(['Remarkable Athlete', 'Remarkable Athlete'])
+    expect(deriveFighterPassiveEffects(later, mixedCatalogs)).toEqual(effects)
+    expect(
+      getCharacterClassResources(
+        later,
+        () => classes.find((row) => row.name === 'Warrior' && row.source === 'WoW'),
+        {
+          catalogs: mixedCatalogs,
+          charismaModifier: 0,
+          unlimitedWildShape: false,
+        },
+      ).some((row) => row.label === 'Know Your Enemy'),
+    ).toBe(true)
+  })
+
   test.each([
     ['Monk', 'Warrior of Mystic Brews', 6, 'Mystic Brew', 'pint of the beverage'],
     ['Priest', 'Shadow Domain', 17, 'Vampiric Embrace', 'regains that many Hit Points'],
     ['Death Knight', 'Oath of the Ebon Blade', 20, 'Aspect of the Horsemen', 'Runic Mastery'],
+    ['Evoker', 'Draconic Sorcery', 18, 'Dragon Companion', 'without a Material component'],
+    ['Demon Hunter', 'Demon Hunter', 3, 'Soul Fragments', 'a whirlwind of soul energy'],
   ] as const)(
     '%s exports the earned %s rule at level %i',
     async (name, subclass, level, feature, phrase) => {
@@ -641,6 +872,25 @@ describe.runIf(available)('configured inherited class progression', () => {
     },
     20_000,
   )
+
+  test('an action in the custom sheet Notes prints its exact subclass rules once', async () => {
+    const knight = reachLevel(
+      chooseSubclass(reachLevel(start('Death Knight'), 3), 'Oath of the Ebon Blade'),
+      20,
+    )
+    const pdf = await PDFDocument.load(
+      await generateTestCharacterSheet(followupSheet(knight), '2014-custom', {
+        text: { descriptions: 'full', overflow: 'notes' },
+      }),
+    )
+    const bodies = pdf
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(bodies.split('restore your use of it by expending a level 5 spell slot')).toHaveLength(2)
+  }, 20_000)
 
   test.each([
     ['Druidic Warrior', 'XPHB', ['Guidance', 'Starry Wisp']],
@@ -838,6 +1088,28 @@ describe.runIf(available)('configured inherited class progression', () => {
     )
   })
 
+  test.each([
+    ['Warrior', 'WoW'],
+    ['Fighter', 'XPHB'],
+  ])('%s derives the exact printed counter with alternate recovery', (name, source) => {
+    const actor = reachLevel(start(name, source), 6)
+    const selected = reopen(
+      actor,
+      selectSubclass(actor, actor.provenance, 'Battle Master', source, undefined, {
+        classChoiceFeatureCatalogs: catalogs,
+      }),
+    )
+    const counter = (character: Character) =>
+      followupSheet(character).classResourceRows.find((row) => row.label === 'Know Your Enemy')
+    expect(counter(selected)).toBeUndefined()
+    expect(counter(reachLevel(selected, 7))).toMatchObject({
+      max: 1,
+      recovery: 'Restores all uses on a long rest',
+      usageText:
+        'You can also restore a use of the feature by expending one Superiority Die (no action required).',
+    })
+  })
+
   test.runIf(existsSync('data/book/book-wow.json'))(
     'companion family, specialization and mastery keep independent identities',
     () => {
@@ -923,6 +1195,45 @@ describe.runIf(available)('configured inherited class progression', () => {
         'Pet Specialization: Tenacity',
       )
     },
+  )
+
+  test.each([
+    ['Evoker', 'WoW'],
+    ['Sorcerer', 'XPHB'],
+  ])(
+    '%s tracks Dragon Companion independently of preparation',
+    (name, source) => {
+      const actor = reachLevel(start(name, source), 3)
+      const selected = reopen(
+        actor,
+        selectSubclass(actor, actor.provenance, 'Draconic Sorcery', source, undefined, {
+          classChoiceFeatureCatalogs: catalogs,
+        }),
+      )
+      const before = reachLevel(selected, 17)
+      const earned = reachLevel(before, 18)
+      const counter = (character: Character) =>
+        followupSheet(character).classResourceRows.find(
+          (row) => row.label === 'Summon Dragon (slot-free)',
+        )
+      expect(fixedSpells(before)).toContain('summon dragon|xphb')
+      expect(counter(before)).toBeUndefined()
+      expect(counter(earned)).toMatchObject({
+        max: 1,
+        recovery: 'Restores all uses on a long rest',
+      })
+      const id = counter(earned)!.id
+      const spent = characterPersistenceSchema.parse({
+        ...earned,
+        classResources: { ...earned.classResources, [id]: 0 },
+      })
+      expect(counter(spent)?.used).toBe(1)
+      const rolledBack = reopen(spent, applyLevelDown(spent, spent.provenance, calculation(spent)))
+      expect(counter(rolledBack)).toBeUndefined()
+      expect(fixedSpells(rolledBack)).toContain('summon dragon|xphb')
+      if (source === 'WoW') expect(counter({ ...spent, allowedSources: ['XPHB'] })).toBeUndefined()
+    },
+    15_000,
   )
 
   test('shared resource casts and their counter follow earned subclass gains and survive reopen', async () => {

@@ -111,13 +111,16 @@ export async function generateFilledCharacterSheetPdf(
     const printedActions = continueInNotes ? original.actions : viewModel.actions
     const ids = printedActions
       .filter((action) => {
-        if (!action.description || !customActionDetails.some(([kind]) => action.kind === kind))
+        if (
+          !action.active ||
+          !action.description ||
+          !customActionDetails.some(([kind]) => action.kind === kind)
+        )
           return false
-        if (action.source.kind === 'subclass') return true
-        if (action.source.kind !== 'class') return false
+        if (action.source.kind !== 'class' && action.source.kind !== 'subclass') return false
         const matchingRule = original.declaredClassFeatureSummaries?.some(
           (row) =>
-            row.actionNotesSource === 'class' &&
+            (action.source.kind === 'subclass' || row.actionNotesSource === 'class') &&
             row.actionId === action.id &&
             row.text === `${action.name}: ${action.description}`,
         )
