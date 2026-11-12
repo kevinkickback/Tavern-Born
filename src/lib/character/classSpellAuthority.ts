@@ -1,16 +1,24 @@
+import {
+  type ArtificerSpellReprints,
+  getArtificerReprintListRoutes,
+  isTceArtificer,
+} from '@/lib/5etools/artificerSpellReprints'
 import { isCircleOfTheLand } from '@/lib/5etools/circleOfTheLand'
 import { DECLARED_CASTING_LISTS } from '@/lib/5etools/classCastingRules'
 import { decodeSubclassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
-import { hasRevisedInheritedDomainSpells } from '@/lib/5etools/legacyClericDomainSpells'
 import {
   divineSoul,
   getCurrentDivineMagic,
   getLegacySorcererSpec,
 } from '@/lib/5etools/legacySorcererSubclassRules'
 import { OPTIONAL_CLASS_SECTION_RULES } from '@/lib/5etools/optionalClassSectionRules'
+import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
 import { matchesJoinedSpellClassFilter } from '@/lib/5etools/spellFilterSources'
-import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
+import {
+  auditSpellRouteMultiplicity,
+  hasUniqueSpellRouteSource,
+} from '@/lib/5etools/spellRouteSources'
 import { hasWarlockPatronSpellConfiguration } from '@/lib/5etools/warlockPatronConfigurations'
 import { getNativeExpandedSpellReferences } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
@@ -28,6 +36,7 @@ export interface ManagedClassSpellContext {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   /** Unfiltered classic producers prove inherited oath reprints. Grants still require a visible target. */
   oathSpellSourceByKey?: Readonly<Record<string, Spell5e>>
+  classicSpellReprints?: ArtificerSpellReprints
   abilityScores?: AbilityScores
   /** Current non-feature spell providers used to qualify selected feature grants. */
   independentSpellProfiles?: readonly SpellProfile[]
@@ -159,10 +168,27 @@ export function hasCurrentClassSpellListRoute(
     )
   )
     return true
+  if (
+    character.originSystem === '2024' &&
+    isTceArtificer(entry) &&
+    owner[0] === 'class' &&
+    owner[1] === 'artificer' &&
+    owner[2] === 'tce' &&
+    checked.classSpellRouteSource?.input.targetOccurrences.length === 1 &&
+    permitted(allowed, entry.source) &&
+    getArtificerReprintListRoutes(spell, context.classicSpellReprints).some(
+      (route) =>
+        route[3] === 'artificer' &&
+        route[4] === 'tce' &&
+        matchesJoinedSpellClassFilter(route, ['artificer']) &&
+        (route[6] === null || permitted(allowed, route[6])),
+    )
+  )
+    return true
   if (options.directOnly) return false
   if (
     options.expandedAtGain?.get(getSpellReferenceKey(spell.name, spell.source)) === spell.level &&
-    checked.classSpellRouteSource?.input.targetOccurrences.length === 1
+    hasUniqueSpellRouteSource(spell)
   )
     return true
   const currentParent = context.catalogs?.classes?.filter(
@@ -248,7 +274,15 @@ export function currentClasses(character: Character, context?: ManagedClassSpell
       subclasses: row.subclasses?.filter(
         (subclass) =>
           permitted(allowed, subclass.source) ||
-          (subclass.source === 'PHB' && hasRevisedInheritedDomainSpells(row, subclass)),
+          // Retained subclasses are selectable under 2024 rules. Their spell grants and
+          // individual spell sources still require the usual authority.
+          (character.originSystem === '2024' &&
+            !subclass.sourceIdentityConflict &&
+            subclass.className === row.name &&
+            subclass.classSource === row.source &&
+            XPHB_LEGACY_SUBCLASS_KEYS.has(
+              [row.name, row.source, subclass.name, subclass.source].join('|'),
+            )),
       ),
     }))
 }

@@ -6,11 +6,18 @@ import { getClassCastingGainAuthority } from '@/lib/5etools/classCastingSource'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getArcaneDabbler, isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { getSavantSpellbookGain, getSavantSpellbookSlots } from '@/lib/5etools/savantSpellbookRules'
-import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  isInvocationRitualTranscriptionSlot,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
+import {
+  getInvocationRitualTranscriptionOffers,
+  getSelectedFeatureCantripSetups,
+} from '@/lib/character/selectedFeatureSpells'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
@@ -54,9 +61,40 @@ export function useClassSpellChoiceController(
         slots.push(
           ...getSavantSpellbookSlots(savedEntry),
           ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
-            (slot) => getClericArcanaSpellRule(slot) || isArcaneDabblerSlot(slot),
+            (slot) =>
+              getClericArcanaSpellRule(slot) ||
+              isArcaneDabblerSlot(slot) ||
+              slot[1] === 'subclass-spell-replacement',
           ),
         )
+      }
+    }
+    const ritualSetups =
+      character && slots.some(isSelectedInvocationRitualSlot)
+        ? getSelectedFeatureCantripSetups(
+            character,
+            catalogs,
+            calculation?.classChoices.prerequisites,
+          )
+        : []
+    const ritualRanks = new Map(
+      ritualSetups
+        .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
+        .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const),
+    )
+    if (character) {
+      for (const { slot } of getInvocationRitualTranscriptionOffers(
+        character,
+        entry,
+        ritualSetups,
+      )) {
+        choices.set(slot[3], {
+          cantrips: 0,
+          spells: 0,
+          maxSpellLevel: 0,
+          canSwap: false,
+          canTranscribeRituals: true,
+        })
       }
     }
     const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
@@ -75,6 +113,10 @@ export function useClassSpellChoiceController(
         canSwap: false,
       }
       choices.set(slot[3], gain)
+      if (isInvocationRitualTranscriptionSlot(slot)) {
+        gain.hasTranscribedRituals = true
+        continue
+      }
       const savant = getSavantSpellbookGain(slot)
       if (savant) {
         gain.savantSpellbook ??= {
@@ -86,6 +128,10 @@ export function useClassSpellChoiceController(
         continue
       }
       const domain = slot[1]
+      if (domain === 'subclass-spell-replacement') {
+        gain.canSwap = true
+        continue
+      }
       if (domain === 'class-spellbook-specialty') {
         gain.spellbookSpecialty ??= {
           name: getManagedClassSpellFeatureLabel(slot) ?? 'Spellbook specialty',
@@ -117,7 +163,7 @@ export function useClassSpellChoiceController(
           : undefined
       gain.maxSpellLevel = Math.max(
         gain.maxSpellLevel,
-        isSelectedInvocationRitualSlot(slot) ? 1 : 0,
+        isSelectedInvocationRitualSlot(slot) ? (ritualRanks.get(slot[2]) ?? 0) : 0,
         getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
         dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
           ? Math.max(...dabbler.ranks)

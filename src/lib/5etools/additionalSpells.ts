@@ -38,6 +38,22 @@ export interface ParsedAdditionalSpellBlock {
   scheduleIdentity: string[]
 }
 
+const rankedExpansionKey = /^s[0-9]$/
+
+export function getUnnamedRankedExpansion(blocks: unknown) {
+  if (!Array.isArray(blocks) || blocks.length !== 1) return undefined
+  const block: unknown = blocks[0]
+  if (!block || typeof block !== 'object' || 'name' in block || !('expanded' in block))
+    return undefined
+  const { expanded } = block
+  if (!expanded || typeof expanded !== 'object' || Array.isArray(expanded)) return undefined
+  const ranks = Object.entries(expanded)
+  return ranks.length &&
+    ranks.every(([key, spells]) => rankedExpansionKey.test(key) && Array.isArray(spells))
+    ? (expanded as NonNullable<AdditionalSpellBlock['expanded']>)
+    : undefined
+}
+
 function requireRecord(value: unknown, label: string, keys?: readonly string[]): void {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error(`Invalid native spell ${label}.`)
@@ -267,7 +283,7 @@ function parseBlock(
   ]
   if (block.expanded !== undefined) requireRecord(block.expanded, 'expanded list')
   const expanded = Object.entries(block.expanded ?? {}).flatMap(([key, references]) => {
-    const spellLevel = /^s[0-9]$/.test(key) ? Number(key.slice(1)) : NaN
+    const spellLevel = rankedExpansionKey.test(key) ? Number(key.slice(1)) : NaN
     if (!Number.isInteger(spellLevel) || !Array.isArray(references))
       throw new Error('Invalid native spell expanded list.')
     return references.map((token) => ({

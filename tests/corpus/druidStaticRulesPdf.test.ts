@@ -224,7 +224,7 @@ test.each(stacks)(
     const data = await load(type, root)
     const current = lookups(data)
     const forExport = (source: 'PHB' | 'XPHB') => {
-      const character = actor(source, 10)
+      const character = actor(source, 14)
       // Fill the main feature box to prove the actual notes path for every template.
       character.features.push({
         id: 'manual:field-notes',
@@ -240,6 +240,8 @@ test.each(stacks)(
       const vm = forExport('PHB')
       const { text, notes } = await print(vm, template)
       expect(notes).toContain('Natural Recovery')
+      expect(text).toContain("Land's Stride")
+      expect(text).toContain("Nature's Sanctuary")
       expect(text).toContain('Restores all uses on a short or long rest')
       expect(text).toContain('Max. CR: 1')
       expect(text).toContain('by elementals or fey')
@@ -257,6 +259,10 @@ test.each(stacks)(
       expect(text).toContain('Known Forms: 8')
       expect(text).toContain('Fly Speed: Yes')
       expect(text).toContain('immune to the Poisoned condition')
+      expect(text).toContain("Land's Aid")
+      expect(text).toContain('life-draining thorns')
+      expect(text).toContain("Nature's Sanctuary")
+      expect(text).toContain('spectral trees and vines')
       expect(text).toContain(
         'prepared from your Circle Spells feature without expending a spell slot',
       )
@@ -282,20 +288,29 @@ test.each(stacks)(
     expect(summaries('PHB', 2)).toContain('No flying or swimming speed')
     expect(summaries('PHB', 2)).toContain('Natural Recovery')
     expect(summaries('PHB', 4)).toContain('No flying speed')
+    expect(summaries('PHB', 5)).not.toContain("Land's Stride")
+    expect(summaries('PHB', 6)).toContain("Land's Stride")
     expect(summaries('PHB', 9)).not.toContain("Nature's Ward")
     expect(summaries('PHB', 10)).toContain("Nature's Ward")
+    expect(summaries('PHB', 13)).not.toContain("Nature's Sanctuary")
+    expect(summaries('PHB', 14)).toContain("Nature's Sanctuary")
     expect(summaries('PHB', 19)).toContain('Restores all uses')
     expect(summaries('PHB', 20)).not.toContain('Restores all uses')
     expect(project('PHB', 20).featuresSummary).toContain('Wild Shape (Archdruid): Unlimited uses.')
     expect(summaries('XPHB', 2)).toContain('Known Forms: 4')
     expect(summaries('XPHB', 2)).toContain('Fly Speed: No')
+    expect(summaries('XPHB', 2)).not.toContain("Land's Aid")
+    expect(summaries('XPHB', 3)).toContain("Land's Aid")
     expect(summaries('XPHB', 5)).not.toContain('Natural Recovery')
     expect(summaries('XPHB', 6)).toContain('Natural Recovery')
     expect(summaries('XPHB', 9)).not.toContain("Nature's Ward")
     expect(summaries('XPHB', 10)).toContain('immune to the Poisoned condition')
+    expect(summaries('XPHB', 13)).not.toContain("Nature's Sanctuary")
+    expect(summaries('XPHB', 14)).toContain("Nature's Sanctuary")
     expect(summaries('XPHB', 17)).toContain('Base uses: 4')
     const names = withoutSheetDescriptions(project('XPHB', 10)).featuresSummary
-    expect(names).toContain("Wild Shape\n\nNature's Ward\n\nNatural Recovery")
+    for (const title of ['Wild Shape', "Land's Aid", 'Natural Recovery', "Nature's Ward"])
+      expect(names.split('\n\n')).toContain(title)
     expect(names).not.toMatch(/immune to the Poisoned|restores|spell slots to recover/i)
 
     const suppress = (target: string) => {
@@ -311,12 +326,37 @@ test.each(stacks)(
     const hidden = summaries('PHB', 10, withoutRecovery)
     expect(hidden).not.toContain('Natural Recovery')
     expect(hidden).toContain('immune to poison and disease')
-    expect(summaries('XPHB', 10, withoutShape)).not.toContain('Wild Shape')
+    expect(
+      project('XPHB', 10, withoutShape).declaredClassFeatureSummaries?.map(
+        ({ compactText }) => compactText,
+      ),
+    ).not.toContain('Wild Shape')
     const withoutWard = suppress("subclass-feature|nature's ward|druid|xphb|land|xphb|10|xphb")
     expect(summaries('XPHB', 10, withoutWard)).not.toContain('Poisoned condition')
     expect(summaries('XPHB', 10, withoutWard)).toContain('Natural Recovery')
     expect(summaries('PHB', 10)).toContain('Natural Recovery')
     expect(summaries('XPHB', 10)).toContain('Wild Shape')
+    const classic = actor('PHB', 6)
+    classic.features.push(
+      { id: 'earned-land', name: "Land's Stride", source: 'PHB', level: 6, description: '' },
+      { id: 'manual-land', name: "Land's Stride", source: 'Manual', description: 'Personal note.' },
+    )
+    classic.provenance.features["land's stride"] = [
+      {
+        sourceType: 'subclass',
+        sourceName: 'Circle of the Land',
+        sourceRef: 'PHB',
+        grantType: 'fixed',
+        label: 'Circle of the Land',
+      },
+    ]
+    const withSavedLabel = createCharacterSheetViewModel(classic, raw, raw)
+    expect(
+      withoutSheetDescriptions(withSavedLabel)
+        .featuresSummary.split('\n\n')
+        .filter((row) => row === "Land's Stride"),
+    ).toHaveLength(2)
+    expect(withSavedLabel.featuresSummary).toContain("Land's Stride: Personal note.")
     const multiclass = actor('XPHB', 1)
     const fighter = { name: 'Fighter', source: 'XPHB', levels: 9 }
     multiclass.classProgression.unshift(fighter)

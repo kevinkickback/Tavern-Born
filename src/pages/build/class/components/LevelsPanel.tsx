@@ -571,12 +571,15 @@ export function BuildClassLevelsPanel({
                     appliedAsiChoicesForClass.some((choice) => choice.level === lv) ||
                     classAsiFeats.some((feat) => feat.classLevel === lv)
                 const subclassChoiceComplete = !isSubclassLevel || !!viewingSubclass
-                const selectedSpellCount = managedSpellStatuses.filter(
+                const activeSpellsAtGain = managedSpellStatuses.filter(
                   (row) =>
                     row.active &&
                     row.choice.slot[0][1] === viewingClass.trim().toLowerCase() &&
                     row.choice.slot[0][2] === viewingClassSource?.trim().toLowerCase() &&
                     row.choice.slot[3] === lv,
+                )
+                const selectedSpellCount = activeSpellsAtGain.filter(
+                  (row) => row.choice.slot[1] !== 'subclass-spell-replacement',
                 ).length
                 const pendingSpellChoices = spellGain
                   ? Math.max(0, countSpellGainChoices(spellGain) - selectedSpellCount)
@@ -935,7 +938,8 @@ export function BuildClassLevelsPanel({
                             spellGain={spellGain}
                             chosenNames={spellSelectionsByLevel.get(lv) ?? []}
                             unavailableCount={
-                              (spellSelectionsByLevel.get(lv)?.length ?? 0) - selectedSpellCount
+                              (spellSelectionsByLevel.get(lv)?.length ?? 0) -
+                              activeSpellsAtGain.length
                             }
                             spellByReference={spellByReference}
                             detailCollapsed={detailCollapsed}

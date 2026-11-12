@@ -670,27 +670,32 @@ const patronFormCases = [
   },
 ] as const
 
+function configuredGenieSheet() {
+  const data = dataFor('composed')
+  const catalogs = lookups({
+    ...data,
+    classes: DataFilter.filterClasses(data.classes, { sources: ['XPHB', 'TCE'] }),
+  })
+  const retained = lookups(data)
+  const sheet = (level: number, visible = catalogs, patron = 'The Genie') => {
+    const saved = actor(editions[1], level, patron)
+    return createCharacterSheetViewModel(
+      {
+        ...saved,
+        allowedSources: ['XPHB', 'TCE'],
+        classProgression: [{ ...saved.classProgression[0], subclassSource: 'TCE' }],
+      },
+      retained,
+      visible,
+    )
+  }
+  return { data, catalogs, sheet }
+}
+
 test.skipIf(!packs.includes('composed'))(
-  'a configured patron prints its copied rule at the revised Warlock gain',
-  async () => {
-    const data = dataFor('composed')
-    const catalogs = lookups({
-      ...data,
-      classes: DataFilter.filterClasses(data.classes, { sources: ['XPHB', 'TCE'] }),
-    })
-    const retained = lookups(data)
-    const sheet = (level: number, visible = catalogs, patron = 'The Genie') => {
-      const saved = actor(editions[1], level, patron)
-      return createCharacterSheetViewModel(
-        {
-          ...saved,
-          allowedSources: ['XPHB', 'TCE'],
-          classProgression: [{ ...saved.classProgression[0], subclassSource: 'TCE' }],
-        },
-        retained,
-        visible,
-      )
-    }
+  'a configured patron earns its copied rule at the revised Warlock gain',
+  () => {
+    const { data, catalogs, sheet } = configuredGenieSheet()
     const names = (view: ReturnType<typeof sheet>) =>
       view.declaredClassFeatureSummaries?.map((row) => row.compactText)
     expect(names(sheet(2))).not.toContain("Genie's Vessel")
@@ -719,25 +724,37 @@ test.skipIf(!packs.includes('composed'))(
     expect(otherNames).toContain('Pact Magic')
     expect(otherNames).not.toContain("Genie's Vessel")
     expect(otherNames).not.toContain('Elemental Gift')
-    for (const template of ['2024-official', '2024-custom'] as const) {
-      const bytes = await generateTestCharacterSheet(earned, template, {
-        text: { descriptions: 'full', overflow: 'notes' },
-      })
-      const text = (await PDFDocument.load(bytes))
-        .getForm()
-        .getFields()
-        .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-      expect(text).toContain('Elemental Gift')
-      expect(text.toLowerCase()).toContain('resistance to a damage type')
-    }
   },
 )
 
-test.skipIf(!packs.includes('composed')).each(patronFormCases)(
-  '$template prints $patron rules and names-only labels',
-  async ({ edition, patron, shortName, level, template, gains }) => {
+test.skipIf(!packs.includes('composed')).each(['2024-official', '2024-custom'] as const)(
+  '%s prints a configured patron rule at the revised Warlock gain',
+  async (template) => {
+    const { sheet } = configuredGenieSheet()
+    const earned = sheet(6)
+    const bytes = await generateTestCharacterSheet(earned, template, {
+      text: { descriptions: 'full', overflow: 'notes' },
+    })
+    const text = (await PDFDocument.load(bytes))
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(text).toContain('Elemental Gift')
+    expect(text.toLowerCase()).toContain('resistance to a damage type')
+  },
+)
+
+test
+  .skipIf(!packs.includes('composed'))
+  .each(
+    patronFormCases.flatMap((row) =>
+      (['full', 'names'] as const).map((descriptions) => ({ ...row, descriptions })),
+    ),
+  )(
+  '$template prints $patron with $descriptions descriptions',
+  async ({ edition, patron, shortName, level, template, gains, descriptions }) => {
     const [, source] = edition
     const data = dataFor('composed')
     const view = createCharacterSheetViewModel(
@@ -765,29 +782,27 @@ test.skipIf(!packs.includes('composed')).each(patronFormCases)(
       expect(body.length).toBeGreaterThan(0)
       return { label, body }
     })
-    for (const descriptions of ['full', 'names'] as const) {
-      const bytes = await generateTestCharacterSheet(view, template, {
-        text: { descriptions, overflow: 'notes' },
-      })
-      const fields = (await PDFDocument.load(bytes))
-        .getForm()
-        .getFields()
-        .filter((field) => field instanceof PDFTextField)
-      const printed = normalize(fields.map((field) => field.getText() ?? '').join(' '))
-      const notes = normalize(
-        fields
-          .filter((field) => /Notes\.(Left|Right)$/.test(field.getName()))
-          .map((field) => field.getText() ?? '')
-          .join(' '),
-      )
-      for (const { label, body } of rules) {
-        expect(printed).toContain(label)
-        if (descriptions === 'names') expect(printed).not.toContain(body)
-        else if (template === '2014-custom' && label === 'Misty Escape') {
-          expect(notes).toContain(body)
-          expect(printed.split(body)).toHaveLength(2)
-        } else expect(printed).toContain(body)
-      }
+    const bytes = await generateTestCharacterSheet(view, template, {
+      text: { descriptions, overflow: 'notes' },
+    })
+    const fields = (await PDFDocument.load(bytes))
+      .getForm()
+      .getFields()
+      .filter((field) => field instanceof PDFTextField)
+    const printed = normalize(fields.map((field) => field.getText() ?? '').join(' '))
+    const notes = normalize(
+      fields
+        .filter((field) => /Notes\.(Left|Right)$/.test(field.getName()))
+        .map((field) => field.getText() ?? '')
+        .join(' '),
+    )
+    for (const { label, body } of rules) {
+      expect(printed).toContain(label)
+      if (descriptions === 'names') expect(printed).not.toContain(body)
+      else if (template === '2014-custom' && label === 'Misty Escape') {
+        expect(notes).toContain(body)
+        expect(printed.split(body)).toHaveLength(2)
+      } else expect(printed).toContain(body)
     }
   },
 )

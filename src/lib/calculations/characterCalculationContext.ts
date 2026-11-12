@@ -4,6 +4,7 @@ import {
   getArtificerAttunementLimit,
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
+import { isTceArtificer } from '@/lib/5etools/artificerSpellReprints'
 import {
   BEAR_ASPECT_TARGET,
   CLASSIC_ASPECT_TARGET,
@@ -18,6 +19,7 @@ import {
 import { getCurrentWildHeartAspects } from '@/lib/5etools/barbarianPathChoices'
 import { hasCurrentBardDanceDefense } from '@/lib/5etools/bardCollegeFeatures'
 import { getCurrentBardJackOfAllTrades } from '@/lib/5etools/bardSpellSources'
+import { getClassicSpellReprints } from '@/lib/5etools/classicSpellReprints'
 import { CLASS_ORDERS } from '@/lib/5etools/classOrderIdentity'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -44,6 +46,7 @@ import {
   getMysticImmortalDurability,
   isMysticJourneyOwner,
 } from '@/lib/5etools/mysticJourneyRules'
+import { getRetainedRankedExpansion } from '@/lib/5etools/retainedSubclassSpells'
 import { deriveRevisedAffinityEffects } from '@/lib/5etools/revisedElementalAffinity'
 import { getScionResistance } from '@/lib/5etools/rogueScion'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
@@ -128,6 +131,7 @@ import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { deriveFighterPassiveEffects } from './fighterPassiveEffects'
 import { getAbilityModifier, getProficiencyBonus } from './gameRules'
+import { deriveInvocationMovementEffects } from './invocationMovementEffects'
 import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement, getWalkingSpeed } from './movement'
 import { refreshNativeRacialSpellState } from './nativeRacialSpells'
@@ -455,6 +459,23 @@ export function createCharacterCalculationContext(
     catalogs: primaryLookups.classChoiceFeatureCatalogs,
     spellsByKey: primaryLookups.spellsByKey,
     oathSpellSourceByKey: rawLookups.spellsByKey,
+    classicSpellReprints:
+      character.originSystem === '2024' &&
+      character.classProgression.some(
+        (entry) =>
+          isTceArtificer(entry) ||
+          findClassReference(
+            entry,
+            primaryLookups.classChoiceFeatureCatalogs?.classes,
+          )?.subclasses?.some(
+            (subclass) =>
+              findClassReference({ name: entry.subclass, source: entry.subclassSource }, [
+                subclass,
+              ]) && getRetainedRankedExpansion(subclass),
+          ),
+      )
+        ? getClassicSpellReprints(rawLookups.spellsByKey)
+        : undefined,
     currentRaceResolution: resolveRaceReference(
       {
         name: character.race,
@@ -627,6 +648,7 @@ export function createCharacterCalculationContext(
     choiceCatalogs,
     prerequisites,
     primaryLookups.spellsByKey,
+    rawLookups.spellsByKey,
   )
   character = projectEffectiveClassChoiceFeatures(
     invocationSpells.character,
@@ -718,6 +740,9 @@ export function createCharacterCalculationContext(
       abilityScores.modifiers.charisma,
       sourceEffects,
     ),
+  )
+  sourceEffects.push(
+    ...deriveInvocationMovementEffects(character, choiceCatalogs, prerequisites, sourceEffects),
   )
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 

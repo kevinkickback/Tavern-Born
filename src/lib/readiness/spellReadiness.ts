@@ -152,6 +152,7 @@ export function validateSpells(
       calculation.classChoices.catalogs,
       calculation.classChoices.prerequisites,
     )) {
+      if (slot[1] === 'subclass-spell-replacement') continue
       const key = JSON.stringify(slot.slice(0, 4))
       groups.set(key, [...(groups.get(key) ?? []), slot])
     }

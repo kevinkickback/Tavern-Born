@@ -1,11 +1,14 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getManagedClassSpellRule, isManagedClassSpellSlot } from '@/lib/5etools/classCastingRules'
+import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
 import { ARCANE_DABBLER } from '@/lib/5etools/mysticFeatureIdentity'
 import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
 import {
   decodeSelectedFeatureSpellAddress,
+  getInvocationRitualBookProducer,
+  isSelectedClassicInvocationRitualSlot,
   isSelectedInvocationRitualSlot,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellbookSpecialtyRule } from '@/lib/5etools/spellbookSpecialtyRules'
@@ -30,12 +33,13 @@ export const managedClassSpellId = (slot: ManagedClassSpellSlot) =>
 
 /** Thaumaturge and the classic Circle bonus share the parent class cantrip pool. */
 export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
+  if (slot[1] === 'subclass-spell-replacement') return `${slot[2]}|${slot[3]}`
   if (
     slot[1] === 'class-arcanum' ||
     slot[1] === 'class-spellbook-specialty' ||
     slot[1] === 'feature-prepared'
   )
-    return slot[2]
+    return getInvocationRitualBookProducer(slot[2])
   if (
     slot[1] === 'feature-cantrip' &&
     !['classFeature', 'subclassFeature'].includes(
@@ -47,6 +51,7 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
 }
 
 export const getManagedClassSpellFeatureLabel = (slot: ManagedClassSpellSlot) => {
+  if (slot[1] === 'subclass-spell-replacement') return getClassicSorcererReplacementRule(slot)?.name
   if (isArcaneDabblerSlot(slot)) return ARCANE_DABBLER
   if (isSelectedInvocationRitualSlot(slot))
     return decodeSelectedFeatureSpellAddress(slot[2])?.[2].replace(/\b[a-z]/g, (letter) =>
@@ -109,6 +114,7 @@ export function makeManagedClassSpellTag(
   return {
     ...makeSourceTag(owner[0], name, 'choice', source),
     ...(choice.slot[1] === 'feature-cantrip' ||
+    choice.slot[1] === 'subclass-spell-replacement' ||
     isSelectedInvocationRitualSlot(choice.slot) ||
     isArcaneDabblerSlot(choice.slot) ||
     choice.slot[1] === 'class-arcanum' ||
@@ -137,11 +143,13 @@ export function matchesManagedClassSpellTag(
 ) {
   const [owner] = choice.slot
   return (
+    !isSelectedClassicInvocationRitualSlot(choice.slot) &&
     tag.grantVariant === managedClassSpellId(choice.slot) &&
     tag.sourceType === owner[0] &&
     normalizeOwnerIdentity(tag.sourceName) === (owner[0] === 'class' ? owner[1] : owner[3]) &&
     normalizeOwnerIdentity(tag.sourceRef) === (owner[0] === 'class' ? owner[2] : owner[4]) &&
     (choice.slot[1] === 'class-arcanum' ||
+    choice.slot[1] === 'subclass-spell-replacement' ||
     isSelectedInvocationRitualSlot(choice.slot) ||
     isArcaneDabblerSlot(choice.slot) ||
     getBardLoreSpellRule(choice.slot) ||

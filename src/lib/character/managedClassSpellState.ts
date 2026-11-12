@@ -1,7 +1,10 @@
 import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
-import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  isSelectedClassicInvocationRitualSlot,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import { getSpellNameKey, getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { isIndependentFixedClassSpell } from '@/lib/schema/managedClassSpellValidation'
 import type { Character } from '@/types/character'
@@ -30,7 +33,11 @@ export function removeManagedClassSpellMaterialization(
   character: Character,
   removed: readonly ManagedClassSpellChoice[],
 ): Character {
-  const materialized = removed.filter((choice) => choice.slot[1] !== 'class-spellbook-specialty')
+  const materialized = removed.filter(
+    (choice) =>
+      choice.slot[1] !== 'class-spellbook-specialty' &&
+      !isSelectedClassicInvocationRitualSlot(choice.slot),
+  )
   if (!materialized.length) return character
   const ids = new Set(materialized.map((choice) => managedClassSpellId(choice.slot)))
   const spellProfiles = character.spells.spellProfiles.map((profile) => {

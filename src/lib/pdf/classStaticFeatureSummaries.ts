@@ -10,7 +10,7 @@ import {
   hasCurrentBardWordsOfCreation,
   WORDS_OF_CREATION_TARGET,
 } from '@/lib/5etools/bardSpellSources'
-import { getLandStaticFeatures } from '@/lib/5etools/circleOfTheLand'
+import { isCircleOfTheLand, isLandChoiceFeature } from '@/lib/5etools/circleOfTheLand'
 import { getNormalizedClassChoiceId } from '@/lib/5etools/classChoiceId'
 import { getClassResourceDefs, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
@@ -64,7 +64,10 @@ import type {
   Feature,
   OptionalClassFeatureOwner,
 } from '@/types/character'
-import { getDeclaredSubclassStaticFeatures } from './declaredSubclassStaticFeatures'
+import {
+  getDeclaredSubclassStaticFeatures,
+  getInheritedSubclassStaticFeatures,
+} from './declaredSubclassStaticFeatures'
 import { getWarlockStaticFeatures } from './warlockStaticFeatures'
 
 export interface ClassStaticFeatureSummary {
@@ -558,6 +561,8 @@ export function getClassStaticFeatureSummaries(
   const progression = getCharacterClassEntries(character)
   const sorcerer = getCurrentNativeSorcerer(character, catalogs)
   return progression.flatMap((entry) => {
+    const inheritedRules = (cls: Class5e) =>
+      getInheritedSubclassStaticFeatures(character, cls, entry, catalogs)
     if (entry === sorcerer?.owner) {
       const { cls, source } = sorcerer
       const origin = `${norm(entry.subclass)}|${norm(entry.subclassSource)}`
@@ -569,13 +574,14 @@ export function getClassStaticFeatureSummaries(
             source === 'phb'
               ? { level: 1, intro: 'sorcerous origin', later: 'sorcerous origin feature' }
               : { level: 3, intro: 'sorcerer subclass', later: 'subclass feature' },
-          ).flatMap((feature) =>
-            featureSummary(feature).map((summary) => ({
-              ...summary,
-              replaces: savedClassLabel(character, entry, feature),
-            })),
           )
-        : []
+        : inheritedRules(cls)
+      const originSummaries = declared.flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
       const actionSummaries = [getDragonWings(sorcerer), getDraconicPresence(sorcerer)].flatMap(
         (rule) => {
           if (!rule) return []
@@ -591,7 +597,7 @@ export function getClassStaticFeatureSummaries(
       )
       const companion = featureSummary(getDragonCompanion(sorcerer))
       const innate = getInnateSorcery(sorcerer)
-      if (!innate) return [...actionSummaries, ...companion, ...declared]
+      if (!innate) return [...actionSummaries, ...companion, ...originSummaries]
       const activation = renderEntriesToText(innate.entries?.slice(0, -1))
       return [
         ...actionSummaries,
@@ -609,7 +615,7 @@ export function getClassStaticFeatureSummaries(
             : [],
         ),
         ...companion,
-        ...declared,
+        ...originSummaries,
       ]
     }
     const name = entry.name.trim().toLowerCase()
@@ -913,7 +919,7 @@ export function getClassStaticFeatureSummaries(
             later: source === 'phb' ? 'bard college feature' : 'subclass feature',
             expandNestedRules: true,
           })
-        : []
+        : inheritedRules(cls)
       return [...(jack ? [jack] : []), ...secrets, ...(words ? [words] : []), ...college].flatMap(
         (feature) =>
           featureSummary(feature).map((summary) => ({
@@ -993,30 +999,32 @@ export function getClassStaticFeatureSummaries(
     }
     if (name === 'warlock') {
       if (!getSourceCompatibility(source, character.originSystem ?? '2014').compatible) return []
-      return getWarlockStaticFeatures(cls, entry, catalogs).flatMap((feature) => {
-        const target =
-          'subclassShortName' in feature ? getSubclassFeatureIdentity(feature) : undefined
-        const patron = getNativeWarlockPatronFeatureOwner(target)
-        const actionId =
-          target && patron && patron.shortName !== 'fiend'
-            ? getFeatureActionGroupId(
-                getFeatureOwnerKey(entry.name, entry.source, patron.name, patron.source),
-                target,
-                feature.entries ?? [],
-              )
-            : undefined
-        return featureSummary(feature).map((summary) => ({
-          ...summary,
-          replaces: savedClassLabel(character, entry, feature),
-          ...(actionId && !character.manualActions?.some((action) => action.id === actionId)
-            ? { actionId, actionNotesSource: 'subclass' as const }
-            : {}),
-        }))
-      })
+      return getWarlockStaticFeatures(cls, entry, catalogs, () => inheritedRules(cls)).flatMap(
+        (feature) => {
+          const target =
+            'subclassShortName' in feature ? getSubclassFeatureIdentity(feature) : undefined
+          const patron = getNativeWarlockPatronFeatureOwner(target)
+          const actionId =
+            target && patron && patron.shortName !== 'fiend'
+              ? getFeatureActionGroupId(
+                  getFeatureOwnerKey(entry.name, entry.source, patron.name, patron.source),
+                  target,
+                  feature.entries ?? [],
+                )
+              : undefined
+          return featureSummary(feature).map((summary) => ({
+            ...summary,
+            replaces: savedClassLabel(character, entry, feature),
+            ...(actionId && !character.manualActions?.some((action) => action.id === actionId)
+              ? { actionId, actionNotesSource: 'subclass' as const }
+              : {}),
+          }))
+        },
+      )
     }
     if (name === 'wizard') {
       if (!Number.isInteger(entry.levels) || entry.levels < 1) return []
-      const tradition =
+      const tradition = (
         getSourceCompatibility(source, character.originSystem ?? '2014').compatible &&
         reviewedWizardTraditions[source].includes(
           `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,
@@ -1028,13 +1036,14 @@ export function getClassStaticFeatureSummaries(
               source === 'phb'
                 ? { level: 2, intro: 'arcane tradition', later: 'arcane tradition feature' }
                 : { level: 3, intro: 'wizard subclass', later: 'subclass feature' },
-            ).flatMap((feature) =>
-              featureSummary(feature).map((summary) => ({
-                ...summary,
-                replaces: savedClassLabel(character, entry, feature),
-              })),
             )
-          : []
+          : inheritedRules(cls)
+      ).flatMap((feature) =>
+        featureSummary(feature).map((summary) => ({
+          ...summary,
+          replaces: savedClassLabel(character, entry, feature),
+        })),
+      )
       const feature = getCurrentDirectClassFeature(
         cls,
         catalogs,
@@ -1047,12 +1056,14 @@ export function getClassStaticFeatureSummaries(
       return [replaces ? { ...summary, replaces } : summary, ...tradition]
     }
     const shape = wildShapeSummary(cls, entry.levels, catalogs, unlimited)
-    const subclasses = cls.subclasses?.filter((subclass) =>
-      findClassReference({ name: entry.subclass, source: entry.subclassSource }, [subclass]),
-    )
     const land =
-      subclasses?.length === 1 ? getLandStaticFeatures(cls, subclasses[0], entry.levels) : []
+      entry.subclass &&
+      norm(entry.subclassSource) === source &&
+      isCircleOfTheLand(entry.name, entry.source, entry.subclass, entry.subclassSource)
+        ? getDeclaredSubclassStaticFeatures(cls, entry, catalogs, { sourceDeclaredGains: true })
+        : []
     const landSummaries = land.flatMap((feature) => {
+      if (isLandChoiceFeature(getSubclassFeatureIdentity(feature))) return []
       let entries = feature.entries
       if (feature.name === "Nature's Ward" && feature.source === 'XPHB') {
         // The selected resistance already has a current terrain summary.
@@ -1065,7 +1076,10 @@ export function getClassStaticFeatureSummaries(
         if (!immunity) return []
         entries = [`${immunity[1]}.`]
       }
-      return featureSummary(feature, entries)
+      return featureSummary(feature, entries).map((summary) => ({
+        ...summary,
+        replaces: savedClassLabel(character, entry, feature),
+      }))
     })
     const otherCircle = reviewedDruidCircles[source].includes(
       `${norm(entry.subclass)}|${norm(entry.subclassSource)}`,

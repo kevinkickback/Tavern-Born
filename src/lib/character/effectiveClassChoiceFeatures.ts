@@ -223,7 +223,7 @@ function buildEffectiveClassChoiceFeatureRoutes(
       const declared = isDeclaredRevisedInvocationOption(choice.id, option, catalogs)
       if (declared && !getDeclaredInvocationLeaf(choice, option, catalogs)) continue
       const revisedAtWill =
-        isRevisedInvocationPoolId(choice.id) && isRevisedAtWillInvocationOption(option)
+        isRevisedInvocationPoolId(choice.id) && isRevisedAtWillInvocationOption(option, catalogs)
       if (
         (option.invocationCantrip ||
           declared ||

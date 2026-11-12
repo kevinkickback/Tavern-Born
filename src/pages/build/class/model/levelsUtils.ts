@@ -5,6 +5,8 @@ export interface SpellGain {
   spells: number
   maxSpellLevel: number
   canSwap: boolean
+  canTranscribeRituals?: true
+  hasTranscribedRituals?: true
   savantSpellbook?: { name: string; count: number; maxSpellLevel: number }
   spellbookSpecialty?: { name: string; count: number }
 }
@@ -43,7 +45,13 @@ export function computeLevelDisplayData({
   const isASILevel = asiLevels.includes(level)
   const earnedSpells = spellChoicesByLevel.get(level)
   const spellGain =
-    earnedSpells && countSpellGainChoices(earnedSpells) > 0 ? earnedSpells : undefined
+    earnedSpells &&
+    (earnedSpells.canSwap ||
+      earnedSpells.canTranscribeRituals ||
+      earnedSpells.hasTranscribedRituals ||
+      countSpellGainChoices(earnedSpells) > 0)
+      ? earnedSpells
+      : undefined
 
   const passiveFeatures = (featuresByLevel.get(level) ?? []).filter((feature) => {
     if (isSubclassLevel && subclassFeatureName && feature.name === subclassFeatureName) {

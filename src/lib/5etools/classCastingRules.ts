@@ -8,6 +8,7 @@ import { getBardLoreSpellRule } from './bardSpellSources'
 import copyOwners from './classCastingCopyOwners.generated'
 import generated from './classCastingRuntime.generated'
 import type { CastingProducerRule } from './classCastingStructure'
+import { getClassicSorcererReplacementRule } from './classicSorcererBonusSpells'
 import { getClericArcanaSpellRule } from './clericArcanaSpells'
 import { isArcaneDabblerSlot } from './mysticArcaneDabbler'
 import { getSavantSpellbookGain } from './savantSpellbookRules'
@@ -210,6 +211,7 @@ export function getManagedClassSpellRule(slot: ManagedClassSpellSlot) {
   if (
     domain === 'feature-cantrip' ||
     domain === 'feature-prepared' ||
+    domain === 'subclass-spell-replacement' ||
     domain === 'class-spellbook-specialty'
   )
     return undefined
@@ -230,6 +232,7 @@ export const isManagedClassSpellSlot = (slot: ManagedClassSpellSlot) =>
   isArcaneDabblerSlot(slot) ||
   !!getSavantSpellbookGain(slot) ||
   isSelectedFeatureSpellSlot(slot) ||
+  !!getClassicSorcererReplacementRule(slot) ||
   !!getSpellbookSpecialtyRule(slot)
 
 export function getClassSpellProfilePolicy(

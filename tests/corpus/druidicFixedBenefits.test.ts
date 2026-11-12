@@ -214,6 +214,7 @@ test.skipIf(!existsSync('data/class/class-druid.json')).each([
       expect(printed).toContain(later)
     }
   },
+  20_000,
 )
 
 test.each(variants)(

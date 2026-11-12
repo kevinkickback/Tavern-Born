@@ -38,6 +38,7 @@
     "test:e2e:release": "npm run test:e2e -- --workers=1",
     "test:e2e:ui": "npm run test:e2e -- --ui",
     "test:progression": "npm test -- tests/unit/characterProgressionMatrix.test.ts",
+    "test:journeys:standard": "vitest run --config config/vitest.standard-journeys.ts",
     "test:electron": "playwright test --config config/playwright.electron.ts",
     "dist": "npm run build && npm run check:bundle -- --require-srd && electron-builder"
   },

@@ -5,6 +5,7 @@ import {
   isManagedClassSpellSlot,
   isSavedDailyCastingTarget,
 } from '@/lib/5etools/classCastingRules'
+import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getClassFeatureSpellSemantics } from '@/lib/5etools/featureSpellSemantics'
 import { isArcaneDabblerSlot } from '@/lib/5etools/mysticArcaneDabbler'
@@ -50,8 +51,24 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
   const byId = new Map<string, (typeof choices)[number]>()
   const logical = new Set<string>()
   const revisions = new Set<number>()
+  const replacementGains = new Set<string>()
+  const ordinaryGains = new Set(
+    choices.flatMap((choice) =>
+      choice.slot[1] === 'class-known'
+        ? [
+            JSON.stringify([
+              choice.slot[0].slice(1, 3),
+              choice.slot[3],
+              getSpellNameKey(choice.target.name),
+            ]),
+          ]
+        : [],
+    ),
+  )
   choices.forEach((choice, index) => {
     const id = managedClassSpellId(choice.slot)
+    const replacement = getClassicSorcererReplacementRule(choice.slot)
+    const replacementGain = JSON.stringify(choice.slot.slice(0, 4))
     const key = JSON.stringify([
       choice.slot[0].slice(1, 3),
       managedClassSpellUniquenessGroup(choice.slot),
@@ -70,6 +87,19 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
           !hasSavedSelectedFeatureSpellOwner(character, choice.slot) ||
           choice.policy !== 'default')) ||
       (choice.slot[1] === 'class-spellbook-specialty' && choice.policy !== 'default') ||
+      (replacement &&
+        (character.originSystem !== '2014' ||
+          replacementGains.has(replacementGain) ||
+          ordinaryGains.has(
+            JSON.stringify([
+              choice.slot[0].slice(1, 3),
+              choice.slot[3],
+              getSpellNameKey(choice.target.name),
+            ]),
+          ) ||
+          choice.policy !== 'default' ||
+          (getManagedClassSpellOwnerEntry(choice.slot, character.classProgression)?.levels ?? 0) <
+            choice.slot[3])) ||
       ((getSavantSpellbookGain(choice.slot) ||
         isArcaneDabblerSlot(choice.slot) ||
         getBardLoreSpellRule(choice.slot) ||
@@ -95,6 +125,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
     )
       invalid.push(['managedClassSpellChoices', index])
     byId.set(id, choice)
+    if (replacement) replacementGains.add(replacementGain)
     logical.add(key)
     revisions.add(choice.revision)
   })
@@ -167,6 +198,7 @@ export function getInvalidManagedClassSpellPaths(character: Character): Path[] {
                 !!getBardLoreSpellRule(choice.slot)
               : field === 'spellsKnown'
                 ? choice.slot[1] === 'class-known' ||
+                  choice.slot[1] === 'subclass-spell-replacement' ||
                   choice.slot[1] === 'feature-prepared' ||
                   choice.slot[1] === 'class-spellbook' ||
                   choice.slot[1] === 'class-arcanum'

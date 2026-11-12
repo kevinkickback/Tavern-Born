@@ -181,7 +181,7 @@ function getCurrentOptionalLeaf(
     : undefined
 }
 
-function getCurrentClassicPactBoon(
+export function getCurrentClassicPactBoon(
   cls: Class5e,
   choice: NormalizedCharacterChoice,
   catalogs: ClassChoiceFeatureCatalogs,

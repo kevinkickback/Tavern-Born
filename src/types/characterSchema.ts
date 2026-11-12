@@ -80,6 +80,7 @@ const managedClassSpellChoiceSchema = z
         'class-known',
         'class-spellbook',
         'class-spellbook-specialty',
+        'subclass-spell-replacement',
         'class-arcanum',
         'feature-cantrip',
         'feature-prepared',

@@ -94,23 +94,31 @@ const proofs = (value: object) => {
 const slotOrdinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
 
 /** The class table's linked display label can be ordinal or numeric for the same slot column. */
-function withCanonicalCastingSlotLabels<T extends object>(row: T): T {
-  const groups = (row as Record<string, unknown>).classTableGroups
+function withCanonicalCastingSlotLabels<T extends object>(
+  row: T,
+  field: 'classTableGroups' | 'subclassTableGroups' = 'classTableGroups',
+): T {
+  const groups = (row as Record<string, unknown>)[field]
   if (!Array.isArray(groups)) return row
   let changed = false
   const normalized = groups.map((value) => {
     const group = optionalDeclarationObject(value)
     if (!Array.isArray(group.rowsSpellProgression) || !Array.isArray(group.colLabels)) return value
+    let groupChanged = false
     const labels = group.colLabels.map((label: unknown, index) => {
       if (typeof label !== 'string') return label
-      const match = /^\{@filter ([1-9])(\|spells\|level=\1\|class=[^{}|]+)\}$/.exec(label)
+      const match = /^\{@filter ([1-9])(\|spells\|level=\1\|(?:class|subclass)=[^{}|]+)\}$/.exec(
+        label,
+      )
       if (!match || Number(match[1]) !== index + 1) return label
-      changed = true
+      groupChanged = true
       return `{@filter ${slotOrdinals[index]}${match[2]}}`
     })
+    if (!groupChanged) return value
+    changed = true
     return { ...group, colLabels: labels }
   })
-  return changed ? { ...row, classTableGroups: normalized } : row
+  return changed ? { ...row, [field]: normalized } : row
 }
 
 const declarations = createDeclarationSourceAccess(
@@ -228,9 +236,18 @@ export function auditClassCastingSources(
   const classes = Array.isArray(document.class)
     ? document.class.map((row) => withCanonicalCastingSlotLabels(optionalDeclarationObject(row)))
     : []
-  const castingDocument = { ...document, class: classes }
+  const subclasses = (rows: unknown[]) =>
+    rows.map((row) =>
+      withCanonicalCastingSlotLabels(optionalDeclarationObject(row), 'subclassTableGroups'),
+    )
+  const castingDocument = {
+    ...document,
+    class: classes,
+    subclass: Array.isArray(document.subclass) ? subclasses(document.subclass) : [],
+  }
+  const castingPrepared = prepared && { ...prepared, subclasses: subclasses(prepared.subclasses) }
   const result: ClassCastingSourceProof[] = currentDeclarations.flatMap(({ access }) =>
-    access.audit(castingDocument, origin, prepared),
+    access.audit(castingDocument, origin, castingPrepared),
   )
   for (const [target, rule] of parents) {
     const found = classes.filter((row) => JSON.stringify(getCastingParentOwner(row)) === target)
@@ -293,7 +310,13 @@ function currentParent(catalog: ClassCastingCatalog, key: string) {
   const identity = parentIdentities.get(key)
   const comparison =
     identity && found.length === 1
-      ? withCanonicalCastingSlotLabels({ ...found[0], ...identity })
+      ? withCanonicalCastingSlotLabels({
+          ...found[0],
+          ...identity,
+          subclasses: found[0].subclasses?.map((row) =>
+            withCanonicalCastingSlotLabels(row, 'subclassTableGroups'),
+          ),
+        })
       : undefined
   if (
     found.length !== 1 ||

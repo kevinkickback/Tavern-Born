@@ -80,7 +80,7 @@ function isGuardedInvocation(
     isDeclaredRevisedInvocationOption(choiceId, option, catalogs) ||
     (isRevisedInvocationPoolId(choiceId) &&
       (isRevisedTargetedInvocation(option) ||
-        isRevisedAtWillInvocationOption(option) ||
+        isRevisedAtWillInvocationOption(option, catalogs) ||
         isPactBladeOption(option, 'xphb')))
   )
 }

@@ -75,6 +75,36 @@ test('rejects a failed mechanical read while omitting absent families', async ()
   await expect(prepareCatalog(online, undefined, signal())).rejects.toThrow(/feats.json.*503/)
 })
 
+test('a malformed spell source package reports a missing subclass spell', async () => {
+  const payloads: Record<string, unknown> = {
+    ...files,
+    'spells/spells-xphb.json': {
+      spell: [{ name: 'Cure Wounds', source: 'XPHB', level: 1, classSpellRouteSource: {} }],
+    },
+    'class/index.json': { test: 'class-test.json' },
+    'class/class-test.json': {
+      class: [{ name: 'Wizard', source: 'TEST' }],
+      subclass: [
+        {
+          name: 'Example',
+          shortName: 'Example',
+          source: 'TEST',
+          className: 'Wizard',
+          classSource: 'TEST',
+          additionalSpells: [{ prepared: { 3: ['Cure Wounds|XPHB'] } }],
+        },
+      ],
+    },
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.replace(`${online.path}/data/`, '')
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  await expect(prepareCatalog(online, undefined, signal())).rejects.toThrow(
+    'Example|TEST needs Cure Wounds|XPHB',
+  )
+})
+
 test.each([
   ['items-base.json', {}, 'Incompatible items-base.json'],
   ['items-base.json', { baseitem: [], itemType: {} }, 'Incompatible items-base.json'],

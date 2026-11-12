@@ -6,6 +6,7 @@ import {
 import {
   declaredSubclassSlots,
   decodeSelectedFeatureSpellAddress,
+  getInvocationRitualBookProducer,
   isArcaneArcherCantripSlot,
   isClericDomainCantripSlot,
   isDeclaredSubclassCantripSlot,
@@ -96,14 +97,16 @@ export function hasSavedSelectedFeatureSpellOwner(
     const order = getClassOrderById(address[0])
     if (!order || getSavedClassOrder(character, order)?.branch !== 'caster') return false
   }
+  const producer = getInvocationRitualBookProducer(slot[2])
+  const transcribed = producer !== slot[2]
   const matches = (character.classChoiceSelections ?? []).filter(
     (selection) =>
       JSON.stringify(selectedFeatureSpellOwner(selection)) === JSON.stringify(slot[0]) &&
       selection.choiceId === address[0] &&
       selection.selected.filter(
         (option) =>
-          option.slotLevel === slot[3] &&
-          getSelectedFeatureSpellProducer(selection, option) === slot[2],
+          (transcribed ? option.slotLevel <= slot[3] : option.slotLevel === slot[3]) &&
+          getSelectedFeatureSpellProducer(selection, option) === producer,
       ).length === 1,
   )
   return matches.length === 1

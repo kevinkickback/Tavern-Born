@@ -34,6 +34,9 @@ import {
   optionalDeclarationObject as record,
 } from './optionalClassDeclarationStructure'
 
+const extendingInvocationFilter =
+  '{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source===extend}'
+
 export const REVISED_INVOCATION_POOL = 'class:warlock|xphb|choice:eldritch-invocations|1'
 type InvocationOwner = { name: string; source: string }
 export type InvocationCantripsByOwner = ReadonlyMap<string, readonly Spell5e[]>
@@ -141,6 +144,7 @@ export function isCurrentRevisedInvocationCantripPool(
 function getCurrentRevisedInvocationClass(
   choice: NormalizedCharacterChoice,
   catalogs: InvocationCatalog | undefined,
+  requireExtension = false,
 ) {
   if (
     !catalogs ||
@@ -173,10 +177,11 @@ function getCurrentRevisedInvocationClass(
         const [first, ...rest] = row.entries
         return (
           typeof first === 'string' &&
+          (!requireExtension || first.includes(extendingInvocationFilter)) &&
           getFeatureSourceDigest(
             [
               first.replace(
-                '{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source===extend}',
+                extendingInvocationFilter,
                 '{@filter Eldritch Invocation Options|optionalfeatures|feature type=EI|source=XPHB}',
               ),
               ...rest,
@@ -190,7 +195,15 @@ function getCurrentRevisedInvocationClass(
     : undefined
 }
 
-/** The configured menu may extend the bundled list. Each used option still needs its exact link. */
+/** Only the configured declaration explicitly permits choices beyond its literal links. */
+export function hasCurrentRevisedInvocationExtension(
+  choice: NormalizedCharacterChoice,
+  catalogs: InvocationCatalog | undefined,
+) {
+  return !!getCurrentRevisedInvocationClass(choice, catalogs, true)
+}
+
+/** Exact references retain their independent authority in both bundled and configured menus. */
 export function hasCurrentRevisedInvocationOption(
   choice: NormalizedCharacterChoice,
   catalogs: InvocationCatalog | undefined,

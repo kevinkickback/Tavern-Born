@@ -35,19 +35,22 @@ export function useSpellProvenanceMutations() {
         const prepare = request.prepare === undefined ? old?.prepare : request.prepare || undefined
         return !same || (prepare !== old?.prepare && !(old?.prepare && !prepare))
       })
-      if (
-        grants &&
-        (!calculationContext ||
-          !hasCurrentCharacterSourceContext(
-            latest,
-            character,
-            useGameDataStore.getState().gameData,
-            sourceData,
-          ))
-      )
+      const sourceCurrent =
+        calculationContext &&
+        hasCurrentCharacterSourceContext(
+          latest,
+          character,
+          useGameDataStore.getState().gameData,
+          sourceData,
+        )
+      if (grants && !sourceCurrent)
         throw new RangeError('The spell sources changed. Reopen the choices before confirming.')
+      const restoresBonusSpell = requests.some(
+        (request) =>
+          request.slot[1] === 'subclass-spell-replacement' && request.expected && !request.target,
+      )
       const current =
-        grants && calculationContext
+        (grants || restoresBonusSpell) && sourceCurrent && calculationContext
           ? createCharacterCalculationContext(
               latest,
               calculationContext.lookups.primary,

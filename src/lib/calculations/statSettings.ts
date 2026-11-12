@@ -80,6 +80,14 @@ export function resolveArmorClassSettings(
   )
 }
 
+export function getMovementSettingsPatch(settings: MovementSettings) {
+  return {
+    movementAdjustments: settings.adjustments,
+    movementOverrides: settings.overrides,
+    movementHoverOverride: settings.hoverOverride,
+  }
+}
+
 /** Resolves draft movement settings while preserving source and manual typed effects. */
 export function resolveMovementSettings(
   character: Character,
@@ -87,12 +95,7 @@ export function resolveMovementSettings(
   sourceEffects: readonly CharacterEffect[] = [],
 ): EffectiveMovement {
   return getEffectiveCharacterMovement(
-    {
-      ...character,
-      movementAdjustments: settings.adjustments,
-      movementOverrides: settings.overrides,
-      movementHoverOverride: settings.hoverOverride,
-    },
+    { ...character, ...getMovementSettingsPatch(settings) },
     sourceEffects,
   )
 }

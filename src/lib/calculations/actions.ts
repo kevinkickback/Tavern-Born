@@ -2,6 +2,7 @@ import {
   CLASSIC_WILD_SHAPE_TARGET,
   getClassicArchdruidWildShapeRule,
 } from '@/lib/5etools/archdruidSource'
+import { hasTceBattleReady } from '@/lib/5etools/battleSmithBattleReady'
 import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   decodeClassFeatureReference,
@@ -12,8 +13,10 @@ import {
   getSubclassFeatureReferenceLevel,
 } from '@/lib/5etools/classFeatureIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { permitsClassRuleSource } from '@/lib/5etools/earnedClassFeatureSource'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import { getItemPropertyLabel, getItemPropertyUid } from '@/lib/5etools/itemProperties'
+import { resolveItemReferences } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
@@ -81,7 +84,7 @@ import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getFeatureActionGroupId } from './featureActionGroups'
-import { getItemTypeCodes } from './itemClassification'
+import { getItemTypeCodes, getNormalizedItemTraits } from './itemClassification'
 import {
   getFixedClassSpellCastingNotes,
   getManagedSpellCastingNotes,
@@ -678,18 +681,34 @@ export function deriveWeaponActions(
     context.classChoicePrerequisites,
   ).masteredWeapons
   const masteredWeapons = new Set([...masteryChoices.values()].flatMap((keys) => [...keys]))
-  return weapons.map((item) => {
+  const battleReady = hasTceBattleReady(character, catalogs?.classes)
+  const itemSources = battleReady ? resolveItemReferences(weapons, context.itemLookup) : []
+  return weapons.map((item, index) => {
     const properties = item.properties ?? []
     const propertyKeys = properties.map((property) =>
       getItemPropertyUid(property).split('|')[0].toUpperCase(),
     )
-    const ability: AbilityName = propertyKeys.includes('F')
+    const physicalAbility: AbilityName = propertyKeys.includes('F')
       ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
         ? 'dexterity'
         : 'strength'
       : getItemTypeCodes(item.type).includes('R')
         ? 'dexterity'
         : 'strength'
+    const printing = itemSources[index]
+    const magicWeapon =
+      printing &&
+      item.source &&
+      !printing.sourceIdentityConflict &&
+      permitsClassRuleSource(character, printing.source) &&
+      getNormalizedItemTraits(printing).isWeapon &&
+      typeof printing.rarity === 'string' &&
+      !['', 'none', 'unknown'].includes(printing.rarity.trim().toLowerCase())
+    const ability =
+      magicWeapon &&
+      context.abilityModifiers.intelligence > context.abilityModifiers[physicalAbility]
+        ? 'intelligence'
+        : physicalAbility
     const proficient = isProficientWithWeapon(weaponProficiencies, item)
     const baseAttackBonus =
       context.abilityModifiers[ability] + (proficient ? context.proficiencyBonus : 0)

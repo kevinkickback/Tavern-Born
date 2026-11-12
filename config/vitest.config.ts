@@ -23,7 +23,12 @@ export default defineConfig({
       },
       {
         extends: true,
-        test: { name: 'dom', environment: 'jsdom', include: domTests },
+        test: {
+          name: 'dom',
+          environment: 'jsdom',
+          include: domTests,
+          exclude: ['tests/corpus/standardClassJourneys.test.tsx'],
+        },
       },
     ],
     coverage: {

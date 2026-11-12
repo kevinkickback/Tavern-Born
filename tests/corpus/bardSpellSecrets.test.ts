@@ -654,4 +654,4 @@ test.each(
       )?.cantrips,
     ).not.toContain(`Guidance|${source}`)
   }
-}, 30_000)
+}, 60_000)

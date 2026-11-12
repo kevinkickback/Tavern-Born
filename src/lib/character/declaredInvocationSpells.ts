@@ -1,4 +1,12 @@
-import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import {
+  type ClassicSpellReprints,
+  getClassicSpellReprints,
+} from '@/lib/5etools/classicSpellReprints'
+import {
+  readDeclaredInvocationCast,
+  readFixedInvocationSpell,
+  readSupplementalInvocationCast,
+} from '@/lib/5etools/declaredInvocationCasting'
 import {
   getCurrentSelectedClass,
   permitsClassRuleSource,
@@ -7,15 +15,28 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { auditSpellRouteMultiplicity } from '@/lib/5etools/spellRouteSources'
 import { isRevisedInvocationSelection } from '@/lib/5etools/warlockInvocationCantripSource'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
-import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import {
+  formatSpellReference,
+  getSpellReferenceKey,
+  parseSpellReference,
+} from '@/lib/calculations/spellIdentity'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import {
+  getInvocationLeaf,
+  getInvocationSpellMinimumLevel,
+  isInvocationPool,
+  isInvocationPoolId,
+} from './atWillInvocationRules'
 import type { ClassChoiceFeatureCatalogs } from './classChoiceFeatureCatalogs'
 import { getClassChoiceFeatureId } from './classChoiceIdentity'
-import { getDeclaredInvocationLeaf } from './declaredInvocationPrerequisites'
+import {
+  getDeclaredInvocationLeaf,
+  getDeclaredInvocationRequirement,
+} from './declaredInvocationPrerequisites'
 import {
   type ClassChoicePrerequisiteContext,
   getEffectiveClassChoiceFeatureRoutes,
@@ -32,54 +53,109 @@ export function projectDeclaredInvocationSpells(
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   prerequisites: ClassChoicePrerequisiteContext,
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
+  rawSpellsByKey?: Readonly<Record<string, Spell5e>>,
 ) {
   const statuses: ClassFixedSpellStatus[] = []
-  if (!character.classChoiceSelections?.some(isRevisedInvocationSelection))
+  if (!character.classChoiceSelections?.some(({ choiceId }) => isInvocationPoolId(choiceId)))
     return { character, statuses }
 
+  let reprints: ClassicSpellReprints | undefined
   let profiles = character.spells.spellProfiles
   const routes = getEffectiveClassChoiceFeatureRoutes(character, catalogs, prerequisites)
   for (const { choice, selection, option, ambiguousInvocationPool } of routes.selectedOptions) {
+    const revised = isRevisedInvocationSelection(selection)
     if (
-      !isRevisedInvocationSelection(selection) ||
+      !isInvocationPool(choice) ||
       ambiguousInvocationPool ||
+      !permitsClassRuleSource(character, selection.classSource) ||
       !permitsClassRuleSource(character, option.source) ||
-      !permitsClassRuleSource(character, 'XPHB')
+      (revised && !permitsClassRuleSource(character, 'XPHB')) ||
+      character.classChoiceSelections?.filter((row) => row.choiceId === selection.choiceId)
+        .length !== 1
     )
       continue
-    const feature = getDeclaredInvocationLeaf(choice, option, catalogs)
-    const cast = readDeclaredInvocationCast(feature)
-    if (!feature || !cast) continue
-    const owner = getSavedRevisedInvocationOwner(character, selection)
+    const feature = revised
+      ? getDeclaredInvocationLeaf(choice, option, catalogs)
+      : getInvocationLeaf(option, catalogs)?.feature
+    if (!feature) continue
+    const fixed = readFixedInvocationSpell(feature)
+    const declared = revised ? readDeclaredInvocationCast(feature) : undefined
+    const supplemental = revised ? readSupplementalInvocationCast(feature) : undefined
+    const cast =
+      declared ??
+      ((supplemental || fixed?.limited) &&
+        fixed && {
+          reference: fixed.reference,
+          ability: undefined,
+          learned: false,
+          rules: fixed.rules,
+        })
+    if (!cast) continue
+    const owner = revised
+      ? getSavedRevisedInvocationOwner(character, selection)
+      : character.classProgression.find(
+          (row) =>
+            norm(row.name) === norm(selection.className) &&
+            norm(row.source) === norm(selection.classSource),
+        )
     const cls = owner && getCurrentSelectedClass(character, owner, catalogs)
+    const minimum = supplemental
+      ? getDeclaredInvocationRequirement(choice, option, catalogs)?.level
+      : declared
+        ? choice.level
+        : getInvocationSpellMinimumLevel(feature, revised ? 'xphb' : 'phb')
     if (
       !owner ||
       !cls ||
-      !hasEarnedRevisedInvocationSlots(choice, selection.selected, owner.levels)
+      !minimum ||
+      owner.levels < minimum ||
+      (revised && !hasEarnedRevisedInvocationSlots(choice, selection.selected, owner.levels))
     )
       continue
-    const reference = getSpellReferenceKey(cast.reference)
-    const resolved = resolveSpellReference(cast.reference, spellsByKey ?? {})
+    const needsReprint = supplemental && norm(parseSpellReference(cast.reference).source) === 'phb'
+    if (needsReprint) reprints ??= getClassicSpellReprints(rawSpellsByKey)
+    const reprint = needsReprint
+      ? reprints?.byClassic.get(getSpellReferenceKey(cast.reference))
+      : undefined
+    const reference = reprint?.revised ?? cast.reference
+    const key = getSpellReferenceKey(reference)
+    const candidates = supplemental
+      ? Object.values(spellsByKey ?? {}).filter(
+          (spell) => getSpellReferenceKey(spell.name, spell.source) === key,
+        )
+      : undefined
+    const resolved =
+      (!needsReprint || reprint) &&
+      (candidates
+        ? candidates.length === 1 && candidates[0]
+        : resolveSpellReference(reference, spellsByKey ?? {}))
     const spell = resolved && auditSpellRouteMultiplicity([resolved])[0]
-    const abilityMatches = toAbilityName(cls.spellcastingAbility ?? '') === cast.ability
+    const abilityMatches =
+      !cast.ability || toAbilityName(cls.spellcastingAbility ?? '') === cast.ability
     const available =
       abilityMatches &&
       !!spell &&
       Number.isInteger(spell.level) &&
       spell.level > 0 &&
       spell.level <= 9 &&
-      getSpellReferenceKey(spell.name, spell.source) === reference &&
+      (!supplemental || spell.classSpellRouteSource?.input.targetOccurrences.length === 1) &&
+      (!reprint || spell.level === reprint.classic.level) &&
+      getSpellReferenceKey(spell.name, spell.source) === key &&
       permitsClassRuleSource(character, spell.source) &&
       !spell.classSpellRouteDiagnostics?.length
     statuses.push({
       owner: ['class', norm(owner.name), norm(owner.source)],
       target: getClassChoiceFeatureId(selection, option),
       featureName: feature.name,
-      reference: cast.reference,
+      reference: available ? formatSpellReference(spell.name, spell.source) : reference,
       level: option.slotLevel,
       active: available,
       prepared: false,
-      castOnly: cast.learned ? { castingTime: 'Magic Action' } : {},
+      castOnly: cast.learned
+        ? { castingTime: 'Magic Action' }
+        : /\bwithout (?:using|expending) material components\b/i.test(cast.rules)
+          ? { ignoresMaterial: true }
+          : {},
       ...(available
         ? {
             castingNote: `${feature.name} (${feature.source}) — ${renderEntriesToText([cast.rules]).replace(/\s+([,.])/g, '$1')}`,
@@ -94,7 +170,7 @@ export function projectDeclaredInvocationSpells(
       const id = toClassProfileId(owner.name, owner.source)
       profiles = profiles.map((profile) =>
         profile.id === id &&
-        !profile.spellsKnown.some((spell) => getSpellReferenceKey(spell) === reference)
+        !profile.spellsKnown.some((spell) => getSpellReferenceKey(spell) === key)
           ? {
               ...profile,
               spellsKnown: [...profile.spellsKnown, cast.reference],

@@ -1,9 +1,11 @@
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
+import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { OptionalFeatureLike } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
+import { parseSpellToken } from './spellTokens'
 
 const qualified = '[^|#{}]+\\|[^|#{}]+'
 const learning = new RegExp(
@@ -95,4 +97,95 @@ export function readDeclaredInvocationCast(feature: OptionalFeatureLike | undefi
   } catch {
     return undefined
   }
+}
+
+/** Read a fixed spell grant and preserve the printed casting terms for the builder and PDF. */
+export function readFixedInvocationSpell(feature: OptionalFeatureLike | undefined) {
+  if (
+    feature?.featureType?.length !== 1 ||
+    feature.featureType[0] !== 'EI' ||
+    feature.additionalSpells?.length !== 1 ||
+    !Array.isArray(feature.entries) ||
+    !feature.entries.every((entry) => typeof entry === 'string')
+  )
+    return undefined
+
+  const block = record(feature.additionalSpells[0])
+  const innate = record(block.innate)
+  const schedule = innate._
+  const daily = record(record(schedule).daily)
+  const limited = !Array.isArray(schedule)
+  const tokens = limited ? (daily['1e'] ?? daily['1']) : schedule
+  if (
+    Object.keys(block).length !== 1 ||
+    Object.keys(innate).length !== 1 ||
+    (limited && (Object.keys(record(schedule)).length !== 1 || Object.keys(daily).length !== 1)) ||
+    !Array.isArray(tokens) ||
+    tokens.length !== 1 ||
+    typeof tokens[0] !== 'string' ||
+    !/^[^|#{}]+(?:\|[^|#{}]+)?$/.test(tokens[0])
+  )
+    return undefined
+
+  const rules = feature.entries.join(' ')
+  const casts = [...rules.matchAll(/\byou can (?:also )?cast (?:the )?\{@spell ([^}]+)\}/gi)]
+  const reference = parseSpellToken(tokens[0]).name
+  if (
+    casts.length !== 1 ||
+    getSpellReferenceKey(parseSpellToken(casts[0][1]).name) !== getSpellReferenceKey(reference) ||
+    (limited ? !/long rest/i.test(rules) : !/without (?:expending|using) a spell slot/i.test(rules))
+  )
+    return undefined
+
+  return { reference, limited, rules }
+}
+
+const slotFreeCastClause =
+  /\byou can (?:also )?cast (?:the )?\{@spell [^}]+\}(?: at will,?| once(?: on yourself)?| spell, targeting a creature whose name is on the page,)? without (?:expending|using) a spell slot(?: and without using material components)?\./i
+
+/** Either catalog field can identify a fixed grant while the other is unavailable. */
+export function hasSupplementalInvocationSpellDeclaration(feature: OptionalFeatureLike) {
+  if (
+    !feature.source ||
+    norm(feature.source) === 'xphb' ||
+    !Array.isArray(feature.featureType) ||
+    !feature.featureType.includes('EI')
+  )
+    return false
+  const hasSchedule =
+    Array.isArray(feature.additionalSpells) &&
+    feature.additionalSpells.some((block) => {
+      const schedule = record(record(block).innate)._
+      return Array.isArray(schedule)
+        ? schedule.some((value) => typeof value === 'string')
+        : 'daily' in record(schedule)
+    })
+  const hasCastClause =
+    Array.isArray(feature.entries) &&
+    feature.entries.some((line) => typeof line === 'string' && slotFreeCastClause.test(line))
+  return hasSchedule || hasCastClause
+}
+
+/** Extending a revised pool does not revive an invocation with a declared newer printing. */
+export function readSupplementalInvocationCast(feature: OptionalFeatureLike | undefined) {
+  if (!feature || !feature.source || norm(feature.source) === 'xphb' || 'reprintedAs' in feature)
+    return undefined
+  const cast = readFixedInvocationSpell(feature)
+  const clause = cast?.rules.match(slotFreeCastClause)?.[0]
+  if (!cast || !clause) return undefined
+  if (
+    cast.limited &&
+    !(
+      /\b(?:once\b[^.!?]*without (?:expending|using) a spell slot|once you do so)\b/i.test(
+        cast.rules,
+      ) &&
+      /\b(?:regain the ability to do so when you finish|can't cast it in this way again until you finish) a long rest\b/i.test(
+        cast.rules,
+      )
+    )
+  )
+    return undefined
+  if (!cast.limited && !/\bat will\b/i.test(clause) && !/\bBook of Shadows\b/i.test(cast.rules))
+    return undefined
+  return cast
 }

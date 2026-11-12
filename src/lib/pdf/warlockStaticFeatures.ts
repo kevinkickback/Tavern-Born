@@ -10,7 +10,7 @@ import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClass
 import type { NativeWarlockSource } from '@/lib/5etools/warlockPatronFeatureSource'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
-import type { Class5e, ClassFeature } from '@/types/5etools'
+import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 import { getDeclaredSubclassStaticFeatures } from './declaredSubclassStaticFeatures'
 
@@ -158,13 +158,14 @@ function getPatronStaticFeatures(
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
   source: NativeWarlockSource,
+  inheritedRules: () => SubclassFeature[],
 ) {
   const current = getCurrentNativeWarlockPatronRules(cls, entry, catalogs)
   if (!current) {
     if (
       !configuredPatrons[source].includes(`${norm(entry.subclass)}|${norm(entry.subclassSource)}`)
     )
-      return []
+      return inheritedRules()
     return getDeclaredSubclassStaticFeatures(
       cls,
       entry,
@@ -192,6 +193,7 @@ export function getWarlockStaticFeatures(
   cls: Class5e,
   entry: CharacterClassEntry,
   catalogs: ClassChoiceFeatureCatalogs,
+  inheritedRules: () => SubclassFeature[],
 ) {
   const source = cls.source.trim().toLowerCase()
   if (
@@ -229,6 +231,6 @@ export function getWarlockStaticFeatures(
   return [
     ...(pact ? [{ ...pact, entries: getPactRecovery(pact, source) }] : []),
     ...fixedClassFeatures,
-    ...getPatronStaticFeatures(cls, entry, catalogs, source),
+    ...getPatronStaticFeatures(cls, entry, catalogs, source, inheritedRules),
   ]
 }

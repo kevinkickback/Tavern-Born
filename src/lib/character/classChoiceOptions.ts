@@ -97,7 +97,11 @@ import {
   type CreatureChoiceSummary,
 } from '@/lib/5etools/creatureStatBlock'
 import { readDeclaredInvocationBook } from '@/lib/5etools/declaredInvocationBook'
-import { readDeclaredInvocationCast } from '@/lib/5etools/declaredInvocationCasting'
+import {
+  readDeclaredInvocationCast,
+  readFixedInvocationSpell,
+  readSupplementalInvocationCast,
+} from '@/lib/5etools/declaredInvocationCasting'
 import { getCurrentDirectClassFeature } from '@/lib/5etools/directClassFeatureSource'
 import {
   getDivineSoulConfiguration,
@@ -1474,7 +1478,7 @@ export function resolveClassChoiceOptions(
                 },
               ]
         }
-        if (bladeSource === 'xphb' && isRevisedAtWillInvocationOption(option.reference)) {
+        if (bladeSource === 'xphb' && isRevisedAtWillInvocationOption(option.reference, catalogs)) {
           const rule = invocationSourcesAvailable
             ? getCurrentRevisedAtWillInvocation(choice, option.reference, catalogs)
             : undefined
@@ -1537,7 +1541,11 @@ export function resolveClassChoiceOptions(
               (!permitsClassRuleSource(character, option.reference.source) ||
                 (rule?.required && !permitsClassRuleSource(character, rule.required.source)))) ||
             (declaredSpells &&
-              (!leaf || (!readDeclaredInvocationCast(leaf) && !readDeclaredInvocationBook(leaf))))
+              (!leaf ||
+                (!readDeclaredInvocationCast(leaf) &&
+                  !readDeclaredInvocationBook(leaf) &&
+                  !readFixedInvocationSpell(leaf)?.limited &&
+                  !readSupplementalInvocationCast(leaf))))
           )
             return [
               {

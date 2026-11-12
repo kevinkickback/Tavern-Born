@@ -38,6 +38,7 @@ import {
   getSorcererResourceDefs,
   isNativeSorcerer,
 } from '@/lib/5etools/sorcererSource'
+import { getStandardSubclassResources } from '@/lib/5etools/standardSubclassResources'
 import { getAuthoredSubclassResource } from '@/lib/5etools/subclassResourceCasting'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
@@ -215,6 +216,16 @@ export function getCharacterClassResources(
     if (authored) earned.push(authored)
     earned.push(
       ...getAuthoredFeatureUses(character, entry, catalogs, options.abilityModifiers, earned),
+    )
+    earned.push(
+      ...getStandardSubclassResources(
+        character,
+        entry,
+        catalogs,
+        options.abilityModifiers,
+        proficiencyBonus,
+        earned,
+      ),
     )
     return earned.flatMap((definition) => {
       if (
