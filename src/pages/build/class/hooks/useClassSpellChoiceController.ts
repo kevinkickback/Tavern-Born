@@ -11,7 +11,10 @@ import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeat
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
-import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
+import {
+  getInvocationRitualTranscriptionOffers,
+  getSelectedFeatureCantripSetups,
+} from '@/lib/character/selectedFeatureSpells'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Subclass5e } from '@/types/5etools'
@@ -63,17 +66,34 @@ export function useClassSpellChoiceController(
         )
       }
     }
-    const ritualRanks = new Map(
+    const ritualSetups =
       character && slots.some(isSelectedInvocationRitualSlot)
         ? getSelectedFeatureCantripSetups(
             character,
             catalogs,
             calculation?.classChoices.prerequisites,
           )
-            .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
-            .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const)
-        : [],
+        : []
+    const ritualRanks = new Map(
+      ritualSetups
+        .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
+        .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const),
     )
+    if (character) {
+      for (const { slot } of getInvocationRitualTranscriptionOffers(
+        character,
+        entry,
+        ritualSetups,
+      )) {
+        choices.set(slot[3], {
+          cantrips: 0,
+          spells: 0,
+          maxSpellLevel: 0,
+          canSwap: false,
+          canTranscribeRituals: true,
+        })
+      }
+    }
     const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
     for (const slot of slots) {
       if (

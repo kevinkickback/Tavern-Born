@@ -7,6 +7,7 @@ import { ARCANE_DABBLER } from '@/lib/5etools/mysticFeatureIdentity'
 import { getSavantSpellbookLabel } from '@/lib/5etools/savantSpellbookRules'
 import {
   decodeSelectedFeatureSpellAddress,
+  getInvocationRitualBookProducer,
   isSelectedClassicInvocationRitualSlot,
   isSelectedInvocationRitualSlot,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
@@ -38,7 +39,7 @@ export function managedClassSpellUniquenessGroup(slot: ManagedClassSpellSlot) {
     slot[1] === 'class-spellbook-specialty' ||
     slot[1] === 'feature-prepared'
   )
-    return slot[2]
+    return getInvocationRitualBookProducer(slot[2])
   if (
     slot[1] === 'feature-cantrip' &&
     !['classFeature', 'subclassFeature'].includes(

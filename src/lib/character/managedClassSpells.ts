@@ -1434,7 +1434,7 @@ export function projectManagedClassSpellState(
       )
       continue
     }
-    if (choice.slot[4] >= pool.count) {
+    if (pool.count !== undefined && choice.slot[4] >= pool.count) {
       deny('This choice exceeds the feature’s current count.')
       continue
     }

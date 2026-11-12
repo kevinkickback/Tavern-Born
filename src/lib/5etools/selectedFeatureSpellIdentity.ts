@@ -242,7 +242,12 @@ export function decodeSelectedFeatureSpellAddress(
             !declaredSubclassSlots.some((slot) => slot[2] === value)
           : parts[4] !== null) ||
       parts[5] !== 0 ||
-      parts[6] !== 0 ||
+      (parts[6] !== 0 &&
+        !(
+          parts[6] === 1 &&
+          parts[0] === CLASSIC_INVOCATION_POOL_ID &&
+          parts[1] === 'optionalFeature'
+        )) ||
       selectedFeatureSpellAddress(parts as SelectedFeatureSpellAddress) !== value
     )
       return undefined
@@ -262,6 +267,7 @@ export function isSelectedFeatureSpellSlot(value: unknown): value is ManagedClas
       (owner.length === 5 && owner[0] === 'subclass')) &&
     owner.slice(1).every(normalized) &&
     !!address &&
+    (address[6] === 0 || domain === 'feature-prepared') &&
     (domain === 'feature-cantrip' ||
       (domain === 'feature-prepared' &&
         isSelectedInvocationRitualSlot(value as ManagedClassSpellSlot))) &&
@@ -309,4 +315,23 @@ export function isSelectedInvocationRitualSlot(slot: ManagedClassSpellSlot) {
     Number.isSafeInteger(ordinal) &&
     ordinal >= 0
   )
+}
+
+export function getInvocationRitualTranscriptionProducer(producer: string) {
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  if (address?.[0] !== CLASSIC_INVOCATION_POOL_ID || address[1] !== 'optionalFeature')
+    return undefined
+  address[6] = 1
+  return selectedFeatureSpellAddress(address)
+}
+
+export function getInvocationRitualBookProducer(producer: string) {
+  const address = decodeSelectedFeatureSpellAddress(producer)
+  if (address?.[6] !== 1) return producer
+  address[6] = 0
+  return selectedFeatureSpellAddress(address)
+}
+
+export function isInvocationRitualTranscriptionSlot(slot: ManagedClassSpellSlot) {
+  return slot[1] === 'feature-prepared' && getInvocationRitualBookProducer(slot[2]) !== slot[2]
 }

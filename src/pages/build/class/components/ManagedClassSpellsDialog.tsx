@@ -16,7 +16,11 @@ import { getBardLoreSpellRule } from '@/lib/5etools/bardSpellSources'
 import { getClassicSorcererReplacementRule } from '@/lib/5etools/classicSorcererBonusSpells'
 import { getClericArcanaSpellRule } from '@/lib/5etools/clericArcanaSpells'
 import { getSavantSpellbookGain } from '@/lib/5etools/savantSpellbookRules'
-import { isSelectedInvocationRitualSlot } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import {
+  getInvocationRitualBookProducer,
+  isInvocationRitualTranscriptionSlot,
+  isSelectedInvocationRitualSlot,
+} from '@/lib/5etools/selectedFeatureSpellIdentity'
 import {
   formatSpellReference,
   getSpellReferenceKey,
@@ -39,10 +43,17 @@ import {
   type ManagedClassSpellStatus,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
-import { getSelectedFeatureCantripSetups } from '@/lib/character/selectedFeatureSpells'
+import {
+  getInvocationRitualTranscriptionOffers,
+  getSelectedFeatureCantripSetups,
+} from '@/lib/character/selectedFeatureSpells'
 import { cn } from '@/lib/utils'
 import type { Character, CharacterClassEntry } from '@/types/character'
-import type { ClassSpellSelectionPolicy, ManagedClassSpellChoice } from '@/types/classCasting'
+import type {
+  ClassSpellSelectionPolicy,
+  ManagedClassSpellChoice,
+  ManagedClassSpellSlot,
+} from '@/types/classCasting'
 
 interface Props {
   character: Character
@@ -165,16 +176,20 @@ export function ManagedClassSpellsDialog({
       ),
     [bookPreview, character, context, specialtySlots, statuses],
   )
-  const featureNames = useMemo(
+  const featureSetups = useMemo(
     () =>
-      new Map(
-        getSelectedFeatureCantripSetups(character, context?.catalogs, {
-          effectiveAbilityScores: context?.abilityScores,
-          effectiveSpellProfiles: context?.independentSpellProfiles,
-        }).map((setup) => [setup.producer, setup.name]),
-      ),
+      getSelectedFeatureCantripSetups(character, context?.catalogs, {
+        effectiveAbilityScores: context?.abilityScores,
+        effectiveSpellProfiles: context?.independentSpellProfiles,
+      }),
     [character, context],
   )
+  const featureNames = new Map(featureSetups.map((setup) => [setup.producer, setup.name]))
+  const transcriptionOffers = getInvocationRitualTranscriptionOffers(
+    character,
+    entry,
+    featureSetups,
+  ).filter(({ slot }) => slot[3] === level)
   const selected = pickerIndex === null ? undefined : rows[pickerIndex]
   const isBookSpecialty = selected?.slot[1] === 'class-spellbook-specialty'
   const isBonusReplacement = selected?.slot[1] === 'subclass-spell-replacement'
@@ -189,17 +204,19 @@ export function ManagedClassSpellsDialog({
     !selectedArcana &&
     !(selected && getBardLoreSpellRule(selected.slot))
   const pickerKind =
-    selected && isSelectedInvocationRitualSlot(selected.slot)
-      ? 'ritual spell'
-      : (selected &&
-          (isBookSpecialty ||
-            isBonusReplacement ||
-            savantGain ||
-            selected.slot[1] === 'feature-prepared') &&
-          getManagedClassSpellFeatureLabel(selected.slot)) ||
-        (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
-          ? 'cantrip'
-          : 'spell')
+    selected && isInvocationRitualTranscriptionSlot(selected.slot)
+      ? 'ritual to transcribe'
+      : selected && isSelectedInvocationRitualSlot(selected.slot)
+        ? 'ritual spell'
+        : (selected &&
+            (isBookSpecialty ||
+              isBonusReplacement ||
+              savantGain ||
+              selected.slot[1] === 'feature-prepared') &&
+            getManagedClassSpellFeatureLabel(selected.slot)) ||
+          (selected?.slot[1] === 'class-cantrip' || selected?.slot[1] === 'feature-cantrip'
+            ? 'cantrip'
+            : 'spell')
   const pool = useMemo(
     () =>
       selected &&
@@ -208,6 +225,12 @@ export function ManagedClassSpellsDialog({
         : getManagedClassSpellPool(character, selected.slot, context)),
     [character, selected, context, isBookSpecialty, specialtyPools],
   )
+  const transcription =
+    selected && isInvocationRitualTranscriptionSlot(selected.slot)
+      ? featureSetups.find(
+          (setup) => setup.producer === getInvocationRitualBookProducer(selected.slot[2]),
+        )?.transcription
+      : undefined
   const savantHint =
     savantGain && pool?.schools
       ? `Add one ${pool.schools.map(getSchoolName).join(' or ')} spell of up to ${getOrdinalForm(savantGain.tier)} level from the Wizard spell list to your spellbook.`
@@ -273,6 +296,26 @@ export function ManagedClassSpellsDialog({
       return
     }
     setPickerIndex(index)
+  }
+  const transcribe = (slot: ManagedClassSpellSlot) => {
+    const matching = rows.filter((row) => row.slot[2] === slot[2])
+    const empty = matching.find((row) => !row.old && !row.target)
+    if (empty) {
+      setPickerIndex(rows.indexOf(empty))
+      return
+    }
+    const ordinals = new Set(matching.map((row) => row.slot[4]))
+    let ordinal = 0
+    while (ordinals.has(ordinal)) ordinal++
+    const next: (typeof rows)[number] = {
+      slot: [slot[0], slot[1], slot[2], slot[3], ordinal],
+      old: undefined,
+      target: undefined,
+      policy: 'default',
+      prepare: false,
+    }
+    setDraft((current) => ({ ...current, rows: [...current.rows, next] }))
+    setPickerIndex(rows.length)
   }
   const confirm = () => {
     try {
@@ -363,13 +406,15 @@ export function ManagedClassSpellsDialog({
               const chosen = !!row.target && !unavailable && !missingFromDraftBook
               const featureLabel = getManagedClassSpellFeatureLabel(row.slot)
               const arcana = getClericArcanaSpellRule(row.slot)
-              const kind = isSelectedInvocationRitualSlot(row.slot)
-                ? 'Ritual Spell'
-                : row.slot[1] === 'class-arcanum'
-                  ? 'Mystic Arcanum'
-                  : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
-                    ? 'Cantrip'
-                    : (featureLabel ?? 'Spell')
+              const kind = isInvocationRitualTranscriptionSlot(row.slot)
+                ? 'Transcribed Ritual'
+                : isSelectedInvocationRitualSlot(row.slot)
+                  ? 'Ritual Spell'
+                  : row.slot[1] === 'class-arcanum'
+                    ? 'Mystic Arcanum'
+                    : row.slot[1] === 'class-cantrip' || row.slot[1] === 'feature-cantrip'
+                      ? 'Cantrip'
+                      : (featureLabel ?? 'Spell')
               const position = replacement
                 ? ''
                 : arcana
@@ -445,6 +490,11 @@ export function ManagedClassSpellsDialog({
             })}
           </div>
           <DialogFooter>
+            {transcriptionOffers.map(({ name, slot }) => (
+              <Button key={slot[2]} variant="outline" onClick={() => transcribe(slot)} title={name}>
+                Transcribe a ritual
+              </Button>
+            ))}
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -491,6 +541,9 @@ export function ManagedClassSpellsDialog({
           selectionHint={
             pool.reason ??
             savantHint ??
+            (transcription
+              ? `Transcribing a ritual you found takes ${transcription.hoursPerLevel} hours and costs ${transcription.goldPerLevel} gp per spell level.`
+              : undefined) ??
             (isBookSpecialty
               ? `Choose a ${pool.allowedLevels?.map(formatSpellLevel).join(' or ')} spell from your Wizard spellbook.`
               : pool.schools && !pool.privileged && selected.slot[1] !== 'class-cantrip'

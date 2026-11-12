@@ -5,6 +5,7 @@ export interface SpellGain {
   spells: number
   maxSpellLevel: number
   canSwap: boolean
+  canTranscribeRituals?: true
   savantSpellbook?: { name: string; count: number; maxSpellLevel: number }
   spellbookSpecialty?: { name: string; count: number }
 }
@@ -43,7 +44,10 @@ export function computeLevelDisplayData({
   const isASILevel = asiLevels.includes(level)
   const earnedSpells = spellChoicesByLevel.get(level)
   const spellGain =
-    earnedSpells && (earnedSpells.canSwap || countSpellGainChoices(earnedSpells) > 0)
+    earnedSpells &&
+    (earnedSpells.canSwap ||
+      earnedSpells.canTranscribeRituals ||
+      countSpellGainChoices(earnedSpells) > 0)
       ? earnedSpells
       : undefined
 

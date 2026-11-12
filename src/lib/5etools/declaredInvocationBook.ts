@@ -107,7 +107,36 @@ export function readDeclaredInvocationRituals(feature?: OptionalFeatureLike) {
           : [],
       )[0]
       ?.trim()
-    return { ability: block.ability, rituals, castingNote }
+    const transcription = feature.entries?.flatMap((entry) => {
+      if (typeof entry !== 'string') return []
+      const limit = entry.match(
+        /if the spell's level is equal to or less than half your ([\w -]+) level \(rounded (up|down)\)/i,
+      )
+      const cost = entry.match(
+        /for each level of the spell, the transcription process takes (\d+) hours? and costs (\d+) gp/i,
+      )
+      if (!limit || !cost) return []
+      const hoursPerLevel = Number(cost[1])
+      const goldPerLevel = Number(cost[2])
+      return Number.isSafeInteger(hoursPerLevel) &&
+        hoursPerLevel > 0 &&
+        Number.isSafeInteger(goldPerLevel)
+        ? [
+            {
+              printedClass: limit[1],
+              roundUp: limit[2].toLowerCase() === 'up',
+              hoursPerLevel,
+              goldPerLevel,
+            },
+          ]
+        : []
+    })
+    return {
+      ability: block.ability,
+      rituals,
+      castingNote,
+      transcription: transcription?.length === 1 ? transcription[0] : undefined,
+    }
   } catch {
     return undefined
   }

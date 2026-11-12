@@ -15,7 +15,11 @@ import {
   getCharacterClassChoices,
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
-import { applyLevelDown, applyLevelUp } from '@/lib/character/commands/classCommands'
+import {
+  applyClassProgressionUpdate,
+  applyLevelDown,
+  applyLevelUp,
+} from '@/lib/character/commands/classCommands'
 import {
   type ManagedClassSpellRequest,
   setManagedClassSpellChoicesCommand,
@@ -25,6 +29,10 @@ import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCha
 import { getManagedClassSpellSlots } from '@/lib/character/managedClassSpellSlots'
 import { getManagedClassSpellPool } from '@/lib/character/managedClassSpells'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import {
+  getInvocationRitualTranscriptionOffers,
+  getSelectedFeatureCantripSetups,
+} from '@/lib/character/selectedFeatureSpells'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
@@ -375,7 +383,64 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
       issue.title.includes(name),
     ),
   ).toBe(false)
-  const vm = createCharacterSheetViewModel(ready, fixture.lookups, fixture.lookups)
+  const offer = (actor: Character) => {
+    const { catalogs, prerequisites } = fixture.calc(actor).classChoices
+    const setups = getSelectedFeatureCantripSetups(actor, catalogs, prerequisites)
+    const [current] = getInvocationRitualTranscriptionOffers(
+      actor,
+      actor.classProgression[0],
+      setups,
+    )
+    if (!current) throw new Error('Missing active transcription offer')
+    return current.slot
+  }
+  const transcription = offer(ready)
+  expect(transcription[3]).toBe(3)
+  expect(
+    getManagedClassSpellSlots(ready.classProgression[0], ready, reopened.classChoices.catalogs),
+  ).not.toContainEqual(transcription)
+  const eligible = getManagedClassSpellPool(
+    ready,
+    transcription,
+    reopened.classChoices.spellContext,
+  )
+  expect(eligible.allowedLevels).toEqual([1, 2])
+  expect(eligible).toMatchObject({ transcription: { hoursPerLevel: 2, goldPerLevel: 50 } })
+  expect(() => assign(ready, pick(ready, transcription, 'Water Breathing'))).toThrow(
+    /eligible ritual/,
+  )
+  expect(() => assign(ready, pick(ready, transcription, 'Find Familiar'))).toThrow(
+    /owns that spell choice/,
+  )
+  const transcribed = assign(ready, pick(ready, transcription, 'Augury'))
+  const levelFive = atLevel(transcribed, 5)
+  const later = offer(levelFive)
+  expect(() => assign(levelFive, pick(levelFive, later, 'Augury'))).toThrow(
+    /owns that spell choice/,
+  )
+  expect(() =>
+    assign(
+      levelFive,
+      pick(
+        levelFive,
+        [...transcription.slice(0, 4), 1] as typeof transcription,
+        'Animal Messenger',
+      ),
+    ),
+  ).toThrow(/current class level/)
+  const expanded = assign(levelFive, pick(levelFive, later, 'Water Breathing'))
+  const rolledBack = patch(
+    expanded,
+    applyClassProgressionUpdate(expanded, expanded.provenance, transcribed.classProgression),
+  )
+  expect(rolledBack.managedClassSpellChoices?.map((row) => row.target.name)).toContain('Augury')
+  expect(rolledBack.managedClassSpellChoices?.map((row) => row.target.name)).not.toContain(
+    'Water Breathing',
+  )
+  const vm = createCharacterSheetViewModel(expanded, fixture.lookups, fixture.lookups)
+  expect(vm.spellRows).toContainEqual(
+    expect.objectContaining({ name: 'Water Breathing', castOnly: true, ritual: true }),
+  )
   expect(vm.spellRows).toContainEqual(
     expect.objectContaining({
       name: 'Find Familiar',
@@ -392,11 +457,12 @@ test('2014 Book of Ancient Secrets chooses, retains and exports ritual-only spel
     const values = form
       .getFields()
       .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-    expect(values.some((text) => text.includes('Find Familiar'))).toBe(true)
+    for (const spell of ['Find Familiar', 'Augury', 'Water Breathing'])
+      expect(values.some((text) => text.includes(spell))).toBe(true)
     expect(values.some((text) => text.includes('Book of Shadows in hand'))).toBe(true)
   }
 
-  const cleared = fixture.select(ready)
+  const cleared = fixture.select(expanded)
   const clearedCalculation = fixture.calc(cleared)
   expect(cleared.managedClassSpellChoices).toHaveLength(1)
   expect(

@@ -40,7 +40,11 @@ export function BuildClassSpellSection({
           <MagicWand className="h-4 w-4 text-accent-secondary flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
             <div className="text-sm font-semibold">
-              {hasNewSelections ? 'Spell Selection' : 'Spell Replacement'}
+              {hasNewSelections
+                ? 'Spell Selection'
+                : spellGain.canTranscribeRituals
+                  ? 'Ritual Book'
+                  : 'Spell Replacement'}
             </div>
             <div className="text-xs text-muted-foreground">
               {unavailableCount > 0
@@ -57,22 +61,27 @@ export function BuildClassSpellSection({
                     spellGain.spellbookSpecialty &&
                       `${spellGain.spellbookSpecialty.name} (${spellGain.spellbookSpecialty.count} choices)`,
                     spellGain.canSwap && 'Optional bonus spell replacement',
+                    spellGain.canTranscribeRituals && 'Transcribe rituals',
                   ]
                     .filter(Boolean)
                     .join(' · ')
-                : 'Replace one bonus spell'}
+                : spellGain.canTranscribeRituals
+                  ? 'Transcribe rituals you’ve found'
+                  : 'Replace one bonus spell'}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          {(hasNewSelections || spellGain.canSwap) && (
+          {(hasNewSelections || spellGain.canSwap || spellGain.canTranscribeRituals) && (
             <Button
               variant={chosenNames.length > 0 ? 'outline' : 'default'}
               size="sm"
               className="h-7 text-xs"
               onClick={() => onOpenSpellPicker(level)}
             >
-              {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+              {chosenNames.length > 0 || (!hasNewSelections && spellGain.canTranscribeRituals)
+                ? 'Edit'
+                : 'Choose'}
             </Button>
           )}
         </div>
