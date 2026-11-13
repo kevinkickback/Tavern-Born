@@ -505,18 +505,22 @@ export function useClassChoiceController({
       : getClassChoiceOptionKey
   const savedOptionViews: ClassChoiceOptionView[] =
     activeRemovalOnly && activeSaved
-      ? activeSaved.selection.selected.map((reference, index) => ({
-          reference,
-          selectionKey: recoveryKey(reference),
-          availability: 'retained' as const,
-          displayLabel:
-            activeSaved.psionic && activeSaved.details[index]
-              ? [activeSaved.details[index].name, activeSaved.details[index].source]
-                  .filter(Boolean)
-                  .join(' · ')
-              : getInvocationCantripLabel(reference),
-          entries: activeSaved.details[index]?.entries ?? [],
-        }))
+      ? activeSaved.selection.selected.map((saved, index) => {
+          const reference =
+            mysticSlots.find(
+              (slot) => slot.selection === activeSaved.selection && slot.original === saved,
+            )?.current ?? saved
+          return {
+            reference,
+            selectionKey: recoveryKey(saved),
+            availability: 'retained' as const,
+            displayLabel:
+              activeSaved.psionic && activeSaved.details[index]
+                ? [reference.name, reference.source].filter(Boolean).join(' · ')
+                : getInvocationCantripLabel(reference),
+            entries: activeSaved.details[index]?.entries ?? [],
+          }
+        })
       : resolvedActiveChoice
         ? (optionViewsByChoiceId.get(resolvedActiveChoice.id) ?? [])
         : []

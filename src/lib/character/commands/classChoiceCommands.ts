@@ -1782,6 +1782,10 @@ export function reconcileClassChoiceSelectionGrants(
   })
   const preservedFeatureIds = new Set<string>()
   const preservedGrants = new Map<string, Set<string>>()
+  const replacementSlots = draft.mysticDisciplineReplacements?.length
+    ? getMysticDisciplineState(draft, catalogs).slots.filter((slot) => slot.replaced)
+    : []
+  const savedFeatureLevels = new Map(character.features.map(({ id, level }) => [id, level]))
   let spellReferences: Set<string> | undefined
   for (const selection of selections) {
     const isRevisedInvocation = isRevisedInvocationPoolId(selection.choiceId)
@@ -1807,16 +1811,20 @@ export function reconcileClassChoiceSelectionGrants(
       entry && catalogs?.classes && !resolveClassProgressionRules(entry, catalogs.classes)
     const savedInvocationOwner =
       isRevisedInvocation && getSavedRevisedInvocationOwner(draft, selection)
-    for (const option of selection.selected) {
+    for (const original of selection.selected) {
       if (
-        !isFeatureOption(option) ||
+        !isFeatureOption(original) ||
         !previous.selected.some(
           (prior) =>
-            prior.slotLevel === option.slotLevel &&
-            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+            prior.slotLevel === original.slotLevel &&
+            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(original),
         )
       )
         continue
+      const replacement = replacementSlots.find(
+        (slot) => slot.selection === selection && slot.original === original,
+      )
+      const option = replacement?.current ?? original
       const target =
         savedInvocationOwner && isRevisedTargetedInvocation(option)
           ? option.invocationCantrip
@@ -1831,13 +1839,17 @@ export function reconcileClassChoiceSelectionGrants(
       // Missing authority suspends the benefit without retracting the saved grant.
       const missingTarget =
         target && !spellReferences?.has(getSpellReferenceKey(target.name, target.source))
-      if (
-        !missingOwner &&
-        !missingTarget &&
-        !(catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
-      )
+      const featureId = getClassChoiceFeatureId(selection, option)
+      // Recovery can retain an existing grant. A missing printing cannot create one.
+      if (option.entityType === 'psionic' && savedFeatureLevels.get(featureId) !== option.slotLevel)
         continue
-      preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
+      const missing = replacement
+        ? !replacement.printing
+        : missingOwner ||
+          missingTarget ||
+          (catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
+      if (!missing) continue
+      preservedFeatureIds.add(featureId)
       const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
       names.add(normalizeKey(option.name))
       preservedGrants.set(selection.choiceId, names)

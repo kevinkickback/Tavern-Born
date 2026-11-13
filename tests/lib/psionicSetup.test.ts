@@ -197,6 +197,108 @@ test.skipIf(!hasSource)(
       )?.incoming.some((row) => row.name === talent.name),
     ).toBe(false)
     const two = gain(character, request)
+    const sameName = { ...secondAvatar, name: other.name, source: 'PHB' }
+    const pairedCatalogs = { ...catalogs, psionics: [...psionics, sameName] }
+    const equippedPair = applyCharacterCommandResult(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choices(data, character).rows.find((row) => row.id === bonus.choiceId)!,
+        [avatar, sameName].map((row) => ({ entityType: 'psionic', ...target(row) })),
+        { classes: data.classes, catalogs: pairedCatalogs },
+      ),
+    )
+    const pairLookup = (psionicCatalogs: typeof pairedCatalogs) => ({
+      ...lookups,
+      classChoiceFeatureCatalogs: psionicCatalogs,
+      psionics: psionicCatalogs.psionics,
+    })
+    const pairedGain = (
+      saved: Character,
+      current: typeof pairedCatalogs,
+      replacement?: typeof request,
+    ) => {
+      const [entry] = saved.classProgression
+      const levels = entry.levels + 1
+      const lookup = pairLookup(current)
+      return reopen(
+        applyCharacterCommandResult(
+          saved,
+          applyLevelUp(
+            saved,
+            saved.provenance,
+            [{ ...entry, levels }],
+            {
+              className,
+              classSource,
+              classLevel: levels,
+              hitDie: 8,
+              dieResult: 5,
+              method: 'average',
+            },
+            createCharacterCalculationContext(saved, lookup, lookup),
+            replacement,
+          ),
+        ),
+      )
+    }
+    const both = pairedGain(equippedPair, pairedCatalogs, request)
+    const pairWithoutExactPrinting = {
+      ...pairedCatalogs,
+      psionics: pairedCatalogs.psionics.filter((row) => row !== other),
+    }
+    const retainedPair = pairedGain(both, pairWithoutExactPrinting)
+    expect(retainedPair.mysticDisciplineReplacements).toEqual(both.mysticDisciplineReplacements)
+    expect(retainedPair.features.filter((row) => row.name === other.name)).toEqual(
+      both.features.filter((row) => row.name === other.name),
+    )
+    expect(
+      active(retainedPair, pairWithoutExactPrinting).filter((name) => name === other.name),
+    ).toHaveLength(1)
+    expect(active(retainedPair, pairedCatalogs).filter((name) => name === other.name)).toHaveLength(
+      2,
+    )
+    const onlyAvailableMaterialized = {
+      ...retainedPair,
+      features: retainedPair.features.filter(
+        (row) => row.name !== other.name || row.source !== other.source,
+      ),
+    }
+    expect(reopen(onlyAvailableMaterialized).mysticDisciplineReplacements).toEqual(
+      both.mysticDisciplineReplacements,
+    )
+    expect(
+      characterPersistenceSchema.safeParse({
+        ...onlyAvailableMaterialized,
+        features: onlyAvailableMaterialized.features.filter((row) => row.name !== other.name),
+      }).success,
+    ).toBe(false)
+    const sameNameAsOriginal = { ...other, name: avatar.name, source: 'PHB' }
+    const crossSourceCatalogs = { ...catalogs, psionics: [...psionics, sameNameAsOriginal] }
+    const crossSourceSwap = pairedGain(character, crossSourceCatalogs, {
+      ...request,
+      to: target(sameNameAsOriginal),
+    })
+    const rollbackLookup = pairLookup({
+      ...crossSourceCatalogs,
+      psionics: crossSourceCatalogs.psionics.filter((row) => row !== avatar),
+    })
+    const rolledBackWithMissingOriginal = reopen(
+      applyCharacterCommandResult(
+        crossSourceSwap,
+        applyLevelDown(
+          crossSourceSwap,
+          crossSourceSwap.provenance,
+          createCharacterCalculationContext(crossSourceSwap, rollbackLookup, rollbackLookup),
+        ),
+      ),
+    )
+    expect(rolledBackWithMissingOriginal.mysticDisciplineReplacements).toBeUndefined()
+    expect(rolledBackWithMissingOriginal.features.some((row) => row.name === avatar.name)).toBe(
+      false,
+    )
+    expect(rolledBackWithMissingOriginal.classChoiceSelections).toContainEqual(bonus)
     const withoutOriginal = { ...data, psionics: psionics.filter((row) => row !== avatar) }
     const correctedBonus = pick(withoutOriginal, two, 'Bonus Disciplines', [
       avatar.name,
@@ -393,6 +495,47 @@ test.skipIf(!hasSource)(
     expect(cleared.mysticDisciplineReplacements).toBeUndefined()
     expect(active(cleared)).toContain(ordinary.name)
     expect(active(cleared)).not.toContain(other.name)
+
+    const threeWithSecondBaseSwap = gain(twoWithBaseSwap, {
+      choiceId: baseChoice.id,
+      slotLevel: 1,
+      from: target(other),
+      to: target(later),
+    })
+    const reacquired = reopen(
+      applyCharacterCommandResult(
+        threeWithSecondBaseSwap,
+        applyClassChoiceSelectionWithGrantsCommand(
+          threeWithSecondBaseSwap,
+          threeWithSecondBaseSwap.provenance,
+          baseChoice,
+          [{ entityType: 'psionic', ...target(other) }],
+          { classes: data.classes, catalogs },
+          undefined,
+          getOptionalPoolSelectionHandle(baseAllocation),
+          3,
+        ),
+      ),
+    )
+    expect(reacquired.features).toContainEqual(
+      expect.objectContaining({ name: other.name, level: 3 }),
+    )
+    const missingLookup = { ...lookups, classChoiceFeatureCatalogs: missing }
+    const reacquisitionRolledBack = reopen(
+      applyCharacterCommandResult(
+        reacquired,
+        applyLevelDown(
+          reacquired,
+          reacquired.provenance,
+          createCharacterCalculationContext(reacquired, missingLookup, missingLookup),
+        ),
+      ),
+    )
+    expect(reacquisitionRolledBack.features.some((row) => row.name === other.name)).toBe(false)
+    expect(reacquisitionRolledBack.mysticDisciplineReplacements).toEqual(
+      twoWithBaseSwap.mysticDisciplineReplacements,
+    )
+    expect(active(reacquisitionRolledBack)).toContain(other.name)
   },
 )
 

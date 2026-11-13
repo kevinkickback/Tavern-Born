@@ -88,9 +88,29 @@ test('Mystic replaces a bonus discipline in Level Up and restores it on level re
     .toBe(incoming.name)
   expect((await saved()).features.map((row) => row.name)).toContain(incoming.name)
   expect((await saved()).features.map((row) => row.name)).not.toContain(initial[0].name)
-  await page.reload()
-  await selectCharacterFromHome(page, prepared.name)
   const beforeEdit = await saved()
+  const absent = { ...data, psionics: psionics.filter((row) => row !== incoming) }
+  absent.lookups = buildGameDataLookups(absent)
+  for (const gameData of [absent, data]) {
+    await seedAppState(page, {
+      sourcePath: 'e2e-mystic-replacement',
+      gameData,
+      characters: [beforeEdit],
+      activeCharacterId: prepared.id,
+    })
+    await page.reload()
+    await selectCharacterFromHome(page, prepared.name)
+    if (gameData === absent) {
+      const recovery = await open(page, 'Bonus Disciplines')
+      await recovery.getByRole('textbox', { name: /Search/ }).fill(incoming.name)
+      await expect(
+        recovery.locator('button[aria-pressed="true"]').filter({ hasText: incoming.name }),
+      ).toBeVisible()
+      await recovery.getByRole('button', { name: 'Confirm', exact: true }).click()
+      await expect(recovery).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Save character', exact: true })).toBeDisabled()
+    }
+  }
   const bonusDialog = await open(page, 'Bonus Disciplines')
   const search = bonusDialog.getByRole('textbox', { name: /Search/ })
   const card = (name: string) =>

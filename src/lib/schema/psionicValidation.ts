@@ -175,7 +175,7 @@ export function getInvalidPsionicPaths(character: Character): Array<Array<string
         tag.grantType !== 'choice' ||
         norm(tag.sourceName) !== norm(row.className) ||
         norm(tag.sourceRef) !== norm(row.classSource) ||
-        options.some((option) => !materialized.has(getClassChoiceFeatureId(row, option)))
+        !options.some((option) => materialized.has(getClassChoiceFeatureId(row, option)))
       )
         paths.push(['provenance', 'features', name, index])
     })
