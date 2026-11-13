@@ -167,11 +167,17 @@ export function BuildClassDetailsPanel({
               {[
                 {
                   label: 'Armor',
-                  value: formatProficiencyList(viewingClassData.startingProficiencies?.armor),
+                  value: formatProficiencyList(
+                    viewingClassData.startingProficiencies?.armor,
+                    'armor',
+                  ),
                 },
                 {
                   label: 'Weapons',
-                  value: formatProficiencyList(viewingClassData.startingProficiencies?.weapons),
+                  value: formatProficiencyList(
+                    viewingClassData.startingProficiencies?.weapons,
+                    'weapon',
+                  ),
                 },
                 {
                   label: 'Tools',

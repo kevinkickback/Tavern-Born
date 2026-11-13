@@ -1,11 +1,142 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
+import { parseItems } from '@/lib/5etools/parsers/basic'
+import { associatePrimaryItemTypes } from '@/lib/5etools/primaryItemTypes'
+import { formatProficiencyList } from '@/lib/calculations/classUtils'
 import {
   buildRecursiveLookup,
   getRecursiveTooltipData,
   markRecursiveTooltipReferences,
+  resolveRecursiveEntity,
 } from '@/lib/renderer/recursiveTooltip'
 import type { Creature5e, Item5e, Spell5e } from '@/types/5etools'
+
+describe('class proficiency previews', () => {
+  test('uses the source categories and exact base equipment from Included data', () => {
+    const itemsBase = parseItems(
+      JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8')),
+    ) as Item5e[]
+    const getCategory = (name: string, source: string) =>
+      getRecursiveTooltipData(
+        { kind: 'proficiency', name, source },
+        buildRecursiveLookup({ itemsBase }),
+        name,
+      ).html
+
+    const simple = getCategory('simple', 'weapon')
+    expect(simple).toContain('Dagger (PHB)')
+    expect(simple).toContain('Dagger (XPHB)')
+    expect(simple).not.toContain('Longsword')
+    expect(simple).not.toContain('Wooden Staff')
+    expect(getCategory('martial', 'weapon')).toContain('Longsword (XPHB)')
+    expect(getCategory('light', 'armor')).toContain('Leather Armor (XPHB)')
+    expect(getCategory('medium', 'armor')).toContain('Half Plate Armor (XPHB)')
+    expect(getCategory('heavy', 'armor')).toContain('Plate Armor (XPHB)')
+    expect(getCategory('shield', 'armor')).toContain('Shield (XPHB)')
+  })
+
+  test('preserves structured source wording and leaves qualified grants distinct', () => {
+    const druid = JSON.parse(readFileSync('resources/srd/data/class/class-druid.json', 'utf8'))
+    const classic = druid.class.find((row: { source: string }) => row.source === 'PHB')
+    const armor = formatProficiencyList(classic.startingProficiencies.armor, 'armor')
+    expect(armor).toContain('druids will not wear armor or use shields made of metal')
+    expect(armor).not.toContain('data-hover-name="shield"')
+    const rogue = JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8'))
+    const revised = rogue.class.find((row: { source: string }) => row.source === 'XPHB')
+    const weapons = formatProficiencyList(revised.startingProficiencies.weapons, 'weapon')
+    expect(weapons).toContain('Finesse or Light')
+    expect(weapons).not.toContain('data-hover-name="martial"')
+  })
+
+  test('keeps category snapshots distinct across lookup changes and excludes ambiguous bases', () => {
+    const mace: Item5e = {
+      name: 'Mace',
+      source: 'PHB',
+      type: 'M',
+      weaponCategory: 'simple',
+      startingEquipmentCategory: 'Basic',
+    }
+    const reference = { kind: 'proficiency', name: 'simple', source: 'weapon' }
+    const original = buildRecursiveLookup({ itemsBase: [mace] })
+    const filtered = buildRecursiveLookup({
+      itemsBase: [{ ...mace, sourceIdentityConflict: true }],
+    })
+    const first = getRecursiveTooltipData(reference, original, 'simple')
+    const second = getRecursiveTooltipData(reference, filtered, 'simple')
+    expect(first.html).toContain('Mace (PHB)')
+    expect(second.html).toContain('No matching base equipment')
+    expect(first.key).not.toBe(second.key)
+    expect(getRecursiveTooltipData(reference, original, 'simple')).toBe(first)
+  })
+
+  test('classifies base equipment using its exact primary type definition', () => {
+    const itemsBase = associatePrimaryItemTypes(
+      [
+        {
+          name: 'Example Armor',
+          source: 'HB',
+          type: 'TEST|HB',
+          startingEquipmentCategory: 'Basic',
+        },
+        { name: 'Example Gear', source: 'PHB', type: 'TEST', startingEquipmentCategory: 'Basic' },
+        {
+          name: 'Invalid Armor',
+          source: 'PHB',
+          type: 'MA|PHB|extra',
+          startingEquipmentCategory: 'Basic',
+        },
+        {
+          name: 'Ambiguous Armor',
+          source: 'HB',
+          type: 'MA|HB',
+          startingEquipmentCategory: 'Basic',
+        },
+      ],
+      [
+        { abbreviation: 'TEST', source: 'PHB', name: 'Adventuring Gear' },
+        { abbreviation: 'TEST', source: 'HB', name: 'Medium Armor' },
+        { abbreviation: 'MA', source: 'HB', name: 'Medium Armor' },
+        { abbreviation: 'MA', source: 'HB', name: 'Adventuring Gear' },
+      ],
+      [],
+    )
+    const preview = getRecursiveTooltipData(
+      { kind: 'proficiency', name: 'medium', source: 'armor' },
+      buildRecursiveLookup({ itemsBase }),
+      'medium',
+    )
+    expect(preview.html).toContain('Example Armor (HB)')
+    expect(preview.html).not.toContain('Example Gear')
+    expect(preview.html).not.toContain('Invalid Armor')
+    expect(preview.html).not.toContain('Ambiguous Armor')
+  })
+
+  test('keeps literal item names in generated nested links', () => {
+    const item: Item5e = {
+      name: 'C&copy; Armor',
+      source: 'HB',
+      type: 'MA',
+      startingEquipmentCategory: 'Basic',
+    }
+    const lookup = buildRecursiveLookup({ itemsBase: [item] })
+    const preview = getRecursiveTooltipData(
+      { kind: 'proficiency', name: 'medium', source: 'armor' },
+      lookup,
+      'medium',
+    )
+    const html = new DOMParser().parseFromString(preview.html ?? '', 'text/html')
+    const reference = html.querySelector<HTMLElement>('[data-hover-name]')
+    expect(reference?.textContent).toBe('C&copy; Armor (HB)')
+    expect(
+      resolveRecursiveEntity(
+        lookup.items,
+        reference?.dataset.hoverName ?? '',
+        reference?.dataset.hoverSource,
+      ),
+    ).toBe(item)
+  })
+})
 
 describe('buildRecursiveLookup', () => {
   test('builds source-qualified and deterministic name-only maps from explicit collections', () => {

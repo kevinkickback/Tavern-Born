@@ -232,6 +232,7 @@ function renderTags(text: string): string {
       'Spell',
     ),
     renderEntityTag('item', 'DMG', 'text-accent font-medium italic cursor-help', 'item', 'Item'),
+    renderEntityTag('proficiency', '', 'cursor-help', 'proficiency', 'Proficiency'),
     renderEntityTag(
       'condition',
       'PHB',
