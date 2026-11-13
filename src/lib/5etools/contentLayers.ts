@@ -507,6 +507,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       key === 'fixedShieldDiagnostics' ||
       key === 'fixedEquipmentBases' ||
       key === 'fixedArmorDiagnostics' ||
+      key === 'fixedAmmunitionDiagnostics' ||
       key === 'fixedWeaponDiagnostics'
     )
       continue

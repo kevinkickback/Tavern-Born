@@ -61,11 +61,14 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       },
     )
   })
-  it('loads the bundled and managed source stack with fixed shields, weapons, and body armor', () => {
+  it('loads the bundled and managed source stack with the four fixed equipment families', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
     expect(gameData.magicVariants).toHaveLength(230)
     const generated = gameData.items.filter((item) => item.magicVariantGenerated)
+    const weapons = generated.filter((item) =>
+      item.magicVariantGenerated?.template.name.endsWith(' Weapon'),
+    )
     expect(
       generated
         .filter((item) => item.magicVariantGenerated?.base.name === 'Shield')
@@ -81,10 +84,10 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     ])
     for (const bonus of ['+1', '+2', '+3']) {
       expect(
-        generated.filter((item) => item.bonusWeapon === bonus && item.source === 'DMG'),
+        weapons.filter((item) => item.bonusWeapon === bonus && item.source === 'DMG'),
       ).toHaveLength(36)
       expect(
-        generated.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
+        weapons.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
       ).toHaveLength(38)
       for (const source of ['DMG', 'XDMG'])
         expect(
@@ -96,7 +99,18 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
           ),
         ).toHaveLength(12)
     }
-    expect(generated).toHaveLength(300)
+    const ammunition = generated.filter((item) =>
+      item.magicVariantGenerated?.template.name.endsWith(' Ammunition'),
+    )
+    for (const bonus of ['+1', '+2', '+3']) {
+      expect(
+        ammunition.filter((item) => item.bonusWeapon === bonus && item.source === 'DMG'),
+      ).toHaveLength(4)
+      expect(
+        ammunition.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
+      ).toHaveLength(5)
+    }
+    expect(generated).toHaveLength(327)
   })
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
