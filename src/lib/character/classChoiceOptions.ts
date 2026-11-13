@@ -246,6 +246,7 @@ import {
 } from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
+  selectionKey?: string
   reference: NormalizedChoiceOptionReference
   availability: 'eligible' | 'retained'
   displayLabel?: string
@@ -1942,7 +1943,13 @@ function resolvePsionicChoiceOptions(
       )
       .flatMap((row) =>
         row.selected
-          .filter((option) => option.entityType === 'psionic')
+          .filter(
+            (option) =>
+              option.entityType === 'psionic' &&
+              (!character?.mysticDisciplineReplacements?.length ||
+                relation?.pool === 'talent' ||
+                decodePsionicChoiceId(row.choiceId)?.pool === 'talent'),
+          )
           .map(getClassChoiceOptionKey),
       ),
   )

@@ -33,6 +33,8 @@ import {
 } from '@/lib/character/commands/featCommands'
 import { retainEarnedManagedClassSpells } from '@/lib/character/commands/managedClassSpellCommands'
 import type { ManagedClassSpellContext } from '@/lib/character/managedClassSpells'
+import { retainMysticDisciplineReplacements } from '@/lib/character/mysticDisciplineHistory'
+import { verifyMysticDisciplineReplacement } from '@/lib/character/mysticDisciplineReplacement'
 import { retainEarnedOptionalClassAdoptions } from '@/lib/character/optionalClassFeatureIdentity'
 import {
   emptyStartingCurrency,
@@ -63,6 +65,7 @@ import type {
   ClassFeatChoice,
   HitPointGain,
   HitPointGainMethod,
+  MysticDisciplineReplacement,
   StartingEquipmentItemChoices,
 } from '@/types/character'
 import type { ClassChoiceFeatureCatalogs } from '../classChoiceFeatureCatalogs'
@@ -617,11 +620,19 @@ export function applyClassProgressionUpdate(
     character.classChoiceSelections,
     nextProgression,
   )
+  const mysticDisciplineReplacements = retainMysticDisciplineReplacements({
+    ...character,
+    classProgression: nextProgression,
+    classChoiceSelections,
+    hitPointGains,
+  })
   const equipment = retainEarnedWeaponInscriptions(workingCharacter.equipment, nextProgression)
   const classChoiceGrants = reconcileClassChoiceSelectionGrants(
     {
       ...workingCharacter,
       classProgression: nextProgression,
+      hitPointGains,
+      mysticDisciplineReplacements,
     },
     provenanceUpdate,
     classChoiceSelections,
@@ -648,6 +659,7 @@ export function applyClassProgressionUpdate(
     feats: workingCharacter.feats,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
+    mysticDisciplineReplacements,
     asiChoices,
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
@@ -700,6 +712,7 @@ export function applyLevelUp(
   nextProgression: CharacterClassEntry[],
   hpChoice: LevelUpHitPointChoice,
   calculationContext: CharacterCalculationContext,
+  disciplineReplacement?: Omit<MysticDisciplineReplacement, 'classLevel'>,
 ): ClassCommandResult {
   const characterLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const targetEntry = nextProgression.find(
@@ -759,6 +772,14 @@ export function applyLevelUp(
   if (invalidProgression) {
     throw new RangeError('Level up must add exactly one source-qualified class level.')
   }
+  const replacement = disciplineReplacement
+    ? verifyMysticDisciplineReplacement(
+        character,
+        calculationContext.classChoices.catalogs,
+        hpChoice,
+        disciplineReplacement,
+      )
+    : undefined
 
   const progressionResult = applyClassProgressionUpdate(
     character,
@@ -786,6 +807,28 @@ export function applyLevelUp(
   ].sort((a, b) => a.characterLevel - b.characterLevel)
   const projectedCharacter = applyCharacterCommandResult(character, progressionResult)
   projectedCharacter.hitPointGains = hitPointGains
+  if (replacement) {
+    const mysticDisciplineReplacements = [
+      ...(projectedCharacter.mysticDisciplineReplacements ?? []),
+      replacement,
+    ]
+    projectedCharacter.mysticDisciplineReplacements = mysticDisciplineReplacements
+    const grants = reconcileClassChoiceSelectionGrants(
+      projectedCharacter,
+      progressionResult.provenanceUpdate,
+      projectedCharacter.classChoiceSelections ?? [],
+      calculationContext.classChoices.catalogs,
+      calculationContext.classChoices.spellContext,
+    )
+    Object.assign(progressionResult.characterPatch, {
+      mysticDisciplineReplacements,
+      features: grants.features,
+      proficiencies: grants.proficiencies,
+    })
+    progressionResult.provenanceUpdate = grants.provenanceUpdate
+    projectedCharacter.features = grants.features
+    projectedCharacter.provenance = grants.provenanceUpdate
+  }
   const maximumHitPoints = projectMaximumHitPoints(projectedCharacter, calculationContext)
 
   return {

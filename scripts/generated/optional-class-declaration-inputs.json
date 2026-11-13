@@ -81,6 +81,14 @@
       "sha256": "5a5dc44d02b66d895809ad25d451db18b9b9e991289c9738a1277dbbc501b9e3"
     },
     {
+      "file": "src/lib/5etools/additionalSpellIdentity.ts",
+      "sha256": "ae0a4908a4202d8816d1d61fad54124efb9201dfc74f0eeee1ba7c9dff39ff88"
+    },
+    {
+      "file": "src/lib/5etools/additionalSpells.ts",
+      "sha256": "beb1f50a2883413d2fb7edda3c35977360ce01639d86b2d380626b60de45da36"
+    },
+    {
       "file": "src/lib/5etools/backgroundRuleNormalization.ts",
       "sha256": "fb039598540d08e7a2691582752dadc888d1773f09d93cbd00317f0808c0570a"
     },
@@ -98,7 +106,7 @@
     },
     {
       "file": "src/lib/5etools/featureSourceAudit.ts",
-      "sha256": "2df8f3323a8a2b5cf6b90db1b526827490bee3162495f2ae98a82ebffbf47224"
+      "sha256": "ddfb73369324ad03756de4cdf0ee2fc56eed338e391375916e2dd9b24531a120"
     },
     {
       "file": "src/lib/5etools/mysticFeatureIdentity.ts",
@@ -125,16 +133,20 @@
       "sha256": "dbf8435d33df6cb1e46fec6a532a8c8a7cc7e78aa0e5a5b1681008c3d53c252e"
     },
     {
+      "file": "src/lib/5etools/spellTokens.ts",
+      "sha256": "9545d11b3672e33b4d274059cf22d5f27c7c31baae81053af551b39786e2951b"
+    },
+    {
       "file": "src/lib/5etools/subclassContent.ts",
       "sha256": "5ae8dbd557f6b048d0a38496b24f12ade40ce092800c5d8d1ee9824ae9522f70"
     },
     {
       "file": "src/lib/5etools/subclassProficiencyCertificates.ts",
-      "sha256": "dd28ed92a202cbd698e49983a14b29c6b37c52da19bcb8886897adbf6f7367fd"
+      "sha256": "7f696c1366e749341539d3bb19c7c14b992fb047ffe952cfa67e5167aec92228"
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "5fd75aee94152bb6bb9e94080140fad38302aee92030a917dcd6c22319277f87"
+      "sha256": "dd7829a55a6070546cc347381d6767cc2e220cdfbd45c39d419792a75e70203e"
     },
     {
       "file": "src/lib/calculations/abilityNames.ts",
@@ -143,6 +155,10 @@
     {
       "file": "src/lib/calculations/skillNames.ts",
       "sha256": "b3c85d83b5bd417c2e273199e79d8a71417564b5ba2885de06d23269a9a4824e"
+    },
+    {
+      "file": "src/lib/calculations/spellIdentity.ts",
+      "sha256": "10bb06cbc1bb877ea878f1598798a24eb8976316693b75726817ef7c40f18d19"
     },
     {
       "file": "src/lib/provenance/normalization.ts",
@@ -154,7 +170,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "d946c1a65abb55fdbe3d205f4881d5b777a59efac2fdd8a0b623fb12ce9c125c"
+      "sha256": "2685d9bfe4543352479da7324e31ff013b024078aac425e78dcddeb6cd257355"
     },
     {
       "file": "src/types/actions.ts",
@@ -166,19 +182,19 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
+      "sha256": "887a34fb8bbdc7f827332086368d8668bd98737ce4498f872e7e8a18e658c1d1"
     },
     {
       "file": "src/types/classCasting.ts",
-      "sha256": "18c79ee8bb25374b843b4d350f29462d5ed9ebb2dbf3699c329f016607648d60"
+      "sha256": "650a3f777e82e14a34d3fb4363ce9c07dc84678da5abc56f6bdbef3986e4d60c"
     },
     {
       "file": "src/types/classRules.ts",
-      "sha256": "3aa3ae61c212e76dd185a8fc45f9de0a51744da7691210eb1b94baf861edfdd3"
+      "sha256": "5e9c2ac84793feefddf62f09e65d94eb0f730c57a94ec374dc05feaa0cdfc597"
     },
     {
       "file": "src/types/effects.ts",
-      "sha256": "a1559309e301829ca30714ee2f6f8853d2fe9875a55698ecfdcd8285f53fa6c8"
+      "sha256": "9297518959b78cccc0fe2f17b3b20791fd8ee6a0f03ff5fb1307640e7818c51d"
     },
     {
       "file": "src/types/feat.ts",
@@ -186,7 +202,7 @@
     },
     {
       "file": "src/types/spellRoutes.ts",
-      "sha256": "5fde4df80e1e9a3e6983c68030c1475968a51bebbb6f052d33288638c4d9fb10"
+      "sha256": "053ccc532974f4407cd4fe2c249d93b2b5abbc72c9579b31adf6262fdcee3fc3"
     }
   ]
 }

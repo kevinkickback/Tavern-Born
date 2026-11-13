@@ -60,6 +60,7 @@ import {
 import { describeFavoredEnemyLanguage } from './favoredEnemySelections'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
 import { getFighterStylePair } from './fighterStyleChoices'
+import { getMysticDisciplineState } from './mysticDisciplineReplacement'
 import { getOptionalClassPoolSelectionSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import { optionalClassOwner } from './optionalClassFeatureIdentity'
@@ -107,11 +108,14 @@ export function buildRetainedCharacterDetails(
   const featureEntriesByKey = new Map<string, unknown[]>()
   const choiceDetailsById = new Map<string, RetainedChoiceDetails[]>()
   const primaryCatalogs = buildClassChoiceFeatureCatalogs(primary)
-  const effectiveClassChoiceSelections = getEffectiveClassChoiceSelections(
-    character,
-    primary.classes,
-    primaryCatalogs,
-  )
+  const selections = getEffectiveClassChoiceSelections(character, primary.classes, primaryCatalogs)
+  const mysticSlots = character.mysticDisciplineReplacements?.length
+    ? getMysticDisciplineState(character, primaryCatalogs).slots
+    : []
+  const effectiveClassChoiceSelections = selections.map((selection) => {
+    const slots = mysticSlots.filter((slot) => slot.selection.choiceId === selection.choiceId)
+    return slots.length ? { ...selection, selected: slots.map((slot) => slot.current) } : selection
+  })
   const inactiveLiterals = new Set(
     effectiveClassChoiceSelections
       .filter((selection) => selection.inactive && isFeatureLiteralChoiceId(selection.choiceId))
@@ -281,6 +285,15 @@ export function buildRetainedCharacterDetails(
       })
       choiceDetailsById.set(choice.choiceId, details)
     }
+  }
+  for (const slot of mysticSlots) {
+    if (slot.printing) continue
+    const selections = effectiveClassChoiceSelections.find(
+      (row) => row.choiceId === slot.selection.choiceId,
+    )
+    const index = selections?.selected.indexOf(slot.current) ?? -1
+    const details = choiceDetailsById.get(slot.selection.choiceId)
+    if (details && index >= 0) details[index] = { availability: 'inactive', entries: [] }
   }
   const routes = getEffectiveClassChoiceFeatureRoutes(character, primaryCatalogs, prerequisites)
   const companions = getCompanionSelectionStates(character, primary.classes, primaryCatalogs)

@@ -1050,6 +1050,21 @@ export const characterSchema = z
     specialFeats: z.array(featSchema).optional(),
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
+    mysticDisciplineReplacements: z
+      .array(
+        z.strictObject({
+          classLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
+          choiceId: classChoiceIdSchema,
+          slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+          from: z.strictObject({
+            name: z.string().trim().min(1),
+            source: z.string().trim().min(1),
+          }),
+          to: z.strictObject({ name: z.string().trim().min(1), source: z.string().trim().min(1) }),
+        }),
+      )
+      .max(MAX_CHARACTER_LEVEL - 1)
+      .optional(),
     optionalClassFeatureAdoptions: z.array(optionalClassAdoptionSchema).optional(),
     managedClassSpellChoices: z.array(managedClassSpellChoiceSchema).optional(),
     managedClassSpellRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),

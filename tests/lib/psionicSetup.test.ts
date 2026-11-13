@@ -29,12 +29,19 @@ import {
 import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelections,
+  retainSavedFeatureOptionsCommand,
 } from '@/lib/character/commands/classChoiceCommands'
+import { applyLevelDown, applyLevelUp } from '@/lib/character/commands/classCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   getEffectiveClassChoiceFeatureRoutes,
   projectEffectiveClassChoiceFeatures,
 } from '@/lib/character/effectiveClassChoiceFeatures'
+import { getSavedDisciplineAllocationKey } from '@/lib/character/mysticDisciplineHistory'
+import { getMysticDisciplineReplacementOptions } from '@/lib/character/mysticDisciplineReplacement'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
+import { getPsionicRecoveryStates } from '@/lib/character/psionicSelections'
 import {
   createCharacterSheetViewModel,
   withoutSheetDescriptions,
@@ -106,6 +113,237 @@ function pick(data: GameData, character: Character, label: string, names: string
   )
   return { ...character, ...result.characterPatch, provenance: result.provenanceUpdate }
 }
+
+test.skipIf(!hasSource)(
+  'replaces an earned bonus discipline across orders and replays exact history',
+  async () => {
+    const data = catalog()
+    const psionics = data.psionics ?? []
+    const [avatar, secondAvatar] = psionics.filter(
+      (row) => row.type === 'D' && row.order === 'Avatar',
+    )
+    const [other, later] = psionics.filter((row) => row.type === 'D' && row.order === 'Wu Jen')
+    const ordinary = psionics.find((row) => row.type === 'D' && row.order === 'Nomad')!
+    const talent = psionics.find((row) => row.type === 'T')!
+    let character = pick(data, actor(), 'Bonus Disciplines', [avatar.name, secondAvatar.name])
+    character = pick(data, character, 'Psionic Disciplines', [ordinary.name])
+    character = pick(data, character, 'Psionic Talents', [talent.name])
+    const catalogs = buildClassChoiceFeatureCatalogs(data)
+    const lookups = {
+      ...buildGameDataLookups(data),
+      classChoiceClasses: data.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    }
+    const calculate = (saved: Character) =>
+      createCharacterCalculationContext(saved, lookups, lookups)
+    const active = (saved: Character, current = catalogs) =>
+      getEffectiveClassChoiceFeatureRoutes(saved, current)
+        .contributions.filter((row) => row.psionic)
+        .map((row) => row.name)
+    const reopen = (saved: Character) =>
+      characterPersistenceSchema.parse(JSON.parse(JSON.stringify(saved)))
+    const { name: className, source: classSource } = character.classProgression[0]
+    const bonus = character.classChoiceSelections!.find((row) => row.label === 'Bonus Disciplines')!
+    const target = ({ name, source }: { name: string; source: string }) => ({ name, source })
+    const request = {
+      choiceId: bonus.choiceId,
+      slotLevel: 1,
+      from: target(avatar),
+      to: target(other),
+    }
+    const gain = (saved: Character, replacement?: typeof request) => {
+      const [entry] = saved.classProgression
+      const levels = entry.levels + 1
+      return reopen(
+        applyCharacterCommandResult(
+          saved,
+          applyLevelUp(
+            saved,
+            saved.provenance,
+            [{ ...entry, levels }],
+            {
+              className,
+              classSource,
+              classLevel: levels,
+              hitDie: 8,
+              dieResult: 5,
+              method: 'average',
+            },
+            calculate(saved),
+            replacement,
+          ),
+        ),
+      )
+    }
+    expect(
+      getMysticDisciplineReplacementOptions(character, catalogs, className, classSource, 2)
+        ?.incoming,
+    ).not.toContainEqual(talent)
+    expect(() => gain(character, { ...request, to: target(ordinary) })).toThrow()
+    expect(() => gain(character, { ...request, to: target(talent) })).toThrow()
+    const changedTalent = {
+      ...catalogs,
+      psionics: psionics.map((row) =>
+        row === talent ? { ...row, type: 'D', order: ordinary.order } : row,
+      ),
+    }
+    expect(
+      getMysticDisciplineReplacementOptions(
+        character,
+        changedTalent,
+        className,
+        classSource,
+        2,
+      )?.incoming.some((row) => row.name === talent.name),
+    ).toBe(false)
+    const two = gain(character, request)
+    const earlierChoice = choices(data, two).rows.find(
+      (row) => row.label === 'Psionic Disciplines',
+    )!
+    const earlierSaved = two.classChoiceSelections!.find(
+      (row) => row.choiceId === earlierChoice.id,
+    )!
+    expect(() =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        two,
+        two.provenance,
+        earlierChoice,
+        [{ entityType: 'psionic', ...target(other) }],
+        { classes: data.classes, catalogs },
+        undefined,
+        getOptionalPoolSelectionHandle(earlierSaved),
+        1,
+      ),
+    ).toThrow(/conflicts with a saved discipline replacement/)
+    expect(active(two)).toEqual(
+      expect.arrayContaining([other.name, secondAvatar.name, ordinary.name, talent.name]),
+    )
+    expect(active(two)).not.toContain(avatar.name)
+    const missing = { ...catalogs, psionics: psionics.filter((row) => row !== other) }
+    expect(active(two, missing)).not.toContain(other.name)
+    expect(active(two, missing)).not.toContain(avatar.name)
+    const [recovery] = getPsionicRecoveryStates(two, data.classes, missing)
+    expect(recovery.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: other.name, source: other.source, available: false }),
+        expect.objectContaining({ name: secondAvatar.name, available: true }),
+      ]),
+    )
+    expect(active(reopen(two))).toContain(other.name)
+    const calculation = calculate(two)
+    const actions = deriveCharacterActions(calculation.character, {
+      abilityModifiers: calculation.abilityScores.modifiers,
+      proficiencyBonus: 2,
+      classes: calculation.classes,
+      classChoiceFeatureCatalogs: catalogs,
+    })
+    expect(actions.some((row) => row.name === other.name)).toBe(true)
+    expect(actions.some((row) => row.name === avatar.name)).toBe(false)
+    const view = createCharacterSheetViewModel(two, lookups, lookups)
+    const pdf = await PDFDocument.load(await generateTestCharacterSheet(view, '2014-official'))
+    const printable = pdf
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText()] : []))
+      .join(' ')
+    expect(printable).toContain(other.name)
+    expect(printable).not.toContain(avatar.name)
+    const [event] = two.mysticDisciplineReplacements!
+    expect(
+      characterPersistenceSchema.safeParse({ ...two, mysticDisciplineReplacements: [event, event] })
+        .success,
+    ).toBe(false)
+    expect(characterPersistenceSchema.safeParse({ ...two, hitPointGains: [] }).success).toBe(false)
+    const forged = {
+      ...two,
+      features: [],
+      provenance: { ...two.provenance, features: {} },
+      mysticDisciplineReplacements: [{ ...event, to: target(talent) }],
+    }
+    expect(characterPersistenceSchema.safeParse(forged).success).toBe(false)
+    const withoutOrder = {
+      ...catalogs,
+      classes: data.classes.map((row) => ({ ...row, subclasses: [] })),
+    }
+    expect(active(two, withoutOrder)).toContain(ordinary.name)
+    expect(active(two, withoutOrder)).not.toContain(other.name)
+    const three = gain(two, { ...request, from: target(other), to: target(later) })
+    const discipline = choices(data, three).rows.find((row) => row.label === 'Psionic Disciplines')!
+    const baseSaved = three.classChoiceSelections!.find((row) => row.choiceId === discipline.id)!
+    const threeWithAcquisition = reopen(
+      applyCharacterCommandResult(
+        three,
+        applyClassChoiceSelectionWithGrantsCommand(
+          three,
+          three.provenance,
+          discipline,
+          [{ entityType: 'psionic', ...target(avatar) }],
+          { classes: data.classes, catalogs },
+          undefined,
+          getOptionalPoolSelectionHandle(baseSaved),
+          3,
+        ),
+      ),
+    )
+    expect(active(threeWithAcquisition)).toEqual(expect.arrayContaining([later.name, avatar.name]))
+    expect(active(threeWithAcquisition)).not.toContain(other.name)
+    const rollBack = (saved: Character) =>
+      reopen(
+        applyCharacterCommandResult(
+          saved,
+          applyLevelDown(saved, saved.provenance, calculate(saved)),
+        ),
+      )
+    const reverted = rollBack(threeWithAcquisition)
+    expect(active(reverted)).toContain(other.name)
+    expect(active(reverted)).not.toContain(avatar.name)
+    expect(active(rollBack(reverted))).toContain(avatar.name)
+    const twoWithBaseSwap = gain(character, {
+      choiceId: earlierChoice.id,
+      slotLevel: 1,
+      from: target(ordinary),
+      to: target(other),
+    })
+    const threeWithBaseSwap = gain(twoWithBaseSwap)
+    const baseChoice = choices(data, threeWithBaseSwap).rows.find(
+      (row) => row.id === earlierChoice.id,
+    )!
+    const baseAllocation = threeWithBaseSwap.classChoiceSelections!.find(
+      (row) => row.choiceId === baseChoice.id,
+    )!
+    const relearned = reopen(
+      applyCharacterCommandResult(
+        threeWithBaseSwap,
+        applyClassChoiceSelectionWithGrantsCommand(
+          threeWithBaseSwap,
+          threeWithBaseSwap.provenance,
+          baseChoice,
+          [{ entityType: 'psionic', ...target(ordinary) }],
+          { classes: data.classes, catalogs },
+          undefined,
+          getOptionalPoolSelectionHandle(baseAllocation),
+          3,
+        ),
+      ),
+    )
+    expect(active(relearned)).toEqual(expect.arrayContaining([other.name, ordinary.name]))
+    const restoredEarlierAllocation = relearned.classChoiceSelections!.find(
+      (row) => row.choiceId === baseChoice.id,
+    )!
+    const laterAllocation = restoredEarlierAllocation.selected.find((row) => row.slotLevel === 3)!
+    const clearUnavailable = retainSavedFeatureOptionsCommand(
+      relearned,
+      relearned.provenance,
+      baseChoice.id,
+      [getSavedDisciplineAllocationKey(laterAllocation)],
+      { classes: data.classes, catalogs: missing },
+    )
+    const cleared = reopen(applyCharacterCommandResult(relearned, clearUnavailable))
+    expect(cleared.mysticDisciplineReplacements).toBeUndefined()
+    expect(active(cleared)).toContain(ordinary.name)
+    expect(active(cleared)).not.toContain(other.name)
+  },
+)
 
 test('psionic rules project modes, submodes, focus and costs without mutating the catalog', () => {
   const source = {

@@ -545,6 +545,8 @@ export function BuildClassLevelsPanel({
                   levelSelectedViewsById.set(
                     choice.id,
                     (selectedClassChoiceViewsById.get(choice.id) ?? []).flatMap((view) => {
+                      if (choice.kind === 'psionic' && 'slotLevel' in view.reference)
+                        return view.reference.slotLevel === lv ? [view] : []
                       const slot = slots.get(getClassChoiceOptionKey(view.reference))
                       if (slot === undefined) return []
                       return [slot === lv ? view : { ...view, availability: 'retained' as const }]

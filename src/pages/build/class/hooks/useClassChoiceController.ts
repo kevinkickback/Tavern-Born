@@ -19,6 +19,9 @@ import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import { decodePsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import { getPsionicKey } from '@/lib/5etools/psionics'
 import { isRevisedAffinityChoiceId } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
@@ -60,6 +63,11 @@ import {
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
+import {
+  getMysticDisciplinesKnownBeforeAcquisition,
+  getSavedDisciplineAllocationKey,
+} from '@/lib/character/mysticDisciplineHistory'
+import { getMysticDisciplineState } from '@/lib/character/mysticDisciplineReplacement'
 import {
   hasNaturalExplorerRecovery,
   scopeNaturalExplorerOptions,
@@ -333,10 +341,29 @@ export function useClassChoiceController({
     ],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
+  const mysticSlots = useMemo(
+    () =>
+      character?.mysticDisciplineReplacements?.length
+        ? getMysticDisciplineState(character, resolvedCatalogs).slots
+        : [],
+    [character, resolvedCatalogs],
+  )
   const selectedViewsByChoiceId = useMemo(
     () =>
       new Map(
         choices.map((choice) => {
+          const slots = mysticSlots.filter((slot) => slot.selection.choiceId === choice.id)
+          if (slots.length)
+            return [
+              choice.id,
+              slots.map(
+                ({ current, printing }): ClassChoiceOptionView => ({
+                  reference: current,
+                  availability: printing ? 'eligible' : 'retained',
+                  entries: printing ? getPsionicEntries(printing) : [],
+                }),
+              ),
+            ]
           const selectedKeys = new Set(
             (selectionByChoiceId.get(choice.id)?.selected ?? []).map(getClassChoiceOptionKey),
           )
@@ -360,7 +387,7 @@ export function useClassChoiceController({
           ]
         }),
       ),
-    [choices, optionViewsByChoiceId, selectionByChoiceId, companionStates],
+    [choices, optionViewsByChoiceId, selectionByChoiceId, companionStates, mysticSlots],
   )
   const configurations = useMemo(
     () => getSubclassConfigurations(visibleChoices, viewingClassData, viewingSubclassData),
@@ -435,6 +462,13 @@ export function useClassChoiceController({
             ) === activeGainLevel,
         )
   const gainKeys = new Set(optionsInGain.map(getClassChoiceOptionKey))
+  const knownDisciplinesAtGain =
+    character?.mysticDisciplineReplacements?.length &&
+    activeGainLevel !== undefined &&
+    resolvedActiveChoice &&
+    decodePsionicChoiceId(resolvedActiveChoice.id)?.pool === 'discipline'
+      ? getMysticDisciplinesKnownBeforeAcquisition(character, activeGainLevel)
+      : undefined
   const otherGainKeys = new Set(
     savedOptions
       .filter((option) => !gainKeys.has(getClassChoiceOptionKey(option)))
@@ -448,12 +482,22 @@ export function useClassChoiceController({
           .map(getClassChoiceOptionKey),
   )
   const activeSavedOptions = optionsInGain
+  const recoveryKey =
+    activeSaved?.psionic && character?.mysticDisciplineReplacements?.length
+      ? getSavedDisciplineAllocationKey
+      : getClassChoiceOptionKey
   const allActiveOptionViews: ClassChoiceOptionView[] =
     activeRemovalOnly && activeSaved
       ? activeSaved.selection.selected.map((reference, index) => ({
           reference,
+          selectionKey: recoveryKey(reference),
           availability: 'retained' as const,
-          displayLabel: getInvocationCantripLabel(reference),
+          displayLabel:
+            activeSaved.psionic && activeSaved.details[index]
+              ? [activeSaved.details[index].name, activeSaved.details[index].source]
+                  .filter(Boolean)
+                  .join(' · ')
+              : getInvocationCantripLabel(reference),
           entries: activeSaved.details[index]?.entries ?? [],
         }))
       : resolvedActiveChoice
@@ -462,7 +506,14 @@ export function useClassChoiceController({
   const activeOptionViews =
     otherGainKeys.size || unplacedKeys.size || activeGainLevel !== undefined
       ? allActiveOptionViews
-          .filter((view) => !otherGainKeys.has(getClassChoiceOptionKey(view.reference)))
+          .filter((view) =>
+            knownDisciplinesAtGain
+              ? gainKeys.has(getClassChoiceOptionKey(view.reference)) ||
+                !knownDisciplinesAtGain.has(
+                  getPsionicKey(view.reference.name, view.reference.source ?? ''),
+                )
+              : !otherGainKeys.has(getClassChoiceOptionKey(view.reference)),
+          )
           .map((view) =>
             unplacedKeys.has(getClassChoiceOptionKey(view.reference))
               ? {
@@ -482,11 +533,13 @@ export function useClassChoiceController({
           )
       : allActiveOptionViews
   const activeOptionKeys = new Set(
-    activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
+    activeOptionViews.map(
+      (option) => option.selectionKey ?? getClassChoiceOptionKey(option.reference),
+    ),
   )
   const activeInitialSelectedIds = activeDisplayChoice
     ? (activeRemovalOnly && activeSaved ? activeSaved.selection.selected : activeSavedOptions)
-        .map(getClassChoiceOptionKey)
+        .map(activeRemovalOnly ? recoveryKey : getClassChoiceOptionKey)
         .filter((key) => activeOptionKeys.has(key))
     : []
   const activeRequiredCount =
@@ -502,8 +555,10 @@ export function useClassChoiceController({
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeDisplayChoice) return
     if (activeRemovalOnly && activeSaved) {
-      const keys = selected.map((option) => getClassChoiceOptionKey(option.reference))
-      const previous = new Set(activeSaved.selection.selected.map(getClassChoiceOptionKey))
+      const keys = selected.map(
+        (option) => option.selectionKey ?? getClassChoiceOptionKey(option.reference),
+      )
+      const previous = new Set(activeSaved.selection.selected.map(recoveryKey))
       if (keys.some((key) => !previous.has(key))) {
         toast.error('Source rules changed. Review the saved choices before confirming.')
         return

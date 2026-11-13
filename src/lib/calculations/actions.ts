@@ -516,7 +516,13 @@ function deriveClassFeatureActions(
       selection.subclassName,
       selection.subclassSource,
     )
-    for (const option of selection.selected) {
+    const selected =
+      selection.kind === 'psionic' && character.mysticDisciplineReplacements?.length
+        ? routes.selectedOptions
+            .filter((row) => row.selection === selection)
+            .map((row) => row.option)
+        : selection.selected
+    for (const option of selected) {
       if (option.slotLevel > entry.levels) continue
       if (!routes.featureIds.has(getClassChoiceFeatureId(selection, option))) continue
       if (option.entityType === 'classFeature' || option.entityType === 'subclassFeature') {

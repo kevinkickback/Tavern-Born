@@ -58,6 +58,10 @@ function titleCase(value: string): string {
   return value.replace(/(^|[\s-])\p{L}/gu, (letter) => letter.toUpperCase())
 }
 
+function getOptionSelectionKey(option: ClassChoiceOptionView) {
+  return option.selectionKey ?? getClassChoiceOptionKey(option.reference)
+}
+
 function getOptionLabel(option: ClassChoiceOptionView): string {
   if (option.displayLabel) return option.displayLabel
   return option.reference.entityType === 'proficiency'
@@ -366,7 +370,7 @@ export function ClassChoiceSelectionModal({
     let hasUnmet = false
     for (const option of options) {
       const result = checkAllPrerequisites(option, characterSnapshot, { className, classSource })
-      results.set(getClassChoiceOptionKey(option.reference), {
+      results.set(getOptionSelectionKey(option), {
         met: result.met,
         reasons: result.failures,
       })
@@ -504,8 +508,8 @@ export function ClassChoiceSelectionModal({
     (option: ClassChoiceOptionView, ids: ReadonlySet<string>, filters: ActiveFilters) =>
       (!option.invocationPrerequisite && !option.unavailableReason) ||
       filters.prerequisite?.has('showUnmet') ||
-      initialSelectedIds.includes(getClassChoiceOptionKey(option.reference)) ||
-      ids.has(getClassChoiceOptionKey(option.reference)) ||
+      initialSelectedIds.includes(getOptionSelectionKey(option)) ||
+      ids.has(getOptionSelectionKey(option)) ||
       isClassChoiceOptionEligibleInDraft(option, ids),
     [initialSelectedIds],
   )
@@ -566,9 +570,9 @@ export function ClassChoiceSelectionModal({
       ) {
         return false
       }
-      if (initialSelectedIds.includes(getClassChoiceOptionKey(option.reference))) return true
+      if (initialSelectedIds.includes(getOptionSelectionKey(option))) return true
       if (activeFilters.prerequisite?.has('showUnmet')) return true
-      return prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference))?.met ?? true
+      return prerequisiteByOptionKey.get(getOptionSelectionKey(option))?.met ?? true
     },
     [initialSelectedIds, prerequisiteByOptionKey],
   )
@@ -595,7 +599,7 @@ export function ClassChoiceSelectionModal({
           selected={selected}
           removalOnly={removalOnly}
           prerequisite={
-            prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference)) ?? {
+            prerequisiteByOptionKey.get(getOptionSelectionKey(option)) ?? {
               met: true,
               reasons: [],
             }
@@ -611,7 +615,7 @@ export function ClassChoiceSelectionModal({
       selectedIds: Set<string>,
       allOptions: ClassChoiceOptionView[],
     ) => {
-      const key = getClassChoiceOptionKey(option.reference)
+      const key = getOptionSelectionKey(option)
       if (removalOnly) return initialSelectedIds.includes(key)
       if (!isClassChoiceOptionEligibleInDraft(option, selectedIds)) return false
       if (selectedIds.has(key)) return true
@@ -623,7 +627,7 @@ export function ClassChoiceSelectionModal({
           (!repeat ||
             !allOptions.some(
               (candidate) =>
-                selectedIds.has(getClassChoiceOptionKey(candidate.reference)) &&
+                selectedIds.has(getOptionSelectionKey(candidate)) &&
                 getInvocationRepeatKey(candidate.reference) === repeat,
             ))
         )
@@ -631,7 +635,7 @@ export function ClassChoiceSelectionModal({
       const eligibleSelectionCount = allOptions.filter(
         (candidate) =>
           isClassChoiceOptionEligible(candidate) &&
-          selectedIds.has(getClassChoiceOptionKey(candidate.reference)),
+          selectedIds.has(getOptionSelectionKey(candidate)),
       ).length
       return eligibleSelectionCount < maximumSelections
     },
@@ -719,7 +723,7 @@ export function ClassChoiceSelectionModal({
             : `Choose ${choice.label}`
       }
       items={options}
-      getItemId={(option) => getClassChoiceOptionKey(option.reference)}
+      getItemId={(option) => getOptionSelectionKey(option)}
       getItemLabel={getOptionLabel}
       renderCard={renderCard}
       matchItem={matchItem}
@@ -778,7 +782,7 @@ export function ClassChoiceSelectionModal({
           (id) =>
             !options.some(
               (option) =>
-                getClassChoiceOptionKey(option.reference) === id &&
+                getOptionSelectionKey(option) === id &&
                 (removalOnly ||
                   initialSelectedIds.includes(id) ||
                   isClassChoiceOptionEligibleInDraft(option, ids)),

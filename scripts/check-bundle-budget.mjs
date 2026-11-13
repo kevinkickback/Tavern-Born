@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Copied subclass authority and sheet rules measured 7,047,141 B renderer
-  // and 1,725,115 B initial on Node 24. Keep approximately 3 KiB of headroom.
-  rendererCode: 6885 * KIB,
+  // Mystic replacement and on-demand Level Up measured about 7,065,300 B
+  // of renderer code on Node 24. Keep approximately 3 KiB of headroom.
+  rendererCode: 6903 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
