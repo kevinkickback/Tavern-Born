@@ -41,6 +41,8 @@ const items = associateItemTypeEntries(
       { name: 'Leather Armor', source: 'PHB', type: 'LA', ac: 11 },
       { name: 'Shield', source: 'PHB', type: 'S', ac: 2 },
       { name: 'Longsword', source: 'PHB', type: 'M', weaponCategory: 'martial' },
+      { name: 'Whip', source: 'PHB', type: 'M', weaponCategory: 'martial', property: ['F'] },
+      { name: 'Shortsword', source: 'TCE', type: 'M', weaponCategory: 'martial', property: ['L'] },
     ],
   }) as Item5e[],
   [
@@ -94,7 +96,12 @@ const GAME_DATA: GameData = {
       proficiency: ['str', 'con'],
       startingProficiencies: {
         armor: ['light'],
-        weapons: ['simple weapons', '{@item Mace|PHB}', '{@item Sling|PHB}'],
+        weapons: [
+          'simple weapons',
+          '{@item Mace|PHB}',
+          '{@item Sling|PHB}',
+          'Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property',
+        ],
         skills: [],
       },
       classFeatures: [
@@ -133,6 +140,10 @@ const GAME_DATA: GameData = {
     { name: 'Restrained', source: 'PHB', entries: ['A restrained creature has limited movement.'] },
   ],
   itemsBase: items,
+  itemProperties: [
+    { abbreviation: 'F', source: 'PHB', name: 'Finesse' },
+    { abbreviation: 'L', source: 'PHB', name: 'Light' },
+  ],
 }
 
 test.use({ viewport: { width: 1280, height: 900 } })
@@ -459,6 +470,14 @@ test('draft books supply race, class and background details while linked items r
   await expect(armor.getByText('Shield', { exact: false })).toHaveCount(0)
   await page.mouse.move(5, 5)
   await expect(armor).toBeHidden()
+  await wizard.getByRole('button', { name: 'Finesse or Light', exact: true }).hover()
+  const qualified = page.getByRole('dialog', {
+    name: 'Martial Weapons with Finesse or Light preview',
+  })
+  await expect(qualified.getByRole('button', { name: 'Shortsword (TCE)' })).toBeVisible()
+  await expect(qualified.getByText('Longsword', { exact: false })).toHaveCount(0)
+  await page.mouse.move(5, 5)
+  await expect(qualified).toBeHidden()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   const backgroundReferences = wizard.getByRole('button', { name: 'Reading Lens', exact: true })
   await expect(backgroundReferences).toHaveCount(2)
@@ -478,4 +497,10 @@ test('Builder class training uses the active character books', async ({ page }) 
   const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
   await expect(simple.getByRole('button', { name: 'Mace (PHB)' })).toBeVisible()
   await expect(simple.getByText('Training Dart', { exact: false })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Finesse or Light', exact: true }).hover()
+  const qualified = page.getByRole('dialog', {
+    name: 'Martial Weapons with Finesse or Light preview',
+  })
+  await expect(qualified.getByRole('button', { name: 'Whip (PHB)' })).toBeVisible()
+  await expect(qualified.getByText('Shortsword', { exact: false })).toHaveCount(0)
 })

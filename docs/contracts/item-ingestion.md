@@ -19,6 +19,11 @@ fallback for unknown values. Existing pinned previews keep their lookup snapshot
 Raw magic templates and their reference-only projections are distinct from concrete equipment.
 Reference projections cannot enter inventory or starting-equipment choices.
 
+Class training previews can open authored item filters with a simple or martial weapon type
+and a positive property list. Property names separated by semicolons are alternatives. The
+preview uses available base equipment and each item's exact property definition. A bare
+property reference defaults to PHB. Other filter shapes display the source label as text.
+
 ### Fixed-bonus shields
 
 Only the canonical +1, +2 and +3 DMG shield templates with the exact PHB base, and their

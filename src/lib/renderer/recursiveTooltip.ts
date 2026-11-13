@@ -3,11 +3,16 @@ import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
 import {
+  buildWeaponPreviewPropertyLookup,
+  matchesWeaponPreviewProperties,
+} from '@/lib/5etools/weaponPreviewFilter'
+import {
   getArmorCategoryLabel,
   getNormalizedItemTraits,
   inferArmorCategory,
   inferWeaponRange,
 } from '@/lib/calculations/itemClassification'
+import { toTitleCase } from '@/lib/calculations/raceUtils'
 import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { renderEntry } from '@/lib/renderer'
 import type { Creature5e, Item5e, ItemProperty5e, Psionic5e, Spell5e } from '@/types/5etools'
@@ -45,6 +50,7 @@ export interface RecursiveTooltipData {
 export interface RecursiveLookup {
   itemTextContext?: ItemTextContext
   itemPropertyByAbbr?: Record<string, string>
+  weaponPreviewPropertyLookup?: Record<string, string | undefined>
   spells: Map<string, Spell5e>
   items: Map<string, TooltipEntityLike>
   baseItems?: readonly Item5e[]
@@ -261,6 +267,7 @@ export function buildRecursiveLookup(
   return {
     itemTextContext,
     itemPropertyByAbbr: buildItemPropertyLookup([...(collections.itemProperties ?? [])]),
+    weaponPreviewPropertyLookup: buildWeaponPreviewPropertyLookup(collections.itemProperties ?? []),
     spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
     baseItems: collections.itemsBase,
     items: buildNameMap([
@@ -389,11 +396,12 @@ function getProficiencyPreview(
   lookup: RecursiveLookup,
   { name, source }: RecursiveReference,
 ): RecursiveTooltipData | undefined {
+  const [category, ...properties] = name.split(';')
   const title =
     source === 'armor'
       ? getArmorCategoryLabel(name as Parameters<typeof getArmorCategoryLabel>[0])
-      : source === 'weapon' && (name === 'simple' || name === 'martial')
-        ? `${name[0].toUpperCase()}${name.slice(1)} Weapons`
+      : source === 'weapon' && (category === 'simple' || category === 'martial')
+        ? `${toTitleCase(category)} Weapons${properties.length ? ` with ${properties.map(toTitleCase).join(' or ')}` : ''}`
         : null
   if (!title) return undefined
 
@@ -419,16 +427,23 @@ function getProficiencyPreview(
       )
         return false
       const primary = item.primaryItemTypeText
-      if (primary) {
-        if (primary.diagnostics?.length) return false
-        return source === 'armor'
-          ? inferArmorCategory(primary.name) === name
-          : !!inferWeaponRange(primary.name) && item.weaponCategory === name
-      }
-      const traits = getNormalizedItemTraits(item)
-      return source === 'armor'
-        ? traits.armorCategory === name
-        : traits.weaponRanges.length > 0 && item.weaponCategory === name
+      if (primary?.diagnostics?.length) return false
+      if (source === 'armor')
+        return (
+          (primary
+            ? inferArmorCategory(primary.name)
+            : getNormalizedItemTraits(item).armorCategory) === name
+        )
+      return (
+        item.weaponCategory === category &&
+        (!properties.length ||
+          primary ||
+          (typeof item.type === 'string' && !item.type.includes('|'))) &&
+        (primary
+          ? !!inferWeaponRange(primary.name)
+          : getNormalizedItemTraits(item).weaponRanges.length > 0) &&
+        matchesWeaponPreviewProperties(item, properties, lookup.weaponPreviewPropertyLookup ?? {})
+      )
     })
     .map(({ name, source }) =>
       `{@item ${name}|${source}|${name} (${source})}`.replace(/&/g, '&amp;'),

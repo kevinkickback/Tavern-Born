@@ -1,3 +1,4 @@
+import { getWeaponPreviewFilterKey } from '@/lib/5etools/weaponPreviewFilter'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { casterProgressionToFull } from '@/lib/calculations/spellSlots'
 import { renderEntry } from '@/lib/renderer'
@@ -42,7 +43,19 @@ export function formatProficiencyList(
               ? /^(simple|martial)( weapons?)?$/.exec(category)
               : null
         return [
-          renderEntry(key ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${value.trim()}}` : value),
+          renderEntry(
+            key
+              ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${value.trim()}}`
+              : kind === 'weapon'
+                ? value.replace(
+                    /\{@filter ([^|{}]+)\|items\|([^{}]+)}/gi,
+                    (tag, label: string, clauses: string) => {
+                      const filter = getWeaponPreviewFilterKey(clauses)
+                      return filter ? `{@proficiency ${filter}|weapon|${label}}` : tag
+                    },
+                  )
+                : value,
+          ),
         ]
       })
       .filter(Boolean)

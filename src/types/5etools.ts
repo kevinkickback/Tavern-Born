@@ -284,6 +284,7 @@ export interface OptionalFeatureLike {
 export interface ItemProperty5e {
   abbreviation: string
   source: string
+  sourceIdentityConflict?: true
   entries?: Array<{ type?: string; name?: string; entries?: unknown[] }>
   [key: string]: unknown
 }
