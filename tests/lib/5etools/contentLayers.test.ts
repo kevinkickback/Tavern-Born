@@ -6,7 +6,7 @@ import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItemProperties } from '@/lib/5etools/parsers/basic'
-import { parseClasses } from '@/lib/5etools/parsers/classes'
+import { createIndexedClassDocumentParser, parseClasses } from '@/lib/5etools/parsers/classes'
 import { deriveRulesTextActions } from '@/lib/calculations/actions'
 import type { Class5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference, NormalizedClassRules } from '@/types/classRules'
@@ -491,6 +491,26 @@ describe('game-data content layers', () => {
       }).actions,
     ).toHaveLength(restored ? 1 : 0)
     expect([base, additional]).toEqual(before)
+    const indexed = (document: unknown) =>
+      createIndexedClassDocumentParser(
+        { inventor: 'inventor' },
+        new Map([['inventor', document]]),
+      )('inventor').classes as Class5e[]
+    const indexedBase = makeGameDataFixture({
+      classes: indexed({
+        ...declaration,
+        subclass: declaration.subclass.map((subclass) => ({
+          ...subclass,
+          subclassFeatures: [donorRef],
+        })),
+        subclassFeature: [physicalFeature],
+      }),
+    })
+    const indexedAdditional = makeGameDataFixture({ classes: indexed(declaration) })
+    const scoped = composeGameDataLayers([indexedBase, indexedAdditional])
+    expect(scoped.classes[0].subclasses?.[0].subclassFeatureRefs?.[0].feature?.entries).toEqual(
+      restored ? physicalFeature.entries : undefined,
+    )
 
     const replacement = {
       ...physicalFeature,

@@ -668,7 +668,7 @@ export function createCharacterCalculationContext(
       operation: { kind: 'add', value: Math.max(1, abilityScores.modifiers.wisdom) },
     }))
   })
-  const fighterEffects = deriveFighterPassiveEffects(character, choiceCatalogs?.classes)
+  const fighterEffects = deriveFighterPassiveEffects(character, choiceCatalogs)
   const fighterHalfProficiencySkills = new Set(
     fighterEffects.flatMap(({ target, operation }) =>
       target.kind === 'skill-modifier' && operation.kind === 'add' ? [target.skill] : [],
@@ -736,7 +736,7 @@ export function createCharacterCalculationContext(
   sourceEffects.push(
     ...deriveRoguePassiveEffects(
       character,
-      choiceCatalogs?.classes,
+      choiceCatalogs,
       abilityScores.modifiers.charisma,
       sourceEffects,
     ),
@@ -806,27 +806,27 @@ function deriveDraconicResilienceEffects(
   catalogs: ClassChoiceFeatureCatalogs | undefined,
   { dexterity, charisma }: AbilityScores,
 ): CharacterEffect[] {
-  const resilience = getEarnedDraconicResilience(character, catalogs)
-  if (!resilience) return []
-  const { name, source, target, levels, revised } = resilience
-  const origin = { kind: 'subclass' as const, name, source, entityId: target }
-  const effects: CharacterEffect[] = [
-    {
-      id: `${target}:hp`,
-      label: name,
-      source: origin,
-      target: { kind: 'hit-point-maximum' },
-      operation: { kind: 'add', value: levels },
-    },
-  ]
-  const ac = unarmoredBaseEffect(
-    character.equipment,
-    target,
-    origin,
-    dexterity + (revised ? 10 + charisma : 13),
-  )
-  if (ac) effects.push(ac)
-  return effects
+  return getEarnedDraconicResilience(character, catalogs).flatMap((resilience) => {
+    const { id, name, source, target, levels, revised } = resilience
+    const origin = { kind: 'subclass' as const, name, source, entityId: target }
+    const effects: CharacterEffect[] = [
+      {
+        id: `${id}:hp`,
+        label: name,
+        source: origin,
+        target: { kind: 'hit-point-maximum' },
+        operation: { kind: 'add', value: levels },
+      },
+    ]
+    const ac = unarmoredBaseEffect(
+      character.equipment,
+      id,
+      origin,
+      dexterity + (revised ? 10 + charisma : 13),
+    )
+    if (ac) effects.push(ac)
+    return effects
+  })
 }
 
 function deriveMysticPassiveEffects(

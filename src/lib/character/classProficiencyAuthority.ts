@@ -1,3 +1,4 @@
+import { decodeClassFeatureReference } from '@/lib/5etools/classFeatureIdentity'
 import { getCurrentClassProficiencyChoices } from '@/lib/5etools/classProficiencyChoices'
 import {
   decodeClassProficiencyChoiceId,
@@ -10,11 +11,13 @@ import {
   matchesNativeSubclassGain,
 } from '@/lib/5etools/nativeSubclassGain'
 import { optionalDeclarationObject as record } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { matchesRetainedFirstSubclassGain } from '@/lib/5etools/ownedSubclassFeature'
 import {
   getSubclassProficiencyOwner,
   subclassProficiencyDigest,
 } from '@/lib/5etools/subclassProficiencyCertificates'
 import { normalizeSubclassProficiencyChoices } from '@/lib/5etools/subclassProficiencyChoices'
+import { getSubclassProficiencyRootCertificate } from '@/lib/5etools/subclassProficiencyRegistry'
 import { ALL_SKILLS } from '@/lib/calculations/skillNames'
 import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { AbilityScores, Character, CharacterClassEntry } from '@/types/character'
@@ -78,6 +81,7 @@ export function getCurrentOwnedProficiencyCandidates(
   )
   if (roots.length !== 1) return choices
   const subclass = roots[0]
+  const copiedGain = getSubclassProficiencyRootCertificate(selectedOwner)?.retainedGainTarget
   const owner = {
     type: 'subclass' as const,
     name: classData.name,
@@ -118,11 +122,14 @@ export function getCurrentOwnedProficiencyCandidates(
         rule?.subclassGainTargets ??
         (rule?.subclassGainTarget ? [rule.subclassGainTarget] : undefined)
       if (rule?.subclassGainPosition) {
-        const gain = getCurrentNativeSubclassGain(
-          parents[0],
-          rule.subclassGainPosition === 'at-level' ? choice.level : undefined,
-        )
-        if (gain?.level !== choice.level) return []
+        const retainedGain = copiedGain ?? rule.retainedSubclassGainTarget
+        const validGain = retainedGain
+          ? matchesRetainedFirstSubclassGain(parents[0], retainedGain, choice.level)
+          : getCurrentNativeSubclassGain(
+              parents[0],
+              rule.subclassGainPosition === 'at-level' ? choice.level : undefined,
+            )?.level === choice.level
+        if (!validGain) return []
       }
       if (
         targets &&
@@ -137,7 +144,17 @@ export function getCurrentOwnedProficiencyCandidates(
       )
         return []
       if (!rule?.startingSkillPoolBase || relation?.domain !== 'skills') return [choice]
-      const pool = readStartingSkillPool(parents[0], rule.startingSkillPoolBase)
+      const printedGain =
+        copiedGain && decodeClassFeatureReference(copiedGain.split('|').slice(1).join('|'))
+      const skillOwner = printedGain
+        ? catalogs.classes?.filter(
+            (cls) =>
+              key(cls.name) === printedGain.className &&
+              key(cls.source) === printedGain.classSource,
+          )
+        : parents
+      const pool =
+        skillOwner?.length === 1 && readStartingSkillPool(skillOwner[0], rule.startingSkillPoolBase)
       if (!pool) return []
       const skillPool = relation.trigger
         ? pool.filter((skill) => !rule.domains.some((domain) => domain.trigger === skill))

@@ -76,6 +76,8 @@ interface CharacterEffectBase {
   label: string
   source: CharacterEffectSource
   priority?: number
+  /** Active additive effects in this derived group apply an identical value only once per target. */
+  stackingGroup?: string
   requirements?: CharacterEffectRequirement[]
   condition?: string
 }

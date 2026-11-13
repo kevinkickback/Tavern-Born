@@ -28,6 +28,8 @@ export interface FixedProficiencyRule {
   languageFallback?: true
   subclassGain?: { owner: readonly string[]; target: string; position?: 'at-level' }
   subclassGainPosition?: 'first' | 'at-level'
+  retainedSubclassGainTarget?: string
+  trainingToolIfUntrained?: true
   startingSkillFallbacks?: readonly string[]
   skillCheckModifier?: { skill: string; checkAbility: AbilityName; bonusAbility: AbilityName }
   fallback?: {
@@ -56,6 +58,21 @@ export const FIXED_PROFICIENCY_RULES =
   generated.features as readonly GeneratedFixedProficiencyRule[]
 export const DIRECT_FIXED_CLASS_CERTIFICATES =
   generated.directClasses as DirectFixedClassCertificate[]
+
+/** Persist the copied Rogue's owner while retaining the native language declaration. */
+export function getRetainedFixedClassCertificate(
+  owner: readonly (string | null)[],
+  target?: string,
+) {
+  if (owner.length !== 2 || owner[0] !== 'rogue' || owner[1] !== 'wow') return undefined
+  return DIRECT_FIXED_CLASS_CERTIFICATES.find(
+    (row) =>
+      row.owner[0] === 'rogue' &&
+      row.owner[1] === 'xphb' &&
+      row.target === "class-feature|thieves' cant|rogue|xphb|1|xphb" &&
+      (target === undefined || row.target === target),
+  )
+}
 export const CONCRETE_TOOL_PROFICIENCY_NAMES: readonly string[] = generated.toolNames
 const rules = new Map<string, FixedProficiencyRule>(
   FIXED_PROFICIENCY_RULES.map((row) => [row.target, row]),

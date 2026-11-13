@@ -128,7 +128,14 @@ export function resolveNumericEffect(
   if (baseEffect) {
     apply(baseEffect, Math.max(value, baseEffect.operation.value))
   }
+  const appliedGroups = new Map<string, Set<number>>()
   for (const effect of byKind('add')) {
+    if (effect.source.kind !== 'manual' && effect.stackingGroup) {
+      const values = appliedGroups.get(effect.stackingGroup) ?? new Set<number>()
+      if (values.has(effect.operation.value)) continue
+      values.add(effect.operation.value)
+      appliedGroups.set(effect.stackingGroup, values)
+    }
     apply(effect, value + effect.operation.value)
   }
   for (const effect of byKind('multiply')) {

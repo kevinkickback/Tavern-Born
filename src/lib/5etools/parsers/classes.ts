@@ -55,7 +55,10 @@ import { REVISED_AFFINITY_TARGET } from '@/lib/5etools/revisedElementalAffinity'
 import { isSavantSpellbookSourceTarget } from '@/lib/5etools/savantSpellbookRules'
 import { areEquivalentStormEnvironmentGroups } from '@/lib/5etools/stormAuraSource'
 import { getSubclassIntroEntries, getSubclassIntroReference } from '@/lib/5etools/subclassContent'
-import { subclassProficiencyDigest } from '@/lib/5etools/subclassProficiencyCertificates'
+import {
+  getSubclassCopyLookupKey,
+  subclassProficiencyDigest,
+} from '@/lib/5etools/subclassProficiencyCertificates'
 import {
   auditSubclassProficiencyFeatures,
   auditSubclassProficiencyPackages,
@@ -65,6 +68,7 @@ import {
   createIndexedClassResolver,
   createIndexedSubclassFeatureResolver,
   createIndexedSubclassResolver,
+  getIndexedClassDependencyFiles,
   materializeSubclassCopies,
   materializeSubclassFeatureCopies,
 } from '@/lib/5etools/subclassSourcePreparation'
@@ -141,37 +145,66 @@ function parseClassFeatureReferences(
     .filter((ref): ref is ParsedObject => ref !== null)
 }
 
-function resolveSubclassFeatureRecord(
-  ref: ParsedObject,
-  subclassFeatureRecords: unknown[],
-): { feature?: ParsedObject; sourceIdentityConflict?: true } {
+interface SubclassFeatureScope {
+  records: ReadonlyMap<string, readonly ParsedObject[]>
+  dependencies?: () => readonly SubclassFeatureScope[]
+  scoped?: true
+  copyParent?: (subclass: ParsedObject) => SubclassFeatureScope | undefined
+}
+
+function subclassFeatureScope(
+  data: unknown,
+  dependencies?: SubclassFeatureScope['dependencies'],
+): SubclassFeatureScope {
+  const records = new Map<string, ParsedObject[]>()
+  for (const value of asArray(asObject(data).subclassFeature)) {
+    const row = asObject(value)
+    const identity = getSubclassFeatureIdentity(row)
+    if (identity) {
+      const matches = records.get(identity)
+      if (matches) matches.push(row)
+      else records.set(identity, [row])
+    }
+  }
+  return { records, dependencies }
+}
+
+function resolveSubclassFeatureRecord(ref: ParsedObject, scope: SubclassFeatureScope) {
   const identity = getSubclassFeatureIdentity(ref)
-  if (!identity) return {}
-  const matches = subclassFeatureRecords
-    .map(asObject)
-    .filter((feature) => getSubclassFeatureIdentity(feature) === identity)
-  return matches.length > 1 && !areEquivalentStormEnvironmentGroups(identity, matches)
-    ? { feature: { ...matches[0], sourceIdentityConflict: true }, sourceIdentityConflict: true }
-    : { feature: matches[0] }
+  if (!identity) return undefined
+  const matches = [scope, ...(scope.dependencies?.() ?? [])].flatMap((producer) =>
+    (producer.records.get(identity) ?? []).map((feature) => ({ feature, producer })),
+  )
+  const match = matches[0]
+  return (
+    match && {
+      ...match,
+      identity,
+      conflict:
+        matches.length > 1 &&
+        !areEquivalentStormEnvironmentGroups(
+          identity,
+          matches.map((row) => row.feature),
+        ),
+    }
+  )
 }
 
 function parseSubclassFeatureReference(
   rawRef: unknown,
-  subclassFeatureRecords: unknown[],
+  scope: SubclassFeatureScope,
 ): ParsedObject | null {
   if (typeof rawRef !== 'string') return null
 
   const parsedRef = { ...decodeSubclassFeatureReference(rawRef) }
 
-  const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
-    parsedRef,
-    subclassFeatureRecords,
-  )
-  if (!feature) return parsedRef
+  const match = resolveSubclassFeatureRecord(parsedRef, scope)
+  if (!match) return parsedRef
+  const { feature, producer, identity, conflict } = match
 
   return {
     ...parsedRef,
-    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
+    ...(conflict && { sourceIdentityConflict: true }),
     source:
       typeof feature.source === 'string' && feature.source.trim().length > 0
         ? feature.source
@@ -185,16 +218,28 @@ function parseSubclassFeatureReference(
         ? feature.subclassSource
         : parsedRef.subclassSource,
     level: typeof feature.level === 'number' ? feature.level : parsedRef.level,
-    feature,
+    feature: {
+      ...feature,
+      ...(conflict && { sourceIdentityConflict: true }),
+      ...(Array.isArray(feature.entries) && {
+        entries: enrichEntriesSubclassRefs(
+          feature.entries,
+          producer,
+          isDirectArtificerRuleTarget(identity),
+          false,
+          new Set([identity]),
+        ),
+      }),
+    },
   }
 }
 
 function parseSubclassFeatureReferences(
   subclassObj: ParsedObject,
-  subclassFeatureRecords: unknown[],
+  scope: SubclassFeatureScope,
 ): ParsedObject[] {
   return asArray(subclassObj.subclassFeatures)
-    .map((ref) => parseSubclassFeatureReference(ref, subclassFeatureRecords))
+    .map((ref) => parseSubclassFeatureReference(ref, scope))
     .filter((ref): ref is ParsedObject => ref !== null)
 }
 
@@ -221,7 +266,7 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
-function parsePreparedClasses(data: unknown): unknown[] {
+function parsePreparedClasses(data: unknown, scope = subclassFeatureScope(data)): unknown[] {
   const obj = asObject(data)
   const classes: unknown[] = obj.class
     ? [...asArray(obj.class)]
@@ -232,30 +277,23 @@ function parsePreparedClasses(data: unknown): unknown[] {
   const classFeatureRecords: unknown[] = asArray(obj.classFeature)
   const classFeatureIndex = getClassFeatureIndex(classFeatureRecords)
 
-  const rawSubclassFeatureRecords: unknown[] = asArray(obj.subclassFeature)
-  const subclassFeatureRecords: unknown[] = rawSubclassFeatureRecords.map((feature) => {
-    const record = asObject(feature)
-    return Array.isArray(record.entries)
-      ? {
-          ...record,
-          entries: enrichEntriesSubclassRefs(
-            record.entries,
-            rawSubclassFeatureRecords,
-            isDirectArtificerRuleTarget(getSubclassFeatureIdentity(record)),
-          ),
-        }
-      : feature
-  })
   // Group subclasses by parent class (by className + classSource)
   const subclassMap = new Map<string, unknown[]>()
   for (const sc of subclassEntries) {
-    const scObj = asObject(sc)
+    const { scopedSubclassFeatureDependencies: _rawScope, ...scObj } = asObject(sc)
     const className = typeof scObj.className === 'string' ? scObj.className : undefined
     const classSource = typeof scObj.classSource === 'string' ? scObj.classSource : undefined
     if (!className) continue
     const parentKey = `${className}|${classSource ?? ''}`
     if (!subclassMap.has(parentKey)) subclassMap.set(parentKey, [])
-    const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
+    const copiedFrom = scope.copyParent?.(scObj)
+    const declarationScope = copiedFrom
+      ? {
+          ...scope,
+          dependencies: () => [...new Set([...(scope.dependencies?.() ?? []), copiedFrom])],
+        }
+      : scope
+    const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, declarationScope)
     const introFeatureRef = getSubclassIntroReference(
       scObj,
       subclassFeatureRefs as unknown as SubclassFeatureReference[],
@@ -267,6 +305,7 @@ function parsePreparedClasses(data: unknown): unknown[] {
     const levelFeatures = groupSubclassFeaturesByLevel(subclassFeatureRefs)
     subclassMap.get(parentKey)?.push({
       ...scObj,
+      ...(scope.scoped && { scopedSubclassFeatureDependencies: true }),
       entries,
       introFeatureRef,
       subclassFeatureRefs,
@@ -438,17 +477,19 @@ export function parseClassFluffSummaries(
 
 function resolveInlineSubclassFeatureRef(
   entry: ParsedObject,
-  subclassFeatureRecords: unknown[],
+  scope: SubclassFeatureScope,
   requiresSourceRecord: boolean,
+  ancestors: ReadonlySet<string>,
 ): ParsedObject {
   const refStr = typeof entry.subclassFeature === 'string' ? entry.subclassFeature : ''
   if (!refStr && !requiresSourceRecord) return entry
   const parsedRef = { ...decodeSubclassFeatureReference(refStr) }
-  const { feature, sourceIdentityConflict } = resolveSubclassFeatureRecord(
-    parsedRef,
-    subclassFeatureRecords,
-  )
-  if (!feature) {
+  const match = resolveSubclassFeatureRecord(parsedRef, scope)
+  if (match && ancestors.has(match.identity)) {
+    const { feature: _attachment, ...declaration } = entry
+    return declaration
+  }
+  if (!match) {
     const target = getSubclassFeatureIdentity(parsedRef)
     const directArtificer = isDirectArtificerRuleTarget(target)
     const declaredCoreSubclass =
@@ -459,7 +500,8 @@ function resolveInlineSubclassFeatureRef(
       ['phb', 'xphb'].includes(parsedRef.classSource?.trim().toLowerCase() ?? '')
     if (
       'feature' in entry &&
-      (requiresSourceRecord ||
+      (scope.scoped ||
+        requiresSourceRecord ||
         isNativeResilienceTarget(target) ||
         declaredCoreSubclass ||
         directArtificer)
@@ -470,63 +512,70 @@ function resolveInlineSubclassFeatureRef(
     }
     return entry
   }
+  const { feature, producer, identity, conflict } = match
   return {
     ...entry,
-    ...(sourceIdentityConflict ? { sourceIdentityConflict } : {}),
+    ...(conflict && { sourceIdentityConflict: true }),
     feature: Array.isArray(feature.entries)
       ? {
           ...feature,
+          ...(conflict && { sourceIdentityConflict: true }),
           entries: enrichEntriesSubclassRefs(
             feature.entries,
-            subclassFeatureRecords,
-            isDirectArtificerRuleTarget(getSubclassFeatureIdentity(feature)),
+            producer,
+            isDirectArtificerRuleTarget(identity),
+            false,
+            new Set([...ancestors, identity]),
           ),
         }
-      : feature,
+      : conflict
+        ? { ...feature, sourceIdentityConflict: true }
+        : feature,
   }
 }
 
 function enrichEntriesSubclassRefs(
   entries: unknown[],
-  subclassFeatureRecords: unknown[],
+  scope: SubclassFeatureScope,
   includeListItems = false,
   requiresSourceRecord = false,
+  ancestors: ReadonlySet<string> = new Set(),
 ): unknown[] {
   return entries.map((e) => {
     if (typeof e !== 'object' || e === null) return e
     const obj = e as ParsedObject
     if (obj.type === 'refSubclassFeature') {
-      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords, requiresSourceRecord)
+      return resolveInlineSubclassFeatureRef(obj, scope, requiresSourceRecord, ancestors)
     }
     if (Array.isArray(obj.entries)) {
       return {
         ...obj,
         entries: enrichEntriesSubclassRefs(
           obj.entries,
-          subclassFeatureRecords,
+          scope,
           includeListItems,
           obj.type === 'options' && obj.style === 'list-hang-notitle' && !('count' in obj),
+          ancestors,
         ),
       }
     }
     if (includeListItems && obj.type === 'list' && Array.isArray(obj.items)) {
-      return { ...obj, items: enrichEntriesSubclassRefs(obj.items, subclassFeatureRecords, true) }
+      return { ...obj, items: enrichEntriesSubclassRefs(obj.items, scope, true, false, ancestors) }
     }
     return e
   })
 }
 
-function parsePreparedClassFeatures(data: unknown): unknown[] {
+function parsePreparedClassFeatures(data: unknown, scope = subclassFeatureScope(data)): unknown[] {
   const obj = asObject(data)
-  const subclassFeatureRecords = asArray(obj.subclassFeature)
   const features = asArray(obj.classFeature)
-  if (!subclassFeatureRecords.length) return features
+  if (!scope.records.size && !scope.dependencies) return features
   return features.map((feature) => {
     const f = asObject(feature)
     if (!Array.isArray(f.entries)) return feature
     return {
       ...f,
-      entries: enrichEntriesSubclassRefs(f.entries, subclassFeatureRecords),
+      entries: enrichEntriesSubclassRefs(f.entries, scope),
     }
   })
 }
@@ -580,6 +629,7 @@ function auditNativeSubclassCopies(
 interface PreparedClassOwners {
   classes: ParsedObject[]
   subclasses: ParsedObject[]
+  subclassDependencies?: ParsedObject[]
 }
 
 function prepareClassDocument(
@@ -633,7 +683,11 @@ function prepareClassDocument(
     ),
     origin,
   )
-  const auditedClasses = auditDirectFixedClassDeclarations(classRecords, origin)
+  const auditedClasses = auditDirectFixedClassDeclarations(
+    classRecords,
+    origin,
+    preparedOwners?.classes,
+  )
   const classes = auditFixedLayerMultiplicity(
     auditedClasses.map((row, index) => {
       const preparedClass = preparedOwners?.classes[index]
@@ -651,6 +705,7 @@ function prepareClassDocument(
     materializedSubclasses,
     origin,
     packages,
+    preparedOwners?.subclassDependencies,
   )
   if (!records.length)
     return {
@@ -690,9 +745,13 @@ export function parseClassDocument(
   classCastingSources: import('@/types/classCasting').ClassCastingSourceProof[]
 } {
   const prepared = prepareClassDocument(data, sourceId, preparedSubclassFeatures, preparedOwners)
+  return parsePreparedClassDocument(prepared)
+}
+
+function parsePreparedClassDocument(prepared: unknown, scope = subclassFeatureScope(prepared)) {
   return {
-    classes: parsePreparedClasses(prepared),
-    classFeatures: parsePreparedClassFeatures(prepared),
+    classes: parsePreparedClasses(prepared, scope),
+    classFeatures: parsePreparedClassFeatures(prepared, scope),
     optionalClassFeatureSources: asArray(
       asObject(prepared).optionalClassFeatureSources,
     ) as import('@/types/5etools').OptionalClassFeatureSourceProof[],
@@ -710,11 +769,46 @@ export function createIndexedClassDocumentParser(
   const features = createIndexedSubclassFeatureResolver(index, documents)
   const classes = createIndexedClassResolver(index, documents)
   const subclasses = createIndexedSubclassResolver(index, documents)
-  return (file: string) =>
-    parseClassDocument(documents.get(file), `class/${file}`, features(file), {
+  const prepared = new Map<string, unknown>()
+  const scopes = new Map<string, SubclassFeatureScope>()
+  const subclassDependencies = (file: string) =>
+    getIndexedClassDependencyFiles(index, documents, file, 'subclass')
+  const prepare = (file: string) => {
+    if (prepared.has(file)) return prepared.get(file)
+    const document = prepareClassDocument(documents.get(file), `class/${file}`, features(file), {
       classes: classes(file),
       subclasses: subclasses(file),
+      subclassDependencies: subclassDependencies(file).flatMap((dependency) =>
+        asArray(asObject(documents.get(dependency)).subclass).map(asObject),
+      ),
     })
+    prepared.set(file, document)
+    return document
+  }
+  const scopeFor = (file: string): SubclassFeatureScope => {
+    const existing = scopes.get(file)
+    if (existing) return existing
+    const files = getIndexedClassDependencyFiles(index, documents, file, 'subclassFeature')
+    let dependencies: SubclassFeatureScope[] | undefined
+    const scope = subclassFeatureScope(
+      prepare(file),
+      files.length ? () => (dependencies ??= files.map(scopeFor)) : undefined,
+    )
+    scope.scoped = true
+    scope.copyParent = (subclass) => {
+      const key = getSubclassCopyLookupKey(asObject(subclass._copy))
+      if (!key) return undefined
+      const parents = subclassDependencies(file).filter((dependency) =>
+        asArray(asObject(documents.get(dependency)).subclass).some(
+          (row) => getSubclassCopyLookupKey(asObject(row)) === key,
+        ),
+      )
+      return parents.length === 1 ? scopeFor(parents[0]) : undefined
+    }
+    scopes.set(file, scope)
+    return scope
+  }
+  return (file: string) => parsePreparedClassDocument(prepare(file), scopeFor(file))
 }
 
 export function parseClasses(data: unknown): unknown[] {

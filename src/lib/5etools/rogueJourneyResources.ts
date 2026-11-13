@@ -5,7 +5,10 @@ import type { ClassResourceDef } from '@/types/classRules'
 import { getClassFeatureIdentity } from './classFeatureIdentity'
 import { findClassReference } from './classReference'
 import { getCurrentDirectClassFeature } from './directClassFeatureSource'
-import { getCurrentDirectSubclassSource } from './directSubclassSource'
+import {
+  getCurrentDirectSubclassSource,
+  getCurrentRetainedSubclassSource,
+} from './directSubclassSource'
 import { classResourceProse, readPsionicPowerResource } from './fighterSubclassResources'
 import { decodeOptionalDeclaration } from './optionalClassDeclarationStructure'
 
@@ -20,7 +23,6 @@ export function getRogueJourneyResources(
   proficiency: number,
 ): ClassResourceDef[] {
   if (
-    norm(owner.name) !== 'rogue' ||
     !catalogs ||
     character.classProgression.filter((entry) => findClassReference(owner, [entry])).length !== 1
   )
@@ -29,7 +31,10 @@ export function getRogueJourneyResources(
   if (classes?.length !== 1) return []
   const [cls] = classes
   const result: ClassResourceDef[] = []
-  const stroke = cls.classFeatureRefs?.find((row) => row.name === 'Stroke of Luck')
+  const stroke =
+    norm(owner.name) === 'rogue'
+      ? cls.classFeatureRefs?.find((row) => row.name === 'Stroke of Luck')
+      : undefined
   const strokeTarget = stroke && getClassFeatureIdentity(stroke)
   if (strokeTarget && stroke.level && stroke.level <= owner.levels) {
     const feature = getCurrentDirectClassFeature(cls, catalogs, strokeTarget)
@@ -45,23 +50,30 @@ export function getRogueJourneyResources(
         restType: 'short',
       })
   }
-  const current = getCurrentDirectSubclassSource(character, owner, classes, 'Rogue')
+  const current =
+    getCurrentDirectSubclassSource(character, owner, classes, 'Rogue') ??
+    getCurrentRetainedSubclassSource(character, owner, catalogs, 'Rogue')
   if (!current) return result
-  const { subclass, getFeature } = current
-  const rules = {
-    soulknife: ['Psionic Power', 'Psychic Veil', 'Rend Mind'],
-    phantom: ['Wails from the Grave'],
-    inquisitive: ['Unerring Eye'],
-    swashbuckler: ['Master Duelist'],
-    'scion of the three': ['Bloodthirst'],
-  }
-  for (const name of rules[norm(subclass.shortName) as keyof typeof rules] ?? []) {
-    const feature = getFeature(name)
+  const { getFeature } = current
+  const rules = [
+    ['Soulknife', 'Psionic Power'],
+    ['Soulknife', 'Psychic Veil'],
+    ['Soulknife', 'Rend Mind'],
+    ['Phantom', 'Wails from the Grave'],
+    ['Inquisitive', 'Unerring Eye'],
+    ['Swashbuckler', 'Master Duelist'],
+    ['Scion of the Three', 'Bloodthirst'],
+  ] as const
+  for (const [printing, name] of rules) {
+    const feature = getFeature(name, printing)
     if (!feature) continue
-    const id = feature.target.replace(/^subclass-feature\|/, 'rogue-resource|')
+    const id =
+      feature.id === feature.target
+        ? feature.target.replace(/^subclass-feature\|/, 'rogue-resource|')
+        : `rogue-resource|${feature.id}`
     if (name === 'Psionic Power') {
       const def = readPsionicPowerResource(
-        subclass.source,
+        feature.source,
         feature.level,
         feature.entries,
         proficiency,
@@ -95,7 +107,7 @@ export function getRogueJourneyResources(
         ? 1
         : 0
     if (!uses) continue
-    const upgrade = name === 'Bloodthirst' ? getFeature('Dread Incarnate') : undefined
+    const upgrade = name === 'Bloodthirst' ? getFeature('Dread Incarnate', printing) : undefined
     const cutthroat = classResourceProse(upgrade?.entries ?? [])
       .map((line) =>
         /^You regain one expended use of \{@subclassFeature ([^{}]+)\} when you finish a short rest\.$/.exec(

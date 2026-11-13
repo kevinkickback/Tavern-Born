@@ -27,16 +27,17 @@ and the selected class's own table. Their saved counters are separate across pri
 An inherited Epic Boon claim retains its exact declaration so it can suspend or be cleared
 when the class source is withdrawn.
 
-Exact standalone use clauses can supply an ability-based maximum, a single-use pool, or a dice
-pool with its per-use limit and recovery. Existing counters take precedence. Saved remaining
-uses belong to the actual class or subclass owner and the qualified feature.
+Exact standalone use clauses can supply an ability-based maximum, a single-use pool, a dice
+pool, or a fixed number of slot-free casts. Existing counters take precedence. Saved remaining
+uses belong to the actual class or subclass owner and the qualified feature. Spell preparation
+and manual use tracking have separate rules.
 
 ## Internal subclass-feature copies
 
 Resolve copies before reference expansion, with the shared data-only copy engine. Match all seven
 fields and retain the copied row's owner and level. Nested references keep their original targets.
-The indexed `_meta.dependencies.subclassFeature` scope supplies copy parents only. Dependency rows
-do not become the requesting document's own rules. Missing, ambiguous, cyclic, unsafe or
+The indexed `_meta.dependencies.subclassFeature` scope supplies copy parents and exact referenced
+features. Dependency rows stay in their producer documents. Missing, ambiguous, cyclic, unsafe or
 unsupported copies fail the required class resource. [Copy tests](../../tests/lib/5etools/subclassFeatureCopies.test.ts)
 
 ## Source-backed feature options

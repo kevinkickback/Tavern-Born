@@ -654,6 +654,40 @@
       ]
     },
     {
+      "target": "subclass-feature|bonus proficiencies|monk|xphb|mystic brews|wow|3|wow",
+      "name": "Bonus Proficiencies",
+      "className": "Monk",
+      "classSource": "XPHB",
+      "level": 3,
+      "kind": "fixed-training",
+      "training": {
+        "skills": ["performance"],
+        "tools": ["brewer's supplies"]
+      },
+      "trainingTool": {
+        "name": "brewer's supplies",
+        "source": "XPHB"
+      },
+      "trainingToolIfUntrained": true,
+      "startingSkillFallbacks": ["performance"],
+      "retainedSubclassGainTarget": "class-feature|monk subclass|monk|xphb|3|xphb",
+      "subclassGainPosition": "first",
+      "digest": "13a6f1802243aea5298fdad8bc54812d59c8ac18bc712168a5fb55c5268d5a3c",
+      "metadataDigest": "1de237c33d584174f9c6907f97efaddfdfaf897577bb27b6e6c25ce69744b61a",
+      "fields": [
+        "className",
+        "classSource",
+        "entries",
+        "featureOptionSourceConflict",
+        "fixedProficiencySourceAudit",
+        "level",
+        "name",
+        "source",
+        "subclassShortName",
+        "subclassSource"
+      ]
+    },
+    {
       "target": "subclass-feature|bonus proficiencies|rogue|phb|assassin|phb|3|phb",
       "name": "Bonus Proficiencies",
       "className": "Rogue",

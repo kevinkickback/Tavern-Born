@@ -79,7 +79,11 @@ test.each([
 ] as const)('Included SRD Champion %s gains Remarkable Athlete at the declared level', (source, level, kind) => {
   const classes = parse(read(bundledDocument))
   const effects = (levels: number) =>
-    deriveFighterPassiveEffects(actor(entry(source, 'Champion', source, levels)), classes)
+    deriveFighterPassiveEffects(actor(entry(source, 'Champion', source, levels)), {
+      classes,
+      classFeatures: [],
+      subclassFeatures: [],
+    })
   expect(effects(level - 1)).toEqual([])
   expect(effects(level)).toContainEqual(
     expect.objectContaining({
@@ -458,10 +462,11 @@ configuredTest('Cavalier reads Warding Maneuver uses and recovery from its earne
 configuredTest('Psi Warrior reads the exact Guarded Mind resistance at its earned level', () => {
   const document = read(fighterDocument)
   const targets = (level: number) =>
-    deriveFighterPassiveEffects(
-      actor(entry('XPHB', 'Psi Warrior', 'XPHB', level)),
-      parse(document),
-    ).map((row) => row.target)
+    deriveFighterPassiveEffects(actor(entry('XPHB', 'Psi Warrior', 'XPHB', level)), {
+      classes: parse(document),
+      classFeatures: [],
+      subclassFeatures: [],
+    }).map((row) => row.target)
   expect(targets(9)).toEqual([])
   expect(targets(10)).toEqual([{ kind: 'damage-resistance', damageType: 'psychic' }])
   const rule = document.subclassFeature.find(

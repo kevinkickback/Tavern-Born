@@ -80,9 +80,22 @@ const PRESERVE_FIELDS = [
 ]
 function checkCopy(record) {
   if (!record._copy) return
+  const preserveMysticBrews =
+    record.name === 'Warrior of Mystic Brews' &&
+    record.shortName === 'Mystic Brews' &&
+    record.source === 'WoW' &&
+    record.className === 'Monk' &&
+    record.classSource === 'WoW' &&
+    record._copy.name === record.name &&
+    record._copy.shortName === record.shortName &&
+    record._copy.source === record.source &&
+    record._copy.className === record.className &&
+    record._copy.classSource === 'XPHB' &&
+    same(record._copy._preserve, { '*': true })
   if (
     !only(record._copy, COPY_FIELDS) ||
     (record._copy._preserve &&
+      !preserveMysticBrews &&
       (!only(record._copy._preserve, PRESERVE_FIELDS) ||
         Object.values(record._copy._preserve).some((value) => value !== true)))
   )

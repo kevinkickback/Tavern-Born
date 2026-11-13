@@ -19,7 +19,7 @@ import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
-import { REVISED_AFFINITY_ID } from '@/lib/5etools/revisedElementalAffinity'
+import { isRevisedAffinityChoiceId } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
 import {
@@ -257,7 +257,7 @@ export function useClassChoiceController({
         state.classOrder ||
         state.projectedBranch ||
         state.revisedInvocations ||
-        state.selection.choiceId === REVISED_AFFINITY_ID
+        isRevisedAffinityChoiceId(state.selection.choiceId)
       )
         return (
           !!state.owner &&
@@ -519,7 +519,7 @@ export function useClassChoiceController({
             activeSaved.classOrder ||
             activeSaved.projectedBranch ||
             activeSaved.revisedInvocations ||
-            activeSaved.selection.choiceId === REVISED_AFFINITY_ID ||
+            isRevisedAffinityChoiceId(activeSaved.selection.choiceId) ||
             getSubclassFeatureConfigurationRule(activeSaved.selection.choiceId)
             ? request?.savedHandle
             : undefined,
@@ -590,7 +590,7 @@ export function useClassChoiceController({
             current.id === BLESSED_STRIKES_ID ||
             isRevisedInvocationPoolId(current.id) ||
             current.id === ELEMENTAL_FURY_ID ||
-            current.id === REVISED_AFFINITY_ID ||
+            isRevisedAffinityChoiceId(current.id) ||
             getClassOrderById(current.id)
             ? request?.savedHandle
             : getSubclassFeatureConfigurationRule(current.id)
@@ -813,7 +813,7 @@ export function useClassChoiceController({
                       isRevisedInvocationPoolId(choice.id) ||
                       choice.id === BLESSED_STRIKES_ID ||
                       choice.id === ELEMENTAL_FURY_ID ||
-                      choice.id === REVISED_AFFINITY_ID ||
+                      isRevisedAffinityChoiceId(choice.id) ||
                       getClassOrderById(choice.id) ||
                       getSubclassFeatureConfigurationRule(choice.id) ||
                       decodeFavoredEnemyChoiceId(choice.id) ||
@@ -842,7 +842,7 @@ export function useClassChoiceController({
                 state.classOrder ||
                 state.projectedBranch ||
                 state.revisedInvocations ||
-                state.selection.choiceId === REVISED_AFFINITY_ID ||
+                isRevisedAffinityChoiceId(state.selection.choiceId) ||
                 getSubclassFeatureConfigurationRule(state.selection.choiceId)
                   ? getOptionalPoolSelectionHandle(state.selection)
                   : undefined,

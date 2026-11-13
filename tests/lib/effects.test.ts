@@ -72,6 +72,23 @@ describe('typed character effects', () => {
     expect(result.steps.map((step) => step.effectId)).toEqual(['higher', 'override-b'])
   })
 
+  test('applies identical grouped additions once while an unsuppressed owner remains', () => {
+    const source = { kind: 'subclass', name: 'Printed rule' } as const
+    const grouped = [
+      effect({ id: 'first', source, stackingGroup: 'printed-rule' }),
+      effect({ id: 'second', source, stackingGroup: 'printed-rule' }),
+      effect({ id: 'different-printing', source, stackingGroup: 'different-rule' }),
+      effect({ id: 'manual', stackingGroup: 'printed-rule' }),
+    ]
+    const resolve = (suppressedEffectIds: string[]) =>
+      resolveNumericEffect(10, { kind: 'armor-class' }, grouped, { suppressedEffectIds })
+
+    expect(resolve([]).value).toBe(13)
+    expect(resolve(['first']).steps.map((row) => row.effectId)).toContain('second')
+    expect(resolve(['second']).steps.map((row) => row.effectId)).toContain('first')
+    expect(resolve(['first', 'second']).value).toBe(12)
+  })
+
   test('uses the highest eligible base and lets unscoped effects apply to scoped targets', () => {
     const result = resolveNumericEffect(8, { kind: 'attack-roll', attackId: 'attack-1' }, [
       effect({

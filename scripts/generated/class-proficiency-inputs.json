@@ -114,7 +114,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-source.mjs",
-      "sha256": "9c5c275565e12d52477f37467e9bc52f18b8b0645bd7fcd423397c728a070552"
+      "sha256": "d132d251283c2e596a422c71e7af509a6996b629f6ac9364b6a4105f7626567e"
     }
   ],
   "toolClassificationDependencies": [
@@ -124,7 +124,7 @@
     },
     {
       "file": "scripts/lib/fixed-proficiency-source.mjs",
-      "sha256": "5dec93354b446b738362cc92b3de6d996321a593e7da42be6c0c523d6aee45f4"
+      "sha256": "978e5e7ac9f7f2f94b94a4c56dc1948f2346a91b1d806c83e26e54df89f2cb6d"
     },
     {
       "file": "src/lib/calculations/itemClassification.ts",
@@ -170,7 +170,7 @@
     },
     {
       "file": "scripts/lib/subclass-proficiency-ancestor-semantics.json",
-      "sha256": "d2d94f155ff9090c727515da35e39ca1221734bcc59aeb4f1b617e45252f7a61"
+      "sha256": "bc12ba6b75da14da3dcd114167548d66c97e542f688e919d51884fd1af554c92"
     },
     {
       "file": "scripts/lib/shared-registry-source.mjs",
@@ -268,6 +268,20 @@
         "Playing Cards|XPHB",
         "Three-Dragon Ante Set|XPHB"
       ]
+    }
+  ],
+  "mysticBrewsInputs": [
+    {
+      "file": "data/class/class-monk.json",
+      "sha256": "1dabeb153d15860ebe0b5004172218dac195a71aca8e12fe1c48a5edd76ff71b"
+    },
+    {
+      "file": "data/items.json",
+      "sha256": "3962fdb53ea6580f21e8deb4c0882a80efec4cd7d2d94fda0a8ca651c3835821"
+    },
+    {
+      "file": "data/items-base.json",
+      "sha256": "1bd7b948db06193d2a04c9fd0cf98c916bc545825916742269ba8fc1c56d30f7"
     }
   ]
 }

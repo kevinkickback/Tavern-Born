@@ -15,6 +15,10 @@ gains keep separate slots. Source loss suspends only affected benefits and retai
 intent. Clear, owner replacement and level rollback remove only their grants. A retained
 description cannot prove eligibility. [Class choice tests](../../tests/unit/classChoiceCommands.test.ts)
 
+The supported Rogue subclass passives use each selected class printing's exact earned
+declarations. Identical active numeric contributions from the same printed rule count once
+per target. Each owner retains its own effect ID for suppression and its own limited-use counters.
+
 [Mystic psionic setup](psionic-selection.md) has its own source and ownership limits.
 
 ### Individual optional class features

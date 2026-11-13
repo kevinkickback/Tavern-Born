@@ -16,7 +16,7 @@ import {
 } from './nativeSubclassFeatureSource'
 import { getCurrentNativeSubclassGain } from './nativeSubclassGain'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
-import { parseSpellToken } from './spellTokens'
+import { parseSpellToken, readMaterialFreeSpellUses } from './spellTokens'
 import type { SubclassSpellGrant } from './subclassSpells'
 
 function getLaterRangerSpellFeature(
@@ -52,6 +52,24 @@ function getLaterRangerSpellFeature(
     : undefined
 }
 
+function readClassicFeyReinforcements(entries: readonly unknown[]) {
+  const [, casting, duration] = entries
+  if (
+    entries.length !== 3 ||
+    typeof casting !== 'string' ||
+    duration !==
+      "Whenever you start casting the spell, you can modify it so that it doesn't require {@status concentration}. If you do so, the spell's duration becomes 1 minute for that casting."
+  )
+    return undefined
+  const spell =
+    /^The royal courts of the Feywild have blessed you with the assistance of fey beings: you know \{@spell ([^{}|]+\|tce)\}\. It doesn't count against the number of ranger spells you know, and you can cast it without a material component\. You can also cast it (once|twice|three times) without a spell slot, and you regain the ability to do so when you finish a long rest\.$/.exec(
+      casting,
+    )
+  return spell
+    ? { reference: spell[1], casts: ['once', 'twice', 'three times'].indexOf(spell[2]) + 1 }
+    : undefined
+}
+
 /** This later feature has no structured spell grant in either printing. */
 function getFeyReinforcements(
   cls: Class5e,
@@ -60,26 +78,14 @@ function getFeyReinforcements(
   revised: boolean,
 ): SubclassSpellGrant | undefined {
   const feature = getLaterRangerSpellFeature(cls, subclass, classLevel, 'Fey Reinforcements')
-  if (!feature || feature.entries.length !== (revised ? 2 : 3)) return undefined
-  const [casting, duration] = feature.entries.slice(revised ? 0 : 1)
-  if (typeof casting !== 'string') return undefined
+  if (!feature) return undefined
   const spell = revised
-    ? /^You can cast \{@spell ([^{}|]+\|XPHB)\} without a Material component\. You can also cast it (once|twice|three times) without a spell slot, and you regain the ability to cast it in this way when you finish a \{@variantrule Long Rest\|XPHB\}\.$/.exec(
-        casting,
-      )
-    : /^The royal courts of the Feywild have blessed you with the assistance of fey beings: you know \{@spell ([^{}|]+\|tce)\}\. It doesn't count against the number of ranger spells you know, and you can cast it without a material component\. You can also cast it (once|twice|three times) without a spell slot, and you regain the ability to do so when you finish a long rest\.$/.exec(
-        casting,
-      )
-  const concentration = revised ? 'Concentration|XPHB' : 'concentration'
-  if (
-    !spell ||
-    duration !==
-      `Whenever you start casting the spell, you can modify it so that it doesn't require {@status ${concentration}}. If you do so, the spell's duration becomes 1 minute for that casting.`
-  )
-    return undefined
-  const casts = ['once', 'twice', 'three times'].indexOf(spell[2]) + 1
+    ? readMaterialFreeSpellUses(feature.entries)
+    : readClassicFeyReinforcements(feature.entries)
+  if (!spell) return undefined
+  const { reference, casts } = spell
   return {
-    spellName: parseSpellToken(spell[1]).name,
+    spellName: parseSpellToken(reference).name,
     level: feature.level,
     isCantrip: false,
     mode: revised ? 'prepared' : 'known',

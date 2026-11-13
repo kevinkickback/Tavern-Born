@@ -1,3 +1,4 @@
+import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Class5e } from '@/types/5etools'
@@ -9,6 +10,44 @@ import {
   isInheritedClassicSubclass,
 } from './nativeSubclassFeatureSource'
 import { getCurrentNativeSubclassGain } from './nativeSubclassGain'
+import { getEarnedSubclassFeatureSource } from './ownedSubclassFeature'
+
+export function getCurrentRetainedSubclassSource(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs | undefined,
+  printedClass: string,
+) {
+  const current = getEarnedSubclassFeatureSource(character, entry, catalogs)
+  if (!current) return undefined
+  const features = current.features.filter(
+    ({ feature }) =>
+      norm(feature.className) === norm(printedClass) &&
+      (norm(feature.classSource) !== norm(entry.source) ||
+        norm(feature.className) !== norm(entry.name)),
+  )
+  if (!features.length) return undefined
+  return {
+    subclass: current.subclass,
+    getFeature(name: string, printing?: string, source?: string) {
+      const matches = features.filter(
+        ({ feature }) =>
+          norm(feature.name) === norm(name) &&
+          (!printing || norm(feature.subclassShortName) === norm(printing)) &&
+          (!source || norm(feature.subclassSource) === norm(source)),
+      )
+      if (matches.length !== 1) return undefined
+      const [{ feature, target, level }] = matches
+      return {
+        target,
+        id: `${current.key}:${target}`,
+        level,
+        source: feature.source,
+        entries: feature.entries ?? [],
+      }
+    },
+  }
+}
 
 export function getCurrentDirectSubclassSource(
   character: Character,
@@ -17,6 +56,7 @@ export function getCurrentDirectSubclassSource(
   className: 'Artificer' | 'Fighter' | 'Mystic' | 'Rogue',
 ) {
   const classKey = norm(className)
+  const exactOwner = className === 'Mystic' || className === 'Rogue'
   if (
     norm(entry.name) !== classKey ||
     !entry.subclass ||
@@ -24,8 +64,7 @@ export function getCurrentDirectSubclassSource(
     !getSourceCompatibility(entry.source, character.originSystem).compatible ||
     character.classProgression.filter(
       (row) =>
-        norm(row.name) === classKey &&
-        (className !== 'Mystic' || norm(row.source) === norm(entry.source)),
+        norm(row.name) === classKey && (!exactOwner || norm(row.source) === norm(entry.source)),
     ).length !== 1
   )
     return undefined
@@ -61,7 +100,12 @@ export function getCurrentDirectSubclassSource(
   const introLevel = decodeSubclassFeatureReference(subclass.introFeatureRef ?? '').level
   return {
     subclass,
-    getFeature(name: string) {
+    getFeature(name: string, printing?: string, source?: string) {
+      if (
+        (printing && norm(printing) !== norm(subclass.shortName)) ||
+        (source && norm(source) !== norm(subclass.source))
+      )
+        return undefined
       const direct = subclass.subclassFeatureRefs?.filter((row) => row.name === name) ?? []
       if (direct.length > 1) return undefined
       const producerLevel = direct[0]?.level ?? introLevel
@@ -92,7 +136,7 @@ export function getCurrentDirectSubclassSource(
         !Array.isArray(feature.entries)
       )
         return undefined
-      return { target, level, entries: feature.entries }
+      return { target, id: target, level, source: feature.source, entries: feature.entries }
     },
   }
 }

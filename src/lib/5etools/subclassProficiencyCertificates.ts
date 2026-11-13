@@ -33,6 +33,7 @@ export interface SubclassProficiencyRootCertificate {
   declarations: string[]
   intro: string
   paths: SubclassProficiencyPath[]
+  retainedGainTarget?: string
 }
 export interface SubclassProficiencyPackage {
   features: SubclassProficiencyFeatureCertificate[]
@@ -180,6 +181,7 @@ export function subclassProficiencyMetadata(value: Record<string, unknown>, root
           'introFeatureRef',
           'levelFeatures',
           'normalizedRules',
+          'scopedSubclassFeatureDependencies',
         ]
       : []),
   ])

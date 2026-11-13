@@ -83,10 +83,15 @@ function deriveMonkTraining(feature, itemDocuments) {
     feature.subclassShortName === 'Drunken Master' &&
     feature.classSource === 'PHB' &&
     feature.source === 'XGE'
+  const mysticBrews =
+    feature.name === 'Bonus Proficiencies' &&
+    feature.subclassShortName === 'Mystic Brews' &&
+    feature.classSource === 'XPHB' &&
+    feature.source === 'WoW'
   if (
     feature.className !== 'Monk' ||
     feature.source !== feature.subclassSource ||
-    (!mercy && !drunken)
+    (!mercy && !drunken && !mysticBrews)
   )
     return undefined
   validateFeature(feature, SUBCLASS_FIELDS, mercy)
@@ -94,6 +99,28 @@ function deriveMonkTraining(feature, itemDocuments) {
   const classical = feature.classSource === 'PHB'
   const clause = feature.entries[mercy && classical ? 1 : 0]
   if (typeof clause !== 'string') fail('Missing Monk training grant')
+  if (mysticBrews) {
+    const match =
+      /^You gain proficiency in the \{@skill ([^{}|]+)\|XPHB\} skill, or if you already have it, you gain proficiency in one skill of your choice from the skills available to Monks at level 1\. You also gain proficiency with \{@item ([^{}|]+)\|XPHB\} if you don't already have it\.$/.exec(
+        clause,
+      )
+    if (
+      match?.[1] !== 'Performance' ||
+      match[2] !== "Brewer's Supplies" ||
+      feature.level !== 3 ||
+      feature.entries.length !== 1
+    )
+      fail('Unsupported Mystic Brews training grant')
+    const skills = [match[1].toLowerCase()]
+    const trainingTool = deriveTrainingTool(match[2], 'XPHB', itemDocuments)
+    return {
+      training: { skills, tools: [trainingTool.name] },
+      trainingTool,
+      trainingToolIfUntrained: true,
+      startingSkillFallbacks: skills,
+      retainedSubclassGainTarget: 'class-feature|monk subclass|monk|xphb|3|xphb',
+    }
+  }
   const match = mercy
     ? /^You gain proficiency in the (\{@skill [^{}]+\} and \{@skill [^{}]+\}) skills(?:, and you gain| and) proficiency with the \{@item ([^{}|]+)\|([^{}|]+)\}\.$/.exec(
         clause,

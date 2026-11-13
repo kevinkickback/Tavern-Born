@@ -11,7 +11,7 @@ import {
 } from '@/lib/5etools/classProficiencyRules'
 import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { isFeatureLiteralChoiceId } from '@/lib/5etools/featureOptionIdentity'
-import { isDirectFixedProficiencyRelation } from '@/lib/5etools/fixedProficiencyIdentity'
+import { isFixedClassProficiencyRelation } from '@/lib/5etools/fixedProficiencyIdentity'
 import { fixedProficiencyRule } from '@/lib/5etools/fixedProficiencyRules'
 import {
   ownedClassProficiencyRule as classProficiencyRule,
@@ -58,7 +58,7 @@ export function isValidClassProficiencySelection(
     (relation.domain !== 'languages' ||
       fixedProficiencyRule(relation.target)?.kind !== 'fixed-languages' ||
       !!domain.requiresKnownLanguage ||
-      isDirectFixedProficiencyRelation(relation)) &&
+      isFixedClassProficiencyRelation(relation)) &&
     (!optional ||
       (JSON.stringify(relation.owner) === JSON.stringify(optional.owner.slice(1)) &&
         optional.gains.includes(relation.level) &&

@@ -95,6 +95,25 @@ export function materializeSubclassFeatureCopies(
 
 type IndexedCopyCollection = 'class' | 'subclass' | 'subclassFeature'
 
+export function getIndexedClassDependencyFiles(
+  index: unknown,
+  documents: ReadonlyMap<string, unknown>,
+  file: string,
+  collection: IndexedCopyCollection,
+) {
+  const dependencyIds = object(object(object(documents.get(file))._meta).dependencies)[collection]
+  if (dependencyIds === undefined) return []
+  if (!Array.isArray(dependencyIds)) throw new Error(`Invalid class dependencies: ${file}`)
+  const dependencyFiles = new Set<string>()
+  for (const id of dependencyIds) {
+    const path = typeof id === 'string' && Object.getOwnPropertyDescriptor(object(index), id)?.value
+    if (typeof path !== 'string' || !documents.has(path.trim()))
+      throw new Error(`Unavailable class dependency in ${file}`)
+    dependencyFiles.add(path.trim())
+  }
+  return [...dependencyFiles]
+}
+
 /** Like upstream DataUtil.pLoadByMeta, dependency IDs resolve through the class index. */
 function createIndexedCopyResolver(
   index: unknown,
@@ -106,7 +125,6 @@ function createIndexedCopyResolver(
     metadata: SourceRecord,
   ) => SourceRecord[],
 ): (file: string) => SourceRecord[] {
-  const indexedFiles = object(index)
   const prepared = new Map<string, SourceRecord[] | null>()
 
   function resolve(file: string): SourceRecord[] {
@@ -117,24 +135,11 @@ function createIndexedCopyResolver(
     const document = object(documents.get(file))
     const records = asArray(document[collection]).map(object)
     const metadata = object(document._meta)
-    const dependencyIds = object(metadata.dependencies)[collection]
     prepared.set(file, null)
     try {
       const result = materialize(
         records,
-        () => {
-          if (dependencyIds === undefined) return []
-          if (!Array.isArray(dependencyIds)) throw new Error(`Invalid class dependencies: ${file}`)
-          const dependencyFiles = new Set<string>()
-          for (const id of dependencyIds) {
-            const path =
-              typeof id === 'string' && Object.getOwnPropertyDescriptor(indexedFiles, id)?.value
-            if (typeof path !== 'string' || !documents.has(path.trim()))
-              throw new Error(`Unavailable class dependency in ${file}`)
-            dependencyFiles.add(path.trim())
-          }
-          return [...dependencyFiles].flatMap(resolve)
-        },
+        () => getIndexedClassDependencyFiles(index, documents, file, collection).flatMap(resolve),
         metadata,
       )
       prepared.set(file, result)

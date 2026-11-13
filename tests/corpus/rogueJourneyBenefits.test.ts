@@ -280,7 +280,7 @@ test.skipIf(!existsSync(file))(
         max: (label: string) =>
           resources.find((row) => row.label === label)?.maxPerLevel[entry.levels - 1],
         recovery: (label: string) => resources.find((row) => row.label === label)?.recovery,
-        effects: deriveRoguePassiveEffects(actor, classes, modifiers.charisma, []),
+        effects: deriveRoguePassiveEffects(actor, catalogs, modifiers.charisma, []),
       }
     }
     const subclass = (name: string, subclassSource: string, levels: number, source = 'XPHB') =>

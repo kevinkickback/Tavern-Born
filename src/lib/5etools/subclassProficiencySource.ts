@@ -27,6 +27,7 @@ import {
   subclassProficiencyRootDigest,
 } from './subclassProficiencyCertificates'
 import {
+  COPIED_SUBCLASS_PROFICIENCY_ROOTS,
   isConditionalOnlySubclassProficiencyTarget,
   SUBCLASS_PROFICIENCY_CHECKPOINT,
   SUBCLASS_PROFICIENCY_PACKAGES,
@@ -34,7 +35,12 @@ import {
 
 const certificates = SUBCLASS_PROFICIENCY_CHECKPOINT
 const features = new Map(certificates.features.map((row) => [row.target, row]))
-const roots = new Map(certificates.roots.map((row) => [JSON.stringify(row.owner), row]))
+const roots = new Map(
+  [...certificates.roots, ...COPIED_SUBCLASS_PROFICIENCY_ROOTS].map((row) => [
+    JSON.stringify(row.owner),
+    row,
+  ]),
+)
 const packagedRoots = new Map(
   SUBCLASS_PROFICIENCY_PACKAGES.flatMap((source) => source.roots).map((row) => [
     JSON.stringify(row.owner),
@@ -58,6 +64,7 @@ const rootDerived = [
   'levelFeatures',
   'normalizedRules',
   'subclassProficiencySourceAudit',
+  'scopedSubclassFeatureDependencies',
 ]
 const featureDerived = ['featureOptionSourceConflict', 'subclassProficiencySourceAudit']
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
@@ -209,15 +216,21 @@ export function auditSubclassProficiencyRoots(
   materialized: Record<string, unknown>[],
   origin: string,
   packages: readonly RawPackage[],
+  dependencies: readonly Record<string, unknown>[] = [],
 ) {
   const byOwner = new Map<string, Record<string, unknown>[]>()
   const byCopy = new Map<string, Record<string, unknown>[]>()
+  const copyOwnerCounts = new Map<string, number>()
   raw.forEach((row) => {
     const owner = JSON.stringify(getSubclassProficiencyOwner(row))
     byOwner.set(owner, [...(byOwner.get(owner) ?? []), row])
+  })
+  for (const row of [...raw, ...dependencies]) {
+    const owner = JSON.stringify(getSubclassProficiencyOwner(row))
+    copyOwnerCounts.set(owner, (copyOwnerCounts.get(owner) ?? 0) + 1)
     const key = getSubclassCopyLookupKey(row)
     if (key) byCopy.set(key, [...(byCopy.get(key) ?? []), row])
-  })
+  }
   return materialized.map((row, index) => {
     const owner = JSON.stringify(getSubclassProficiencyOwner(row))
     const matching = packages.filter(({ source }) =>
@@ -238,8 +251,10 @@ export function auditSubclassProficiencyRoots(
         const matches = byCopy.get(copy.key) ?? []
         return (
           matches.length === 1 &&
-          (byOwner.get(JSON.stringify(getSubclassProficiencyOwner(matches[0]))) ?? []).length ===
-            1 &&
+          (certificate.retainedGainTarget
+            ? copyOwnerCounts.get(JSON.stringify(getSubclassProficiencyOwner(matches[0]))) === 1
+            : (byOwner.get(JSON.stringify(getSubclassProficiencyOwner(matches[0]))) ?? [])
+                .length === 1) &&
           matchesRootDigest(matches[0], copy.digest)
         )
       })

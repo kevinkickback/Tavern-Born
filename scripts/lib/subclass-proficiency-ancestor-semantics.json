@@ -2,6 +2,10 @@
   "purpose": "Development-only semantic adapter for independently reviewed actual enabling ancestors. Ordinary generate/check must never rewrite this file. Changed bodies, wrappers, metadata or targets require source review before updating it.",
   "ancestors": [
     {
+      "target": "subclass-feature|warrior of mystic brews|monk|xphb|mystic brews|wow|3|wow",
+      "digest": "e9b4d6ef061b00bc81446f5b3f4d5ff8d43fc7c738e703a661d9eb81ddbc1951"
+    },
+    {
       "target": "subclass-feature|alchemist|artificer|efa|alchemist|efa|3|efa",
       "digest": "e261832ab9de93a05dcc6ec94afb3a89caa75462bdfeb0946320ca6698707269"
     },
