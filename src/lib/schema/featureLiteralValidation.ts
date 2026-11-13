@@ -10,8 +10,8 @@ import {
 import { decodeNaturalExplorerChoiceId } from '@/lib/5etools/naturalExplorerIdentity'
 import {
   getSavedAffinityDamageType,
+  isRevisedAffinityChoiceId,
   isRevisedAffinityOption,
-  REVISED_AFFINITY_ID,
 } from '@/lib/5etools/revisedElementalAffinity'
 import {
   getRevisedHunterRule,
@@ -43,7 +43,7 @@ export function getInvalidFeatureLiteralSelectionIds(
       seen.add(s.choiceId)
       continue
     }
-    if (s.choiceId === REVISED_AFFINITY_ID || s.selected.some(isRevisedAffinityOption)) {
+    if (isRevisedAffinityChoiceId(s.choiceId) || s.selected.some(isRevisedAffinityOption)) {
       if (seen.has(s.choiceId) || !getSavedAffinityDamageType(s, progression))
         invalid.add(s.choiceId)
       seen.add(s.choiceId)

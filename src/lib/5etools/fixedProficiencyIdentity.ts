@@ -10,6 +10,7 @@ import {
   DIRECT_FIXED_CLASS_CERTIFICATES,
   type FixedProficiencyRule,
   fixedProficiencyRule,
+  getRetainedFixedClassCertificate,
 } from './fixedProficiencyRules'
 import { getSubclassProficiencyRootCertificate } from './subclassProficiencyRegistry'
 
@@ -47,11 +48,12 @@ export const getTrainingClassOrder = ({ owner, target, level }: FixedProficiency
     ? CLASS_ORDERS.find((order) => order.owner === owner[0] && order.training.target === target)
     : undefined
 
-export const isDirectFixedProficiencyRelation = ({
+export const isFixedClassProficiencyRelation = ({
   owner,
   target,
   level,
 }: FixedProficiencyRelation) =>
+  getRetainedFixedClassCertificate(owner, target)?.level === level ||
   DIRECT_FIXED_CLASS_CERTIFICATES.some(
     (row) =>
       owner.length === 2 &&
@@ -83,7 +85,7 @@ export function decodeFixedProficiencyId(id: string): FixedProficiencyRelation |
     const relation = { owner: owner as FixedProficiencyRelation['owner'], target, level }
     const qualified =
       owner.length === 2
-        ? isDirectFixedProficiencyRelation(relation) || getTrainingClassOrder(relation)
+        ? isFixedClassProficiencyRelation(relation) || getTrainingClassOrder(relation)
         : getSubclassProficiencyRootCertificate(owner)?.paths.some(
             (path) => path.target === target && path.level === level,
           )

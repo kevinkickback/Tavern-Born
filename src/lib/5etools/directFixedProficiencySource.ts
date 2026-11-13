@@ -1,4 +1,5 @@
 import type { Class5e, ClassFeature } from '@/types/5etools'
+import { getPlainCastingCopyParent } from './classCastingStructure'
 import { decodeClassFeatureReference, getClassFeatureIdentity } from './classFeatureIdentity'
 import { getFeatureSourceDigest } from './featureSourceAudit'
 import {
@@ -6,6 +7,7 @@ import {
   type DirectFixedClassCertificate,
   FIXED_PROFICIENCY_RULES,
   type GeneratedFixedProficiencyRule,
+  getRetainedFixedClassCertificate,
 } from './fixedProficiencyRules'
 import {
   subclassProficiencyDigest,
@@ -33,16 +35,17 @@ for (const certificate of DIRECT_FIXED_CLASS_CERTIFICATES) {
 }
 export const directOwners: ReadonlyMap<string, readonly DirectFixedClassCertificate[]> =
   certificatesByOwner
-export const ownerKey = (row: Record<string, unknown>) =>
-  JSON.stringify(
-    [row.name, row.source].map((value) =>
-      typeof value === 'string' ? value.trim().toLowerCase() : null,
-    ),
+const ownerParts = (row: Record<string, unknown>) =>
+  [row.name, row.source].map((value) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : null,
   )
+export const ownerKey = (row: Record<string, unknown>) => JSON.stringify(ownerParts(row))
 export const getDirectFixedClassCertificate = (
   owner: { name: string; source: string },
   target: string,
-) => directOwners.get(ownerKey(owner))?.find((certificate) => certificate.target === target)
+) =>
+  directOwners.get(ownerKey(owner))?.find((certificate) => certificate.target === target) ??
+  getRetainedFixedClassCertificate(ownerParts(owner), target)
 const stamp = (
   certificate: unknown,
   origin: string,
@@ -112,14 +115,26 @@ export function auditFixedClassFeatures(records: Record<string, unknown>[], orig
 export function auditDirectFixedClassDeclarations(
   records: Record<string, unknown>[],
   origin: string,
+  materialized?: readonly Record<string, unknown>[],
 ) {
   return records.map((root, index) => {
-    const certificates = directOwners.get(ownerKey(root))
+    const retained = getRetainedFixedClassCertificate(ownerParts(root))
+    const certificates = retained ? [retained] : directOwners.get(ownerKey(root))
     if (!certificates) return root
-    const declarations = Array.isArray(root.classFeatures) ? root.classFeatures : []
+    const resolved = retained ? materialized?.[index] : root
+    const declarations = Array.isArray(resolved?.classFeatures) ? resolved.classFeatures : []
+    const copyParent = retained && getPlainCastingCopyParent(root)
     const validRoot =
       !Object.getOwnPropertyDescriptor(root, 'fixedProficiencySourceAudit') &&
-      !root._copy &&
+      (retained
+        ? !!copyParent &&
+          copyParent[1] === retained.owner[0] &&
+          copyParent[2] === retained.owner[1] &&
+          !Object.getOwnPropertyDescriptor(root, 'classFeatures') &&
+          !!resolved &&
+          !resolved._copy &&
+          ownerKey(resolved) === ownerKey(root)
+        : !root._copy) &&
       records.filter((row) => ownerKey(row) === ownerKey(root)).length === 1
     return {
       ...root,
@@ -227,7 +242,8 @@ export function getCurrentDirectFixedClassRules(
   catalogs: FixedClassCatalogs,
 ): GeneratedFixedProficiencyRule[] {
   if (classData.sourceIdentityConflict || classData._copy) return []
-  return (directOwners.get(ownerKey(classData)) ?? []).flatMap((certificate) =>
-    getCurrentDirectRule(classData, catalogs, certificate),
+  const retained = getRetainedFixedClassCertificate(ownerParts(classData))
+  return (retained ? [retained] : (directOwners.get(ownerKey(classData)) ?? [])).flatMap(
+    (certificate) => getCurrentDirectRule(classData, catalogs, certificate),
   )
 }

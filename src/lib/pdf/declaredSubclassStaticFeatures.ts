@@ -19,12 +19,18 @@ import {
   optionalDeclarationObject as record,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
 import {
+  getCurrentSubclassMenuReference,
+  getEarnedSubclassFeatureSource,
+} from '@/lib/5etools/ownedSubclassFeature'
+import {
   getPsaKnowledgeIntroDependency,
   isPsaKnowledgeDependency,
 } from '@/lib/5etools/psaKnowledgeFeatures'
 import { XPHB_LEGACY_SUBCLASS_KEYS } from '@/lib/5etools/rulesetMetadata'
+import { getFeatureActionGroupId } from '@/lib/calculations/featureActionGroups'
 import type { ClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import { renderEntriesToText } from '@/lib/entryText'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
 import type { Class5e, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
@@ -253,6 +259,103 @@ function fixedRuleEntries(entries: readonly unknown[]): unknown[] {
     }
     return Array.isArray(row.items) ? [{ ...row, items: fixedRuleEntries(row.items) }] : [entry]
   })
+}
+
+const fixedGroupIntroduction =
+  /(?:\bYou gain the following benefits\.|^You gain new mastery over [a-z ]+, granting you new ways to use [a-z ]+:|^You can use [a-z ]+ in the following ways:)$/
+
+/** Print verified earned rules for a subclass without a specialized sheet projection. */
+export function getSourceDeclaredSubclassSheetFeatures(
+  character: Character,
+  entry: CharacterClassEntry,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  const current = getEarnedSubclassFeatureSource(character, entry, catalogs)
+  if (!current) return []
+  const earned = current.features.filter(
+    ({ refs }) => refs.length !== 1 || refs[0] !== current.subclass.introFeatureRef,
+  )
+  const printed = new Set(earned.map(({ target }) => target))
+  const declaredEntries = (
+    feature: SubclassFeature,
+    source: readonly unknown[],
+    printedTargets: Set<string>,
+  ): unknown[] =>
+    source.flatMap((value, index) => {
+      const row = record(value)
+      if (row.type === 'options') return []
+      const group = record(source[index + 1])
+      const introduction = typeof value === 'string' && fixedGroupIntroduction.exec(value)
+      if (
+        !introduction ||
+        group.type !== 'options' ||
+        group.style !== 'list-hang-notitle' ||
+        Object.keys(group).some((key) => !['type', 'style', 'entries'].includes(key))
+      )
+        return Array.isArray(row.entries)
+          ? [{ ...row, entries: declaredEntries(feature, row.entries, printedTargets) }]
+          : [value]
+      const prefix = introduction.input.slice(0, introduction.index).trimEnd()
+      const withoutGroup = /[.!?]$/.test(prefix) ? [prefix] : []
+      if (!Array.isArray(group.entries) || !group.entries.length) return withoutGroup
+      const children = new Map<string, SubclassFeature>()
+      for (const reference of group.entries) {
+        const child = getCurrentSubclassMenuReference(reference, current.scoped)
+        if (!child || children.has(child.target)) return withoutGroup
+        const leaf = child.feature
+        if (
+          !leaf.level ||
+          leaf.level > entry.levels ||
+          norm(leaf.className) !== norm(feature.className) ||
+          norm(leaf.subclassShortName) !== norm(feature.subclassShortName) ||
+          ![leaf.classSource, leaf.subclassSource, leaf.source].every((source) =>
+            permitsClassRuleSource(character, source),
+          )
+        )
+          return withoutGroup
+        children.set(child.target, leaf)
+      }
+      const pending = new Set(printedTargets)
+      const projected = []
+      for (const [target, leaf] of children) {
+        if (pending.has(target)) {
+          if (!renderEntriesToText(fixedRuleEntries(leaf.entries ?? []))) return withoutGroup
+          continue
+        }
+        pending.add(target)
+        const entries = fixedRuleEntries(declaredEntries(leaf, leaf.entries ?? [], pending))
+        if (!renderEntriesToText(entries)) return withoutGroup
+        projected.push({ type: 'entries', name: leaf.name, entries })
+      }
+      for (const target of pending) printedTargets.add(target)
+      return projected.length ? [value, ...projected] : withoutGroup
+    })
+  const entries = new Map(
+    earned.map(({ target, feature }) => [
+      target,
+      fixedRuleEntries(declaredEntries(feature, feature.entries ?? [], printed)),
+    ]),
+  )
+  const nested = new Set<string>()
+  for (const { feature, target, refs } of earned) {
+    const parentRef = refs[refs.length - 2]
+    const parent = parentRef && decodeOptionalDeclaration(parentRef, 'subclassFeature')
+    const parentEntries = parent && entries.get(parent.target)
+    const childEntries = entries.get(target)
+    if (!parentEntries || !childEntries?.length) continue
+    parentEntries.push({ type: 'entries', name: feature.name, entries: childEntries })
+    nested.add(target)
+  }
+  return earned.flatMap(({ target, feature }) =>
+    nested.has(target)
+      ? []
+      : [
+          {
+            feature: { ...feature, entries: entries.get(target) },
+            actionId: getFeatureActionGroupId(current.key, target, feature.entries ?? []),
+          },
+        ],
+  )
 }
 
 /** Resolve fixed rules from an exact, source-declared classic subclass on a revised class. */

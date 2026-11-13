@@ -67,6 +67,7 @@ import type {
 import {
   getDeclaredSubclassStaticFeatures,
   getInheritedSubclassStaticFeatures,
+  getSourceDeclaredSubclassSheetFeatures,
 } from './declaredSubclassStaticFeatures'
 import { getWarlockStaticFeatures } from './warlockStaticFeatures'
 
@@ -738,7 +739,14 @@ export function getClassStaticFeatureSummaries(
       (source !== 'phb' && source !== 'xphb') ||
       progression.filter((owner) => findClassReference(entry, [owner])).length !== 1
     )
-      return []
+      return getSourceDeclaredSubclassSheetFeatures(character, entry, catalogs).flatMap(
+        ({ feature, actionId }) =>
+          featureSummary(feature).map((summary) => ({
+            ...summary,
+            actionId,
+            replaces: savedClassLabel(character, entry, feature),
+          })),
+      )
     const classes = catalogs.classes?.filter((cls) => findClassReference(entry, [cls]))
     if (classes?.length !== 1 || classes[0].sourceIdentityConflict) return []
     const cls = classes[0]

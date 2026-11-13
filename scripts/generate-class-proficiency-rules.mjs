@@ -163,6 +163,9 @@ try {
         fields: feature.fields,
         optional: false,
         subclassGainPosition: feature.subclassGainPosition,
+        ...(feature.retainedSubclassGainTarget && {
+          retainedSubclassGainTarget: feature.retainedSubclassGainTarget,
+        }),
         startingSkillPoolBase: [],
         domains: feature.startingSkillFallbacks.map((trigger) => ({
           domain: 'skills',
@@ -333,6 +336,29 @@ try {
     dragonAncestor.package,
     ...bundledLoreCertificates,
   ]
+  const retainedTargets = new Set(
+    subclassDerived.filter((row) => row.retainedSubclassGainTarget).map((row) => row.target),
+  )
+  const retainedRoots = subclassCertificates.roots.filter((root) =>
+    root.paths.some((path) => retainedTargets.has(path.target)),
+  )
+  const retainedWitnesses = new Set(
+    retainedRoots.flatMap((root) =>
+      [root.intro, ...root.paths.flatMap((path) => path.refs)].map((uid) =>
+        getSubclassFeatureIdentity(decodeSubclassFeatureReference(uid)),
+      ),
+    ),
+  )
+  const retainedCertificates = {
+    roots: retainedRoots,
+    features: subclassCertificates.features.filter((row) => retainedWitnesses.has(row.target)),
+  }
+  subclassCertificates.roots = subclassCertificates.roots.filter(
+    (root) => !retainedRoots.includes(root),
+  )
+  subclassCertificates.features = subclassCertificates.features.filter(
+    (row) => !retainedWitnesses.has(row.target),
+  )
   fixed.features.push(life.rule, dragonAncestor.rule)
   fixed.features.sort((left, right) => left.target.localeCompare(right.target))
   const provenance = {
@@ -390,11 +416,17 @@ try {
         memberIdentities: pool.members,
       })),
     ],
+    mysticBrewsInputs: inputs
+      .filter(({ file }) =>
+        ['class/class-monk.json', 'items.json', 'items-base.json'].includes(file),
+      )
+      .map(({ file, sha256 }) => ({ file: `data/${file}`, sha256 })),
   }
   for (const [file, value] of [
     ['src/lib/5etools/classProficiencyRules.generated.json', derived],
     ['src/lib/5etools/subclassProficiencyRules.generated.json', subclassDerived],
     ['src/lib/5etools/subclassProficiencyCertificates.generated.ts', subclassCertificates],
+    ['src/lib/5etools/retainedSubclassProficiencyCertificates.generated.ts', retainedCertificates],
     ['src/lib/5etools/fixedProficiencyRules.generated.json', { ...fixed, toolNames }],
     ['src/lib/5etools/conditionalProficiencyRules.generated.json', conditional],
     ['src/lib/5etools/toolProficiencyCopySemantics.generated.json', toolCopySemantics.certificates],

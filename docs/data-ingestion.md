@@ -164,6 +164,17 @@ source-qualified references. Starting and multiclass proficiency grants belong t
 class printing. Inherited features use their own source checks for class casting, optional features,
 and other automated choices.
 
+Each subclass feature resolves its nested references against the document that produced it
+and that document’s declared subclass-feature dependencies. Dependency bodies retain their
+original audits. Ambiguous targets carry a conflict and cyclic reference edges remain unresolved.
+Dependency records stay in the producer’s entity inventory.
+
+`node scripts/generate-copied-subclass-proficiency-roots.mjs --check` checks the generated
+proficiency roots for plain indexed copies. The generator reuses the printed subclass’s
+certified paths and records the copied owner’s retained first gain. Saved choices belong to
+the selected class and subclass. A rule that refers to the printed class’s starting skill
+pool uses that class’s current source, even when the selected copy has different starting skills.
+
 Inherited mastery and Fighting Style choices resolve the selected class's declared feature
 reference. The exact target supplies eligibility, while the selected class owns the saved choice.
 

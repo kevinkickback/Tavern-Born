@@ -57,9 +57,9 @@ import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
 import { resolvePsionic } from '@/lib/5etools/psionics'
 import {
+  isRevisedAffinityChoiceId,
   isRevisedAffinityOption,
   isRevisedAffinitySourceEnabled,
-  REVISED_AFFINITY_ID,
 } from '@/lib/5etools/revisedElementalAffinity'
 import { getRevisedHunterRule, REVISED_HUNTER_GROUP } from '@/lib/5etools/revisedHunterIdentity'
 import { SCION_GROUP } from '@/lib/5etools/rogueScion'
@@ -518,7 +518,7 @@ function currentLiteralChoice(
     return choice
   }
   const classData = authority && findClassReference(choice.owner, authority.classes)
-  const affinity = choice.id === REVISED_AFFINITY_ID
+  const affinity = isRevisedAffinityChoiceId(choice.id)
   const subclassLiteral =
     affinity ||
     getBarbarianPathChoice(choice.id) ||
@@ -560,7 +560,11 @@ function currentLiteralChoice(
       createOptionalClassFeatureActivity(character, authority?.catalogs),
       authority?.catalogs,
     ).find((candidate) => candidate.id === choice.id)
-  if (!current || !authority?.catalogs || (affinity && !isRevisedAffinitySourceEnabled(character)))
+  if (
+    !current ||
+    !authority?.catalogs ||
+    (affinity && !isRevisedAffinitySourceEnabled(character, choice.id))
+  )
     throw new RangeError(
       'Current source rules cannot verify this feature choice. Restore the source or review the saved choice.',
     )
@@ -677,7 +681,7 @@ export function retainSavedFeatureOptionsCommand(
       registeredCompanion ||
       registeredOrder ||
       registeredBranch ||
-      choiceId === REVISED_AFFINITY_ID) &&
+      isRevisedAffinityChoiceId(choiceId)) &&
       expectedSelectionHandle === undefined) ||
     (registeredCompanion &&
       character.classChoiceSelections?.filter((row) => row.choiceId === choiceId).length !== 1) ||
@@ -1148,7 +1152,7 @@ export function applyClassChoiceSelectionCommand(
     )
   if (isEpicBoonAdvancementChoice(choice, authority?.catalogs))
     throw new RangeError('Choose or remove this feat through the Epic Boon advancement slot.')
-  if (choice.id !== REVISED_AFFINITY_ID && selected.some(isRevisedAffinityOption))
+  if (!isRevisedAffinityChoiceId(choice.id) && selected.some(isRevisedAffinityOption))
     throw new RangeError('Choose a damage type through the exact Elemental Affinity feature.')
   if (
     selected.some((option) => {
@@ -1211,7 +1215,7 @@ export function applyClassChoiceSelectionCommand(
   if (
     (choice.id === BLESSED_STRIKES_ID ||
       choice.id === ELEMENTAL_FURY_ID ||
-      choice.id === REVISED_AFFINITY_ID ||
+      isRevisedAffinityChoiceId(choice.id) ||
       getClassOrderById(choice.id) ||
       getSubclassFeatureConfigurationRule(choice.id) ||
       decodeFavoredEnemyChoiceId(choice.id) ||
@@ -1370,7 +1374,7 @@ export function applyClassChoiceSelectionCommand(
             ? 'Choose one current option for the exact subclass feature.'
             : getBarbarianPathChoice(choice.id)
               ? 'Choose one current option for the exact Barbarian path feature.'
-              : choice.id === REVISED_AFFINITY_ID
+              : isRevisedAffinityChoiceId(choice.id)
                 ? 'Choose one current damage type for Elemental Affinity.'
                 : getRevisedHunterRule(choice.id)
                   ? 'Choose one current option for the exact Hunter feature.'

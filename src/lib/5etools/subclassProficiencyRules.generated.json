@@ -340,6 +340,35 @@
     ]
   },
   {
+    "target": "subclass-feature|bonus proficiencies|monk|xphb|mystic brews|wow|3|wow",
+    "digest": "13a6f1802243aea5298fdad8bc54812d59c8ac18bc712168a5fb55c5268d5a3c",
+    "fields": [
+      "className",
+      "classSource",
+      "entries",
+      "featureOptionSourceConflict",
+      "fixedProficiencySourceAudit",
+      "level",
+      "name",
+      "source",
+      "subclassShortName",
+      "subclassSource"
+    ],
+    "optional": false,
+    "subclassGainPosition": "first",
+    "retainedSubclassGainTarget": "class-feature|monk subclass|monk|xphb|3|xphb",
+    "startingSkillPoolBase": [],
+    "domains": [
+      {
+        "domain": "skills",
+        "count": 1,
+        "skillPool": null,
+        "excludeExisting": true,
+        "trigger": "performance"
+      }
+    ]
+  },
+  {
     "target": "subclass-feature|bonus proficiency|fighter|phb|cavalier|xge|3|xge",
     "digest": "bd6da4bb8ce703988da6c6038ea102a8dab5d9e75c4fbce1326acd93affe05e1",
     "optional": false,

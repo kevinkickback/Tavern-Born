@@ -23,8 +23,8 @@ import {
 } from '@/lib/5etools/featureTableOptions'
 import {
   getSavedAffinityDamageType,
+  isRevisedAffinityChoiceId,
   isRevisedAffinitySourceEnabled,
-  REVISED_AFFINITY_ID,
 } from '@/lib/5etools/revisedElementalAffinity'
 import {
   getRevisedHunterRule,
@@ -365,7 +365,7 @@ export function getFeatureOptionSelectionStates(
         selection.kind === 'feature-option' &&
         !selection.inactive &&
         (!isFeatureLiteralChoiceId(selection.choiceId) ||
-          selection.choiceId === REVISED_AFFINITY_ID ||
+          isRevisedAffinityChoiceId(selection.choiceId) ||
           !!getBarbarianPathChoice(selection.choiceId) ||
           !!getRevisedHunterRule(selection.choiceId) ||
           !!getSubclassFeatureConfigurationRule(selection.choiceId)),
@@ -374,7 +374,7 @@ export function getFeatureOptionSelectionStates(
       const hunter = getRevisedHunterRule(selection.choiceId)
       const land = getLandChoiceRule(selection.choiceId)
       const configuration = getSubclassFeatureConfigurationRule(selection.choiceId)
-      const revisedAffinity = selection.choiceId === REVISED_AFFINITY_ID
+      const revisedAffinity = isRevisedAffinityChoiceId(selection.choiceId)
       const barbarianPathChoice = !!getBarbarianPathChoice(selection.choiceId)
       const usesSourceGroup = !!(hunter || configuration || revisedAffinity || barbarianPathChoice)
       const owner = findClassReference(
@@ -415,7 +415,7 @@ export function getFeatureOptionSelectionStates(
                 (!configuration || isValidSubclassFeatureConfigurationSelection(selection)) &&
                 (!revisedAffinity ||
                   (getSavedAffinityDamageType(selection, character.classProgression) &&
-                    isRevisedAffinitySourceEnabled(character))) &&
+                    isRevisedAffinitySourceEnabled(character, selection.choiceId))) &&
                 selection.selected.every(
                   (row) => row.slotLevel >= candidate.level && row.slotLevel <= owner.levels,
                 ),
@@ -605,7 +605,7 @@ export function summarizeFeatureOptionSelection(
     .join(', ')
   const title = `${state.selection.label}${state.literalGroup ? ` (level ${state.literalGroup.gain})` : ''}: ${selected}`
   if (!descriptions) {
-    if (state.selection.choiceId === REVISED_AFFINITY_ID && state.details[0]?.available)
+    if (isRevisedAffinityChoiceId(state.selection.choiceId) && state.details[0]?.available)
       return `${title} · ${renderEntriesToText(state.details[0].entries)}`
     return (
       title +

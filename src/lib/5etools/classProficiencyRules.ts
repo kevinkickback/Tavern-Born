@@ -42,6 +42,7 @@ export interface ClassProficiencyRule {
   subclassGainTarget?: string
   subclassGainTargets?: readonly string[]
   subclassGainPosition?: 'first' | 'at-level'
+  retainedSubclassGainTarget?: string
   startingSkillPoolBase?: readonly string[]
   skillModifier?: { label: string; ability: AbilityName; minimum: number }
   domains: readonly ClassProficiencyRuleDomain[]

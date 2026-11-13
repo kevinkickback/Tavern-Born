@@ -1,5 +1,5 @@
-import { getEffectiveSources } from '@/lib/sourceCompatibility'
-import type { Class5e, ClassFeature, SubclassFeature } from '@/types/5etools'
+import { getSourceCompatibility } from '@/lib/sourceCompatibility'
+import type { Class5e, ClassFeature, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import type {
   ClassChoiceDiagnostic,
@@ -8,8 +8,10 @@ import type {
 } from '@/types/classRules'
 import type { CharacterEffect } from '@/types/effects'
 import { getSubclassFeatureIdentity } from './classFeatureIdentity'
+import { permitsClassRuleSource } from './earnedClassFeatureSource'
 import { getEntityLookupKey } from './entityIdentity'
 import {
+  decodeFeatureLiteralChoiceId,
   decodeFeatureOptionReference,
   encodeSourceGroupOptionReference,
   getFeatureLiteralChoiceId,
@@ -20,6 +22,7 @@ import {
   exactOptionalDeclarationReference,
   optionalDeclarationObject as record,
 } from './optionalClassDeclarationStructure'
+import { getOwnedSubclassFeature } from './ownedSubclassFeature'
 
 const featureName = 'Elemental Affinity'
 const level = 6
@@ -38,18 +41,11 @@ const target = `subclass-feature|${parent.ref.toLowerCase()}`
 
 export { target as REVISED_AFFINITY_TARGET }
 
-const ownerKey = JSON.stringify([
-  getEntityLookupKey(owner.name, owner.source).toLowerCase(),
-  getEntityLookupKey(owner.subclassName, owner.subclassSource).toLowerCase(),
-])
 export const REVISED_AFFINITY_GROUP = 'elemental-affinity-damage-type'
-export const REVISED_AFFINITY_ID = getFeatureLiteralChoiceId(
-  owner,
-  target,
-  REVISED_AFFINITY_GROUP,
-  target,
-  level,
-)
+type AffinityOwner = { name: string; source: string; subclassName: string; subclassSource: string }
+const affinityId = (selected: AffinityOwner) =>
+  getFeatureLiteralChoiceId(selected, target, REVISED_AFFINITY_GROUP, target, level)
+export const REVISED_AFFINITY_ID = affinityId(owner)
 const norm = (value?: string) => value?.trim().toLowerCase()
 const isRevisedSorcerer = (cls: { name?: string; source?: string }) =>
   norm(cls.name) === 'sorcerer' && norm(cls.source) === 'xphb'
@@ -69,15 +65,60 @@ const sourceFields = new Set([
   'basicRules2024',
 ])
 
-export function isRevisedAffinityOwner(
+type AffinitySubclass = {
+  name?: string
+  source?: string
+  className?: string
+  classSource?: string
+  subclassFeatureRefs?: Subclass5e['subclassFeatureRefs']
+}
+
+export function isNativeAffinityOwner(
   cls: { name?: string; source?: string },
-  subclass: { name?: string; source?: string } | undefined,
+  subclass: AffinitySubclass | undefined,
 ) {
   return (
     isRevisedSorcerer(cls) &&
     norm(subclass?.name) === 'draconic sorcery' &&
     norm(subclass?.source) === 'xphb'
   )
+}
+
+function affinityOwner(
+  cls: { name?: string; source?: string },
+  subclass: AffinitySubclass | undefined,
+) {
+  if (!cls.name || !cls.source || !subclass?.name || !subclass.source) return undefined
+  const native = isNativeAffinityOwner(cls, subclass)
+  if (
+    !native &&
+    !(
+      getSourceCompatibility(cls.source, '2024').compatible &&
+      norm(subclass.className) === norm(cls.name) &&
+      norm(subclass.classSource) === norm(cls.source) &&
+      subclass.subclassFeatureRefs?.some((ref) => isAffinityUid(ref.ref))
+    )
+  )
+    return undefined
+  return {
+    name: cls.name,
+    source: cls.source,
+    subclassName: subclass.name,
+    subclassSource: subclass.source,
+  }
+}
+
+function affinityOwnerFromId(id: string): AffinityOwner | undefined {
+  const address = decodeFeatureLiteralChoiceId(id)
+  if (!address || address.group !== REVISED_AFFINITY_GROUP) return undefined
+  const [name, source, subclassName, subclassSource] = address.owner
+  if (!subclassName || !subclassSource) return undefined
+  const selected = { name, source, subclassName, subclassSource }
+  return affinityId(selected) === id ? selected : undefined
+}
+
+export function isRevisedAffinityChoiceId(id: string) {
+  return !!affinityOwnerFromId(id)
 }
 
 function affinityDamageType(option: NormalizedChoiceOptionReference) {
@@ -105,32 +146,39 @@ export function getSavedAffinityDamageType(
   selection: CharacterClassChoiceSelection,
   progression?: Character['classProgression'],
 ) {
+  const selected = affinityOwnerFromId(selection.choiceId)
+  if (
+    !selected ||
+    affinityId({
+      name: selection.className,
+      source: selection.classSource,
+      subclassName: selection.subclassName ?? '',
+      subclassSource: selection.subclassSource ?? '',
+    }) !== selection.choiceId
+  )
+    return undefined
   if (progression) {
-    const owners = progression.filter(isRevisedSorcerer)
+    const owners = progression.filter(
+      (entry) =>
+        norm(entry.name) === norm(selected.name) && norm(entry.source) === norm(selected.source),
+    )
     const [entry] = owners
     if (
       owners.length !== 1 ||
       entry.levels < level ||
       entry.name !== selection.className ||
       entry.source !== selection.classSource ||
-      entry.subclass !== owner.subclassName ||
-      entry.subclassSource !== owner.subclassSource ||
       entry.subclass !== selection.subclassName ||
       entry.subclassSource !== selection.subclassSource
     )
       return undefined
   }
   if (
-    selection.choiceId === REVISED_AFFINITY_ID &&
     selection.kind === 'feature-option' &&
     selection.classLevel === level &&
     selection.inactive === undefined &&
     !selection.favoredEnemy &&
     !selection.proficiencyAtGain &&
-    isRevisedAffinityOwner(
-      { name: selection.className, source: selection.classSource },
-      { name: selection.subclassName, source: selection.subclassSource },
-    ) &&
     selection.selected.length === 1 &&
     selection.selected[0].slotLevel === level
   )
@@ -167,16 +215,37 @@ function verifiesBody(
   )
 }
 
-function currentAffinity(catalogs: AffinityCatalog | undefined) {
-  const classes = catalogs?.classes?.filter(isRevisedSorcerer)
+function currentAffinity(catalogs: AffinityCatalog | undefined, selected: AffinityOwner = owner) {
+  const classes = catalogs?.classes?.filter(
+    (cls) => norm(cls.name) === norm(selected.name) && norm(cls.source) === norm(selected.source),
+  )
   if (classes?.length !== 1 || classes[0].sourceIdentityConflict || '_copy' in classes[0])
     return undefined
   const cls = classes[0]
-  const subclasses = cls.subclasses?.filter((row) => isRevisedAffinityOwner(cls, row))
-  if (subclasses?.length !== 1 || subclasses[0].sourceIdentityConflict || '_copy' in subclasses[0])
-    return undefined
+  const subclasses = cls.subclasses?.filter(
+    (row) =>
+      norm(row.name) === norm(selected.subclassName) &&
+      norm(row.source) === norm(selected.subclassSource),
+  )
+  if (subclasses?.length !== 1 || subclasses[0].sourceIdentityConflict) return undefined
   const subclass = subclasses[0]
+  const ownerKey = JSON.stringify([
+    getEntityLookupKey(selected.name, selected.source).toLowerCase(),
+    getEntityLookupKey(selected.subclassName, selected.subclassSource).toLowerCase(),
+  ])
+  if (!isNativeAffinityOwner(cls, subclass)) {
+    const candidates = catalogs?.subclassTargets?.candidatesByOwner.get(ownerKey)
+    if (!candidates) return undefined
+    const current = getOwnedSubclassFeature(cls, subclass, target, {
+      subclassFeatures: [],
+      subclassFeatureCandidates: candidates,
+    })
+    return current?.refs.length === 1 && current.level === level && verifiesBody(current.feature)
+      ? current.feature
+      : undefined
+  }
   if (
+    '_copy' in subclass ||
     norm(subclass.className) !== 'sorcerer' ||
     norm(subclass.classSource) !== 'xphb' ||
     typeof subclass.shortName !== 'string' ||
@@ -211,13 +280,13 @@ function currentAffinity(catalogs: AffinityCatalog | undefined) {
 }
 
 export function getRevisedAffinitySetup(
-  cls: Parameters<typeof isRevisedAffinityOwner>[0],
-  subclass: Parameters<typeof isRevisedAffinityOwner>[1],
+  cls: Parameters<typeof affinityOwner>[0],
+  subclass: Parameters<typeof affinityOwner>[1],
   catalogs: AffinityCatalog | undefined,
 ): NormalizedCharacterChoice | undefined {
-  if (!isRevisedAffinityOwner(cls, subclass)) return undefined
-  const feature = currentAffinity(catalogs)
-  if (!feature) return undefined
+  const selected = affinityOwner(cls, subclass)
+  const feature = selected && currentAffinity(catalogs, selected)
+  if (!selected || !feature) return undefined
   const [choiceText] = feature.entries
   const options: NormalizedChoiceOptionReference[] = choiceText
     .slice(choiceText.indexOf(': ') + 2, -1)
@@ -230,10 +299,10 @@ export function getRevisedAffinitySetup(
       ref: encodeSourceGroupOptionReference(parent, REVISED_AFFINITY_GROUP, name),
     }))
   return {
-    id: REVISED_AFFINITY_ID,
+    id: affinityId(selected),
     label: featureName,
     kind: 'feature-option',
-    owner: { ...owner, featureName, featureSource: owner.source },
+    owner: { ...selected, type: 'subclass', featureName, featureSource: owner.source },
     level,
     minimumSelections: 1,
     maximumSelections: 1,
@@ -245,30 +314,43 @@ export function getRevisedAffinitySetup(
   }
 }
 
-export const revisedAffinityDiagnostic: ClassChoiceDiagnostic = {
-  code: 'unverified-required-choice',
-  className: owner.name,
-  classSource: owner.source,
-  subclassName: owner.subclassName,
-  subclassSource: owner.subclassSource,
-  featureName,
-  level,
-  message: 'Restore the exact Elemental Affinity source to choose a damage type.',
+export function getRevisedAffinityDiagnostic(
+  cls: Parameters<typeof affinityOwner>[0],
+  subclass: Parameters<typeof affinityOwner>[1],
+  catalogs: AffinityCatalog | undefined,
+): ClassChoiceDiagnostic | undefined {
+  const selected = affinityOwner(cls, subclass)
+  if (!selected || currentAffinity(catalogs, selected)) return undefined
+  return {
+    code: 'unverified-required-choice',
+    className: selected.name,
+    classSource: selected.source,
+    subclassName: selected.subclassName,
+    subclassSource: selected.subclassSource,
+    featureName,
+    level,
+    message: 'Restore the exact Elemental Affinity source to choose a damage type.',
+  }
 }
 
-export function isRevisedAffinitySourceEnabled(character: Character) {
+export function isRevisedAffinitySourceEnabled(character: Character, id: string) {
+  const selected = affinityOwnerFromId(id)
   return (
-    character.allowedSources === undefined ||
-    getEffectiveSources(character.allowedSources, character.originSystem).includes(owner.source)
+    !!selected &&
+    [selected.source, selected.subclassSource, owner.source].every((source) =>
+      permitsClassRuleSource(character, source),
+    )
   )
 }
 
 export function resolveRevisedAffinityOption(
   option: NormalizedChoiceOptionReference,
   catalogs: AffinityCatalog,
+  id = REVISED_AFFINITY_ID,
 ) {
   const damageType = affinityDamageType(option)
-  const feature = damageType && currentAffinity(catalogs)
+  const selected = affinityOwnerFromId(id)
+  const feature = damageType && selected && currentAffinity(catalogs, selected)
   if (!feature || !option.ref) return undefined
   const [, rules] = feature.entries
   return {
@@ -288,26 +370,33 @@ export function deriveRevisedAffinityEffects(
   character: Character,
   catalogs: AffinityCatalog | undefined,
 ): CharacterEffect[] {
-  const selections = character.classChoiceSelections?.filter(
-    (s) => s.choiceId === REVISED_AFFINITY_ID,
-  )
-  if (selections?.length !== 1 || selections[0].inactive) return []
-  const damageType = getSavedAffinityDamageType(selections[0], character.classProgression)
-  if (!damageType || !isRevisedAffinitySourceEnabled(character) || !currentAffinity(catalogs))
-    return []
-  return [
-    {
-      id: `${REVISED_AFFINITY_ID}:resistance`,
-      label: featureName,
-      source: {
-        kind: 'subclass',
-        name: featureName,
-        source: owner.source,
-        entityId: target,
-        provenance: { choiceId: REVISED_AFFINITY_ID },
-      },
-      target: { kind: 'damage-resistance', damageType },
-      operation: { kind: 'grant' },
-    },
-  ]
+  const selections = character.classChoiceSelections ?? []
+  return selections.flatMap((selection) => {
+    const selected = affinityOwnerFromId(selection.choiceId)
+    if (
+      !selected ||
+      selections.filter((row) => row.choiceId === selection.choiceId).length !== 1 ||
+      !isRevisedAffinitySourceEnabled(character, selection.choiceId) ||
+      !currentAffinity(catalogs, selected)
+    )
+      return []
+    const damageType = getSavedAffinityDamageType(selection, character.classProgression)
+    return damageType
+      ? [
+          {
+            id: `${selection.choiceId}:resistance`,
+            label: featureName,
+            source: {
+              kind: 'subclass',
+              name: featureName,
+              source: owner.source,
+              entityId: target,
+              provenance: { choiceId: selection.choiceId },
+            },
+            target: { kind: 'damage-resistance', damageType },
+            operation: { kind: 'grant' },
+          },
+        ]
+      : []
+  })
 }

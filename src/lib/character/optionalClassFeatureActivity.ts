@@ -32,6 +32,7 @@ import {
 } from '@/lib/5etools/favoredEnemyIdentity'
 import { featureOptionRulesSignature } from '@/lib/5etools/featureRulesSignature'
 import { getFixedProficiencyId } from '@/lib/5etools/fixedProficiencyAddress'
+import { getRetainedFixedClassCertificate } from '@/lib/5etools/fixedProficiencyRules'
 import {
   decodeNaturalExplorerChoiceId,
   NATURAL_EXPLORER_GRANTS,
@@ -43,12 +44,14 @@ import {
 import { OPTIONAL_CLASS_FEATURE_RULES } from '@/lib/5etools/optionalClassFeatureRules'
 import { getCurrentOptionalClassDeclaration } from '@/lib/5etools/optionalClassFeatureSource'
 import { getCurrentOptionalClassSection } from '@/lib/5etools/optionalClassSectionSource'
+import { isRevisedAffinityChoiceId } from '@/lib/5etools/revisedElementalAffinity'
 import { resolveRevisedHunterOption } from '@/lib/5etools/revisedHunterChoices'
 import {
   getRevisedHunterRule,
   isValidRevisedHunterSelection,
   revisedHunterRules,
 } from '@/lib/5etools/revisedHunterIdentity'
+import { getSubclassProficiencyRootCertificate } from '@/lib/5etools/subclassProficiencyRegistry'
 import { getEffectiveSources, getSourceCompatibility } from '@/lib/sourceCompatibility'
 import type { Subclass5e } from '@/types/5etools'
 import type {
@@ -240,6 +243,12 @@ function buildOptionalClassFeatureActivity(
     )
       return false
     const owner = optionalClassOwner(row.owner)
+    if (
+      isRevisedAffinityChoiceId(row.id) &&
+      (character.originSystem === '2014' ||
+        (allowed && (owner[0] !== 'subclass' || !allowed.has(owner[2]) || !allowed.has(owner[4]))))
+    )
+      return false
     const pathChoice = getBarbarianPathChoice(row.id)
     const proficiency = decodeClassProficiencyChoiceId(row.id)
     if (
@@ -257,7 +266,25 @@ function buildOptionalClassFeatureActivity(
     )
       return false
     if (proficiency) {
-      const needed = classProficiencyRule(proficiency.target)?.domains.find(
+      const rule = classProficiencyRule(proficiency.target)
+      if (
+        (rule?.retainedSubclassGainTarget ||
+          getSubclassProficiencyRootCertificate(proficiency.owner)?.retainedGainTarget ||
+          getRetainedFixedClassCertificate(proficiency.owner, proficiency.target)) &&
+        [
+          owner[2],
+          ...(owner[0] === 'subclass' ? [owner[4]] : []),
+          proficiency.target.split('|')[3],
+          norm(row.owner.featureSource),
+        ].some(
+          (source) =>
+            !source ||
+            (allowed && !allowed.has(source)) ||
+            !getSourceCompatibility(source, character.originSystem ?? '2014').compatible,
+        )
+      )
+        return false
+      const needed = rule?.domains.find(
         (domain) => domain.domain === proficiency.domain,
       )?.requiresKnownLanguage
       if (needed) {

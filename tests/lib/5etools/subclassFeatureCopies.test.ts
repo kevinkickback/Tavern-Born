@@ -3,9 +3,15 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { CopyResolutionError, resolveCopiedRecords } from '@/lib/5etools/copyResolution'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { parseClassDocument, parseClasses, parseClassFeatures } from '@/lib/5etools/parsers/classes'
+import {
+  createIndexedClassDocumentParser,
+  parseClassDocument,
+  parseClasses,
+  parseClassFeatures,
+} from '@/lib/5etools/parsers/classes'
 import { createIndexedSubclassFeatureResolver } from '@/lib/5etools/subclassSourcePreparation'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import {
@@ -21,6 +27,125 @@ import type { Class5e, ClassFeature } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeGameDataFixture } from '../../fixtures/gameDataFixtures'
 import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
+
+test.each([
+  'declared',
+  'undeclared',
+  'absent metadata',
+  'ambiguous',
+])('indexed subclass references follow exact producer dependencies (%s)', (scenario) => {
+  const feature = (name: string, source: string, entries: unknown[]) => ({
+    name,
+    source,
+    className: 'Maker',
+    classSource: source,
+    subclassShortName: 'Workshop',
+    subclassSource: source,
+    level: 3,
+    entries,
+  })
+  const ref = (name: string, source: string) => ({
+    type: 'refSubclassFeature',
+    subclassFeature: `${name}|Maker|${source}|Workshop|${source}|3|${source}`,
+  })
+  const index = { selected: 'selected', parent: 'parent', leaf: 'leaf', duplicate: 'duplicate' }
+  const documents = new Map<string, unknown>([
+    [
+      'selected',
+      {
+        ...(scenario !== 'absent metadata' && {
+          _meta: {
+            dependencies: {
+              subclassFeature:
+                scenario === 'undeclared'
+                  ? []
+                  : scenario === 'ambiguous'
+                    ? ['parent', 'duplicate']
+                    : ['parent'],
+            },
+          },
+        }),
+        class: [{ name: 'Maker', source: 'LOCAL' }],
+        subclass: [
+          {
+            name: 'Workshop',
+            shortName: 'Workshop',
+            className: 'Maker',
+            classSource: 'LOCAL',
+            source: 'LOCAL',
+            subclassFeatures: [
+              ref('Origin', 'LOCAL').subclassFeature,
+              ref('Parent', 'FIRST').subclassFeature,
+            ],
+          },
+        ],
+        subclassFeature: [
+          feature('Origin', 'LOCAL', [
+            {
+              ...ref('Parent', 'FIRST'),
+              feature: feature('Parent', 'FIRST', ['Untrusted inline text']),
+            },
+            ref('Leaf', 'SECOND'),
+          ]),
+        ],
+      },
+    ],
+    [
+      'parent',
+      {
+        _meta: { dependencies: { subclassFeature: ['leaf', 'selected'] } },
+        subclassFeature: [
+          feature('Parent', 'FIRST', [ref('Leaf', 'SECOND'), ref('Origin', 'LOCAL')]),
+        ],
+      },
+    ],
+    ['leaf', { subclassFeature: [feature('Leaf', 'SECOND', ['Current leaf rule'])] }],
+    [
+      'duplicate',
+      {
+        class: [{ name: 'Unrelated', source: 'OTHER' }],
+        subclass: [
+          {
+            name: 'Workshop',
+            shortName: 'Workshop',
+            className: 'Unrelated',
+            classSource: 'OTHER',
+            source: 'OTHER',
+            subclassFeatures: [ref('Parent', 'FIRST').subclassFeature],
+          },
+        ],
+        subclassFeature: [feature('Parent', 'FIRST', ['Conflicting rule'])],
+      },
+    ],
+  ])
+  const parse = createIndexedClassDocumentParser(index, documents)
+  const parsed = parse('selected')
+  const [cls] = parsed.classes as Class5e[]
+  const source = cls.subclasses?.[0].subclassFeatureRefs?.[0].feature?.entries as Array<{
+    sourceIdentityConflict?: boolean
+    feature?: { entries: Array<{ feature?: { entries: unknown[] } }> }
+  }>
+  expect(source[1].feature).toBeUndefined()
+  if (scenario === 'declared') {
+    expect(source[0].feature?.entries[0].feature?.entries).toEqual(['Current leaf rule'])
+    expect(source[0].feature?.entries[1].feature).toBeUndefined()
+  } else if (scenario === 'ambiguous') {
+    expect(source[0].sourceIdentityConflict).toBe(true)
+  } else expect(source[0].feature).toBeUndefined()
+  const composed = composeGameDataLayers([
+    makeGameDataFixture({
+      classes: [...parsed.classes, ...parse('duplicate').classes] as Class5e[],
+    }),
+  ])
+  const direct = composed.classes.find((row) => row.source === 'LOCAL')?.subclasses?.[0]
+    .subclassFeatureRefs?.[1]
+  if (scenario === 'declared')
+    expect(direct?.feature?.entries?.[0]).toMatchObject({
+      feature: { entries: ['Current leaf rule'] },
+    })
+  else if (scenario === 'ambiguous') expect(direct?.sourceIdentityConflict).toBe(true)
+  else expect(direct?.feature).toBeUndefined()
+})
 
 const identityFields = [
   'name',
