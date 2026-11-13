@@ -16,6 +16,10 @@ durable exportable quarantine. The parsed catalog cache has its own version.
 - Class adoptions and specialized choices save the exact owner, target and gain. Missing adoption
   means unselected. Conflicting families, unknown roots and orphan rows reject. Recoverable
   intent stays separate from current benefit. [Class ownership](class-ownership.md)
+- Mystic replacements save the original choice and slot, exact outgoing and incoming
+  disciplines, and the recorded Mystic level gain. Strict admission replays these relations.
+  Older readers that do not recognize the optional field reject saves that contain it.
+  [Psionic choices](psionic-selection.md)
 - A revised Epic Boon uses an ordinary feat or ASI at the earned slot. Starting-class skill
   choices come from the ledger written at class selection.
 - Feats distinguish ordinary, bonus, fixed and configured choice owners. Configured choices need

@@ -17,6 +17,7 @@ import {
   IMPROVED_ELEMENTAL_FURY_LEVEL,
   IMPROVED_ELEMENTAL_FURY_NAME,
 } from '@/lib/5etools/elementalFurySource'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import {
   type InvocationCantripsByOwner,
   isCurrentRevisedInvocationCantripPool,
@@ -63,6 +64,8 @@ import {
   isDeclaredRevisedInvocationOption,
 } from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
+import { replayMysticDisciplines } from './mysticDisciplineHistory'
+import { getMysticDisciplineState } from './mysticDisciplineReplacement'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 import {
@@ -121,7 +124,14 @@ function buildEffectiveClassChoiceFeatureRoutes(
     className: string
     classSource: string
   }> = []
-  const invalidPsionics = getInvalidPsionicSelectionIds(character.classChoiceSelections ?? [])
+  const history = character.mysticDisciplineReplacements?.length
+    ? replayMysticDisciplines(character)
+    : undefined
+  const disciplineSlots = history ? getMysticDisciplineState(character, catalogs).slots : []
+  const invalidPsionics = getInvalidPsionicSelectionIds(
+    character.classChoiceSelections ?? [],
+    history,
+  )
   const blessedStrikes = getSavedBlessedStrikes(character.classChoiceSelections ?? [])
   const elementalFury = getSavedElementalFury(character.classChoiceSelections ?? [])
   for (const selection of character.classChoiceSelections ?? []) {
@@ -149,6 +159,29 @@ function buildEffectiveClassChoiceFeatureRoutes(
     )
       continue
     const choice = choices.get(selection.choiceId)
+    if (history && selection.kind === 'psionic' && choice) {
+      const slots = disciplineSlots.filter((slot) => slot.selection === selection)
+      if (slots.length) {
+        choiceIds.add(choice.id)
+        for (const { current: option, printing } of slots) {
+          if (!printing) continue
+          selectedOptions.push({ choice, selection, option })
+          contributions.push({
+            id: getClassChoiceFeatureId(selection, option),
+            choiceId: selection.choiceId,
+            name: option.name,
+            feature: getClassChoiceGrantedFeature(selection, option),
+            guarded: false,
+            psionic: true,
+            entries: getPsionicEntries(printing),
+            prerequisite: undefined,
+            className: selection.className,
+            classSource: selection.classSource,
+          })
+        }
+        continue
+      }
+    }
     const mastery = choice?.optionFilter?.requiresMastery
     if (mastery) {
       if (seenMastery.has(selection.choiceId)) {

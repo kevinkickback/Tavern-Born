@@ -82,10 +82,12 @@ export function BuildClassChoicesSection({
           selectedCount={state.selection.selected.length}
           isFull={false}
           chosenItems={state.selection.selected.map((row, index) => ({
-            name: getInvocationCantripLabel(row) ?? row.name,
-            source: row.source,
+            name: state.psionic
+              ? (state.details[index]?.name ?? row.name)
+              : (getInvocationCantripLabel(row) ?? row.name),
+            source: state.psionic ? (state.details[index]?.source ?? row.source) : row.source,
             entries: state.details[index]?.entries,
-            unavailable: true,
+            unavailable: state.psionic ? !state.details[index]?.available : true,
           }))}
           detailCollapsed={detailCollapsed}
           onChoose={() => onRecover?.(state)}

@@ -19,6 +19,9 @@ import { decodeFavoredEnemyChoiceId } from '@/lib/5etools/favoredEnemyIdentity'
 import { decodeFeatureOptionReference } from '@/lib/5etools/featureOptionIdentity'
 import { decodeLegacySubclassChoice } from '@/lib/5etools/legacySubclassChoiceIdentity'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
+import { decodePsionicChoiceId } from '@/lib/5etools/psionicIdentity'
+import { getPsionicKey } from '@/lib/5etools/psionics'
 import { isRevisedAffinityChoiceId } from '@/lib/5etools/revisedElementalAffinity'
 import { buildSpokenLanguageSuggestions } from '@/lib/5etools/spokenLanguageSuggestions'
 import { getSubclassFeatureConfigurationRule } from '@/lib/5etools/subclassFeatureConfiguration'
@@ -44,6 +47,7 @@ import {
   hasClassProficiencyRecovery,
   refreshClassProficiencyState,
 } from '@/lib/character/classProficiencySelections'
+import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import {
   hasFavoredEnemyRecovery,
@@ -60,6 +64,11 @@ import {
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
+import {
+  getMysticDisciplinesKnownBeforeAcquisition,
+  getSavedDisciplineAllocationKey,
+} from '@/lib/character/mysticDisciplineHistory'
+import { getMysticDisciplineState } from '@/lib/character/mysticDisciplineReplacement'
 import {
   hasNaturalExplorerRecovery,
   scopeNaturalExplorerOptions,
@@ -333,10 +342,29 @@ export function useClassChoiceController({
     ],
   )
   const selectionByChoiceId = persistedSelectionByChoiceId
+  const mysticSlots = useMemo(
+    () =>
+      character?.mysticDisciplineReplacements?.length
+        ? getMysticDisciplineState(character, resolvedCatalogs).slots
+        : [],
+    [character, resolvedCatalogs],
+  )
   const selectedViewsByChoiceId = useMemo(
     () =>
       new Map(
         choices.map((choice) => {
+          const slots = mysticSlots.filter((slot) => slot.selection.choiceId === choice.id)
+          if (slots.length)
+            return [
+              choice.id,
+              slots.map(
+                ({ current, printing }): ClassChoiceOptionView => ({
+                  reference: current,
+                  availability: printing ? 'eligible' : 'retained',
+                  entries: printing ? getPsionicEntries(printing) : [],
+                }),
+              ),
+            ]
           const selectedKeys = new Set(
             (selectionByChoiceId.get(choice.id)?.selected ?? []).map(getClassChoiceOptionKey),
           )
@@ -360,7 +388,7 @@ export function useClassChoiceController({
           ]
         }),
       ),
-    [choices, optionViewsByChoiceId, selectionByChoiceId, companionStates],
+    [choices, optionViewsByChoiceId, selectionByChoiceId, companionStates, mysticSlots],
   )
   const configurations = useMemo(
     () => getSubclassConfigurations(visibleChoices, viewingClassData, viewingSubclassData),
@@ -423,7 +451,7 @@ export function useClassChoiceController({
   const activeGainLevel =
     request?.contextKey === contextKey ? request.progressionGainLevel : undefined
   const savedOptions = activeId ? (selectionByChoiceId.get(activeId)?.selected ?? []) : []
-  const optionsInGain =
+  const savedOptionsInGain =
     activeGainLevel === undefined || !resolvedActiveChoice
       ? savedOptions
       : savedOptions.filter(
@@ -434,10 +462,34 @@ export function useClassChoiceController({
               viewingClassLevel,
             ) === activeGainLevel,
         )
+  // The picker edits the current view of an earned allocation. Keep its original
+  // identity when writing a retained slot back through the class-choice command.
+  const replayedSlots = mysticSlots.filter(
+    (slot) => !activeRemovalOnly && slot.replaced && slot.selection.choiceId === activeId,
+  )
+  const replacedSlotsInGain = replayedSlots.filter((slot) =>
+    savedOptionsInGain.includes(slot.original),
+  )
+  const replacementsInGain = new Map(
+    replacedSlotsInGain.map((slot) => [getClassChoiceOptionKey(slot.current), slot]),
+  )
+  const historicalOptionKeys = new Set(
+    replacedSlotsInGain.map((slot) => getClassChoiceOptionKey(slot.original)),
+  )
+  const optionsInGain = savedOptionsInGain.map(
+    (option) => replacedSlotsInGain.find((slot) => slot.original === option)?.current ?? option,
+  )
   const gainKeys = new Set(optionsInGain.map(getClassChoiceOptionKey))
+  const knownDisciplinesAtGain =
+    character?.mysticDisciplineReplacements?.length &&
+    activeGainLevel !== undefined &&
+    resolvedActiveChoice &&
+    decodePsionicChoiceId(resolvedActiveChoice.id)?.pool === 'discipline'
+      ? getMysticDisciplinesKnownBeforeAcquisition(character, activeGainLevel)
+      : undefined
   const otherGainKeys = new Set(
     savedOptions
-      .filter((option) => !gainKeys.has(getClassChoiceOptionKey(option)))
+      .filter((option) => !savedOptionsInGain.includes(option))
       .map(getClassChoiceOptionKey),
   )
   const unplacedKeys = new Set(
@@ -448,21 +500,69 @@ export function useClassChoiceController({
           .map(getClassChoiceOptionKey),
   )
   const activeSavedOptions = optionsInGain
-  const allActiveOptionViews: ClassChoiceOptionView[] =
+  const recoveryKey =
+    activeSaved?.psionic && character?.mysticDisciplineReplacements?.length
+      ? getSavedDisciplineAllocationKey
+      : getClassChoiceOptionKey
+  const savedOptionViews: ClassChoiceOptionView[] =
     activeRemovalOnly && activeSaved
-      ? activeSaved.selection.selected.map((reference, index) => ({
-          reference,
-          availability: 'retained' as const,
-          displayLabel: getInvocationCantripLabel(reference),
-          entries: activeSaved.details[index]?.entries ?? [],
-        }))
+      ? activeSaved.selection.selected.map((saved, index) => {
+          const reference =
+            mysticSlots.find(
+              (slot) => slot.selection === activeSaved.selection && slot.original === saved,
+            )?.current ?? saved
+          return {
+            reference,
+            selectionKey: recoveryKey(saved),
+            availability: 'retained' as const,
+            displayLabel:
+              activeSaved.psionic && activeSaved.details[index]
+                ? [reference.name, reference.source].filter(Boolean).join(' · ')
+                : getInvocationCantripLabel(reference),
+            entries: activeSaved.details[index]?.entries ?? [],
+          }
+        })
       : resolvedActiveChoice
         ? (optionViewsByChoiceId.get(resolvedActiveChoice.id) ?? [])
         : []
+  const allActiveOptionViews = [
+    ...savedOptionViews.flatMap((view) => {
+      const key = getClassChoiceOptionKey(view.reference)
+      if (replacementsInGain.has(key)) return []
+      return historicalOptionKeys.has(key)
+        ? [
+            {
+              ...view,
+              availability: 'retained' as const,
+              unavailableReason: 'This discipline was replaced in this slot.',
+            },
+          ]
+        : [view]
+    }),
+    ...[...replacementsInGain.values()].map(
+      ({ current, printing }): ClassChoiceOptionView => ({
+        reference: current,
+        availability: printing ? 'eligible' : 'retained',
+        entries: printing ? getPsionicEntries(printing) : [],
+        searchText: printing ? `${printing.name} ${printing.order ?? ''}` : current.name,
+        presentation: {
+          kind: 'feature',
+          featureTypeLabels: [`${printing?.order ?? 'Unknown order'} discipline`],
+        },
+      }),
+    ),
+  ]
   const activeOptionViews =
     otherGainKeys.size || unplacedKeys.size || activeGainLevel !== undefined
       ? allActiveOptionViews
-          .filter((view) => !otherGainKeys.has(getClassChoiceOptionKey(view.reference)))
+          .filter((view) =>
+            knownDisciplinesAtGain
+              ? gainKeys.has(getClassChoiceOptionKey(view.reference)) ||
+                !knownDisciplinesAtGain.has(
+                  getPsionicKey(view.reference.name, view.reference.source ?? ''),
+                )
+              : !otherGainKeys.has(getClassChoiceOptionKey(view.reference)),
+          )
           .map((view) =>
             unplacedKeys.has(getClassChoiceOptionKey(view.reference))
               ? {
@@ -482,11 +582,13 @@ export function useClassChoiceController({
           )
       : allActiveOptionViews
   const activeOptionKeys = new Set(
-    activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
+    activeOptionViews.map(
+      (option) => option.selectionKey ?? getClassChoiceOptionKey(option.reference),
+    ),
   )
   const activeInitialSelectedIds = activeDisplayChoice
     ? (activeRemovalOnly && activeSaved ? activeSaved.selection.selected : activeSavedOptions)
-        .map(getClassChoiceOptionKey)
+        .map(activeRemovalOnly ? recoveryKey : getClassChoiceOptionKey)
         .filter((key) => activeOptionKeys.has(key))
     : []
   const activeRequiredCount =
@@ -495,6 +597,49 @@ export function useClassChoiceController({
         ? getRequiredChoiceSelectionCount(resolvedActiveChoice, viewingClassLevel)
         : (getProgressiveChoiceGainCount(resolvedActiveChoice, activeGainLevel) ?? 0)
       : 0
+  const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
+  const getConfirmedSelections = (selected: ClassChoiceOptionView[]) => {
+    if (isRevisedInvocationPoolId(resolvedActiveChoice?.id)) return selected
+    const eligible = selected.filter(isClassChoiceOptionEligible)
+    const retained = selected.filter((option) => !isClassChoiceOptionEligible(option))
+    return [...eligible, ...retained.slice(0, Math.max(0, activeRequiredCount - eligible.length))]
+  }
+  const getPersistedSelections = (selected: ClassChoiceOptionView[]) =>
+    selected.map(
+      ({ reference }) =>
+        replacementsInGain.get(getClassChoiceOptionKey(reference))?.original ?? reference,
+    )
+  const psionicPool = activeId && decodePsionicChoiceId(activeId)?.pool
+  const getDraftError =
+    !activeRemovalOnly &&
+    savedCharacter?.mysticDisciplineReplacements?.length &&
+    resolvedActiveChoice &&
+    (psionicPool === 'discipline' || psionicPool === 'bonus-discipline')
+      ? (selected: ClassChoiceOptionView[]) => {
+          const confirmed = getConfirmedSelections(selected)
+          if (
+            previousKeys.size === confirmed.length &&
+            confirmed.every((view) => previousKeys.has(getClassChoiceOptionKey(view.reference)))
+          )
+            return undefined
+          try {
+            applyClassChoiceSelectionCommand(
+              savedCharacter,
+              resolvedActiveChoice,
+              getPersistedSelections(confirmed),
+              {
+                classes: resolvedCatalogs.classes ?? (viewingClassData ? [viewingClassData] : []),
+                catalogs: resolvedCatalogs,
+              },
+              undefined,
+              request?.savedHandle,
+              activeGainLevel,
+            )
+          } catch (error) {
+            return error instanceof RangeError ? error.message : 'Review the discipline choices.'
+          }
+        }
+      : undefined
   const close = () => {
     setRequest(null)
     setQueue(null)
@@ -502,8 +647,10 @@ export function useClassChoiceController({
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeDisplayChoice) return
     if (activeRemovalOnly && activeSaved) {
-      const keys = selected.map((option) => getClassChoiceOptionKey(option.reference))
-      const previous = new Set(activeSaved.selection.selected.map(getClassChoiceOptionKey))
+      const keys = selected.map(
+        (option) => option.selectionKey ?? getClassChoiceOptionKey(option.reference),
+      )
+      const previous = new Set(activeSaved.selection.selected.map(recoveryKey))
       if (keys.some((key) => !previous.has(key))) {
         toast.error('Source rules changed. Review the saved choices before confirming.')
         return
@@ -558,18 +705,7 @@ export function useClassChoiceController({
         return live ? [live] : []
       })
     }
-    const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
-    const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
-    const confirmedSelections = isRevisedInvocationPoolId(current.id)
-      ? selected
-      : [
-          ...eligibleSelections,
-          ...retainedSelections.slice(
-            0,
-            Math.max(0, activeRequiredCount - eligibleSelections.length),
-          ),
-        ]
-    const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
+    const confirmedSelections = getConfirmedSelections(selected)
     try {
       const unchanged =
         previousKeys.size === confirmedSelections.length &&
@@ -584,7 +720,7 @@ export function useClassChoiceController({
       if (!unchanged) {
         applyClassChoiceSelection(
           current,
-          confirmedSelections.map((option) => option.reference),
+          getPersistedSelections(confirmedSelections),
           undefined,
           activeGainLevel !== undefined ||
             current.id === BLESSED_STRIKES_ID ||
@@ -714,6 +850,7 @@ export function useClassChoiceController({
     activeOptionViews,
     activeInitialSelectedIds,
     activeRequiredCount,
+    getDraftError,
     enemySetup:
       activeDisplayChoice?.id && decodeFavoredEnemyChoiceId(activeDisplayChoice.id)
         ? {

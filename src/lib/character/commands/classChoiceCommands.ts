@@ -55,7 +55,7 @@ import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getNamedSubclassSpellRule } from '@/lib/5etools/namedSubclassSpells'
 import { psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { decodePsionicChoiceId, getPsionicChoiceId } from '@/lib/5etools/psionicIdentity'
-import { resolvePsionic } from '@/lib/5etools/psionics'
+import { getPsionicKey, resolvePsionic } from '@/lib/5etools/psionics'
 import {
   isRevisedAffinityChoiceId,
   isRevisedAffinityOption,
@@ -135,6 +135,13 @@ import {
   type ManagedClassSpellContext,
   projectManagedClassSpellState,
 } from '@/lib/character/managedClassSpells'
+import {
+  getMysticDisciplinesKnownBeforeAcquisition,
+  getSavedDisciplineAllocationKey,
+  replayMysticDisciplines,
+  retainMysticDisciplineReplacements,
+} from '@/lib/character/mysticDisciplineHistory'
+import { getMysticDisciplineState } from '@/lib/character/mysticDisciplineReplacement'
 import {
   getOptionalClassPoolSection,
   getOptionalClassPoolSelectionSection,
@@ -339,6 +346,10 @@ function currentLiteralChoice(
         .filter((row) => row.availability === 'eligible')
         .map((row) => getClassChoiceOptionKey(row.reference)),
     )
+    if (character.mysticDisciplineReplacements?.length)
+      for (const slot of getMysticDisciplineState(character, authority.catalogs).slots)
+        if (slot.selection.choiceId === current.id && slot.replaced && slot.printing)
+          eligible.add(getClassChoiceOptionKey(slot.original))
     if (
       selected.some(
         (row) =>
@@ -733,7 +744,11 @@ export function retainSavedFeatureOptionsCommand(
       authority?.catalogs,
     )
   }
-  const originalKeys = selection.selected.map(getClassChoiceOptionKey)
+  const getSavedKey =
+    selection.kind === 'psionic' && character.mysticDisciplineReplacements?.length
+      ? getSavedDisciplineAllocationKey
+      : getClassChoiceOptionKey
+  const originalKeys = selection.selected.map(getSavedKey)
   const remaining = new Set(remainingKeys)
   if (
     remaining.size !== remainingKeys.length ||
@@ -745,9 +760,7 @@ export function retainSavedFeatureOptionsCommand(
   }
   if (sameSelectionKeys(originalKeys, remainingKeys))
     return { characterPatch: {}, provenanceUpdate: ledger }
-  const selected = selection.selected.filter((option) =>
-    remaining.has(getClassChoiceOptionKey(option)),
-  )
+  const selected = selection.selected.filter((option) => remaining.has(getSavedKey(option)))
   verifyRevisedInvocationWithdrawal(character, selection, selected, authority?.catalogs)
   const next = retainCompanionFamilyMastery(
     (character.classChoiceSelections ?? []).flatMap((row) =>
@@ -760,13 +773,17 @@ export function retainSavedFeatureOptionsCommand(
     selection,
     { ...selection, selected },
   )
+  const mysticDisciplineReplacements = retainMysticDisciplineReplacements({
+    ...character,
+    classChoiceSelections: next,
+  })
   const ownedProficiencies = isClassProficiencyChoiceId(selection.choiceId)
     ? retainClassProficiencyGrants(character, ledger, selection, selected)
     : undefined
   const featureGrants = ownedProficiencies
     ? undefined
     : reconcileChoiceMutationGrants(
-        character,
+        { ...character, mysticDisciplineReplacements },
         ledger,
         next,
         selection,
@@ -819,6 +836,7 @@ export function retainSavedFeatureOptionsCommand(
     {
       characterPatch: {
         classChoiceSelections: next,
+        mysticDisciplineReplacements,
         features: grants.features,
         proficiencies: projected?.proficiencies ?? grants.proficiencies,
       },
@@ -1019,8 +1037,17 @@ function resolveProgressiveChoiceGainEdit(
     throw new RangeError('The saved choices changed. Review them before confirming.')
 
   const priorOptions = previous?.selected ?? []
+  const disciplineHistory =
+    choice.kind === 'psionic' &&
+    decodePsionicChoiceId(choice.id)?.pool === 'discipline' &&
+    character.mysticDisciplineReplacements?.length
+  const knownBeforeGain = disciplineHistory
+    ? getMysticDisciplinesKnownBeforeAcquisition(character, level)
+    : undefined
   const priorByKey = new Map(
-    priorOptions.map((option) => [getClassChoiceOptionKey(option), option]),
+    priorOptions
+      .filter((option) => !disciplineHistory || option.slotLevel === level)
+      .map((option) => [getClassChoiceOptionKey(option), option]),
   )
   const availableSlots = getClassChoiceSlotLevels(choice).filter((slot) => slot <= owner.levels)
   const hasInvalidAllocation = priorOptions.some((option) => {
@@ -1051,6 +1078,8 @@ function resolveProgressiveChoiceGainEdit(
       throw new RangeError('Remove choices in invalid or overfilled slots before making new picks.')
     const current = eligible.get(key)
     if (!current) throw new RangeError('Choose an option from the current source.')
+    if (knownBeforeGain?.has(getPsionicKey(current.reference.name, current.reference.source ?? '')))
+      throw new RangeError('Choose a discipline that was not already known at this gain.')
     if ((current.minimumClassLevel ?? 1) > level)
       throw new RangeError('Choose an option whose prerequisites were met at this gain.')
     if (current.prerequisite) {
@@ -1335,7 +1364,13 @@ export function applyClassChoiceSelectionCommand(
     }
   }
   if (!decodeFavoredEnemyChoiceId(choice.id))
-    validateSelectedOptions(choice, selected, existingSelection?.selected)
+    validateSelectedOptions(
+      choice,
+      gain && choice.kind === 'psionic'
+        ? gain.options.filter((option) => option.slotLevel === progressionGainLevel)
+        : selected,
+      existingSelection?.selected,
+    )
   if (favoredEnemy && !decodeFavoredEnemyChoiceId(choice.id))
     throw new RangeError('Campaign enemy setup requires its exact choice family.')
   if (decodeFavoredEnemyChoiceId(choice.id) && !favoredEnemy && selected.length)
@@ -1509,7 +1544,19 @@ export function applyClassChoiceSelectionCommand(
   if (isKenseiChoiceId(choice.id) && getInvalidKenseiSelectionIds(next).size)
     throw new RangeError('Choose distinct Kensei weapon types in their earned slots.')
   if (choice.kind === 'psionic') {
-    if (getInvalidPsionicSelectionIds(next).size)
+    const draft = { ...character, classChoiceSelections: next }
+    if (
+      draft.mysticDisciplineReplacements?.length &&
+      replayMysticDisciplines(draft).conflictingEvents.size
+    )
+      throw new RangeError(
+        'This choice conflicts with a saved discipline replacement at a later level.',
+      )
+    const retainedHistory = retainMysticDisciplineReplacements(draft)
+    const history = retainedHistory?.length
+      ? replayMysticDisciplines({ ...draft, mysticDisciplineReplacements: retainedHistory })
+      : undefined
+    if (getInvalidPsionicSelectionIds(next, history).size)
       throw new RangeError('Choose distinct psionics across the Mystic pools.')
     for (const row of selection.selected.filter(
       (row) =>
@@ -1735,6 +1782,10 @@ export function reconcileClassChoiceSelectionGrants(
   })
   const preservedFeatureIds = new Set<string>()
   const preservedGrants = new Map<string, Set<string>>()
+  const replacementSlots = draft.mysticDisciplineReplacements?.length
+    ? getMysticDisciplineState(draft, catalogs).slots.filter((slot) => slot.replaced)
+    : []
+  const savedFeatureLevels = new Map(character.features.map(({ id, level }) => [id, level]))
   let spellReferences: Set<string> | undefined
   for (const selection of selections) {
     const isRevisedInvocation = isRevisedInvocationPoolId(selection.choiceId)
@@ -1760,16 +1811,20 @@ export function reconcileClassChoiceSelectionGrants(
       entry && catalogs?.classes && !resolveClassProgressionRules(entry, catalogs.classes)
     const savedInvocationOwner =
       isRevisedInvocation && getSavedRevisedInvocationOwner(draft, selection)
-    for (const option of selection.selected) {
+    for (const original of selection.selected) {
       if (
-        !isFeatureOption(option) ||
+        !isFeatureOption(original) ||
         !previous.selected.some(
           (prior) =>
-            prior.slotLevel === option.slotLevel &&
-            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(option),
+            prior.slotLevel === original.slotLevel &&
+            getClassChoiceOptionKey(prior) === getClassChoiceOptionKey(original),
         )
       )
         continue
+      const replacement = replacementSlots.find(
+        (slot) => slot.selection === selection && slot.original === original,
+      )
+      const option = replacement?.current ?? original
       const target =
         savedInvocationOwner && isRevisedTargetedInvocation(option)
           ? option.invocationCantrip
@@ -1784,13 +1839,17 @@ export function reconcileClassChoiceSelectionGrants(
       // Missing authority suspends the benefit without retracting the saved grant.
       const missingTarget =
         target && !spellReferences?.has(getSpellReferenceKey(target.name, target.source))
-      if (
-        !missingOwner &&
-        !missingTarget &&
-        !(catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
-      )
+      const featureId = getClassChoiceFeatureId(selection, option)
+      // Recovery can retain an existing grant. A missing printing cannot create one.
+      if (option.entityType === 'psionic' && savedFeatureLevels.get(featureId) !== option.slotLevel)
         continue
-      preservedFeatureIds.add(getClassChoiceFeatureId(selection, option))
+      const missing = replacement
+        ? !replacement.printing
+        : missingOwner ||
+          missingTarget ||
+          (catalogs && isSavedFeatureSourceMissing(selection, option, catalogs))
+      if (!missing) continue
+      preservedFeatureIds.add(featureId)
       const names = preservedGrants.get(selection.choiceId) ?? new Set<string>()
       names.add(normalizeKey(option.name))
       preservedGrants.set(selection.choiceId, names)
@@ -1839,9 +1898,14 @@ export function reconcileClassChoiceSelectionGrants(
       )
         return {
           ...selection,
-          selected: selection.selected.filter((option) =>
-            routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
-          ),
+          selected:
+            selection.kind === 'psionic' && draft.mysticDisciplineReplacements?.length
+              ? routes.selectedOptions
+                  .filter((row) => row.selection.choiceId === selection.choiceId)
+                  .map((row) => row.option)
+              : selection.selected.filter((option) =>
+                  routes.featureIds.has(getClassChoiceFeatureId(selection, option)),
+                ),
         }
       const section = getOptionalClassPoolSelectionSection(selection)
       return section
@@ -1959,8 +2023,13 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
   const classChoiceSelections = selectionPatch.classChoiceSelections ?? []
+  const mysticDisciplineReplacements =
+    choice.kind === 'psionic'
+      ? retainMysticDisciplineReplacements({ ...character, classChoiceSelections })
+      : character.mysticDisciplineReplacements
+  const choiceCharacter = { ...character, mysticDisciplineReplacements }
   const grants = reconcileChoiceMutationGrants(
-    character,
+    choiceCharacter,
     ledger,
     classChoiceSelections,
     choice,
@@ -1970,6 +2039,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   const withSelections: Character = {
     ...character,
     classChoiceSelections,
+    mysticDisciplineReplacements,
     features: grants.features,
     proficiencies: grants.proficiencies,
     provenance: grants.provenanceUpdate,
@@ -2005,6 +2075,7 @@ export function applyClassChoiceSelectionWithGrantsCommand(
       characterPatch: {
         ...featMirror.characterPatch,
         classChoiceSelections,
+        mysticDisciplineReplacements,
         features: grants.features,
         proficiencies:
           projected?.proficiencies ??

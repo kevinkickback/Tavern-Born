@@ -379,17 +379,24 @@ export function validateClassChoices(
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
-      const countedSelections = eligibleOptionKeys
-        ? storedSelection.filter(
-            (option) =>
-              eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-              (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
-                option.entityType,
-              ) ||
-                (!!savedChoice &&
-                  effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
-          )
-        : storedSelection
+      const countedSelections =
+        choice.kind === 'psionic' && character.mysticDisciplineReplacements?.length
+          ? effectiveRoutes.selectedOptions
+              .filter((row) => row.choice.id === choice.id)
+              .map((row) => row.option)
+          : eligibleOptionKeys
+            ? storedSelection.filter(
+                (option) =>
+                  eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+                  (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+                    option.entityType,
+                  ) ||
+                    (!!savedChoice &&
+                      effectiveRoutes.featureIds.has(
+                        getClassChoiceFeatureId(savedChoice, option),
+                      ))),
+              )
+            : storedSelection
       const count =
         choice.kind === 'creature'
           ? Number(

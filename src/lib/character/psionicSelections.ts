@@ -1,5 +1,6 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import {
@@ -10,6 +11,7 @@ import {
   resolveClassChoiceOptions,
 } from './classChoiceOptions'
 import type { FeatureOptionSelectionState } from './featureOptionSelections'
+import { getMysticDisciplineState } from './mysticDisciplineReplacement'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
 /** Recover saved exact intent without borrowing unfiltered rules or another earned allocation. */
@@ -18,6 +20,9 @@ export function getPsionicRecoveryStates(
   classes: readonly Class5e[],
   catalogs: ClassChoiceFeatureCatalogs | undefined,
 ): FeatureOptionSelectionState[] {
+  const disciplineSlots = character.mysticDisciplineReplacements?.length
+    ? getMysticDisciplineState(character, catalogs).slots
+    : []
   return (character.classChoiceSelections ?? [])
     .filter((row) => row.kind === 'psionic')
     .map((selection) => {
@@ -51,6 +56,18 @@ export function getPsionicRecoveryStates(
               entries: [],
             }))
       const details = selection.selected.map((row) => {
+        const slot = disciplineSlots.find(
+          (slot) => slot.selection === selection && slot.original === row,
+        )
+        if (slot)
+          return {
+            name: slot.current.name,
+            source: slot.current.source,
+            available: !!slot.printing,
+            entries: slot.printing
+              ? getPsionicEntries(slot.printing)
+              : ['Restore the exact discipline source or remove this allocation.'],
+          }
         const view = options.find(
           (view) => getClassChoiceOptionKey(view.reference) === getClassChoiceOptionKey(row),
         )

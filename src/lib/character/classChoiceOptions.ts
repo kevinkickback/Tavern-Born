@@ -43,7 +43,7 @@ import {
 import { normalizePsionicChoices, psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { decodePsionicChoiceId, PSIONIC_CLASS_SOURCE } from '@/lib/5etools/psionicIdentity'
-import { resolvePsionic } from '@/lib/5etools/psionics'
+import { getPsionicKey, resolvePsionic } from '@/lib/5etools/psionics'
 import { getCurrentWeaponProficiencies } from '@/lib/calculations/weaponProficiency'
 import { isValidKenseiSelection } from '@/lib/schema/legacySubclassChoiceValidation'
 import {
@@ -231,6 +231,7 @@ import {
   hasDeclaredInvocationSpells,
 } from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
+import { replayMysticDisciplines } from './mysticDisciplineHistory'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import {
   createOptionalClassFeatureActivity,
@@ -246,6 +247,7 @@ import {
 } from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
+  selectionKey?: string
   reference: NormalizedChoiceOptionReference
   availability: 'eligible' | 'retained'
   displayLabel?: string
@@ -1942,10 +1944,18 @@ function resolvePsionicChoiceOptions(
       )
       .flatMap((row) =>
         row.selected
-          .filter((option) => option.entityType === 'psionic')
-          .map(getClassChoiceOptionKey),
+          .filter(
+            (option) =>
+              option.entityType === 'psionic' &&
+              (!character?.mysticDisciplineReplacements?.length ||
+                relation?.pool === 'talent' ||
+                decodePsionicChoiceId(row.choiceId)?.pool === 'talent'),
+          )
+          .map((option) => getPsionicKey(option.name, option.source ?? '')),
       ),
   )
+  if (relation?.pool === 'talent' && character?.mysticDisciplineReplacements?.length)
+    for (const target of replayMysticDisciplines(character).replacementTargetKeys) other.add(target)
   const views = new Map<string, ClassChoiceOptionView>()
   if (current)
     for (const row of catalogs.psionics ?? []) {
@@ -1957,7 +1967,7 @@ function resolvePsionicChoiceOptions(
         choice.optionFilter?.psionicTypes?.includes(row.type) &&
         (!choice.optionFilter?.psionicOrders ||
           choice.optionFilter.psionicOrders.includes(row.order ?? '')) &&
-        !other.has(key) &&
+        !other.has(getPsionicKey(row.name, row.source)) &&
         (!prior || psionicSlotIsCurrent(choice, saved, prior.slotLevel, classLevel))
       if (eligible)
         views.set(key, {

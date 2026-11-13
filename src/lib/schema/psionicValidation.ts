@@ -3,6 +3,7 @@ import {
   getClassChoiceFeatureId,
   getClassChoiceOptionKey,
 } from '@/lib/character/classChoiceIdentity'
+import { replayMysticDisciplines } from '@/lib/character/mysticDisciplineHistory'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 
@@ -36,6 +37,7 @@ export function isValidPsionicSelection(row: CharacterClassChoiceSelection): boo
           !!option.name.trim() &&
           !!option.source?.trim() &&
           option.ref === undefined &&
+          option.invocationCantrip === undefined &&
           Number.isInteger(option.slotLevel) &&
           option.slotLevel >= 1 &&
           option.slotLevel <= 20,
@@ -48,6 +50,7 @@ export function isValidPsionicSelection(row: CharacterClassChoiceSelection): boo
 /** Admission proves the saved relation, not current catalog eligibility. */
 export function getInvalidPsionicSelectionIds(
   rows: readonly CharacterClassChoiceSelection[],
+  history?: ReturnType<typeof replayMysticDisciplines>,
 ): Set<string> {
   const invalid = new Set<string>(),
     seenIds = new Set<string>(),
@@ -62,7 +65,10 @@ export function getInvalidPsionicSelectionIds(
     if (!isValidPsionicSelection(row)) invalid.add(row.choiceId)
     if (seenIds.has(row.choiceId)) invalid.add(row.choiceId)
     seenIds.add(row.choiceId)
-    for (const option of row.selected) {
+    if (history?.conflictingChoices.has(row.choiceId)) invalid.add(row.choiceId)
+    const options =
+      history && decodePsionicChoiceId(row.choiceId)?.pool !== 'talent' ? [] : row.selected
+    for (const option of options) {
       const key = JSON.stringify([
         norm(row.className),
         norm(row.classSource),
@@ -88,9 +94,14 @@ function isReservedPsionicFeature(id: string): boolean {
   }
 }
 export function getInvalidPsionicPaths(character: Character): Array<Array<string | number>> {
+  const history = character.mysticDisciplineReplacements?.length
+    ? replayMysticDisciplines(character)
+    : undefined
   const paths: Array<Array<string | number>> = [],
     rows = character.classChoiceSelections ?? [],
-    invalid = getInvalidPsionicSelectionIds(rows)
+    invalid = getInvalidPsionicSelectionIds(rows, history)
+  for (const index of history?.invalidEvents ?? [])
+    paths.push(['mysticDisciplineReplacements', index])
   const intents = new Map<
     string,
     {
@@ -118,8 +129,11 @@ export function getInvalidPsionicPaths(character: Character): Array<Array<string
           norm(owner.subclassSource) !== norm(row.subclassSource)))
     )
       paths.push(['classChoiceSelections', index])
-    for (const option of row.selected)
-      intents.set(getClassChoiceFeatureId(row, option), { row, option })
+    const options =
+      history && decodePsionicChoiceId(row.choiceId)?.pool !== 'talent'
+        ? history.slots.filter((slot) => slot.selection === row).map((slot) => slot.current)
+        : row.selected
+    for (const option of options) intents.set(getClassChoiceFeatureId(row, option), { row, option })
   })
   const materialized = new Map<string, number>()
   character.features.forEach((feature, index) => {
@@ -151,7 +165,9 @@ export function getInvalidPsionicPaths(character: Character): Array<Array<string
     tags.forEach((tag, index) => {
       if (!tag.grantVariant?.startsWith('psionic-choice:')) return
       const row = rows.find((row) => row.choiceId === tag.grantVariant)
-      const options = row?.selected.filter((option) => normalizeKey(option.name) === name) ?? []
+      const options = [...intents.values()]
+        .filter((intent) => intent.row === row && normalizeKey(intent.option.name) === name)
+        .map((intent) => intent.option)
       if (
         !row ||
         !options.length ||
@@ -159,7 +175,7 @@ export function getInvalidPsionicPaths(character: Character): Array<Array<string
         tag.grantType !== 'choice' ||
         norm(tag.sourceName) !== norm(row.className) ||
         norm(tag.sourceRef) !== norm(row.classSource) ||
-        options.some((option) => !materialized.has(getClassChoiceFeatureId(row, option)))
+        !options.some((option) => materialized.has(getClassChoiceFeatureId(row, option)))
       )
         paths.push(['provenance', 'features', name, index])
     })

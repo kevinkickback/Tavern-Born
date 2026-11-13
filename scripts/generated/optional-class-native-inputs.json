@@ -818,7 +818,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "cbb0b72a2caf4ddee39018faef16e4b3e37832ada9cd2a826e6c6c7a5ef876ce"
+      "sha256": "887a34fb8bbdc7f827332086368d8668bd98737ce4498f872e7e8a18e658c1d1"
     },
     {
       "file": "src/types/classCasting.ts",
