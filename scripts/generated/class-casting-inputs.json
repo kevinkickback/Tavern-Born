@@ -547,7 +547,7 @@
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
-      "sha256": "14408fa00a8950867e0b0886e0d722ba8819616ed137ec7c54b0fc69408f64d3"
+      "sha256": "07de19b7ab3141c4f0660787d27696b67ffed22b28adcff026a9bb31808f7e94"
     },
     {
       "file": "src/lib/5etools/optionalClassFeatureRules.generated.json",
