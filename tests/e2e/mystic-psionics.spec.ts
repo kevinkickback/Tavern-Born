@@ -17,8 +17,12 @@ async function open(page: Page, label: string) {
   const level = page.getByRole('button', { name: /^Level 1,/ })
   if ((await level.getAttribute('data-state')) === 'closed') await level.click()
   await page
-    .getByRole('group', { name: label, exact: true })
-    .getByRole('button', { name: /^(Choose|Edit|Review saved choice)$/ })
+    .getByRole('button', { name: `Edit ${label}`, exact: true })
+    .or(
+      page
+        .getByRole('group', { name: label, exact: true })
+        .getByRole('button', { name: /^(Choose|Edit|Review saved choice)$/ }),
+    )
     .click()
   return page.getByRole('dialog')
 }
@@ -86,6 +90,37 @@ test('Mystic replaces a bonus discipline in Level Up and restores it on level re
   expect((await saved()).features.map((row) => row.name)).not.toContain(initial[0].name)
   await page.reload()
   await selectCharacterFromHome(page, prepared.name)
+  const beforeEdit = await saved()
+  const bonusDialog = await open(page, 'Bonus Disciplines')
+  const search = bonusDialog.getByRole('textbox', { name: /Search/ })
+  const card = (name: string) =>
+    bonusDialog.locator('button[aria-pressed]').filter({ hasText: name })
+  await search.fill(incoming.name)
+  await expect(card(incoming.name)).toHaveAttribute('aria-pressed', 'true')
+  await search.fill(initial[0].name)
+  await expect(card(initial[0].name)).toHaveCount(0)
+  await bonusDialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(bonusDialog).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save character', exact: true })).toBeDisabled()
+  expect(await saved()).toEqual(beforeEdit)
+
+  const correction = psionics.filter((row) => row.type === 'D' && row.order === 'Avatar')[2]
+  await open(page, 'Bonus Disciplines')
+  await search.fill(initial[1].name)
+  await card(initial[1].name).click({ position: { x: 8, y: 8 } })
+  await search.fill(correction.name)
+  await card(correction.name).click({ position: { x: 8, y: 8 } })
+  await bonusDialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(bonusDialog).toHaveCount(0)
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () => (await saved()).features.map((row) => row.name))
+    .toContain(correction.name)
+  expect((await saved()).mysticDisciplineReplacements).toEqual(
+    beforeEdit.mysticDisciplineReplacements,
+  )
+  expect((await saved()).features.map((row) => row.name)).toContain(incoming.name)
+
   await page.getByRole('banner').getByRole('button', { name: 'Level Up' }).click()
   await levelDialog.getByRole('button', { name: /^Remove last level/ }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Remove', exact: true }).click()

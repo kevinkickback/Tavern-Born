@@ -450,7 +450,7 @@ export function useClassChoiceController({
   const activeGainLevel =
     request?.contextKey === contextKey ? request.progressionGainLevel : undefined
   const savedOptions = activeId ? (selectionByChoiceId.get(activeId)?.selected ?? []) : []
-  const optionsInGain =
+  const savedOptionsInGain =
     activeGainLevel === undefined || !resolvedActiveChoice
       ? savedOptions
       : savedOptions.filter(
@@ -461,6 +461,23 @@ export function useClassChoiceController({
               viewingClassLevel,
             ) === activeGainLevel,
         )
+  // The picker edits the current view of an earned allocation. Keep its original
+  // identity when writing a retained slot back through the class-choice command.
+  const replayedSlots = mysticSlots.filter(
+    (slot) => !activeRemovalOnly && slot.replaced && slot.selection.choiceId === activeId,
+  )
+  const replacedSlotsInGain = replayedSlots.filter((slot) =>
+    savedOptionsInGain.includes(slot.original),
+  )
+  const replacementsInGain = new Map(
+    replacedSlotsInGain.map((slot) => [getClassChoiceOptionKey(slot.current), slot]),
+  )
+  const historicalOptionKeys = new Set(
+    replacedSlotsInGain.map((slot) => getClassChoiceOptionKey(slot.original)),
+  )
+  const optionsInGain = savedOptionsInGain.map(
+    (option) => replacedSlotsInGain.find((slot) => slot.original === option)?.current ?? option,
+  )
   const gainKeys = new Set(optionsInGain.map(getClassChoiceOptionKey))
   const knownDisciplinesAtGain =
     character?.mysticDisciplineReplacements?.length &&
@@ -471,7 +488,7 @@ export function useClassChoiceController({
       : undefined
   const otherGainKeys = new Set(
     savedOptions
-      .filter((option) => !gainKeys.has(getClassChoiceOptionKey(option)))
+      .filter((option) => !savedOptionsInGain.includes(option))
       .map(getClassChoiceOptionKey),
   )
   const unplacedKeys = new Set(
@@ -486,7 +503,7 @@ export function useClassChoiceController({
     activeSaved?.psionic && character?.mysticDisciplineReplacements?.length
       ? getSavedDisciplineAllocationKey
       : getClassChoiceOptionKey
-  const allActiveOptionViews: ClassChoiceOptionView[] =
+  const savedOptionViews: ClassChoiceOptionView[] =
     activeRemovalOnly && activeSaved
       ? activeSaved.selection.selected.map((reference, index) => ({
           reference,
@@ -503,6 +520,33 @@ export function useClassChoiceController({
       : resolvedActiveChoice
         ? (optionViewsByChoiceId.get(resolvedActiveChoice.id) ?? [])
         : []
+  const allActiveOptionViews = [
+    ...savedOptionViews.flatMap((view) => {
+      const key = getClassChoiceOptionKey(view.reference)
+      if (replacementsInGain.has(key)) return []
+      return historicalOptionKeys.has(key)
+        ? [
+            {
+              ...view,
+              availability: 'retained' as const,
+              unavailableReason: 'This discipline was replaced in this slot.',
+            },
+          ]
+        : [view]
+    }),
+    ...[...replacementsInGain.values()].map(
+      ({ current, printing }): ClassChoiceOptionView => ({
+        reference: current,
+        availability: printing ? 'eligible' : 'retained',
+        entries: printing ? getPsionicEntries(printing) : [],
+        searchText: printing ? `${printing.name} ${printing.order ?? ''}` : current.name,
+        presentation: {
+          kind: 'feature',
+          featureTypeLabels: [`${printing?.order ?? 'Unknown order'} discipline`],
+        },
+      }),
+    ),
+  ]
   const activeOptionViews =
     otherGainKeys.size || unplacedKeys.size || activeGainLevel !== undefined
       ? allActiveOptionViews
@@ -639,7 +683,10 @@ export function useClassChoiceController({
       if (!unchanged) {
         applyClassChoiceSelection(
           current,
-          confirmedSelections.map((option) => option.reference),
+          confirmedSelections.map(
+            ({ reference }) =>
+              replacementsInGain.get(getClassChoiceOptionKey(reference))?.original ?? reference,
+          ),
           undefined,
           activeGainLevel !== undefined ||
             current.id === BLESSED_STRIKES_ID ||

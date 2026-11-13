@@ -141,6 +141,7 @@ import {
   replayMysticDisciplines,
   retainMysticDisciplineReplacements,
 } from '@/lib/character/mysticDisciplineHistory'
+import { getMysticDisciplineState } from '@/lib/character/mysticDisciplineReplacement'
 import {
   getOptionalClassPoolSection,
   getOptionalClassPoolSelectionSection,
@@ -345,6 +346,10 @@ function currentLiteralChoice(
         .filter((row) => row.availability === 'eligible')
         .map((row) => getClassChoiceOptionKey(row.reference)),
     )
+    if (character.mysticDisciplineReplacements?.length)
+      for (const slot of getMysticDisciplineState(character, authority.catalogs).slots)
+        if (slot.selection.choiceId === current.id && slot.replaced && slot.printing)
+          eligible.add(getClassChoiceOptionKey(slot.original))
     if (
       selected.some(
         (row) =>

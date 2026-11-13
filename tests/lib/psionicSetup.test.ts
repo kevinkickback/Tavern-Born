@@ -119,7 +119,7 @@ test.skipIf(!hasSource)(
   async () => {
     const data = catalog()
     const psionics = data.psionics ?? []
-    const [avatar, secondAvatar] = psionics.filter(
+    const [avatar, secondAvatar, thirdAvatar] = psionics.filter(
       (row) => row.type === 'D' && row.order === 'Avatar',
     )
     const [other, later] = psionics.filter((row) => row.type === 'D' && row.order === 'Wu Jen')
@@ -197,6 +197,14 @@ test.skipIf(!hasSource)(
       )?.incoming.some((row) => row.name === talent.name),
     ).toBe(false)
     const two = gain(character, request)
+    const withoutOriginal = { ...data, psionics: psionics.filter((row) => row !== avatar) }
+    const correctedBonus = pick(withoutOriginal, two, 'Bonus Disciplines', [
+      avatar.name,
+      thirdAvatar.name,
+    ])
+    expect(correctedBonus.mysticDisciplineReplacements).toEqual(two.mysticDisciplineReplacements)
+    expect(active(correctedBonus)).toEqual(expect.arrayContaining([other.name, thirdAvatar.name]))
+    expect(active(correctedBonus)).not.toContain(secondAvatar.name)
     const earlierChoice = choices(data, two).rows.find(
       (row) => row.label === 'Psionic Disciplines',
     )!
