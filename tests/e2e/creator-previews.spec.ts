@@ -37,6 +37,10 @@ const items = associateItemTypeEntries(
         type: 'G',
         entries: ['This detail belongs to the draft books.'],
       },
+      { name: 'Training Dart', source: 'TCE', type: 'R', weaponCategory: 'simple' },
+      { name: 'Leather Armor', source: 'PHB', type: 'LA', ac: 11 },
+      { name: 'Shield', source: 'PHB', type: 'S', ac: 2 },
+      { name: 'Longsword', source: 'PHB', type: 'M', weaponCategory: 'martial' },
     ],
   }) as Item5e[],
   [
@@ -89,6 +93,7 @@ const GAME_DATA: GameData = {
       hd: { faces: 10, number: 1 },
       proficiency: ['str', 'con'],
       startingProficiencies: {
+        armor: ['light'],
         weapons: ['simple weapons', '{@item Mace|PHB}', '{@item Sling|PHB}'],
         skills: [],
       },
@@ -147,11 +152,11 @@ type CaptureWindow = Window & {
   __creatorPreviewCapture?: { stopped: boolean; frames: PreviewFrame[] }
 }
 
-async function openRace(page: Page) {
+async function openExistingCharacter(page: Page) {
   const existing: Character = {
     ...(JSON.parse(readFileSync('tests/fixtures/equipment-e2e.tbc', 'utf8')) as Character),
     name: 'Existing character',
-    allowedSources: [],
+    allowedSources: ['PHB'],
     originSystem: '2014',
   }
   await page.goto('/')
@@ -163,6 +168,10 @@ async function openRace(page: Page) {
   })
   await page.reload()
   await openCharacterFromHome(page, 'Existing character')
+}
+
+async function openRace(page: Page) {
+  await openExistingCharacter(page)
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const wizard = page.getByRole('dialog', { name: 'Create New Character', exact: true })
   await wizard.getByLabel('Character Name').fill('Preview draft')
@@ -434,9 +443,22 @@ test('draft books supply race, class and background details while linked items r
   await expect(sling).toContainText('1 sp')
   await expect(sling).not.toContainText('The mace has an available description.')
   await expect(sling).not.toContainText('Supplemental draft guidance.')
-  await expect(wizard.getByText('simple weapons', { exact: false })).toBeVisible()
   await page.mouse.move(5, 5)
   await expect(sling).toBeHidden()
+  await wizard.getByRole('button', { name: 'simple weapons', exact: true }).hover()
+  const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
+  await expect(simple.getByRole('button', { name: 'Training Dart (TCE)' })).toBeVisible()
+  await expect(simple.getByText('Longsword', { exact: false })).toHaveCount(0)
+  await simple.getByRole('button', { name: 'Mace (PHB)', exact: true }).hover()
+  await expect(mace).toContainText('Supplemental draft guidance.')
+  await page.mouse.move(5, 5)
+  await expect(simple).toBeHidden()
+  await wizard.getByRole('button', { name: 'light', exact: true }).hover()
+  const armor = page.getByRole('dialog', { name: 'Light Armor preview', exact: true })
+  await expect(armor.getByRole('button', { name: 'Leather Armor (PHB)' })).toBeVisible()
+  await expect(armor.getByText('Shield', { exact: false })).toHaveCount(0)
+  await page.mouse.move(5, 5)
+  await expect(armor).toBeHidden()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   const backgroundReferences = wizard.getByRole('button', { name: 'Reading Lens', exact: true })
   await expect(backgroundReferences).toHaveCount(2)
@@ -446,4 +468,14 @@ test('draft books supply race, class and background details while linked items r
     await page.mouse.move(5, 5)
     await expect(lens).toBeHidden()
   }
+})
+
+test('Builder class training uses the active character books', async ({ page }) => {
+  await openExistingCharacter(page)
+  await page.getByRole('button', { name: 'Builder', exact: true }).click()
+  await page.getByRole('link', { name: 'Class', exact: true }).click()
+  await page.getByRole('button', { name: 'simple weapons', exact: true }).hover()
+  const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
+  await expect(simple.getByRole('button', { name: 'Mace (PHB)' })).toBeVisible()
+  await expect(simple.getByText('Training Dart', { exact: false })).toHaveCount(0)
 })

@@ -342,6 +342,7 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     ...(gameData.fixedShieldDiagnostics ?? []),
     ...(gameData.fixedWeaponDiagnostics ?? []),
     ...(gameData.fixedArmorDiagnostics ?? []),
+    ...(gameData.fixedAmmunitionDiagnostics ?? []),
   ])
     issues.push({
       code: 'magic-variant-diagnostic',
