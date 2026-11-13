@@ -227,6 +227,45 @@ test.skipIf(!hasSource)(
       expect.arrayContaining([other.name, secondAvatar.name, ordinary.name, talent.name]),
     )
     expect(active(two)).not.toContain(avatar.name)
+    const expectTalentReservation = (
+      saved: Character,
+      disciplines: typeof psionics,
+      available: typeof psionics = [],
+    ) => {
+      const alternate = { ...disciplines[0], type: 'T' as const, source: 'TEST-TALENT' }
+      const drifted = {
+        ...data,
+        psionics: [
+          ...psionics.map((row) =>
+            disciplines.includes(row) || available.includes(row)
+              ? { ...row, type: 'T' as const }
+              : row,
+          ),
+          alternate,
+        ],
+      }
+      const { catalogs: driftedCatalogs, rows } = choices(drifted, saved)
+      const choice = rows.find((row) => row.label === 'Psionic Talents')!
+      const views = resolveClassChoiceOptions(
+        choice,
+        createClassChoiceCatalogs(driftedCatalogs),
+        [],
+        saved.classProgression[0].levels,
+        saved,
+      )
+      const offers = (target: { name: string; source: string }) =>
+        views.some(
+          ({ reference }) => reference.name === target.name && reference.source === target.source,
+        )
+      expect(offers(talent)).toBe(true)
+      expect(offers(alternate)).toBe(true)
+      for (const row of available) expect(offers(row)).toBe(true)
+      for (const row of disciplines) {
+        expect(offers(row)).toBe(false)
+        expect(() => pick(drifted, saved, 'Psionic Talents', [row.name])).toThrow()
+      }
+    }
+    expectTalentReservation(two, [other])
     const missing = { ...catalogs, psionics: psionics.filter((row) => row !== other) }
     expect(active(two, missing)).not.toContain(other.name)
     expect(active(two, missing)).not.toContain(avatar.name)
@@ -276,6 +315,7 @@ test.skipIf(!hasSource)(
     expect(active(two, withoutOrder)).toContain(ordinary.name)
     expect(active(two, withoutOrder)).not.toContain(other.name)
     const three = gain(two, { ...request, from: target(other), to: target(later) })
+    expectTalentReservation(three, [avatar, other, later])
     const discipline = choices(data, three).rows.find((row) => row.label === 'Psionic Disciplines')!
     const baseSaved = three.classChoiceSelections!.find((row) => row.choiceId === discipline.id)!
     const threeWithAcquisition = reopen(
@@ -305,7 +345,10 @@ test.skipIf(!hasSource)(
     const reverted = rollBack(threeWithAcquisition)
     expect(active(reverted)).toContain(other.name)
     expect(active(reverted)).not.toContain(avatar.name)
-    expect(active(rollBack(reverted))).toContain(avatar.name)
+    expectTalentReservation(reverted, [avatar, other], [later])
+    const restoredOriginal = rollBack(reverted)
+    expect(active(restoredOriginal)).toContain(avatar.name)
+    expectTalentReservation(restoredOriginal, [avatar], [other, later])
     const twoWithBaseSwap = gain(character, {
       choiceId: earlierChoice.id,
       slotLevel: 1,

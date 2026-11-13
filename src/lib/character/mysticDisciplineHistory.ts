@@ -49,6 +49,7 @@ export function replayMysticDisciplines(character: Actor, beforeAcquisitionAt?: 
   const invalidEvents = new Set<number>()
   const conflictingEvents = new Set<number>()
   const conflictingChoices = new Set<string>()
+  const replacementTargetKeys = new Set<string>()
   const slots: MysticDisciplineSlot[] = []
   const limit = Math.min(owner?.levels ?? 0, beforeAcquisitionAt ?? 20)
   const eventLevels = new Map<number, number[]>()
@@ -90,6 +91,7 @@ export function replayMysticDisciplines(character: Actor, beforeAcquisitionAt?: 
       } else {
         matches[0].current = { ...matches[0].original, ...event.to }
         matches[0].replaced = true
+        replacementTargetKeys.add(key(event.to))
       }
     }
     if (level === beforeAcquisitionAt) break
@@ -115,7 +117,14 @@ export function replayMysticDisciplines(character: Actor, beforeAcquisitionAt?: 
       }
     }
   }
-  return { slots, talentOwners, invalidEvents, conflictingEvents, conflictingChoices }
+  return {
+    slots,
+    talentOwners,
+    replacementTargetKeys,
+    invalidEvents,
+    conflictingEvents,
+    conflictingChoices,
+  }
 }
 
 export function getMysticDisciplinesKnownBeforeAcquisition(character: Actor, level: number) {
