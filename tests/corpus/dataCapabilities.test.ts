@@ -15,6 +15,7 @@ import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { parseConditions, parseTrapHazards } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
+import { isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 import { renderEntriesToText } from '@/lib/entryText'
 import type { GameData } from '@/types/5etools'
@@ -60,6 +61,54 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         },
       },
     )
+  })
+  it('materializes the pinned public resistance armor pairs as exact inventory items', () => {
+    const names = [
+      'Breastplate',
+      'Chain Mail',
+      'Chain Shirt',
+      'Half Plate Armor',
+      'Hide Armor',
+      'Leather Armor',
+      'Padded Armor',
+      'Plate Armor',
+      'Ring Mail',
+      'Scale Mail',
+      'Splint Armor',
+      'Studded Leather Armor',
+    ]
+    const damageTypes = [
+      'Acid',
+      'Cold',
+      'Fire',
+      'Force',
+      'Lightning',
+      'Necrotic',
+      'Poison',
+      'Psychic',
+      'Radiant',
+      'Thunder',
+    ]
+    const expected = ['DMG', 'XDMG']
+      .flatMap((source) =>
+        names.flatMap((base) =>
+          damageTypes.map((damage) => `${base} of ${damage} Resistance|${source}`),
+        ),
+      )
+      .sort()
+    const actual = gameData.items.filter((item) =>
+      /^Armor of .+ Resistance$/.test(item.magicVariantGenerated?.template.name ?? ''),
+    )
+    expect(actual.map((item) => `${item.name}|${item.source}`).sort()).toEqual(expected)
+    expect(gameData.resistanceArmorDiagnostics).toEqual([])
+    for (const item of actual) {
+      const damageType = /^.+ of (\w+) Resistance$/.exec(item.name)?.[1].toLowerCase()
+      expect(isSelectableEquipmentItem(item)).toBe(true)
+      expect(item.resist).toEqual([damageType])
+      expect(item.reqAttune).toBe(true)
+      expect(item.itemEntryDiagnostics).toBeUndefined()
+      expect(renderEntriesToText(getItemRulesEntries(item))).toContain(`${damageType} damage`)
+    }
   })
   it('loads the bundled and managed source stack with the four fixed equipment families', () => {
     expect(failures).toEqual([])
@@ -110,7 +159,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         ammunition.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
       ).toHaveLength(5)
     }
-    expect(generated).toHaveLength(327)
+    expect(generated.filter((item) => /^\+[123] /.test(item.name))).toHaveLength(327)
   })
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']

@@ -73,3 +73,16 @@ The rules text records the attack and damage bonus for a shot made with that pie
 and the loss of magic after a hit. Players apply that rule per shot and manage
 quantity manually. Carrying magic ammunition leaves the weapon's standing attack
 and damage values unchanged.
+
+### Resistance armor
+
+The classic and revised Armor of Resistance templates use their declared eligibility
+rules against direct public body-armor bases of the matching edition. Generated
+items retain the base armor's physical fields. The template supplies the name suffix,
+resistance type, attunement requirement and source-qualified rules fragment.
+Existing concrete equipment takes precedence over a generated item of the same
+name and source. Reference entries remain outside inventory.
+
+Resistance applies while the exact catalog item is equipped and attuned. If the
+printing becomes unavailable, the saved armor retains its physical fields and
+attunement state. The existing equipment effect resumes when the exact printing returns.

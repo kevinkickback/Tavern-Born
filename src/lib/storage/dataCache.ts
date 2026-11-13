@@ -8,7 +8,7 @@ const CACHE_KEY = 'tb:game-data-cache'
 const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 103
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 104
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {

@@ -1,5 +1,6 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { getItemEntryIdentity, getRawItems } from './itemEntries'
+import { DAMAGE_TYPE_LABEL_FALLBACKS } from './rulesetMetadata'
 
 // Bounded adaptation of Renderer.item at 5etools b9061583 (render.js:12942–13382).
 type Row = Record<string, unknown>
@@ -151,6 +152,14 @@ const WEAPON_INHERITED_FIELDS = new Set(
 )
 const AMMUNITION_TEMPLATE_FIELDS = new Set([...CORE_TEMPLATE_FIELDS, 'ammo'])
 const AMMUNITION_INHERITED_FIELDS = new Set([...WEAPON_INHERITED_FIELDS, 'miscTags'])
+const RESISTANCE_INHERITED_FIELDS = new Set(
+  [...INHERITED_FIELDS]
+    .filter((field) => field !== 'namePrefix' && field !== 'bonusAc')
+    .concat('nameSuffix', 'resist', 'reqAttune', 'hasRefs'),
+)
+const RESISTANCE_TYPES = new Set(
+  Object.values(DAMAGE_TYPE_LABEL_FALLBACKS).map((type) => type.toLowerCase()),
+)
 const AMMUNITION_TAGS = ['arrow', 'bolt', 'bulletFirearm', 'bulletSling', 'needleBlowgun']
 const AMMUNITION_BASE_FIELDS = new Set([...BASE_FIELDS, ...AMMUNITION_TAGS, 'miscTags'])
 
@@ -304,19 +313,47 @@ function validWeaponBase(row: Row, source: string): boolean {
 }
 
 export function generateFixedBonusShields(data: GameData, definitions: readonly Row[]) {
-  return generateFixedBonusVariants(data, definitions, 'shield')
+  return generateEquipmentVariants(data, definitions, 'shield')
 }
 
 export function generateFixedBonusWeapons(data: GameData, definitions: readonly Row[]) {
-  return generateFixedBonusVariants(data, definitions, 'weapon')
+  return generateEquipmentVariants(data, definitions, 'weapon')
 }
 
 export function generateFixedBonusArmor(data: GameData, definitions: readonly Row[]) {
-  return generateFixedBonusVariants(data, definitions, 'armor')
+  return generateEquipmentVariants(data, definitions, 'armor')
 }
 
 export function generateFixedBonusAmmunition(data: GameData, definitions: readonly Row[]) {
-  return generateFixedBonusVariants(data, definitions, 'ammunition')
+  return generateEquipmentVariants(data, definitions, 'ammunition')
+}
+
+export function generateResistanceArmor(
+  data: GameData,
+  definitions: readonly Row[],
+  fixedItems: readonly Item5e[],
+) {
+  return generateEquipmentVariants(data, definitions, 'resistanceArmor', fixedItems)
+}
+
+function validResistanceArmor(inherited: Row, name: string, source: string): boolean {
+  const resistance = inherited.resist
+  const entry =
+    Array.isArray(inherited.entries) && inherited.entries.length === 1 && inherited.entries[0]
+  const reference =
+    typeof entry === 'string' && /^\{#itemEntry Armor of Resistance(?:\|(DMG|XDMG))?}$/.exec(entry)
+  return (
+    Array.isArray(resistance) &&
+    resistance.length === 1 &&
+    RESISTANCE_TYPES.has(resistance[0]) &&
+    inherited.nameSuffix === name.slice('Armor'.length) &&
+    inherited.nameSuffix ===
+      ` of ${resistance[0][0].toUpperCase()}${resistance[0].slice(1)} Resistance` &&
+    inherited.reqAttune === true &&
+    (inherited.hasRefs === undefined || inherited.hasRefs === true) &&
+    !!reference &&
+    (reference[1] ?? 'DMG') === source
+  )
 }
 
 const FIXED_PATTERNS = {
@@ -324,38 +361,46 @@ const FIXED_PATTERNS = {
   weapon: /^\+([123]) Weapon$/,
   armor: /^\+([123]) Armor$/,
   ammunition: /^\+([123]) Ammunition$/,
+  resistanceArmor: /^Armor of .+ Resistance$/,
 }
 const BASE_VALIDATORS = {
   shield: validShieldBase,
   weapon: validWeaponBase,
   armor: validArmorBase,
   ammunition: validAmmunitionBase,
+  resistanceArmor: validArmorBase,
 }
 const CORE_BASE_MATCHERS = {
   weapon: (row: Row) => row.weapon === true,
   armor: isBodyArmor,
   ammunition: isCoreAmmunition,
+  resistanceArmor: isBodyArmor,
 }
 
-function generateFixedBonusVariants(
+function generateEquipmentVariants(
   data: GameData,
   definitions: readonly Row[],
   family: keyof typeof FIXED_PATTERNS,
+  otherGenerated: readonly Item5e[] = [],
 ): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
   const shield = family === 'shield'
   const ammunition = family === 'ammunition'
-  const baseLabel = shield ? 'Shield' : family
+  const resistanceArmor = family === 'resistanceArmor'
+  const baseLabel = shield ? 'Shield' : resistanceArmor ? 'armor' : family
+  const templateLabel = resistanceArmor ? 'resistance armor' : `fixed-${family}`
   const bonusField = family === 'weapon' || ammunition ? 'bonusWeapon' : 'bonusAc'
   const templateFields = ammunition
     ? AMMUNITION_TEMPLATE_FIELDS
     : shield
       ? TEMPLATE_FIELDS
       : CORE_TEMPLATE_FIELDS
-  const inheritedFields = ammunition
-    ? AMMUNITION_INHERITED_FIELDS
-    : bonusField === 'bonusWeapon'
-      ? WEAPON_INHERITED_FIELDS
-      : INHERITED_FIELDS
+  const inheritedFields = resistanceArmor
+    ? RESISTANCE_INHERITED_FIELDS
+    : ammunition
+      ? AMMUNITION_INHERITED_FIELDS
+      : bonusField === 'bonusWeapon'
+        ? WEAPON_INHERITED_FIELDS
+        : INHERITED_FIELDS
   const diagnostics: ItemEntryDiagnostic[] = []
   const diagnose = (path: string, message: string) => {
     if (diagnostics.length < 32) diagnostics.push({ path: `magicVariants.${path}`, message })
@@ -368,7 +413,7 @@ function generateFixedBonusVariants(
     const key = identity(value)
     groups.set(key, [...(groups.get(key) ?? []), value])
   }
-  const occupied = new Set([...data.items, ...data.itemsBase].map(identity)),
+  const occupied = new Set([...data.items, ...data.itemsBase, ...otherGenerated].map(identity)),
     generated = new Map<string, Item5e[]>()
   for (const definition of definitions) {
     const match = FIXED_PATTERNS[family].exec(String(definition.name))
@@ -392,8 +437,9 @@ function generateFixedBonusVariants(
       !validMetadata(inherited) ||
       definition.type !== `GV|${source}` ||
       inherited.source !== source ||
-      inherited.namePrefix !== `+${match[1]} ` ||
-      inherited[bonusField] !== `+${match[1]}` ||
+      (resistanceArmor
+        ? !validResistanceArmor(inherited, String(definition.name), source)
+        : inherited.namePrefix !== `+${match[1]} ` || inherited[bonusField] !== `+${match[1]}`) ||
       !Array.isArray(inherited.entries) ||
       !Object.keys(inherited).every((k) => inheritedFields.has(k)) ||
       !Array.isArray(requires) ||
@@ -401,7 +447,7 @@ function generateFixedBonusVariants(
       (definition.excludes !== undefined && !excludes) ||
       ![undefined, 'classic', 'one'].includes(definition.edition as string | undefined)
     ) {
-      diagnose(path, `Unsupported fixed-${family} template shape.`)
+      diagnose(path, `Unsupported ${templateLabel} template shape.`)
       continue
     }
     let entries: unknown[]
@@ -417,7 +463,7 @@ function generateFixedBonusVariants(
       if (unsupported) throw new Error('Unsupported property injector')
       entries = JSON.parse(encoded)
     } catch {
-      diagnose(path, `Unsupported fixed-${family} text injector.`)
+      diagnose(path, `Unsupported ${templateLabel} text injector.`)
       continue
     }
     const matchesTemplate = (row: Row) =>
@@ -466,9 +512,11 @@ function generateFixedBonusVariants(
       ])
         delete output[key]
       for (const [key, value] of Object.entries(inherited))
-        if (!['namePrefix', 'entries', 'reprintedAs'].includes(key))
+        if (!['namePrefix', 'nameSuffix', 'entries', 'reprintedAs'].includes(key))
           output[key] = structuredClone(value)
-      output.name = `${inherited.namePrefix}${base.name}`
+      output.name = resistanceArmor
+        ? `${base.name}${inherited.nameSuffix}`
+        : `${inherited.namePrefix}${base.name}`
       output.entries = structuredClone([...entries, ...((base.entries ?? []) as unknown[])])
       const baseName = String(base.name)
       output.baseItem = `${baseName.toLowerCase()}|${baseSource.toLowerCase()}`
