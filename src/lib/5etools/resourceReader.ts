@@ -24,6 +24,11 @@ export class ResourceHttpError extends Error {
   }
 }
 
+export function isMissingCatalogResource(type: DataSourceConfig['type'], error: unknown): boolean {
+  if (error instanceof ResourceHttpError) return error.status === 404 || error.status === 410
+  return type !== 'remote' && error instanceof Error && /^(?:Error: )?ENOENT:/.test(error.message)
+}
+
 function normalizeJsonResourcePath(relativePath: string): string {
   const normalized = relativePath.trim()
   const segments = normalized.split('/')

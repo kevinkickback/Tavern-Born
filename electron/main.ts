@@ -98,15 +98,29 @@ async function readLocalJsonText(filePath: unknown, root: unknown): Promise<stri
   checkLocalRoot(root)
   if (!isPathWithinRoot(root, normalize(filePath)))
     throw new Error('Access denied: path is outside the configured data directory.')
-  const canonicalTarget = normalize(await realpath(filePath))
+  const canonicalTarget = normalize(
+    await realpath(filePath).catch(async (error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') {
+        const rootStats = await stat(root).catch(() => null)
+        if (!rootStats?.isDirectory()) throw new Error('The selected data folder is unavailable.')
+      }
+      throw error
+    }),
+  )
   if (!isPathWithinRoot(root, canonicalTarget))
     throw new Error('Access denied: path is outside the configured data directory.')
 
-  const fileStats = await stat(canonicalTarget)
-  if (!fileStats.isFile()) throw new Error('Path does not reference a file')
-  if (fileStats.size > MAX_LOCAL_JSON_BYTES)
-    throw new Error('JSON file exceeds the 50 MB safety limit')
-  return readFile(canonicalTarget, 'utf-8')
+  try {
+    const fileStats = await stat(canonicalTarget)
+    if (!fileStats.isFile()) throw new Error('Path does not reference a file')
+    if (fileStats.size > MAX_LOCAL_JSON_BYTES)
+      throw new Error('JSON file exceeds the 50 MB safety limit')
+    return await readFile(canonicalTarget, 'utf-8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+      throw new Error('The file moved during the check. Try checking the source again.')
+    throw error
+  }
 }
 
 function getLocalDataAuthPath(): string {

@@ -257,6 +257,11 @@ catalog waits for **Apply game data update** in Settings. On relaunch an unappli
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
+An interrupted read of an existing source keeps the accepted catalog. A missing top-level file
+or a record withdrawn from a successfully read file can appear in the removal preview. A missing
+file still declared by an index fails the check. Confirmed removals require Apply. A same-source
+reload that changes the accepted catalog also requires Apply, including changes to descriptions
+that do not have separate record identities in the removal preview.
 The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
 only if the original cache generation is still current.
 

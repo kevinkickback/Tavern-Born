@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
-import { type JsonResourceReader, ResourceHttpError } from './resourceReader'
+import { isMissingCatalogResource, type JsonResourceReader } from './resourceReader'
 import {
   ActionDataSchema,
   BackgroundDataSchema,
@@ -40,8 +40,8 @@ const CANDIDATE_FILES: FileValidationConfig[] = [
   { name: 'books.json', schema: BookDataSchema },
   { name: 'adventures.json', schema: GenericDataSchema, collections: ['adventure'] },
   { name: 'races.json', schema: RaceDataSchema, collections: ['race', 'subrace'] },
-  { name: 'fluff-races.json', schema: GenericDataSchema },
-  { name: 'fluff-backgrounds.json', schema: GenericDataSchema },
+  { name: 'fluff-races.json', schema: GenericDataSchema, collections: ['raceFluff'] },
+  { name: 'fluff-backgrounds.json', schema: GenericDataSchema, collections: ['backgroundFluff'] },
   { name: 'class/index.json', schema: IndexSchema },
   { name: 'backgrounds.json', schema: BackgroundDataSchema },
   { name: 'spells/index.json', schema: IndexSchema },
@@ -85,6 +85,7 @@ export async function inspectCatalogResources(
   reader: JsonResourceReader,
   previous: readonly string[],
   signal: AbortSignal,
+  unknownPriorInventory = false,
 ) {
   const reads = new Map<string, Promise<unknown>>()
   const readJson = (path: string) => {
@@ -97,6 +98,7 @@ export async function inspectCatalogResources(
   const rows = await mapWithConcurrency(CANDIDATE_FILES, 6, async (file) => {
     signal.throwIfAborted()
     const presentation = file.name.startsWith('fluff-')
+    const previouslyAvailable = previous.includes(file.name)
     try {
       const data = await readJson(file.name)
       const valid =
@@ -111,21 +113,23 @@ export async function inspectCatalogResources(
         file,
         admitted: valid || file.optionalSupport,
         warning: !valid ? `Incompatible ${file.name}` : undefined,
-        blocking: !valid && !presentation && !file.optionalSupport,
+        unavailable: !valid && presentation,
+        blocking:
+          !valid &&
+          !file.optionalSupport &&
+          (!presentation || previouslyAvailable || unknownPriorInventory),
       }
     } catch (error) {
       signal.throwIfAborted()
       const detail = error instanceof Error ? error.message : String(error)
-      const absent =
-        error instanceof ResourceHttpError
-          ? error.status === 404 || error.status === 410
-          : reader.type === 'local' && /(?:^|Error: )ENOENT(?::|$)/.test(detail)
-      if (absent) return { file, admitted: false }
-      const optional = presentation || (file.optionalSupport && !previous.includes(file.name))
+      if (isMissingCatalogResource(reader.type, error)) return { file, admitted: false }
+      const optional =
+        (presentation || file.optionalSupport) && !previouslyAvailable && !unknownPriorInventory
       return {
         file,
         admitted: false,
         warning: `Could not read ${file.name} — ${detail}`,
+        unavailable: true,
         blocking: !optional,
       }
     }
@@ -137,6 +141,7 @@ export async function inspectCatalogResources(
     throw new Error('No compatible game data files were found at this location.')
   return {
     resources,
+    unavailable: rows.filter((row) => row.unavailable).map(({ file }) => file.name),
     warnings: rows.flatMap((row) => (row.warning ? [row.warning] : [])),
     reader: { type: reader.type, readJson },
   }

@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { INTERACTIVE_CATALOG_TIMEOUT_MS, useGameDataStore } from '@/store/gameDataStore'
+import { CatalogCharacterImpact } from './CatalogCharacterImpact'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
 type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
@@ -697,6 +698,16 @@ export function DataSourceConfigurator({
               source. This preview may miss some removals.
             </p>
           )}
+          {!!pending.additions?.length && (
+            <details className="text-sm">
+              <summary>See what this source now provides</summary>
+              <ul className="max-h-48 overflow-y-auto">
+                {pending.additions.map((entry) => (
+                  <li key={entry}>{entry}</li>
+                ))}
+              </ul>
+            </details>
+          )}
           {!!pending.removals.length && (
             <details className="text-sm">
               <summary>See what this source no longer provides</summary>
@@ -707,6 +718,7 @@ export function DataSourceConfigurator({
               </ul>
             </details>
           )}
+          {pending.reason !== 'reload' && <CatalogCharacterImpact candidate={pending.candidate} />}
           <Button
             disabled={hasUnsavedChanges || isLoading}
             onClick={() => void applyCandidate(pending.candidate, true)}

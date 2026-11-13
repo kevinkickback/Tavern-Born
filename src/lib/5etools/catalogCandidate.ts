@@ -15,7 +15,11 @@ import {
 } from './contentLayers'
 import type { DataLoaderOptions } from './dataLoader'
 import { loadDataFromSource } from './dataLoader'
-import { createJsonResourceReader, type ReadSourceJson } from './resourceReader'
+import {
+  createJsonResourceReader,
+  isMissingCatalogResource,
+  type ReadSourceJson,
+} from './resourceReader'
 import { resolveSourceRevision } from './sourceRevision'
 import { hasUniqueSpellRouteSource } from './spellRouteSources'
 import { inspectCatalogResources } from './validator'
@@ -26,6 +30,7 @@ export interface PreparedCatalog {
   data: GameData
   keys: string[]
   warnings: string[]
+  unavailableResources?: string[]
   revision?: string
   layerMetadata?: GameDataLayerCacheMetadataByRole
 }
@@ -68,7 +73,12 @@ export async function prepareCatalog(
   const source = await resolveSourceRevision(config, signal, read)
   const reader = createJsonResourceReader(source.readConfig, read)
   const scan = await settleOnAbort(
-    inspectCatalogResources(reader, config.availableResources ?? [], signal),
+    inspectCatalogResources(
+      reader,
+      config.availableResources ?? [],
+      signal,
+      !!config.lastLoaded && !config.availableResources,
+    ),
     signal,
   )
   const admitted = { ...source.config, isValid: true, availableResources: scan.resources }
@@ -83,13 +93,22 @@ export async function prepareCatalog(
     onResourceFailure: (resource: string, failure: { required: boolean; cause?: unknown }) => {
       const detail = failure.cause instanceof Error ? ` — ${failure.cause.message}` : ''
       const message = `${resource}${detail}`
+      const fromBase = resource.startsWith('Included SRD: ')
+      const file = resource.replace(/^Additional content: /, '')
+      const previouslyAvailable = !fromBase && config.availableResources?.includes(file)
+      const missing = isMissingCatalogResource(fromBase ? 'bundled' : config.type, failure.cause)
+      const refreshingIndexedClass =
+        file.startsWith('class/fluff-class-') &&
+        (config.lastLoaded || config.availableResources?.includes('class/index.json'))
       if (
         failure.required ||
-        (resource.endsWith('book/book-tce.json') &&
-          config.availableResources?.includes('book/book-tce.json'))
+        (!missing && (fromBase || previouslyAvailable || refreshingIndexedClass))
       ) {
         issues.push(message)
-      } else scan.warnings.push(message)
+      } else if (!missing) {
+        scan.warnings.push(message)
+        scan.unavailable.push(file)
+      }
     },
   }
   const load = base
@@ -128,6 +147,7 @@ export async function prepareCatalog(
     data,
     keys,
     warnings: scan.warnings,
+    ...(scan.unavailable.length ? { unavailableResources: scan.unavailable } : {}),
     revision: source.revision,
     layerMetadata,
   }

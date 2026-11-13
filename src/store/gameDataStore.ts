@@ -151,6 +151,7 @@ interface GameDataState {
     candidate: CatalogCandidate
     reason: 'reload' | 'recovery' | 'update' | 'review'
     removals: string[]
+    additions?: string[]
     incompleteRemovalPreview: boolean
     folderGrant?: string
   } | null
@@ -539,29 +540,54 @@ export const useGameDataStore = create<GameDataState>()(
           const prior = get()
           const priorSource = prior.dataSourceConfig
           const hadExternal = priorSource && priorSource.type !== 'bundled'
+          const sameSource =
+            candidate &&
+            priorSource?.type === candidate.config.type &&
+            priorSource.path === candidate.config.path
+          const sameSourceBaseline =
+            sameSource &&
+            ((!prior.sessionBundledSource && prior.lastContentFingerprint) ||
+              prior.savedContentFingerprint)
+          const unavailable = hadExternal
+            ? candidate?.unavailableResources?.filter(
+                (resource) =>
+                  !priorSource.availableResources ||
+                  priorSource.availableResources.includes(resource) ||
+                  (resource.startsWith('class/fluff-class-') &&
+                    priorSource.availableResources.includes('class/index.json')),
+              )
+            : undefined
+          if (unavailable?.length) {
+            throw new Error(
+              `Some files could not be checked. Your current game data was kept. ${unavailable.join(', ')}`,
+            )
+          }
           const hasPriorExternalData =
             hadExternal &&
             (priorSource.lastLoaded || (prior.gameData && !prior.sessionBundledSource))
-          const { removals, incompleteRemovalPreview, sameExternalKeys } =
+          const { additions, removals, incompleteRemovalPreview, sameExternalKeys } =
             candidate && !request?.confirmed
               ? await compareCatalogCandidate(
                   candidate,
                   {
                     config: priorSource,
                     externalKeys: prior.externalKeys,
-                    fallbackData:
-                      hadExternal && !prior.externalKeys && !prior.sessionBundledSource
-                        ? (prior.gameData ?? undefined)
-                        : undefined,
                     hasExternalData: Boolean(hasPriorExternalData),
                   },
                   signal,
                 )
-              : { removals: [], incompleteRemovalPreview: false, sameExternalKeys: false }
+              : {
+                  additions: [],
+                  removals: [],
+                  incompleteRemovalPreview: false,
+                  sameExternalKeys: false,
+                }
           if (candidate && 'workerId' in candidate)
             contentFingerprint = candidate.contentFingerprint
           const candidateFingerprint =
-            candidate && !request?.confirmed && (background || incompleteRemovalPreview)
+            candidate &&
+            !request?.confirmed &&
+            (background || incompleteRemovalPreview || sameSourceBaseline)
               ? 'workerId' in candidate
                 ? candidate.contentFingerprint
                 : computeGameDataFingerprint(candidate.data)
@@ -572,12 +598,10 @@ export const useGameDataStore = create<GameDataState>()(
             !request?.confirmed &&
             (removals.length ||
               incompleteRemovalPreview ||
-              (background && (prior.sessionBundledSource || !fingerprintMatches)))
+              (background && (prior.sessionBundledSource || !fingerprintMatches)) ||
+              (sameSourceBaseline && candidateFingerprint !== sameSourceBaseline))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
-            const sameSource =
-              priorSource?.type === candidate.config.type &&
-              priorSource.path === candidate.config.path
             const recovering = !!prior.sessionBundledSource || !prior.gameData
             const reason =
               removals.length || (!recovering && !fingerprintMatches && !candidate.warnings.length)
@@ -593,6 +617,7 @@ export const useGameDataStore = create<GameDataState>()(
               pendingCatalog: {
                 candidate,
                 reason,
+                additions,
                 removals,
                 incompleteRemovalPreview,
                 ...(folderGrant ? { folderGrant } : {}),
