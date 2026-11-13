@@ -26,7 +26,7 @@ export function mergeFixedShieldBases(layers: readonly GameData[]): unknown[] {
 }
 
 // Keep every named row from these sources until the winning raw identity is known.
-// Filtering on weapon/type first could revive a lower-layer base after an invalid override.
+// Filtering by family first could revive a lower-layer base after an invalid override.
 const isCoreBaseTarget = (value: unknown): value is Row => {
   const row = record(value)
   return (
@@ -37,8 +37,8 @@ const isCoreBaseTarget = (value: unknown): value is Row => {
   )
 }
 
-export function getFixedWeaponBases(data: GameData): unknown[] {
-  if (data.fixedWeaponBases) return data.fixedWeaponBases
+export function getFixedEquipmentBases(data: GameData): unknown[] {
+  if (data.fixedEquipmentBases) return data.fixedEquipmentBases
   const { items, itemsBase } = getRawItems(data)
   // Ordinary exact claims can shadow a base but do not supply baseitem authority.
   return [
@@ -50,8 +50,8 @@ export function getFixedWeaponBases(data: GameData): unknown[] {
   ]
 }
 
-export function mergeFixedWeaponBases(layers: readonly GameData[]): unknown[] {
-  return mergeBases(layers, getFixedWeaponBases, isCoreBaseTarget)
+export function mergeFixedEquipmentBases(layers: readonly GameData[]): unknown[] {
+  return mergeBases(layers, getFixedEquipmentBases, isCoreBaseTarget)
 }
 
 function mergeBases(
@@ -144,7 +144,8 @@ const WEAPON_BASE_FIELDS = new Set([
   'range',
   'weaponCategory',
 ])
-const WEAPON_TEMPLATE_FIELDS = new Set([...TEMPLATE_FIELDS, 'referenceSources'])
+const CORE_TEMPLATE_FIELDS = new Set([...TEMPLATE_FIELDS, 'referenceSources'])
+const ARMOR_BASE_FIELDS = new Set([...BASE_FIELDS, 'armor', 'strength', 'stealth'])
 const WEAPON_INHERITED_FIELDS = new Set(
   [...INHERITED_FIELDS].map((field) => (field === 'bonusAc' ? 'bonusWeapon' : field)),
 )
@@ -214,17 +215,43 @@ function validShieldBase(row: Row, source: string): boolean {
   )
 }
 
-function validWeaponBase(row: Row, source: string): boolean {
-  const typeSuffix = source === 'PHB' ? '' : '|XPHB'
-  const damage = (value: unknown) => typeof value === 'string' && /^\d+(?:d\d+)?$/.test(value)
-  const label = (value: unknown) => typeof value === 'string' && !!value.trim()
+function validDirectPublicBase(row: Row, source: string): boolean {
   return (
     validPublicBase(row, source) &&
     typeof row.name === 'string' &&
     row.name === row.name.trim() &&
     !row.name.includes('|') &&
     row.startingEquipmentCategory === 'Basic' &&
-    !row.sourceIdentityConflict &&
+    !row.sourceIdentityConflict
+  )
+}
+
+function isBodyArmor(row: Row, source: string): boolean {
+  const suffix = source === 'PHB' ? '' : '|XPHB'
+  return ['LA', 'MA', 'HA'].some((type) => row.type === `${type}${suffix}`)
+}
+
+function validArmorBase(row: Row, source: string): boolean {
+  return (
+    validDirectPublicBase(row, source) &&
+    isBodyArmor(row, source) &&
+    Object.keys(row).every((field) => ARMOR_BASE_FIELDS.has(field)) &&
+    (row.armor === undefined || typeof row.armor === 'boolean') &&
+    typeof row.ac === 'number' &&
+    Number.isSafeInteger(row.ac) &&
+    row.ac > 0 &&
+    (row.strength === undefined ||
+      (typeof row.strength === 'string' && /^\d+$/.test(row.strength))) &&
+    (row.stealth === undefined || typeof row.stealth === 'boolean')
+  )
+}
+
+function validWeaponBase(row: Row, source: string): boolean {
+  const typeSuffix = source === 'PHB' ? '' : '|XPHB'
+  const damage = (value: unknown) => typeof value === 'string' && /^\d+(?:d\d+)?$/.test(value)
+  const label = (value: unknown) => typeof value === 'string' && !!value.trim()
+  return (
+    validDirectPublicBase(row, source) &&
     row.weapon === true &&
     Object.keys(row).every((field) => WEAPON_BASE_FIELDS.has(field)) &&
     WEAPON_TAGS.every((field) => row[field] === undefined || typeof row[field] === 'boolean') &&
@@ -259,17 +286,31 @@ export function generateFixedBonusWeapons(data: GameData, definitions: readonly 
   return generateFixedBonusVariants(data, definitions, 'weapon')
 }
 
+export function generateFixedBonusArmor(data: GameData, definitions: readonly Row[]) {
+  return generateFixedBonusVariants(data, definitions, 'armor')
+}
+
+const FIXED_PATTERNS = {
+  shield: /^\+([123]) Shield \(\*\)$/,
+  weapon: /^\+([123]) Weapon$/,
+  armor: /^\+([123]) Armor$/,
+}
+const BASE_VALIDATORS = {
+  shield: validShieldBase,
+  weapon: validWeaponBase,
+  armor: validArmorBase,
+}
+
 function generateFixedBonusVariants(
   data: GameData,
   definitions: readonly Row[],
-  family: 'shield' | 'weapon',
+  family: keyof typeof FIXED_PATTERNS,
 ): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
   const shield = family === 'shield'
-  const baseLabel = shield ? 'Shield' : 'weapon'
-  const pattern = shield ? /^\+([123]) Shield \(\*\)$/ : /^\+([123]) Weapon$/
-  const bonusField = shield ? 'bonusAc' : 'bonusWeapon'
-  const templateFields = shield ? TEMPLATE_FIELDS : WEAPON_TEMPLATE_FIELDS
-  const inheritedFields = shield ? INHERITED_FIELDS : WEAPON_INHERITED_FIELDS
+  const baseLabel = shield ? 'Shield' : family
+  const bonusField = family === 'weapon' ? 'bonusWeapon' : 'bonusAc'
+  const templateFields = shield ? TEMPLATE_FIELDS : CORE_TEMPLATE_FIELDS
+  const inheritedFields = family === 'weapon' ? WEAPON_INHERITED_FIELDS : INHERITED_FIELDS
   const diagnostics: ItemEntryDiagnostic[] = []
   const diagnose = (path: string, message: string) => {
     if (diagnostics.length < 32) diagnostics.push({ path: `magicVariants.${path}`, message })
@@ -277,7 +318,7 @@ function generateFixedBonusVariants(
   const groups = new Map<string, Row[]>()
   const inputs = shield
     ? getFixedShieldBases(data).filter(isShieldTarget)
-    : getFixedWeaponBases(data).filter(isCoreBaseTarget)
+    : getFixedEquipmentBases(data).filter(isCoreBaseTarget)
   for (const value of inputs) {
     const key = identity(value)
     groups.set(key, [...(groups.get(key) ?? []), value])
@@ -285,7 +326,7 @@ function generateFixedBonusVariants(
   const occupied = new Set([...data.items, ...data.itemsBase].map(identity)),
     generated = new Map<string, Item5e[]>()
   for (const definition of definitions) {
-    const match = pattern.exec(String(definition.name))
+    const match = FIXED_PATTERNS[family].exec(String(definition.name))
     if (!match || !['DMG', 'XDMG'].includes(String(definition.source))) continue
     const source = String(definition.source),
       baseSource = source === 'DMG' ? 'PHB' : 'XPHB',
@@ -348,7 +389,7 @@ function generateFixedBonusVariants(
             (row) =>
               row.startingEquipmentCategory === 'Basic' &&
               row.source === baseSource &&
-              row.weapon === true &&
+              (family === 'weapon' ? row.weapon === true : isBodyArmor(row, baseSource)) &&
               isPublicBase(row, baseSource),
           ),
         )
@@ -359,10 +400,7 @@ function generateFixedBonusVariants(
     for (const bases of candidates) {
       const base = bases[0]
       if (!shield && !bases.some(matchesTemplate)) continue
-      if (
-        bases.length !== 1 ||
-        !(shield ? validShieldBase(base, baseSource) : validWeaponBase(base, baseSource))
-      ) {
+      if (bases.length !== 1 || !BASE_VALIDATORS[family](base, baseSource)) {
         diagnose(path, `Ambiguous or unsupported direct public ${baseLabel} base.`)
         continue
       }

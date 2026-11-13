@@ -33,7 +33,7 @@ import {
 } from './dataLoader'
 import { isNativeResilienceIntro } from './draconicResilience'
 import { getNativeDraconicFeatureOwner } from './draconicSubclassFeatureSource'
-import { mergeFixedShieldBases, mergeFixedWeaponBases } from './fixedBonusEquipment'
+import { mergeFixedEquipmentBases, mergeFixedShieldBases } from './fixedBonusEquipment'
 import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
@@ -505,7 +505,8 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       key === 'magicVariantDiagnostics' ||
       key === 'fixedShieldBases' ||
       key === 'fixedShieldDiagnostics' ||
-      key === 'fixedWeaponBases' ||
+      key === 'fixedEquipmentBases' ||
+      key === 'fixedArmorDiagnostics' ||
       key === 'fixedWeaponDiagnostics'
     )
       continue
@@ -597,7 +598,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     ),
   )
   composed.fixedShieldBases = mergeFixedShieldBases(layers)
-  composed.fixedWeaponBases = mergeFixedWeaponBases(layers)
+  composed.fixedEquipmentBases = mergeFixedEquipmentBases(layers)
   const concreteItemCount = composed.items.length
   retainRawItems(composed)
   const rawToolInputs = [...composed.items, ...composed.itemsBase]

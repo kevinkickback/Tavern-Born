@@ -659,8 +659,9 @@ export interface GameData {
   fixedShieldBases?: unknown[]
   fixedShieldDiagnostics?: ItemEntryDiagnostic[]
   /** Winning raw core item identities before ordinary base-item deduplication. */
-  fixedWeaponBases?: unknown[]
+  fixedEquipmentBases?: unknown[]
   fixedWeaponDiagnostics?: ItemEntryDiagnostic[]
+  fixedArmorDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

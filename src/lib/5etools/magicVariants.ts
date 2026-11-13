@@ -1,6 +1,10 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { resolveCopiedRecords } from './copyResolution'
-import { generateFixedBonusShields, generateFixedBonusWeapons } from './fixedBonusEquipment'
+import {
+  generateFixedBonusArmor,
+  generateFixedBonusShields,
+  generateFixedBonusWeapons,
+} from './fixedBonusEquipment'
 import { stripMagicVariantLineage } from './itemEntries'
 
 // Data-only reference adaptation of Renderer.item and SourceUtil at 5etools b9061583:
@@ -181,9 +185,11 @@ export function appendMagicVariantReferences(data: GameData): void {
   const result = resolveMagicVariants(data.magicVariants ?? [])
   const shields = generateFixedBonusShields(data, result.definitions)
   const weapons = generateFixedBonusWeapons(data, result.definitions)
+  const armor = generateFixedBonusArmor(data, result.definitions)
   data.fixedShieldDiagnostics = shields.diagnostics
   data.fixedWeaponDiagnostics = weapons.diagnostics
-  data.items = [...data.items, ...shields.items, ...weapons.items]
+  data.fixedArmorDiagnostics = armor.diagnostics
+  data.items = [...data.items, ...shields.items, ...weapons.items, ...armor.items]
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )
