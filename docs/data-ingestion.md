@@ -246,11 +246,16 @@ its last saved catalog. The overlay offers **Retry** and **Change source** if ne
 catalog is usable. If the pack is unavailable, recovery can admit a valid standalone external
 catalog.
 
-With automatic checks enabled, the configured source is checked after local game data becomes
-available. Settings shows the configured location, when the content last changed, and when it was
-last successfully checked. Failures and optional warnings appear separately. A changed catalog waits for
-**Apply game data update** in Settings. The previous catalog remains active during checks and
-review. The cache and accepted configuration are committed together after validation.
+With automatic checks enabled, startup checks the configured source after local data is available
+if there is no successful check or the last one was at least 24 hours ago. Returning focus can start
+a due check. After a failure, the retry delay starts at 15 minutes and doubles up to eight hours.
+The app remembers the delay for the configured source across launches. A missing compatible cache
+allows a recovery check before the daily interval, subject to failure backoff. Manual checks can
+run immediately. Settings shows the configured location, when the content last changed, and when
+it was last successfully checked. Failures and optional warnings appear separately. A changed
+catalog waits for **Apply game data update** in Settings. On relaunch an unapplied preview can be
+checked again before the daily interval, subject to backoff. The previous catalog remains active
+during checks and review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
 The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
 only if the original cache generation is still current.

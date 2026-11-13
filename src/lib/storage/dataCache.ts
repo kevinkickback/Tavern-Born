@@ -1,11 +1,13 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
-import { createStore, delMany, get, getMany } from 'idb-keyval'
+import { createStore, delMany, get, getMany, set } from 'idb-keyval'
+import type { CatalogRefreshCheck } from '@/lib/5etools/catalogRefreshPolicy'
 import { settleOnAbort } from '@/lib/abortable'
 import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
 const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
+const REFRESH_CHECK_KEY = 'tb:game-data-refresh-check'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 100
@@ -151,10 +153,11 @@ export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
 }
 
 export async function readGameDataCachePair() {
-  const [value, persisted, stamp] = await getMany([
+  const [value, persisted, stamp, refreshCheck] = await getMany([
     CACHE_KEY,
     GAME_DATA_SETTINGS_KEY,
     CACHE_GENERATION_KEY,
+    REFRESH_CHECK_KEY,
   ])
   const cache = usableCache(value)
   if (
@@ -171,7 +174,11 @@ export async function readGameDataCachePair() {
         lastUpdateCheckAt?: string | null
       }
     | undefined
-  return { cache, settings }
+  return { cache, settings, refreshCheck: refreshCheck as CatalogRefreshCheck | undefined }
+}
+
+export function writeCatalogRefreshCheck(check: CatalogRefreshCheck): Promise<void> {
+  return set(REFRESH_CHECK_KEY, check)
 }
 
 function writeBeforeAbort(
@@ -373,7 +380,10 @@ export async function writeGameDataCache(
   await writeBeforeAbort(options?.signal ?? new AbortController().signal, (store, done) => {
     store.put(entry, CACHE_KEY)
     store.put(entry.generation, CACHE_GENERATION_KEY)
-    if (options?.config) putSettings(store, options.config, entry)
+    if (options?.config) {
+      store.delete(REFRESH_CHECK_KEY)
+      putSettings(store, options.config, entry)
+    }
     done(true)
   })
   return entry
@@ -383,7 +393,7 @@ export async function clearGameDataCache(clearSettings = false): Promise<void> {
   await delMany([
     CACHE_KEY,
     CACHE_GENERATION_KEY,
-    ...(clearSettings ? [GAME_DATA_SETTINGS_KEY] : []),
+    ...(clearSettings ? [GAME_DATA_SETTINGS_KEY, REFRESH_CHECK_KEY] : []),
   ])
 }
 

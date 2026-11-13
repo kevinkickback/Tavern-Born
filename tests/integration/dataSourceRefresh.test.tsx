@@ -126,15 +126,15 @@ describe('data source refresh feedback', () => {
     const user = userEvent.setup()
     render(<DataSourceConfigurator />)
 
-    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+    expect(screen.getByText('Automatic update checks')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
 
-    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+    expect(screen.queryByText('Automatic update checks')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+    expect(screen.getByText('Automatic update checks')).toBeTruthy()
   })
 
   test('removes additional content without clearing the current source first', async () => {
@@ -231,7 +231,7 @@ describe('data source refresh feedback', () => {
     expect(screen.getByRole('button', { name: 'Add Additional Content' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Use Included SRD' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Check for Updates' })).toBeNull()
-    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+    expect(screen.queryByText('Automatic update checks')).toBeNull()
   })
 
   test('recovery shows source selection without an SRD choice prompt', () => {

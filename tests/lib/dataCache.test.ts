@@ -27,6 +27,7 @@ import {
   persistCatalogRepair,
   readGameDataCache,
   readGameDataCachePair,
+  writeCatalogRefreshCheck,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 
@@ -67,6 +68,31 @@ describe('writeGameDataCache', () => {
   })
 
   afterEach(() => vi.useRealTimers())
+
+  test('stores the refresh outcome independently from the accepted catalog and settings', async () => {
+    const check = {
+      source: config,
+      lastAttemptAt: Date.parse('2026-11-01T05:00:00Z'),
+      lastSuccessAt: null,
+      consecutiveFailures: 2,
+    }
+    const entry = await writeGameDataCache(makeGameData(), config, { config })
+    try {
+      await writeCatalogRefreshCheck(check)
+      const pair = await readGameDataCachePair()
+      expect(pair.cache).toEqual(entry)
+      expect(pair.settings).toMatchObject({ dataSourceConfig: config })
+      expect(pair.refreshCheck).toEqual(check)
+      await clearGameDataCache()
+      expect((await readGameDataCachePair()).refreshCheck).toEqual(check)
+      await writeGameDataCache(makeGameData('accepted'), config, { config })
+      expect((await readGameDataCachePair()).refreshCheck).toBeUndefined()
+      await writeCatalogRefreshCheck(check)
+    } finally {
+      await clearGameDataCache(true)
+    }
+    expect((await readGameDataCachePair()).refreshCheck).toBeUndefined()
+  })
 
   test('updates check metadata without rewriting the catalog and rejects writes after clear', async () => {
     const source = { ...config, acceptedRevision: '1'.repeat(40) }
@@ -199,6 +225,14 @@ describe('writeGameDataCache', () => {
   test('a superseded activation keeps the accepted configuration and catalog together', async () => {
     const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
     const old = await writeGameDataCache(makeGameData('Accepted'), config, { config })
+    const check = {
+      source: config,
+      lastAttemptAt: Date.now(),
+      lastSuccessAt: Date.now(),
+      consecutiveFailures: 0,
+      needsReview: true,
+    }
+    await writeCatalogRefreshCheck(check)
     const next = { ...config, path: 'https://backup.example.test' }
     const controller = new AbortController()
     const originalPut = IDBObjectStore.prototype.put
@@ -219,9 +253,10 @@ describe('writeGameDataCache', () => {
       expect(await idb.get('game-data-storage')).toMatchObject({
         state: { dataSourceConfig: config },
       })
+      expect((await readGameDataCachePair()).refreshCheck).toEqual(check)
     } finally {
       put.mockRestore()
-      await idb.delMany(['tb:game-data-cache', 'game-data-storage'])
+      await clearGameDataCache(true)
     }
   })
 

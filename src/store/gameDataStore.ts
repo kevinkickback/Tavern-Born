@@ -11,6 +11,11 @@ import {
   repairCatalog,
 } from '@/lib/5etools/catalogClient'
 import type { CatalogCandidate } from '@/lib/5etools/catalogProtocol'
+import {
+  type CatalogRefreshCheck,
+  isCatalogCheckDue,
+  refreshCheckForSource,
+} from '@/lib/5etools/catalogRefreshPolicy'
 import { hasCatalogRecords } from '@/lib/5etools/contentLayers'
 import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -25,6 +30,7 @@ import {
   markCatalogChecked,
   persistCatalogRepair,
   readGameDataCachePair,
+  writeCatalogRefreshCheck,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
@@ -61,6 +67,7 @@ interface CatalogRequest {
   confirmed?: boolean
   session?: boolean
   startup?: boolean
+  recovery?: boolean
   folderGrant?: string
 }
 
@@ -136,6 +143,7 @@ interface GameDataState {
   /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
   lastUpdateCheckAt: string | null
+  catalogRefreshCheck: CatalogRefreshCheck | undefined
   catalogWarnings: string[]
   externalKeys: string[] | undefined
   pendingCatalog: {
@@ -159,6 +167,7 @@ interface GameDataState {
     checkForUpdates?: boolean
     retry?: boolean
   }) => Promise<{ backgroundRefresh?: Promise<boolean> }>
+  checkCatalogIfDue: (startup?: boolean) => Promise<boolean> | undefined
 
   /** Prepare a catalog. Background checks stage changed content for explicit Apply. */
   loadCatalog: (
@@ -183,6 +192,7 @@ export const useGameDataStore = create<GameDataState>()(
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       lastUpdateCheckAt: null,
+      catalogRefreshCheck: undefined,
       catalogWarnings: [],
       externalKeys: undefined,
       pendingCatalog: null,
@@ -198,8 +208,34 @@ export const useGameDataStore = create<GameDataState>()(
         }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
+      checkCatalogIfDue: (startup = false) => {
+        const state = get()
+        const config = state.dataSourceConfig
+        if (
+          !config ||
+          config.type === 'bundled' ||
+          !state.gameData ||
+          remoteStartupPreparation ||
+          state.isLoading ||
+          state.isBackgroundRefreshing ||
+          state.pendingCatalog ||
+          !isCatalogCheckDue(
+            config,
+            state.catalogRefreshCheck,
+            state.lastUpdateCheckAt,
+            state.sessionBundledSource !== null,
+            Date.now(),
+          )
+        )
+          return
+
+        return get()
+          .loadCatalog(config, true, { startup })
+          .then((result) => result.kind === 'applied' && result.changed)
+      },
+
       loadFromCache: async (opts) => {
-        if (remoteStartupPreparation || get().isLoading) return {}
+        if (remoteStartupPreparation || get().isLoading || get().isBackgroundRefreshing) return {}
         const startupRequestId = activeLoadRequestId
         const controller = new AbortController()
         remoteStartupPreparation = controller
@@ -215,6 +251,7 @@ export const useGameDataStore = create<GameDataState>()(
         if (remoteStartupPreparation !== controller) return {}
         remoteStartupPreparation = null
         const availableCache = pair?.cache
+        if (pair) set({ catalogRefreshCheck: pair.refreshCheck })
         if (pair?.settings) {
           const state = migrateGameDataPersistedState(pair.settings) as typeof pair.settings
           set({
@@ -226,6 +263,17 @@ export const useGameDataStore = create<GameDataState>()(
         const desktop = typeof window.electronAPI?.getBundledManifest === 'function'
         set({ bundledUnavailable: desktop && !installed })
         const external = config?.type === 'bundled' ? null : config
+        if (external) {
+          const lastSuccessAt = refreshCheckForSource(
+            pair?.refreshCheck,
+            external,
+            Date.now(),
+          )?.lastSuccessAt
+          const lastCheckedAt = Date.parse(get().lastUpdateCheckAt ?? '')
+          if (lastSuccessAt != null && lastSuccessAt > (lastCheckedAt || 0)) {
+            set({ lastUpdateCheckAt: new Date(lastSuccessAt).toISOString() })
+          }
+        }
         const identity = installed
           ? external
             ? { base: installed, additional: external }
@@ -305,9 +353,22 @@ export const useGameDataStore = create<GameDataState>()(
           const openedFallback = get().gameData || (await openCache(external))
           if (fallbackRequestId !== activeLoadRequestId) return {}
           if (!openedFallback) {
-            if (external && (opts?.retry || (opts?.checkForUpdates && !desktop && !installed))) {
+            if (
+              external &&
+              (opts?.retry ||
+                (opts?.checkForUpdates &&
+                  !desktop &&
+                  !installed &&
+                  isCatalogCheckDue(
+                    external,
+                    get().catalogRefreshCheck,
+                    get().lastUpdateCheckAt,
+                    true,
+                    Date.now(),
+                  )))
+            ) {
               set({ remoteStartup: 'checking' })
-              const result = await get().loadCatalog(external, false, { startup })
+              const result = await get().loadCatalog(external, false, { startup, recovery: true })
               if (result.kind === 'staged')
                 set({ remoteStartup: 'setup', cacheStatus: 'unconfigured' })
               else if (result.kind === 'rejected') set({ remoteStartup: 'unavailable' })
@@ -322,17 +383,13 @@ export const useGameDataStore = create<GameDataState>()(
           }
         }
 
-        if (
-          external &&
-          opts?.checkForUpdates &&
-          get().gameData &&
-          get().dataSourceConfig === config
-        ) {
-          return {
-            backgroundRefresh: get()
-              .loadCatalog(external, true, { startup })
-              .then((result) => result.kind === 'applied' && result.changed),
-          }
+        if (external && opts?.checkForUpdates && get().dataSourceConfig === config) {
+          const backgroundRefresh = opts.retry
+            ? get()
+                .loadCatalog(external, true)
+                .then((result) => result.kind === 'applied' && result.changed)
+            : get().checkCatalogIfDue(true)
+          if (backgroundRefresh) return { backgroundRefresh }
         }
         return {}
       },
@@ -370,6 +427,31 @@ export const useGameDataStore = create<GameDataState>()(
           : INTERACTIVE_CATALOG_TIMEOUT_MS
         const timeout = setTimeout(() => controller.abort(catalogTimeout(timeoutMs)), timeoutMs)
         const { signal } = controller
+        const startedAt = Date.now()
+        const configured = get().dataSourceConfig
+        const tracksCheck =
+          config.type !== 'bundled' &&
+          (background || request?.recovery) &&
+          !request?.prepared &&
+          configured?.type === config.type &&
+          configured.path === config.path
+        const previousCheck = tracksCheck
+          ? refreshCheckForSource(get().catalogRefreshCheck, config, startedAt)
+          : undefined
+
+        const rememberCheck = (succeeded: boolean, needsReview = false) => {
+          if (!tracksCheck || requestId !== activeLoadRequestId) return
+          const check: CatalogRefreshCheck = {
+            source: { type: config.type, path: config.path },
+            lastAttemptAt: startedAt,
+            lastSuccessAt: succeeded ? Date.now() : (previousCheck?.lastSuccessAt ?? null),
+            consecutiveFailures: succeeded ? 0 : (previousCheck?.consecutiveFailures ?? 0) + 1,
+            needsReview: needsReview || (!succeeded && previousCheck?.needsReview),
+          }
+          set({ catalogRefreshCheck: check })
+          // Scheduling metadata is best effort and independent of catalog activation.
+          return writeCatalogRefreshCheck(check).catch(() => undefined)
+        }
 
         set({
           pendingCatalog: null,
@@ -487,6 +569,7 @@ export const useGameDataStore = create<GameDataState>()(
                     prior.lastContentFingerprint)))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
+            const recorded = rememberCheck(true, true)
             set({
               pendingCatalog: {
                 candidate,
@@ -500,6 +583,7 @@ export const useGameDataStore = create<GameDataState>()(
               lastUpdateCheckAt: new Date().toISOString(),
               catalogWarnings: candidate.warnings,
             })
+            await recorded
             return { kind: 'staged' }
           }
 
@@ -530,7 +614,7 @@ export const useGameDataStore = create<GameDataState>()(
               lastLoaded: priorSource?.lastLoaded,
             }
             const warnings = candidate.warnings
-            return await enqueueCacheMutation(async () => {
+            const result = await enqueueCacheMutation(async () => {
               signal.throwIfAborted()
               const generation = await markCatalogChecked(cached, checkedConfig, now, signal)
               if (!generation)
@@ -547,6 +631,8 @@ export const useGameDataStore = create<GameDataState>()(
               })
               return { kind: 'applied', changed: false } as const
             })
+            await rememberCheck(true)
+            return result
           }
           const prepared = candidate
             ? await materializeCatalogCandidate(candidate, signal)
@@ -613,6 +699,7 @@ export const useGameDataStore = create<GameDataState>()(
               lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
               lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
               lastUpdateCheckAt: now,
+              catalogRefreshCheck: undefined,
               cacheStatus: 'fetched',
               remoteStartup: null,
               bundledUnavailable: config.type !== 'bundled' && get().bundledUnavailable,
@@ -620,7 +707,9 @@ export const useGameDataStore = create<GameDataState>()(
             })
             return { kind: 'applied', changed: contentChanged } as const
           })
-          return await settleOnAbort(mutation, signal, () => !writeStarted)
+          const result = await settleOnAbort(mutation, signal, () => !writeStarted)
+          if (result.kind === 'applied') await rememberCheck(true)
+          return result
         } catch (error) {
           // Ignore stale request failures and intentional aborts.
           if (requestId !== activeLoadRequestId) {
@@ -638,6 +727,7 @@ export const useGameDataStore = create<GameDataState>()(
           }
 
           const message = failure?.message ?? 'Failed to load game data'
+          const recorded = rememberCheck(false)
           set({
             error: message,
             ...(background && get().gameData && !get().sessionBundledSource
@@ -647,6 +737,7 @@ export const useGameDataStore = create<GameDataState>()(
             isBackgroundRefreshing: false,
             loadProgress: null,
           })
+          await recorded
           return { kind: 'rejected', message }
         } finally {
           clearTimeout(timeout)

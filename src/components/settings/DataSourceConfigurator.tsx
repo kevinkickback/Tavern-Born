@@ -656,8 +656,8 @@ export function DataSourceConfigurator({
 
       {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
         <Section
-          title="Check for Updates at Startup"
-          description="Automatically check your selected game data for changes when Tavern Born starts."
+          title="Automatic update checks"
+          description="Tavern Born checks about once a day when you open or return to the app. If a check fails, it waits before trying again."
         >
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-medium">Check automatically</p>
