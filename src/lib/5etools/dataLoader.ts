@@ -16,7 +16,7 @@ import {
   resolveCopiedRecords,
 } from './copyResolution'
 import { createEmptyGameData } from './emptyGameData'
-import { getFixedShieldBases, getFixedWeaponBases } from './fixedBonusEquipment'
+import { getFixedEquipmentBases, getFixedShieldBases } from './fixedBonusEquipment'
 import { expandItemEntries, parseItemEntries, retainRawItems } from './itemEntries'
 import {
   associateItemTypeEntries,
@@ -509,7 +509,7 @@ export class FiveEToolsDataLoader {
     throwIfAborted(options?.signal)
 
     retainRawItems(gameData)
-    gameData.fixedWeaponBases = getFixedWeaponBases(gameData)
+    gameData.fixedEquipmentBases = getFixedEquipmentBases(gameData)
     const concreteItemCount = gameData.items.length
     const rawToolInputs = [...gameData.items, ...gameData.itemsBase]
     const resolvedItems = resolveCopiedRecords(rawToolInputs, 'item')

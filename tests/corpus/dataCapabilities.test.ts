@@ -61,7 +61,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       },
     )
   })
-  it('loads the bundled and managed source stack with concrete shields and fixed weapons', () => {
+  it('loads the bundled and managed source stack with fixed shields, weapons, and body armor', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
     expect(gameData.magicVariants).toHaveLength(230)
@@ -86,8 +86,17 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       expect(
         generated.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
       ).toHaveLength(38)
+      for (const source of ['DMG', 'XDMG'])
+        expect(
+          generated.filter(
+            (item) =>
+              item.bonusAc === bonus &&
+              item.source === source &&
+              item.magicVariantGenerated?.base.name !== 'Shield',
+          ),
+        ).toHaveLength(12)
     }
-    expect(generated).toHaveLength(228)
+    expect(generated).toHaveLength(300)
   })
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
