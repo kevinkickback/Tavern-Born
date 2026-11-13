@@ -15,11 +15,14 @@ import {
   optionalDeclarationKey,
   summarizeOptionalDeclarationCertificate,
 } from '@/lib/5etools/optionalClassDeclarationStructure'
+import { createIndexedClassDocumentParser } from '@/lib/5etools/parsers/classes'
 import {
   buildClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
+import type { Class5e, ClassFeature } from '@/types/5etools'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import {
   makeOptionalDeclarationCatalog,
   makeOptionalDeclarationLayer,
@@ -75,6 +78,36 @@ describe('current optional class/subclass declaration authority', () => {
       }
     }
     expect(unavailable).toEqual([])
+  })
+  it('verifies indexed subclass declarations while rejecting changed authored metadata', () => {
+    const file = 'class-ranger.json'
+    const fixture = optionalDeclarationSources.documents.find((row) => row.file === `class/${file}`)
+    if (!fixture) throw new Error('Missing Ranger declaration fixture')
+    const document = structuredClone(fixture.data)
+    document.subclass = document.subclass.filter((row) => row.classSource === 'PHB')
+    const owner: OptionalDeclarationOwner = ['subclass', 'ranger', 'phb', 'beast master', 'phb']
+    const target = 'subclass-feature|primal companion|ranger|phb|beast master|phb|3|tce'
+    const parse = createIndexedClassDocumentParser({ ranger: file }, new Map([[file, document]]))
+    const parsed = parse(file)
+    const data = composeGameDataLayers([
+      makeGameDataFixture({
+        classes: parsed.classes as Class5e[],
+        classFeatures: parsed.classFeatures as ClassFeature[],
+        optionalClassFeatureSources: parsed.optionalClassFeatureSources,
+      }),
+    ])
+    const catalogs = scopeClassChoiceFeatureCatalogs(
+      buildClassChoiceFeatureCatalogs(data),
+      getFeatureOwnerKey('ranger', 'phb', 'beast master', 'phb'),
+    )
+    const declaration = current(catalogs, owner, target, 3)
+    expect(declaration?.feature.source).toBe('TCE')
+    const changed = structuredClone(catalogs)
+    const ranger = changed.classes?.find((row) => row.name === 'Ranger' && row.source === 'PHB')
+    const subclass = ranger?.subclasses?.find((row) => row.name === 'Beast Master')
+    if (!subclass) throw new Error('Missing indexed Beast Master')
+    subclass.page = 1
+    expect(current(changed, owner, target, 3)).toBeUndefined()
   })
   it.each([
     'name',
