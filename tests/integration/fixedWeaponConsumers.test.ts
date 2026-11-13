@@ -108,9 +108,18 @@ test('fixed weapons require an exact winning base and keep explicit equipment an
   expect(
     composeGameDataLayers([crossFileCollision]).items.some((row) => row.name === '+1 Rapier'),
   ).toBe(false)
-  expect(
-    (await load(templates, [], [], [rapier])).items.some((row) => row.magicVariantGenerated),
-  ).toBe(false)
+  const withoutDirectBases = await load(templates, [], [], [rapier])
+  expect(withoutDirectBases.items.some((row) => row.magicVariantGenerated)).toBe(false)
+  expect(withoutDirectBases.fixedWeaponDiagnostics).toEqual([
+    {
+      path: 'magicVariants.+1 Weapon|DMG',
+      message: 'Unavailable exact public weapon base from PHB.',
+    },
+    {
+      path: 'magicVariants.+2 Weapon|XDMG',
+      message: 'Unavailable exact public weapon base from XPHB.',
+    },
+  ])
   expect(
     (await load([{ ...templates[0], requires: [{ weapon: true, axe: true }] }])).items.some(
       (row) => row.magicVariantGenerated,

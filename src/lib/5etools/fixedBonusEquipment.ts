@@ -265,6 +265,7 @@ function generateFixedBonusVariants(
   family: 'shield' | 'weapon',
 ): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
   const shield = family === 'shield'
+  const baseLabel = shield ? 'Shield' : 'weapon'
   const pattern = shield ? /^\+([123]) Shield \(\*\)$/ : /^\+([123]) Weapon$/
   const bonusField = shield ? 'bonusAc' : 'bonusWeapon'
   const templateFields = shield ? TEMPLATE_FIELDS : WEAPON_TEMPLATE_FIELDS
@@ -337,8 +338,11 @@ function generateFixedBonusVariants(
         (row.edition === 'one' && definition.edition !== 'classic')) &&
       requires.some((requirement) => matches(row, requirement, true)) &&
       (!excludes || !matches(row, excludes, false))
+    const shieldBases = groups.get(identity({ name: baseLabel, source: baseSource }))
     const candidates = shield
-      ? [groups.get(identity({ name: 'Shield', source: baseSource })) ?? []]
+      ? shieldBases
+        ? [shieldBases]
+        : []
       : [...groups.values()].filter((rows) =>
           rows.some(
             (row) =>
@@ -348,6 +352,10 @@ function generateFixedBonusVariants(
               isPublicBase(row, baseSource),
           ),
         )
+    if (candidates.length === 0) {
+      diagnose(path, `Unavailable exact public ${baseLabel} base from ${baseSource}.`)
+      continue
+    }
     for (const bases of candidates) {
       const base = bases[0]
       if (!shield && !bases.some(matchesTemplate)) continue
@@ -355,12 +363,7 @@ function generateFixedBonusVariants(
         bases.length !== 1 ||
         !(shield ? validShieldBase(base, baseSource) : validWeaponBase(base, baseSource))
       ) {
-        diagnose(
-          path,
-          bases.length
-            ? `Ambiguous or unsupported direct public ${shield ? 'Shield' : 'weapon'} base.`
-            : 'Unavailable exact public Shield base.',
-        )
+        diagnose(path, `Ambiguous or unsupported direct public ${baseLabel} base.`)
         continue
       }
       if (shield && !matchesTemplate(base)) continue
