@@ -57,10 +57,10 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
   const spellcastingStat = selectedClass ? getSpellcastingStatDisplay(selectedClass) : 'None'
   const savingThrows = selectedClass ? getSavingThrowsDisplay(selectedClass) : 'None'
   const armorHtml = selectedClass
-    ? formatProficiencyList(selectedClass.startingProficiencies?.armor)
+    ? formatProficiencyList(selectedClass.startingProficiencies?.armor, 'armor')
     : null
   const weaponsHtml = selectedClass
-    ? formatProficiencyList(selectedClass.startingProficiencies?.weapons)
+    ? formatProficiencyList(selectedClass.startingProficiencies?.weapons, 'weapon')
     : null
   const toolsHtml = selectedClass
     ? formatProficiencyList(selectedClass.startingProficiencies?.tools)

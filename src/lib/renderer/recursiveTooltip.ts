@@ -2,6 +2,12 @@ import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTyp
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
+import {
+  getArmorCategoryLabel,
+  getNormalizedItemTraits,
+  inferArmorCategory,
+  inferWeaponRange,
+} from '@/lib/calculations/itemClassification'
 import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { renderEntry } from '@/lib/renderer'
 import type { Creature5e, Item5e, ItemProperty5e, Psionic5e, Spell5e } from '@/types/5etools'
@@ -33,6 +39,7 @@ export interface RecursiveTooltipData {
   title: string
   subtitle?: string
   html?: string
+  key?: string
 }
 
 export interface RecursiveLookup {
@@ -40,6 +47,7 @@ export interface RecursiveLookup {
   itemPropertyByAbbr?: Record<string, string>
   spells: Map<string, Spell5e>
   items: Map<string, TooltipEntityLike>
+  baseItems?: readonly Item5e[]
   feats: Map<string, TooltipEntityLike>
   races: Map<string, TooltipEntityLike>
   classes: Map<string, TooltipEntityLike>
@@ -68,7 +76,7 @@ export interface RecursiveTooltipCollections {
   itemProperties?: readonly ItemProperty5e[]
   spells?: readonly unknown[]
   items?: readonly unknown[]
-  itemsBase?: readonly unknown[]
+  itemsBase?: readonly Item5e[]
   feats?: readonly unknown[]
   races?: readonly unknown[]
   classes?: readonly unknown[]
@@ -254,6 +262,7 @@ export function buildRecursiveLookup(
     itemTextContext,
     itemPropertyByAbbr: buildItemPropertyLookup([...(collections.itemProperties ?? [])]),
     spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
+    baseItems: collections.itemsBase,
     items: buildNameMap([
       ...asTooltipEntities(collections.items),
       ...asTooltipEntities(collections.itemsBase),
@@ -373,6 +382,70 @@ function getCreaturePreviewEntries(creature: Creature5e): unknown[] {
   return [...(creature.entries ?? []), ...namedEntries]
 }
 
+const proficiencyPreviews = new WeakMap<RecursiveLookup, Map<string, RecursiveTooltipData>>()
+let proficiencySnapshot = 0
+
+function getProficiencyPreview(
+  lookup: RecursiveLookup,
+  { name, source }: RecursiveReference,
+): RecursiveTooltipData | undefined {
+  const title =
+    source === 'armor'
+      ? getArmorCategoryLabel(name as Parameters<typeof getArmorCategoryLabel>[0])
+      : source === 'weapon' && (name === 'simple' || name === 'martial')
+        ? `${name[0].toUpperCase()}${name.slice(1)} Weapons`
+        : null
+  if (!title) return undefined
+
+  let previews = proficiencyPreviews.get(lookup)
+  if (!previews) {
+    previews = new Map()
+    proficiencyPreviews.set(lookup, previews)
+  }
+  const key = getEntityKey(name, source)
+  const cached = previews.get(key)
+  if (cached) return cached
+
+  const items = (lookup.baseItems ?? [])
+    .filter((item) => {
+      if (
+        item?.startingEquipmentCategory !== 'Basic' ||
+        item.sourceIdentityConflict ||
+        item.primaryItemTypeDiagnostics?.length ||
+        !item.name ||
+        !item.source ||
+        /[|{}<>]/.test(item.name + item.source) ||
+        lookup.items.get(getEntityKey(item.name, item.source)) !== item
+      )
+        return false
+      const primary = item.primaryItemTypeText
+      if (primary) {
+        if (primary.diagnostics?.length) return false
+        return source === 'armor'
+          ? inferArmorCategory(primary.name) === name
+          : !!inferWeaponRange(primary.name) && item.weaponCategory === name
+      }
+      const traits = getNormalizedItemTraits(item)
+      return source === 'armor'
+        ? traits.armorCategory === name
+        : traits.weaponRanges.length > 0 && item.weaponCategory === name
+    })
+    .map(({ name, source }) =>
+      `{@item ${name}|${source}|${name} (${source})}`.replace(/&/g, '&amp;'),
+    )
+  const preview = {
+    title,
+    key: `proficiency|${key}|${++proficiencySnapshot}`,
+    html: getEntryWithHoverTitles(
+      items.length
+        ? { type: 'list', items: [...new Set(items)].sort() }
+        : 'No matching base equipment is available in the selected books.',
+    ),
+  }
+  previews.set(key, preview)
+  return preview
+}
+
 export function getRecursiveTooltipData(
   reference: RecursiveReference,
   lookup: RecursiveLookup,
@@ -386,6 +459,9 @@ export function getRecursiveTooltipData(
   }
 
   if (!reference.name) return simpleFallback
+
+  if (reference.kind === 'proficiency')
+    return getProficiencyPreview(lookup, reference) ?? simpleFallback
 
   if (normalizeKind(reference.kind) === 'spell') {
     const spell = resolveRecursiveEntity(lookup.spells, reference.name, reference.source)
