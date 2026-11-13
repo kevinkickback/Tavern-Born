@@ -106,8 +106,7 @@ describe('data source refresh feedback', () => {
     expect(screen.getByRole('button', { name: 'Check for Updates' }).hasAttribute('disabled')).toBe(
       false,
     )
-    if (outcome === 'updated')
-      expect(toast.info).toHaveBeenCalledWith('Review your additional content in Game Data')
+    if (outcome === 'updated') expect(toast.info).toHaveBeenCalledWith('Game data ready for review')
     if (outcome === 'unchanged') expect(toast.info).toHaveBeenCalledWith('Game data is up to date')
     if (outcome === 'failed')
       expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
@@ -151,8 +150,8 @@ describe('data source refresh feedback', () => {
 
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
-    expect(toast.info).toHaveBeenCalledWith('Your additional content is ready to reload')
-    expect(screen.getByRole('button', { name: 'Reload additional content' })).toBeTruthy()
+    expect(toast.info).toHaveBeenCalledWith('Additional content ready to restore')
+    expect(screen.getByRole('button', { name: 'Restore additional content' })).toBeTruthy()
   })
 
   test('keeps the startup update preference on the main Game Data view', async () => {

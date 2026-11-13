@@ -41,7 +41,7 @@ function getDataStatus(
       detail:
         error ??
         (cacheStatus === 'session-srd'
-          ? 'Using Included SRD this session. Check the configured source in Settings.'
+          ? 'Additional content is unavailable. Open Game Data for details.'
           : 'Using saved game data. See Settings for details.'),
       icon: CloudOff,
       tone: 'text-warning-foreground',
@@ -92,7 +92,9 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
   const isBundledCatalog = dataSourceConfig?.type === 'bundled'
   const catalogLabel = dataSourceConfig
     ? isBundledCatalog
-      ? 'SRD Content Only'
+      ? cacheStatus === 'session-srd'
+        ? 'Built-in rules only'
+        : 'SRD Content Only'
       : 'Additional Content Loaded'
     : null
   const catalogDetail = isBundledCatalog
@@ -116,7 +118,14 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
     catalogDetail,
   )
   const DataStatusIcon = dataStatus.icon
-  const dataAction = dataReview === 'reload' || dataReview === 'recovery' ? 'reload' : dataReview
+  const dataAction =
+    dataReview === 'reload'
+      ? 'Restore additional content'
+      : dataReview === 'review' || dataReview === 'recovery'
+        ? 'Review game data'
+        : dataReview === 'update'
+          ? 'Game data update available'
+          : undefined
   const separator = <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />
 
   return (
@@ -160,13 +169,9 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
           {dataAction && (
             <>
               {separator}
-              <Link
-                to="/settings?section=data#game-data-update"
-                aria-label={`Game data ${dataAction} available`}
-                className={updateActionClass}
-              >
+              <Link to="/settings?section=data#game-data-update" className={updateActionClass}>
                 <CircleArrowUp className="size-3.5" aria-hidden="true" />
-                {dataAction[0].toUpperCase() + dataAction.slice(1)} available
+                {dataAction}
               </Link>
             </>
           )}

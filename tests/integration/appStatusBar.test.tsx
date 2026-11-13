@@ -2,7 +2,9 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { AppLayout } from '@/components/layout/AppLayout'
 import { AppStatusBar } from '@/components/layout/AppStatusBar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -89,13 +91,12 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     const status = screen.getByTestId('game-data-status')
-    expect(status.textContent).toBe('SRD Content Only')
-    expect(screen.getByText('SRD Content Only').classList.contains('text-muted-foreground')).toBe(
-      true,
-    )
+    const label = fallback ? 'Built-in rules only' : 'SRD Content Only'
+    expect(status.textContent).toBe(label)
+    expect(screen.getByText(label).classList.contains('text-muted-foreground')).toBe(true)
     expect(status.getAttribute('title')).toBe(
       fallback
-        ? 'Using Included SRD this session. Check the configured source in Settings.'
+        ? 'Additional content is unavailable. Open Game Data for details.'
         : 'tavern-born-srd-core 1.0.0',
     )
   })
@@ -114,11 +115,11 @@ describe('application status bar', () => {
   })
 
   test.each([
-    ['update', 'update', 'Review changes to your game data'],
-    ['review', 'review', 'Review your additional content'],
-    ['reload', 'reload', 'Reload your additional content'],
-    ['recovery', 'reload', 'Reload your additional content'],
-  ] as const)('opens the %s review independently of app updates', async (reason, action, title) => {
+    ['update', 'Game data update available', 'Game data update'],
+    ['review', 'Review game data', 'Review game data'],
+    ['reload', 'Restore additional content', 'Restore additional content'],
+    ['recovery', 'Review game data', 'Review game data'],
+  ] as const)('opens the %s review independently of app updates', async (reason, linkName, title) => {
     const user = userEvent.setup()
     const openAppUpdate = vi.fn()
     vi.stubGlobal('electronAPI', { getAppVersion: () => Promise.resolve('0.6.0') })
@@ -146,10 +147,8 @@ describe('application status bar', () => {
         },
       }),
     )
-    const linkName = `Game data ${action} available`
     const dataUpdate = screen.getByRole('link', { name: linkName })
-    expect(dataUpdate.textContent?.toLowerCase()).toContain(`${action} available`)
-    if (action !== 'update')
+    if (reason !== 'update')
       expect(screen.queryByRole('link', { name: 'Game data update available' })).toBeNull()
     const appUpdate = screen.getByRole('button', { name: 'App update available' })
     expect(dataUpdate.parentElement?.contains(screen.getByText('Additional Content Loaded'))).toBe(
@@ -161,13 +160,21 @@ describe('application status bar', () => {
     expect(openAppUpdate).toHaveBeenCalledTimes(1)
     await user.click(dataUpdate)
     const heading = await screen.findByRole('heading', { name: title })
-    expect(Boolean(screen.queryByText(/matches the rules you last used/))).toBe(reason === 'reload')
+    expect(Boolean(screen.queryByText(/rebuilt rules match what you last used/))).toBe(
+      reason === 'reload',
+    )
+    expect(Boolean(screen.queryByText(/couldn’t confirm a match/))).toBe(reason === 'recovery')
     expect(Boolean(screen.queryByText(/This preview may miss some removals/))).toBe(
       reason !== 'update',
     )
     expect(
       screen.getByRole('button', {
-        name: action === 'reload' ? 'Reload additional content' : 'Apply game data update',
+        name:
+          reason === 'reload'
+            ? 'Restore additional content'
+            : reason === 'recovery'
+              ? 'Use additional content'
+              : 'Apply game data update',
       }),
     ).toBeTruthy()
     expect(heading.closest('section')).toBe(document.activeElement)
@@ -176,6 +183,47 @@ describe('application status bar', () => {
     await act(() => useGameDataStore.setState({ pendingCatalog: null }))
     expect(screen.queryByRole('link', { name: linkName })).toBeNull()
     expect(screen.getByRole('button', { name: 'App update available' })).toBe(appUpdate)
+  })
+
+  test('shows the built-in rules fallback outside the footer before a preview is ready', async () => {
+    const user = userEvent.setup()
+    const bundled = {
+      type: 'bundled' as const,
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    }
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<p>Characters</p>} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </AppLayout>
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    expect(screen.queryByRole('link', { name: 'Open Game Data' })).toBeNull()
+    await act(() =>
+      useGameDataStore.setState({
+        sessionBundledSource: bundled,
+        cacheStatus: 'session-srd',
+        isBackgroundRefreshing: true,
+      }),
+    )
+    expect(
+      screen.getByText('Some character options may be unavailable.', { exact: false }),
+    ).toBeTruthy()
+    await user.click(screen.getByRole('link', { name: 'Open Game Data' }))
+    const section = screen.getByRole('region', { name: 'Using built-in rules' })
+    expect(section.textContent).toContain('couldn’t use its saved copy')
+    expect(section).toBe(document.activeElement)
+    expect(screen.queryByRole('link', { name: 'Open Game Data' })).toBeNull()
+    await act(() => useGameDataStore.setState({ sessionBundledSource: null }))
+    expect(screen.queryByRole('region', { name: 'Using built-in rules' })).toBeNull()
   })
 
   test('shows active-character save state', () => {

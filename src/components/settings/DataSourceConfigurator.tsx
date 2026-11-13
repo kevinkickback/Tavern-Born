@@ -92,6 +92,7 @@ export function DataSourceConfigurator({
   const [bundledManifest, setBundledManifest] = useState<BundledManifest | null>(null)
   const remotePathId = useId()
   const localPathId = useId()
+  const updateTitleId = useId()
   const [validationResult, setValidationResult] = useState<{
     error?: string
     candidate?: CatalogCandidate
@@ -347,9 +348,11 @@ export function DataSourceConfigurator({
     } else if (result.kind === 'staged') {
       const reason = useGameDataStore.getState().pendingCatalog?.reason
       toast.info(
-        reason === 'reload' || reason === 'recovery'
-          ? 'Your additional content is ready to reload'
-          : 'Review your additional content in Game Data',
+        reason === 'reload'
+          ? 'Additional content ready to restore'
+          : reason === 'update'
+            ? 'Game data update available'
+            : 'Game data ready for review',
       )
     } else if (result.kind === 'applied') toast.info('Game data is up to date')
   }
@@ -428,9 +431,6 @@ export function DataSourceConfigurator({
                 <CheckCircle className="size-3.5" />
                 {usingSessionSrd ? 'Configured' : 'Active'}
               </Badge>
-              {usingSessionSrd && (
-                <p className="text-sm text-warning">Using Included SRD for this session.</p>
-              )}
               <div className="flex items-center gap-2">
                 {dataSourceConfig.type === 'bundled' ? (
                   <Database className="size-[1.125rem] text-muted-foreground" />
@@ -665,6 +665,100 @@ export function DataSourceConfigurator({
         </div>
       </Section>
 
+      {(pending || (!selectorOnly && usingSessionSrd)) && (
+        <Section
+          id={selectorOnly ? undefined : 'game-data-update'}
+          tabIndex={-1}
+          aria-labelledby={updateTitleId}
+          title={
+            <span id={updateTitleId}>
+              {pending?.reason === 'reload'
+                ? 'Restore additional content'
+                : pending?.reason === 'update'
+                  ? 'Game data update'
+                  : pending
+                    ? 'Review game data'
+                    : 'Using built-in rules'}
+            </span>
+          }
+          description={
+            usingSessionSrd
+              ? 'Tavern Born couldn’t use its saved copy of your additional content. Built-in rules are active.'
+              : undefined
+          }
+        >
+          {pending ? (
+            <div className="space-y-3 rounded-md border border-border bg-workspace-pane p-4">
+              {pending.reason === 'reload' && (
+                <p className="text-sm">The rebuilt rules match what you last used.</p>
+              )}
+              {pending.reason === 'recovery' && (
+                <p className="text-sm">We couldn’t confirm a match with the rules you last used.</p>
+              )}
+              {pending.incompleteRemovalPreview && (
+                <p className="text-sm text-muted-foreground">
+                  This preview may miss some removals.
+                </p>
+              )}
+              {!!pending.additions?.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Added content</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {pending.additions.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {!!pending.removals.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Removed content</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {pending.removals.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {!!catalogWarnings.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Content warnings</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {catalogWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <div className="flex flex-wrap items-start gap-2">
+                <Button
+                  disabled={hasUnsavedChanges || isLoading || isCatalogActivating}
+                  onClick={() => void applyCandidate(pending.candidate, true)}
+                >
+                  {pending.reason === 'reload'
+                    ? 'Restore additional content'
+                    : pending.reason === 'recovery'
+                      ? 'Use additional content'
+                      : 'Apply game data update'}
+                </Button>
+                {pending.reason !== 'reload' && (
+                  <CatalogCharacterImpact candidate={pending.candidate} />
+                )}
+              </div>
+              {hasUnsavedChanges && (
+                <p className="text-sm text-muted-foreground">
+                  Save or discard character edits first.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Some character options may be unavailable until your additional content is restored.
+            </p>
+          )}
+        </Section>
+      )}
+
       {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
         <Section
           title="Automatic update checks"
@@ -712,66 +806,7 @@ export function DataSourceConfigurator({
           </AlertDialog>
         </Section>
       )}
-      {pending && (
-        <Section
-          id={selectorOnly ? undefined : 'game-data-update'}
-          tabIndex={-1}
-          title={
-            pending.reason === 'reload' || pending.reason === 'recovery'
-              ? 'Reload your additional content'
-              : pending.reason === 'review'
-                ? 'Review your additional content'
-                : 'Review changes to your game data'
-          }
-        >
-          <p className="text-sm">
-            {pending.reason === 'reload'
-              ? 'The rebuilt game data matches the rules you last used. Reload it to use your additional content again.'
-              : pending.reason === 'recovery'
-                ? 'Your additional content is ready to reload. Review any notes below before continuing.'
-                : 'Review these notes before applying. Your saved characters stay in your library.'}
-          </p>
-          {pending.incompleteRemovalPreview && (
-            <p className="text-sm">
-              Tavern Born couldn’t compare the full list of files and entries from your previous
-              source. This preview may miss some removals.
-            </p>
-          )}
-          {!!pending.additions?.length && (
-            <details className="text-sm">
-              <summary>See what this source now provides</summary>
-              <ul className="max-h-48 overflow-y-auto">
-                {pending.additions.map((entry) => (
-                  <li key={entry}>{entry}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          {!!pending.removals.length && (
-            <details className="text-sm">
-              <summary>See what this source no longer provides</summary>
-              <ul className="max-h-48 overflow-y-auto">
-                {pending.removals.map((entry) => (
-                  <li key={entry}>{entry}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          {pending.reason !== 'reload' && <CatalogCharacterImpact candidate={pending.candidate} />}
-          <Button
-            disabled={hasUnsavedChanges || isLoading}
-            onClick={() => void applyCandidate(pending.candidate, true)}
-          >
-            {pending.reason === 'reload' || pending.reason === 'recovery'
-              ? 'Reload additional content'
-              : 'Apply game data update'}
-          </Button>
-          {hasUnsavedChanges && (
-            <p className="text-sm">Save or discard your character changes before continuing.</p>
-          )}
-        </Section>
-      )}
-      {!!catalogWarnings.length && (
+      {!pending && !!catalogWarnings.length && (
         <details className="text-sm">
           <summary>Some extra content couldn’t be loaded</summary>
           <ul>

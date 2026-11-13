@@ -30,11 +30,18 @@ describe('desktop workspace navigation', () => {
 
   afterEach(() => {
     cleanup()
-    useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
+    useGameDataStore.setState({
+      gameData: null,
+      dataSourceConfig: null,
+      sessionBundledSource: null,
+    })
     vi.clearAllMocks()
   })
 
-  test('opens a recent character with limited access while keeping the saved references', async () => {
+  test.each([
+    false,
+    true,
+  ])('opens with limited access and explains fallback when active (%s)', async (fallback) => {
     const user = userEvent.setup()
     const character = makeCharacterFixture({
       name: 'Affected Sidebar',
@@ -42,13 +49,20 @@ describe('desktop workspace navigation', () => {
       raceSource: 'TEST',
     })
     useCharacterStore.setState({ characters: [character], isActiveCharacterDirty: false })
-    useGameDataStore.setState({ gameData: makeGameDataFixture(), dataSourceConfig: null })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture(),
+      dataSourceConfig: null,
+      sessionBundledSource: fallback
+        ? { type: 'bundled', path: 'srd/core', packId: 'srd', packVersion: '1', isValid: true }
+        : null,
+    })
     renderSidebar('/')
     await user.click(screen.getByRole('button', { name: 'Open Affected Sidebar' }))
     expect(screen.getByRole('dialog', { name: 'Additional content unavailable' })).toBeTruthy()
     expect(screen.getByText('External (TEST)')).toBeTruthy()
+    expect(Boolean(screen.queryByText(/Tavern Born is using built-in rules/))).toBe(fallback)
     expect(screen.getByRole('link', { name: 'Game Data settings' }).getAttribute('href')).toBe(
-      '/settings?section=data',
+      fallback ? '/settings?section=data#game-data-update' : '/settings?section=data',
     )
     expect(useCharacterStore.getState().activeCharacter).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open with limited access' }))
