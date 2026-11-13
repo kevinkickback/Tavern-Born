@@ -4,6 +4,7 @@ import { Toaster, toast } from 'sonner'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
+import { RequireActiveCharacter } from '@/components/layout/RequireActiveCharacter'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import {
   AlertDialog,
@@ -20,7 +21,6 @@ import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
 import { useDataInit } from '@/hooks/data/useDataInit'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
-import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 const TOAST_VIEWPORT_OFFSET = { bottom: '3rem' }
@@ -123,11 +123,6 @@ function WorkspaceRoute({ onReady }: { onReady: (ready: boolean) => void }) {
   return <Outlet />
 }
 
-function RequireActiveCharacter() {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  return activeCharacter ? <Outlet /> : <Navigate to="/" replace />
-}
-
 function CloseConfirmDialog() {
   const [open, setOpen] = useState(false)
 
@@ -177,7 +172,11 @@ function App() {
   const [progressVersion, setProgressVersion] = useState<string | null>(null)
   const [initialRouteReady, setInitialRouteReady] = useState(false)
   const [startupComplete, setStartupComplete] = useState(false)
-  const workspaceRoute = <WorkspaceRoute onReady={setInitialRouteReady} />
+  const workspaceRoute = (
+    <Suspense fallback={initialRouteReady ? <RouteLoadingFallback /> : null}>
+      <WorkspaceRoute onReady={setInitialRouteReady} />
+    </Suspense>
+  )
   const canOpenStartupDialogs = initialRouteReady && startupComplete
   const finishStartup = useCallback(() => setStartupComplete(true), [])
   const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
@@ -229,39 +228,37 @@ function App() {
       <RulesPreviewManager>
         <HashRouter>
           <AppLayout onOpenAppUpdate={hasAppUpdate ? openAppUpdate : undefined}>
-            <Suspense fallback={initialRouteReady ? <RouteLoadingFallback /> : null}>
-              <Routes>
-                <Route element={<RequireActiveCharacter />}>
-                  <Route path="/build" element={<Navigate to="/build/race" replace />} />
-                  <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
-                  <Route element={workspaceRoute}>
-                    <Route path="/build/race" element={<BuildRacePage />} />
-                    <Route path="/build/class" element={<BuildClassPage />} />
-                    <Route path="/build/background" element={<BuildBackgroundPage />} />
-                    <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
-                    <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-                    <Route path="/build/review" element={<BuildReviewPage />} />
-                    <Route path="/build/adjustments" element={<AdjustmentsPage />} />
-                    <Route path="/feats" element={<FeatsPage />} />
-                    <Route path="/spells" element={<SpellsPage />} />
-                    <Route path="/equipment" element={<EquipmentPage />} />
-                    <Route path="/rules" element={<RulesPage />} />
-                    <Route path="/details/portrait" element={<PortraitPage />} />
-                    <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-                    <Route path="/details/conditions" element={<ConditionsPage />} />
-                    <Route path="/sources" element={<SourcesPage />} />
-                    <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
-                  </Route>
-                </Route>
+            <Routes>
+              <Route element={<RequireActiveCharacter />}>
+                <Route path="/build" element={<Navigate to="/build/race" replace />} />
+                <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
                 <Route element={workspaceRoute}>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/compendium" element={<CompendiumPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/build/race" element={<BuildRacePage />} />
+                  <Route path="/build/class" element={<BuildClassPage />} />
+                  <Route path="/build/background" element={<BuildBackgroundPage />} />
+                  <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+                  <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                  <Route path="/build/review" element={<BuildReviewPage />} />
+                  <Route path="/build/adjustments" element={<AdjustmentsPage />} />
+                  <Route path="/feats" element={<FeatsPage />} />
+                  <Route path="/spells" element={<SpellsPage />} />
+                  <Route path="/equipment" element={<EquipmentPage />} />
+                  <Route path="/rules" element={<RulesPage />} />
+                  <Route path="/details/portrait" element={<PortraitPage />} />
+                  <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+                  <Route path="/details/conditions" element={<ConditionsPage />} />
+                  <Route path="/sources" element={<SourcesPage />} />
+                  <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
                 </Route>
-                <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
-                <Route path="*" element={workspaceRoute} />
-              </Routes>
-            </Suspense>
+              </Route>
+              <Route element={workspaceRoute}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/compendium" element={<CompendiumPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
+              <Route path="*" element={workspaceRoute} />
+            </Routes>
           </AppLayout>
           <Toaster
             position="bottom-right"

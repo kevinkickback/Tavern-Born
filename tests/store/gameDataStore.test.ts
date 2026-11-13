@@ -86,6 +86,7 @@ vi.mock('@/lib/storage/dataCache', () => ({
     settings: readGameDataSettingsMock(),
     refreshCheck: refreshStorage.check,
   }),
+  readCatalogExpectation: () => Promise.resolve(undefined),
   writeCatalogRefreshCheck: (check: CatalogRefreshCheck) => {
     refreshStorage.check = check
     return Promise.resolve()
@@ -163,6 +164,10 @@ describe('gameDataStore', () => {
       lastDataChangedAt: null,
       lastContentFingerprint: null,
       savedContentFingerprint: null,
+      cacheExpectation: undefined,
+      previousCatalog: undefined,
+      isCatalogActivating: false,
+      catalogDraftDirty: false,
       lastUpdateCheckAt: null,
       catalogRefreshCheck: undefined,
       pendingCatalog: null,
@@ -422,13 +427,11 @@ describe('gameDataStore', () => {
     expect(useGameDataStore.getState().pendingCatalog).toBeNull()
   })
 
-  test('an acknowledged write stays active when a newer attempt fails', async () => {
+  test('an acknowledged write stays active and excludes another activation in flight', async () => {
     const data = nonempty('Committed race')
     const commit = deferred<{ lastDataChangedAt: string; contentFingerprint: string }>()
     writeGameDataCacheMock.mockReturnValueOnce(commit.promise)
-    loadDataFromSourceMock
-      .mockResolvedValueOnce(data)
-      .mockRejectedValueOnce(new Error('New source failed'))
+    loadDataFromSourceMock.mockResolvedValueOnce(data)
     const { loadCatalog } = useGameDataStore.getState()
     const first = loadCatalog(config)
     await vi.waitFor(() => expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1))
@@ -437,12 +440,42 @@ describe('gameDataStore', () => {
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       contentFingerprint: 'acknowledged',
     })
-    await Promise.all([first, second])
+    expect(await second).toMatchObject({
+      kind: 'rejected',
+      message: 'Game data is already being applied.',
+    })
+    await first
     expect(useGameDataStore.getState()).toMatchObject({
       gameData: data,
       dataSourceConfig: config,
-      error: 'New source failed',
+      error: null,
     })
+  })
+
+  test('releases a rejected foreground preview and folder grant during a protected workflow', async () => {
+    const discardLocalDataRoot = vi.fn()
+    vi.stubGlobal('electronAPI', { discardLocalDataRoot })
+    const release = useGameDataStore.getState().protectCatalog()
+    try {
+      const candidate = {
+        config,
+        identity: config,
+        data: nonempty('Candidate'),
+        keys: [],
+        warnings: [],
+      }
+      expect(
+        await useGameDataStore.getState().loadCatalog(config, false, {
+          prepared: candidate,
+          folderGrant: config.path,
+        }),
+      ).toMatchObject({ kind: 'rejected' })
+      expect(discardLocalDataRoot).toHaveBeenCalledWith(config.path)
+      expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+    } finally {
+      release()
+      vi.unstubAllGlobals()
+    }
   })
 
   test('cold startup loads the SRD before checking the configured source', async () => {

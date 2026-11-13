@@ -110,6 +110,19 @@ test.each([
     resource,
     expect.stringMatching(/retired feat.*phb/i),
   ])
+  const staged = useGameDataStore.getState().pendingCatalog!
+  const releaseWorkflow = useGameDataStore.getState().protectCatalog()
+  try {
+    expect(
+      await loadCatalog(staged.candidate.config, false, {
+        prepared: staged.candidate,
+        confirmed: true,
+      }),
+    ).toMatchObject({ kind: 'rejected' })
+    expect(useGameDataStore.getState().pendingCatalog).toBe(staged)
+  } finally {
+    releaseWorkflow()
+  }
   expect((await readGameDataCachePair()).cache).toEqual(acceptedPair.cache)
 
   useCharacterStore.setState({
@@ -133,4 +146,13 @@ test.each([
   await waitFor(async () =>
     expect((await readGameDataCachePair()).cache?.sourceSnapshot.resources).not.toContain(resource),
   )
+  const { loadFromCache } = useGameDataStore.getState()
+  await loadFromCache()
+  await user.click(screen.getByRole('button', { name: 'Restore previous game data' }))
+  await user.click(screen.getByRole('button', { name: /^Restore$/ }))
+  await waitFor(async () =>
+    expect((await readGameDataCachePair()).cache?.sourceSnapshot.resources).toContain(resource),
+  )
+  expect((await readGameDataCachePair()).previous).toBeUndefined()
+  expect(useGameDataStore.getState().lastContentFingerprint).toMatch(/^[a-f0-9]{64}$/)
 })

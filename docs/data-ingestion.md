@@ -262,6 +262,15 @@ or a record withdrawn from a successfully read file can appear in the removal pr
 file still declared by an index fails the check. Confirmed removals require Apply. A same-source
 reload that changes the accepted catalog also requires Apply, including changes to descriptions
 that do not have separate record identities in the removal preview.
+
+An open Wizard or Builder keeps its current catalog. A dirty Builder draft also blocks manual
+catalog changes after leaving Builder. Applying or restoring a catalog briefly defers workflow
+entry. Activation checks the accepted generation before writing; when a compatible catalog is
+replaced, its data and settings are saved together as one restore point. Use **Restore previous
+game data** in Settings to restore it without contacting its source. Restoration consumes that
+restore point. Rollback restores game data and source settings. Character reconciliation still
+follows the active rules, and rollback cannot restore character choices already changed under a
+different catalog. Snapshots from incompatible rules packs or cache schemas are ineligible.
 The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
 only if the original cache generation is still current.
 

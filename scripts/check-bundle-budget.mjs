@@ -14,8 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // Keep approximately 3 KiB of headroom above the measured combined renderer.
-  rendererCode: 6909 * KIB,
+  // Catalog workflow protection and rollback measured about 7,078,300 B on Node 24.
+  // Keep approximately 3 KiB of headroom.
+  rendererCode: 6915 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

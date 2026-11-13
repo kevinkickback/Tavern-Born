@@ -27,9 +27,13 @@ import {
   GAME_DATA_STORE_VERSION,
   type GameDataCacheMetadata,
   isCacheForSource,
+  isPreviousCatalogCompatible,
   markCatalogChecked,
+  type PreviousCatalog,
   persistCatalogRepair,
+  readCatalogExpectation,
   readGameDataCachePair,
+  restorePreviousCatalog,
   writeCatalogRefreshCheck,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
@@ -40,7 +44,8 @@ let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
 let remoteStartupPreparation: AbortController | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
-let acceptedCache: GameDataCacheMetadata | null = null
+const catalogWorkflows = new Set<symbol>()
+const WORKFLOW_MESSAGE = 'Finish the character workflow or save or discard its edits first.'
 
 export const STARTUP_CATALOG_TIMEOUT_MS = 15_000
 export const INTERACTIVE_CATALOG_TIMEOUT_MS = 60_000
@@ -137,6 +142,12 @@ interface GameDataState {
   dataSourceConfig: DataSourceConfig | null
   isLoading: boolean
   isBackgroundRefreshing: boolean
+  isCatalogActivating: boolean
+  catalogDraftDirty: boolean
+  previousCatalog: PreviousCatalog | undefined
+  cacheExpectation: GameDataCacheMetadata | null | undefined
+  protectCatalog: () => () => void
+  rollbackCatalog: () => Promise<boolean>
   loadProgress: LoadProgress | null
   error: string | null
   lastDataChangedAt: string | null
@@ -149,6 +160,7 @@ interface GameDataState {
   externalKeys: string[] | undefined
   pendingCatalog: {
     candidate: CatalogCandidate
+    expectedCache?: GameDataCacheMetadata | null
     reason: 'reload' | 'recovery' | 'update' | 'review'
     removals: string[]
     additions?: string[]
@@ -190,6 +202,17 @@ export const useGameDataStore = create<GameDataState>()(
       dataSourceConfig: null,
       isLoading: false,
       isBackgroundRefreshing: false,
+      isCatalogActivating: false,
+      catalogDraftDirty: false,
+      previousCatalog: undefined,
+      cacheExpectation: undefined,
+      protectCatalog: () => {
+        const token = Symbol()
+        catalogWorkflows.add(token)
+        return () => {
+          catalogWorkflows.delete(token)
+        }
+      },
       loadProgress: null,
       error: null,
       lastDataChangedAt: null,
@@ -222,6 +245,7 @@ export const useGameDataStore = create<GameDataState>()(
           remoteStartupPreparation ||
           state.isLoading ||
           state.isBackgroundRefreshing ||
+          state.isCatalogActivating ||
           state.pendingCatalog ||
           !isCatalogCheckDue(
             config,
@@ -239,7 +263,15 @@ export const useGameDataStore = create<GameDataState>()(
       },
 
       loadFromCache: async (opts) => {
-        if (remoteStartupPreparation || get().isLoading || get().isBackgroundRefreshing) return {}
+        if (
+          remoteStartupPreparation ||
+          get().isLoading ||
+          get().isBackgroundRefreshing ||
+          get().isCatalogActivating ||
+          catalogWorkflows.size ||
+          get().catalogDraftDirty
+        )
+          return {}
         const startupRequestId = activeLoadRequestId
         const controller = new AbortController()
         remoteStartupPreparation = controller
@@ -255,6 +287,15 @@ export const useGameDataStore = create<GameDataState>()(
         if (remoteStartupPreparation !== controller) return {}
         remoteStartupPreparation = null
         const availableCache = pair?.cache
+        if (pair) {
+          set({
+            cacheExpectation: pair.expectedCache,
+            previousCatalog:
+              pair.previous && isPreviousCatalogCompatible(pair.previous, installed)
+                ? pair.previous
+                : undefined,
+          })
+        }
         if (pair) set({ catalogRefreshCheck: pair.refreshCheck })
         if (pair?.settings) {
           const state = migrateGameDataPersistedState(pair.settings) as typeof pair.settings
@@ -318,15 +359,13 @@ export const useGameDataStore = create<GameDataState>()(
               if (!entry || repairController.signal.aborted) return false
               data = entry.data
               contentFingerprint = entry.contentFingerprint
-              acceptedCache = cacheMetadata(entry)
+              set({ cacheExpectation: cacheMetadata(entry) })
             } catch {
               return false
             } finally {
               clearTimeout(repairTimeout)
               if (remoteStartupPreparation === repairController) remoteStartupPreparation = null
             }
-          } else if (hasCatalogWorker()) {
-            acceptedCache = cacheMetadata(availableCache)
           }
           set({
             gameData: data.lookups ? data : { ...data, lookups: buildGameDataLookups(data) },
@@ -419,6 +458,18 @@ export const useGameDataStore = create<GameDataState>()(
         const pending = get().pendingCatalog
         if (request?.confirmed && request.prepared !== pending?.candidate)
           return { kind: 'superseded' }
+        const blocked = get().isCatalogActivating
+          ? 'Game data is already being applied.'
+          : !background && (catalogWorkflows.size || get().catalogDraftDirty)
+            ? WORKFLOW_MESSAGE
+            : undefined
+        if (blocked) {
+          if (request?.prepared !== pending?.candidate) releaseCatalogCandidate(request?.prepared)
+          if (request?.folderGrant !== pending?.folderGrant)
+            releaseFolderGrant(request?.folderGrant)
+          return { kind: 'rejected', message: blocked }
+        }
+        const expectation = request?.confirmed ? pending?.expectedCache : get().cacheExpectation
         if (pending?.candidate !== request?.prepared) releaseCatalogCandidate(pending?.candidate)
         const folderGrant = request?.confirmed ? pending?.folderGrant : request?.folderGrant
         if (pending?.folderGrant !== folderGrant) releaseFolderGrant(pending?.folderGrant)
@@ -444,7 +495,11 @@ export const useGameDataStore = create<GameDataState>()(
           ? refreshCheckForSource(get().catalogRefreshCheck, config, startedAt)
           : undefined
 
-        const rememberCheck = (succeeded: boolean, needsReview = false) => {
+        const rememberCheck = (
+          succeeded: boolean,
+          needsReview = false,
+          checkExpectation = expectation,
+        ) => {
           if (!tracksCheck || requestId !== activeLoadRequestId) return
           const check: CatalogRefreshCheck = {
             source: { type: config.type, path: config.path },
@@ -455,7 +510,7 @@ export const useGameDataStore = create<GameDataState>()(
           }
           set({ catalogRefreshCheck: check })
           // Scheduling metadata is best effort and independent of catalog activation.
-          return writeCatalogRefreshCheck(check).catch(() => undefined)
+          return writeCatalogRefreshCheck(check, checkExpectation).catch(() => undefined)
         }
 
         set({
@@ -468,6 +523,10 @@ export const useGameDataStore = create<GameDataState>()(
 
         let candidate = request?.prepared
         try {
+          const expectedCache =
+            expectation === undefined && !request?.session
+              ? await settleOnAbort(readCatalogExpectation(), signal)
+              : expectation
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
           const loaderOptions: DataLoaderOptions = {
@@ -593,18 +652,36 @@ export const useGameDataStore = create<GameDataState>()(
                 : computeGameDataFingerprint(candidate.data)
               : undefined
           const fingerprintMatches = candidateFingerprint === prior.lastContentFingerprint
+          const cached = expectedCache
+          const layerMetadata = candidate?.layerMetadata
+          const sameLayers =
+            !!cached?.sourceSnapshot &&
+            (cached.sourceSnapshot.layers ?? []).every(
+              (layer) =>
+                layer.contentFingerprint === layerMetadata?.[layer.role]?.contentFingerprint &&
+                layer.entityCount === layerMetadata?.[layer.role]?.entityCount,
+            )
+          const externalInventoryChanged =
+            background &&
+            hadExternal &&
+            ((prior.externalKeys !== undefined && !sameExternalKeys) ||
+              (!!cached && (!sameLayers || !isCacheForSource(cached, cacheIdentity))))
           if (
             candidate &&
             !request?.confirmed &&
             (removals.length ||
               incompleteRemovalPreview ||
-              (background && (prior.sessionBundledSource || !fingerprintMatches)) ||
+              (background &&
+                (prior.sessionBundledSource || !fingerprintMatches || externalInventoryChanged)) ||
               (sameSourceBaseline && candidateFingerprint !== sameSourceBaseline))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
             const recovering = !!prior.sessionBundledSource || !prior.gameData
             const reason =
-              removals.length || (!recovering && !fingerprintMatches && !candidate.warnings.length)
+              removals.length ||
+              (!recovering &&
+                (!fingerprintMatches || externalInventoryChanged) &&
+                !candidate.warnings.length)
                 ? 'update'
                 : recovering && sameSource
                   ? candidateFingerprint === prior.savedContentFingerprint &&
@@ -612,10 +689,11 @@ export const useGameDataStore = create<GameDataState>()(
                     ? 'reload'
                     : 'recovery'
                   : 'review'
-            const recorded = rememberCheck(true, true)
+            const recorded = rememberCheck(true, true, expectedCache)
             set({
               pendingCatalog: {
                 candidate,
+                expectedCache,
                 reason,
                 additions,
                 removals,
@@ -634,22 +712,15 @@ export const useGameDataStore = create<GameDataState>()(
 
           if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
           signal.throwIfAborted()
-          const cached = acceptedCache
-          const layerMetadata = candidate?.layerMetadata
           if (
             candidate &&
-            'workerId' in candidate &&
             background &&
             prior.gameData &&
             !prior.sessionBundledSource &&
             cached &&
-            cached.contentFingerprint === contentFingerprint &&
+            cached.contentFingerprint === candidateFingerprint &&
             sameExternalKeys &&
-            (cached.sourceSnapshot.layers ?? []).every(
-              (layer) =>
-                layer.contentFingerprint === layerMetadata?.[layer.role]?.contentFingerprint &&
-                layer.entityCount === layerMetadata?.[layer.role]?.entityCount,
-            ) &&
+            sameLayers &&
             isCacheForSource(cached, cacheIdentity)
           ) {
             const now = new Date().toISOString()
@@ -664,8 +735,8 @@ export const useGameDataStore = create<GameDataState>()(
               const generation = await markCatalogChecked(cached, checkedConfig, now, signal)
               if (!generation)
                 throw new Error('The game data cache changed during the check. Try again.')
-              acceptedCache = { ...cached, generation }
               set({
+                cacheExpectation: { ...cached, generation },
                 dataSourceConfig: checkedConfig,
                 catalogWarnings: warnings,
                 lastUpdateCheckAt: now,
@@ -676,7 +747,7 @@ export const useGameDataStore = create<GameDataState>()(
               })
               return { kind: 'applied', changed: false } as const
             })
-            await rememberCheck(true)
+            await rememberCheck(true, false, get().cacheExpectation)
             return result
           }
           const prepared = candidate
@@ -686,6 +757,7 @@ export const useGameDataStore = create<GameDataState>()(
           if (!acceptedData || (config.type === 'bundled' && !hasCatalogRecords(acceptedData)))
             throw new Error('The Included SRD could not be loaded.')
           if (request?.session && config.type === 'bundled') {
+            if (catalogWorkflows.size || get().catalogDraftDirty) throw new Error(WORKFLOW_MESSAGE)
             set({
               gameData: acceptedData,
               remoteStartup: null,
@@ -712,48 +784,68 @@ export const useGameDataStore = create<GameDataState>()(
           const mutation = enqueueCacheMutation(async () => {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' } as const
             signal.throwIfAborted()
-            if (config.type === 'local')
-              await settleOnAbort(
-                Promise.resolve(window.electronAPI?.approveLocalDataRoot?.(config.path)),
+            if (catalogWorkflows.size || get().catalogDraftDirty) {
+              if (pending?.candidate === candidate && pending)
+                set({ pendingCatalog: pending, catalogWarnings: pending.candidate.warnings })
+              throw new Error(WORKFLOW_MESSAGE)
+            }
+            set({ isCatalogActivating: true })
+            try {
+              if (config.type === 'local')
+                await settleOnAbort(
+                  Promise.resolve(window.electronAPI?.approveLocalDataRoot?.(config.path)),
+                  signal,
+                )
+              writeStarted = true
+              let previousCatalog = get().previousCatalog
+              const cacheEntry = await writeGameDataCache(acceptedData, cacheIdentity, {
+                fingerprint: prevFingerprint,
+                lastDataChangedAt: prevChangedAt,
+                layerMetadata: candidate?.layerMetadata,
                 signal,
-              )
-            writeStarted = true
-            const cacheEntry = await writeGameDataCache(acceptedData, cacheIdentity, {
-              fingerprint: prevFingerprint,
-              lastDataChangedAt: prevChangedAt,
-              layerMetadata: candidate?.layerMetadata,
-              signal,
-              config: acceptedConfig,
-              externalKeys: prepared?.keys,
-              ...(hasCatalogWorker() ? { contentFingerprint, previous: acceptedCache } : {}),
-            })
-            if (hasCatalogWorker()) acceptedCache = cacheMetadata(cacheEntry)
+                config: acceptedConfig,
+                externalKeys: prepared?.keys,
+                expectedCache,
+                onPrevious: (previous) => {
+                  previousCatalog = previous
+                },
+                ...(expectedCache !== undefined
+                  ? { contentFingerprint, previous: expectedCache }
+                  : {}),
+              })
 
-            // Publish a committed pair before the next queued operation can use it.
-            const contentChanged = cacheEntry.contentFingerprint !== prevFingerprint
-            const shouldHydrateMemory =
-              contentChanged || !hadGameData || get().sessionBundledSource !== null
-            set({
-              gameData: shouldHydrateMemory ? acceptedData : get().gameData,
-              dataSourceConfig: acceptedConfig,
-              externalKeys: prepared?.keys,
-              catalogWarnings: candidate?.warnings ?? [],
-              ...(requestId === activeLoadRequestId
-                ? { isLoading: false, isBackgroundRefreshing: false, loadProgress: null }
-                : {}),
-              lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
-              lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
-              lastUpdateCheckAt: now,
-              catalogRefreshCheck: undefined,
-              cacheStatus: 'fetched',
-              remoteStartup: null,
-              bundledUnavailable: config.type !== 'bundled' && get().bundledUnavailable,
-              sessionBundledSource: null,
-            })
-            return { kind: 'applied', changed: contentChanged } as const
+              // Publish a committed pair before the next queued operation can use it.
+              const contentChanged = cacheEntry.contentFingerprint !== prevFingerprint
+              const shouldHydrateMemory =
+                contentChanged || !hadGameData || get().sessionBundledSource !== null
+              set({
+                gameData: shouldHydrateMemory ? acceptedData : get().gameData,
+                dataSourceConfig: acceptedConfig,
+                externalKeys: prepared?.keys,
+                catalogWarnings: candidate?.warnings ?? [],
+                ...(requestId === activeLoadRequestId
+                  ? { isLoading: false, isBackgroundRefreshing: false, loadProgress: null }
+                  : {}),
+                lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
+                lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
+                lastUpdateCheckAt: now,
+                catalogRefreshCheck: undefined,
+                cacheStatus: 'fetched',
+                remoteStartup: null,
+                bundledUnavailable: config.type !== 'bundled' && get().bundledUnavailable,
+                sessionBundledSource: null,
+                savedContentFingerprint: cacheEntry.contentFingerprint ?? null,
+                previousCatalog,
+                cacheExpectation:
+                  expectedCache === undefined ? undefined : cacheMetadata(cacheEntry),
+              })
+              return { kind: 'applied', changed: contentChanged } as const
+            } finally {
+              set({ isCatalogActivating: false })
+            }
           })
           const result = await settleOnAbort(mutation, signal, () => !writeStarted)
-          if (result.kind === 'applied') await rememberCheck(true)
+          if (result.kind === 'applied') await rememberCheck(true, false, get().cacheExpectation)
           return result
         } catch (error) {
           // Ignore stale request failures and intentional aborts.
@@ -791,6 +883,80 @@ export const useGameDataStore = create<GameDataState>()(
           if (activeLoadController === controller) {
             activeLoadController = null
           }
+        }
+      },
+
+      rollbackCatalog: async () => {
+        const previous = get().previousCatalog
+        if (!previous || get().isLoading || get().isCatalogActivating) return false
+        if (catalogWorkflows.size || get().catalogDraftDirty) {
+          set({ error: WORKFLOW_MESSAGE })
+          return false
+        }
+        const controller = new AbortController()
+        const { signal } = controller
+        const timer = setTimeout(
+          () => controller.abort(catalogTimeout(INTERACTIVE_CATALOG_TIMEOUT_MS)),
+          INTERACTIVE_CATALOG_TIMEOUT_MS,
+        )
+        set({ isCatalogActivating: true, error: null })
+        activeLoadController?.abort()
+        try {
+          return await enqueueCacheMutation(async () => {
+            const installed = await settleOnAbort(resolveDefaultBundledSource(), signal)
+            const { config } = previous
+            if (!isPreviousCatalogCompatible(previous, installed))
+              throw new Error(
+                'The previous game data is incompatible with this copy of Tavern Born.',
+              )
+            const entry = await restorePreviousCatalog(
+              previous,
+              get().cacheExpectation ?? null,
+              signal,
+            )
+            const cacheExpectation = cacheMetadata(entry)
+            const fingerprint =
+              entry.contentFingerprint?.length === 64
+                ? entry.contentFingerprint
+                : computeGameDataFingerprint(entry.data)
+            const pending = get().pendingCatalog
+            releaseCatalogCandidate(pending?.candidate)
+            releaseFolderGrant(pending?.folderGrant)
+            set({
+              gameData: entry.data.lookups
+                ? entry.data
+                : { ...entry.data, lookups: buildGameDataLookups(entry.data) },
+              dataSourceConfig: config,
+              previousCatalog: undefined,
+              savedContentFingerprint: fingerprint,
+              lastContentFingerprint: fingerprint,
+              lastDataChangedAt: entry.lastDataChangedAt ?? entry.cachedAt,
+              lastUpdateCheckAt: previous.lastCheckedAt ?? entry.cachedAt,
+              externalKeys: entry.externalKeys,
+              catalogRefreshCheck: undefined,
+              pendingCatalog: null,
+              catalogWarnings: [],
+              isBackgroundRefreshing: false,
+              loadProgress: null,
+              sessionBundledSource: null,
+              bundledUnavailable:
+                config.type !== 'bundled' &&
+                window.electronAPI?.getBundledManifest !== undefined &&
+                !installed,
+              remoteStartup: null,
+              cacheStatus: 'cached',
+              cacheExpectation,
+            })
+            return true
+          })
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Could not restore previous game data.',
+          })
+          return false
+        } finally {
+          clearTimeout(timer)
+          set({ isCatalogActivating: false })
         }
       },
 

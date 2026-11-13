@@ -70,6 +70,9 @@ export function DataSourceConfigurator({
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
   const loadCatalog = useGameDataStore((state) => state.loadCatalog)
   const pending = useGameDataStore((state) => state.pendingCatalog)
+  const previousCatalog = useGameDataStore((state) => state.previousCatalog)
+  const rollbackCatalog = useGameDataStore((state) => state.rollbackCatalog)
+  const isCatalogActivating = useGameDataStore((state) => state.isCatalogActivating)
   const catalogWarnings = useGameDataStore((state) => state.catalogWarnings)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
@@ -84,6 +87,7 @@ export function DataSourceConfigurator({
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
   const [isValidating, setIsValidating] = useState(false)
   const [confirmRevertOpen, setConfirmRevertOpen] = useState(false)
+  const [confirmRollback, setConfirmRollback] = useState(false)
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
   const [bundledManifest, setBundledManifest] = useState<BundledManifest | null>(null)
   const remotePathId = useId()
@@ -673,6 +677,41 @@ export function DataSourceConfigurator({
         </Section>
       )}
 
+      {!selectorOnly && previousCatalog && (
+        <Section
+          title="Previous game data"
+          description="Restore the last saved catalog and its source settings."
+        >
+          <Button
+            variant="outline"
+            disabled={isLoading || isCatalogActivating || hasUnsavedChanges}
+            onClick={() => setConfirmRollback(true)}
+          >
+            Restore previous game data
+          </Button>
+          <AlertDialog open={confirmRollback} onOpenChange={setConfirmRollback}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Restore previous game data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tavern Born will load the previous game data and its saved source settings.
+                  Character choices already changed under other rules may need to be selected again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    if (await rollbackCatalog()) toast.success('Previous game data restored')
+                  }}
+                >
+                  Restore
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Section>
+      )}
       {pending && (
         <Section
           id={selectorOnly ? undefined : 'game-data-update'}
