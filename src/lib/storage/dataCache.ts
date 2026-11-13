@@ -10,7 +10,7 @@ const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 const REFRESH_CHECK_KEY = 'tb:game-data-refresh-check'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 100
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 101
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {
@@ -172,6 +172,7 @@ export async function readGameDataCachePair() {
     | {
         dataSourceConfig?: DataSourceConfig | null
         lastUpdateCheckAt?: string | null
+        lastContentFingerprint?: string | null
       }
     | undefined
   return { cache, settings, refreshCheck: refreshCheck as CatalogRefreshCheck | undefined }

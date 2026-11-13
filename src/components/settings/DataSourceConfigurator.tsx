@@ -337,10 +337,16 @@ export function DataSourceConfigurator({
     const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
     const result = await loadCatalog(dataSourceConfig, true)
-    if (result.kind === 'rejected')
-      toast.error('Update could not be applied', { description: result.message })
-    else if (result.kind === 'staged') toast.info('A game-data update is ready to review')
-    else if (result.kind === 'applied') toast.info('Game data is up to date')
+    if (result.kind === 'rejected') {
+      toast.error('Couldn’t check your additional content', { description: result.message })
+    } else if (result.kind === 'staged') {
+      const reason = useGameDataStore.getState().pendingCatalog?.reason
+      toast.info(
+        reason === 'reload' || reason === 'recovery'
+          ? 'Your additional content is ready to reload'
+          : 'Review your additional content in Game Data',
+      )
+    } else if (result.kind === 'applied') toast.info('Game data is up to date')
   }
   const handleRestoreBundled = async () => {
     if (useCharacterStore.getState().hasUnsavedChanges()) {
@@ -670,19 +676,30 @@ export function DataSourceConfigurator({
         <Section
           id={selectorOnly ? undefined : 'game-data-update'}
           tabIndex={-1}
-          title="Game data update ready"
+          title={
+            pending.reason === 'reload' || pending.reason === 'recovery'
+              ? 'Reload your additional content'
+              : pending.reason === 'review'
+                ? 'Review your additional content'
+                : 'Review changes to your game data'
+          }
         >
-          {pending.candidate.revision && (
-            <p className="text-sm">Revision {pending.candidate.revision.slice(0, 12)}</p>
-          )}
+          <p className="text-sm">
+            {pending.reason === 'reload'
+              ? 'The rebuilt game data matches the rules you last used. Reload it to use your additional content again.'
+              : pending.reason === 'recovery'
+                ? 'Your additional content is ready to reload. Review any notes below before continuing.'
+                : 'Review these notes before applying. Your saved characters stay in your library.'}
+          </p>
           {pending.incompleteRemovalPreview && (
             <p className="text-sm">
-              Your saved catalog predates removal tracking. This preview may omit some removals.
+              Tavern Born couldn’t compare the full list of files and entries from your previous
+              source. This preview may miss some removals.
             </p>
           )}
           {!!pending.removals.length && (
             <details className="text-sm">
-              <summary>{pending.removals.length} entries or files will be removed</summary>
+              <summary>See what this source no longer provides</summary>
               <ul className="max-h-48 overflow-y-auto">
                 {pending.removals.map((entry) => (
                   <li key={entry}>{entry}</li>
@@ -694,16 +711,18 @@ export function DataSourceConfigurator({
             disabled={hasUnsavedChanges || isLoading}
             onClick={() => void applyCandidate(pending.candidate, true)}
           >
-            Apply game data update
+            {pending.reason === 'reload' || pending.reason === 'recovery'
+              ? 'Reload additional content'
+              : 'Apply game data update'}
           </Button>
           {hasUnsavedChanges && (
-            <p className="text-sm">Save or discard your character changes before applying.</p>
+            <p className="text-sm">Save or discard your character changes before continuing.</p>
           )}
         </Section>
       )}
       {!!catalogWarnings.length && (
         <details className="text-sm">
-          <summary>Some optional content is unavailable</summary>
+          <summary>Some extra content couldn’t be loaded</summary>
           <ul>
             {catalogWarnings.map((warning) => (
               <li key={warning}>{warning}</li>

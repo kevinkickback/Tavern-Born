@@ -113,7 +113,12 @@ describe('application status bar', () => {
     expect(status.getAttribute('title')).toBe('spells.json')
   })
 
-  test('keeps simultaneous update actions separate and takes game data to the pending review', async () => {
+  test.each([
+    ['update', 'update', 'Review changes to your game data'],
+    ['review', 'review', 'Review your additional content'],
+    ['reload', 'reload', 'Reload your additional content'],
+    ['recovery', 'reload', 'Reload your additional content'],
+  ] as const)('opens the %s review independently of app updates', async (reason, action, title) => {
     const user = userEvent.setup()
     const openAppUpdate = vi.fn()
     vi.stubGlobal('electronAPI', { getAppVersion: () => Promise.resolve('0.6.0') })
@@ -135,12 +140,17 @@ describe('application status bar', () => {
         dataSourceConfig: config,
         pendingCatalog: {
           candidate: { config, data, identity: config, keys: [], warnings: [] },
+          reason,
           removals: [],
-          incompleteRemovalPreview: true,
+          incompleteRemovalPreview: reason !== 'update',
         },
       }),
     )
-    const dataUpdate = screen.getByRole('link', { name: 'Game data update available' })
+    const linkName = `Game data ${action} available`
+    const dataUpdate = screen.getByRole('link', { name: linkName })
+    expect(dataUpdate.textContent?.toLowerCase()).toContain(`${action} available`)
+    if (action !== 'update')
+      expect(screen.queryByRole('link', { name: 'Game data update available' })).toBeNull()
     const appUpdate = screen.getByRole('button', { name: 'App update available' })
     expect(dataUpdate.parentElement?.contains(screen.getByText('Additional Content Loaded'))).toBe(
       true,
@@ -150,13 +160,21 @@ describe('application status bar', () => {
     await user.click(appUpdate)
     expect(openAppUpdate).toHaveBeenCalledTimes(1)
     await user.click(dataUpdate)
-    const heading = await screen.findByRole('heading', { name: 'Game data update ready' })
-    expect(screen.getByText(/Your saved catalog predates removal tracking/)).toBeTruthy()
+    const heading = await screen.findByRole('heading', { name: title })
+    expect(Boolean(screen.queryByText(/matches the rules you last used/))).toBe(reason === 'reload')
+    expect(Boolean(screen.queryByText(/This preview may miss some removals/))).toBe(
+      reason !== 'update',
+    )
+    expect(
+      screen.getByRole('button', {
+        name: action === 'reload' ? 'Reload additional content' : 'Apply game data update',
+      }),
+    ).toBeTruthy()
     expect(heading.closest('section')).toBe(document.activeElement)
     expect(openAppUpdate).toHaveBeenCalledTimes(1)
 
     await act(() => useGameDataStore.setState({ pendingCatalog: null }))
-    expect(screen.queryByRole('link', { name: 'Game data update available' })).toBeNull()
+    expect(screen.queryByRole('link', { name: linkName })).toBeNull()
     expect(screen.getByRole('button', { name: 'App update available' })).toBe(appUpdate)
   })
 

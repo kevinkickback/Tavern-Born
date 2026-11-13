@@ -14,9 +14,8 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // The catalog refresh schedule measured about 7,070,700 B of renderer code on Node 24.
-  // Keep approximately 3 KiB of headroom.
-  rendererCode: 6908 * KIB,
+  // Keep approximately 3 KiB of headroom above the measured combined renderer.
+  rendererCode: 6909 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

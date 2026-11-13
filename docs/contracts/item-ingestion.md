@@ -43,3 +43,16 @@ the current catalog's exact generated base identity for named proficiency and ac
 Weapon Mastery. The weapon's own attack and damage bonuses belong to the equipped
 instance. An unavailable variant keeps its saved inventory fields and suspends
 rules that require the exact catalog printing.
+
+### Fixed-bonus body armor
+
+The canonical +1, +2 and +3 armor templates use direct public PHB and XPHB
+bases of the corresponding edition. Classic templates declare the armor flag.
+Revised templates declare eligible armor types. Generated pieces retain base AC,
+armor category, weight, Strength requirement and Stealth disadvantage metadata. Explicit concrete
+items keep priority. A missing, ambiguous or unsupported exact base cannot
+produce a substitute.
+
+The first equipped body armor owns both its saved base AC and its live magic bonus.
+The first equipped shield may contribute independently. Losing the exact catalog
+printing suspends the live bonus while preserving the saved armor and its base AC.

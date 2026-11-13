@@ -39,6 +39,7 @@ describe('data source refresh feedback', () => {
       error: null,
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       lastUpdateCheckAt: '2026-01-01T00:00:00.000Z',
+      pendingCatalog: null,
       cacheStatus: 'cached',
       loadCatalog,
       restoreBundledData: defaultRestoreBundledData,
@@ -58,7 +59,7 @@ describe('data source refresh feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
+      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
         description: 'Local directory is unavailable',
       }),
     )
@@ -106,10 +107,10 @@ describe('data source refresh feedback', () => {
       false,
     )
     if (outcome === 'updated')
-      expect(toast.info).toHaveBeenCalledWith('A game-data update is ready to review')
+      expect(toast.info).toHaveBeenCalledWith('Review your additional content in Game Data')
     if (outcome === 'unchanged') expect(toast.info).toHaveBeenCalledWith('Game data is up to date')
     if (outcome === 'failed')
-      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
+      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
         description: 'Local directory is unavailable',
       })
   })
@@ -120,6 +121,38 @@ describe('data source refresh feedback', () => {
     expect(screen.getByText('Additional Content on This Computer')).toBeTruthy()
     expect(screen.getByText('C:/5etools/data')).toBeTruthy()
     expect(screen.queryByText('Base content:')).toBeNull()
+  })
+
+  test('offers a reload after manually checking a matching rebuild', async () => {
+    const user = userEvent.setup()
+    const state = useGameDataStore.getState()
+    const config = state.dataSourceConfig!
+    const data = state.gameData!
+    useGameDataStore.setState({
+      loadCatalog: () => {
+        useGameDataStore.setState({
+          pendingCatalog: {
+            candidate: {
+              config: { ...config, type: 'local' },
+              identity: config,
+              data,
+              keys: [],
+              warnings: [],
+            },
+            reason: 'reload',
+            removals: [],
+            incompleteRemovalPreview: true,
+          },
+        })
+        return Promise.resolve({ kind: 'staged' })
+      },
+    })
+    render(<DataSourceConfigurator />)
+
+    await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
+
+    expect(toast.info).toHaveBeenCalledWith('Your additional content is ready to reload')
+    expect(screen.getByRole('button', { name: 'Reload additional content' })).toBeTruthy()
   })
 
   test('keeps the startup update preference on the main Game Data view', async () => {

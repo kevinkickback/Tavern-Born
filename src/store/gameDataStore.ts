@@ -142,12 +142,14 @@ interface GameDataState {
   lastDataChangedAt: string | null
   /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
+  savedContentFingerprint: string | null
   lastUpdateCheckAt: string | null
   catalogRefreshCheck: CatalogRefreshCheck | undefined
   catalogWarnings: string[]
   externalKeys: string[] | undefined
   pendingCatalog: {
     candidate: CatalogCandidate
+    reason: 'reload' | 'recovery' | 'update' | 'review'
     removals: string[]
     incompleteRemovalPreview: boolean
     folderGrant?: string
@@ -191,6 +193,7 @@ export const useGameDataStore = create<GameDataState>()(
       error: null,
       lastDataChangedAt: null,
       lastContentFingerprint: null,
+      savedContentFingerprint: null,
       lastUpdateCheckAt: null,
       catalogRefreshCheck: undefined,
       catalogWarnings: [],
@@ -257,6 +260,7 @@ export const useGameDataStore = create<GameDataState>()(
           set({
             dataSourceConfig: state.dataSourceConfig ?? null,
             lastUpdateCheckAt: state.lastUpdateCheckAt ?? null,
+            savedContentFingerprint: state.lastContentFingerprint ?? null,
           })
         }
         const { dataSourceConfig: config } = get()
@@ -556,23 +560,39 @@ export const useGameDataStore = create<GameDataState>()(
               : { removals: [], incompleteRemovalPreview: false, sameExternalKeys: false }
           if (candidate && 'workerId' in candidate)
             contentFingerprint = candidate.contentFingerprint
+          const candidateFingerprint =
+            candidate && !request?.confirmed && (background || incompleteRemovalPreview)
+              ? 'workerId' in candidate
+                ? candidate.contentFingerprint
+                : computeGameDataFingerprint(candidate.data)
+              : undefined
+          const fingerprintMatches = candidateFingerprint === prior.lastContentFingerprint
           if (
             candidate &&
             !request?.confirmed &&
             (removals.length ||
               incompleteRemovalPreview ||
-              (background &&
-                (prior.sessionBundledSource ||
-                  ('workerId' in candidate
-                    ? candidate.contentFingerprint
-                    : computeGameDataFingerprint(candidate.data)) !==
-                    prior.lastContentFingerprint)))
+              (background && (prior.sessionBundledSource || !fingerprintMatches)))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
+            const sameSource =
+              priorSource?.type === candidate.config.type &&
+              priorSource.path === candidate.config.path
+            const recovering = !!prior.sessionBundledSource || !prior.gameData
+            const reason =
+              removals.length || (!recovering && !fingerprintMatches && !candidate.warnings.length)
+                ? 'update'
+                : recovering && sameSource
+                  ? candidateFingerprint === prior.savedContentFingerprint &&
+                    !candidate.warnings.length
+                    ? 'reload'
+                    : 'recovery'
+                  : 'review'
             const recorded = rememberCheck(true, true)
             set({
               pendingCatalog: {
                 candidate,
+                reason,
                 removals,
                 incompleteRemovalPreview,
                 ...(folderGrant ? { folderGrant } : {}),

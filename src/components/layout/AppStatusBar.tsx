@@ -81,7 +81,7 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
-  const hasDataUpdate = useGameDataStore((state) => !!(state.gameData && state.pendingCatalog))
+  const dataReview = useGameDataStore((state) => state.gameData && state.pendingCatalog?.reason)
   const dataSourceConfig = useGameDataStore((state) =>
     state.gameData ? (state.sessionBundledSource ?? state.dataSourceConfig) : null,
   )
@@ -116,12 +116,7 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
     catalogDetail,
   )
   const DataStatusIcon = dataStatus.icon
-  const updateAvailable = (
-    <>
-      <CircleArrowUp className="size-3.5" aria-hidden="true" />
-      Update available
-    </>
-  )
+  const dataAction = dataReview === 'reload' || dataReview === 'recovery' ? 'reload' : dataReview
   const separator = <span className="h-3 w-px shrink-0 bg-border" aria-hidden="true" />
 
   return (
@@ -162,15 +157,16 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
               {dataStatus.label}
             </span>
           </span>
-          {hasDataUpdate && (
+          {dataAction && (
             <>
               {separator}
               <Link
                 to="/settings?section=data#game-data-update"
-                aria-label="Game data update available"
+                aria-label={`Game data ${dataAction} available`}
                 className={updateActionClass}
               >
-                {updateAvailable}
+                <CircleArrowUp className="size-3.5" aria-hidden="true" />
+                {dataAction[0].toUpperCase() + dataAction.slice(1)} available
               </Link>
             </>
           )}
@@ -191,7 +187,8 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
                     className={updateActionClass}
                     onClick={onOpenAppUpdate}
                   >
-                    {updateAvailable}
+                    <CircleArrowUp className="size-3.5" aria-hidden="true" />
+                    Update available
                   </button>
                 </>
               )}
