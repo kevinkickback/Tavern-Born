@@ -120,7 +120,7 @@ test('requires an index withdrawal before accepting the loss of an indexed spell
   expect(comparison.removals[0]).toMatch(/cure wounds.*xphb/i)
 })
 
-test('keeps absent class descriptions optional in the bundled layer during external refresh', async () => {
+test('warns about absent optional bundled descriptions without admitting a read failure as a removal', async () => {
   const base = {
     type: 'bundled' as const,
     path: 'srd/core',
@@ -141,7 +141,7 @@ test('keeps absent class descriptions optional in the bundled layer during exter
   }
   const candidate = await prepareCatalog(config, base, signal(), undefined, read)
   expect(candidate.data.classes.map(({ name }) => name)).toContain('Fighter')
-  expect(candidate.warnings.some((warning) => warning.includes(description))).toBe(false)
+  expect(candidate.warnings.some((warning) => warning.includes(description))).toBe(true)
   expect(candidate.unavailableResources).toBeUndefined()
 })
 

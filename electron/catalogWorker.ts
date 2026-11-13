@@ -1,4 +1,8 @@
-import { type PreparedCatalog, prepareCatalog } from '@/lib/5etools/catalogCandidate'
+import {
+  checkCatalogRevision,
+  type PreparedCatalog,
+  prepareCatalog,
+} from '@/lib/5etools/catalogCandidate'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
 import type {
   CatalogCommand,
@@ -57,8 +61,18 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
 
   switch (command.kind) {
     case 'prepare': {
-      const candidate = await prepareCatalog(command.config, command.base, signal, onProgress, read)
+      const candidate = command.verifiedRevision
+        ? await checkCatalogRevision(
+            command.config,
+            command.base,
+            command.verifiedRevision,
+            signal,
+            onProgress,
+            read,
+          )
+        : await prepareCatalog(command.config, command.base, signal, onProgress, read)
       signal.throwIfAborted()
+      if (!candidate) return null
       const { data, keys: _keys, ...metadata } = candidate
       const contentFingerprint = computeGameDataFingerprint(data)
       prepared.set(id, candidate)

@@ -8,7 +8,12 @@ type WorkerCatalog = CatalogSummary & { workerId: string }
 export type CatalogCandidate = PreparedCatalog | WorkerCatalog
 
 export type CatalogCommand =
-  | { kind: 'prepare'; config: PreparedCatalog['config']; base?: GameDataSourceStack['base'] }
+  | {
+      kind: 'prepare'
+      config: PreparedCatalog['config']
+      base?: GameDataSourceStack['base']
+      verifiedRevision?: string
+    }
   | { kind: 'bundled'; config: BundledDataSourceConfig }
   | { kind: 'repair'; data: GameData; contentFingerprint?: string }
   | { kind: 'compare'; workerId: string; prior: CatalogComparisonBasis }

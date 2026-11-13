@@ -23,6 +23,7 @@ import { settleOnAbort } from '@/lib/abortable'
 import {
   cacheMetadata,
   computeGameDataFingerprint,
+  GAME_DATA_CACHE_SCHEMA_VERSION,
   GAME_DATA_SETTINGS_KEY,
   GAME_DATA_STORE_VERSION,
   type GameDataCacheMetadata,
@@ -527,6 +528,32 @@ export const useGameDataStore = create<GameDataState>()(
             expectation === undefined && !request?.session
               ? await settleOnAbort(readCatalogExpectation(), signal)
               : expectation
+          const finishUnchangedCheck = async (
+            cached: GameDataCacheMetadata,
+            checkedConfig: DataSourceConfig,
+            warnings: string[],
+          ) => {
+            const now = new Date().toISOString()
+            const result = await enqueueCacheMutation(async () => {
+              signal.throwIfAborted()
+              const generation = await markCatalogChecked(cached, checkedConfig, now, signal)
+              if (!generation)
+                throw new Error('The game data cache changed during the check. Try again.')
+              set({
+                cacheExpectation: { ...cached, generation },
+                dataSourceConfig: checkedConfig,
+                catalogWarnings: warnings,
+                lastUpdateCheckAt: now,
+                cacheStatus: 'cached',
+                ...(requestId === activeLoadRequestId
+                  ? { isBackgroundRefreshing: false, loadProgress: null }
+                  : {}),
+              })
+              return { kind: 'applied', changed: false } as const
+            })
+            await rememberCheck(true, false, get().cacheExpectation)
+            return result
+          }
           const failedResources = new Set<string>()
           const failedRequiredResources = new Set<string>()
           const loaderOptions: DataLoaderOptions = {
@@ -544,13 +571,42 @@ export const useGameDataStore = create<GameDataState>()(
           let data: GameData | undefined
           let contentFingerprint: string | undefined
           if (!candidate && config.type !== 'bundled') {
-            const base = get().bundledUnavailable
+            const state = get()
+            const base = state.bundledUnavailable
               ? null
               : await settleOnAbort(resolveDefaultBundledSource(), signal)
-            candidate = await settleOnAbort(
-              prepareCatalogCandidate(config, base ?? undefined, signal, loaderOptions.onProgress),
+            const verifiedRevision =
+              background &&
+              config.type === 'remote' &&
+              configured === config &&
+              config.verifiedRevision &&
+              config.verifiedRevision === config.acceptedRevision &&
+              /^[a-f\d]{40}$/i.test(config.verifiedRevision) &&
+              (!window.electronAPI?.getBundledManifest || base) &&
+              !state.bundledUnavailable &&
+              state.gameData &&
+              !state.sessionBundledSource &&
+              state.externalKeys?.length &&
+              expectedCache?.cacheSchemaVersion === GAME_DATA_CACHE_SCHEMA_VERSION &&
+              expectedCache.generation &&
+              expectedCache.contentFingerprint?.length === 64 &&
+              expectedCache.contentFingerprint === state.lastContentFingerprint &&
+              isCacheForSource(expectedCache, base ? { base, additional: config } : config)
+                ? config.verifiedRevision
+                : undefined
+            const prepared = await settleOnAbort(
+              prepareCatalogCandidate(
+                config,
+                base ?? undefined,
+                signal,
+                loaderOptions.onProgress,
+                verifiedRevision,
+              ),
               signal,
             )
+            if (prepared === null && expectedCache)
+              return await finishUnchangedCheck(expectedCache, config, [])
+            candidate = prepared ?? undefined
           }
           let failureCount = 0
           let requiredFailureCount = 0
@@ -723,32 +779,13 @@ export const useGameDataStore = create<GameDataState>()(
             sameLayers &&
             isCacheForSource(cached, cacheIdentity)
           ) {
-            const now = new Date().toISOString()
             const checkedConfig = {
               ...candidate.config,
               acceptedRevision: candidate.revision,
+              verifiedRevision: candidate.warnings.length ? undefined : candidate.revision,
               lastLoaded: priorSource?.lastLoaded,
             }
-            const warnings = candidate.warnings
-            const result = await enqueueCacheMutation(async () => {
-              signal.throwIfAborted()
-              const generation = await markCatalogChecked(cached, checkedConfig, now, signal)
-              if (!generation)
-                throw new Error('The game data cache changed during the check. Try again.')
-              set({
-                cacheExpectation: { ...cached, generation },
-                dataSourceConfig: checkedConfig,
-                catalogWarnings: warnings,
-                lastUpdateCheckAt: now,
-                cacheStatus: 'cached',
-                ...(requestId === activeLoadRequestId
-                  ? { isBackgroundRefreshing: false, loadProgress: null }
-                  : {}),
-              })
-              return { kind: 'applied', changed: false } as const
-            })
-            await rememberCheck(true, false, get().cacheExpectation)
-            return result
+            return await finishUnchangedCheck(cached, checkedConfig, candidate.warnings)
           }
           const prepared = candidate
             ? await materializeCatalogCandidate(candidate, signal)
@@ -772,7 +809,12 @@ export const useGameDataStore = create<GameDataState>()(
 
           const now = new Date().toISOString()
           const acceptedConfig = candidate
-            ? { ...candidate.config, acceptedRevision: candidate.revision, lastLoaded: now }
+            ? {
+                ...candidate.config,
+                acceptedRevision: candidate.revision,
+                verifiedRevision: candidate.warnings.length ? undefined : candidate.revision,
+                lastLoaded: now,
+              }
             : { ...config, isValid: true, lastLoaded: now }
           // Persist parsed data to IDB cache so next launch is instant.
           // Pass the last known fingerprint so writeGameDataCache can detect

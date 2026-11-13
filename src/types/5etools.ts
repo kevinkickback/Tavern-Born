@@ -620,6 +620,8 @@ type ExternalDataSourceConfig = DataSourceConfigBase & {
   /** Top-level resources confirmed during source validation. Missing unlisted families are absent. */
   availableResources?: string[]
   acceptedRevision?: string
+  /** GitHub revision whose accepted catalog passed a complete check without warnings. */
+  verifiedRevision?: string
 }
 
 export type BundledDataSourceConfig = DataSourceConfigBase & {

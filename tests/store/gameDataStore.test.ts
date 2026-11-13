@@ -78,6 +78,7 @@ vi.mock('@/lib/5etools/catalogCandidate', () => ({
 }))
 
 vi.mock('@/lib/storage/dataCache', () => ({
+  GAME_DATA_CACHE_SCHEMA_VERSION: 101,
   GAME_DATA_SETTINGS_KEY: 'game-data-storage',
   GAME_DATA_STORE_VERSION: 1,
   writeGameDataCache: writeGameDataCacheMock,

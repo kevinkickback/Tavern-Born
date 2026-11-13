@@ -71,6 +71,32 @@ export async function prepareCatalog(
 ): Promise<PreparedCatalog> {
   onProgress?.(0, 0, 'Checking source')
   const source = await resolveSourceRevision(config, signal, read)
+  return prepareResolvedCatalog(source, base, signal, onProgress, read)
+}
+
+export async function checkCatalogRevision(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  verifiedRevision: string,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+): Promise<PreparedCatalog | null> {
+  onProgress?.(0, 0, 'Checking source')
+  const source = await resolveSourceRevision(config, signal, read)
+  signal.throwIfAborted()
+  if (source.revision && source.revision === verifiedRevision) return null
+  return prepareResolvedCatalog(source, base, signal, onProgress, read)
+}
+
+async function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+): Promise<PreparedCatalog> {
+  const { config } = source
   const reader = createJsonResourceReader(source.readConfig, read)
   const scan = await settleOnAbort(
     inspectCatalogResources(
@@ -105,9 +131,9 @@ export async function prepareCatalog(
         (!missing && (fromBase || previouslyAvailable || refreshingIndexedClass))
       ) {
         issues.push(message)
-      } else if (!missing) {
+      } else if (fromBase || !missing) {
         scan.warnings.push(message)
-        scan.unavailable.push(file)
+        if (!missing) scan.unavailable.push(file)
       }
     },
   }

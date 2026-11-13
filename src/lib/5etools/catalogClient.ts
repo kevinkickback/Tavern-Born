@@ -115,25 +115,43 @@ async function run<T>(
   }
 }
 
+export function prepareCatalogCandidate(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  progress?: Progress,
+): Promise<CatalogCandidate>
+export function prepareCatalogCandidate(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  progress: Progress | undefined,
+  verifiedRevision: string | undefined,
+): Promise<CatalogCandidate | null>
 export async function prepareCatalogCandidate(
   config: PreparedCatalog['config'],
   base: GameDataSourceStack['base'] | undefined,
   signal: AbortSignal,
   progress?: Progress,
-): Promise<CatalogCandidate> {
+  verifiedRevision?: string,
+): Promise<CatalogCandidate | null> {
   if (!hasCatalogWorker()) {
     if (import.meta.env.DESKTOP_CATALOG_WORKER) throw new Error('Catalog utility is unavailable.')
-    const { prepareCatalog } = await import('./catalogCandidate')
-    return prepareCatalog(config, base, signal, progress)
+    const catalog = await import('./catalogCandidate')
+    return verifiedRevision
+      ? catalog.checkCatalogRevision(config, base, verifiedRevision, signal, progress)
+      : catalog.prepareCatalog(config, base, signal, progress)
   }
   const workerId = crypto.randomUUID()
-  const summary = await run<CatalogSummary>(
-    { kind: 'prepare', config, base },
+  const summary = await run<CatalogSummary | null>(
+    { kind: 'prepare', config, base, verifiedRevision },
     signal,
     progress,
     workerId,
   )
-  return { ...summary, workerId }
+  if (summary) return { ...summary, workerId }
+  window.electronAPI.sendCatalogMessage({ kind: 'drop', id: workerId })
+  return null
 }
 
 export function compareCatalogCandidate(
