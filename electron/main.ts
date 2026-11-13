@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, extname, isAbsolute, join, normalize, sep } from 'node:path'
+import { mkdir, open, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
   app,
@@ -22,7 +22,8 @@ import {
   resolveBundledPackRoot,
 } from './bundledResources'
 import { createCatalogService } from './catalogService'
-import { isPathWithinRoot, isTrustedRendererUrl } from './security'
+import { readLocalCatalogResource } from './localCatalogResource'
+import { isTrustedRendererUrl } from './security'
 import {
   cancelDownload,
   checkForUpdate,
@@ -61,7 +62,6 @@ let bundledManifestCache: {
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 const LOCAL_DATA_AUTH_FILE = 'trusted-data-root.json'
-const MAX_LOCAL_JSON_BYTES = 50 * 1024 * 1024
 
 // Vite's optimized dependency responses are intentionally immutable. Electron's persistent
 // HTTP cache can otherwise retain one of those responses after Vite regenerates its shared
@@ -88,38 +88,6 @@ function assertTrustedIpcSender(event: TrustedIpcEvent): void {
 function checkLocalRoot(root: unknown): asserts root is string {
   if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
     throw new Error('Select the local data directory first.')
-  }
-}
-
-async function readLocalJsonText(filePath: unknown, root: unknown): Promise<string> {
-  if (typeof filePath !== 'string' || !isAbsolute(filePath))
-    throw new Error('Path must be absolute')
-  if (extname(filePath).toLowerCase() !== '.json') throw new Error('Only JSON files may be read')
-  checkLocalRoot(root)
-  if (!isPathWithinRoot(root, normalize(filePath)))
-    throw new Error('Access denied: path is outside the configured data directory.')
-  const canonicalTarget = normalize(
-    await realpath(filePath).catch(async (error: NodeJS.ErrnoException) => {
-      if (error.code === 'ENOENT') {
-        const rootStats = await stat(root).catch(() => null)
-        if (!rootStats?.isDirectory()) throw new Error('The selected data folder is unavailable.')
-      }
-      throw error
-    }),
-  )
-  if (!isPathWithinRoot(root, canonicalTarget))
-    throw new Error('Access denied: path is outside the configured data directory.')
-
-  try {
-    const fileStats = await stat(canonicalTarget)
-    if (!fileStats.isFile()) throw new Error('Path does not reference a file')
-    if (fileStats.size > MAX_LOCAL_JSON_BYTES)
-      throw new Error('JSON file exceeds the 50 MB safety limit')
-    return await readFile(canonicalTarget, 'utf-8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-      throw new Error('The file moved during the check. Try checking the source again.')
-    throw error
   }
 }
 
@@ -398,9 +366,16 @@ app.on('ready', async () => {
           owner,
           join(__dirname, 'catalogWorker.js'),
           async (request) => {
-            if (request.kind === 'local') return readLocalJsonText(request.path, request.root)
+            if (request.kind === 'local') {
+              checkLocalRoot(request.root)
+              return readLocalCatalogResource(
+                request.path,
+                request.root,
+                request.observation?.probe,
+              )
+            }
             const { rootPath } = await getAllowedBundledManifest()
-            return readBundledJsonText(join(rootPath, 'data'), request.path)
+            return { text: await readBundledJsonText(join(rootPath, 'data'), request.path) }
           },
           (root) => {
             checkLocalRoot(root)

@@ -575,13 +575,9 @@ export const useGameDataStore = create<GameDataState>()(
             const base = state.bundledUnavailable
               ? null
               : await settleOnAbort(resolveDefaultBundledSource(), signal)
-            const verifiedRevision =
+            const canRevalidate =
               background &&
-              config.type === 'remote' &&
               configured === config &&
-              config.verifiedRevision &&
-              config.verifiedRevision === config.acceptedRevision &&
-              /^[a-f\d]{40}$/i.test(config.verifiedRevision) &&
               (!window.electronAPI?.getBundledManifest || base) &&
               !state.bundledUnavailable &&
               state.gameData &&
@@ -592,8 +588,14 @@ export const useGameDataStore = create<GameDataState>()(
               expectedCache.contentFingerprint?.length === 64 &&
               expectedCache.contentFingerprint === state.lastContentFingerprint &&
               isCacheForSource(expectedCache, base ? { base, additional: config } : config)
+            const verifiedRevision = canRevalidate
+              ? config.type === 'remote' &&
+                config.verifiedRevision &&
+                config.verifiedRevision === config.acceptedRevision &&
+                /^[a-f\d]{40}$/i.test(config.verifiedRevision)
                 ? config.verifiedRevision
-                : undefined
+                : config.resourceProof
+              : undefined
             const prepared = await settleOnAbort(
               prepareCatalogCandidate(
                 config,

@@ -1,4 +1,9 @@
-import type { BundledDataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
+import type {
+  BundledDataSourceConfig,
+  CatalogResourceProof,
+  GameData,
+  GameDataSourceStack,
+} from '@/types/5etools'
 import type { PreparedCatalog } from './catalogCandidate'
 import type { CatalogComparisonBasis } from './catalogComparison'
 import type { JsonSourceRead } from './resourceReader'
@@ -12,7 +17,7 @@ export type CatalogCommand =
       kind: 'prepare'
       config: PreparedCatalog['config']
       base?: GameDataSourceStack['base']
-      verifiedRevision?: string
+      verifiedRevision?: string | CatalogResourceProof
     }
   | { kind: 'bundled'; config: BundledDataSourceConfig }
   | { kind: 'repair'; data: GameData; contentFingerprint?: string }
@@ -20,8 +25,10 @@ export type CatalogCommand =
   | { kind: 'take'; workerId: string }
 
 export type CatalogReply =
-  | { text: string }
-  | { bytes: ArrayBuffer }
+  | { text: string; stamp?: string }
+  | { bytes: ArrayBuffer; stamp?: string }
+  | { stamp: string }
+  | { unchanged: true }
   | { error: string; status?: number }
 
 export type CatalogRequestMessage =

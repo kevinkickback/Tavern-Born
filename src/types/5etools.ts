@@ -622,6 +622,13 @@ type ExternalDataSourceConfig = DataSourceConfigBase & {
   acceptedRevision?: string
   /** GitHub revision whose accepted catalog passed a complete check without warnings. */
   verifiedRevision?: string
+  /** Inputs observed while preparing the accepted catalog, including confirmed absences. */
+  resourceProof?: CatalogResourceProof
+}
+
+export interface CatalogResourceProof {
+  kind: 'local' | 'remote'
+  entries: [path: string, stamp: string | null][]
 }
 
 export type BundledDataSourceConfig = DataSourceConfigBase & {

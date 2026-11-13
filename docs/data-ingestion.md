@@ -257,9 +257,13 @@ catalog waits for **Apply game data update** in Settings. On relaunch an unappli
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
-For GitHub sources, a complete accepted catalog with a matching cache schema, source and Included
-SRD can skip resource reads and parsing when the resolved commit matches its verified revision.
-Older or incomplete caches take a full check before they can use this shortcut.
+A complete accepted catalog with a matching cache schema, source and Included SRD can skip
+preparation when the source still matches. GitHub checks the verified commit. Other HTTPS
+sources recheck each JSON resource with an ETag or Last-Modified when available, and check
+previously missing resources again. Local folders check file identity, size and timestamps for
+the inputs the catalog uses, including indexes and files previously missing. Changes,
+inconclusive results and older caches run the full check. A server that cannot provide or
+accept validators can still be checked with ordinary requests.
 An interrupted read of an existing source keeps the accepted catalog. A missing top-level file
 or a record withdrawn from a successfully read file can appear in the removal preview. A missing
 file still declared by an index fails the check. Confirmed removals require Apply. A same-source

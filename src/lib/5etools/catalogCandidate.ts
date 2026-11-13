@@ -4,9 +4,15 @@ import {
   computeGameDataFingerprint,
   type GameDataLayerCacheMetadataByRole,
 } from '@/lib/storage/dataCache'
-import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
+import type {
+  CatalogResourceProof,
+  DataSourceConfig,
+  GameData,
+  GameDataSourceStack,
+} from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
+import { observeCatalogResources } from './catalogResourceProof'
 import {
   assertLayerDependencies,
   externalCatalogKeys,
@@ -77,7 +83,7 @@ export async function prepareCatalog(
 export async function checkCatalogRevision(
   config: PreparedCatalog['config'],
   base: GameDataSourceStack['base'] | undefined,
-  verifiedRevision: string,
+  verifiedRevision: string | CatalogResourceProof,
   signal: AbortSignal,
   onProgress?: DataLoaderOptions['onProgress'],
   read?: ReadSourceJson,
@@ -85,19 +91,46 @@ export async function checkCatalogRevision(
   onProgress?.(0, 0, 'Checking source')
   const source = await resolveSourceRevision(config, signal, read)
   signal.throwIfAborted()
-  if (source.revision && source.revision === verifiedRevision) return null
-  return prepareResolvedCatalog(source, base, signal, onProgress, read)
+  if (typeof verifiedRevision === 'string' && source.revision === verifiedRevision) return null
+  return prepareResolvedCatalog(
+    source,
+    base,
+    signal,
+    onProgress,
+    read,
+    typeof verifiedRevision === 'object' ? verifiedRevision : undefined,
+  )
 }
 
+function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+): Promise<PreparedCatalog>
+function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress: DataLoaderOptions['onProgress'],
+  read: ReadSourceJson | undefined,
+  priorProof: CatalogResourceProof | undefined,
+): Promise<PreparedCatalog | null>
 async function prepareResolvedCatalog(
   source: Awaited<ReturnType<typeof resolveSourceRevision>>,
   base: GameDataSourceStack['base'] | undefined,
   signal: AbortSignal,
   onProgress?: DataLoaderOptions['onProgress'],
   read?: ReadSourceJson,
-): Promise<PreparedCatalog> {
+  priorProof?: CatalogResourceProof,
+): Promise<PreparedCatalog | null> {
   const { config } = source
-  const reader = createJsonResourceReader(source.readConfig, read)
+  const observation = source.revision
+    ? undefined
+    : observeCatalogResources(source.readConfig, read, signal)
+  if (observation && (await observation.matches(priorProof))) return null
+  const reader = observation?.reader ?? createJsonResourceReader(source.readConfig, read)
   const scan = await settleOnAbort(
     inspectCatalogResources(
       reader,
@@ -167,6 +200,8 @@ async function prepareResolvedCatalog(
   if (missingSpell) throw new Error(missingSpell)
   const keys = externalCatalogKeys(additional ?? data)
   if (!keys.length) throw new Error('The additional source has no usable game data.')
+  admitted.resourceProof =
+    scan.warnings.length || scan.unavailable.length ? undefined : observation?.proof()
   return {
     config: admitted,
     identity,

@@ -17,6 +17,7 @@ import {
   createJsonResourceReader,
   type ReadSourceJson,
   ResourceHttpError,
+  type ResourceObservation,
 } from '@/lib/5etools/resourceReader'
 import { settleOnAbort } from '@/lib/abortable'
 import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
@@ -45,14 +46,22 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
     try {
       send({ kind: 'read', id, readId: nextReadId, request })
       const reply = await settleOnAbort(pending, readSignal)
-      if ('text' in reply) return JSON.parse(reply.text)
-      if ('bytes' in reply) return JSON.parse(new TextDecoder().decode(reply.bytes))
-      if (reply.status)
-        throw new ResourceHttpError(
-          reply.status,
-          request.kind === 'remote' ? request.url : request.path,
-        )
-      throw new Error(reply.error)
+      if ('error' in reply) {
+        if (reply.status)
+          throw new ResourceHttpError(
+            reply.status,
+            request.kind === 'remote' ? request.url : request.path,
+          )
+        throw new Error(reply.error)
+      }
+      if ('unchanged' in reply)
+        return { observed: true, unchanged: true } satisfies ResourceObservation
+      if (!('text' in reply) && !('bytes' in reply))
+        return { observed: true, stamp: reply.stamp } satisfies ResourceObservation
+      const data = JSON.parse('text' in reply ? reply.text : new TextDecoder().decode(reply.bytes))
+      if ('observation' in request && request.observation)
+        return { observed: true, stamp: reply.stamp, data } satisfies ResourceObservation
+      return data
     } finally {
       reads.delete(nextReadId)
       if (readSignal.aborted) send({ kind: 'cancel-read', id, readId: nextReadId })
