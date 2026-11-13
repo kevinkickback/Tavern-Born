@@ -6,6 +6,7 @@ import type { Character } from '@/types/character'
 
 interface WeaponProficiencyTarget {
   name: string
+  source?: string
   weaponCategory?: string
   type?: string
   properties?: ItemPropertyReference[]
@@ -109,6 +110,13 @@ export function isProficientWithWeapon(
   return proficiencies.some((rawProficiency) => {
     const proficiency = normalized(rawProficiency)
     if (proficiency === name) return true
+    const tagged = /^\{@item\s+([^|}]+)(?:\|([^|}]*)(?:\|[^}]*)?)?\}$/i.exec(proficiency)
+    if (
+      tagged &&
+      normalized(tagged[1]) === name &&
+      (normalized(tagged[2]) || 'dmg') === normalized(weapon.source)
+    )
+      return true
     if (!category) return false
 
     if ([category, `${category} weapon`, `${category} weapons`].includes(proficiency)) return true

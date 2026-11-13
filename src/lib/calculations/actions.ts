@@ -688,7 +688,7 @@ export function deriveWeaponActions(
   ).masteredWeapons
   const masteredWeapons = new Set([...masteryChoices.values()].flatMap((keys) => [...keys]))
   const battleReady = hasTceBattleReady(character, catalogs?.classes)
-  const itemSources = battleReady ? resolveItemReferences(weapons, context.itemLookup) : []
+  const itemSources = resolveItemReferences(weapons, context.itemLookup)
   return weapons.map((item, index) => {
     const properties = item.properties ?? []
     const propertyKeys = properties.map((property) =>
@@ -703,6 +703,7 @@ export function deriveWeaponActions(
         : 'strength'
     const printing = itemSources[index]
     const magicWeapon =
+      battleReady &&
       printing &&
       item.source &&
       !printing.sourceIdentityConflict &&
@@ -715,7 +716,13 @@ export function deriveWeaponActions(
       context.abilityModifiers.intelligence > context.abilityModifiers[physicalAbility]
         ? 'intelligence'
         : physicalAbility
-    const proficient = isProficientWithWeapon(weaponProficiencies, item)
+    const generatedBase = !printing?.sourceIdentityConflict
+      ? printing?.magicVariantGenerated?.base
+      : undefined
+    const proficient =
+      isProficientWithWeapon(weaponProficiencies, item) ||
+      (!!generatedBase &&
+        isProficientWithWeapon(weaponProficiencies, { ...item, ...generatedBase }))
     const baseAttackBonus =
       context.abilityModifiers[ability] + (proficient ? context.proficiencyBonus : 0)
     const attackBonus = Math.trunc(
@@ -748,21 +755,30 @@ export function deriveWeaponActions(
           row.scfType === focusType &&
           !row.sourceIdentityConflict,
       )
-    const masteryName = focusStaff ? 'Quarterstaff' : item.name
+    const masteryName = generatedBase?.name ?? (focusStaff ? 'Quarterstaff' : item.name)
+    const masterySource = generatedBase?.source ?? item.source
     const masteryItem =
-      item.source &&
+      masterySource &&
       masteredWeapons.has(
         getClassChoiceOptionKey({
           entityType: 'item',
           name: masteryName,
-          source: item.source,
+          source: masterySource,
         }),
       )
         ? context.classChoiceFeatureCatalogs?.itemsBase?.find(
-            (row) => row.name === masteryName && row.source === item.source,
+            (row) =>
+              row.name === masteryName &&
+              row.source === masterySource &&
+              !row.sourceIdentityConflict,
           )
         : undefined
-    const mastery = (masteryItem?.mastery ?? []).flatMap((reference) => {
+    const masteryReferences = masteryItem
+      ? generatedBase
+        ? printing?.mastery
+        : masteryItem.mastery
+      : undefined
+    const mastery = (masteryReferences ?? []).flatMap((reference) => {
       const parsed = parseMasteryReference(reference)
       return parsed ? [parsed] : []
     })

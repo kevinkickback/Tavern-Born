@@ -1,6 +1,7 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { resolveCopiedRecords } from './copyResolution'
-import { generateFixedBonusShields } from './fixedBonusShields'
+import { generateFixedBonusShields, generateFixedBonusWeapons } from './fixedBonusEquipment'
+import { stripMagicVariantLineage } from './itemEntries'
 
 // Data-only reference adaptation of Renderer.item and SourceUtil at 5etools b9061583:
 // https://github.com/5etools-mirror-3/5etools-src/tree/b9061583536101068b3a59d27e886d1fa664e366/js
@@ -146,8 +147,8 @@ export function resolveMagicVariants(rows: readonly unknown[]): {
     // is legitimate; an explicit unusable source must not fall back to the raw copy owner.
     const source = 'source' in inherits ? text(inherits.source) : target.source
     const projection = {
-      ...row,
-      ...inherits,
+      ...stripMagicVariantLineage(row),
+      ...stripMagicVariantLineage(inherits),
       name: target.name,
       source,
       type: row.type,
@@ -174,10 +175,15 @@ function isGenericType(value: unknown): value is string {
 
 /** References follow concrete copy resolution and can never replace an actual equipment tuple. */
 export function appendMagicVariantReferences(data: GameData): void {
+  // Raw copy directives must not mint application-owned provenance.
+  data.items = data.items.map(stripMagicVariantLineage)
+  data.itemsBase = data.itemsBase.map(stripMagicVariantLineage)
   const result = resolveMagicVariants(data.magicVariants ?? [])
-  const generated = generateFixedBonusShields(data, result.definitions)
-  data.fixedShieldDiagnostics = generated.diagnostics
-  data.items = [...data.items, ...generated.items]
+  const shields = generateFixedBonusShields(data, result.definitions)
+  const weapons = generateFixedBonusWeapons(data, result.definitions)
+  data.fixedShieldDiagnostics = shields.diagnostics
+  data.fixedWeaponDiagnostics = weapons.diagnostics
+  data.items = [...data.items, ...shields.items, ...weapons.items]
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )

@@ -658,6 +658,9 @@ export interface GameData {
   /** Winning raw Shield bases, retaining malformed and duplicate generation inputs. */
   fixedShieldBases?: unknown[]
   fixedShieldDiagnostics?: ItemEntryDiagnostic[]
+  /** Winning raw core item identities before ordinary base-item deduplication. */
+  fixedWeaponBases?: unknown[]
+  fixedWeaponDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

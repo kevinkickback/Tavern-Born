@@ -27,3 +27,19 @@ template eligibility and safe fixed numeric bonuses after ordinary copies resolv
 concrete tuples win. Ambiguous or malformed inputs do not generate a substitute. Generated
 rules keep exact printing and legal source identity. Changing generation invalidates the
 parsed cache without rewriting saved inventory. [Equipment state](equipment-state.md)
+
+### Fixed-bonus weapons
+
+The canonical +1, +2 and +3 weapon templates generate concrete weapons from direct
+public PHB and XPHB bases of the corresponding edition. The generator applies each
+template's declared requirements and exclusions and reads its fixed attack and damage
+bonus. It retains the base weapon's physical fields and preserves any explicit item
+with the same concrete identity. Ambiguous or unsupported source rows do not generate
+equipment. Generic templates remain reference entries, and generated weapons are
+classified as Other for starting equipment.
+
+Inventory saves the concrete weapon printing and instance. Actions and PDFs use
+the current catalog's exact generated base identity for named proficiency and acquired
+Weapon Mastery. The weapon's own attack and damage bonuses belong to the equipped
+instance. An unavailable variant keeps its saved inventory fields and suspends
+rules that require the exact catalog printing.
