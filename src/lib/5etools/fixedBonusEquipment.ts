@@ -149,6 +149,10 @@ const ARMOR_BASE_FIELDS = new Set([...BASE_FIELDS, 'armor', 'strength', 'stealth
 const WEAPON_INHERITED_FIELDS = new Set(
   [...INHERITED_FIELDS].map((field) => (field === 'bonusAc' ? 'bonusWeapon' : field)),
 )
+const AMMUNITION_TEMPLATE_FIELDS = new Set([...CORE_TEMPLATE_FIELDS, 'ammo'])
+const AMMUNITION_INHERITED_FIELDS = new Set([...WEAPON_INHERITED_FIELDS, 'miscTags'])
+const AMMUNITION_TAGS = ['arrow', 'bolt', 'bulletFirearm', 'bulletSling', 'needleBlowgun']
+const AMMUNITION_BASE_FIELDS = new Set([...BASE_FIELDS, ...AMMUNITION_TAGS, 'miscTags'])
 
 /** Upstream OR-of-AND requirements and any-key exclusions use own fields. */
 function matches(candidate: unknown, requirements: Row, every: boolean): boolean {
@@ -246,6 +250,27 @@ function validArmorBase(row: Row, source: string): boolean {
   )
 }
 
+function isCoreAmmunition(row: Row, source: string): boolean {
+  return row.type === (source === 'PHB' ? 'A' : 'A|XPHB') && !row.packContents
+}
+
+function hasSupportedAmmunitionTags(row: Row): boolean {
+  return (
+    row.miscTags === undefined ||
+    (Array.isArray(row.miscTags) && row.miscTags.every((tag) => tag === 'CNS'))
+  )
+}
+
+function validAmmunitionBase(row: Row, source: string): boolean {
+  return (
+    validDirectPublicBase(row, source) &&
+    isCoreAmmunition(row, source) &&
+    Object.keys(row).every((field) => AMMUNITION_BASE_FIELDS.has(field)) &&
+    AMMUNITION_TAGS.every((field) => row[field] === undefined || typeof row[field] === 'boolean') &&
+    hasSupportedAmmunitionTags(row)
+  )
+}
+
 function validWeaponBase(row: Row, source: string): boolean {
   const typeSuffix = source === 'PHB' ? '' : '|XPHB'
   const damage = (value: unknown) => typeof value === 'string' && /^\d+(?:d\d+)?$/.test(value)
@@ -290,15 +315,26 @@ export function generateFixedBonusArmor(data: GameData, definitions: readonly Ro
   return generateFixedBonusVariants(data, definitions, 'armor')
 }
 
+export function generateFixedBonusAmmunition(data: GameData, definitions: readonly Row[]) {
+  return generateFixedBonusVariants(data, definitions, 'ammunition')
+}
+
 const FIXED_PATTERNS = {
   shield: /^\+([123]) Shield \(\*\)$/,
   weapon: /^\+([123]) Weapon$/,
   armor: /^\+([123]) Armor$/,
+  ammunition: /^\+([123]) Ammunition$/,
 }
 const BASE_VALIDATORS = {
   shield: validShieldBase,
   weapon: validWeaponBase,
   armor: validArmorBase,
+  ammunition: validAmmunitionBase,
+}
+const CORE_BASE_MATCHERS = {
+  weapon: (row: Row) => row.weapon === true,
+  armor: isBodyArmor,
+  ammunition: isCoreAmmunition,
 }
 
 function generateFixedBonusVariants(
@@ -307,10 +343,19 @@ function generateFixedBonusVariants(
   family: keyof typeof FIXED_PATTERNS,
 ): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
   const shield = family === 'shield'
+  const ammunition = family === 'ammunition'
   const baseLabel = shield ? 'Shield' : family
-  const bonusField = family === 'weapon' ? 'bonusWeapon' : 'bonusAc'
-  const templateFields = shield ? TEMPLATE_FIELDS : CORE_TEMPLATE_FIELDS
-  const inheritedFields = family === 'weapon' ? WEAPON_INHERITED_FIELDS : INHERITED_FIELDS
+  const bonusField = family === 'weapon' || ammunition ? 'bonusWeapon' : 'bonusAc'
+  const templateFields = ammunition
+    ? AMMUNITION_TEMPLATE_FIELDS
+    : shield
+      ? TEMPLATE_FIELDS
+      : CORE_TEMPLATE_FIELDS
+  const inheritedFields = ammunition
+    ? AMMUNITION_INHERITED_FIELDS
+    : bonusField === 'bonusWeapon'
+      ? WEAPON_INHERITED_FIELDS
+      : INHERITED_FIELDS
   const diagnostics: ItemEntryDiagnostic[] = []
   const diagnose = (path: string, message: string) => {
     if (diagnostics.length < 32) diagnostics.push({ path: `magicVariants.${path}`, message })
@@ -337,6 +382,7 @@ function generateFixedBonusVariants(
     if (
       !inherited ||
       !Object.keys(definition).every((key) => templateFields.has(key)) ||
+      (ammunition && (definition.ammo !== true || !hasSupportedAmmunitionTags(inherited))) ||
       (!shield &&
         (!validMetadata(definition) ||
           !inherited.rarity ||
@@ -389,7 +435,7 @@ function generateFixedBonusVariants(
             (row) =>
               row.startingEquipmentCategory === 'Basic' &&
               row.source === baseSource &&
-              (family === 'weapon' ? row.weapon === true : isBodyArmor(row, baseSource)) &&
+              CORE_BASE_MATCHERS[family](row, baseSource) &&
               isPublicBase(row, baseSource),
           ),
         )

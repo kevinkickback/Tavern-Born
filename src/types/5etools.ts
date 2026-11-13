@@ -662,6 +662,7 @@ export interface GameData {
   fixedEquipmentBases?: unknown[]
   fixedWeaponDiagnostics?: ItemEntryDiagnostic[]
   fixedArmorDiagnostics?: ItemEntryDiagnostic[]
+  fixedAmmunitionDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

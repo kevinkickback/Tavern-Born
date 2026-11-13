@@ -56,3 +56,15 @@ produce a substitute.
 The first equipped body armor owns both its saved base AC and its live magic bonus.
 The first equipped shield may contribute independently. Losing the exact catalog
 printing suspends the live bonus while preserving the saved armor and its base AC.
+
+### Fixed-bonus ammunition
+
+The canonical +1, +2 and +3 ammunition templates generate individual pieces from
+exact public PHB and XPHB bases. Declared type and edition predicates determine
+eligibility. Packs of mundane ammunition do not generate magic variants. Inventory
+retains the exact printing, quantity, and weight per piece.
+
+The rules text records the attack and damage bonus for a shot made with that piece
+and the loss of magic after a hit. Players apply that rule per shot and manage
+quantity manually. Carrying magic ammunition leaves the weapon's standing attack
+and damage values unchanged.
