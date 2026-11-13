@@ -10,6 +10,16 @@ const ALL_DAMAGE_TYPES = Object.values(DAMAGE_TYPE_LABEL_FALLBACKS)
   .sort()
 const rawItems = new WeakMap<GameData, Pick<GameData, 'items' | 'itemsBase'>>()
 
+export function stripMagicVariantLineage<T extends object>(item: T): T {
+  if (!('magicVariantGenerated' in item) && !('magicVariantReference' in item)) return item
+  const {
+    magicVariantGenerated: _generation,
+    magicVariantReference: _reference,
+    ...data
+  } = item as T & Pick<Item5e, 'magicVariantGenerated' | 'magicVariantReference'>
+  return data as T
+}
+
 /** Retain load-time inputs before copies/text expand, as with raw race data. */
 export function retainRawItems(data: GameData): void {
   rawItems.set(data, { items: data.items, itemsBase: data.itemsBase })

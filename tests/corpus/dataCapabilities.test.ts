@@ -61,13 +61,14 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       },
     )
   })
-  it('loads the actual bundled and managed source stack with concrete shield item-choice targets', () => {
+  it('loads the bundled and managed source stack with concrete shields and fixed weapons', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
     expect(gameData.magicVariants).toHaveLength(230)
+    const generated = gameData.items.filter((item) => item.magicVariantGenerated)
     expect(
-      gameData.items
-        .filter((item) => item.magicVariantGenerated)
+      generated
+        .filter((item) => item.magicVariantGenerated?.base.name === 'Shield')
         .map((item) => `${item.name}|${item.source}`)
         .sort(),
     ).toEqual([
@@ -78,6 +79,15 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       '+3 Shield|DMG',
       '+3 Shield|XDMG',
     ])
+    for (const bonus of ['+1', '+2', '+3']) {
+      expect(
+        generated.filter((item) => item.bonusWeapon === bonus && item.source === 'DMG'),
+      ).toHaveLength(36)
+      expect(
+        generated.filter((item) => item.bonusWeapon === bonus && item.source === 'XDMG'),
+      ).toHaveLength(38)
+    }
+    expect(generated).toHaveLength(228)
   })
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']

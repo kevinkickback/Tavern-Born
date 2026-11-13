@@ -1,0 +1,414 @@
+import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
+import { getItemEntryIdentity, getRawItems } from './itemEntries'
+
+// Bounded adaptation of Renderer.item at 5etools b9061583 (render.js:12942–13382).
+type Row = Record<string, unknown>
+const record = (v: unknown): Row | undefined =>
+  v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Row) : undefined
+const identity = (r: Row) => getItemEntryIdentity(String(r.name), String(r.source))
+const isShieldTarget = (v: unknown): v is Row => {
+  const r = record(v)
+  return (
+    typeof r?.name === 'string' &&
+    r.name.trim().toLowerCase() === 'shield' &&
+    typeof r.source === 'string' &&
+    ['phb', 'xphb'].includes(r.source.trim().toLowerCase())
+  )
+}
+
+/** Serializable raw authority precedes ordinary itemsBase duplicate collapse. */
+export function getFixedShieldBases(data: GameData): unknown[] {
+  return data.fixedShieldBases ?? getRawItems(data).itemsBase.filter(isShieldTarget)
+}
+
+export function mergeFixedShieldBases(layers: readonly GameData[]): unknown[] {
+  return mergeBases(layers, getFixedShieldBases, isShieldTarget)
+}
+
+// Keep every named row from these sources until the winning raw identity is known.
+// Filtering on weapon/type first could revive a lower-layer base after an invalid override.
+const isCoreBaseTarget = (value: unknown): value is Row => {
+  const row = record(value)
+  return (
+    typeof row?.name === 'string' &&
+    !!row.name.trim() &&
+    typeof row.source === 'string' &&
+    ['phb', 'xphb'].includes(row.source.trim().toLowerCase())
+  )
+}
+
+export function getFixedWeaponBases(data: GameData): unknown[] {
+  if (data.fixedWeaponBases) return data.fixedWeaponBases
+  const { items, itemsBase } = getRawItems(data)
+  // Ordinary exact claims can shadow a base but do not supply baseitem authority.
+  return [
+    ...itemsBase.filter(isCoreBaseTarget),
+    ...items.filter(isCoreBaseTarget).map((row) => ({
+      ...row,
+      startingEquipmentCategory: 'Other',
+    })),
+  ]
+}
+
+export function mergeFixedWeaponBases(layers: readonly GameData[]): unknown[] {
+  return mergeBases(layers, getFixedWeaponBases, isCoreBaseTarget)
+}
+
+function mergeBases(
+  layers: readonly GameData[],
+  getBases: (data: GameData) => unknown[],
+  isTarget: (value: unknown) => value is Row,
+): unknown[] {
+  return layers.reduce<unknown[]>((merged, layer) => {
+    const rows = getBases(layer).filter(isTarget)
+    const replaced = new Set(rows.map(identity))
+    return [...merged.filter((r) => !isTarget(r) || !replaced.has(identity(r))), ...rows]
+  }, [])
+}
+
+const BASE_FIELDS = new Set([
+  'name',
+  'source',
+  'page',
+  'srd',
+  'srd52',
+  'basicRules',
+  'basicRules2024',
+  'referenceSources',
+  'reprintedAs',
+  'edition',
+  'type',
+  'rarity',
+  'weight',
+  'value',
+  'ac',
+  'entries',
+  'hasFluff',
+  'hasFluffImages',
+  'startingEquipmentCategory',
+])
+const TEMPLATE_FIELDS = new Set([
+  'name',
+  'source',
+  'type',
+  'edition',
+  'requires',
+  'excludes',
+  'entries',
+  'inherits',
+  'hasFluffImages',
+])
+const INHERITED_FIELDS = new Set([
+  'namePrefix',
+  'source',
+  'page',
+  'srd',
+  'srd52',
+  'basicRules',
+  'basicRules2024',
+  'reprintedAs',
+  'tier',
+  'rarity',
+  'bonusAc',
+  'entries',
+  'classFeatures',
+  'lootTables',
+])
+
+const WEAPON_TAGS = [
+  'weapon',
+  'axe',
+  'bow',
+  'club',
+  'crossbow',
+  'dagger',
+  'firearm',
+  'hammer',
+  'lance',
+  'mace',
+  'net',
+  'polearm',
+  'rapier',
+  'spear',
+  'sword',
+] as const
+const WEAPON_BASE_FIELDS = new Set([
+  ...BASE_FIELDS,
+  ...WEAPON_TAGS,
+  'ammoType',
+  'dmg1',
+  'dmg2',
+  'dmgType',
+  'mastery',
+  'property',
+  'range',
+  'weaponCategory',
+])
+const WEAPON_TEMPLATE_FIELDS = new Set([...TEMPLATE_FIELDS, 'referenceSources'])
+const WEAPON_INHERITED_FIELDS = new Set(
+  [...INHERITED_FIELDS].map((field) => (field === 'bonusAc' ? 'bonusWeapon' : field)),
+)
+
+/** Upstream OR-of-AND requirements and any-key exclusions use own fields. */
+function matches(candidate: unknown, requirements: Row, every: boolean): boolean {
+  if (candidate == null) return false
+  return Object.entries(requirements)[every ? 'every' : 'some'](([key, requirement]) => {
+    const value = Object.getOwnPropertyDescriptor(candidate, key)?.value
+    if (Array.isArray(requirement))
+      return Array.isArray(value)
+        ? value.some((x) => requirement.includes(x))
+        : requirement.includes(value)
+    const nested = record(requirement)
+    if (nested) return matches(value, nested, every)
+    return Array.isArray(value) ? value.includes(requirement) : value === requirement
+  })
+}
+
+function validMetadata(row: Row): boolean {
+  return (
+    ['srd', 'srd52'].every(
+      (key) =>
+        row[key] === undefined || typeof row[key] === 'boolean' || typeof row[key] === 'string',
+    ) &&
+    ['basicRules', 'basicRules2024'].every(
+      (key) => row[key] === undefined || typeof row[key] === 'boolean',
+    ) &&
+    ['rarity', 'tier'].every((key) => row[key] === undefined || typeof row[key] === 'string') &&
+    ['page', 'weight', 'value'].every(
+      (key) =>
+        row[key] === undefined || (typeof row[key] === 'number' && Number.isFinite(row[key])),
+    ) &&
+    ['referenceSources', 'reprintedAs', 'classFeatures', 'lootTables'].every(
+      (key) =>
+        row[key] === undefined ||
+        (Array.isArray(row[key]) && row[key].every((value) => typeof value === 'string')),
+    )
+  )
+}
+
+const isPublicBase = (row: Row, source: string) =>
+  Boolean(source === 'PHB' ? row.srd || row.basicRules : row.srd52 || row.basicRules2024)
+
+function validPublicBase(row: Row, source: string): boolean {
+  return (
+    row.source === source &&
+    validMetadata(row) &&
+    row.edition === (source === 'PHB' ? 'classic' : 'one') &&
+    row.rarity === 'none' &&
+    (row.entries === undefined || Array.isArray(row.entries)) &&
+    isPublicBase(row, source)
+  )
+}
+
+function validShieldBase(row: Row, source: string): boolean {
+  return (
+    row.name === 'Shield' &&
+    validPublicBase(row, source) &&
+    Object.keys(row).every((k) => BASE_FIELDS.has(k)) &&
+    (!Object.getOwnPropertyDescriptor(row, 'startingEquipmentCategory') ||
+      row.startingEquipmentCategory === 'Basic' ||
+      row.startingEquipmentCategory === 'Other') &&
+    row.type === (source === 'PHB' ? 'S' : 'S|XPHB') &&
+    typeof row.ac === 'number' &&
+    Number.isFinite(row.ac)
+  )
+}
+
+function validWeaponBase(row: Row, source: string): boolean {
+  const typeSuffix = source === 'PHB' ? '' : '|XPHB'
+  const damage = (value: unknown) => typeof value === 'string' && /^\d+(?:d\d+)?$/.test(value)
+  const label = (value: unknown) => typeof value === 'string' && !!value.trim()
+  return (
+    validPublicBase(row, source) &&
+    typeof row.name === 'string' &&
+    row.name === row.name.trim() &&
+    !row.name.includes('|') &&
+    row.startingEquipmentCategory === 'Basic' &&
+    !row.sourceIdentityConflict &&
+    row.weapon === true &&
+    Object.keys(row).every((field) => WEAPON_BASE_FIELDS.has(field)) &&
+    WEAPON_TAGS.every((field) => row[field] === undefined || typeof row[field] === 'boolean') &&
+    (row.type === `M${typeSuffix}` || row.type === `R${typeSuffix}`) &&
+    (row.weaponCategory === 'simple' || row.weaponCategory === 'martial') &&
+    damage(row.dmg1) &&
+    (row.dmg2 === undefined || damage(row.dmg2)) &&
+    label(row.dmgType) &&
+    (row.range === undefined || label(row.range)) &&
+    (row.ammoType === undefined || label(row.ammoType)) &&
+    (row.mastery === undefined || (Array.isArray(row.mastery) && row.mastery.every(label))) &&
+    (row.property === undefined ||
+      (Array.isArray(row.property) &&
+        row.property.every((entry) => {
+          if (label(entry)) return true
+          const property = record(entry)
+          return (
+            !!property &&
+            label(property.uid) &&
+            (property.note === undefined || typeof property.note === 'string') &&
+            Object.keys(property).every((key) => key === 'uid' || key === 'note')
+          )
+        })))
+  )
+}
+
+export function generateFixedBonusShields(data: GameData, definitions: readonly Row[]) {
+  return generateFixedBonusVariants(data, definitions, 'shield')
+}
+
+export function generateFixedBonusWeapons(data: GameData, definitions: readonly Row[]) {
+  return generateFixedBonusVariants(data, definitions, 'weapon')
+}
+
+function generateFixedBonusVariants(
+  data: GameData,
+  definitions: readonly Row[],
+  family: 'shield' | 'weapon',
+): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
+  const shield = family === 'shield'
+  const baseLabel = shield ? 'Shield' : 'weapon'
+  const pattern = shield ? /^\+([123]) Shield \(\*\)$/ : /^\+([123]) Weapon$/
+  const bonusField = shield ? 'bonusAc' : 'bonusWeapon'
+  const templateFields = shield ? TEMPLATE_FIELDS : WEAPON_TEMPLATE_FIELDS
+  const inheritedFields = shield ? INHERITED_FIELDS : WEAPON_INHERITED_FIELDS
+  const diagnostics: ItemEntryDiagnostic[] = []
+  const diagnose = (path: string, message: string) => {
+    if (diagnostics.length < 32) diagnostics.push({ path: `magicVariants.${path}`, message })
+  }
+  const groups = new Map<string, Row[]>()
+  const inputs = shield
+    ? getFixedShieldBases(data).filter(isShieldTarget)
+    : getFixedWeaponBases(data).filter(isCoreBaseTarget)
+  for (const value of inputs) {
+    const key = identity(value)
+    groups.set(key, [...(groups.get(key) ?? []), value])
+  }
+  const occupied = new Set([...data.items, ...data.itemsBase].map(identity)),
+    generated = new Map<string, Item5e[]>()
+  for (const definition of definitions) {
+    const match = pattern.exec(String(definition.name))
+    if (!match || !['DMG', 'XDMG'].includes(String(definition.source))) continue
+    const source = String(definition.source),
+      baseSource = source === 'DMG' ? 'PHB' : 'XPHB',
+      path = `${definition.name}|${source}`
+    const inherited = record(definition.inherits),
+      requires = definition.requires,
+      excludes = record(definition.excludes)
+    if (
+      !inherited ||
+      !Object.keys(definition).every((key) => templateFields.has(key)) ||
+      (!shield &&
+        (!validMetadata(definition) ||
+          !inherited.rarity ||
+          inherited.rarity === 'none' ||
+          inherited.rarity === 'unknown')) ||
+      (definition.hasFluffImages !== undefined && typeof definition.hasFluffImages !== 'boolean') ||
+      !validMetadata(inherited) ||
+      definition.type !== `GV|${source}` ||
+      inherited.source !== source ||
+      inherited.namePrefix !== `+${match[1]} ` ||
+      inherited[bonusField] !== `+${match[1]}` ||
+      !Array.isArray(inherited.entries) ||
+      !Object.keys(inherited).every((k) => inheritedFields.has(k)) ||
+      !Array.isArray(requires) ||
+      !requires.every((row) => record(row)) ||
+      (definition.excludes !== undefined && !excludes) ||
+      ![undefined, 'classic', 'one'].includes(definition.edition as string | undefined)
+    ) {
+      diagnose(path, `Unsupported fixed-${family} template shape.`)
+      continue
+    }
+    let entries: unknown[]
+    try {
+      let unsupported = false
+      const encoded = JSON.stringify(inherited.entries).replace(
+        /\{=([^}]+)}/g,
+        (_token, field: string) => {
+          if (field !== bonusField) unsupported = true
+          return String(inherited[bonusField])
+        },
+      )
+      if (unsupported) throw new Error('Unsupported property injector')
+      entries = JSON.parse(encoded)
+    } catch {
+      diagnose(path, `Unsupported fixed-${family} text injector.`)
+      continue
+    }
+    const matchesTemplate = (row: Row) =>
+      (row.edition === definition.edition ||
+        (row.edition === 'one' && definition.edition !== 'classic')) &&
+      requires.some((requirement) => matches(row, requirement, true)) &&
+      (!excludes || !matches(row, excludes, false))
+    const shieldBases = groups.get(identity({ name: baseLabel, source: baseSource }))
+    const candidates = shield
+      ? shieldBases
+        ? [shieldBases]
+        : []
+      : [...groups.values()].filter((rows) =>
+          rows.some(
+            (row) =>
+              row.startingEquipmentCategory === 'Basic' &&
+              row.source === baseSource &&
+              row.weapon === true &&
+              isPublicBase(row, baseSource),
+          ),
+        )
+    if (candidates.length === 0) {
+      diagnose(path, `Unavailable exact public ${baseLabel} base from ${baseSource}.`)
+      continue
+    }
+    for (const bases of candidates) {
+      const base = bases[0]
+      if (!shield && !bases.some(matchesTemplate)) continue
+      if (
+        bases.length !== 1 ||
+        !(shield ? validShieldBase(base, baseSource) : validWeaponBase(base, baseSource))
+      ) {
+        diagnose(path, `Ambiguous or unsupported direct public ${baseLabel} base.`)
+        continue
+      }
+      if (shield && !matchesTemplate(base)) continue
+      const output = structuredClone(base) as unknown as Item5e
+      for (const key of [
+        'value',
+        'srd',
+        'srd52',
+        'basicRules',
+        'basicRules2024',
+        'page',
+        'reprintedAs',
+        'referenceSources',
+        'hasFluff',
+        'hasFluffImages',
+      ])
+        delete output[key]
+      for (const [key, value] of Object.entries(inherited))
+        if (!['namePrefix', 'entries', 'reprintedAs'].includes(key))
+          output[key] = structuredClone(value)
+      output.name = `${inherited.namePrefix}${base.name}`
+      output.entries = structuredClone([...entries, ...((base.entries ?? []) as unknown[])])
+      const baseName = String(base.name)
+      output.baseItem = `${baseName.toLowerCase()}|${baseSource.toLowerCase()}`
+      output.genericVariant = { name: definition.name, source }
+      output.magicVariantGenerated = {
+        base: { name: baseName, source: baseSource },
+        template: { name: String(definition.name), source },
+      }
+      output.startingEquipmentCategory = 'Other'
+      const key = identity(output)
+      if (occupied.has(key)) {
+        diagnose(
+          path,
+          `Generated ${family} collides with concrete equipment; concrete item retained.`,
+        )
+        continue
+      }
+      generated.set(key, [...(generated.get(key) ?? []), output])
+    }
+  }
+  const items = [...generated.values()].flatMap((rows) => {
+    if (rows.length === 1) return rows
+    diagnose(`${rows[0].name}|${rows[0].source}`, `Ambiguous generated ${family} identity.`)
+    return []
+  })
+  return { items, diagnostics }
+}

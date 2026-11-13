@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
-import { generateFixedBonusShields } from '@/lib/5etools/fixedBonusShields'
+import { generateFixedBonusShields } from '@/lib/5etools/fixedBonusEquipment'
 import { getRawItems } from '@/lib/5etools/itemEntries'
 import {
   fixedShieldTemplates,
