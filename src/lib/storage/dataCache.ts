@@ -169,6 +169,7 @@ export async function readGameDataCachePair() {
     | {
         dataSourceConfig?: DataSourceConfig | null
         lastUpdateCheckAt?: string | null
+        lastContentFingerprint?: string | null
       }
     | undefined
   return { cache, settings }

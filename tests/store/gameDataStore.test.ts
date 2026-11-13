@@ -6,6 +6,7 @@ const {
   loadGameDataSourceStackMock,
   writeGameDataCacheMock,
   readGameDataCacheMock,
+  readGameDataSettingsMock,
 } = vi.hoisted(() => ({
   loadDataFromSourceMock: vi.fn(),
   loadGameDataSourceStackMock: vi.fn(),
@@ -14,6 +15,7 @@ const {
     contentFingerprint: 'abc123ef',
   })),
   readGameDataCacheMock: vi.fn(),
+  readGameDataSettingsMock: vi.fn(),
 }))
 const { resolveDefaultBundledSourceMock } = vi.hoisted(() => ({
   resolveDefaultBundledSourceMock: vi.fn<() => Promise<DataSourceConfig | null>>(async () => null),
@@ -75,7 +77,10 @@ vi.mock('@/lib/storage/dataCache', () => ({
   GAME_DATA_SETTINGS_KEY: 'game-data-storage',
   GAME_DATA_STORE_VERSION: 1,
   writeGameDataCache: writeGameDataCacheMock,
-  readGameDataCachePair: async () => ({ cache: await readGameDataCacheMock() }),
+  readGameDataCachePair: async () => ({
+    cache: await readGameDataCacheMock(),
+    settings: readGameDataSettingsMock(),
+  }),
   isCacheForSource: (cache: { sourceSnapshot: { path: string } }, config: DataSourceConfig) =>
     cache.sourceSnapshot.path === config.path,
   computeGameDataFingerprint: () => 'layer-fingerprint',
@@ -137,6 +142,7 @@ describe('gameDataStore', () => {
     vi.clearAllMocks()
     resolveDefaultBundledSourceMock.mockResolvedValue(null)
     readGameDataCacheMock.mockResolvedValue(null)
+    readGameDataSettingsMock.mockReturnValue(undefined)
     useGameDataStore.setState({
       gameData: null,
       dataSourceConfig: null,
@@ -146,6 +152,7 @@ describe('gameDataStore', () => {
       error: null,
       lastDataChangedAt: null,
       lastContentFingerprint: null,
+      savedContentFingerprint: null,
       lastUpdateCheckAt: null,
       pendingCatalog: null,
       externalKeys: undefined,
@@ -196,6 +203,7 @@ describe('gameDataStore', () => {
     useGameDataStore.setState({ lastContentFingerprint: 'previous-fingerprint' })
     late.resolve(next)
     await backgroundRefresh
+    expect(useGameDataStore.getState().pendingCatalog?.reason).toBe('update')
     expect(useGameDataStore.getState().pendingCatalog?.candidate).toMatchObject({ data: next })
     expect(useGameDataStore.getState().gameData?.races).toEqual(cached.races)
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
@@ -329,6 +337,28 @@ describe('gameDataStore', () => {
     late.resolve(nonempty('Online race'))
     await backgroundRefresh
     expect(useGameDataStore.getState().pendingCatalog).not.toBeNull()
+    expect(useGameDataStore.getState().pendingCatalog?.reason).toBe('recovery')
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['layer-fingerprint', 'reload'],
+    ['different-fingerprint', 'recovery'],
+  ])('classifies a rebuilt catalog using the accepted fingerprint (%s)', async (fingerprint, reason) => {
+    readGameDataSettingsMock.mockReturnValue({
+      dataSourceConfig: remote,
+      lastContentFingerprint: fingerprint,
+    })
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
+    loadDataFromSourceMock.mockResolvedValueOnce(nonempty('Included race'))
+    loadGameDataSourceStackMock.mockResolvedValueOnce(nonempty('Additional race'))
+
+    const { backgroundRefresh } = await useGameDataStore
+      .getState()
+      .loadFromCache({ checkForUpdates: true })
+    await backgroundRefresh
+    expect(useGameDataStore.getState().pendingCatalog?.reason).toBe(reason)
+    expect(useGameDataStore.getState().sessionBundledSource).toEqual(bundled)
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
@@ -415,6 +445,7 @@ describe('gameDataStore', () => {
       .getState()
       .loadFromCache({ checkForUpdates: true })
     await backgroundRefresh
+    expect(useGameDataStore.getState().pendingCatalog?.reason).toBe('update')
     expect(useGameDataStore.getState().pendingCatalog?.removals).toEqual([key])
   })
 

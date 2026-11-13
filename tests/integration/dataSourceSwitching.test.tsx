@@ -180,7 +180,7 @@ describe('data source switching', () => {
     const settings = render(<DataSourceConfigurator />)
     await chooseFolder()
     await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
-    await screen.findByText('Game data update ready')
+    await screen.findByText('Review changes to your game data')
     expect(approveLocalDataRoot).not.toHaveBeenCalled()
     expect(useGameDataStore.getState().dataSourceConfig).toBe(active)
 
@@ -197,7 +197,7 @@ describe('data source switching', () => {
     } else {
       nextFolder = anotherFolder
       await chooseFolder()
-      expect(screen.queryByText('Game data update ready')).toBeNull()
+      expect(screen.queryByText('Review changes to your game data')).toBeNull()
       expect(useGameDataStore.getState().dataSourceConfig).toBe(active)
       expect(approveLocalDataRoot).not.toHaveBeenCalled()
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
