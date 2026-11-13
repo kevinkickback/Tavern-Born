@@ -333,6 +333,7 @@ interface ClassChoiceSelectionModalProps {
   classSource?: string
   onClose: () => void
   onConfirm: (selected: ClassChoiceOptionView[]) => void
+  getDraftError?: (selected: ClassChoiceOptionView[]) => string | undefined
 }
 
 export function ClassChoiceSelectionModal({
@@ -346,6 +347,7 @@ export function ClassChoiceSelectionModal({
   classSource,
   onClose,
   onConfirm,
+  getDraftError,
   historicalSetup,
   enemySetup,
 }: ClassChoiceSelectionModalProps) {
@@ -637,7 +639,15 @@ export function ClassChoiceSelectionModal({
           isClassChoiceOptionEligible(candidate) &&
           selectedIds.has(getOptionSelectionKey(candidate)),
       ).length
-      return eligibleSelectionCount < maximumSelections
+      return (
+        eligibleSelectionCount < maximumSelections &&
+        !getDraftError?.(
+          allOptions.filter(
+            (candidate) =>
+              candidate === option || selectedIds.has(getOptionSelectionKey(candidate)),
+          ),
+        )
+      )
     },
     [
       maximumSelections,
@@ -645,6 +655,7 @@ export function ClassChoiceSelectionModal({
       removalOnly,
       initialSelectedIds,
       invocationCantrips,
+      getDraftError,
     ],
   )
 
@@ -789,7 +800,7 @@ export function ClassChoiceSelectionModal({
             ),
         )
           ? 'Source rules changed. Close and review this choice before confirming.'
-          : undefined
+          : getDraftError?.(options.filter((option) => ids.has(getOptionSelectionKey(option))))
       }}
       canSelect={canSelect}
       initialSelectedIds={initialSelectedIds}

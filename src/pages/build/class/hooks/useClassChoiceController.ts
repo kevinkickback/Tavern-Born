@@ -47,6 +47,7 @@ import {
   hasClassProficiencyRecovery,
   refreshClassProficiencyState,
 } from '@/lib/character/classProficiencySelections'
+import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
 import { getCompanionSelectionStates } from '@/lib/character/companionSelections'
 import {
   hasFavoredEnemyRecovery,
@@ -596,6 +597,49 @@ export function useClassChoiceController({
         ? getRequiredChoiceSelectionCount(resolvedActiveChoice, viewingClassLevel)
         : (getProgressiveChoiceGainCount(resolvedActiveChoice, activeGainLevel) ?? 0)
       : 0
+  const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
+  const getConfirmedSelections = (selected: ClassChoiceOptionView[]) => {
+    if (isRevisedInvocationPoolId(resolvedActiveChoice?.id)) return selected
+    const eligible = selected.filter(isClassChoiceOptionEligible)
+    const retained = selected.filter((option) => !isClassChoiceOptionEligible(option))
+    return [...eligible, ...retained.slice(0, Math.max(0, activeRequiredCount - eligible.length))]
+  }
+  const getPersistedSelections = (selected: ClassChoiceOptionView[]) =>
+    selected.map(
+      ({ reference }) =>
+        replacementsInGain.get(getClassChoiceOptionKey(reference))?.original ?? reference,
+    )
+  const psionicPool = activeId && decodePsionicChoiceId(activeId)?.pool
+  const getDraftError =
+    !activeRemovalOnly &&
+    savedCharacter?.mysticDisciplineReplacements?.length &&
+    resolvedActiveChoice &&
+    (psionicPool === 'discipline' || psionicPool === 'bonus-discipline')
+      ? (selected: ClassChoiceOptionView[]) => {
+          const confirmed = getConfirmedSelections(selected)
+          if (
+            previousKeys.size === confirmed.length &&
+            confirmed.every((view) => previousKeys.has(getClassChoiceOptionKey(view.reference)))
+          )
+            return undefined
+          try {
+            applyClassChoiceSelectionCommand(
+              savedCharacter,
+              resolvedActiveChoice,
+              getPersistedSelections(confirmed),
+              {
+                classes: resolvedCatalogs.classes ?? (viewingClassData ? [viewingClassData] : []),
+                catalogs: resolvedCatalogs,
+              },
+              undefined,
+              request?.savedHandle,
+              activeGainLevel,
+            )
+          } catch (error) {
+            return error instanceof RangeError ? error.message : 'Review the discipline choices.'
+          }
+        }
+      : undefined
   const close = () => {
     setRequest(null)
     setQueue(null)
@@ -661,18 +705,7 @@ export function useClassChoiceController({
         return live ? [live] : []
       })
     }
-    const eligibleSelections = selected.filter(isClassChoiceOptionEligible)
-    const retainedSelections = selected.filter((option) => !isClassChoiceOptionEligible(option))
-    const confirmedSelections = isRevisedInvocationPoolId(current.id)
-      ? selected
-      : [
-          ...eligibleSelections,
-          ...retainedSelections.slice(
-            0,
-            Math.max(0, activeRequiredCount - eligibleSelections.length),
-          ),
-        ]
-    const previousKeys = new Set(activeSavedOptions.map(getClassChoiceOptionKey))
+    const confirmedSelections = getConfirmedSelections(selected)
     try {
       const unchanged =
         previousKeys.size === confirmedSelections.length &&
@@ -687,10 +720,7 @@ export function useClassChoiceController({
       if (!unchanged) {
         applyClassChoiceSelection(
           current,
-          confirmedSelections.map(
-            ({ reference }) =>
-              replacementsInGain.get(getClassChoiceOptionKey(reference))?.original ?? reference,
-          ),
+          getPersistedSelections(confirmedSelections),
           undefined,
           activeGainLevel !== undefined ||
             current.id === BLESSED_STRIKES_ID ||
@@ -820,6 +850,7 @@ export function useClassChoiceController({
     activeOptionViews,
     activeInitialSelectedIds,
     activeRequiredCount,
+    getDraftError,
     enemySetup:
       activeDisplayChoice?.id && decodeFavoredEnemyChoiceId(activeDisplayChoice.id)
         ? {

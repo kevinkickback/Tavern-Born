@@ -45,15 +45,34 @@ test('Mystic replaces a bonus discipline in Level Up and restores it on level re
     catalogs,
   ).find((row) => row.label === 'Bonus Disciplines')!
   const psionics = data.psionics ?? []
-  const initial = psionics.filter((row) => row.type === 'D' && row.order === 'Avatar').slice(0, 2)
+  const [first, second, ordinary, correction] = psionics.filter(
+    (row) => row.type === 'D' && row.order === 'Avatar',
+  )
+  const initial = [first, second]
   const incoming = psionics.find((row) => row.type === 'D' && row.order === 'Nomad')!
-  const prepared = applyCharacterCommandResult(
+  const classChoice = getCharacterClassChoices(
+    cls,
+    order,
+    createOptionalClassFeatureActivity(character, catalogs),
+    catalogs,
+  ).find((row) => row.label === 'Psionic Disciplines')!
+  const withBonus = applyCharacterCommandResult(
     character,
     applyClassChoiceSelectionWithGrantsCommand(
       character,
       character.provenance,
       choice,
       initial.map(({ name, source }) => ({ entityType: 'psionic', name, source })),
+      { classes: data.classes, catalogs },
+    ),
+  )
+  const prepared = applyCharacterCommandResult(
+    withBonus,
+    applyClassChoiceSelectionWithGrantsCommand(
+      withBonus,
+      withBonus.provenance,
+      classChoice,
+      [{ entityType: 'psionic', name: ordinary.name, source: ordinary.source }],
       { classes: data.classes, catalogs },
     ),
   )
@@ -124,10 +143,11 @@ test('Mystic replaces a bonus discipline in Level Up and restores it on level re
   await expect(page.getByRole('button', { name: 'Save character', exact: true })).toBeDisabled()
   expect(await saved()).toEqual(beforeEdit)
 
-  const correction = psionics.filter((row) => row.type === 'D' && row.order === 'Avatar')[2]
   await open(page, 'Bonus Disciplines')
   await search.fill(initial[1].name)
   await card(initial[1].name).click({ position: { x: 8, y: 8 } })
+  await search.fill(ordinary.name)
+  await expect(card(ordinary.name)).toBeDisabled()
   await search.fill(correction.name)
   await card(correction.name).click({ position: { x: 8, y: 8 } })
   await bonusDialog.getByRole('button', { name: 'Confirm', exact: true }).click()

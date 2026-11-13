@@ -752,6 +752,7 @@ export function BuildClassPage() {
           classSource={viewingClassSource}
           onClose={classChoiceController.close}
           onConfirm={classChoiceController.confirm}
+          getDraftError={classChoiceController.getDraftError}
           historicalSetup={classChoiceController.historicalSetup}
           enemySetup={classChoiceController.enemySetup}
         />
