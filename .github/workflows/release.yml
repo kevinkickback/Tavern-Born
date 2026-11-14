@@ -196,8 +196,35 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Build artifacts and update manifests without publishing
+      - name: Build Windows or Linux artifacts without publishing
+        if: runner.os != 'macOS'
         run: npm run dist -- --publish never
+      - name: Build signed macOS artifacts without publishing
+        if: runner.os == 'macOS'
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ vars.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          for setting in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER APPLE_TEAM_ID; do
+            if [[ -z "${!setting}" ]]; then
+              echo "::error::Set $setting before building a macOS release."
+              exit 1
+            fi
+          done
+          APPLE_API_KEY="$(mktemp "$RUNNER_TEMP/tb-notary.XXXXXX")"
+          export APPLE_API_KEY
+          trap 'rm -f "$APPLE_API_KEY"' EXIT
+          printf '%s\n' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY"
+          unset APPLE_API_KEY_P8
+          npm run dist -- --mac --arm64 --publish never -c.mac.forceCodeSigning=true
+          app=release/mac-arm64/Tavern-Born.app
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -d --verbose=4 "$app" 2>&1 | grep -Fx "TeamIdentifier=$APPLE_TEAM_ID"
+          xcrun stapler validate "$app"
       - name: Preserve build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -205,6 +232,7 @@ jobs:
           path: |
             release/*.exe
             release/*.dmg
+            release/*.zip
             release/*.AppImage
             release/*.deb
             release/*.blockmap
@@ -271,20 +299,22 @@ jobs:
           require_file 'latest-linux.yml'
 
           shopt -s nullglob
-          dmg_files=(release-artifacts/Tavern-Born-"$RELEASE_VERSION"*.dmg)
-          if [[ "${#dmg_files[@]}" -ne 1 || ! -f "${dmg_files[0]}.blockmap" ]]; then
-            echo "::error::Expected exactly one macOS DMG and its blockmap."
-            exit 1
-          fi
-
-          dmg_name="$(basename "${dmg_files[0]}")"
+          dmg_name="Tavern-Born-$RELEASE_VERSION-arm64.dmg"
+          zip_name="Tavern-Born-$RELEASE_VERSION-arm64-mac.zip"
+          require_file "$dmg_name"
+          require_file "$dmg_name.blockmap"
+          require_file "$zip_name"
+          require_file "$zip_name.blockmap"
           require_manifest 'latest.yml' "Tavern-Born-Setup-$RELEASE_VERSION.exe"
-          require_manifest 'latest-mac.yml' "$dmg_name"
+          require_manifest 'latest-mac.yml' "$zip_name"
+          grep -Fxq "  - url: $dmg_name" release-artifacts/latest-mac.yml
+          zip_hash="$(openssl dgst -sha512 -binary "release-artifacts/$zip_name" | openssl base64 -A)"
+          grep -Fxq "sha512: $zip_hash" release-artifacts/latest-mac.yml
           require_manifest 'latest-linux.yml' "Tavern-Born-$RELEASE_VERSION.AppImage"
 
           artifact_files=(release-artifacts/*)
-          if [[ "${#artifact_files[@]}" -ne 10 ]]; then
-            echo "::error::Expected exactly 10 release artifacts; found ${#artifact_files[@]}."
+          if [[ "${#artifact_files[@]}" -ne 12 ]]; then
+            echo "::error::Expected exactly 12 release artifacts; found ${#artifact_files[@]}."
             printf '%s\n' "${artifact_files[@]}"
             exit 1
           fi
@@ -294,6 +324,7 @@ jobs:
           subject-path: |
             release-artifacts/*.exe
             release-artifacts/*.dmg
+            release-artifacts/*.zip
             release-artifacts/*.AppImage
             release-artifacts/*.deb
             release-artifacts/*.blockmap
@@ -509,22 +540,14 @@ jobs:
           require_asset 'latest-mac.yml'
           require_asset 'latest-linux.yml'
 
-          dmg_assets=()
-          while IFS= read -r asset; do
-            if [[ "$asset" == Tavern-Born-"$RELEASE_VERSION"*.dmg ]]; then
-              dmg_assets+=("$asset")
-            fi
-          done <<<"$assets"
-          if [[ "${#dmg_assets[@]}" -ne 1 ]]; then
-            echo "::error::Expected exactly one macOS DMG for Tavern-Born $RELEASE_VERSION."
-            missing=1
-          else
-            require_asset "${dmg_assets[0]}.blockmap"
-          fi
+          require_asset "Tavern-Born-$RELEASE_VERSION-arm64.dmg"
+          require_asset "Tavern-Born-$RELEASE_VERSION-arm64.dmg.blockmap"
+          require_asset "Tavern-Born-$RELEASE_VERSION-arm64-mac.zip"
+          require_asset "Tavern-Born-$RELEASE_VERSION-arm64-mac.zip.blockmap"
 
           asset_count="$(grep -c . <<<"$assets")"
-          if [[ "$asset_count" -ne 10 ]]; then
-            echo "::error::Expected exactly 10 release assets; found $asset_count."
+          if [[ "$asset_count" -ne 12 ]]; then
+            echo "::error::Expected exactly 12 release assets; found $asset_count."
             missing=1
           fi
           if [[ -n "$empty_assets" ]]; then

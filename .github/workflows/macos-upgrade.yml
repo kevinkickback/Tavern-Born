@@ -14,10 +14,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: macos-upgrade-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   stage:
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -46,25 +50,78 @@ jobs:
             echo 'Published v0.6.0 failed native signature verification.'
           fi
       - run: npm ci
-      - name: Build staged v0.7.0 without publishing
+      - run: npm run build
+      - run: npm run check:bundle -- --require-srd
+      - name: Build and exercise two versions with one test signing identity
+        shell: bash
+        env:
+          CSC_FOR_PULL_REQUEST: 'true'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_NAME: Tavern-Born CI
+          TB_STAGING_PORT: '42857'
         run: |
-          npm pkg set version=0.7.0
-          npm run dist -- --mac --arm64 --publish never
+          # This key signs disposable artifacts and lives only in the hosted runner.
+          signing="$(mktemp -d)"
+          trap 'rm -f "$signing/key.pem" "$signing/cert.pem" "$signing/key.p12" "$signing/cert.cnf"' EXIT
+          umask 077
+          cat > "$signing/cert.cnf" <<'EOF'
+          [req]
+          distinguished_name = subject
+          prompt = no
+          x509_extensions = codesign
+          [subject]
+          CN = Tavern-Born CI
+          [codesign]
+          keyUsage = critical,digitalSignature
+          extendedKeyUsage = critical,codeSigning
+          EOF
+          openssl req -newkey rsa:2048 -nodes -x509 -days 1 -config "$signing/cert.cnf" \
+            -keyout "$signing/key.pem" -out "$signing/cert.pem"
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+            -k /Library/Keychains/System.keychain "$signing/cert.pem"
+          CSC_KEY_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$CSC_KEY_PASSWORD"
+          export CSC_KEY_PASSWORD
+          export CSC_LINK="$signing/key.p12"
+          openssl pkcs12 -export -out "$CSC_LINK" -inkey "$signing/key.pem" \
+            -in "$signing/cert.pem" -passout env:CSC_KEY_PASSWORD -legacy
+
+          pack() {
+            local version="$1"
+            local output="$2"
+            npx --no-install electron-builder --mac --arm64 --publish never \
+              -c.extraMetadata.version="$version" -c.directories.output="$output" \
+              -c.mac.publish.provider=generic -c.mac.publish.url="http://127.0.0.1:$TB_STAGING_PORT" \
+              -c.mac.forceCodeSigning=true -c.mac.timestamp=none \
+              -c.mac.preAutoEntitlements=false -c.mac.hardenedRuntime=false -c.mac.notarize=false
+          }
+
+          pack 0.7.0 "$RUNNER_TEMP/tb-staged-base"
+          pack 0.7.1 "$RUNNER_TEMP/tb-staged-next"
+          app="$RUNNER_TEMP/tb-staged-base/mac-arm64/Tavern-Born.app"
+          next="$RUNNER_TEMP/tb-staged-next"
+          codesign --verify --deep --strict "$app"
+          node scripts/ci/smoke-macos-upgrade.mjs "$app" "$next" 0.7.0 0.7.1
       - name: Check the staged ZIP against the published app's update requirement
+        if: always() && !cancelled()
+        shell: bash
         run: |
           legacy="$RUNNER_TEMP/tb-legacy/Tavern-Born.app"
           requirement="$(codesign -d -r- "$legacy" 2>&1 | sed -nE 's/^(# )?designated => //p')"
           test -n "$requirement"
-          test -s release/Tavern-Born-0.7.0-arm64.dmg
-          test -s release/Tavern-Born-0.7.0-arm64.dmg.blockmap
-          test -s release/Tavern-Born-0.7.0-arm64-mac.zip.blockmap
+          stage="$RUNNER_TEMP/tb-staged-base"
+          test -s "$stage/Tavern-Born-0.7.0-arm64.dmg"
+          test -s "$stage/Tavern-Born-0.7.0-arm64.dmg.blockmap"
+          test -s "$stage/Tavern-Born-0.7.0-arm64-mac.zip.blockmap"
           mkdir -p "$RUNNER_TEMP/tb-staged"
-          ditto -x -k release/Tavern-Born-0.7.0-arm64-mac.zip "$RUNNER_TEMP/tb-staged"
+          ditto -x -k "$stage/Tavern-Born-0.7.0-arm64-mac.zip" "$RUNNER_TEMP/tb-staged"
           staged="$RUNNER_TEMP/tb-staged/Tavern-Born.app"
+          codesign --verify --deep --strict --all-architectures "$staged"
           codesign -dvv -r- "$staged"
-          cat release/latest-mac.yml
+          cat "$stage/latest-mac.yml"
           if codesign --verify --deep --strict --all-architectures --test-requirement "=$requirement" "$staged"; then
-            echo 'The staged ZIP satisfies the exact v0.6.0 code requirement.'
+            echo 'Unexpectedly, the staged ZIP satisfies the exact v0.6.0 code requirement.'
+            exit 1
           else
             echo 'The staged ZIP failed the exact v0.6.0 code requirement.'
           fi

@@ -167,10 +167,7 @@
       "target": [
         "dmg",
         "zip"
-      ],
-      "identity": null,
-      "hardenedRuntime": false,
-      "notarize": false
+      ]
     },
     "linux": {
       "icon": "build/icon.png",

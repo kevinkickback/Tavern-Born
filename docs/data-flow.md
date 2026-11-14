@@ -110,5 +110,15 @@ checks run after saved preferences load and at the configured interval when enab
 setting starts or stops future scheduled checks. Manual checks are available either way.
 Notifications offer download. Completed installers require the update modal before relaunch.
 Portable builds do not auto-install.
+
+macOS uses a DMG for initial installation and a ZIP for in-app updates. Each update must
+satisfy the installed app's code-signing requirement. The published v0.6.0 Mac app has an
+ad-hoc signature tied to its executable hash. Those installations need to start from a
+Developer ID-signed build before they can receive further updates in the app.
+
+The [macOS staging check](../.github/workflows/macos-upgrade.yml) uses a loopback feed and a
+runner-only signing identity to test install, relaunch, and character reopen. Release builds
+use the project's Apple Developer ID and require a stapled notarization ticket.
+
 Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
 separately authorized [release workflow](../.github/workflows/release.yml).
