@@ -2,7 +2,7 @@ import type { Race5e } from '@/types/5etools'
 import type { Character, CharacterMovement, MovementMode } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import { getCharacterEffectResolutionContext, getCharacterEffects } from './characterEffects'
-import { resolveNumericEffect } from './effects'
+import { isCharacterEffectActive, resolveNumericEffect } from './effects'
 
 const MOVEMENT_MODES: readonly MovementMode[] = ['walk', 'climb', 'swim', 'fly', 'burrow']
 
@@ -110,23 +110,34 @@ export function getEffectiveCharacterMovement(
   }
 
   const effects = getCharacterEffects(character, 1, sourceEffects)
+  const context = getCharacterEffectResolutionContext(character)
+  const resolveSpeed = (mode: string, declarations: readonly CharacterEffect[]) =>
+    Math.max(
+      0,
+      Math.trunc(
+        resolveNumericEffect(speeds[mode] ?? 0, { kind: 'speed', mode }, declarations, context)
+          .value,
+      ),
+    )
+  const movementEffects = effects.flatMap((effect): CharacterEffect[] => {
+    if (effect.operation.kind !== 'minimum-from-walk') return [effect]
+    if (effect.target.kind !== 'speed' || !isCharacterEffectActive(effect, context)) return []
+    const walk = resolveSpeed('walk', effects)
+    return walk
+      ? [{ ...effect, target: effect.target, operation: { kind: 'minimum', value: walk } }]
+      : []
+  })
   const modes = new Set([
     ...Object.keys(speeds),
-    ...effects.flatMap((effect) =>
+    ...movementEffects.flatMap((effect) =>
       effect.target.kind === 'speed' && effect.target.mode
         ? [effect.target.mode.trim().toLowerCase()]
         : [],
     ),
   ])
-  const context = getCharacterEffectResolutionContext(character)
   for (const mode of modes) {
     if (!mode) continue
-    speeds[mode] = Math.max(
-      0,
-      Math.trunc(
-        resolveNumericEffect(speeds[mode] ?? 0, { kind: 'speed', mode }, effects, context).value,
-      ),
-    )
+    speeds[mode] = resolveSpeed(mode, movementEffects)
   }
 
   return {

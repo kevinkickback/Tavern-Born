@@ -366,6 +366,44 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     }
     await clear()
   }, 60_000)
+  it("materializes all 24 Mariner's Armor variants from their exact printings and bases", () => {
+    const bases = [
+      'Breastplate',
+      'Chain Mail',
+      'Chain Shirt',
+      'Half Plate Armor',
+      'Hide Armor',
+      'Leather Armor',
+      'Padded Armor',
+      'Plate Armor',
+      'Ring Mail',
+      'Scale Mail',
+      'Splint Armor',
+      'Studded Leather Armor',
+    ]
+    const template = "Mariner's Armor"
+    const actual = gameData.items.filter(
+      (item) => item.magicVariantGenerated?.template.name === template,
+    )
+    expect(actual.map(({ name, source }) => `${name}|${source}`).sort()).toEqual(
+      ['DMG', 'XDMG']
+        .flatMap((source) => bases.map((base) => `Mariner's ${base}|${source}`))
+        .sort(),
+    )
+    for (const item of actual) {
+      const classic = item.source === 'DMG'
+      expect(item.magicVariantGenerated).toEqual({
+        template: { name: template, source: item.source },
+        base: { name: item.name.slice("Mariner's ".length), source: classic ? 'PHB' : 'XPHB' },
+        minimumSwimFromWalk: true,
+      })
+      expect(isSelectableEquipmentItem(item)).toBe(true)
+      expect(item.modifySpeed?.equal).toEqual({ swim: 'walk' })
+      expect(renderEntriesToText(getItemRulesEntries(item))).toMatch(
+        classic ? /rise 60 feet toward the surface/i : /regain 1d4 Hit Points.*next dawn/i,
+      )
+    }
+  })
   it('loads the bundled and managed source stack with the four fixed equipment families', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
@@ -398,9 +436,8 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         expect(
           generated.filter(
             (item) =>
-              item.bonusAc === bonus &&
               item.source === source &&
-              item.magicVariantGenerated?.base.name !== 'Shield',
+              item.magicVariantGenerated?.template.name === `${bonus} Armor`,
           ),
         ).toHaveLength(12)
     }
@@ -417,6 +454,102 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     }
     expect(generated.filter((item) => /^\+[123] /.test(item.name))).toHaveLength(327)
   })
+  it('verifies the remaining 367 qualified armor variants in saved inventory and exported sheets', async () => {
+    const groups: Array<[source: string, counts: number[]]> = [
+      ['AU', [1, 1, 8]],
+      ['AUD', [12]],
+      ['BGG', [3, 4]],
+      ['BMT', [4, 5, 9, 12, 12, 12, 12]],
+      ['CRCotN', [8]],
+      ['DMG', [12]],
+      ['DitLCoT', [4]],
+      ['EGW', [12]],
+      ['ERLW', [12]],
+      ['GGR', [8]],
+      ['MM', [12, 12, 12]],
+      ['VGM', [4]],
+      ['XDMG', [2, 2, 2, 2, ...Array<number>(14).fill(12)]],
+    ]
+    const generated = gameData.items.filter((item) => item.magicVariantGenerated)
+    const existing =
+      /^(?:\+[123] |Armor of .+ Resistance$|Armor of Gleaming$|(?:Mithral(?: \+1)?|Adamantine|Cast-Off|Smoldering) Armor$)/
+    const items = generated.filter(
+      (item) => !existing.test(item.magicVariantGenerated!.template.name),
+    )
+    expect(items).toHaveLength(367)
+    expect(new Set(items.map(({ name, source }) => `${name}|${source}`)).size).toBe(367)
+    expect(gameData.materialArmorDiagnostics).toEqual([])
+    const lookup = gameData.lookups!
+    for (const [source, expected] of groups) {
+      const printings = new Map<string, Item5e[]>()
+      for (const item of items.filter((item) => item.source === source)) {
+        const name = item.magicVariantGenerated!.template.name
+        printings.set(name, [...(printings.get(name) ?? []), item])
+      }
+      expect([...printings.values()].map((list) => list.length).sort((a, b) => a - b)).toEqual(
+        expected,
+      )
+      for (const [template, variants] of printings) {
+        const classic = source === 'DMG'
+        const relativeSwim = template === "Mariner's Armor" || template === 'Ruidium Armor'
+        const saved = await saveAndReopenEquipment(
+          variants,
+          classic ? '2014' : '2024',
+          relativeSwim ? variants[0].name : undefined,
+        )
+        expect(saved.equipment).toHaveLength(variants.length)
+        // Attune in the export view for the Ruidium movement check.
+        const actor =
+          source === 'CRCotN'
+            ? {
+                ...saved,
+                equipment: saved.equipment.map((item) => ({ ...item, attuned: item.equipped })),
+              }
+            : saved
+        const view = createCurrentCharacterSheetViewModel(actor, lookup)
+        for (const [i, variant] of variants.entries()) {
+          const equipment = saved.equipment[i]
+          const base = variant.magicVariantGenerated!.base
+          const baseRow = lookup.itemLookup.get(
+            `${base.name.toLowerCase()}|${base.source.toLowerCase()}`,
+          )!
+          expect(base.source).toBe(classic ? 'PHB' : 'XPHB')
+          expect(isSelectableEquipmentItem(variant)).toBe(true)
+          expect(equipment).toMatchObject({
+            name: variant.name,
+            source,
+            ac: baseRow.ac,
+            weight: baseRow.weight,
+          })
+          expect(buildItemDetailFields(equipment, variant, {})).toContainEqual({
+            label: 'Armor Class',
+            value: baseRow.ac,
+          })
+          expect(renderEntriesToText(getItemRulesEntries(variant))).not.toMatch(
+            /\{=|\[Item rules text unavailable\]/,
+          )
+        }
+        const form = (
+          await PDFDocument.load(
+            await generateTestCharacterSheet(view, classic ? '2014-custom' : '2024-official', {
+              pages: { notes: false, spells: false },
+            }),
+          )
+        ).getForm()
+        const names = classic
+          ? variants.map((_, i) => form.getTextField(`Adventuring Gear Row ${i + 1}`).getText())
+          : form.getTextField('Text_90').getText()?.split('\n')
+        expect(names).toEqual(variants.map(({ name }) => name))
+        if (relativeSwim) {
+          expect(view.movement.speeds.swim).toBe(view.walkingSpeed)
+          expect(form.getTextField(classic ? 'Racial Traits' : 'Text_59').getText()).toContain(
+            'swim 30 ft.',
+          )
+        }
+      }
+    }
+    await clear()
+  }, 120_000)
   it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
     const raw = collection(readJson(resolve(DATA_ROOT, 'magicvariants.json')), 'magicvariant')

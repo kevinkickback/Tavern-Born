@@ -15,7 +15,7 @@ export const BUNDLE_BUDGETS = Object.freeze({
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
   // Source-backed class training previews measured about 6905 KiB on Node 24.
-  rendererCode: 6906 * KIB,
+  rendererCode: 6907 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,
