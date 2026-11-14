@@ -14,6 +14,7 @@ import type {
   GameData,
   GameDataSourceStack,
   ItemEntry5e,
+  ItemProperty5e,
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
@@ -138,6 +139,21 @@ function itemPropertyIdentity(value: unknown): string {
   const abbreviation = normalizeIdentityPart(record.abbreviation)
   if (!abbreviation) return recordIdentity(value)
   return `item-property:${abbreviation}|${normalizeIdentityPart(record.source)}`
+}
+
+function markItemPropertyConflicts(properties: readonly ItemProperty5e[]): ItemProperty5e[] {
+  const seen = new Set<string>()
+  const conflicts = new Set<string>()
+  for (const property of properties) {
+    const uid = itemPropertyIdentity(property)
+    if (seen.has(uid)) conflicts.add(uid)
+    seen.add(uid)
+  }
+  return properties.map((property) =>
+    conflicts.has(itemPropertyIdentity(property))
+      ? { ...property, sourceIdentityConflict: true }
+      : property,
+  )
 }
 
 function subraceIdentity(value: unknown): string {
@@ -508,6 +524,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
       key === 'fixedEquipmentBases' ||
       key === 'fixedArmorDiagnostics' ||
       key === 'fixedAmmunitionDiagnostics' ||
+      key === 'resistanceArmorDiagnostics' ||
       key === 'fixedWeaponDiagnostics'
     )
       continue
@@ -558,7 +575,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
                 : key === 'languages' || key === 'creatures' || key === 'itemMasteries'
                   ? auditFixedLayerMultiplicity(layerValues as object[], 'named')
-                  : layerValues
+                  : key === 'itemProperties'
+                    ? markItemPropertyConflicts(layerValues as ItemProperty5e[])
+                    : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values

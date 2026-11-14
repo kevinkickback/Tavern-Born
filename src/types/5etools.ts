@@ -284,6 +284,7 @@ export interface OptionalFeatureLike {
 export interface ItemProperty5e {
   abbreviation: string
   source: string
+  sourceIdentityConflict?: true
   entries?: Array<{ type?: string; name?: string; entries?: unknown[] }>
   [key: string]: unknown
 }
@@ -672,6 +673,7 @@ export interface GameData {
   fixedWeaponDiagnostics?: ItemEntryDiagnostic[]
   fixedArmorDiagnostics?: ItemEntryDiagnostic[]
   fixedAmmunitionDiagnostics?: ItemEntryDiagnostic[]
+  resistanceArmorDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

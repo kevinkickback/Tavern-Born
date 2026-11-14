@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
-import { parseItems } from '@/lib/5etools/parsers/basic'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { parseItemProperties, parseItems, parseItemTypes } from '@/lib/5etools/parsers/basic'
 import { associatePrimaryItemTypes } from '@/lib/5etools/primaryItemTypes'
 import { formatProficiencyList } from '@/lib/calculations/classUtils'
 import {
@@ -46,7 +48,89 @@ describe('class proficiency previews', () => {
     const revised = rogue.class.find((row: { source: string }) => row.source === 'XPHB')
     const weapons = formatProficiencyList(revised.startingProficiencies.weapons, 'weapon')
     expect(weapons).toContain('Finesse or Light')
+    expect(weapons).toMatch(/data-hover-type="proficiency"[^>]*>Finesse or Light</)
     expect(weapons).not.toContain('data-hover-name="martial"')
+  })
+
+  test.each([
+    ['monk', 'Light', ['Hand Crossbow', 'Scimitar', 'Shortsword']],
+    ['rogue', 'Finesse or Light', ['Hand Crossbow', 'Rapier', 'Scimitar', 'Shortsword', 'Whip']],
+  ])('previews the Included revised %s filter using exact property definitions', (className, label, names) => {
+    const document = JSON.parse(
+      readFileSync(`resources/srd/data/class/class-${className}.json`, 'utf8'),
+    )
+    const revised = document.class.find((row: { source: string }) => row.source === 'XPHB')
+    const source = JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8'))
+    const items = parseItems(source) as Item5e[]
+    const missingProperty = {
+      ...items.find((item) => item.name === 'Rapier' && item.source === 'XPHB')!,
+      name: 'Unknown Property',
+      property: ['L|UNKNOWN'],
+    }
+    const lookup = buildRecursiveLookup(
+      composeGameDataLayers([
+        {
+          ...createEmptyGameData(),
+          itemTypes: parseItemTypes(source),
+          itemsBase: [
+            ...items.filter((item) => item.source === 'XPHB'),
+            missingProperty,
+            { ...missingProperty, name: 'Different Property', property: ['L|HB'] },
+            { ...missingProperty, name: 'Ambiguous Property', property: ['L|DUP'] },
+            { ...missingProperty, name: 'Whitespace Property', property: [{ uid: ' l | xPhB ' }] },
+            { ...missingProperty, name: 'Unnamed Property', property: ['LIGHT|HB'] },
+            { ...missingProperty, name: 'Unknown Type', type: 'M|UNKNOWN', property: ['L|XPHB'] },
+          ],
+          itemProperties: [
+            ...parseItemProperties(source),
+            { abbreviation: 'L', source: 'HB', name: 'Long' },
+            { abbreviation: 'L', source: 'DUP', name: 'Long' },
+            { abbreviation: 'L', source: 'DUP', name: 'Light' },
+            { abbreviation: 'LIGHT', source: 'HB' },
+          ],
+        },
+      ]),
+    )
+    const formatted = formatProficiencyList(revised.startingProficiencies.weapons, 'weapon')
+    const parser = new DOMParser()
+    const links = [
+      ...parser
+        .parseFromString(formatted ?? '', 'text/html')
+        .querySelectorAll<HTMLElement>('[data-hover-type="proficiency"]'),
+    ]
+    const trigger = links.find((link) => link.textContent === label)
+    expect(trigger).toBeDefined()
+    const preview = getRecursiveTooltipData(
+      {
+        kind: 'proficiency',
+        name: trigger?.dataset.hoverName ?? '',
+        source: trigger?.dataset.hoverSource,
+      },
+      lookup,
+      label,
+    )
+    expect(
+      [
+        ...parser
+          .parseFromString(preview.html ?? '', 'text/html')
+          .querySelectorAll<HTMLElement>('[data-hover-type="item"]'),
+      ].map((link) => [link.dataset.hoverName, link.dataset.hoverSource]),
+    ).toEqual([...names, 'Whitespace Property'].sort().map((name) => [name, 'XPHB']))
+  })
+
+  test('keeps unsupported weapon filter clauses as readable text', () => {
+    const html = formatProficiencyList(
+      [
+        '{@filter Excluded|items|type=martial weapon|property=!light}',
+        '{@filter Restricted|items|type=martial weapon|property=light|source=XPHB}',
+        '{@filter Empty|items|type=martial weapon|property=light;;finesse}',
+      ],
+      'weapon',
+    )
+    expect(html).toContain('Excluded')
+    expect(html).toContain('Restricted')
+    expect(html).toContain('Empty')
+    expect(html).not.toContain('data-hover-type')
   })
 
   test('keeps category snapshots distinct across lookup changes and excludes ambiguous bases', () => {

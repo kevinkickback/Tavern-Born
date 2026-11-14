@@ -19,6 +19,11 @@ fallback for unknown values. Existing pinned previews keep their lookup snapshot
 Raw magic templates and their reference-only projections are distinct from concrete equipment.
 Reference projections cannot enter inventory or starting-equipment choices.
 
+Class training previews can open authored item filters with a simple or martial weapon type
+and a positive property list. Property names separated by semicolons are alternatives. The
+preview uses available base equipment and each item's exact property definition. A bare
+property reference defaults to PHB. Other filter shapes display the source label as text.
+
 ### Fixed-bonus shields
 
 Only the canonical +1, +2 and +3 DMG shield templates with the exact PHB base, and their
@@ -68,3 +73,16 @@ The rules text records the attack and damage bonus for a shot made with that pie
 and the loss of magic after a hit. Players apply that rule per shot and manage
 quantity manually. Carrying magic ammunition leaves the weapon's standing attack
 and damage values unchanged.
+
+### Resistance armor
+
+The classic and revised Armor of Resistance templates use their declared eligibility
+rules against direct public body-armor bases of the matching edition. Generated
+items retain the base armor's physical fields. The template supplies the name suffix,
+resistance type, attunement requirement and source-qualified rules fragment.
+Existing concrete equipment takes precedence over a generated item of the same
+name and source. Reference entries remain outside inventory.
+
+Resistance applies while the exact catalog item is equipped and attuned. If the
+printing becomes unavailable, the saved armor retains its physical fields and
+attunement state. The existing equipment effect resumes when the exact printing returns.
