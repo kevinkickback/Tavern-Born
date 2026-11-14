@@ -55,6 +55,12 @@ Electron receives unsaved state and requests confirmation before close. Preferen
 make characters dirty. Event-only preload subscriptions expose no native payload and return cleanup
 for their exact listener; consumers must unsubscribe on unmount.
 
+Electron allows one Tavern Born process per desktop profile. Starting it again restores or focuses
+the existing window and keeps its draft. Separate profiles can run independently.
+The pinned Windows portable builder uses `portable.unpackDirName: true` for a directory unique to
+each launch. This keeps the launcher from replacing a running instance's files before Electron
+checks the lock. Verify the setting against the installed builder when upgrading it.
+
 See [State Management](state-management.md#saved-library-transactions) for hydration, overlapping
 saves, reload ordering, failure/retry and quarantine acknowledgement. Before submission, the creation
 wizard confirms discarding remaining edits; pending creation also preserves input and blocks dismissal.
