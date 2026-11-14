@@ -8,7 +8,7 @@ import '../../electron/preload'
 
 const bridge = vi.hoisted(() => ({
   expose: vi.fn<(name: string, api: Window['electronAPI']) => void>(),
-  invoke: vi.fn(async () => undefined),
+  invoke: vi.fn<(channel: string, ...args: unknown[]) => Promise<unknown>>(async () => undefined),
   send: vi.fn(),
 }))
 
@@ -57,15 +57,23 @@ vi.mock('@/components/updates/ChangelogModal', () => ({
     open,
     version,
     onInstall,
+    onOpenDownloadPage,
   }: {
     open: boolean
     version: string
     onInstall?: () => void
+    onOpenDownloadPage?: () => Promise<void>
   }) =>
     open ? (
-      <button type="button" onClick={onInstall}>
-        Install {version}
-      </button>
+      onOpenDownloadPage ? (
+        <button type="button" onClick={onOpenDownloadPage}>
+          Open Download Page
+        </button>
+      ) : (
+        <button type="button" onClick={onInstall}>
+          Install {version}
+        </button>
+      )
     ) : null,
 }))
 vi.mock('@/components/updates/UpdateProgressModal', () => ({
@@ -101,7 +109,7 @@ describe('close-confirmation preload and application lifecycle', () => {
     const callback = vi.fn()
     const unsubscribeFirst = api.onUpdateAvailable(callback)
     const unsubscribeSecond = api.onUpdateAvailable(callback)
-    const update = { version: '2.0.0', changelog: null, isPortable: true }
+    const update = { version: '2.0.0', changelog: null, useReleaseDownloadPage: true }
     const nativeEvent = { sender: { send: vi.fn() } }
 
     unsubscribeFirst()
@@ -116,7 +124,11 @@ describe('close-confirmation preload and application lifecycle', () => {
     const user = userEvent.setup()
     render(<App />)
     const announce = (version: string) => {
-      ipcRenderer.emit('update-available', {}, { version, changelog: null, isPortable: false })
+      ipcRenderer.emit(
+        'update-available',
+        {},
+        { version, changelog: null, useReleaseDownloadPage: false },
+      )
     }
 
     act(() => {
@@ -136,6 +148,30 @@ describe('close-confirmation preload and application lifecycle', () => {
     })
     expect(screen.getByText('Downloading 0.7.0')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'App update available' })).toBeTruthy()
+  })
+
+  test('opens the download page through the preload bridge for a release-page update', async () => {
+    const user = userEvent.setup()
+    bridge.invoke.mockImplementation(async (channel) =>
+      channel === 'update:open-download-page' ? { success: true } : undefined,
+    )
+    render(<App />)
+    act(() => {
+      ipcRenderer.emit(
+        'update-available',
+        {},
+        {
+          version: '0.7.1',
+          changelog: null,
+          useReleaseDownloadPage: true,
+        },
+      )
+    })
+    await user.click(screen.getByRole('button', { name: 'App update available' }))
+    await user.click(await screen.findByRole('button', { name: 'Open Download Page' }))
+    expect(bridge.invoke).toHaveBeenCalledWith('update:open-download-page')
+    expect(bridge.invoke).not.toHaveBeenCalledWith('update:download')
+    expect(screen.queryByRole('button', { name: 'Install 0.7.1' })).toBeNull()
   })
 
   test('delivers no event or payload and removes the exact wrapper', () => {

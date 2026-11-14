@@ -108,17 +108,10 @@ separate promise to preserve released v1.x characters.
 [updateManager](../electron/updateManager.ts) owns check/download/cancel/install IPC. Automatic
 checks run after saved preferences load and at the configured interval when enabled. Changing the
 setting starts or stops future scheduled checks. Manual checks are available either way.
-Notifications offer download. Completed installers require the update modal before relaunch.
-Portable builds do not auto-install.
-
-macOS uses a DMG for initial installation and a ZIP for in-app updates. Each update must
-satisfy the installed app's code-signing requirement. The published v0.6.0 Mac app has an
-ad-hoc signature tied to its executable hash. Those installations need to start from a
-Developer ID-signed build before they can receive further updates in the app.
-
-The [macOS staging check](../.github/workflows/macos-upgrade.yml) uses a loopback feed and a
-runner-only signing identity to test install, relaunch, and character reopen. Release builds
-use the project's Apple Developer ID and require a stapled notarization ticket.
-
+On macOS and Windows Portable, the update dialog links to the official release download page.
+Install the new Mac app from its DMG or replace the portable executable with the new download.
+Upgrading from macOS v0.6.0 or earlier starts on the
+[GitHub releases page](https://github.com/kevinkickback/Tavern-Born/releases).
+On Windows Setup and Linux, the notification offers installation and relaunch from the app.
 Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
 separately authorized [release workflow](../.github/workflows/release.yml).

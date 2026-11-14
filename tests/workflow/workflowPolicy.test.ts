@@ -78,8 +78,7 @@ describe('trusted workflow policy', () => {
   test('builds before safely creating a clean unpublished draft', async () => {
     const workflow = await readWorkflow('release.yml')
 
-    expect(workflow).toContain('Build Windows or Linux artifacts without publishing')
-    expect(workflow).toContain('Build signed macOS artifacts without publishing')
+    expect(workflow).toContain('Build artifacts and update manifests without publishing')
     expect(workflow).toContain('run: npm run dist -- --publish never')
     expect(workflow).toContain('needs: [validate-source, release-state, build]')
     expect(workflow).toContain('name: Create draft from completed artifacts')
@@ -88,8 +87,8 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('release-metadata/published-tags.txt')
     expect(workflow.match(/overwrite: true/g)).toHaveLength(2)
     expect(workflow).toContain('Validate completed artifact bundle')
-    expect(workflow).toContain('Expected exactly 12 release artifacts')
-    expect(workflow).toContain('Expected exactly 12 release assets')
+    expect(workflow).toContain('Expected exactly 10 release artifacts')
+    expect(workflow).toContain('Expected exactly 10 release assets')
     expect(workflow).toContain('Expected exactly one draft for $RELEASE_TAG')
     expect(workflow).toContain("require_manifest 'latest.yml'")
     expect(workflow).toContain("require_manifest 'latest-mac.yml'")

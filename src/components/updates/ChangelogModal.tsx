@@ -64,7 +64,7 @@ export function ChangelogModal({
             {updateAvailable
               ? onInstall
                 ? 'A new version is ready to install. Review the changes below.'
-                : 'A new version is available. Portable builds do not update in place.'
+                : 'Download the new version from the release page and replace your current app.'
               : 'Changes included in this version.'}
           </DialogDescription>
         </DialogHeader>

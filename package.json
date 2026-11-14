@@ -164,10 +164,10 @@
     },
     "mac": {
       "icon": "build/icon-mac.png",
-      "target": [
-        "dmg",
-        "zip"
-      ]
+      "target": "dmg",
+      "identity": null,
+      "hardenedRuntime": false,
+      "notarize": false
     },
     "linux": {
       "icon": "build/icon.png",

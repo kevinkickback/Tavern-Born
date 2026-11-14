@@ -6,6 +6,9 @@ on:
     paths:
       - package.json
       - package-lock.json
+      - electron/updateManager.ts
+      - electron/updateEvents.ts
+      - electron/preload.ts
       - .github/workflows/desktop-packages.yml
       - scripts/ci/smoke-desktop-package.mjs
 
@@ -36,8 +39,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build packages without publishing
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run dist -- --publish never
       - name: Install and exercise the Windows packages
         if: runner.os == 'Windows'
@@ -73,6 +74,18 @@ jobs:
           hdiutil attach -mountpoint "$mount" -readonly -nobrowse "${images[0]}"
           trap 'hdiutil detach "$mount"' EXIT
           node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born"
+      - name: Verify the Mac update alert against the public feed
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # A lower test version lets the current public release exercise update discovery.
+          npx --no-install electron-builder --mac dmg --arm64 --publish never \
+            -c.extraMetadata.version=0.5.99 -c.directories.output="$RUNNER_TEMP/tb-mac-update"
+          mount="$RUNNER_TEMP/tb-mac-update-dmg"
+          mkdir -p "$mount"
+          hdiutil attach -mountpoint "$mount" -readonly -nobrowse "$RUNNER_TEMP/tb-mac-update/Tavern-Born-0.5.99-arm64.dmg"
+          trap 'hdiutil detach "$mount"' EXIT
+          node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born" --release-page
       - name: Exercise Linux AppImage and Debian package
         if: runner.os == 'Linux'
         shell: bash

@@ -31,7 +31,7 @@ let currentStatus: UpdateStatus = { status: 'idle' }
 let autoCheckTimer: ReturnType<typeof setInterval> | null = null
 let startupCheckTimeout: ReturnType<typeof setTimeout> | null = null
 let devSimInterval: ReturnType<typeof setInterval> | null = null
-let isPortableMode = false
+let useReleaseDownloadPage = false
 
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
@@ -162,13 +162,12 @@ export async function fetchChangelog(version: string): Promise<string | null> {
 }
 
 export function initAutoUpdater() {
+  useReleaseDownloadPage = process.platform === 'darwin' || !!process.env.PORTABLE_EXECUTABLE_DIR
+  if (useReleaseDownloadPage) return
+
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowDowngrade = false
-
-  try {
-    isPortableMode = !!process.env.PORTABLE_EXECUTABLE_DIR
-  } catch {}
 
   autoUpdater.on('checking-for-update', () => {
     setStatus({ status: 'checking' })
@@ -186,7 +185,7 @@ export function initAutoUpdater() {
     sendToRenderer('update-available', {
       version: info.version,
       changelog: changelog ?? null,
-      isPortable: isPortableMode,
+      useReleaseDownloadPage: false,
     })
   })
 
@@ -225,11 +224,7 @@ export function initAutoUpdater() {
   })
 }
 
-async function checkForUpdatePortable(): Promise<UpdateStatus> {
-  if (isOfflineNow()) {
-    return setOfflineStatus()
-  }
-
+async function checkForReleaseDownload(): Promise<UpdateStatus> {
   const currentVersion = app.getVersion()
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
 
@@ -261,7 +256,7 @@ async function checkForUpdatePortable(): Promise<UpdateStatus> {
       sendToRenderer('update-available', {
         version: latestVersion,
         changelog: data.body ?? null,
-        isPortable: true,
+        useReleaseDownloadPage: true,
       })
       return status
     }
@@ -288,8 +283,8 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     return setOfflineStatus()
   }
 
-  if (isPortableMode) {
-    return checkForUpdatePortable()
+  if (useReleaseDownloadPage) {
+    return checkForReleaseDownload()
   }
 
   try {
@@ -345,8 +340,8 @@ export async function downloadUpdate(): Promise<void> {
     return
   }
 
-  if (isPortableMode) {
-    throw new Error('Automatic updates are unavailable in portable builds')
+  if (useReleaseDownloadPage) {
+    throw new Error('Install this update from the release download page')
   }
 
   if (cancellationToken) return
@@ -362,12 +357,12 @@ export async function downloadUpdate(): Promise<void> {
   }
 }
 
-export async function openPortableUpdatePage(): Promise<void> {
-  if (!isPortableMode) {
-    throw new Error('The portable download page is only available in portable builds')
+export async function openUpdateDownloadPage(): Promise<void> {
+  if (!useReleaseDownloadPage) {
+    throw new Error('This build installs updates in the app')
   }
   if (currentStatus.status !== 'available' || !currentStatus.version) {
-    throw new Error('No portable update is currently available')
+    throw new Error('No update is currently available')
   }
 
   const releaseTag = encodeURIComponent(`v${currentStatus.version}`)
@@ -393,7 +388,7 @@ export function cancelDownload(): boolean {
 }
 
 export function installUpdate(): void {
-  if (!app.isPackaged || isPortableMode) {
+  if (!app.isPackaged || useReleaseDownloadPage) {
     return
   }
   autoUpdater.quitAndInstall(true, true)

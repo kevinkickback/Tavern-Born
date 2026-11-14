@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { chromium, expect } from '@playwright/test'
 
-const [packageExecutable] = process.argv.slice(2)
+const [packageExecutable, checkMode] = process.argv.slice(2)
 assert(packageExecutable, 'Provide the packaged executable to launch.')
 const executable = resolve(packageExecutable)
 const projectFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url))
@@ -122,33 +122,52 @@ async function openCharacter(page) {
 }
 
 try {
-  await withPackage(async (page) => {
-    await page.getByRole('button', { name: 'Get Started', exact: true }).click()
-    const imported = JSON.parse(
-      await readFile(projectFile('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
-    )
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent('filechooser'),
-      page.getByRole('button', { name: 'Import' }).first().click(),
-    ])
-    await fileChooser.setFiles({
-      name: 'packaged-smoke.tbc',
-      mimeType: 'application/json',
-      buffer: Buffer.from(
-        JSON.stringify({ ...imported, name: characterName, background: 'Acolyte', equipment: [] }),
-      ),
+  if (checkMode === '--release-page') {
+    await withPackage(async (page) => {
+      await page.getByRole('button', { name: 'Get Started', exact: true }).click()
+      const result = await page.evaluate(() => window.electronAPI.checkForUpdate())
+      assert.equal(result.data?.status, 'available', JSON.stringify(result))
+      await page.getByRole('button', { name: 'App update available' }).click()
+      await expect(page.getByRole('button', { name: 'Open Download Page' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Install Now' })).toHaveCount(0)
+      console.log(`Packaged app offered the release-page update to v${result.data.version}.`)
     })
-    await openCharacter(page)
-    await page.getByRole('button', { name: 'Character Sheet' }).click()
-    await page.getByRole('button', { name: 'Generate Preview' }).click()
-    await expect(page.locator('canvas').first()).toBeVisible({ timeout })
-  })
-  await withPackage(openCharacter)
+  } else {
+    await withPackage(async (page) => {
+      await page.getByRole('button', { name: 'Get Started', exact: true }).click()
+      const imported = JSON.parse(
+        await readFile(projectFile('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
+      )
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser'),
+        page.getByRole('button', { name: 'Import' }).first().click(),
+      ])
+      await fileChooser.setFiles({
+        name: 'packaged-smoke.tbc',
+        mimeType: 'application/json',
+        buffer: Buffer.from(
+          JSON.stringify({
+            ...imported,
+            name: characterName,
+            background: 'Acolyte',
+            equipment: [],
+          }),
+        ),
+      })
+      await openCharacter(page)
+      await page.getByRole('button', { name: 'Character Sheet' }).click()
+      await page.getByRole('button', { name: 'Generate Preview' }).click()
+      await expect(page.locator('canvas').first()).toBeVisible({ timeout })
+    })
+    await withPackage(openCharacter)
+  }
 } finally {
   const resolvedProfile = await realpath(profile)
   assert.equal(dirname(resolvedProfile), temp)
   await rm(resolvedProfile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
-console.log(
-  `Electron ${expectedElectron} packaged launch, Included SRD, PDF, and saved reopen passed: ${executable}`,
-)
+if (checkMode !== '--release-page') {
+  console.log(
+    `Electron ${expectedElectron} packaged launch, Included SRD, PDF, and saved reopen passed: ${executable}`,
+  )
+}

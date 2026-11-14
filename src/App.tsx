@@ -167,7 +167,7 @@ function App() {
   const [updateData, setUpdateData] = useState<{
     version: string
     changelog: string | null
-    isPortable: boolean
+    useReleaseDownloadPage: boolean
   } | null>(null)
   const [changelogOpen, setChangelogOpen] = useState(false)
   const [hasAppUpdate, setHasAppUpdate] = useState(false)
@@ -276,7 +276,7 @@ function App() {
                 changelog={updateData.changelog}
                 updateAvailable
                 onInstall={
-                  updateData.isPortable
+                  updateData.useReleaseDownloadPage
                     ? undefined
                     : () => {
                         setChangelogOpen(false)
@@ -284,10 +284,10 @@ function App() {
                       }
                 }
                 onOpenDownloadPage={
-                  updateData.isPortable
+                  updateData.useReleaseDownloadPage
                     ? async () => {
                         try {
-                          const result = await window.electronAPI.openPortableUpdatePage()
+                          const result = await window.electronAPI.openUpdateDownloadPage()
                           if (!result.success) {
                             toast.error('Could not open the download page', {
                               description: result.error ?? undefined,

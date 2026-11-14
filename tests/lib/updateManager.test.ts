@@ -82,7 +82,7 @@ import {
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
-  openPortableUpdatePage,
+  openUpdateDownloadPage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from '../../electron/updateManager'
@@ -272,7 +272,7 @@ describe('update event lifecycle', () => {
     expect(rendererSendMock).toHaveBeenLastCalledWith('update-available', {
       version: '2.1.0',
       changelog: 'Detailed release notes',
-      isPortable: false,
+      useReleaseDownloadPage: false,
     })
   })
 
@@ -365,28 +365,36 @@ describe('download cancellation lifecycle', () => {
   })
 })
 
-describe('portable update safeguards', () => {
+describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')
+
   beforeEach(() => {
     vi.clearAllMocks()
     appState.isPackaged = true
     netState.online = true
-    process.env.PORTABLE_EXECUTABLE_DIR = 'C:/Portable/Tavern-Born'
+    vi.stubEnv(
+      'PORTABLE_EXECUTABLE_DIR',
+      build === 'Windows Portable' ? 'C:/Portable/Tavern-Born' : undefined,
+    )
+    Object.defineProperty(process, 'platform', { value: build === 'macOS' ? 'darwin' : 'win32' })
     initAutoUpdater()
   })
 
   afterEach(() => {
-    delete process.env.PORTABLE_EXECUTABLE_DIR
+    vi.unstubAllEnvs()
+    if (platform) Object.defineProperty(process, 'platform', platform)
     initAutoUpdater()
   })
 
-  test('does not download or install updates in portable mode', async () => {
+  test('never uses the native updater', async () => {
     await expect(downloadUpdate()).rejects.toThrow(
-      'Automatic updates are unavailable in portable builds',
+      'Install this update from the release download page',
     )
     installUpdate()
 
     expect(downloadUpdateMock).not.toHaveBeenCalled()
     expect(quitAndInstallMock).not.toHaveBeenCalled()
+    expect(onMock).not.toHaveBeenCalled()
   })
 
   test('opens the exact GitHub release page after an update is found', async () => {
@@ -394,9 +402,14 @@ describe('portable update safeguards', () => {
       ok: true,
       json: () => Promise.resolve({ tag_name: 'v2.0.0', body: 'Release notes' }),
     })
-    await checkForUpdate()
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'available',
+      version: '2.0.0',
+      changelog: 'Release notes',
+    })
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
 
-    await openPortableUpdatePage()
+    await openUpdateDownloadPage()
 
     expect(shellOpenExternalMock).toHaveBeenCalledWith(
       'https://github.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0',
@@ -407,9 +420,7 @@ describe('portable update safeguards', () => {
     netFetchMock.mockResolvedValueOnce({ ok: false })
     await checkForUpdate()
 
-    await expect(openPortableUpdatePage()).rejects.toThrow(
-      'No portable update is currently available',
-    )
+    await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')
     expect(shellOpenExternalMock).not.toHaveBeenCalled()
   })
 })
