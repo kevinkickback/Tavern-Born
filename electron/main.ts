@@ -49,6 +49,10 @@ const __dirname = dirname(__filename)
 const RENDERER_ROOT_URL = pathToFileURL(join(__dirname, '../dist') + sep).href
 
 let mainWindow: BrowserWindow | null = null
+let desktopState: 'starting' | 'ready' | 'closing' = 'starting'
+let reopenAfterClose = false
+let openingMainWindow = false
+let mainWindowReadyToShow = false
 let hasUnsavedChanges = false
 let forceClose = false
 let localDataRoots = new Set<string>()
@@ -62,11 +66,6 @@ let bundledManifestCache: {
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 const LOCAL_DATA_AUTH_FILE = 'trusted-data-root.json'
-
-// Vite's optimized dependency responses are intentionally immutable. Electron's persistent
-// HTTP cache can otherwise retain one of those responses after Vite regenerates its shared
-// chunks, leaving lazy routes pointed at an obsolete chunk until the cache is cleared manually.
-if (isDev) app.commandLine.appendSwitch('disable-http-cache')
 
 type TrustedIpcEvent = IpcMainEvent | IpcMainInvokeEvent
 
@@ -163,6 +162,8 @@ function isDevToolsShortcut(input: Electron.Input): boolean {
 async function createWindow(): Promise<void> {
   const windowState = await loadWindowState()
   forceClose = false
+  hasUnsavedChanges = false
+  mainWindowReadyToShow = false
 
   mainWindow = new BrowserWindow({
     width: windowState.width,
@@ -211,6 +212,7 @@ async function createWindow(): Promise<void> {
   attachWindowStatePersistence(mainWindow)
 
   mainWindow.once('ready-to-show', () => {
+    mainWindowReadyToShow = true
     mainWindow?.show()
     if (isDev) {
       mainWindow?.webContents.openDevTools({ mode: 'detach' })
@@ -244,7 +246,28 @@ async function createWindow(): Promise<void> {
   })
 }
 
-app.on('ready', async () => {
+async function activateMainWindow(): Promise<void> {
+  if (desktopState === 'closing') {
+    reopenAfterClose = true
+    return
+  }
+  if (desktopState !== 'ready' || openingMainWindow) return
+  if (mainWindow) {
+    if (!mainWindowReadyToShow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    return
+  }
+
+  openingMainWindow = true
+  try {
+    await createWindow()
+  } finally {
+    openingMainWindow = false
+  }
+}
+
+async function initializeDesktop(): Promise<void> {
   if (!isDev) {
     Menu.setApplicationMenu(null)
   }
@@ -507,22 +530,11 @@ app.on('ready', async () => {
     return { version, changelog }
   })
 
-  await createWindow()
-})
+  desktopState = 'ready'
+  await activateMainWindow()
+}
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    void createWindow()
-  }
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    void flushWindowStateWrites().finally(() => app.quit())
-  }
-})
-
-app.on('web-contents-created', (_event, contents) => {
+function configureWebContents(contents: Electron.WebContents): void {
   if (!isDev) {
     contents.on('before-input-event', (event, input) => {
       if (isDevToolsShortcut(input)) {
@@ -544,4 +556,33 @@ app.on('web-contents-created', (_event, contents) => {
   })
 
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
-})
+}
+
+if (app.requestSingleInstanceLock()) {
+  // Vite's immutable optimized chunks can outlive their renderer imports in Electron's disk cache.
+  if (isDev) app.commandLine.appendSwitch('disable-http-cache')
+
+  app.on('ready', initializeDesktop)
+  app.on('second-instance', () => {
+    void activateMainWindow()
+  })
+  app.on('activate', () => {
+    void activateMainWindow()
+  })
+  app.on('window-all-closed', async () => {
+    if (process.platform === 'darwin') return
+
+    desktopState = 'closing'
+    await flushWindowStateWrites()
+    if (reopenAfterClose) {
+      reopenAfterClose = false
+      desktopState = 'ready'
+      await activateMainWindow()
+    } else {
+      app.quit()
+    }
+  })
+  app.on('web-contents-created', (_event, contents) => configureWebContents(contents))
+} else {
+  app.exit(0)
+}

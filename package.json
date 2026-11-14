@@ -158,7 +158,8 @@
       "installerSidebar": "build/installerSidebar.bmp"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "${productName}-${version}-portable.${ext}",
+      "unpackDirName": true
     },
     "mac": {
       "icon": "build/icon-mac.png",

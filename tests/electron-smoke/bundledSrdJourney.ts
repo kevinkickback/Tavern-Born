@@ -1,5 +1,7 @@
+import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { promisify } from 'node:util'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
 import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
@@ -60,7 +62,8 @@ test('creates and reloads both rules generations using only the Included SRD', a
     ),
   )
   const userDataArgument = `--user-data-dir=${testInfo.outputPath('bundled-srd-user-data')}`
-  const electronApp = await electron.launch({ args: ['.', userDataArgument], env: environment })
+  const launchArgs = ['.', userDataArgument]
+  const electronApp = await electron.launch({ args: launchArgs, env: environment })
 
   try {
     const page = await electronApp.firstWindow()
@@ -98,6 +101,22 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await levelDialog.getByRole('button', { name: 'Level Up' }).first().click()
       await expect(levelDialog.getByText('2', { exact: true })).toBeVisible()
       await levelDialog.getByRole('button', { name: 'Close' }).first().click()
+
+      const mainWindow = await electronApp.browserWindow(page)
+      await mainWindow.evaluate((window) => window.hide())
+      await expect.poll(() => mainWindow.evaluate((window) => window.isVisible())).toBe(false)
+      const executable = await electronApp.evaluate(() => process.execPath)
+      // Mirror Playwright's Linux launch policy for the second process.
+      const sandboxArgs = electronApp.process().spawnargs.filter((arg) => arg === '--no-sandbox')
+      await promisify(execFile)(executable, [...sandboxArgs, ...launchArgs], {
+        env: environment,
+        timeout: 10_000,
+        windowsHide: true,
+      })
+      await expect.poll(() => mainWindow.evaluate((window) => window.isVisible())).toBe(true)
+      expect(electronApp.windows()).toEqual([page])
+      await expect(page.getByRole('banner').getByText('Level 2')).toBeVisible()
+
       await page.getByRole('banner').getByRole('button', { name: 'Save character' }).click()
       await expect(page.getByTestId('character-save-status')).toHaveText('Character saved')
 
