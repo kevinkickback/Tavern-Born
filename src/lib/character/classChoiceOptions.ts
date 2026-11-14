@@ -50,7 +50,11 @@ import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
-import { getCreatureTypes, matchesClassChoiceFilter } from './classChoiceFilters'
+import {
+  getCreatureTypes,
+  itemFilterIncludesMagicItems,
+  matchesClassChoiceFilter,
+} from './classChoiceFilters'
 
 export {
   buildClassChoiceFeatureCatalogs,
@@ -401,20 +405,10 @@ function getFilteredCatalog(
   catalogs: ClassChoiceCatalogs,
 ): readonly ChoiceCatalogEntity[] {
   if (filter.entityType !== 'item') return getCatalog(filter.entityType, catalogs)
-  const includesMagicItems =
-    (filter.rarities?.length ?? 0) > 0 ||
-    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate))
-  const candidates = includesMagicItems
+  const candidates = itemFilterIncludesMagicItems(filter)
     ? [...catalogs.itemsBase, ...catalogs.items]
     : catalogs.itemsBase
   return candidates.filter(isSelectableEquipmentItem)
-}
-
-function getFilteredCatalogIncludesMagicItems(filter: NormalizedChoiceOptionFilter): boolean {
-  return (
-    (filter.rarities?.length ?? 0) > 0 ||
-    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate)) === true
-  )
 }
 
 function getRawFeatureTypes(entity: ChoiceCatalogEntity): string[] {

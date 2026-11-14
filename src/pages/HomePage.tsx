@@ -246,10 +246,11 @@ function CharacterListRow({
 }
 
 interface HomePageProps {
+  showCompatibilityDialog?: boolean
   readinessFocus?: string | null
 }
 
-export function HomePage({ readinessFocus }: HomePageProps = {}) {
+export function HomePage({ readinessFocus, showCompatibilityDialog = true }: HomePageProps = {}) {
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
@@ -920,12 +921,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
-      <UnsupportedCharactersDialog
-        count={unsupportedCharacters.length}
-        onExport={handleExportUnsupportedCharacters}
-        isPending={isLibraryPending}
-        onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
-      />
+      {showCompatibilityDialog && (
+        <UnsupportedCharactersDialog
+          count={unsupportedCharacters.length}
+          onExport={handleExportUnsupportedCharacters}
+          isPending={isLibraryPending}
+          onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
+        />
+      )}
       <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -1071,7 +1074,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   )
 }
 
-export function RoutedHomePage() {
+export function RoutedHomePage({
+  showCompatibilityDialog,
+}: Pick<HomePageProps, 'showCompatibilityDialog'>) {
   const [searchParams] = useSearchParams()
-  return <HomePage readinessFocus={getReadinessFocus(searchParams)} />
+  return (
+    <HomePage
+      readinessFocus={getReadinessFocus(searchParams)}
+      showCompatibilityDialog={showCompatibilityDialog}
+    />
+  )
 }

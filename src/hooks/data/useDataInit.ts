@@ -7,6 +7,7 @@ export function useDataInit() {
   const gameData = useGameDataStore((s) => s.gameData)
   const isLoading = useGameDataStore((s) => s.isLoading)
   const loadFromCache = useGameDataStore((s) => s.loadFromCache)
+  const checkCatalogIfDue = useGameDataStore((s) => s.checkCatalogIfDue)
   const autoRefreshGameData = useAppPreferencesStore((s) => s.autoRefreshGameData)
 
   const preferencesReady = useSyncExternalStore(
@@ -24,4 +25,12 @@ export function useDataInit() {
 
     void loadFromCache({ checkForUpdates: autoRefreshGameData })
   }, [hasHydrated, preferencesReady, gameData, isLoading, loadFromCache, autoRefreshGameData])
+
+  useEffect(() => {
+    if (!hasHydrated || !preferencesReady || !autoRefreshGameData) return
+
+    const checkOnFocus = () => void checkCatalogIfDue()
+    window.addEventListener('focus', checkOnFocus)
+    return () => window.removeEventListener('focus', checkOnFocus)
+  }, [hasHydrated, preferencesReady, autoRefreshGameData, checkCatalogIfDue])
 }

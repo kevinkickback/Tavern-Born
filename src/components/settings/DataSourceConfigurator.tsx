@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { INTERACTIVE_CATALOG_TIMEOUT_MS, useGameDataStore } from '@/store/gameDataStore'
+import { CatalogCharacterImpact } from './CatalogCharacterImpact'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
 type BundledManifest = Awaited<ReturnType<Window['electronAPI']['getBundledManifest']>>
@@ -69,8 +70,13 @@ export function DataSourceConfigurator({
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
   const loadCatalog = useGameDataStore((state) => state.loadCatalog)
   const pending = useGameDataStore((state) => state.pendingCatalog)
+  const previousCatalog = useGameDataStore((state) => state.previousCatalog)
+  const rollbackCatalog = useGameDataStore((state) => state.rollbackCatalog)
+  const isCatalogActivating = useGameDataStore((state) => state.isCatalogActivating)
   const catalogWarnings = useGameDataStore((state) => state.catalogWarnings)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
+  const rollbackDisabled =
+    isLoading || isBackgroundRefreshing || isCatalogActivating || hasUnsavedChanges
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
   const autoRefreshGameData = useAppPreferencesStore((state) => state.autoRefreshGameData)
@@ -83,10 +89,12 @@ export function DataSourceConfigurator({
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
   const [isValidating, setIsValidating] = useState(false)
   const [confirmRevertOpen, setConfirmRevertOpen] = useState(false)
+  const [confirmRollback, setConfirmRollback] = useState(false)
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
   const [bundledManifest, setBundledManifest] = useState<BundledManifest | null>(null)
   const remotePathId = useId()
   const localPathId = useId()
+  const updateTitleId = useId()
   const [validationResult, setValidationResult] = useState<{
     error?: string
     candidate?: CatalogCandidate
@@ -334,21 +342,40 @@ export function DataSourceConfigurator({
   }
 
   const handleRefresh = async () => {
-    const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
-    if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
+    const {
+      dataSourceConfig,
+      isLoading,
+      isBackgroundRefreshing,
+      isCatalogActivating,
+      sessionBundledSource,
+    } = useGameDataStore.getState()
+    if (!dataSourceConfig || isLoading || isBackgroundRefreshing || isCatalogActivating) return
     const result = await loadCatalog(dataSourceConfig, true)
-    if (result.kind === 'rejected')
-      toast.error('Update could not be applied', { description: result.message })
-    else if (result.kind === 'staged') toast.info('A game-data update is ready to review')
-    else if (result.kind === 'applied') toast.info('Game data is up to date')
+    if (result.kind === 'rejected') {
+      toast.error('Couldn’t check your additional content', { description: result.message })
+    } else if (result.kind === 'staged') {
+      const reason = useGameDataStore.getState().pendingCatalog?.reason
+      toast.info(
+        reason === 'reload'
+          ? 'Additional content ready to restore'
+          : reason === 'update'
+            ? 'Game data update available'
+            : 'Game data ready for review',
+      )
+    } else if (result.kind === 'applied') {
+      toast.info(sessionBundledSource ? 'Additional content restored' : 'Game data is up to date')
+    }
   }
   const handleRestoreBundled = async () => {
+    const { isCatalogActivating, isLoading } = useGameDataStore.getState()
+    if (isCatalogActivating || isLoading) return
     if (useCharacterStore.getState().hasUnsavedChanges()) {
       toast.info('Save or discard your character changes before switching game data.')
       return
     }
     try {
       const restored = await restoreBundledData()
+      if (restored === undefined) return
       if (!restored) {
         toast.error('Unable to load the included SRD', {
           description:
@@ -417,9 +444,6 @@ export function DataSourceConfigurator({
                 <CheckCircle className="size-3.5" />
                 {usingSessionSrd ? 'Configured' : 'Active'}
               </Badge>
-              {usingSessionSrd && (
-                <p className="text-sm text-warning">Using Included SRD for this session.</p>
-              )}
               <div className="flex items-center gap-2">
                 {dataSourceConfig.type === 'bundled' ? (
                   <Database className="size-[1.125rem] text-muted-foreground" />
@@ -587,7 +611,7 @@ export function DataSourceConfigurator({
                 <Button
                   onClick={() => setConfirmRevertOpen(true)}
                   className="border-warning/50"
-                  disabled={isLoading || hasUnsavedChanges}
+                  disabled={isLoading || isCatalogActivating || hasUnsavedChanges}
                   variant="outline"
                 >
                   Remove Additional Content
@@ -627,7 +651,12 @@ export function DataSourceConfigurator({
               {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
                 <Button
                   onClick={handleRefresh}
-                  disabled={isLoading || isBackgroundRefreshing || !hasActiveDataSource}
+                  disabled={
+                    isLoading ||
+                    isBackgroundRefreshing ||
+                    isCatalogActivating ||
+                    !hasActiveDataSource
+                  }
                   variant="outline"
                   className="gap-2"
                 >
@@ -654,10 +683,110 @@ export function DataSourceConfigurator({
         </div>
       </Section>
 
+      {(pending || (!selectorOnly && usingSessionSrd)) && (
+        <Section
+          id={selectorOnly ? undefined : 'game-data-update'}
+          tabIndex={-1}
+          aria-labelledby={updateTitleId}
+          title={
+            <span id={updateTitleId}>
+              {pending?.reason === 'reload'
+                ? 'Restore additional content'
+                : pending?.reason === 'update'
+                  ? 'Game data update'
+                  : pending
+                    ? 'Review game data'
+                    : 'Using built-in rules'}
+            </span>
+          }
+          description={
+            usingSessionSrd
+              ? 'Tavern Born couldn’t use its saved copy of your additional content. Built-in rules are active.'
+              : undefined
+          }
+        >
+          {pending ? (
+            <div className="space-y-3 rounded-md border border-border bg-workspace-pane p-4">
+              {pending.reason === 'reload' && (
+                <p className="text-sm">The rebuilt rules match what you last used.</p>
+              )}
+              {pending.reason === 'recovery' && (
+                <p className="text-sm">We couldn’t confirm a match with the rules you last used.</p>
+              )}
+              {pending.incompleteRemovalPreview && (
+                <p className="text-sm text-muted-foreground">
+                  This preview may miss some removals.
+                </p>
+              )}
+              {!!pending.additions?.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Added content</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {pending.additions.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {!!pending.removals.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Removed content</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {pending.removals.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {!!catalogWarnings.length && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">Content warnings</summary>
+                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
+                    {catalogWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <div className="flex flex-wrap items-start gap-2">
+                {pending.restoreWhenIdle ? (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    Restores automatically when you finish character editing.
+                  </p>
+                ) : (
+                  <Button
+                    disabled={hasUnsavedChanges || isLoading || isCatalogActivating}
+                    onClick={() => void applyCandidate(pending.candidate, true)}
+                  >
+                    {pending.reason === 'reload'
+                      ? 'Restore additional content'
+                      : pending.reason === 'recovery'
+                        ? 'Use additional content'
+                        : 'Apply game data update'}
+                  </Button>
+                )}
+                {pending.reason !== 'reload' && (
+                  <CatalogCharacterImpact candidate={pending.candidate} />
+                )}
+              </div>
+              {hasUnsavedChanges && !pending.restoreWhenIdle && (
+                <p className="text-sm text-muted-foreground">
+                  Save or discard character edits first.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Some character options may be unavailable until your additional content is restored.
+            </p>
+          )}
+        </Section>
+      )}
+
       {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
         <Section
-          title="Check for Updates at Startup"
-          description="Automatically check your selected game data for changes when Tavern Born starts."
+          title="Automatic update checks"
+          description="Tavern Born checks about once a day when you open or return to the app. If a check fails, it waits before trying again."
         >
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-medium">Check automatically</p>
@@ -666,44 +795,45 @@ export function DataSourceConfigurator({
         </Section>
       )}
 
-      {pending && (
+      {!selectorOnly && previousCatalog && (
         <Section
-          id={selectorOnly ? undefined : 'game-data-update'}
-          tabIndex={-1}
-          title="Game data update ready"
+          title="Previous game data"
+          description="Restore the last saved catalog and its source settings."
         >
-          {pending.candidate.revision && (
-            <p className="text-sm">Revision {pending.candidate.revision.slice(0, 12)}</p>
-          )}
-          {pending.incompleteRemovalPreview && (
-            <p className="text-sm">
-              Your saved catalog predates removal tracking. This preview may omit some removals.
-            </p>
-          )}
-          {!!pending.removals.length && (
-            <details className="text-sm">
-              <summary>{pending.removals.length} entries or files will be removed</summary>
-              <ul className="max-h-48 overflow-y-auto">
-                {pending.removals.map((entry) => (
-                  <li key={entry}>{entry}</li>
-                ))}
-              </ul>
-            </details>
-          )}
           <Button
-            disabled={hasUnsavedChanges || isLoading}
-            onClick={() => void applyCandidate(pending.candidate, true)}
+            variant="outline"
+            disabled={rollbackDisabled}
+            onClick={() => setConfirmRollback(true)}
           >
-            Apply game data update
+            Restore previous game data
           </Button>
-          {hasUnsavedChanges && (
-            <p className="text-sm">Save or discard your character changes before applying.</p>
-          )}
+          <AlertDialog open={confirmRollback} onOpenChange={setConfirmRollback}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Restore previous game data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tavern Born will load the previous game data and its saved source settings.
+                  Character choices already changed under other rules may need to be selected again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={rollbackDisabled}
+                  onClick={async () => {
+                    if (await rollbackCatalog()) toast.success('Previous game data restored')
+                  }}
+                >
+                  Restore
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Section>
       )}
-      {!!catalogWarnings.length && (
+      {!pending && !!catalogWarnings.length && (
         <details className="text-sm">
-          <summary>Some optional content is unavailable</summary>
+          <summary>Some extra content couldn’t be loaded</summary>
           <ul>
             {catalogWarnings.map((warning) => (
               <li key={warning}>{warning}</li>
@@ -733,7 +863,10 @@ export function DataSourceConfigurator({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Keep Additional Content</AlertDialogCancel>
-            <AlertDialogAction disabled={isLoading} onClick={() => void handleRestoreBundled()}>
+            <AlertDialogAction
+              disabled={isLoading || isCatalogActivating}
+              onClick={() => void handleRestoreBundled()}
+            >
               Remove Additional Content
             </AlertDialogAction>
           </AlertDialogFooter>

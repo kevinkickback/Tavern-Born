@@ -189,6 +189,9 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
       fixtureKey,
     )
     await page.reload()
+    // The recent successful check is still fresh. Trigger a refresh without waiting a day.
+    await expect(status).toHaveText('Additional Content Loaded')
+    await page.getByRole('button', { name: 'Check for Updates' }).click()
     await expect(status).toHaveText('Checking for game data updates')
     await app.evaluate(
       (_electron, key) => (Reflect.get(globalThis, key) as RefreshFixture).requested,

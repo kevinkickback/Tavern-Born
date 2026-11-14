@@ -154,7 +154,12 @@ beforeEach(() => {
     isActiveCharacterDirty: false,
     addCharacter,
   })
-  useGameDataStore.setState({ gameData: null, dataSourceConfig: null, sessionBundledSource: null })
+  useGameDataStore.setState({
+    gameData: null,
+    dataSourceConfig: null,
+    sessionBundledSource: null,
+    isCatalogActivating: false,
+  })
 })
 afterEach(() => {
   cleanup()
@@ -179,6 +184,23 @@ function wizardBackdrop() {
   if (!backdrop) throw new Error('Wizard backdrop is missing')
   return backdrop
 }
+
+test('defers opening during activation and holds its catalog while the wizard is open', async () => {
+  const source = { type: 'remote', path: 'https://example.test/data', isValid: true } as const
+  useGameDataStore.setState({ isCatalogActivating: true })
+  try {
+    render(<WizardHarness />)
+    expect(screen.queryByRole('dialog', { name: 'Create New Character' })).toBeNull()
+    await act(() => useGameDataStore.setState({ isCatalogActivating: false }))
+    expect(await screen.findByRole('dialog', { name: 'Create New Character' })).toBeTruthy()
+    await expect(useGameDataStore.getState().loadCatalog(source)).resolves.toMatchObject({
+      kind: 'rejected',
+      message: expect.stringContaining('character workflow'),
+    })
+  } finally {
+    await act(() => useGameDataStore.setState({ isCatalogActivating: false }))
+  }
+})
 
 test('the content step uses the active session SRD while keeping the saved remote source', async () => {
   const remote = { type: 'remote', path: 'https://example.test/data', isValid: true } as const

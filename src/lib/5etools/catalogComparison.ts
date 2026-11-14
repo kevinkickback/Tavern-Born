@@ -1,31 +1,31 @@
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig } from '@/types/5etools'
 import type { PreparedCatalog } from './catalogCandidate'
-import { externalCatalogKeys } from './contentLayers'
 
 export interface CatalogComparisonBasis {
   config: DataSourceConfig | null
   externalKeys?: string[]
-  fallbackData?: GameData
   hasExternalData: boolean
 }
 
 export function compareCatalog(candidate: PreparedCatalog, prior: CatalogComparisonBasis) {
   const source = prior.config
   if (!source || source.type === 'bundled')
-    return { removals: [], incompleteRemovalPreview: false, sameExternalKeys: false }
+    return { additions: [], removals: [], incompleteRemovalPreview: false, sameExternalKeys: false }
 
+  const previousResources = new Set(source.availableResources)
   const resources = new Set(candidate.config.availableResources)
-  const removals = (source.availableResources ?? []).filter(
-    (file) => !file.startsWith('fluff-') && file !== 'book/book-tce.json' && !resources.has(file),
-  )
+  const additions = source.availableResources
+    ? [...resources].filter((file) => !previousResources.has(file))
+    : []
+  const removals = [...previousResources].filter((file) => !resources.has(file))
   if (prior.externalKeys) {
     const keys = new Set(candidate.keys)
+    const previousKeys = new Set(prior.externalKeys)
+    additions.push(...candidate.keys.filter((key) => !previousKeys.has(key)))
     removals.push(...prior.externalKeys.filter((key) => !keys.has(key)))
-  } else if (prior.fallbackData) {
-    const keys = new Set(externalCatalogKeys(candidate.data))
-    removals.push(...externalCatalogKeys(prior.fallbackData).filter((key) => !keys.has(key)))
   }
   return {
+    additions,
     removals,
     incompleteRemovalPreview: prior.hasExternalData && !prior.externalKeys,
     sameExternalKeys: removals.length === 0 && prior.externalKeys?.length === candidate.keys.length,

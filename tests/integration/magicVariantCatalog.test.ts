@@ -86,8 +86,9 @@ describe('raw template cache and concrete character persistence', () => {
         ),
       readLocalJson: (path: string) => {
         const file = path.slice('/additional/'.length)
-        if (file.startsWith('class/fluff-')) return {}
-        if (!(file in payloads)) throw new Error('ENOENT')
+        if (file.startsWith('class/fluff-')) return { classFluff: [] }
+        if (!(file in payloads))
+          throw new Error(`ENOENT: no such file or directory, open '${path}'`)
         return structuredClone(payloads[file])
       },
     })

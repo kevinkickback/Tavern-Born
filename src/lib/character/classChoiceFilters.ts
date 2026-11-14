@@ -13,6 +13,13 @@ interface FilterableChoiceEntity {
   name: string
   source?: string
 }
+
+export function itemFilterIncludesMagicItems(filter: NormalizedChoiceOptionFilter): boolean {
+  return (
+    (filter.rarities?.length ?? 0) > 0 || filter.anyOf?.some(itemFilterIncludesMagicItems) === true
+  )
+}
+
 const normalized = (value: string | undefined) => value?.trim().toLowerCase() ?? ''
 function getFeatureTypes(entity: FilterableChoiceEntity): string[] {
   const raw = (entity as OptionalFeatureLike).featureType

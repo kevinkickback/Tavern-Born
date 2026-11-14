@@ -35,10 +35,12 @@ describe('data source refresh feedback', () => {
       },
       isLoading: false,
       isBackgroundRefreshing: false,
+      isCatalogActivating: false,
       loadProgress: null,
       error: null,
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
       lastUpdateCheckAt: '2026-01-01T00:00:00.000Z',
+      pendingCatalog: null,
       cacheStatus: 'cached',
       loadCatalog,
       restoreBundledData: defaultRestoreBundledData,
@@ -58,11 +60,24 @@ describe('data source refresh feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
+      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
         description: 'Local directory is unavailable',
       }),
     )
     expect(toast.info).not.toHaveBeenCalledWith('Game data is up to date')
+  })
+
+  test('disables checks while the catalog is being applied', async () => {
+    const loadCatalog = useGameDataStore.getState().loadCatalog
+    useGameDataStore.setState({ isCatalogActivating: true })
+    render(<DataSourceConfigurator />)
+    const check = screen.getByRole<HTMLButtonElement>('button', { name: 'Check for Updates' })
+    expect(check.disabled).toBe(true)
+    await userEvent.click(check)
+    expect(loadCatalog).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    await act(() => useGameDataStore.setState({ isCatalogActivating: false }))
+    expect(check.disabled).toBe(false)
   })
 
   test.each([
@@ -105,11 +120,10 @@ describe('data source refresh feedback', () => {
     expect(screen.getByRole('button', { name: 'Check for Updates' }).hasAttribute('disabled')).toBe(
       false,
     )
-    if (outcome === 'updated')
-      expect(toast.info).toHaveBeenCalledWith('A game-data update is ready to review')
+    if (outcome === 'updated') expect(toast.info).toHaveBeenCalledWith('Game data ready for review')
     if (outcome === 'unchanged') expect(toast.info).toHaveBeenCalledWith('Game data is up to date')
     if (outcome === 'failed')
-      expect(toast.error).toHaveBeenCalledWith('Update could not be applied', {
+      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
         description: 'Local directory is unavailable',
       })
   })
@@ -122,19 +136,51 @@ describe('data source refresh feedback', () => {
     expect(screen.queryByText('Base content:')).toBeNull()
   })
 
+  test('offers a reload after manually checking a matching rebuild', async () => {
+    const user = userEvent.setup()
+    const state = useGameDataStore.getState()
+    const config = state.dataSourceConfig!
+    const data = state.gameData!
+    useGameDataStore.setState({
+      loadCatalog: () => {
+        useGameDataStore.setState({
+          pendingCatalog: {
+            candidate: {
+              config: { ...config, type: 'local' },
+              identity: config,
+              data,
+              keys: [],
+              warnings: [],
+            },
+            reason: 'reload',
+            removals: [],
+            incompleteRemovalPreview: true,
+          },
+        })
+        return Promise.resolve({ kind: 'staged' })
+      },
+    })
+    render(<DataSourceConfigurator />)
+
+    await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
+
+    expect(toast.info).toHaveBeenCalledWith('Additional content ready to restore')
+    expect(screen.getByRole('button', { name: 'Restore additional content' })).toBeTruthy()
+  })
+
   test('keeps the startup update preference on the main Game Data view', async () => {
     const user = userEvent.setup()
     render(<DataSourceConfigurator />)
 
-    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+    expect(screen.getByText('Automatic update checks')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
 
-    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+    expect(screen.queryByText('Automatic update checks')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.getByText('Check for Updates at Startup')).toBeTruthy()
+    expect(screen.getByText('Automatic update checks')).toBeTruthy()
   })
 
   test('removes additional content without clearing the current source first', async () => {
@@ -231,7 +277,7 @@ describe('data source refresh feedback', () => {
     expect(screen.getByRole('button', { name: 'Add Additional Content' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Use Included SRD' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Check for Updates' })).toBeNull()
-    expect(screen.queryByText('Check for Updates at Startup')).toBeNull()
+    expect(screen.queryByText('Automatic update checks')).toBeNull()
   })
 
   test('recovery shows source selection without an SRD choice prompt', () => {

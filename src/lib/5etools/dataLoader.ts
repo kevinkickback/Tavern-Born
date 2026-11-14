@@ -629,10 +629,16 @@ export class FiveEToolsDataLoader {
           }
           const fluffFile = `class/${file.replace(/^class-/, 'fluff-class-')}`
           try {
-            fluff = parseClassFluff(await this.loadResource(fluffFile, options?.signal))
+            const document = await this.loadResource(fluffFile, options?.signal)
+            if (options?.strictCandidate && !Array.isArray(asObject(document).classFluff))
+              throw new SyntaxError('Expected a class description collection')
+            fluff = parseClassFluff(document)
           } catch (error) {
             if (isAbortError(error)) throw error
-            options?.onResourceFailure?.(fluffFile, { required: false })
+            options?.onResourceFailure?.(fluffFile, {
+              required: false,
+              ...(options.strictCandidate ? { cause: error } : {}),
+            })
           }
           documents.set(file, classData)
           return { file, fluff }

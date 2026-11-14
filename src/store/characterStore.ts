@@ -640,6 +640,16 @@ function reconcileActiveRuleState() {
 }
 
 useCharacterStore.subscribe((state, previous) => {
+  if (
+    state.characters !== previous.characters ||
+    state.activeCharacter !== previous.activeCharacter ||
+    state.activeCharacterId !== previous.activeCharacterId ||
+    state.isActiveCharacterDirty !== previous.isActiveCharacterDirty
+  ) {
+    const dirty = state.hasUnsavedChanges()
+    if (dirty !== useGameDataStore.getState().catalogDraftDirty)
+      useGameDataStore.setState({ catalogDraftDirty: dirty })
+  }
   if (state.activeCharacter !== previous.activeCharacter) reconcileActiveRuleState()
 })
 useGameDataStore.subscribe((state, previous) => {

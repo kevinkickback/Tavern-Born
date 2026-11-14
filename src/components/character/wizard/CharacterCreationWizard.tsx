@@ -1,5 +1,5 @@
 import { Warning } from '@phosphor-icons/react'
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useRulesPreview } from '@/components/editor/RulesPreviewManager'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -95,7 +95,16 @@ function sameWizardValue(left: unknown, right: unknown, sourceSelection = false)
   )
 }
 
-export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
+export function CharacterCreationWizard({
+  open: requestedOpen,
+  onOpenChange,
+}: CharacterCreationWizardProps) {
+  const activating = useGameDataStore((state) => state.isCatalogActivating)
+  const protectCatalog = useGameDataStore((state) => state.protectCatalog)
+  const open = requestedOpen && !activating
+  useLayoutEffect(() => {
+    if (open) return protectCatalog()
+  }, [open, protectCatalog])
   const { setPortalHost } = useRulesPreview()
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)

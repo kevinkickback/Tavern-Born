@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { useCharacterContentOpening } from '@/hooks/character/useCharacterContentOpening'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export function CharacterContentOpeningDialog({
   opening,
@@ -17,6 +18,12 @@ export function CharacterContentOpeningDialog({
   opening: ReturnType<typeof useCharacterContentOpening>
 }) {
   const { pending, cancel, openLimited, restoreFocus } = opening
+  const usingBuiltInRules = useGameDataStore((state) => state.sessionBundledSource !== null)
+  const protectCatalog = useGameDataStore((state) => state.protectCatalog)
+  const open = pending !== null
+  useLayoutEffect(() => {
+    if (open) return protectCatalog()
+  }, [open, protectCatalog])
   const title = useRef<HTMLHeadingElement>(null)
   const dismissed = useRef(false)
   if (!pending) return null
@@ -47,8 +54,9 @@ export function CharacterContentOpeningDialog({
             Additional content unavailable
           </DialogTitle>
           <DialogDescription>
-            {pending.name || 'This character'} uses unavailable rules. Your choices stay saved.
-            Restore the original source in Game Data settings and reopen to edit affected choices.
+            {usingBuiltInRules
+              ? `Tavern Born is using built-in rules. Some options for ${pending.name || 'this character'} need additional content. Your choices stay saved.`
+              : `${pending.name || 'This character'} uses unavailable rules. Your choices stay saved. Restore the original source and reopen to edit affected choices.`}
           </DialogDescription>
         </DialogHeader>
         <ul
@@ -64,7 +72,14 @@ export function CharacterContentOpeningDialog({
         </ul>
         <DialogFooter>
           <Button variant="outline" asChild>
-            <Link to="/settings?section=data" onClick={cancel}>
+            <Link
+              to={
+                usingBuiltInRules
+                  ? '/settings?section=data#game-data-update'
+                  : '/settings?section=data'
+              }
+              onClick={cancel}
+            >
               Game Data settings
             </Link>
           </Button>

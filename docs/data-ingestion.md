@@ -246,12 +246,50 @@ its last saved catalog. The overlay offers **Retry** and **Change source** if ne
 catalog is usable. If the pack is unavailable, recovery can admit a valid standalone external
 catalog.
 
-With automatic checks enabled, the configured source is checked after local game data becomes
-available. Settings shows the configured location, when the content last changed, and when it was
-last successfully checked. Failures and optional warnings appear separately. A changed catalog waits for
-**Apply game data update** in Settings. The previous catalog remains active during checks and
-review. The cache and accepted configuration are committed together after validation.
+With automatic checks enabled, startup checks the configured source after local data is available
+if there is no successful check or the last one was at least 24 hours ago. Returning focus can start
+a due check. After a failure, the retry delay starts at 15 minutes and doubles up to eight hours.
+The app remembers the delay for the configured source across launches. A missing compatible cache
+allows a recovery check before the daily interval, subject to failure backoff. Manual checks can
+run immediately. Settings shows the configured location, when the content last changed, and when
+it was last successfully checked. Failures and optional warnings appear separately. A rebuild
+restores additional content automatically when the saved catalog's rules, source layers and
+resource and record inventories match. Restoration waits for open character workflows and unsaved
+edits to clear. Changed results and results without enough evidence to prove a match wait for
+manual approval in Settings. During startup recovery, a rebuild can also restore new generated
+equipment when existing records, working references and character choices stay the same. An
+unresolved rules-preview link in an item description or creature stat block may gain its
+exact target. GitHub needs the same
+accepted commit. Local folders need a complete matching set of previously recorded file hashes.
+On relaunch an unapplied preview can be
+checked again before the daily interval, subject to backoff. The previous catalog remains active
+during checks and review. The cache and accepted configuration are committed together after validation.
+If startup needs built-in rules because the saved catalog could not open, a due recovery check
+keeps the loading screen open within the startup check's time limit. A failed check or a result
+that needs manual review opens the app with built-in rules. Startup with usable saved data
+stays nonblocking.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
+A complete accepted catalog with a matching cache schema, source and Included SRD can skip
+preparation when the source still matches. GitHub checks the verified commit. Other HTTPS
+sources recheck each JSON resource with an ETag or Last-Modified when available, and check
+previously missing resources again. Local folders check file identity, size and timestamps for
+the inputs the catalog uses, including indexes and files previously missing. Changes,
+inconclusive results and older caches run the full check. A server that cannot provide or
+accept validators can still be checked with ordinary requests.
+An interrupted read of an existing source keeps the accepted catalog. A missing top-level file
+or a record withdrawn from a successfully read file can appear in the removal preview. A missing
+file still declared by an index fails the check. Confirmed removals require Apply. A same-source
+reload that changes the accepted catalog also requires Apply, including changes to descriptions
+that do not have separate record identities in the removal preview.
+
+An open Wizard or Builder keeps its current catalog. A dirty Builder draft also blocks manual
+catalog changes after leaving Builder. Applying or restoring a catalog briefly defers workflow
+entry. Activation checks the accepted generation before writing; when a compatible catalog is
+replaced, its data and settings are saved together as one restore point. Use **Restore previous
+game data** in Settings to restore it without contacting its source. Restoration consumes that
+restore point. Rollback restores game data and source settings. Character reconciliation still
+follows the active rules, and rollback cannot restore character choices already changed under a
+different catalog. Snapshots from incompatible rules packs or cache schemas are ineligible.
 The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
 only if the original cache generation is still current.
 
