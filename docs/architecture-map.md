@@ -29,75 +29,69 @@ domain libraries remain independent of React and Zustand.
 - Game-data UI reads use `useFilteredGameData()` or named hooks from
   `src/hooks/data/useGameData.ts`. Raw store selectors are for lifecycle owners.
 
-## Concern routing
+## From startup to export
 
-Start at the narrowest matching owner instead of searching a manual file catalog:
+Electron authorizes local file access and runs the catalog utility. The renderer opens a usable catalog before handing off the workspace. The wizard uses its draft rules and sources. The Builder opens a saved character as a draft, applies commands in memory, then saves through the durable library queue. Review and PDF export use the shared calculation context.
 
-| Concern | Start here |
-| --- | --- |
-| Character creation/editing | `src/pages/build/`, then the related character hook and command |
-| Ability scores, HP, AC, skills, movement | `src/lib/calculations/` and `useCharacterCalculationContext` |
-| Class progression and choices | `src/lib/character/commands/classCommands.ts`, class page controllers |
-| Spells | `spellProfiles*`, `spellSlots.ts`, `spellCommands.ts`, spell hooks |
-| Equipment | `equipmentCommands.ts`, `equipmentHelpers.ts`, `useEquipment.ts` |
-| Readiness and Review | `src/lib/readiness/`, `src/pages/build/review/` |
-| Source filtering and reprints | `useFilteredGameData.ts`, `src/lib/5etools/filters.ts` |
-| Rules text and previews | `GameContent`, renderer modules, `RulesPreviewManager` |
-| Compendium | `src/lib/compendiumEntries.ts`, 5etools stat-block adapters, `src/pages/compendium/` |
-| PDF export | `src/lib/pdf/` |
-| Imports, copies, exports | `src/lib/character/characterTransfer.ts`, character store |
-| Updates and packaging | `electron/updateManager.ts`, update components, workflow files |
+Read [catalog startup](data-ingestion.md#startup-and-update-checks), [durable writes](state-management.md#saved-library-transactions), and [PDF projection](pdf-generation.md#pipeline) for those boundaries. The Compendium uses the global catalog rather than the character filter.
 
-## Stable boundaries
-
-### Character calculations
-
-`CharacterCalculationContext` is the shared boundary for effective scores, resolved entities,
-typed effects, equipment, rules metadata, HP, AC, prerequisites, spellcasting, readiness, and PDF
-inputs. React callers use `useCharacterCalculationContext`. Ordinary UI/export code must not treat
-persisted base ability scores as effective totals.
-Filtered game-data views and calculation contexts are reused across hooks for the same source
-settings, game-data object, and character object. Store updates must replace those objects when
-their contents change so the shared derived values are invalidated.
-
-### Character mutations
-
-User writes go through `updateCharacter(id, patch)` (or the active-character convenience wrappers).
-Commands own transition and cleanup semantics. `reconcileCharacter` is reserved for silent system
-corrections and must preserve dirty-draft behavior.
-
-### Spellcasting
-
-See [spell state](state-management.md#spell-state) for intent, derived casting and mutation adapters.
-
-### Parsed game data
-
-Canonical values originate from parsed entities. Simple entity references use complete name/source
-fields; class/subclass features also require owner and gain fields. Filtered resolution may retain
-exact raw fallback where the domain allows it. Never generalize one domain's legacy source-less
-exception into another resolver. See [Reference resolution](contracts/reference-resolution.md).
-
-### Rules content
-
-User-facing 5etools content goes through `GameContent`, which provides sanitization and source-aware
-recursive previews. PDFs and compact noninteractive projections may use the lower-level string
-renderer explicitly. Preview positioning and the shared pinned/transient chain belong to
-RulesPreviewManager and Floating UI helpers. The [preview contract](react-patterns.md#rules-preview-manager)
-records current creator integration limits.
-
-### Assets and responsive workspaces
+## Assets and responsive workspaces
 
 Runtime assets resolve through `src/lib/assetUrls.ts` so development and packaged `file://` paths
 behave alike. Documentation assets belong under `docs/assets/`; packaging artwork and its retained
 source belong under `build/`. Content pages use the shared
 centered width convention; `SplitPane` owns compact one-pane behavior and desktop collapse state.
 
-## Current high-level flows
+## Large selection lists
 
-[Data flow](data-flow.md) owns startup, domain mutation, draft/save and update sequences.
-The Compendium indexes editorial entities, including canonical creatures and context-qualified
-subclass features, rather than every repeated feature definition. Its creature model adapts the
-upstream 5etools bestiary renderer; React owns presentation.
+`SelectionModal` virtualizes the complete filtered result set with stable item IDs. Search, filters
+and virtualizer state stay local; canonical catalogs stay in `gameDataStore`. Incremental batches
+must not replace the full virtual range. Use `Number.POSITIVE_INFINITY` for an uncapped category.
+
+The shared workspace components own scroll and responsive pane behavior. Compact details selection does not toggle desktop collapse. Use the shared keyboard and ARIA behavior for tab lists. Portrait pan uses the card’s logical coordinates and commits once at drag end.
+
+## Rules preview manager
+
+Interactive 5etools content is sanitized and uses `GameContent` and one root `RulesPreviewManager`. Creator triggers
+and nested references use the wizard's catalog. Triggers pass immutable descriptors so a pinned
+preview survives route changes and virtual row unmounts.
+
+Two transient shells roll forward without moving the shell under the pointer. An explicit pin
+action controls the one independent draggable snapshot. Escape closes the newest transient
+first and restores focus without reopening the trigger. Ordinary dialogs, menus and listboxes
+retain their own focus and Escape behavior.
+
+The creator hosts the stable portal inside its viewport-fixed modal boundary before Radix hides
+siblings. Host changes clear transient previews and preserve the pin. Use Floating UI with the
+existing collision fallback, hover corridors and fade-only entry. Preview scrolling stays
+inside its own shell.
+
+Noninteractive compact text and PDF can use the lower-level renderer.
+
+## Desktop lifecycle
+
+Electron receives unsaved state and requests confirmation before close. Preferences/layout do not
+make characters dirty. Event-only preload subscriptions expose no native payload and return cleanup
+for their exact listener; consumers must unsubscribe on unmount.
+
+Electron allows one Tavern Born process per desktop profile. Starting it again restores or focuses
+the existing window and keeps its draft. Separate profiles can run independently.
+The pinned Windows portable builder uses `portable.unpackDirName: true` for a directory unique to
+each launch. This keeps the launcher from replacing a running instance's files before Electron
+checks the lock. Verify the setting against the installed builder when upgrading it.
+
+## Auto-update
+
+[updateManager](../electron/updateManager.ts) owns check/download/cancel/install IPC. Automatic
+checks run after saved preferences load and at the configured interval when enabled. Changing the
+setting starts or stops future scheduled checks. Manual checks are available either way.
+On macOS and Windows Portable, the update dialog links to the official release download page.
+Install the new Mac app from its DMG or replace the portable executable with the new download.
+Upgrading from macOS v0.6.0 or earlier starts on the
+[GitHub releases page](https://github.com/kevinkickback/Tavern-Born/releases).
+On Windows Setup and Linux, the notification offers installation and relaunch from the app.
+Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
+separately authorized [release workflow](../.github/workflows/release.yml).
 
 ## Dependency guardrails
 

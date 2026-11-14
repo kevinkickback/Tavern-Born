@@ -62,10 +62,10 @@ records omitted by that layer remain available from the base. Composition rebuil
 
 | Family | Composition boundary | Detailed contract |
 | --- | --- | --- |
-| Races/subraces | Compose raw identities before copies/versions and normalization. Parent replacement rebuilds children. | [Race ingestion](contracts/race-ingestion.md) |
-| Items and shared/type text | Compose retained raw rows/definitions before copies, generation and text expansion. Final caches contain ready projections. | [Item ingestion](contracts/item-ingestion.md) |
-| Class/subclass features | Re-link complete target UIDs, rebuild level groups/normalized choices, then validate required references. Intro content comes only from declared references. | [Feature references](contracts/feature-references.md) |
-| Other families | Overlay normalized collections by their complete identity. Repeated/nested records include structural owner/kind fields. | [Reference resolution](contracts/reference-resolution.md) |
+| Races/subraces | Compose raw identities before copies/versions and normalization. Parent replacement rebuilds children. | [Race ingestion](#race-copies-and-versions) |
+| Items and shared/type text | Compose retained raw rows/definitions before copies, generation and text expansion. Final caches contain ready projections. | [Item ingestion](equipment.md#catalog-and-templates) |
+| Class/subclass features | Re-link complete target UIDs, rebuild level groups/normalized choices, then validate required references. Intro content comes only from declared references. | [Feature references](#feature-references) |
+| Other families | Overlay normalized collections by their complete identity. Repeated/nested records include structural owner/kind fields. | [Reference resolution](#identity-and-entity-resolution) |
 
 Top-level names alone are not identities. Class feature identities include owner and level; item
 properties use abbreviation/source, with abbreviation fallbacks for existing saved values. Complete
@@ -115,136 +115,35 @@ not read arbitrary files or construct legal metadata independently.
 
 ## Loading rules
 
-External validation recognizes the optional nested capability `book/book-tce.json`. It uses the
-same authorized reader and bounded request pool; the Included SRD never requests it. Only a
-confirmed inventory entry permits the loader to consume the read from this check. A check can
-discover book-backed optional class features that an older inventory lacked.
-Both the legacy `data` array envelope and the current singleton `bookData` envelope with exact
-`TCE` id and source feed the same section checks. Malformed optional support is diagnosed without
-rejecting otherwise valid ordinary content.
+Each attempt uses a bounded pool of at most six requests and one cancellation identity, including expanded indexes. The Included SRD requires its entity files, class and spell indexes, and spell-source data. External layers can omit whole families but must supply complete, valid children for the indexes they declare. An authoritative empty collection is valid. Optional presentation files can degrade independently. Unreachable and empty catalogs never silently replace a usable catalog.
 
-`optionalClassSections` retains thirteen compact source-qualified sections and their exact book,
-chapter, class and optional-parent context, rather than the whole book. Independently reviewed
-semantic inputs are separate from ordinary descriptor generation. Changed/ambiguous context or
-body, missing source, or a missing current class granting declaration/progression leaves the
-section unavailable. Members never supply a missing section. Later provided section identities
-replace earlier candidates, retaining same-layer multiplicity for audit; omitted identities retain
-the base. Current unavailable records cannot borrow old certificates. Background transport failure
-retains the previous complete catalog under the existing refresh policy, rather than mixing revisions.
-The closed context includes chapter/class introductory prose, document metadata and unexpected
-structured ancestor entries. Only inventoried sibling frames/leaves are excluded; another known
-class's title/page/body does not govern this class, while its type/field shape and stable ID remain
-bounded. Each targeted class/section still requires its own complete context and exact identity.
-Sibling inventories record whether an `entries` field was absent or an array. A known array body
-may change or disappear; a new body on an entry-less node or a wrong-kind body remains unverified.
-This applies at the book root and chapter, class and leaf lists. Books-index and TCE metadata keys
-and value kinds are closed, while known publication/navigation values and unrelated books remain
-independent of optional rules. These optional certificates do not tighten ordinary book validation.
+### Source authority for class choices and casting
 
-Native optional class/subclass declarations use separate per-declaration records in
-`optionalClassFeatureSources`. They bind the complete actual owner, encoded target and enclosing
-gain to raw multiplicity, the exact local copy directive/lookup closure and complete retained
-ancestor bodies before parser enrichment. Production copy preparation is shared with parsing.
-Each declaration has its own scope: unrelated later declaration loss does not invalidate an
-earlier root. Current filtered ancestors may omit only unrelated qualified subclass-reference entries,
-preserving prose, metadata, order and the requested path. Unattached nested class references still
-require the exact current candidate collection. Empty current indexes remain authoritative.
-Winning owner/body identities replace their proof too, including absent or invalid incoming proof.
-Existing proficiency/body audits remain independent. Parsed cache57 retains these serializable
-records. Copies are materialized before composing layers; replacing a different owner without
-providing a winning consumed body does not re-materialize an omitted copied owner. The
-development semantic input is separate from ordinary generation; runtime rules retain
-compact hashes and typed entry frames, rather than copies of corpus prose. Source qualification
-alone neither adopts a feature nor implements its conditional benefits, spell grants or events.
+The external inventory can include optional `book/book-tce.json`. The loader accepts a legacy
+`data` array or a singleton `bookData` entry with exact TCE identity. Malformed optional
+support is diagnosed without rejecting otherwise valid content. A book-backed option needs
+the verified chapter, class, section, and current granting declaration.
 
-The indexed class loader resolves class copies through declared internal and indexed dependencies.
-It preserves the selected class's name, source, and overrides. Indexed subclass roots resolve
-one level of copying against declared internal and indexed dependencies. The resulting features keep their original
-source-qualified references. Starting and multiclass proficiency grants belong to the selected
-class printing. Inherited features use their own source checks for class casting, optional features,
-and other automated choices.
+Native optional-feature proof binds each exact owner, target and gain to its raw declaration,
+ancestor entries, and declared copy dependencies. One missing declaration does not invalidate
+an independent grant. Winning layers replace proof with the winning declaration. Explicitly
+empty, conflicting, or unavailable current evidence cannot borrow authority from older data.
 
-Each subclass feature resolves its nested references against the document that produced it
-and that document’s declared subclass-feature dependencies. Dependency bodies retain their
-original audits. Ambiguous targets carry a conflict and cyclic reference edges remain unresolved.
-Dependency records stay in the producer’s entity inventory.
-
-`node scripts/generate-copied-subclass-proficiency-roots.mjs --check` checks the generated
-proficiency roots for plain indexed copies. The generator reuses the printed subclass’s
-certified paths and records the copied owner’s retained first gain. Saved choices belong to
-the selected class and subclass. A rule that refers to the printed class’s starting skill
-pool uses that class’s current source, even when the selected copy has different starting skills.
-
-Inherited mastery and Fighting Style choices resolve the selected class's declared feature
-reference. The exact target supplies eligibility, while the selected class owns the saved choice.
-
-Shared feature digests canonicalize current input on every call. Only exact canonical strings and
-their SHA-256 values are reused in memory; source validity, ownership and multiplicity are always
-checked separately. Retention is bounded to 256 entries, 32,768 code units per signature and a
-512 KiB UTF-16 key/value payload charge (Map overhead is separately bounded by the entry limit).
-Oversized inputs are hashed normally without retention; mutation and exact restoration are observed.
-The same declaration channel also certifies ordinary granting dependencies for optional pool
-expansions. Metamagic Options and Maneuver Options require their exact current standard grant
-and structured progression; these dependency records remain standard features and never become
-optional adoptions or additional selections. Their absence suspends only the expanded route,
-retaining saved intent for exact restoration.
-
-Numeric casting declarations use a separate `classCastingSources` collection. The shared declaration
-resolver retains exact actual owners and requested feature targets; ordinary casting never becomes an
-optional adoption merely by sharing that resolver. Additional raw exact-one proofs bind consumed
-parent-class progression, preparation and table inputs. Parsed slot arrays must agree with the
-production table derivation. The casting audit treats numeric and ordinal link labels for the same
-explicit slot column as equivalent. It retains the link target, table rows and displayed data.
-When a subclass uses the standard-table fallback, current authority
-validates the actual helper-selected provider against the finite supported provider catalog; it does
-not choose a different provider from an approved-only subset. Winning parent/provider layers replace
-their proofs even when incoming proof is absent. Empty current evidence denies authority.
-Exact licensed bundled declarations and full native declarations are alternative whole packages
-within one producer; they never add another quota or saved slot identity. Raw auditing checks every
-known package before projection. Current resolution first checks the complete evidence group for
-closed shape, known certificates, one origin, one row per alternative and exactly one verified
-package, then validates that package's complete owner/root/body. Unknown or conflicting evidence
-cannot disappear through alternative filtering. Winning layers replace the entire group, so native
-parent metadata cannot be stitched to a different bundled feature body.
-The finite registry distinguishes level-earned cantrips/known spells, Wizard spellbook increments
-and separate Arcanum gains; daily leveled preparation creates no historical numeric acquisition.
-Simple class copies can use these same casting declarations when the current catalog proves the
-declared copy, exact feature and casting fields. Saved slots name the selected class and reference
-the original casting target. List membership still uses the selected class's current routes.
-`node scripts/generate-class-casting-copy-owners.mjs` derives the owner pairs used to validate
-saved intent offline. Changed casting features and transformed copies need their own authority.
-Multiple named subclass spell schedules need a resolved configuration. Independent unnamed
-schedules can still apply while the named schedules are unresolved.
-Declaration and dependency qualification alone do not create character spell choices or usage events.
-Ordinary `generate-class-casting-rules.mjs` checks the separate reviewed semantic input before writing
-rules and its source/helper manifest; it never recaptures semantic authority on source drift.
-The runtime registry shares repeated certificate and identity strings through generated constants.
-Its complete values and field order must equal the canonical JSON registry; this changes only emitted
-representation. The generator checks both outputs and includes the runtime module in its helper hashes.
-
-- The loader uses one bounded worker pool (maximum six requests), including expanded class/spell
-  indexes. Do not replace it with unbounded `Promise.all`.
-- Every load has a request identity and abort signal. Superseded progress, success, and failure are
-  ignored.
-- Bundled entity files, class/spell indexes, and spell-source association data are required. When a
-  source inventories a bestiary index, its referenced files are loaded through the same bounded
-  worker pool and retained as a creature catalog for character-option resolution; their sourcebooks
-  are not thereby exposed as selectable character-content books. For an external partial layer,
-  inventoried indexes and their children are validated together. Absent top-level families are
-  permitted. Fluff and presentation data are optional.
-- Settings and startup share candidate validation. Verified removals require confirmation.
-- A remote source with no reachable top-level resources fails instead of producing an empty catalog.
-- A bundled source with no readable top-level resources also fails instead of producing an empty
-  catalog.
-- Parser output and source ordering must be deterministic to avoid cache fingerprint churn.
+Numeric casting uses separate proof for the feature, prepared/known counts and actual source
+table provider. The licensed bundled and full native declarations are alternative whole
+packages. A single verified package supplies the quota and saved slot identity. A parser
+cannot combine a native parent with a different bundled feature body. The casting generator
+checks reviewed inputs and rejects source drift. Qualification alone grants no choices or
+usage events.
 
 ## Startup and update checks
 
 Startup uses a compatible cache that matches the configured source and installed pack. Otherwise
 it opens the Included SRD automatically. A session fallback preserves the configured source and
 its last saved catalog. The overlay offers **Retry** and **Change source** if neither local
-catalog is usable. If the pack is unavailable, recovery can admit a valid standalone external
-catalog.
+catalog is usable. Automatic startup checks allow 15 seconds per attempt and manual catalog
+operations allow up to 60 seconds. If the pack is unavailable, recovery can admit a valid
+standalone external catalog.
 
 With automatic checks enabled, startup checks the configured source after local data is available
 if there is no successful check or the last one was at least 24 hours ago. Returning focus can start
@@ -298,41 +197,167 @@ default branch. It is scheduled and can run manually. Ordinary CI uses local fix
 
 ## Parsing policy
 
-Inspect the relevant pinned upstream 5etools behavior before writing an equivalent parser, reference,
-filter or renderer. Reuse behind an adapter or adapt attributed data-only logic with parity checks;
-record why application-specific behavior is needed. Keep saved choices, calculations and persistence
-in the application. A browser-global upstream import needs its own trust/dependency assessment.
+Normalize source data once, preserving structured requirements and complete identities. Unsupported
+counted choice blocks stay diagnostic. A presentation group without a count does not create a pick.
+A generic template remains a reference entry until a supported generator builds a concrete item.
 
-Prefer structure supplied by 5etools. When upstream exposes a rule only as prose, an adapter must
-be narrow, ruleset/source-qualified, versioned, diagnostic when uncertain, and overridden by parsed
-structured data whenever that becomes available.
+### Race copies and versions
 
-The shared additional-spell normalizer preserves supported blocks, choices, counts, filters,
-abilities and schedules without assigning an actor. Race adapters retain their suite/level
-conventions; selected Class feature adapters establish actual ownership and supported missing
-semantics separately. Unknown syntax cannot partially grant benefits. A successfully parsed block
-does not certify arbitrary prose conditions or acquisition events; see [feature spell selection](contracts/spell-selection.md#selected-feature-cantrips).
+The data-only copy engine reads own properties and rejects prototype keys and unsafe paths or
+directives. Failed copies cannot alter prototypes or replace a usable catalog. Race parents use
+exact name/source. Subrace parents also include race name/source. Missing parents, cycles,
+unattached subraces and unsupported rules fail the completed catalog. Raw stacks may defer
+resolution until composition.
 
-Do not:
+Versions substitute template values, apply overrides and then run copy modifications. Honor
+explicit null removals. Subrace versions compose the exact parent before applying child version
+rules. They do not inherit parent version definitions. Complete versions retain their full
+mechanics and exact saved identity. Ordinary children keep domain-specific inheritance.
+Named race templates are unsupported.
+[Pinned upstream copy and version rules](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js) · [Pinned subrace merge](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/render.js)
 
-- edit `data/`;
-- put canonical game values in components;
-- infer source identity by name alone;
-- turn ambiguous prose into a guessed mechanical rule;
-- mix persisted compatibility aliases into validation of the current upstream catalog.
+Native additional spells preserve named suites, abilities, earned schedules and exact fixed or
+choice targets. Known, innate and prepared support direct, at-will, ritual and bounded daily/rest
+declarations. Daily can use `pb`. Expanded `s0`–`s9` grants list eligibility only. Whole-field
+null removes inheritance. Malformed or unsupported supplied blocks fail as a whole. No resource
+or rest-use tracking is created.
 
-Emergency content substitutions live in `sourceFallbacks.ts`; ruleset metadata gaps live in the
-explicit ruleset metadata module. Both must be testable and removable.
+Spell UIDs default an omitted source to PHB and retain printing and recognized casting modifiers.
+Filters require valid class or level constraints. An empty supplied class constraint cannot
+become unrestricted. Structural suite and descriptor IDs encode exact owner, grant kind and
+usage bucket. Equivalent casing and order preserve identity. Duplicate descriptors reject.
+The evaluator activates one valid suite, while the save retains its applied snapshot.
+[Native spell parser tests](../tests/lib/5etools/raceSpells.test.ts)
 
-Complete class/subclass UIDs, defaults, gain levels and lookup ambiguity are defined in
-[Feature references](contracts/feature-references.md).
+## Feature references
 
-Copy trust boundaries, race/subrace versions and native additional-spell grammar are defined in
-[Race ingestion](contracts/race-ingestion.md).
+The shared UID codec follows the pinned [5etools class reference format](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js).
+A class feature needs its name, class name and printing, positive gain level and feature printing.
+Subclass features also require the subclass short name and printing in their own UID field order.
+Blank class and subclass sources default to PHB. A blank feature source uses the decoded class
+source for a class feature and the decoded subclass source for a subclass feature.
+Compare normalized fields without rewriting raw UIDs. Explicit conflicts and incomplete or
+ambiguous targets remain unresolved.
+
+A complete encoded level overrides attached metadata. A malformed nonempty UID cannot borrow a
+level. A row without a UID can use a valid explicit or attached level. Subclass gain defaults to
+level 3 only when no class reference is marked as the subclass gain.
+
+### Composition and subclass presentation
+
+Layering re-resolves complete targets and rebuilds owning rules before required-reference
+validation. A repeated label or selected parent cannot fill a missing target owner. Keep actual
+selected owner, declaring feature and target identities separate. Intro presentation follows the
+declared intro references. Raw unavailable details may remain readable without granting rules.
+Legacy stored name/source descriptions can enrich only on one unique owner/level match.
+
+Builder follows the selected class and subclass's direct references, including exact targets
+printed under another class. This keeps inherited descriptions and the Epic Boon choice tied
+to the selected owner. Supported resource counters also require a matching declared feature
+and the selected class's own table. Their saved counters are separate across printings.
+An inherited Epic Boon claim retains its exact declaration so it can suspend or be cleared
+when the class source is withdrawn.
+
+Exact standalone use clauses can supply an ability-based maximum, a single-use pool, a dice
+pool, or a fixed number of slot-free casts. Existing counters take precedence. Saved remaining
+uses belong to the actual class or subclass owner and the qualified feature. Spell preparation
+and manual use tracking have separate rules.
+
+### Internal subclass-feature copies
+
+Resolve copies before reference expansion, with the shared data-only copy engine. Match all seven
+fields and retain the copied row's owner and level. Nested references keep their original targets.
+The indexed `_meta.dependencies.subclassFeature` scope supplies copy parents and exact referenced
+features. Dependency rows stay in their producer documents. Missing, ambiguous, cyclic, unsafe or
+unsupported copies fail the required class resource. [Copy tests](../tests/lib/5etools/subclassFeatureCopies.test.ts)
+
+### Source-backed feature options
+
+A structured option saves its canonical feature, table/row or source-group address, actual
+selected owner and earned slot. Current exact rules determine its pool and derived benefit.
+Classic Dragon Ancestor uses a table row. Revised Elemental Affinity uses an authored damage
+type. Conflicting, absent or filtered declarations preserve saved selections for recovery without
+granting benefits. Opening and cancelling leave the save alone. Clear removes the addressed owner.
+
+An authored companion table keeps the pet family separate from its qualified creature stat
+block. The family may occupy one ordinary Weapon Mastery slot for its Beast's Strike. Changing
+the family releases that allocation, and changing forms within one family preserves it. Earned
+specialization rules show their conditions with the companion. Existing generic companions
+remain valid without a family. A family that requires a separate taming ability displays that
+prerequisite.
+
+### Required setup diagnostics
+
+A known, reachable declaration with unverified rules reports a setup gap. The bounded detectors
+cover Storm Aura, Natural Explorer, Favored Enemy, Canny and Mystic setup. They never guess counts
+or reconstruct wholly pruned rules. An adopted unavailable replacement has one restore-or-clear
+duty. An empty diagnostics list does not qualify all class choices.
+
+### Specialized setup
+
+- Storm Aura, Natural Explorer and Favored Enemy retain distinct earned choices. Campaign-authored
+  humanoid labels are literals, and an explicit language assertion or none belongs to its own gain.
+- Canny and other Expertise choices require current qualifying proficiency. Paired
+  proficiency/Expertise uses its declared order. Save each provider separately so removal
+  preserves independently earned proficiency and Expertise.
+- Conditional proficiencies use exact declarations and the effective character. Unknown conditions
+  require review. [Class choice normalization tests](../tests/lib/5etools/classChoiceNormalization.test.ts)
+
+## Identity and entity resolution
+
+Compare trimmed name and source fields independently. Resolve the exact filtered record, then
+the exact raw record for a retained selection. New picks remain in the eligible filtered pool.
+A unique candidate cannot supply a missing printing. Source-less custom equipment and manual
+spells retain their saved facts without catalog enrichment. Display aliases never replace IDs.
+
+Fixed feats and saved spell options remain visible through filtering or source absence.
+Opening, cancelling and unchanged confirmation preserve ownership. A missing exact target
+requires restoration or replacement before finishing a new edit. Keep unmatched saved choices
+visible for explicit removal. Apply setup through the exact owner. [Feat ownership](provenance.md#feat-setup-ownership)
+
+## Ruleset compatibility
+
+`originSystem` selects the PHB/XPHB, DMG/XDMG and MM/XMM replacement families. 2014 cannot use
+revised entities. 2024 can use older supplements and the explicitly unreplaced PHB options.
+A revised replacement wins before same-edition reprint preferences. Missing, ambiguous and
+cyclic reprint targets do not establish a replacement.
+
+Qualified legacy subclass and option dependencies resolve under their exact current owner and
+declared target. They do not enable a source globally. Conflicts, duplicate targets and explicitly
+empty scopes cannot acquire authority from embedded or raw recovery data. The Compendium's
+global catalog remains separate from character filtering. The applicable PHB or XPHB is implicit.
+Bundled public items use the shared player-item policy. Their DMG/MM or XDMG/XMM provenance
+does not enable those books for general selection.
+
+## Source removal
+
+Commit allowed sources, pruning and provenance together. Retain numeric and daily spell intent
+while suspending unavailable benefits. Racial and Bonus pruning retracts only the removed exact
+printing and its addressed owner. A fixed grant protects its exact profile target only. Removing
+one owner preserves independent grants, preparation and usage. Re-enabling sources does not
+recreate explicitly pruned racial or Bonus choices.
+[Pruning tests](../tests/lib/nonracialSourcePruning.test.ts)
+
+## Spell enrichment
+
+Spell routes bind exact spell and class printings, base or variant channel, and any defining
+source alternatives. Invalid declarations or duplicates cannot become unrestricted memberships.
+Retain source-local audit evidence through layers and parsed cache. A winning layer replaces
+the whole producer package. A changed or explicitly empty lookup replaces previous evidence.
+Filtering checks target, owner and defining sources independently. An empty current view stays
+empty. Base and variant lists remain separate. Missing casting tables provide no invented
+capacity. [Route tests](../tests/lib/spellRouteSources.test.ts)
 
 ## Prerequisite eligibility
 
-See [Prerequisite eligibility](contracts/reference-resolution.md#prerequisite-eligibility).
+Upstream prerequisite blocks are alternatives. Conditions within a block all apply. Ability maps
+require every named score, and separate maps are alternatives. Class-qualified levels use the
+exact matching class/subclass and printing, without adding unrelated class levels.
+
+The shared checker distinguishes met, unmet and unsupported. A met alternative is sufficient.
+Malformed or unknown conditions require review. A known failure makes its own block unmet.
+Known spell names use the shared logical identity. Filtered spell choices and unknown suffixes
+remain unsupported.
 
 ## Compound reference collections
 
@@ -342,87 +367,13 @@ references. Condition/status tags default to PHB. Disease and trap/hazard tags d
 Disease previews require a disease tag. Compendium reference availability is global. Character
 condition controls and immunity names exclude diseases and statuses.
 
-## Normalized capabilities
-
-The parser layer owns normalization that would otherwise be repeated across pages, including:
-
-- class/subclass feature references, copied subclasses, spellcasting, resources, ritual casting,
-  ASIs, and source-owned class and subclass choice descriptors;
-- creature choices expressed as explicit stat-block references or structured bestiary filters,
-  including type, size, challenge rating, and swarm exclusions;
-- background origin rules, source-qualified narrative entries, and starting-equipment blocks;
-- race versions/lineages, structured traits, and presentation entries;
-- conditions versus diseases and structured rules entries;
-- item type labels, generic magic variants, mastery definitions, generic equipment candidates;
-- feat fixed references and unconditional lasting effects;
-- fluff summaries and optional images/sections.
-
-Generic magic variants prefer their own reference entries over inherited base-item templates.
-When inherited entries are used, `{=field}` values are filled from the variant's structured
-metadata before display; unknown values receive a visible fallback.
-Sourcebook and adventure metadata IDs are matched without regard to case so their full names
-appear in source lists, including the global Compendium filter.
-
-The shared `getRaceTraits` presentation helper further excludes the descriptive Age entry from
-gameplay-trait lists in the builder, creation wizard, and PDFs. Ingestion retains the original
-entry for ancestry reference text; this display policy does not discard source data or require a
-cache migration.
-
-Choice normalizers preserve class/subclass owner, level, capacity, replacement rule, source filters,
-and diagnostic provenance. Unsupported counted choice blocks remain visible as diagnostics instead of
-becoming invented options. Countless presentation groups do not imply a choice; known mandatory setup
-has [source-confirmed diagnostics](contracts/feature-references.md#required-setup-diagnostics).
-Optional-feature and feat progression remain the count owners when feature prose
-repeats the same choice. Feature variants retain replacement metadata so the character's optional
-class-feature setting can swap the original and replacement choice without showing both.
-
-## Identity and entity resolution
-
-See [Reference resolution](contracts/reference-resolution.md#identity-and-entity-resolution) for exact target matching, retained choices, feat editing and restoration.
-
-## Ruleset compatibility
-
-See [Ruleset compatibility](contracts/reference-resolution.md#ruleset-compatibility) for source families, filtering and the global Compendium boundary.
-
-## Spell enrichment
-
-See [Spell enrichment](contracts/reference-resolution.md#spell-enrichment) for canonical class-list associations and slot tables.
-
 ## Items and starting equipment
 
-See [Item ingestion](contracts/item-ingestion.md) for exact equipment resolution, shared text, primary/supplemental type rules, template references and starting-equipment selection.
-
-### Fixed-bonus shields
-
-See [Fixed-bonus shields](contracts/item-ingestion.md#fixed-bonus-shields) for the six supported combinations and generation limits.
+An actual `baseitem` row carries Basic classification through copies, layering and cache reload. Missing collection metadata does not inherit the parent’s classification. Other and generated variants stay Other. See [Equipment](equipment.md#catalog-and-templates) for generation and saved rules.
 
 ## Cache compatibility
 
-The current parsed cache schema version is defined in [dataCache](../src/lib/storage/dataCache.ts).
-Use that constant when changing code.
-
-Starting-item Basic classification records each parsed item's own input collection. Actual `baseitem`
-rows are Basic; ordinary items/groups and unknown array-only inputs are Other. Copy resolution restores
-that own category rather than inheriting it, generated variants remain Other, and winning layers/cache
-round trips retain the boundary. A filename, source abbreviation or missing rarity cannot establish Basic.
-Unmarked nonparser inputs retain absence and cannot inherit a parent's marker. Tool source certificates
-exclude only this root collection marker from semantic hashes; full projection integrity and matching
-raw/current marker ownership still protect restoration. Mechanical and nested copy rules remain certified.
-
-Cache entries include a normalization schema version. Increment it whenever parser-owned normalized
-output or layer composition changes in a way that makes previous cached data unsafe. Character
-schema changes are a separate concern and follow [State Management](state-management.md).
-Native Warlock patron rule exports use the current owner-qualified feature records. Older parsed
-caches rebuild these attachments so unverified inline or copied bodies cannot supply the rules.
-The item-property display update invalidates older caches so property definitions collapsed by
-layer composition are rebuilt; the property hook can also rebuild missing lookup entries from the
-parsed definitions in a cached catalog.
-
-Layered cache identity includes the stable bundled pack ID/version and the selected external source.
-An application update therefore invalidates a composition built on an older bundled snapshot, while
-changing or removing external content selects a different cache identity. Successful layered loads
-also persist each layer's normalized-content fingerprint and entity count, allowing diagnostics to
-identify which layer changed without weakening source-identity cache matching.
+The [parsed schema version](../src/lib/storage/dataCache.ts) changes when parser or composition updates make earlier projections unsafe. Identity binds the installed Included SRD pack and the configured external source. Cache repair only writes over the same generation. Character format is independent.
 
 ## Adding a data family
 

@@ -123,42 +123,18 @@ matching current derived note from the unsupported-mechanic warning. A shortened
 Notes, stale terrain text or unrelated conditional effect cannot supply this proof; ordinary omission
 and truncation warnings remain.
 
-Sorcerer sheets use the same current resource counts as the manual Class Resources controls.
-The 2014 custom form keeps the counters in its limited-feature table and prints the full recovery
-rules in Class Features. The other forms include both in their feature fields. Full descriptions
-print the current selected Metamagic option's rules in its existing feature row. Names-only
-exports keep the option names and the resource counts and recovery.
+Class and subclass rules come from the shared character projection. Sorcerer and inherited
+resource counts and recovery remain visible in both description modes. Names-only exports keep earned feature
+labels and omit optional rules prose. When full action text continues in Notes, the original
+feature row retains its label. Exact source and owning class determine which rules and counters
+appear. A spell row and a companion or class feature can describe different parts of the same
+grant and still need separate fields.
 
-Inherited class and subclass counters use the same projection, including table-derived partial
-recovery. The 2014 custom form uses its limited-feature rows with abbreviated recovery, and the
-other forms include available and maximum counts in their feature fields. Full recovery text
-remains in the feature fields in both description modes. Overflowed inherited counters, cut-off
-recovery and clipped owner labels continue onto Notes when enabled. Counters with matching
-labels identify their owning class and, when needed, its source.
-
-Revised Draconic Sorcery prints the earned Dragon Companion rules in Class Features.
-The separate Summon Dragon spell row continues to show its prepared status.
-Native Draconic Sorcerers print the earned level-14 Dragon Wings rules for their edition.
-Classic Draconic Bloodline also prints the earned level-18 Draconic Presence rules.
-The 2014 custom form keeps the feature labels in Class Features when their rules print in
-action Notes. Names-only exports keep the feature labels.
-
-Warlock sheets print the current selected Pact of the Blade rule. The classic Pact Boon
-and revised Eldritch Invocation use their own source text, including when the character
-uses a sheet template from the other edition. The 2014 custom form keeps the feature
-label in Class Features when action Notes carry the full rule. Names-only exports keep
-the label.
-
-Full descriptions also print the current selected PHB rules for Agonizing Blast, Devil's
-Sight, Eldritch Spear, and Repelling Blast in their feature rows. The three blast rules
-follow the character's current Eldritch Blast eligibility. Names-only exports keep the
-selected feature labels.
-
-Native Archfey, Celestial, and Great Old One patrons print their current earned subclass rules
-through Class Features and Notes. When the classic custom sheet preserves an exact generated
-rule in action Notes, its feature row keeps the label. Revised patron spell tables appear in
-full descriptions from the subclass gain. Spell fields continue to show the character's earned
-spells, and names-only keeps the feature labels.
+For those counters, the 2014 custom sheet puts counts and abbreviated recovery in its
+limited-feature rows. Full
+recovery also appears in Class Features. Other templates put counts and recovery in the feature
+fields. Notes can preserve overflow. Counters with matching labels qualify their owning class
+and, when needed, its source.
 
 ## Spells and companions
 
