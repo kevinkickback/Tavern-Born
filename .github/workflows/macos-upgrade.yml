@@ -1,0 +1,70 @@
+name: Stage macOS upgrades
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/macos-upgrade.yml
+      - .github/workflows/release.yml
+      - electron/updateManager.ts
+      - scripts/ci/*macos*
+
+permissions:
+  contents: read
+
+jobs:
+  stage:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Inspect the exact published v0.6.0 macOS bundle
+        run: |
+          test "$(uname -m)" = arm64
+          legacy="$RUNNER_TEMP/Tavern-Born-0.6.0-arm64.dmg"
+          curl --fail --location --retry 3 --output "$legacy" \
+            https://github.com/kevinkickback/Tavern-Born/releases/download/v0.6.0/Tavern-Born-0.6.0-arm64.dmg
+          printf '%s  %s\n' af3ff2cb863d7df3935e7d998fd07987ebb784de86c0c64508a8e24c5bc1a98b "$legacy" | shasum -a 256 -c
+          mount="$RUNNER_TEMP/tb-legacy-dmg"
+          mkdir -p "$mount" "$RUNNER_TEMP/tb-legacy"
+          hdiutil attach -mountpoint "$mount" -readonly -nobrowse "$legacy"
+          trap 'hdiutil detach "$mount"' EXIT
+          app="$RUNNER_TEMP/tb-legacy/Tavern-Born.app"
+          ditto "$mount/Tavern-Born.app" "$app"
+          codesign -dvv -r- "$app"
+          if codesign --verify --deep --strict --verbose=2 "$app"; then
+            echo 'Published v0.6.0 passed native signature verification.'
+          else
+            echo 'Published v0.6.0 failed native signature verification.'
+          fi
+      - run: npm ci
+      - name: Build staged v0.7.0 without publishing
+        run: |
+          npm pkg set version=0.7.0
+          npm run dist -- --mac --arm64 --publish never
+      - name: Check the staged ZIP against the published app's update requirement
+        run: |
+          legacy="$RUNNER_TEMP/tb-legacy/Tavern-Born.app"
+          requirement="$(codesign -d -r- "$legacy" 2>&1 | sed -n 's/^designated => //p')"
+          test -n "$requirement"
+          test -s release/Tavern-Born-0.7.0-arm64.dmg
+          test -s release/Tavern-Born-0.7.0-arm64.dmg.blockmap
+          test -s release/Tavern-Born-0.7.0-arm64-mac.zip.blockmap
+          mkdir -p "$RUNNER_TEMP/tb-staged"
+          ditto -x -k release/Tavern-Born-0.7.0-arm64-mac.zip "$RUNNER_TEMP/tb-staged"
+          staged="$RUNNER_TEMP/tb-staged/Tavern-Born.app"
+          codesign -dvv -r- "$staged"
+          cat release/latest-mac.yml
+          if codesign --verify --deep --strict --all-architectures --test-requirement "$requirement" "$staged"; then
+            echo 'The staged ZIP satisfies the exact v0.6.0 code requirement.'
+          else
+            echo 'The staged ZIP failed the exact v0.6.0 code requirement.'
+          fi
