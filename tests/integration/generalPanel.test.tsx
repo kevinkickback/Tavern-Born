@@ -1,7 +1,8 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { GeneralPanel } from '@/components/settings/GeneralPanel'
+import { useAppUpdatePreference } from '@/hooks/useAppUpdatePreference'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 const { resetAllHintsMock } = vi.hoisted(() => ({
@@ -14,7 +15,7 @@ vi.mock('@/lib/storage/hints', () => ({
 
 function installElectronApi(checkForUpdate: ReturnType<typeof vi.fn>) {
   const unsubscribe = vi.fn()
-  const setAutoCheck = vi.fn()
+  const setAutoCheck = vi.fn(async (_enabled: boolean) => undefined)
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,
     value: {
@@ -30,6 +31,11 @@ function installElectronApi(checkForUpdate: ReturnType<typeof vi.fn>) {
   return { setAutoCheck, unsubscribe }
 }
 
+function AppUpdateSettings() {
+  useAppUpdatePreference()
+  return <GeneralPanel />
+}
+
 describe('general update settings', () => {
   beforeEach(() => {
     useAppPreferencesStore.setState({ autoUpdate: true })
@@ -37,12 +43,57 @@ describe('general update settings', () => {
 
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
-  test('describes automatic checks without promising automatic installation', async () => {
+  test.each([
+    false,
+    true,
+    undefined,
+  ])('waits for the stored automatic update preference %s before configuring the updater', async (autoUpdate) => {
     const user = userEvent.setup()
-    const { setAutoCheck } = installElectronApi(
+    const checkForUpdate = vi.fn(async () => ({
+      success: true,
+      data: { status: 'not-available' },
+      error: null,
+    }))
+    const { setAutoCheck } = installElectronApi(checkForUpdate)
+    const storage = useAppPreferencesStore.persist.getOptions().storage!
+    let resolveStored!: (value: Awaited<ReturnType<typeof storage.getItem>>) => void
+    const stored = new Promise<Awaited<ReturnType<typeof storage.getItem>>>((resolve) => {
+      resolveStored = resolve
+    })
+    vi.spyOn(storage, 'getItem').mockReturnValue(stored)
+    const hydration = useAppPreferencesStore.persist.rehydrate()
+
+    render(<AppUpdateSettings />)
+    const toggle = screen.getByRole('switch')
+    expect(toggle.hasAttribute('disabled')).toBe(true)
+    expect(setAutoCheck).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolveStored(autoUpdate === undefined ? null : { state: { autoUpdate }, version: 0 })
+      await hydration
+    })
+    const enabled = autoUpdate ?? true
+    expect(setAutoCheck.mock.calls).toEqual([[enabled]])
+    expect(toggle.getAttribute('aria-checked')).toBe(String(enabled))
+    expect(toggle.hasAttribute('disabled')).toBe(false)
+
+    await user.click(toggle)
+    await user.click(toggle)
+    expect(setAutoCheck.mock.calls).toEqual([[enabled], [!enabled], [enabled]])
+
+    if (!enabled) {
+      await user.click(screen.getByRole('button', { name: 'Check Now' }))
+      expect(checkForUpdate).toHaveBeenCalledTimes(1)
+      expect(await screen.findByRole('button', { name: 'Up to Date' })).toBeTruthy()
+    }
+  })
+
+  test('describes automatic checks without promising automatic installation', () => {
+    installElectronApi(
       vi.fn(async () => ({ success: true, data: { status: 'not-available' }, error: null })),
     )
 
@@ -55,9 +106,6 @@ describe('general update settings', () => {
       ),
     ).toBeTruthy()
     expect(screen.queryByText(/install updates automatically/i)).toBeNull()
-
-    await user.click(screen.getByRole('switch'))
-    expect(setAutoCheck).toHaveBeenCalledWith(false)
   })
 
   test('finishes a manual check and displays a returned updater error', async () => {

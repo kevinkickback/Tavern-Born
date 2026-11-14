@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
@@ -113,3 +114,10 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
     },
   ),
 )
+
+export function useAppPreferencesHydrated() {
+  return useSyncExternalStore(
+    useAppPreferencesStore.persist.onFinishHydration,
+    useAppPreferencesStore.persist.hasHydrated,
+  )
+}

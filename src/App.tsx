@@ -19,6 +19,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
 import { useDataInit } from '@/hooks/data/useDataInit'
+import { useAppUpdatePreference } from '@/hooks/useAppUpdatePreference'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -156,6 +157,7 @@ function CloseConfirmDialog() {
 
 function App() {
   useDataInit()
+  useAppUpdatePreference()
 
   const themeAccent = useAppPreferencesStore((s) => s.themeAccent)
   const themeAppearance = useAppPreferencesStore((s) => s.themeAppearance)
@@ -192,12 +194,6 @@ function App() {
   useLayoutEffect(() => {
     applyUiScale(uiScale)
   }, [uiScale])
-
-  useEffect(() => {
-    if (!window.electronAPI?.setAutoCheck) return
-    const { autoUpdate } = useAppPreferencesStore.getState()
-    void window.electronAPI.setAutoCheck(autoUpdate)
-  }, [])
 
   useEffect(() => {
     const api = window.electronAPI

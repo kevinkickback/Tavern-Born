@@ -106,7 +106,9 @@ separate promise to preserve released v1.x characters.
 ## Auto-update
 
 [updateManager](../electron/updateManager.ts) owns check/download/cancel/install IPC. Automatic
-checks run after startup and at the configured interval when enabled. Notifications offer download;
-completed installers require the update modal before relaunch. Portable builds do not auto-install.
+checks run after saved preferences load and at the configured interval when enabled. Changing the
+setting starts or stops future scheduled checks. Manual checks are available either way.
+Notifications offer download. Completed installers require the update modal before relaunch.
+Portable builds do not auto-install.
 Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
 separately authorized [release workflow](../.github/workflows/release.yml).
