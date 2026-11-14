@@ -340,15 +340,27 @@ export function generateMaterialArmor(data: GameData, definitions: readonly Row[
   return generateEquipmentVariants(data, definitions, 'materialArmor')
 }
 
-const MATERIAL_ARMOR_FIELDS = new Set([...INHERITED_FIELDS, 'strength', 'stealth'])
+const MATERIAL_ARMOR_FIELDS = new Set([...INHERITED_FIELDS, 'nameSuffix', 'strength', 'stealth'])
 
 function validMaterialArmor(inherited: Row, material: string): boolean {
   return (
     inherited.namePrefix === `${material} ` &&
+    inherited.nameSuffix === undefined &&
     inherited.bonusAc === undefined &&
     (material === 'Mithral'
       ? inherited.strength === null && inherited.stealth === false
       : inherited.strength === undefined && inherited.stealth === undefined)
+  )
+}
+
+function validSupplementalArmor(inherited: Row, enhanced: boolean): boolean {
+  const { namePrefix, nameSuffix, bonusAc, strength, stealth } = inherited
+  return (
+    ((typeof namePrefix === 'string' && !!namePrefix.trim() && nameSuffix === undefined) ||
+      (typeof nameSuffix === 'string' && !!nameSuffix.trim() && namePrefix === undefined)) &&
+    (enhanced
+      ? bonusAc === '+1' && strength === null && stealth === false
+      : bonusAc === undefined && strength === undefined && stealth === undefined)
   )
 }
 
@@ -378,7 +390,8 @@ const FIXED_PATTERNS = {
   armor: /^\+([123]) Armor$/,
   ammunition: /^\+([123]) Ammunition$/,
   resistanceArmor: /^Armor of .+ Resistance$/,
-  materialArmor: /^(Mithral|Adamantine) Armor$/,
+  materialArmor:
+    /^(?:(Mithral|Adamantine) Armor|Armor of Gleaming|Cast-Off Armor|Smoldering Armor|(Mithral \+1 Armor))$/,
 }
 const BASE_VALIDATORS = {
   shield: validShieldBase,
@@ -443,9 +456,20 @@ function generateEquipmentVariants(
     generated = new Map<string, Item5e[]>()
   for (const definition of definitions) {
     const match = FIXED_PATTERNS[family].exec(String(definition.name))
-    if (!match || !['DMG', 'XDMG'].includes(String(definition.source))) continue
-    const source = String(definition.source),
-      baseSource = source === 'DMG' ? 'PHB' : 'XPHB',
+    if (!match) continue
+    const source = String(definition.source)
+    const supplemental = materialArmor && !match[1]
+    if (
+      !(supplemental
+        ? match[2]
+          ? source === 'AI'
+          : source === 'XGE' || source === 'XDMG'
+        : source === 'DMG' || source === 'XDMG')
+    )
+      continue
+    const baseSource = (supplemental ? definition.edition === 'classic' : source === 'DMG')
+        ? 'PHB'
+        : 'XPHB',
       path = `${definition.name}|${source}`
     const inherited = record(definition.inherits),
       requires = definition.requires,
@@ -461,12 +485,14 @@ function generateEquipmentVariants(
           inherited.rarity === 'unknown')) ||
       (definition.hasFluffImages !== undefined && typeof definition.hasFluffImages !== 'boolean') ||
       !validMetadata(inherited) ||
-      definition.type !== `GV|${source}` ||
+      definition.type !== (source === 'XDMG' ? 'GV|XDMG' : 'GV|DMG') ||
       inherited.source !== source ||
       (resistanceArmor
         ? !validResistanceArmor(inherited, String(definition.name), source)
         : materialArmor
-          ? !validMaterialArmor(inherited, match[1])
+          ? supplemental
+            ? !validSupplementalArmor(inherited, Boolean(match[2]))
+            : !validMaterialArmor(inherited, match[1])
           : inherited.namePrefix !== `+${match[1]} ` || inherited[bonusField] !== `+${match[1]}`) ||
       !Array.isArray(inherited.entries) ||
       !Object.keys(inherited).every((k) => inheritedFields.has(k)) ||
@@ -484,7 +510,7 @@ function generateEquipmentVariants(
       const encoded = JSON.stringify(inherited.entries).replace(
         /\{=([^}]+)}/g,
         (_token, field: string) => {
-          if (materialArmor || field !== bonusField) unsupported = true
+          if (field !== bonusField || inherited[bonusField] === undefined) unsupported = true
           return String(inherited[bonusField])
         },
       )
@@ -542,9 +568,7 @@ function generateEquipmentVariants(
       for (const [key, value] of Object.entries(inherited))
         if (!['namePrefix', 'nameSuffix', 'entries', 'reprintedAs'].includes(key))
           output[key] = structuredClone(value)
-      output.name = resistanceArmor
-        ? `${base.name}${inherited.nameSuffix}`
-        : `${inherited.namePrefix}${base.name}`
+      output.name = `${inherited.namePrefix ?? ''}${base.name}${inherited.nameSuffix ?? ''}`
       output.entries = structuredClone([...entries, ...((base.entries ?? []) as unknown[])])
       const baseName = String(base.name)
       output.baseItem = `${baseName.toLowerCase()}|${baseSource.toLowerCase()}`

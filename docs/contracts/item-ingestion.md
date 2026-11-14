@@ -33,6 +33,19 @@ concrete tuples win. Ambiguous or malformed inputs do not generate a substitute.
 rules keep exact printing and legal source identity. Changing generation invalidates the
 parsed cache without rewriting saved inventory. [Equipment state](equipment-state.md)
 
+### Additional armor templates
+
+Gleaming, Cast-Off, Smoldering, and Mithral +1 use the shared armor generator. The
+template's edition and authored requirements and exclusions select eligible public armor
+bases. An editionless template matches revised bases under the upstream default. The
+generic type code identifies the schema for the template. Its inherited source supplies
+the actual printing used for source access and exact lookup. A generated item's base
+edition cannot mark its whole sourcebook as revised-only.
+
+The generator applies the authored name affix and retains the base's physical fields.
+Mithral +1 contributes the declared AC bonus and removes Strength and Stealth penalties.
+Gleaming, Cast-Off, and Smoldering preserve their rules as item text.
+
 ### Fixed-bonus weapons
 
 The canonical +1, +2 and +3 weapon templates generate concrete weapons from direct

@@ -22,8 +22,9 @@ import { addManualEquipmentBatchCommand } from '@/lib/character/commands/equipme
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 import { renderEntriesToText } from '@/lib/entryText'
 import { buildItemDetailFields } from '@/lib/itemDetailFields'
+import { normalizeSelectableAllowedSources } from '@/lib/sourceCompatibility'
 import { useCharacterStore } from '@/store/characterStore'
-import type { GameData } from '@/types/5etools'
+import type { GameData, Item5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -44,6 +45,41 @@ function collection(payload: unknown, field: string): unknown[] {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return []
   const value = (payload as Record<string, unknown>)[field]
   return Array.isArray(value) ? value : []
+}
+
+async function saveAndReopenEquipment(
+  items: Item5e[],
+  originSystem: Character['originSystem'],
+  equippedName?: string,
+) {
+  await clear()
+  await useCharacterStore.persist.rehydrate()
+  const character = await useCharacterStore
+    .getState()
+    .addCharacter(makeCharacterFixture({ originSystem, equipment: [] }))
+  const { characterPatch, provenanceUpdate } = addManualEquipmentBatchCommand(
+    character,
+    character.provenance,
+    items,
+  )
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  useCharacterStore.getState().updateCharacter(character.id, {
+    ...characterPatch,
+    equipment: characterPatch.equipment?.map((item) =>
+      item.name === equippedName ? { ...item, equipped: true } : item,
+    ),
+    provenance: provenanceUpdate,
+  })
+  await useCharacterStore.getState().saveActiveCharacter()
+  const stored = await get<{ state: { characters: Character[] } }>('character-storage')
+  const saved = characterPersistenceSchema.parse(
+    stored?.state.characters.find((row) => row.id === character.id),
+  )
+  useCharacterStore.getState().setActiveCharacter(null)
+  await useCharacterStore.persist.rehydrate()
+  useCharacterStore.getState().setActiveCharacter(character.id)
+  expect(useCharacterStore.getState().activeCharacter).toEqual(saved)
+  return saved
 }
 
 describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', () => {
@@ -166,30 +202,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     for (const source of ['DMG', 'XDMG']) {
       const items = actual.filter((item) => item.source === source)
       const originSystem = source === 'DMG' ? '2014' : '2024'
-      await clear()
-      await useCharacterStore.persist.rehydrate()
-      const character = await useCharacterStore
-        .getState()
-        .addCharacter(makeCharacterFixture({ originSystem, equipment: [] }))
-      const { characterPatch, provenanceUpdate } = addManualEquipmentBatchCommand(
-        character,
-        character.provenance,
-        items,
-      )
-      useCharacterStore.getState().setActiveCharacter(character.id)
-      useCharacterStore.getState().updateCharacter(character.id, {
-        ...characterPatch,
-        provenance: provenanceUpdate,
-      })
-      await useCharacterStore.getState().saveActiveCharacter()
-      const stored = await get<{ state: { characters: Character[] } }>('character-storage')
-      const saved = characterPersistenceSchema.parse(
-        stored?.state.characters.find((row) => row.id === character.id),
-      )
-      useCharacterStore.getState().setActiveCharacter(null)
-      await useCharacterStore.persist.rehydrate()
-      useCharacterStore.getState().setActiveCharacter(character.id)
-      expect(useCharacterStore.getState().activeCharacter).toEqual(saved)
+      const saved = await saveAndReopenEquipment(items, originSystem)
       expect(saved.equipment).toHaveLength(16)
       const lookup = gameData.lookups!
       for (const [index, equipment] of saved.equipment.entries()) {
@@ -238,6 +251,121 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     }
     await clear()
   }, 30_000)
+  it('verifies all 77 additional armor variants through inventory, reopen, details and exports', async () => {
+    const mithralBases = [
+      'Breastplate',
+      'Chain Mail',
+      'Chain Shirt',
+      'Half Plate Armor',
+      'Plate Armor',
+      'Ring Mail',
+      'Scale Mail',
+      'Splint Armor',
+    ]
+    const mediumAndHeavy = [...mithralBases, 'Hide Armor']
+    const all = [...mediumAndHeavy, 'Leather Armor', 'Padded Armor', 'Studded Leather Armor']
+    const templates = [
+      ['Armor of Gleaming', 'XGE', mediumAndHeavy, '', ' of Gleaming', /never gets dirty/i],
+      ['Armor of Gleaming', 'XDMG', all, '', ' of Gleaming', /never gets dirty/i],
+      ['Cast-Off Armor', 'XGE', all, 'Cast-Off ', '', /doff this armor as an action/i],
+      ['Cast-Off Armor', 'XDMG', all, 'Cast-Off ', '', /doff this armor as a Magic action/i],
+      ['Smoldering Armor', 'XGE', all, 'Smoldering ', '', /harmless, odorless smoke/i],
+      ['Smoldering Armor', 'XDMG', all, 'Smoldering ', '', /harmless, odorless smoke/i],
+      ['Mithral +1 Armor', 'AI', mithralBases, 'Mithral +1 ', '', /\+1 bonus to AC/i],
+    ] as const
+    const lookup = gameData.lookups!
+    const targets = new Set<string>(templates.map(([template]) => template))
+    const allGenerated = gameData.items.filter((item) =>
+      targets.has(item.magicVariantGenerated?.template.name ?? ''),
+    )
+    expect(allGenerated).toHaveLength(77)
+    const classicSources = normalizeSelectableAllowedSources(
+      ['AI', 'XGE', 'XPHB', 'XDMG'],
+      '2014',
+      gameData.sources,
+    )
+    expect(classicSources).toEqual(['AI', 'XGE'])
+    const classicItems = filterCharacterItems(gameData.items, {
+      originSystem: '2014',
+      allowedSources: classicSources,
+    })
+    expect(classicItems).toContainEqual(
+      expect.objectContaining({ name: 'Coin of Decisionry', source: 'AI' }),
+    )
+    for (const [template, source, bases, prefix, suffix, authoredRule] of templates) {
+      const classic = source === 'XGE'
+      const baseSource = classic ? 'PHB' : 'XPHB'
+      const originSystem = classic ? '2014' : '2024'
+      const items = allGenerated.filter(
+        (item) => item.magicVariantGenerated?.template.name === template && item.source === source,
+      )
+      const expected = bases.map((base) => `${prefix}${base}${suffix}`)
+      expect(items.map((item) => item.name).sort()).toEqual(expected.sort())
+      expect(filterCharacterItems(items, { originSystem, allowedSources: [baseSource] })).toEqual(
+        [],
+      )
+      expect(
+        filterCharacterItems(items, { originSystem, allowedSources: [baseSource, source] }),
+      ).toEqual(items)
+      const saved = await saveAndReopenEquipment(
+        items,
+        originSystem,
+        source === 'AI' ? 'Mithral +1 Plate Armor' : undefined,
+      )
+      expect(saved.equipment).toHaveLength(bases.length)
+      for (const [index, equipment] of saved.equipment.entries()) {
+        const item = items[index]
+        const baseName = item.name.slice(prefix.length, item.name.length - suffix.length)
+        const base = lookup.itemLookup.get(`${baseName.toLowerCase()}|${baseSource.toLowerCase()}`)!
+        expect(item.magicVariantGenerated).toEqual({
+          template: { name: template, source },
+          base: { name: baseName, source: baseSource },
+        })
+        expect(item.genericVariant).toEqual({ name: template, source })
+        expect(item.edition).toBe(classic ? 'classic' : 'one')
+        expect(isSelectableEquipmentItem(item)).toBe(true)
+        expect(item.reprintedAs).toBeUndefined()
+        expect([item.type, item.ac, item.weight]).toEqual([base.type, base.ac, base.weight])
+        expect(item.bonusAc).toBe(source === 'AI' ? '+1' : undefined)
+        expect(item.strength).toBe(source === 'AI' ? null : base.strength)
+        expect(item.stealth).toBe(source === 'AI' ? false : base.stealth)
+        expect(equipment).toMatchObject({
+          name: item.name,
+          source,
+          ac: base.ac,
+          weight: base.weight,
+        })
+        const current = lookup.itemLookup.get(
+          `${equipment.name.toLowerCase()}|${source.toLowerCase()}`,
+        )
+        expect(current).toBe(item)
+        const facts = buildItemDetailFields(equipment, current, {})
+        expect(facts).toContainEqual({ label: 'Armor Class', value: base.ac })
+        expect(facts.some((field) => field.label === 'Strength')).toBe(Boolean(item.strength))
+        expect(facts.some((field) => field.label === 'Stealth')).toBe(Boolean(item.stealth))
+        expect(renderEntriesToText(getItemRulesEntries(current))).toMatch(authoredRule)
+      }
+      const view = createCurrentCharacterSheetViewModel(saved, lookup)
+      expect(view.magicItems).toHaveLength(items.length)
+      for (const row of view.magicItems) expect(row.description).toMatch(authoredRule)
+      const bytes = await generateTestCharacterSheet(
+        view,
+        classic ? '2014-custom' : '2024-official',
+        {
+          pages: { notes: false, spells: false },
+        },
+      )
+      const form = (await PDFDocument.load(bytes)).getForm()
+      const printed = classic
+        ? items.map((_, index) => form.getTextField(`Adventuring Gear Row ${index + 1}`).getText())
+        : form.getTextField('Text_90').getText()?.split('\n')
+      expect(printed).toEqual(items.map((item) => item.name))
+      if (source === 'AI') expect(form.getTextField('Text_8').getText()).toBe('19')
+      if (classic)
+        expect(form.getTextField('Extra.Magic Item Description 1').getText()).toMatch(authoredRule)
+    }
+    await clear()
+  }, 60_000)
   it('loads the bundled and managed source stack with the four fixed equipment families', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])
