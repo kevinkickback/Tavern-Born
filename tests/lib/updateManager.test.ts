@@ -367,6 +367,8 @@ describe('download cancellation lifecycle', () => {
 
 describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
   const platform = Object.getOwnPropertyDescriptor(process, 'platform')
+  const nodeFetchMock = vi.fn()
+  const releaseFetchMock = build === 'macOS' ? nodeFetchMock : netFetchMock
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -377,11 +379,13 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
       build === 'Windows Portable' ? 'C:/Portable/Tavern-Born' : undefined,
     )
     Object.defineProperty(process, 'platform', { value: build === 'macOS' ? 'darwin' : 'win32' })
+    vi.stubGlobal('fetch', nodeFetchMock)
     initAutoUpdater()
   })
 
   afterEach(() => {
     vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
     if (platform) Object.defineProperty(process, 'platform', platform)
     initAutoUpdater()
   })
@@ -398,7 +402,7 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
   })
 
   test('opens the exact GitHub release page after an update is found', async () => {
-    netFetchMock.mockResolvedValueOnce({
+    releaseFetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ tag_name: 'v2.0.0', body: 'Release notes' }),
     })
@@ -408,6 +412,13 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
       changelog: 'Release notes',
     })
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
+    expect(releaseFetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/kevinkickback/Tavern-Born/releases/latest',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    )
+    if (build === 'macOS') {
+      expect(releaseFetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+    }
 
     await openUpdateDownloadPage()
 
@@ -417,7 +428,7 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
   })
 
   test('refuses to open a download page before an update is available', async () => {
-    netFetchMock.mockResolvedValueOnce({ ok: false })
+    releaseFetchMock.mockResolvedValueOnce({ ok: false })
     await checkForUpdate()
 
     await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')

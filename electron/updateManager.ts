@@ -35,6 +35,7 @@ let useReleaseDownloadPage = false
 
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
+const RELEASE_CHECK_TIMEOUT = 15_000
 
 function isOfflineNow(): boolean {
   const netWithOnline = net as typeof net & { isOnline?: () => boolean }
@@ -232,7 +233,11 @@ async function checkForReleaseDownload(): Promise<UpdateStatus> {
     setStatus({ status: 'checking' })
     sendToRenderer('update-checking')
 
-    const response = await net.fetch(url, {
+    // Isolate the macOS release check from Chromium's persistent session.
+    const macOS = process.platform === 'darwin'
+    const request = macOS ? globalThis.fetch : net.fetch
+    const response = await request(url, {
+      ...(macOS && { signal: AbortSignal.timeout(RELEASE_CHECK_TIMEOUT) }),
       headers: {
         Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'tavern-born-updater',
@@ -265,6 +270,9 @@ async function checkForReleaseDownload(): Promise<UpdateStatus> {
     sendToRenderer('update-not-available')
     return { status: 'not-available' }
   } catch (err) {
+    if (err instanceof Error && err.name === 'TimeoutError') {
+      return setErrorStatus('The update server did not respond in time. Try again.')
+    }
     if (isConnectivityError(err)) {
       return setOfflineStatus()
     }

@@ -126,8 +126,10 @@ try {
     await withPackage(async (page) => {
       const start = page.getByRole('button', { name: 'Get Started', exact: true })
       const notification = page.getByRole('button', { name: 'App update available' })
+      console.log('Checking the public release from the packaged Mac app.')
       const result = await page.evaluate(() => window.electronAPI.checkForUpdate())
       assert.equal(result.data?.status, 'available', JSON.stringify(result))
+      console.log(`The public feed returned v${result.data.version}.`)
       await expect(start.or(notification).first()).toBeVisible()
       if (await start.isVisible()) await start.click()
       await notification.click()
