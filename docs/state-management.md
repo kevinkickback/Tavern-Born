@@ -183,7 +183,7 @@ independent daily/racial/Bonus state use `character.spells.spellProfiles`.
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
 `useSpellProvenanceMutations` exposes the addressed batch Finish adapter. Clear and preparation
 withdrawal work without unavailable sources; source suspension preserves ownership and revisions.
-Rest/acquisition event history remains separate work. See [the full spell contract](contracts/spell-selection.md).
+Rest/acquisition event history remains separate work. See [the full spell contract](spell-selection.md).
 
 Each normalized target occurs once in `special:unrestricted`, in either cantrips or known spells.
 Available exact spell metadata determines its current kind for all special owners together. Pure

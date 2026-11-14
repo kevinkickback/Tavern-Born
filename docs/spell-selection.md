@@ -18,7 +18,7 @@ independent picks can overlap a later grant.
 Finish validates the whole proposed edit against current rules and atomically saves intent and
 materialization. Retain exact unavailable picks and their revisions for recovery. A missing
 declaration cannot supply new capacity. Class, Spells, readiness and PDF use the same current
-casting projection. [Managed spell command tests](../../tests/lib/managedClassSpellCommands.test.ts)
+casting projection. [Managed spell command tests](../tests/lib/managedClassSpellCommands.test.ts)
 
 The loader discovers a class copy's eligible casting rules from its declared parent, exact
 feature roots and unchanged casting fields. The selected copy supplies its own spell routes.
@@ -111,4 +111,4 @@ verify it again before a preparation has an effect.
 One effective character supplies current spell profiles and matching provenance for Actions,
 prerequisites, readiness, Review and PDF. Racial casting uses its own active owner and ability.
 Generic Bonus and native edits cannot create managed class rows. PDF receives the current
-filtered authority separately from retained descriptions. [Consumer tests](../../tests/lib/managedClassSpellConsumers.test.ts)
+filtered authority separately from retained descriptions. [Consumer tests](../tests/lib/managedClassSpellConsumers.test.ts)
