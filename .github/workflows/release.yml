@@ -199,32 +199,70 @@ jobs:
       - name: Build Windows or Linux artifacts without publishing
         if: runner.os != 'macOS'
         run: npm run dist -- --publish never
+      - name: Build and validate the macOS application
+        if: runner.os == 'macOS'
+        run: |
+          npm run build
+          npm run check:bundle -- --require-srd
       - name: Build signed macOS artifacts without publishing
         if: runner.os == 'macOS'
+        shell: bash
         env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
           APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ vars.APPLE_API_ISSUER }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
         run: |
-          for setting in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER APPLE_TEAM_ID; do
+          for setting in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER APPLE_TEAM_ID; do
             if [[ -z "${!setting}" ]]; then
               echo "::error::Set $setting before building a macOS release."
               exit 1
             fi
           done
-          APPLE_API_KEY="$(mktemp "$RUNNER_TEMP/tb-notary.XXXXXX")"
-          export APPLE_API_KEY
-          trap 'rm -f "$APPLE_API_KEY"' EXIT
+          signing="$(mktemp -d "$RUNNER_TEMP/tb-signing.XXXXXX")"
+          APPLE_API_KEY="$signing/notary.p8"
+          CSC_KEYCHAIN="$signing/release.keychain-db"
+          export APPLE_API_KEY CSC_KEYCHAIN
+          cleanup() {
+            security delete-keychain "$CSC_KEYCHAIN" 2>/dev/null || true
+            rm -f "$APPLE_API_KEY" "$signing/release.p12"
+          }
+          trap cleanup EXIT
+          umask 077
           printf '%s\n' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY"
-          unset APPLE_API_KEY_P8
-          npm run dist -- --mac --arm64 --publish never -c.mac.forceCodeSigning=true
-          app=release/mac-arm64/Tavern-Born.app
-          codesign --verify --deep --strict --verbose=2 "$app"
-          codesign -d --verbose=4 "$app" 2>&1 | grep -Fx "TeamIdentifier=$APPLE_TEAM_ID"
-          xcrun stapler validate "$app"
+          printf '%s' "$MAC_CSC_LINK" | base64 -D > "$signing/release.p12"
+          keychain_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$keychain_password"
+          security create-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security set-keychain-settings -lut 7200 "$CSC_KEYCHAIN"
+          security unlock-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security import "$signing/release.p12" -k "$CSC_KEYCHAIN" -P "$MAC_CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$CSC_KEYCHAIN" >/dev/null
+          rm -f "$signing/release.p12"
+          unset APPLE_API_KEY_P8 MAC_CSC_LINK MAC_CSC_KEY_PASSWORD keychain_password
+          npx --no-install electron-builder --mac --arm64 --publish never -c.mac.forceCodeSigning=true
+      - name: Verify both shipped macOS bundles
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          verify_app() {
+            local app="$1"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -d --verbose=4 "$app" 2>&1 | grep -Fx "TeamIdentifier=$APPLE_TEAM_ID"
+            xcrun stapler validate "$app"
+          }
+          version="$(node -p "require('./package.json').version")"
+          mkdir -p "$RUNNER_TEMP/tb-release-zip" "$RUNNER_TEMP/tb-release-dmg"
+          ditto -x -k "release/Tavern-Born-$version-arm64-mac.zip" "$RUNNER_TEMP/tb-release-zip"
+          verify_app "$RUNNER_TEMP/tb-release-zip/Tavern-Born.app"
+          mount="$RUNNER_TEMP/tb-release-dmg"
+          hdiutil attach -mountpoint "$mount" -readonly -nobrowse "release/Tavern-Born-$version-arm64.dmg"
+          trap 'hdiutil detach "$mount"' EXIT
+          verify_app "$mount/Tavern-Born.app"
       - name: Preserve build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -307,9 +345,23 @@ jobs:
           require_file "$zip_name.blockmap"
           require_manifest 'latest.yml' "Tavern-Born-Setup-$RELEASE_VERSION.exe"
           require_manifest 'latest-mac.yml' "$zip_name"
-          grep -Fxq "  - url: $dmg_name" release-artifacts/latest-mac.yml
+          mac_manifest=release-artifacts/latest-mac.yml
           zip_hash="$(openssl dgst -sha512 -binary "release-artifacts/$zip_name" | openssl base64 -A)"
-          grep -Fxq "sha512: $zip_hash" release-artifacts/latest-mac.yml
+          zip_size="$(wc -c < "release-artifacts/$zip_name" | tr -d '[:space:]')"
+          if ! grep -Fxq "version: $RELEASE_VERSION" "$mac_manifest" ||
+             ! grep -Fxq "  - url: $dmg_name" "$mac_manifest" ||
+             ! grep -Fxq "sha512: $zip_hash" "$mac_manifest" ||
+             ! awk -v zip="$zip_name" -v hash="$zip_hash" -v size="$zip_size" '
+               $0 == "  - url: " zip {
+                 entries++
+                 if ((getline > 0) && $0 == "    sha512: " hash &&
+                     (getline > 0) && $0 == "    size: " size) matches++
+               }
+               END { exit !(entries == 1 && matches == 1) }
+             ' "$mac_manifest"; then
+            echo "::error::latest-mac.yml does not match the expected macOS build artifacts."
+            exit 1
+          fi
           require_manifest 'latest-linux.yml' "Tavern-Born-$RELEASE_VERSION.AppImage"
 
           artifact_files=(release-artifacts/*)

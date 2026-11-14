@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { promisify } from 'node:util'
 import { chromium, expect } from '@playwright/test'
 
@@ -44,6 +45,11 @@ const profile = await mkdtemp(join(tmpdir(), 'tavern-born-upgrade-'))
 const run = promisify(execFile)
 const timeout = 45_000
 const characterName = 'Staged Update Hero'
+
+async function expectCleanExit(exited) {
+  const result = await Promise.race([exited, delay(10_000, null, { ref: false })])
+  assert.deepEqual(result, { code: 0, signal: null }, 'The staged app did not exit cleanly.')
+}
 
 async function bundleVersion() {
   const { stdout } = await run('/usr/bin/plutil', [
@@ -94,8 +100,11 @@ async function launch(use) {
     await use(page, exited, session)
   } finally {
     await browser?.close().catch(() => undefined)
-    if (child.exitCode === null && child.signalCode === null) child.kill()
-    await exited
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill()
+      await Promise.race([exited, delay(2000, null, { ref: false })])
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+    }
   }
 }
 
@@ -144,7 +153,7 @@ try {
     await page.getByRole('button', { name: 'Install Now' }).click()
     await expect(page.getByRole('heading', { name: 'Update Ready' })).toBeVisible({ timeout })
     await expect.poll(() => bundleVersion().catch(() => ''), { timeout: 120_000 }).toBe(toVersion)
-    assert.deepEqual(await exited, { code: 0, signal: null })
+    await expectCleanExit(exited)
   })
 
   assert(served.has(files.get(`/${zipName}`).path), 'The app did not fetch the staged ZIP.')
@@ -170,7 +179,7 @@ try {
       timeout,
     })
     void session.send('Browser.close').catch(() => undefined)
-    assert.deepEqual(await exited, { code: 0, signal: null })
+    await expectCleanExit(exited)
   })
   console.log(`In-app macOS update ${fromVersion} → ${toVersion} and character reopen passed.`)
 } finally {

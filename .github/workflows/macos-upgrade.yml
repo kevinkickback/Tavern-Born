@@ -62,7 +62,12 @@ jobs:
         run: |
           # This key signs disposable artifacts and lives only in the hosted runner.
           signing="$(mktemp -d)"
-          trap 'rm -f "$signing/key.pem" "$signing/cert.pem" "$signing/key.p12" "$signing/cert.cnf"' EXIT
+          export CSC_KEYCHAIN="$signing/test.keychain-db"
+          cleanup() {
+            security delete-keychain "$CSC_KEYCHAIN" 2>/dev/null || true
+            rm -f "$signing/key.pem" "$signing/cert.pem" "$signing/key.p12" "$signing/cert.cnf"
+          }
+          trap cleanup EXIT
           umask 077
           cat > "$signing/cert.cnf" <<'EOF'
           [req]
@@ -79,12 +84,17 @@ jobs:
             -keyout "$signing/key.pem" -out "$signing/cert.pem"
           sudo security add-trusted-cert -d -r trustRoot -p codeSign \
             -k /Library/Keychains/System.keychain "$signing/cert.pem"
-          CSC_KEY_PASSWORD="$(openssl rand -hex 24)"
-          echo "::add-mask::$CSC_KEY_PASSWORD"
-          export CSC_KEY_PASSWORD
-          export CSC_LINK="$signing/key.p12"
-          openssl pkcs12 -export -out "$CSC_LINK" -inkey "$signing/key.pem" \
-            -in "$signing/cert.pem" -passout env:CSC_KEY_PASSWORD -legacy
+          keychain_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$keychain_password"
+          export keychain_password
+          openssl pkcs12 -export -out "$signing/key.p12" -inkey "$signing/key.pem" \
+            -in "$signing/cert.pem" -passout env:keychain_password -legacy
+          security create-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security set-keychain-settings -lut 7200 "$CSC_KEYCHAIN"
+          security unlock-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security import "$signing/key.p12" -k "$CSC_KEYCHAIN" -P "$keychain_password" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$CSC_KEYCHAIN" >/dev/null
+          unset keychain_password
 
           pack() {
             local version="$1"
@@ -103,7 +113,6 @@ jobs:
           codesign --verify --deep --strict "$app"
           node scripts/ci/smoke-macos-upgrade.mjs "$app" "$next" 0.7.0 0.7.1
       - name: Check the staged ZIP against the published app's update requirement
-        if: always() && !cancelled()
         shell: bash
         run: |
           legacy="$RUNNER_TEMP/tb-legacy/Tavern-Born.app"
