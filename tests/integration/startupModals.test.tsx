@@ -227,8 +227,7 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
   })
 
-  test('blocks during startup recovery and lets the user continue with built-in rules', async () => {
-    const user = userEvent.setup()
+  test('keeps the workspace blocked until startup recovery settles', async () => {
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: makeGameDataFixture(),
@@ -248,10 +247,12 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText('Restoring additional content…')).toBeTruthy()
     expect(content?.hasAttribute('inert')).toBe(true)
 
-    await user.click(screen.getByRole('button', { name: 'Continue with built-in rules' }))
+    expect(screen.queryByRole('button', { name: 'Continue with built-in rules' })).toBeNull()
+    await act(() =>
+      useGameDataStore.setState({ isStartupRecovering: false, isBackgroundRefreshing: false }),
+    )
     expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
     expect(content?.hasAttribute('inert')).toBe(false)
-    expect(useGameDataStore.getState().isBackgroundRefreshing).toBe(true)
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {

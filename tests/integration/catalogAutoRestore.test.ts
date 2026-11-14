@@ -112,11 +112,6 @@ test.each([
 test('waits for the workflow and draft to clear, then restores without checking again', async () => {
   const { fetch } = await setUpObsoleteCache()
   const { backgroundRefresh } = await start()
-  useGameDataStore.getState().continueWithBuiltInRules()
-  expect(useGameDataStore.getState()).toMatchObject({
-    isStartupRecovering: false,
-    isBackgroundRefreshing: true,
-  })
   const release = useGameDataStore.getState().protectCatalog()
   useGameDataStore.setState({ catalogDraftDirty: true })
   try {

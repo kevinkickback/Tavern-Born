@@ -168,7 +168,6 @@ interface GameDataState {
   isLoading: boolean
   isBackgroundRefreshing: boolean
   isStartupRecovering: boolean
-  continueWithBuiltInRules: () => void
   isCatalogActivating: boolean
   catalogDraftDirty: boolean
   previousCatalog: PreviousCatalog | undefined
@@ -231,9 +230,6 @@ export const useGameDataStore = create<GameDataState>()(
       isLoading: false,
       isBackgroundRefreshing: false,
       isStartupRecovering: false,
-      continueWithBuiltInRules: () => {
-        if (get().isStartupRecovering) set({ isStartupRecovering: false })
-      },
       isCatalogActivating: false,
       catalogDraftDirty: false,
       previousCatalog: undefined,

@@ -260,9 +260,9 @@ manual approval in Settings. On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
 If startup needs built-in rules because the saved catalog could not open, a due recovery check
-keeps the loading screen open within the startup check's time limit. **Continue with built-in rules**
-opens the app while the check continues in the background. A failed check or a result that needs
-manual review opens the app with built-in rules. Startup with usable saved data stays nonblocking.
+keeps the loading screen open within the startup check's time limit. A failed check or a result
+that needs manual review opens the app with built-in rules. Startup with usable saved data
+stays nonblocking.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
 A complete accepted catalog with a matching cache schema, source and Included SRD can skip
 preparation when the source still matches. GitHub checks the verified commit. Other HTTPS
