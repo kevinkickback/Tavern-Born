@@ -3,7 +3,6 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
-import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
 const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/manifest.json'))
 
@@ -46,10 +45,6 @@ async function openCharacter(page: Page, name: string) {
 }
 
 test.skip(!HAS_DEVELOPMENT_SRD, 'requires an approved or generated SRD snapshot')
-test.skip(
-  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION,
-  'Windows build has upstream Electron sandbox crash 0x80000003',
-)
 
 test('creates and reloads both rules generations using only the Included SRD', async ({
   browserName: _browserName,
@@ -63,7 +58,11 @@ test('creates and reloads both rules generations using only the Included SRD', a
   )
   const userDataArgument = `--user-data-dir=${testInfo.outputPath('bundled-srd-user-data')}`
   const launchArgs = ['.', userDataArgument]
-  const electronApp = await electron.launch({ args: launchArgs, env: environment })
+  const electronApp = await electron.launch({
+    args: launchArgs,
+    env: environment,
+    chromiumSandbox: process.platform === 'win32',
+  })
 
   try {
     const page = await electronApp.firstWindow()
@@ -146,6 +145,7 @@ test('creates and reloads both rules generations using only the Included SRD', a
       await expect(page.getByRole('button', { name: 'Regenerate' })).toBeEnabled({
         timeout: 60_000,
       })
+      await expect(page.locator('canvas').first()).toBeVisible()
     })
   } finally {
     if (electronApp.process().exitCode === null) await electronApp.close()

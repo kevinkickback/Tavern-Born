@@ -1,14 +1,8 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { _electron as electron, expect, test } from '@playwright/test'
-import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
 const HAS_DEVELOPMENT_SRD = existsSync(resolve('resources/srd/manifest.json'))
-
-test.skip(
-  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION,
-  'Windows build has upstream Electron sandbox crash 0x80000003',
-)
 
 test('starts the compiled desktop shell with a sandboxed renderer and working bridge', async ({
   browserName: _browserName,
@@ -20,6 +14,7 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     ),
   )
   const electronApp = await electron.launch({
+    chromiumSandbox: process.platform === 'win32',
     args: ['.', `--user-data-dir=${testInfo.outputPath('user-data')}`],
     env: environment,
   })
