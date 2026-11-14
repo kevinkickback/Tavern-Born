@@ -60,6 +60,7 @@ const diagnosticFields = [
   'fixedArmorDiagnostics',
   'fixedAmmunitionDiagnostics',
   'resistanceArmorDiagnostics',
+  'materialArmorDiagnostics',
 ] as const
 
 function normalizeItemName(value: string) {

@@ -266,8 +266,10 @@ test.each([
           gear: ['Leather Armor of Fire Resistance|DMG'],
         }),
       })
+    const { materialArmorDiagnostics, ...previousData } = accepted.data
+    expect(materialArmorDiagnostics).toEqual([])
     const oldData = {
-      ...accepted.data,
+      ...previousData,
       items: accepted.data.items.filter((item) => item.name !== added.name),
       feats:
         condition === 'old record edit'
