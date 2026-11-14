@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { PDFDocument } from '@cantoo/pdf-lib'
+import { clear, get } from 'idb-keyval'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import {
   createClassChoiceCoverageMatrix,
@@ -16,11 +18,23 @@ import { parseConditions, parseTrapHazards } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
+import { addManualEquipmentBatchCommand } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 import { renderEntriesToText } from '@/lib/entryText'
+import { buildItemDetailFields } from '@/lib/itemDetailFields'
+import { useCharacterStore } from '@/store/characterStore'
 import type { GameData } from '@/types/5etools'
+import type { Character } from '@/types/character'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import {
+  createCurrentCharacterSheetViewModel,
+  generateTestCharacterSheet,
+} from '../fixtures/pdfTemplates'
 
 const DATA_ROOT = resolve(process.cwd(), 'data')
+
+vi.unmock('@/lib/storage/idb-storage')
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -110,6 +124,120 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       expect(renderEntriesToText(getItemRulesEntries(item))).toContain(`${damageType} damage`)
     }
   })
+  it('verifies all 32 material armor variants through inventory, reopen, details and PDF output', async () => {
+    const names = [
+      'Breastplate',
+      'Chain Mail',
+      'Chain Shirt',
+      'Half Plate Armor',
+      'Plate Armor',
+      'Ring Mail',
+      'Scale Mail',
+      'Splint Armor',
+    ]
+    const expected = ['DMG', 'XDMG']
+      .flatMap((source) =>
+        ['Mithral', 'Adamantine'].flatMap((material) =>
+          names.map((name) => `${material} ${name}|${source}`),
+        ),
+      )
+      .sort()
+    const actual = gameData.items.filter((item) =>
+      /^(Mithral|Adamantine) Armor$/.test(item.magicVariantGenerated?.template.name ?? ''),
+    )
+    expect(actual.map((item) => `${item.name}|${item.source}`).sort()).toEqual(expected)
+    for (const item of actual) {
+      expect(isSelectableEquipmentItem(item)).toBe(true)
+      expect(item.magicVariantGenerated?.base.source).toBe(item.source === 'DMG' ? 'PHB' : 'XPHB')
+      const base = gameData.itemsBase.find(
+        (row) =>
+          row.name === item.magicVariantGenerated?.base.name &&
+          row.source === item.magicVariantGenerated?.base.source,
+      )!
+      expect([item.type, item.ac, item.weight]).toEqual([base.type, base.ac, base.weight])
+      const mithral = item.magicVariantGenerated?.template.name === 'Mithral Armor'
+      expect(item.strength).toBe(mithral ? null : base.strength)
+      expect(item.stealth).toBe(mithral ? false : base.stealth)
+      expect(renderEntriesToText(getItemRulesEntries(item))).toMatch(
+        mithral ? /mithral is a light, flexible metal/i : /critical hit.*becomes a normal hit/i,
+      )
+    }
+    expect(gameData.materialArmorDiagnostics).toEqual([])
+    for (const source of ['DMG', 'XDMG']) {
+      const items = actual.filter((item) => item.source === source)
+      const originSystem = source === 'DMG' ? '2014' : '2024'
+      await clear()
+      await useCharacterStore.persist.rehydrate()
+      const character = await useCharacterStore
+        .getState()
+        .addCharacter(makeCharacterFixture({ originSystem, equipment: [] }))
+      const { characterPatch, provenanceUpdate } = addManualEquipmentBatchCommand(
+        character,
+        character.provenance,
+        items,
+      )
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      useCharacterStore.getState().updateCharacter(character.id, {
+        ...characterPatch,
+        provenance: provenanceUpdate,
+      })
+      await useCharacterStore.getState().saveActiveCharacter()
+      const stored = await get<{ state: { characters: Character[] } }>('character-storage')
+      const saved = characterPersistenceSchema.parse(
+        stored?.state.characters.find((row) => row.id === character.id),
+      )
+      useCharacterStore.getState().setActiveCharacter(null)
+      await useCharacterStore.persist.rehydrate()
+      useCharacterStore.getState().setActiveCharacter(character.id)
+      expect(useCharacterStore.getState().activeCharacter).toEqual(saved)
+      expect(saved.equipment).toHaveLength(16)
+      const lookup = gameData.lookups!
+      for (const [index, equipment] of saved.equipment.entries()) {
+        const item = items[index]
+        const base = gameData.itemsBase.find(
+          (row) =>
+            row.name === item.magicVariantGenerated?.base.name &&
+            row.source === item.magicVariantGenerated?.base.source,
+        )!
+        expect(equipment).toMatchObject({
+          name: item.name,
+          source,
+          ac: base.ac,
+          weight: base.weight,
+        })
+        const current = lookup.itemLookup.get(
+          `${equipment.name.toLowerCase()}|${source.toLowerCase()}`,
+        )
+        expect(current).toBe(item)
+        const facts = buildItemDetailFields(equipment, current, {})
+        expect(facts).toContainEqual({ label: 'Armor Class', value: base.ac })
+        expect(facts.some((field) => field.label === 'Strength')).toBe(Boolean(item.strength))
+        expect(facts.some((field) => field.label === 'Stealth')).toBe(Boolean(item.stealth))
+      }
+      const view = createCurrentCharacterSheetViewModel(saved, lookup)
+      expect(view.magicItems).toHaveLength(items.length)
+      for (const [index, row] of view.magicItems.entries()) {
+        expect(row.description).toContain(renderEntriesToText(items[index].entries))
+      }
+      const form = (
+        await PDFDocument.load(
+          await generateTestCharacterSheet(
+            view,
+            source === 'DMG' ? '2014-custom' : '2024-official',
+            { pages: { notes: false, spells: false } },
+          ),
+        )
+      ).getForm()
+      const printed =
+        source === 'DMG'
+          ? items
+              .map((_, index) => form.getTextField(`Adventuring Gear Row ${index + 1}`).getText())
+              .join('\n')
+          : form.getTextField('Text_90').getText()
+      for (const item of items) expect(printed).toContain(item.name)
+    }
+    await clear()
+  }, 30_000)
   it('loads the bundled and managed source stack with the four fixed equipment families', () => {
     expect(failures).toEqual([])
     expect(findLayerDependencyIssues(gameData, gameData)).toEqual([])

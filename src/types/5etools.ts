@@ -448,7 +448,7 @@ export interface Item5e {
   range?: string
   mastery?: string[]
   ac?: number
-  strength?: string
+  strength?: string | null
   stealth?: boolean
   /** True for wondrous items (rings, amulets, cloaks, belts, etc.). */
   wondrous?: boolean
@@ -665,6 +665,7 @@ export interface GameData {
   fixedArmorDiagnostics?: ItemEntryDiagnostic[]
   fixedAmmunitionDiagnostics?: ItemEntryDiagnostic[]
   resistanceArmorDiagnostics?: ItemEntryDiagnostic[]
+  materialArmorDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

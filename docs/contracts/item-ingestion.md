@@ -86,3 +86,11 @@ name and source. Reference entries remain outside inventory.
 Resistance applies while the exact catalog item is equipped and attuned. If the
 printing becomes unavailable, the saved armor retains its physical fields and
 attunement state. The existing equipment effect resumes when the exact printing returns.
+
+### Mithral and Adamantine armor
+
+The classic and revised Mithral and Adamantine templates select direct public body armor
+by their declared type and exclusion rules. Their authored prefixes and exact sources
+identify the generated pieces. Both retain the base AC, weight, and armor category.
+Mithral applies the declared null Strength requirement and false Stealth disadvantage.
+Adamantine retains the base requirements and presents the critical-hit rule for manual use.

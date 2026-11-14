@@ -5,6 +5,7 @@ import {
   generateFixedBonusArmor,
   generateFixedBonusShields,
   generateFixedBonusWeapons,
+  generateMaterialArmor,
   generateResistanceArmor,
 } from './fixedBonusEquipment'
 import { stripMagicVariantLineage } from './itemEntries'
@@ -197,6 +198,9 @@ export function appendMagicVariantReferences(data: GameData): void {
   data.fixedAmmunitionDiagnostics = ammunition.diagnostics
   data.resistanceArmorDiagnostics = resistanceArmor.diagnostics
   data.items = [...data.items, ...fixedItems, ...resistanceArmor.items]
+  const materialArmor = generateMaterialArmor(data, result.definitions)
+  data.materialArmorDiagnostics = materialArmor.diagnostics
+  data.items.push(...materialArmor.items)
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )
