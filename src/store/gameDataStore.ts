@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import {
+  isAdditiveCatalogRestore,
+  matchesAcceptedSource,
+} from '@/lib/5etools/additiveCatalogRestore'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   compareCatalogCandidate,
@@ -21,6 +25,7 @@ import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { settleOnAbort } from '@/lib/abortable'
 import {
+  CatalogRestoreLibraryChanged,
   cacheMetadata,
   computeGameDataFingerprint,
   GAME_DATA_CACHE_SCHEMA_VERSION,
@@ -32,6 +37,7 @@ import {
   markCatalogChecked,
   type PreviousCatalog,
   persistCatalogRepair,
+  readAcceptedCatalogForComparison,
   readCatalogExpectation,
   readGameDataCachePair,
   restorePreviousCatalog,
@@ -784,6 +790,51 @@ export const useGameDataStore = create<GameDataState>()(
                 (layer) => layer.contentFingerprint && layer.entityCount !== undefined,
               ) !== false,
           )
+          let prepared: Awaited<ReturnType<typeof materializeCatalogCandidate>> | undefined
+          let verifiedLibrary: string | undefined
+          if (
+            !verifiedRestore &&
+            !request?.confirmed &&
+            prior.isStartupRecovering &&
+            recovering &&
+            candidate &&
+            priorSource &&
+            priorSource.type !== 'bundled' &&
+            cached?.generation &&
+            cached.contentFingerprint &&
+            cached.contentFingerprint === prior.savedContentFingerprint &&
+            candidateFingerprint &&
+            !candidate.warnings.length &&
+            !candidate.unavailableResources?.length &&
+            !removals.length &&
+            !incompleteRemovalPreview &&
+            priorSource.availableResources &&
+            candidate.config.availableResources &&
+            isCacheForSource(cached, cacheIdentity) &&
+            matchesAcceptedSource(priorSource, candidate.config, candidate.revision)
+          ) {
+            const accepted = await settleOnAbort(
+              readAcceptedCatalogForComparison(cached).catch(() => undefined),
+              signal,
+            )
+            if (accepted) {
+              prepared = await materializeCatalogCandidate(candidate, signal)
+              try {
+                if (
+                  isAdditiveCatalogRestore(
+                    accepted.data,
+                    prepared.data,
+                    cached.contentFingerprint,
+                    accepted.characters,
+                  )
+                )
+                  verifiedLibrary = accepted.characterLibrary
+              } catch {
+                // An unrecognized legacy payload can still be replaced through manual review.
+              }
+            }
+          }
+          const additiveRestore = verifiedLibrary !== undefined
           const restoring = verifiedRestore || (request?.confirmed && pending?.restoreWhenIdle)
           const stageCatalog = async (review: NonNullable<GameDataState['pendingCatalog']>) => {
             const recorded = rememberCheck(true, true, expectedCache)
@@ -803,6 +854,7 @@ export const useGameDataStore = create<GameDataState>()(
             candidate &&
             !request?.confirmed &&
             !verifiedRestore &&
+            !additiveRestore &&
             (recovering ||
               removals.length ||
               incompleteRemovalPreview ||
@@ -851,9 +903,8 @@ export const useGameDataStore = create<GameDataState>()(
             }
             return await finishUnchangedCheck(cached, checkedConfig, candidate.warnings)
           }
-          const prepared = candidate
-            ? await materializeCatalogCandidate(candidate, signal)
-            : undefined
+          if (candidate && !prepared)
+            prepared = await materializeCatalogCandidate(candidate, signal)
           const acceptedData = prepared?.data ?? data
           if (!acceptedData || (config.type === 'bundled' && !hasCatalogRecords(acceptedData)))
             throw new Error('The Included SRD could not be loaded.')
@@ -900,11 +951,21 @@ export const useGameDataStore = create<GameDataState>()(
             ? prior.savedContentFingerprint
             : get().lastContentFingerprint
           const hadGameData = get().gameData !== null
+          const stageAdditiveRestore = (candidate: CatalogCandidate) =>
+            stageCatalog({
+              candidate,
+              expectedCache,
+              reason: 'recovery',
+              additions,
+              removals,
+              incompleteRemovalPreview,
+            })
           let writeStarted = false
           const mutation = enqueueCacheMutation(async () => {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' } as const
             signal.throwIfAborted()
             if (catalogIsProtected()) {
+              if (additiveRestore && candidate) return stageAdditiveRestore(candidate)
               if (verifiedRestore && candidate)
                 return stageCatalog({
                   candidate,
@@ -935,6 +996,7 @@ export const useGameDataStore = create<GameDataState>()(
                 config: acceptedConfig,
                 externalKeys: prepared?.keys,
                 expectedCache,
+                characterLibrary: verifiedLibrary,
                 onPrevious: (previous) => {
                   previousCatalog = previous
                 },
@@ -979,6 +1041,10 @@ export const useGameDataStore = create<GameDataState>()(
                   expectedCache === undefined ? undefined : cacheMetadata(cacheEntry),
               })
               return { kind: 'applied', changed: contentChanged } as const
+            } catch (error) {
+              if (error instanceof CatalogRestoreLibraryChanged && candidate)
+                return stageAdditiveRestore(candidate)
+              throw error
             } finally {
               set({ isCatalogActivating: false })
             }

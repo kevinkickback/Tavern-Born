@@ -26,19 +26,25 @@ vi.mock(import('@/lib/5etools/resourceReader'), async (importOriginal) => {
       | Partial<
           Record<
             'readBundledJson' | 'readLocalJson',
-            (path: string, root?: string) => Promise<unknown>
+            (path: string, root?: string, probe?: boolean) => Promise<unknown>
           >
         >
       | undefined
     const readFile =
       config.type === 'bundled' ? fileReads?.readBundledJson : fileReads?.readLocalJson
-    if (typeof readFile !== 'function') return actual.createJsonResourceReader(config)
-    return actual.createJsonResourceReader(config, (request, signal) =>
-      request.kind === 'remote'
-        ? actual.readRemoteJson(request.url, signal)
-        : request.kind === 'local'
-          ? readFile(request.path, request.root)
-          : readFile(request.path),
+    if (typeof readFile !== 'function')
+      return actual.createJsonResourceReader(config, undefined, options)
+    return actual.createJsonResourceReader(
+      config,
+      (request, signal) =>
+        request.kind === 'remote'
+          ? actual.readRemoteJson(request.url, signal)
+          : request.kind === 'local'
+            ? request.observation
+              ? readFile(request.path, request.root, request.observation.probe)
+              : readFile(request.path, request.root)
+            : readFile(request.path),
+      options,
     )
   }
   return { ...actual, createJsonResourceReader }

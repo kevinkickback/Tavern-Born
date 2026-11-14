@@ -258,6 +258,15 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     await act(() =>
       useGameDataStore.setState({
+        loadProgress: { current: 28, total: 28, resource: 'Additional content: items.json' },
+      }),
+    )
+    expect(
+      screen.getByText('Additional content · 28/28 main files · processing catalog'),
+    ).toBeTruthy()
+
+    await act(() =>
+      useGameDataStore.setState({
         loadProgress: { current: 0, total: 0, resource: 'Verifying rebuilt game data' },
       }),
     )

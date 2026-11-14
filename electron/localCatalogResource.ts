@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { BigIntStats } from 'node:fs'
 import { open, realpath, stat } from 'node:fs/promises'
 import { extname, isAbsolute, normalize, relative } from 'node:path'
@@ -42,10 +43,13 @@ export async function readLocalCatalogResource(filePath: string, root: string, p
         throw new Error('JSON file exceeds the 50 MB safety limit')
       const stamp = stampFor(fileStats)
       if (probe) return { stamp }
-      const text = await file.readFile('utf-8')
+      const bytes = await file.readFile()
       if (stampFor(await file.stat({ bigint: true })) !== stamp)
         throw new Error('The file changed during the check. Try checking the source again.')
-      return { text, stamp }
+      return {
+        text: bytes.toString('utf-8'),
+        stamp: `${stamp}#${createHash('sha256').update(bytes).digest('hex')}`,
+      }
     } finally {
       await file.close()
     }

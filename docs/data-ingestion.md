@@ -256,7 +256,10 @@ it was last successfully checked. Failures and optional warnings appear separate
 restores additional content automatically when the saved catalog's rules, source layers and
 resource and record inventories match. Restoration waits for open character workflows and unsaved
 edits to clear. Changed results and results without enough evidence to prove a match wait for
-manual approval in Settings. On relaunch an unapplied preview can be
+manual approval in Settings. During startup recovery, a rebuild can also restore new generated
+equipment when existing catalog records and references stay the same. GitHub needs the same
+accepted commit. Local folders need a complete matching set of previously recorded file hashes.
+On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
 If startup needs built-in rules because the saved catalog could not open, a due recovery check

@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // The combined startup recovery and resistance armor build measured 6921.0 KiB on Node 24.
+  // Startup additive catalog verification measured 6925.3 KiB on Node 24.
   // Keep approximately 2 KiB of headroom.
-  rendererCode: 6923 * KIB,
+  rendererCode: 6927 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

@@ -77,6 +77,14 @@ export function AppLoadingOverlay({
 
   const hasProgress =
     !isStartupReady && !isStartupRecovering && loadProgress !== null && loadProgress.total > 0
+  const recoveryCount =
+    isStartupRecovering &&
+    loadProgress &&
+    loadProgress.current >= 0 &&
+    loadProgress.current <= loadProgress.total &&
+    loadProgress.total > 0
+      ? loadProgress
+      : null
   const isProgressComplete =
     hasProgress &&
     (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
@@ -173,6 +181,16 @@ export function AppLoadingOverlay({
             </span>
           )}
         </div>
+        {recoveryCount && (
+          <p className="text-center text-xs text-muted-foreground">
+            {recoveryCount.resource.startsWith('Included SRD:')
+              ? 'Built-in rules'
+              : 'Additional content'}
+            {' · '}
+            {recoveryCount.current}/{recoveryCount.total} main files
+            {recoveryCount.current === recoveryCount.total && ' · processing catalog'}
+          </p>
+        )}
       </div>
       {error && !isStartupReady && (
         <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>

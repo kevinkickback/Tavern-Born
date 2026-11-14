@@ -63,7 +63,10 @@ export function observeCatalogResources(
           const same =
             stamp !== null &&
             isObservation(value) &&
-            ('unchanged' in value || (config.type === 'local' && value.stamp === stamp))
+            ('unchanged' in value ||
+              (config.type === 'local' &&
+                /#[a-f\d]{64}$/.test(stamp) &&
+                value.stamp === stamp.split('#')[0]))
           if (same) return
           changed = true
           if (config.type === 'remote' && isObservation(value) && 'data' in value)

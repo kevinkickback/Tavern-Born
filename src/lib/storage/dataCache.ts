@@ -10,6 +10,7 @@ const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 const REFRESH_CHECK_KEY = 'tb:game-data-refresh-check'
 const PREVIOUS_CACHE_KEY = 'tb:game-data-previous-cache'
 const PREVIOUS_INFO_KEY = 'tb:game-data-previous-info'
+const CHARACTER_LIBRARY_KEY = 'character-storage'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
 export const GAME_DATA_CACHE_SCHEMA_VERSION = 104
@@ -178,6 +179,33 @@ export async function readCatalogExpectation(): Promise<GameDataCacheMetadata | 
   const [value, stamp] = await getMany([CACHE_KEY, CACHE_GENERATION_KEY])
   return catalogExpectation(value, stamp)
 }
+
+/** Read rejected cache data as comparison evidence only. It cannot become the active catalog. */
+export async function readAcceptedCatalogForComparison(expected: GameDataCacheMetadata) {
+  const [entry, stamp, library] = await getMany([
+    CACHE_KEY,
+    CACHE_GENERATION_KEY,
+    CHARACTER_LIBRARY_KEY,
+  ])
+  const current = catalogExpectation(entry, stamp)
+  const generation = typeof stamp === 'string' ? stamp : stamp?.generation
+  if (
+    !expected.generation ||
+    generation !== expected.generation ||
+    current?.generation !== expected.generation ||
+    !sameLegacyCache(current, expected) ||
+    (library &&
+      (!Array.isArray(library.state?.characters) || library.state.unsupportedCharacters?.length))
+  )
+    return
+  return {
+    data: (entry as GameDataCacheEntry).data,
+    characters: library?.state?.characters ?? [],
+    characterLibrary: JSON.stringify(library ?? null),
+  }
+}
+
+export class CatalogRestoreLibraryChanged extends Error {}
 
 function catalogExpectation(value?: GameDataCacheEntry, stamp?: string | LegacyCacheStamp) {
   if (!value) return null
@@ -457,6 +485,7 @@ export async function writeGameDataCache(
     contentFingerprint?: string
     previous?: GameDataCacheMetadata | null
     expectedCache?: GameDataCacheMetadata | null
+    characterLibrary?: string
     onPrevious?: (previous: PreviousCatalog | undefined) => void
   },
 ): Promise<GameDataCacheEntry> {
@@ -507,17 +536,14 @@ export async function writeGameDataCache(
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
   let backup: PreviousCatalog | undefined
+  let libraryChanged = false
   const written = await writeBeforeAbort(
     options?.signal ?? new AbortController().signal,
     (store, done) => {
       const config = options?.config
       if (config && options.expectedCache !== undefined) {
         withExpectedCatalog(store, options.expectedCache, (current) => {
-          const settings = store.get(GAME_DATA_SETTINGS_KEY)
-          settings.onsuccess = () => {
-            const priorConfig = settings.result?.state?.dataSourceConfig as
-              | DataSourceConfig
-              | undefined
+          const activate = (priorConfig: DataSourceConfig | undefined, lastCheckedAt?: string) => {
             if (usableCache(current) && current && priorConfig) {
               const installed = isSourceStack(identity)
                 ? identity.base
@@ -534,7 +560,7 @@ export async function writeGameDataCache(
                 backup = {
                   cache: cacheMetadata(old),
                   config: priorConfig,
-                  lastCheckedAt: settings.result?.state?.lastUpdateCheckAt,
+                  lastCheckedAt,
                 }
                 store.put(old, PREVIOUS_CACHE_KEY)
                 store.put(backup, PREVIOUS_INFO_KEY)
@@ -542,6 +568,24 @@ export async function writeGameDataCache(
             }
             putAcceptedCatalog(store, entry, config)
             done(true)
+          }
+          const readSettings = () => {
+            const settings = store.get(GAME_DATA_SETTINGS_KEY)
+            settings.onsuccess = () =>
+              activate(
+                settings.result?.state?.dataSourceConfig,
+                settings.result?.state?.lastUpdateCheckAt,
+              )
+          }
+          if (options.characterLibrary === undefined) {
+            readSettings()
+          } else {
+            const library = store.get(CHARACTER_LIBRARY_KEY)
+            library.onsuccess = () => {
+              libraryChanged = JSON.stringify(library.result ?? null) !== options.characterLibrary
+              if (libraryChanged) done(false)
+              else readSettings()
+            }
           }
         })
         return
@@ -555,6 +599,7 @@ export async function writeGameDataCache(
       done(true)
     },
   )
+  if (libraryChanged) throw new CatalogRestoreLibraryChanged()
   if (!written) throw new Error('The saved game data changed. Restart to load the current catalog.')
   if (backup) options?.onPrevious?.(backup)
   return entry
