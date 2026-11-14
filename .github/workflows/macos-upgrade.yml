@@ -63,9 +63,15 @@ jobs:
           # This key signs disposable artifacts and lives only in the hosted runner.
           signing="$(mktemp -d)"
           export CSC_KEYCHAIN="$signing/test.keychain-db"
+          keychain_list="$(security list-keychains -d user)"
+          original_keychains=()
+          while IFS= read -r path; do
+            original_keychains+=("$path")
+          done < <(printf '%s\n' "$keychain_list" | sed -nE 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/p')
           cleanup() {
+            security list-keychains -d user -s "${original_keychains[@]}" || true
             security delete-keychain "$CSC_KEYCHAIN" 2>/dev/null || true
-            rm -f "$signing/key.pem" "$signing/cert.pem" "$signing/key.p12" "$signing/cert.cnf"
+            rm -f "$signing/key.pem" "$signing/cert.pem" "$signing/key.p12" "$signing/cert.cnf" "$signing/probe"
           }
           trap cleanup EXIT
           umask 077
@@ -90,11 +96,14 @@ jobs:
           openssl pkcs12 -export -out "$signing/key.p12" -inkey "$signing/key.pem" \
             -in "$signing/cert.pem" -passout env:keychain_password -legacy
           security create-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security list-keychains -d user -s "$CSC_KEYCHAIN" "${original_keychains[@]}"
           security set-keychain-settings -lut 7200 "$CSC_KEYCHAIN"
           security unlock-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
           security import "$signing/key.p12" -k "$CSC_KEYCHAIN" -P "$keychain_password" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$CSC_KEYCHAIN" >/dev/null
           unset keychain_password
+          printf 'int main(void) { return 0; }\n' | clang -x c -o "$signing/probe" -
+          codesign --force --sign "$CSC_NAME" --keychain "$CSC_KEYCHAIN" --timestamp=none "$signing/probe"
 
           pack() {
             local version="$1"

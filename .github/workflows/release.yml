@@ -225,7 +225,13 @@ jobs:
           APPLE_API_KEY="$signing/notary.p8"
           CSC_KEYCHAIN="$signing/release.keychain-db"
           export APPLE_API_KEY CSC_KEYCHAIN
+          keychain_list="$(security list-keychains -d user)"
+          original_keychains=()
+          while IFS= read -r path; do
+            original_keychains+=("$path")
+          done < <(printf '%s\n' "$keychain_list" | sed -nE 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/p')
           cleanup() {
+            security list-keychains -d user -s "${original_keychains[@]}" || true
             security delete-keychain "$CSC_KEYCHAIN" 2>/dev/null || true
             rm -f "$APPLE_API_KEY" "$signing/release.p12"
           }
@@ -236,6 +242,7 @@ jobs:
           keychain_password="$(openssl rand -hex 24)"
           echo "::add-mask::$keychain_password"
           security create-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
+          security list-keychains -d user -s "$CSC_KEYCHAIN" "${original_keychains[@]}"
           security set-keychain-settings -lut 7200 "$CSC_KEYCHAIN"
           security unlock-keychain -p "$keychain_password" "$CSC_KEYCHAIN"
           security import "$signing/release.p12" -k "$CSC_KEYCHAIN" -P "$MAC_CSC_KEY_PASSWORD" -T /usr/bin/codesign
