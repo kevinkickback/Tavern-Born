@@ -113,10 +113,10 @@ function appVersion(page) {
 }
 
 async function runningApp() {
-  const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,comm='])
+  const { stdout } = await run('/bin/ps', ['-axww', '-o', 'pid=,state=,comm='])
   for (const line of stdout.split('\n')) {
-    const match = line.trim().match(/^(\d+)\s+(.+)$/)
-    if (match?.[2] === executable) return Number(match[1])
+    const match = line.trim().match(/^(\d+)\s+(\S+)\s+(.+)$/)
+    if (match?.[3] === executable && !match[2].startsWith('Z')) return Number(match[1])
   }
   return null
 }
@@ -170,7 +170,14 @@ try {
       { timeout },
     )
     .not.toBeNull()
-  process.kill(relaunchedPid, 'SIGTERM')
+  console.log(`Squirrel relaunched the verified ${toVersion} app (PID ${relaunchedPid}).`)
+  if ((await runningApp()) === relaunchedPid) {
+    try {
+      process.kill(relaunchedPid, 'SIGKILL')
+    } catch (error) {
+      if (error.code !== 'ESRCH') throw error
+    }
+  }
   await expect.poll(runningApp, { timeout }).toBeNull()
   await launch(async (page, exited, session) => {
     await expect.poll(() => appVersion(page), { timeout }).toBe(toVersion)
