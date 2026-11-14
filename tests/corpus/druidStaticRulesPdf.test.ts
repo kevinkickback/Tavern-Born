@@ -22,7 +22,7 @@ import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
 const stacks: Array<['bundled' | 'local', string]> = [['bundled', 'resources/srd/data']]
 if (existsSync('data/class/class-druid.json')) stacks.push(['local', 'data'])
 
-async function load(type: 'bundled' | 'local', root: string) {
+async function loadCatalog(type: 'bundled' | 'local', root: string) {
   return composeGameDataLayers([
     await new FiveEToolsDataLoader(
       type === 'bundled'
@@ -37,6 +37,16 @@ async function load(type: 'bundled' | 'local', root: string) {
       { type, readJson: async (file) => JSON.parse(await readFile(resolve(root, file), 'utf8')) },
     ).loadAllData(),
   ])
+}
+
+const catalogs = new Map<string, Promise<GameData>>()
+
+function load(type: 'bundled' | 'local', root: string) {
+  const cached = catalogs.get(root)
+  if (cached) return cached
+  const pending = loadCatalog(type, root)
+  catalogs.set(root, pending)
+  return pending
 }
 
 function lookups(data: GameData) {
@@ -218,59 +228,61 @@ test.skipIf(!existsSync('data/class/class-druid.json'))(
   90_000,
 )
 
-test.each(stacks)(
-  'exact Druid rules survive all shipped PDF layouts and continue in notes (%s)',
-  async (type, root) => {
-    const data = await load(type, root)
-    const current = lookups(data)
-    const forExport = (source: 'PHB' | 'XPHB') => {
-      const character = actor(source, 14)
-      // Fill the main feature box to prove the actual notes path for every template.
-      character.features.push({
-        id: 'manual:field-notes',
-        name: 'Field notes',
-        source: 'Manual',
-        description: 'A longer independent note remains available on the character sheet. '.repeat(
-          105,
-        ),
-      })
-      return createCharacterSheetViewModel(character, current, current)
-    }
-    for (const template of classics) {
-      const vm = forExport('PHB')
-      const { text, notes } = await print(vm, template)
-      expect(notes).toContain('Natural Recovery')
-      expect(text).toContain("Land's Stride")
-      expect(text).toContain("Nature's Sanctuary")
-      expect(text).toContain('Restores all uses on a short or long rest')
-      expect(text).toContain('Max. CR: 1')
-      expect(text).toContain('by elementals or fey')
-      expect(text).toContain('immune to poison and disease')
-      expect(text).toContain('none of the slots can be 6th level or higher')
-      expect(text).toContain("can't use this feature again until you finish a long rest")
-    }
-    for (const template of revised) {
-      const vm = forExport('XPHB')
-      const { text, notes } = await print(vm, template)
-      expect(notes).toContain('Field notes')
-      expect(text).toContain('Base uses: 3')
-      expect(text).toContain('1 use on a short rest')
-      expect(text).toContain('all uses on a long rest')
-      expect(text).toContain('Known Forms: 8')
-      expect(text).toContain('Fly Speed: Yes')
-      expect(text).toContain('immune to the Poisoned condition')
-      expect(text).toContain("Land's Aid")
-      expect(text).toContain('life-draining thorns')
-      expect(text).toContain("Nature's Sanctuary")
-      expect(text).toContain('spectral trees and vines')
-      expect(text).toContain(
-        'prepared from your Circle Spells feature without expending a spell slot',
-      )
-      expect(text).toContain('none of them can be level 6+')
-    }
-  },
-  45_000,
-)
+const classicRules = [
+  "Land's Stride",
+  "Nature's Sanctuary",
+  'Restores all uses on a short or long rest',
+  'Max. CR: 1',
+  'by elementals or fey',
+  'immune to poison and disease',
+  'none of the slots can be 6th level or higher',
+  "can't use this feature again until you finish a long rest",
+]
+
+const revisedRules = [
+  'Base uses: 3',
+  '1 use on a short rest',
+  'all uses on a long rest',
+  'Known Forms: 8',
+  'Fly Speed: Yes',
+  'immune to the Poisoned condition',
+  "Land's Aid",
+  'life-draining thorns',
+  "Nature's Sanctuary",
+  'spectral trees and vines',
+  'prepared from your Circle Spells feature without expending a spell slot',
+  'none of them can be level 6+',
+]
+
+test('exact bundled Druid rules survive all shipped PDF layouts and continue in notes', async () => {
+  const data = await load('bundled', 'resources/srd/data')
+  const current = lookups(data)
+  const forExport = (source: 'PHB' | 'XPHB') => {
+    const character = actor(source, 14)
+    // Fill the main feature box to prove the actual notes path for every template.
+    character.features.push({
+      id: 'manual:field-notes',
+      name: 'Field notes',
+      source: 'Manual',
+      description: 'A longer independent note remains available on the character sheet. '.repeat(
+        105,
+      ),
+    })
+    return createCharacterSheetViewModel(character, current, current)
+  }
+  for (const template of classics) {
+    const vm = forExport('PHB')
+    const { text, notes } = await print(vm, template)
+    expect(notes).toContain('Natural Recovery')
+    for (const rule of classicRules) expect(text).toContain(rule)
+  }
+  for (const template of revised) {
+    const vm = forExport('XPHB')
+    const { text, notes } = await print(vm, template)
+    expect(notes).toContain('Field notes')
+    for (const rule of revisedRules) expect(text).toContain(rule)
+  }
+}, 45_000)
 
 test.each(stacks)(
   'static rows follow exact earned gains, current catalog and names-only rules (%s)',
@@ -308,6 +320,11 @@ test.each(stacks)(
     expect(summaries('XPHB', 13)).not.toContain("Nature's Sanctuary")
     expect(summaries('XPHB', 14)).toContain("Nature's Sanctuary")
     expect(summaries('XPHB', 17)).toContain('Base uses: 4')
+    // The configured and bundled catalogs each have to supply the rules sent to the mapper.
+    const classic = normalize(summaries('PHB', 14))
+    const revised = normalize(summaries('XPHB', 14))
+    for (const rule of classicRules) expect(classic).toContain(rule)
+    for (const rule of revisedRules) expect(revised).toContain(rule)
     const names = withoutSheetDescriptions(project('XPHB', 10)).featuresSummary
     for (const title of ['Wild Shape', "Land's Aid", 'Natural Recovery', "Nature's Ward"])
       expect(names.split('\n\n')).toContain(title)
@@ -336,12 +353,12 @@ test.each(stacks)(
     expect(summaries('XPHB', 10, withoutWard)).toContain('Natural Recovery')
     expect(summaries('PHB', 10)).toContain('Natural Recovery')
     expect(summaries('XPHB', 10)).toContain('Wild Shape')
-    const classic = actor('PHB', 6)
-    classic.features.push(
+    const classicActor = actor('PHB', 6)
+    classicActor.features.push(
       { id: 'earned-land', name: "Land's Stride", source: 'PHB', level: 6, description: '' },
       { id: 'manual-land', name: "Land's Stride", source: 'Manual', description: 'Personal note.' },
     )
-    classic.provenance.features["land's stride"] = [
+    classicActor.provenance.features["land's stride"] = [
       {
         sourceType: 'subclass',
         sourceName: 'Circle of the Land',
@@ -350,7 +367,7 @@ test.each(stacks)(
         label: 'Circle of the Land',
       },
     ]
-    const withSavedLabel = createCharacterSheetViewModel(classic, raw, raw)
+    const withSavedLabel = createCharacterSheetViewModel(classicActor, raw, raw)
     expect(
       withoutSheetDescriptions(withSavedLabel)
         .featuresSummary.split('\n\n')

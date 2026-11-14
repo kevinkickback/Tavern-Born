@@ -19,6 +19,9 @@ Use Node 24.15 or later in the Node 24 line.
 | Standard subclass journeys | `npm run test:journeys:standard` |
 | Local PR checks | `npm run check:pr` |
 
+For a local full run on a machine with spare cores and memory, try
+`npm test -- --maxWorkers=8`. This runs the same cases. Use fewer workers if the machine is busy.
+
 Vitest separates Node and jsdom. Use jsdom only for tests that need browser APIs or rendering.
 Shared setup provides browser shims and a no-op persistence adapter. Storage tests exercise the
 real transaction path. Keep runs isolated when fixtures or stores can change.
