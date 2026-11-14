@@ -53,7 +53,7 @@ jobs:
       - name: Check the staged ZIP against the published app's update requirement
         run: |
           legacy="$RUNNER_TEMP/tb-legacy/Tavern-Born.app"
-          requirement="$(codesign -d -r- "$legacy" 2>&1 | sed -n 's/^designated => //p')"
+          requirement="$(codesign -d -r- "$legacy" 2>&1 | sed -nE 's/^(# )?designated => //p')"
           test -n "$requirement"
           test -s release/Tavern-Born-0.7.0-arm64.dmg
           test -s release/Tavern-Born-0.7.0-arm64.dmg.blockmap
