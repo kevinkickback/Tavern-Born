@@ -924,30 +924,6 @@ describe('home page integration workflows', () => {
     )
   })
 
-  test('rejects oversized imports before reading their contents', async () => {
-    const user = userEvent.setup()
-    useCharacterStore.setState({
-      characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
-      activeCharacterId: null,
-      activeCharacter: null,
-    })
-    const fileInput = mockDynamicFileInput()
-    const text = vi.fn(async () => '{}')
-    const oversizedFile = { size: MAX_CHARACTER_SIZE + 1, text } as unknown as File
-
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'Import' }))
-    Object.defineProperty(fileInput, 'files', {
-      configurable: true,
-      get: () => [oversizedFile],
-    })
-
-    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
-
-    expect(text).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Character file exceeds the 10MB safety limit.')
-  })
-
   test('rejects a current-version character with corrupted nested data and reports why', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({

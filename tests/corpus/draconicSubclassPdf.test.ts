@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
-import { expect, test } from 'vitest'
+import { beforeAll, expect, test } from 'vitest'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
@@ -19,7 +19,10 @@ import {
 } from '@/lib/character/commands/classCommands'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import {
+  createCharacterSheetViewModel,
+  withoutSheetDescriptions,
+} from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
 import type { Class5e, ClassFeature, GameData, Subclass5e, SubclassFeature } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
@@ -62,6 +65,21 @@ function loadLayer(type: 'bundled' | 'local') {
   ).loadAllData()
 }
 
+const catalogs = new Map<string, GameData>()
+beforeAll(async () => {
+  const bundled = await loadLayer('bundled')
+  catalogs.set('bundled', composeGameDataLayers([bundled]))
+  if (stacks.includes('composed')) {
+    catalogs.set('composed', composeGameDataLayers([bundled, await loadLayer('local')]))
+  }
+}, 120_000)
+
+function catalogFor(stack: string) {
+  const data = catalogs.get(stack)
+  if (!data) throw new Error(`Missing loaded catalog: ${stack}`)
+  return data
+}
+
 function lookups(data: GameData) {
   return {
     ...buildGameDataLookups(data),
@@ -77,13 +95,8 @@ function reopen(character: Character, result?: CharacterCommandResult) {
   return characterPersistenceSchema.parse(JSON.parse(JSON.stringify(saved)))
 }
 
-test.each(
-  stacks,
-)('the exact earned Dragon Companion rules print in both revised layouts (%s)', async (stack) => {
-  const bundled = await loadLayer('bundled')
-  const data = composeGameDataLayers(
-    stack === 'composed' ? [bundled, await loadLayer('local')] : [bundled],
-  )
+test.each(stacks)('the exact earned Dragon Companion reaches the sheet (%s)', async (stack) => {
+  const data = catalogFor(stack)
   const raw = lookups(data)
   const filtered = (...keys: string[]) => {
     const filter = { sources: ['XPHB'], suppressedKeys: new Set(keys) }
@@ -194,6 +207,12 @@ test.each(
       },
     }).classFeaturesSummary2014,
   ).not.toContain('Dragon Companion')
+
+  const compact = withoutSheetDescriptions(view).classFeaturesSummary2014
+  expect(compact.match(/Dragon Companion/g)).toHaveLength(1)
+  for (const rule of rules) expect(compact).not.toMatch(rule)
+  // The catalog affects projection. The two PDF layouts consume the same projected fields.
+  if (stack === 'composed') return
 
   for (const layout of ['2024-official', '2024-custom'] as const) {
     const read = async (description: 'full' | 'names', input = view) => {
@@ -501,11 +520,8 @@ test.each(
 
 test.each(
   stacks,
-)('earned Draconic actions print with their native rules and existing action notes (%s)', async (stack) => {
-  const bundled = await loadLayer('bundled')
-  const data = composeGameDataLayers(
-    stack === 'composed' ? [bundled, await loadLayer('local')] : [bundled],
-  )
+)('earned Draconic actions reach the sheet with their native rules (%s)', async (stack) => {
+  const data = catalogFor(stack)
   const raw = lookups(data)
   for (const {
     name,
@@ -599,6 +615,12 @@ test.each(
     for (const rule of rules) expect(manualFeature.classFeaturesSummary2014).toMatch(rule)
     const native = view.actions.find((action) => action.name === name)
     expect(native).toMatchObject({ kind, source: { kind: 'subclass', source } })
+    const compact = withoutSheetDescriptions(view).classFeaturesSummary2014
+    expect(compact).toContain(name)
+    for (const rule of rules) expect(compact).not.toMatch(rule)
+    // Exercise document settings once per applicable layout, using the bundled catalog.
+    if (stack === 'composed') continue
+
     const action: CharacterAction = {
       id: 'manual-draconic-action',
       name,
