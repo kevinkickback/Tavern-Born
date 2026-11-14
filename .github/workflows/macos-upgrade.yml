@@ -63,7 +63,7 @@ jobs:
           staged="$RUNNER_TEMP/tb-staged/Tavern-Born.app"
           codesign -dvv -r- "$staged"
           cat release/latest-mac.yml
-          if codesign --verify --deep --strict --all-architectures --test-requirement "$requirement" "$staged"; then
+          if codesign --verify --deep --strict --all-architectures --test-requirement "=$requirement" "$staged"; then
             echo 'The staged ZIP satisfies the exact v0.6.0 code requirement.'
           else
             echo 'The staged ZIP failed the exact v0.6.0 code requirement.'
