@@ -41,7 +41,8 @@ async function withPackage(use) {
             )
             if (/^\d+$/.test(portLine.trim())) return Number(portLine)
           } catch (error) {
-            if (error.code !== 'ENOENT') throw error
+            // Windows can temporarily lock the file while Chromium writes it.
+            if (error.code !== 'ENOENT' && error.code !== 'EBUSY') throw error
           }
           await delay(100)
         }
