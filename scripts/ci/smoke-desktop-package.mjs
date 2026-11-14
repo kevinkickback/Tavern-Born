@@ -122,68 +122,50 @@ async function openCharacter(page) {
 }
 
 try {
-  if (checkMode === '--release-page') {
-    await withPackage(async (page) => {
-      const start = page.getByRole('button', { name: 'Get Started', exact: true })
-      const notification = page.getByRole('button', { name: 'App update available' })
-      const home = page.getByRole('main')
-      await expect(start.or(home).first()).toBeVisible({ timeout })
-      if (await start.isVisible()) await start.click()
-      console.log('Checking the public release from the packaged Mac app.')
+  await withPackage(async (page) => {
+    await page.getByRole('button', { name: 'Get Started', exact: true }).click()
+    const imported = JSON.parse(
+      await readFile(projectFile('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
+    )
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.getByRole('button', { name: 'Import' }).first().click(),
+    ])
+    await fileChooser.setFiles({
+      name: 'packaged-smoke.tbc',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          ...imported,
+          name: characterName,
+          background: 'Acolyte',
+          equipment: [],
+        }),
+      ),
+    })
+    await openCharacter(page)
+    await page.getByRole('button', { name: 'Character Sheet' }).click()
+    await page.getByRole('button', { name: 'Generate Preview' }).click()
+    await expect(page.locator('canvas').first()).toBeVisible({ timeout })
+  })
+  await withPackage(async (page) => {
+    await openCharacter(page)
+    if (checkMode === '--release-page') {
       const result = await page.evaluate(() => window.electronAPI.checkForUpdate())
       assert.equal(result.data?.status, 'available', JSON.stringify(result))
-      console.log(`The public feed returned v${result.data.version}.`)
-      // If data initialization opened the first-run modal after the manual check, dismiss it.
-      await expect(start.or(notification).first())
-        .toBeVisible({ timeout })
-        .catch(async (error) => {
-          console.error((await page.locator('body').innerText()).slice(0, 2500))
-          throw error
-        })
-      if (await start.isVisible()) await start.click()
-      await notification.click()
+      await page.getByRole('button', { name: 'App update available' }).click()
       await expect(page.getByRole('button', { name: 'Open Download Page' })).toBeVisible({
         timeout,
       })
       await expect(page.getByRole('button', { name: 'Install Now' })).toHaveCount(0)
       console.log(`Packaged app offered the release-page update to v${result.data.version}.`)
-    })
-  } else {
-    await withPackage(async (page) => {
-      await page.getByRole('button', { name: 'Get Started', exact: true }).click()
-      const imported = JSON.parse(
-        await readFile(projectFile('tests/fixtures/equipment-e2e.tbc'), 'utf8'),
-      )
-      const [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        page.getByRole('button', { name: 'Import' }).first().click(),
-      ])
-      await fileChooser.setFiles({
-        name: 'packaged-smoke.tbc',
-        mimeType: 'application/json',
-        buffer: Buffer.from(
-          JSON.stringify({
-            ...imported,
-            name: characterName,
-            background: 'Acolyte',
-            equipment: [],
-          }),
-        ),
-      })
-      await openCharacter(page)
-      await page.getByRole('button', { name: 'Character Sheet' }).click()
-      await page.getByRole('button', { name: 'Generate Preview' }).click()
-      await expect(page.locator('canvas').first()).toBeVisible({ timeout })
-    })
-    await withPackage(openCharacter)
-  }
+    }
+  })
 } finally {
   const resolvedProfile = await realpath(profile)
   assert.equal(dirname(resolvedProfile), temp)
   await rm(resolvedProfile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
-if (checkMode !== '--release-page') {
-  console.log(
-    `Electron ${expectedElectron} packaged launch, Included SRD, PDF, and saved reopen passed: ${executable}`,
-  )
-}
+console.log(
+  `Electron ${expectedElectron} packaged launch, Included SRD, PDF, and saved reopen passed: ${executable}`,
+)
