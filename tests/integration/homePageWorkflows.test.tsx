@@ -343,6 +343,16 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('Additional content')).toBeTruthy()
   })
 
+  test('waits until startup is complete to open the character compatibility dialog', () => {
+    useCharacterStore.setState({
+      unsupportedCharacters: [{ ...makeCharacterFixture({ name: 'Old Hero' }), schemaVersion: 0 }],
+    })
+    const { rerender } = render(<HomePage showCompatibilityDialog={false} />)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    rerender(<HomePage showCompatibilityDialog />)
+    expect(screen.getByRole('alertdialog', { name: 'Character compatibility issue' })).toBeTruthy()
+  })
+
   test('retains incompatible originals after download failure and exports one oversized backup on retry', async () => {
     const user = userEvent.setup()
     const originals = [

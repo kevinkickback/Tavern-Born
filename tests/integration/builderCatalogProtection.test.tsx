@@ -5,6 +5,7 @@ import { RequireActiveCharacter } from '@/components/layout/RequireActiveCharact
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 const gameData = useGameDataStore.getState()
 const characters = useCharacterStore.getState()
@@ -23,7 +24,7 @@ test('defers Builder during activation and protects a draft after leaving the ro
     activeCharacter: character,
     activeCharacterId: character.id,
   })
-  useGameDataStore.setState({ isCatalogActivating: true })
+  useGameDataStore.setState({ gameData: makeGameDataFixture(), isStartupRecovering: true })
   const builder = render(
     <MemoryRouter initialEntries={['/build']}>
       <Routes>
@@ -33,8 +34,11 @@ test('defers Builder during activation and protects a draft after leaving the ro
       </Routes>
     </MemoryRouter>,
   )
-  expect(screen.getByRole('status').textContent).toBe('Applying game data…')
   expect(screen.queryByRole('heading', { name: 'Builder' })).toBeNull()
+  await act(() =>
+    useGameDataStore.setState({ isStartupRecovering: false, isCatalogActivating: true }),
+  )
+  expect(screen.getByRole('status').textContent).toBe('Applying game data…')
   await act(() => useGameDataStore.setState({ isCatalogActivating: false }))
   expect(await screen.findByRole('heading', { name: 'Builder' })).toBeTruthy()
   await expect(useGameDataStore.getState().loadCatalog(source)).resolves.toMatchObject({

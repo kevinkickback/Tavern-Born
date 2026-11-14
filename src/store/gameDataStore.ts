@@ -97,6 +97,7 @@ interface CatalogRequest {
   session?: boolean
   startup?: boolean
   recovery?: boolean
+  startupRecoverySource?: Exclude<DataSourceConfig, { type: 'bundled' }>
   folderGrant?: string
 }
 
@@ -166,6 +167,8 @@ interface GameDataState {
   dataSourceConfig: DataSourceConfig | null
   isLoading: boolean
   isBackgroundRefreshing: boolean
+  isStartupRecovering: boolean
+  continueWithBuiltInRules: () => void
   isCatalogActivating: boolean
   catalogDraftDirty: boolean
   previousCatalog: PreviousCatalog | undefined
@@ -227,6 +230,10 @@ export const useGameDataStore = create<GameDataState>()(
       dataSourceConfig: null,
       isLoading: false,
       isBackgroundRefreshing: false,
+      isStartupRecovering: false,
+      continueWithBuiltInRules: () => {
+        if (get().isStartupRecovering) set({ isStartupRecovering: false })
+      },
       isCatalogActivating: false,
       catalogDraftDirty: false,
       previousCatalog: undefined,
@@ -416,6 +423,8 @@ export const useGameDataStore = create<GameDataState>()(
             const result = await get().loadCatalog(installed, false, {
               session: Boolean(external),
               startup,
+              startupRecoverySource:
+                startup && opts?.checkForUpdates ? (external ?? undefined) : undefined,
             })
             if (result.kind === 'superseded') return {}
             if (result.kind === 'rejected') set({ bundledUnavailable: true })
@@ -462,6 +471,7 @@ export const useGameDataStore = create<GameDataState>()(
             : get().checkCatalogIfDue(true)
           if (backgroundRefresh) return { backgroundRefresh }
         }
+        if (get().isStartupRecovering) set({ isStartupRecovering: false })
         return {}
       },
 
@@ -544,6 +554,9 @@ export const useGameDataStore = create<GameDataState>()(
           pendingCatalog: null,
           isLoading: !background,
           isBackgroundRefreshing: background,
+          isStartupRecovering: Boolean(
+            background && request?.startup && get().sessionBundledSource,
+          ),
           error: null,
           loadProgress: null,
         })
@@ -780,6 +793,7 @@ export const useGameDataStore = create<GameDataState>()(
               pendingCatalog: review,
               isLoading: false,
               isBackgroundRefreshing: false,
+              isStartupRecovering: false,
               loadProgress: null,
               lastUpdateCheckAt: new Date().toISOString(),
               catalogWarnings: review.candidate.warnings,
@@ -851,6 +865,16 @@ export const useGameDataStore = create<GameDataState>()(
               gameData: acceptedData,
               remoteStartup: null,
               sessionBundledSource: config,
+              isStartupRecovering: Boolean(
+                request.startupRecoverySource &&
+                  isCatalogCheckDue(
+                    request.startupRecoverySource,
+                    get().catalogRefreshCheck,
+                    get().lastUpdateCheckAt,
+                    true,
+                    Date.now(),
+                  ),
+              ),
               bundledUnavailable: false,
               cacheStatus: 'session-srd',
               isLoading: false,
@@ -936,7 +960,12 @@ export const useGameDataStore = create<GameDataState>()(
                 externalKeys: prepared?.keys,
                 catalogWarnings: candidate?.warnings ?? [],
                 ...(requestId === activeLoadRequestId
-                  ? { isLoading: false, isBackgroundRefreshing: false, loadProgress: null }
+                  ? {
+                      isLoading: false,
+                      isBackgroundRefreshing: false,
+                      isStartupRecovering: false,
+                      loadProgress: null,
+                    }
                   : {}),
                 lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now,
                 lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
@@ -970,6 +999,7 @@ export const useGameDataStore = create<GameDataState>()(
             set({
               isLoading: false,
               isBackgroundRefreshing: false,
+              isStartupRecovering: false,
               loadProgress: null,
             })
             return { kind: 'superseded' }
@@ -984,6 +1014,7 @@ export const useGameDataStore = create<GameDataState>()(
               : {}),
             isLoading: false,
             isBackgroundRefreshing: false,
+            isStartupRecovering: false,
             loadProgress: null,
           })
           await recorded

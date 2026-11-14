@@ -14,6 +14,8 @@ export function AppLoadingOverlay({
 }) {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
+  const isStartupRecovering = useGameDataStore((s) => s.isStartupRecovering)
+  const continueWithBuiltInRules = useGameDataStore((s) => s.continueWithBuiltInRules)
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
   const gameData = useGameDataStore((s) => s.gameData)
   const loadProgress = useGameDataStore((s) => s.loadProgress)
@@ -34,6 +36,7 @@ export function AppLoadingOverlay({
   const isLoadingOverlay =
     (initialRoutePending && remoteStartup !== 'setup') ||
     shouldStayVisible ||
+    isStartupRecovering ||
     Boolean(gameData && isLoading)
   const isStartupReady = Boolean(
     onStartupComplete && !isLoadingOverlay && gameData && remoteStartup !== 'setup',
@@ -82,6 +85,8 @@ export function AppLoadingOverlay({
   let statusLine: string
   if (isStartupReady) {
     statusLine = 'Ready'
+  } else if (isStartupRecovering) {
+    statusLine = 'Restoring additional content…'
   } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
@@ -168,6 +173,11 @@ export function AppLoadingOverlay({
       </div>
       {error && !isStartupReady && (
         <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>
+      )}
+      {isStartupRecovering && (
+        <Button variant="outline" className="mt-5" onClick={continueWithBuiltInRules}>
+          Continue with built-in rules
+        </Button>
       )}
       {remoteStartup === 'unavailable' && (
         <div className="mt-5 flex max-w-[calc(100vw-2rem)] flex-wrap justify-center gap-2">

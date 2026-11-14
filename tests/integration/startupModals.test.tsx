@@ -41,6 +41,7 @@ function resetGameDataStore() {
     dataSourceConfig: null,
     isLoading: false,
     isBackgroundRefreshing: false,
+    isStartupRecovering: false,
     loadProgress: null,
     error: null,
     cacheStatus: 'unknown',
@@ -224,6 +225,33 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+  })
+
+  test('blocks during startup recovery and lets the user continue with built-in rules', async () => {
+    const user = userEvent.setup()
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: makeGameDataFixture(),
+      cacheStatus: 'session-srd',
+      isBackgroundRefreshing: true,
+      isStartupRecovering: true,
+    })
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Open character</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+    const content = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
+    expect(screen.getByText('Restoring additional content…')).toBeTruthy()
+    expect(content?.hasAttribute('inert')).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Continue with built-in rules' }))
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    expect(content?.hasAttribute('inert')).toBe(false)
+    expect(useGameDataStore.getState().isBackgroundRefreshing).toBe(true)
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {

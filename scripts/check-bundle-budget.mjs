@@ -14,9 +14,9 @@ export const BUNDLE_BUDGETS = Object.freeze({
   bundledSrdPack: 5.25 * MIB,
   applicationBundle: 37 * MIB,
   staticAssets: 32 * MIB,
-  // The catalog refresh branch with the class training previews measured 6915.9 KiB on Node 24.
+  // Startup recovery with the loading-screen fallback measured 6919.6 KiB on Node 24.
   // Keep approximately 3 KiB of headroom.
-  rendererCode: 6919 * KIB,
+  rendererCode: 6923 * KIB,
   initialRendererScript: 1688 * KIB,
   initialStylesheet: 185 * KIB,
   largestLazyScript: 620 * KIB,

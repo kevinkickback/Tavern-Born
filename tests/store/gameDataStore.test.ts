@@ -160,6 +160,7 @@ describe('gameDataStore', () => {
       dataSourceConfig: null,
       isLoading: false,
       isBackgroundRefreshing: false,
+      isStartupRecovering: false,
       loadProgress: null,
       error: null,
       lastDataChangedAt: null,
@@ -535,8 +536,58 @@ describe('gameDataStore', () => {
       useGameDataStore.getState().loadFromCache({ checkForUpdates: false }),
     ).resolves.toEqual({})
     expect(useGameDataStore.getState().cacheStatus).toBe('session-srd')
+    expect(useGameDataStore.getState().isStartupRecovering).toBe(false)
     expect(loadGameDataSourceStackMock).not.toHaveBeenCalled()
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test('startup recovery releases the built-in fallback on timeout', async () => {
+    vi.useFakeTimers()
+    const late = deferred<GameData>()
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
+    loadDataFromSourceMock.mockResolvedValueOnce(nonempty('Included race'))
+    loadGameDataSourceStackMock.mockReturnValueOnce(late.promise)
+    const { backgroundRefresh } = await useGameDataStore
+      .getState()
+      .loadFromCache({ checkForUpdates: true })
+    expect(useGameDataStore.getState().isStartupRecovering).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(STARTUP_CATALOG_TIMEOUT_MS)
+    await backgroundRefresh
+    expect(useGameDataStore.getState()).toMatchObject({
+      isStartupRecovering: false,
+      isBackgroundRefreshing: false,
+      pendingCatalog: null,
+      sessionBundledSource: bundled,
+      error: expect.stringContaining('15 seconds'),
+    })
+    late.resolve(nonempty('Late rules'))
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test('gates recovery when backoff expires while built-in rules are loading', async () => {
+    vi.useFakeTimers()
+    const fallback = deferred<GameData>()
+    const source = deferred<GameData>()
+    useGameDataStore.setState({ dataSourceConfig: remote })
+    refreshStorage.check = {
+      source: remote,
+      lastAttemptAt: Date.now() - 15 * 60_000 + 1000,
+      lastSuccessAt: null,
+      consecutiveFailures: 1,
+    }
+    resolveDefaultBundledSourceMock.mockResolvedValue(bundled)
+    loadDataFromSourceMock.mockReturnValueOnce(fallback.promise)
+    loadGameDataSourceStackMock.mockReturnValueOnce(source.promise)
+    const startup = useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
+    await vi.advanceTimersByTimeAsync(1000)
+    fallback.resolve(nonempty('Included race'))
+    const { backgroundRefresh } = await startup
+    expect(useGameDataStore.getState().isStartupRecovering).toBe(true)
+    source.resolve(nonempty('External race'))
+    await backgroundRefresh
+    expect(useGameDataStore.getState().isStartupRecovering).toBe(false)
   })
 
   test('explicit retry stages an unverified standalone source when the desktop pack is unavailable', async () => {

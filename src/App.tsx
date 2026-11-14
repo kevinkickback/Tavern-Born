@@ -252,7 +252,7 @@ function App() {
                 </Route>
               </Route>
               <Route element={workspaceRoute}>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={<HomePage showCompatibilityDialog={startupComplete} />} />
                 <Route path="/compendium" element={<CompendiumPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>

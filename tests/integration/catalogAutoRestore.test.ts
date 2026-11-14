@@ -68,10 +68,12 @@ test('restores a verified matching obsolete catalog and preserves its last chang
   const { accepted } = await setUpObsoleteCache()
   const { backgroundRefresh } = await start()
   expect(useGameDataStore.getState().sessionBundledSource).not.toBeNull()
+  expect(useGameDataStore.getState().isStartupRecovering).toBe(true)
   await expect(backgroundRefresh).resolves.toBe(false)
   const state = useGameDataStore.getState()
   const { cache, previous, refreshCheck } = await readGameDataCachePair()
   expect(state.sessionBundledSource).toBeNull()
+  expect(state.isStartupRecovering).toBe(false)
   expect(state.pendingCatalog).toBeNull()
   expect(state.gameData?.feats.map(({ name }) => name)).toContain('Original feat')
   expect(cache?.contentFingerprint).toBe(accepted.contentFingerprint)
@@ -97,6 +99,7 @@ test.each([
   if (condition === 'missing cache') await clearGameDataCache()
   await (await start()).backgroundRefresh
   expect(useGameDataStore.getState().sessionBundledSource).not.toBeNull()
+  expect(useGameDataStore.getState().isStartupRecovering).toBe(false)
   expect(useGameDataStore.getState().pendingCatalog).toMatchObject({
     reason: condition === 'changed' ? 'update' : 'recovery',
   })
@@ -109,6 +112,11 @@ test.each([
 test('waits for the workflow and draft to clear, then restores without checking again', async () => {
   const { fetch } = await setUpObsoleteCache()
   const { backgroundRefresh } = await start()
+  useGameDataStore.getState().continueWithBuiltInRules()
+  expect(useGameDataStore.getState()).toMatchObject({
+    isStartupRecovering: false,
+    isBackgroundRefreshing: true,
+  })
   const release = useGameDataStore.getState().protectCatalog()
   useGameDataStore.setState({ catalogDraftDirty: true })
   try {
@@ -118,6 +126,7 @@ test('waits for the workflow and draft to clear, then restores without checking 
     release()
     await Promise.resolve()
     expect(useGameDataStore.getState().sessionBundledSource).not.toBeNull()
+    expect(useGameDataStore.getState().isStartupRecovering).toBe(false)
     useGameDataStore.setState({ catalogDraftDirty: false })
     await vi.waitFor(() => expect(useGameDataStore.getState().sessionBundledSource).toBeNull())
     expect(fetch.mock.calls.length).toBe(reads)
