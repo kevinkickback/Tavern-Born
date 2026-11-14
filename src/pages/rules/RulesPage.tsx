@@ -19,6 +19,7 @@ import { setEquipmentRestrictionsIgnoredCommand } from '@/lib/character/commands
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { VariantRules } from '@/types/character'
 
 type BooleanRuleKey = Exclude<keyof VariantRules, 'abilityScoreMethod'>
@@ -190,6 +191,7 @@ export function RulesPage() {
           character,
           checked,
           calculation?.character.proficiencies.armor,
+          useGameDataStore.getState().gameData?.lookups?.itemLookup,
         ),
       )
       return

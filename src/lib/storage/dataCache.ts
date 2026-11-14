@@ -13,7 +13,7 @@ const PREVIOUS_INFO_KEY = 'tb:game-data-previous-info'
 const CHARACTER_LIBRARY_KEY = 'character-storage'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
-export const GAME_DATA_CACHE_SCHEMA_VERSION = 106
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 107
 let abortableCacheStore: ReturnType<typeof createStore> | undefined
 
 export interface GameDataCacheEntry {
