@@ -61,13 +61,15 @@ async function withPackage(use) {
           const page = context.pages()[0] ?? (await context.waitForEvent('page', { timeout }))
           page.setDefaultTimeout(timeout)
           await expect(page).toHaveTitle(/Tavern Born/i, { timeout })
+          const rendererUrl = await page.evaluate(() => location.href)
+          assert.match(rendererUrl, /\/resources\/app\.asar\/dist\//i)
+          console.log(`Packaged renderer: ${rendererUrl}`)
           await expect
             .poll(() => page.evaluate(() => window.electronAPI?.getBundledManifest()), { timeout })
             .toMatchObject({ packId: 'tavern-born-srd-core' })
           assert.equal(await page.evaluate(() => typeof globalThis.require), 'undefined')
           const { userAgent } = await session.send('Browser.getVersion')
           assert.equal(userAgent.match(/\bElectron\/(\S+)/)?.[1], expectedElectron, userAgent)
-          assert.match(await page.evaluate(() => location.href), /\/resources\/app\.asar\/dist\//i)
           await use(page)
         })(),
         exited.then(({ code, signal }) => {
@@ -80,6 +82,7 @@ async function withPackage(use) {
     } finally {
       verificationDeadline.abort()
     }
+    // Browser.close quits the browser process, including on macOS.
     void session.send('Browser.close').catch(() => undefined)
     const result = await Promise.race([exited, delay(timeout, null, { ref: false })])
     assert.deepEqual(result, { code: 0, signal: null }, 'Packaged app did not close cleanly.')

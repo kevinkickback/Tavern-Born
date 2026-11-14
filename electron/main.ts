@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import {
   app,
   BrowserWindow,
@@ -23,7 +23,7 @@ import {
 } from './bundledResources'
 import { createCatalogService } from './catalogService'
 import { readLocalCatalogResource } from './localCatalogResource'
-import { isTrustedRendererUrl } from './security'
+import { isTrustedRendererUrl, rendererRootFileUrl } from './security'
 import {
   cancelDownload,
   checkForUpdate,
@@ -46,7 +46,7 @@ import {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const RENDERER_ROOT_URL = pathToFileURL(join(__dirname, '../dist') + sep).href
+const RENDERER_ROOT_URL = rendererRootFileUrl(join(__dirname, '../dist') + sep)
 
 let mainWindow: BrowserWindow | null = null
 let desktopState: 'starting' | 'ready' | 'closing' = 'starting'

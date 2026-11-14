@@ -50,6 +50,12 @@ jobs:
           Get-FileHash -LiteralPath $installer[0].FullName,$portable[0].FullName
           node scripts/ci/smoke-desktop-package.mjs (Join-Path $destination 'Tavern-Born.exe')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Exercise Windows when the portable extraction path uses different casing.
+          $portableTemp = Join-Path $env:RUNNER_TEMP 'TavernBorn-PortableTemp'
+          New-Item -ItemType Directory -Path $portableTemp | Out-Null
+          $env:TEMP = $portableTemp.ToLowerInvariant()
+          $env:TMP = $env:TEMP
+          if (!(Test-Path -LiteralPath $env:TEMP -PathType Container)) { throw 'Expected a case-insensitive temporary path.' }
           node scripts/ci/smoke-desktop-package.mjs $portable[0].FullName
           exit $LASTEXITCODE
       - name: Mount and exercise the macOS DMG
@@ -61,6 +67,7 @@ jobs:
           test "${#images[@]}" -eq 1
           shasum -a 256 "${images[0]}"
           mount="$RUNNER_TEMP/tb-desktop-package"
+          mkdir -p "$mount"
           hdiutil attach -mountpoint "$mount" -readonly -nobrowse "${images[0]}"
           trap 'hdiutil detach "$mount"' EXIT
           node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born"

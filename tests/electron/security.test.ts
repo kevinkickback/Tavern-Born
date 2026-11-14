@@ -1,7 +1,11 @@
 import { join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, expect, test } from 'vitest'
-import { isPathWithinRoot, isTrustedRendererUrl } from '../../electron/security'
+import {
+  isPathWithinRoot,
+  isTrustedRendererUrl,
+  rendererRootFileUrl,
+} from '../../electron/security'
 
 describe('Electron security boundaries', () => {
   test('allows the selected root and descendants only', () => {
@@ -41,6 +45,30 @@ describe('Electron security boundaries', () => {
     )
     expect(
       isTrustedRendererUrl('http://127.0.0.1:5173@evil.example/', rendererRoot, devServer),
+    ).toBe(false)
+  })
+
+  test('normalizes only the drive letter of Windows file URLs', () => {
+    const rendererRoot = rendererRootFileUrl('c:/App/Resources/app.asar/dist/', 'win32')
+    expect(rendererRoot).toBe('file:///C:/App/Resources/app.asar/dist/')
+    expect(rendererRootFileUrl('/c:/App/Resources/app.asar/dist/', 'linux')).toBe(
+      'file:///c:/App/Resources/app.asar/dist/',
+    )
+
+    expect(
+      isTrustedRendererUrl('file:///C:/App/Resources/app.asar/dist/index.html', rendererRoot),
+    ).toBe(true)
+    expect(
+      isTrustedRendererUrl('file:///D:/App/Resources/app.asar/dist/index.html', rendererRoot),
+    ).toBe(false)
+    expect(
+      isTrustedRendererUrl('file:///C:/app/Resources/app.asar/dist/index.html', rendererRoot),
+    ).toBe(false)
+    expect(
+      isTrustedRendererUrl(
+        'file:///C:/App/Resources/app.asar/dist-sibling/index.html',
+        rendererRoot,
+      ),
     ).toBe(false)
   })
 })
