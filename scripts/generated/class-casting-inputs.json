@@ -151,7 +151,7 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "e5c5362f2830f39d7626288530441b0ffe14d213b328027bdb69c3ce9bf0e4e3"
+      "sha256": "2ce7f831616c04aae3d4df491246505342eb73a9a22c1ae84e279ae2f85d3399"
     },
     {
       "file": "scripts/generate-class-casting-rules.mjs",

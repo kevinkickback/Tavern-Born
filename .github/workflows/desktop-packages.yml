@@ -1,0 +1,87 @@
+name: Desktop package checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/desktop-packages.yml
+      - scripts/ci/smoke-desktop-package.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-packages-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  packages:
+    name: Packaged desktop (${{ matrix.os }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build packages without publishing
+        run: npm run dist -- --publish never
+      - name: Install and exercise the Windows packages
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem -LiteralPath release -Filter '*-Setup-*.exe')
+          $portable = @(Get-ChildItem -LiteralPath release -Filter '*-portable.exe')
+          if ($installer.Count -ne 1 -or $portable.Count -ne 1) { throw 'Expected two Windows packages.' }
+          $destination = Join-Path $env:RUNNER_TEMP 'tb-desktop-package'
+          $setup = Start-Process -FilePath $installer[0].FullName -ArgumentList "/S /D=$destination" -Wait -PassThru -WindowStyle Hidden
+          if ($setup.ExitCode -ne 0) { throw "Installer exited $($setup.ExitCode)." }
+          Get-FileHash -LiteralPath $installer[0].FullName,$portable[0].FullName
+          node scripts/ci/smoke-desktop-package.mjs (Join-Path $destination 'Tavern-Born.exe')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/ci/smoke-desktop-package.mjs $portable[0].FullName
+          exit $LASTEXITCODE
+      - name: Mount and exercise the macOS DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          images=(release/*-arm64.dmg)
+          test "${#images[@]}" -eq 1
+          shasum -a 256 "${images[0]}"
+          mount="$RUNNER_TEMP/tb-desktop-package"
+          hdiutil attach -mountpoint "$mount" -readonly -nobrowse "${images[0]}"
+          trap 'hdiutil detach "$mount"' EXIT
+          node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born"
+      - name: Exercise Linux AppImage and Debian package
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          images=(release/*.AppImage)
+          debs=(release/*.deb)
+          test "${#images[@]}" -eq 1
+          test "${#debs[@]}" -eq 1
+          sha256sum "${images[0]}" "${debs[0]}"
+          sudo apt-get update
+          sudo apt-get install -y "./${debs[0]}"
+          deb_executable="$(dpkg-query -L tavern-born | grep -E '^/opt/[^/]+/tavern-born$')"
+          xvfb-run --auto-servernum node scripts/ci/smoke-desktop-package.mjs "$deb_executable"
+          # Extract the AppImage and exercise AppRun on runners without FUSE.
+          image="$(realpath "${images[0]}")"
+          (
+            cd "$RUNNER_TEMP"
+            "$image" --appimage-extract > /dev/null
+            APPIMAGE="$image" xvfb-run --auto-servernum node "$GITHUB_WORKSPACE/scripts/ci/smoke-desktop-package.mjs" squashfs-root/AppRun
+          )

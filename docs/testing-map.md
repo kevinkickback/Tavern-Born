@@ -87,9 +87,12 @@ CI splits the complete Vitest suite across two native coverage parts. Its collec
 preserves source coverage but leaves the threshold decision to the required combined report under
 the main test config. Ordinary local `test:coverage` remains a complete run with the same floors.
 
-Electron smoke requires a display on Linux. It skips local Windows builds 26200–26399 because of
-upstream Electron issue 52098 (`0x80000003` during sandboxed child initialization). Keep CI coverage;
-never use `--no-sandbox` to make this check pass. Remove the skip once the pinned runtime is fixed.
+Electron smoke requires a display on Linux. Windows smoke runs with Chromium sandboxing and also
+runs on builds 26200–26399. Electron 45.3.2 passed this suite on build 26300.
+Changes to the package manifest or lockfile also run desktop package checks on Windows, macOS,
+and Linux. They build without publishing and exercise the installers and portable packages on
+disposable runners. CI extracts the AppImage and runs its AppRun launcher. After changing fuses,
+the macOS build restores the ad-hoc signature Apple Silicon requires to launch.
 Before an authorized release, also run `npm run test:e2e:release` and `npm run check:release` locally.
 `npm run lint` writes fixes. `npx biome ci .` is read-only.
 
