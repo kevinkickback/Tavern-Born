@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { del, set } from 'idb-keyval'
 import { afterEach, expect, test, vi } from 'vitest'
+import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
 import {
   clearGameDataCache,
   computeGameDataFingerprint,
@@ -15,6 +16,17 @@ import type { DataSourceConfig } from '@/types/5etools'
 import { readLocalCatalogResource } from '../../electron/localCatalogResource'
 import { itemTextTypes } from '../fixtures/itemEntryFixtures'
 
+const refreshMetadataWrite = vi.hoisted(() => vi.fn(async () => {}))
+
+vi.mock(import('@/lib/storage/dataCache'), async (importOriginal) => {
+  const actual = await importOriginal()
+  const writeCatalogRefreshCheck: typeof actual.writeCatalogRefreshCheck = async (...args) => {
+    await refreshMetadataWrite()
+    return actual.writeCatalogRefreshCheck(...args)
+  }
+  return { ...actual, writeCatalogRefreshCheck }
+})
+
 const source = { type: 'remote', path: 'https://example.test/rules', isValid: true } as const
 const github = { ...source, path: 'https://github.com/example/rules' }
 const revision = 'a'.repeat(40)
@@ -23,6 +35,7 @@ const installed = { packId: 'srd', packVersion: '1' }
 const originalDate = '2026-01-01T00:00:00.000Z'
 
 afterEach(async () => {
+  refreshMetadataWrite.mockReset()
   installed.packVersion = '1'
   vi.unstubAllGlobals()
   useGameDataStore.setState(initial)
@@ -413,4 +426,81 @@ test('a new accepted cache generation supersedes a matching rebuild', async () =
   } finally {
     finish()
   }
+})
+
+test('a confirmed Apply retains the worker candidate while its data is being loaded', async () => {
+  const { accepted, changeContent } = await setUpObsoleteCache()
+  changeContent()
+  await (await start()).backgroundRefresh
+  const state = useGameDataStore.getState()
+  const pending = state.pendingCatalog!
+  const data = pending.candidate
+  expect(pending).toBeTruthy()
+  let receive: ((message: CatalogWorkerMessage) => void) | undefined
+  const sendCatalogMessage = vi.fn((message: CatalogRequestMessage) => {
+    if (message.kind !== 'run') return
+    if (message.command.kind === 'prepare') {
+      receive?.({
+        kind: 'result',
+        id: message.id,
+        result: { ...data, contentFingerprint: 'updated' },
+      })
+    } else if (message.command.kind === 'compare') {
+      receive?.({
+        kind: 'result',
+        id: message.id,
+        result: { additions: [], removals: [], incompleteRemovalPreview: false },
+      })
+    }
+  })
+  vi.stubGlobal('electronAPI', {
+    ...window.electronAPI,
+    onCatalogMessage: (listener: typeof receive) => {
+      receive = listener
+      return () => {
+        receive = undefined
+      }
+    },
+    sendCatalogMessage,
+  })
+  let finishCheck = () => {}
+  refreshMetadataWrite.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      finishCheck = resolve
+    }),
+  )
+  const backgroundRefresh = state.loadCatalog(source, true)
+  await vi.waitFor(() =>
+    expect(useGameDataStore.getState().pendingCatalog?.candidate).toHaveProperty('workerId'),
+  )
+  const candidate = useGameDataStore.getState().pendingCatalog!.candidate
+  if (!('workerId' in candidate)) throw new Error('Expected a worker candidate')
+  sendCatalogMessage.mockClear()
+  const request = { prepared: candidate, confirmed: true }
+  const applying = state.loadCatalog(candidate.config, false, request)
+  await vi.waitFor(() =>
+    expect(sendCatalogMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'run',
+        command: { kind: 'take', workerId: candidate.workerId },
+      }),
+    ),
+  )
+  const [[take]] = sendCatalogMessage.mock.calls
+  expect(useGameDataStore.getState().isCatalogActivating).toBe(true)
+  await expect(state.restoreBundledData()).resolves.toBeUndefined()
+  expect(await state.loadCatalog(source, true)).toMatchObject({ kind: 'rejected' })
+  expect(await state.loadCatalog(source, false, { prepared: candidate })).toMatchObject({
+    kind: 'rejected',
+  })
+  finishCheck()
+  await backgroundRefresh
+  expect(sendCatalogMessage.mock.calls).toHaveLength(1)
+  expect((await readGameDataCachePair()).expectedCache?.generation).toBe(accepted.generation)
+  receive?.({ kind: 'result', id: take.id, result: data })
+  await expect(applying).resolves.toEqual({ kind: 'applied', changed: true })
+  expect((await readGameDataCachePair()).cache?.data.feats.map(({ name }) => name)).toContain(
+    'Updated feat',
+  )
+  expect(useGameDataStore.getState().isCatalogActivating).toBe(false)
 })

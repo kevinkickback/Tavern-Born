@@ -49,6 +49,7 @@ import type { BundledDataSourceConfig, DataSourceConfig, GameData } from '@/type
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
+let activeApply: Pick<CatalogRequest, 'prepared' | 'folderGrant'> | undefined
 let remoteStartupPreparation: AbortController | null = null
 let cacheMutationQueue: Promise<void> = Promise.resolve()
 const catalogWorkflows = new Set<symbol>()
@@ -225,7 +226,7 @@ interface GameDataState {
   ) => Promise<CatalogResult>
   reconfigureRemoteStartup: () => void
   invalidatePendingFolderSelection: () => void
-  restoreBundledData: () => Promise<boolean>
+  restoreBundledData: () => Promise<boolean | undefined>
 }
 
 export const useGameDataStore = create<GameDataState>()(
@@ -503,8 +504,15 @@ export const useGameDataStore = create<GameDataState>()(
             ? WORKFLOW_MESSAGE
             : undefined
         if (blocked) {
-          if (request?.prepared !== pending?.candidate) releaseCatalogCandidate(request?.prepared)
-          if (request?.folderGrant !== pending?.folderGrant)
+          if (
+            request?.prepared !== pending?.candidate &&
+            request?.prepared !== activeApply?.prepared
+          )
+            releaseCatalogCandidate(request?.prepared)
+          if (
+            request?.folderGrant !== pending?.folderGrant &&
+            request?.folderGrant !== activeApply?.folderGrant
+          )
             releaseFolderGrant(request?.folderGrant)
           return { kind: 'rejected', message: blocked }
         }
@@ -517,6 +525,9 @@ export const useGameDataStore = create<GameDataState>()(
         activeLoadController?.abort()
         const controller = new AbortController()
         activeLoadController = controller
+        const applying =
+          !background && !!request?.prepared && !(request.confirmed && pending?.restoreWhenIdle)
+        if (applying) activeApply = { prepared: request.prepared, folderGrant }
         const timeoutMs = request?.startup
           ? STARTUP_CATALOG_TIMEOUT_MS
           : INTERACTIVE_CATALOG_TIMEOUT_MS
@@ -555,6 +566,7 @@ export const useGameDataStore = create<GameDataState>()(
         set({
           pendingCatalog: null,
           isLoading: !background,
+          ...(applying ? { isCatalogActivating: true } : {}),
           isBackgroundRefreshing: background,
           isStartupRecovering: Boolean(
             background && request?.startup && get().sessionBundledSource,
@@ -564,6 +576,7 @@ export const useGameDataStore = create<GameDataState>()(
         })
 
         let candidate = request?.prepared
+        let staged: NonNullable<GameDataState['pendingCatalog']> | undefined
         try {
           const expectedCache =
             expectation === undefined && !request?.session
@@ -838,6 +851,7 @@ export const useGameDataStore = create<GameDataState>()(
           const restoring = verifiedRestore || (request?.confirmed && pending?.restoreWhenIdle)
           const stageCatalog = async (review: NonNullable<GameDataState['pendingCatalog']>) => {
             const recorded = rememberCheck(true, true, expectedCache)
+            staged = review
             set({
               pendingCatalog: review,
               isLoading: false,
@@ -979,7 +993,7 @@ export const useGameDataStore = create<GameDataState>()(
                 set({ pendingCatalog: pending, catalogWarnings: pending.candidate.warnings })
               throw new Error(WORKFLOW_MESSAGE)
             }
-            set({ isCatalogActivating: true })
+            if (!applying) set({ isCatalogActivating: true })
             try {
               if (config.type === 'local')
                 await settleOnAbort(
@@ -1046,7 +1060,7 @@ export const useGameDataStore = create<GameDataState>()(
                 return stageAdditiveRestore(candidate)
               throw error
             } finally {
-              set({ isCatalogActivating: false })
+              if (!applying) set({ isCatalogActivating: false })
             }
           })
           const result = await settleOnAbort(mutation, signal, () => !writeStarted)
@@ -1085,10 +1099,19 @@ export const useGameDataStore = create<GameDataState>()(
           return { kind: 'rejected', message }
         } finally {
           clearTimeout(timeout)
-          if (candidate !== get().pendingCatalog?.candidate) releaseCatalogCandidate(candidate)
-          if (folderGrant !== get().pendingCatalog?.folderGrant) releaseFolderGrant(folderGrant)
+          if (candidate !== staged?.candidate && candidate !== get().pendingCatalog?.candidate)
+            releaseCatalogCandidate(candidate)
+          if (
+            folderGrant !== staged?.folderGrant &&
+            folderGrant !== get().pendingCatalog?.folderGrant
+          )
+            releaseFolderGrant(folderGrant)
           if (activeLoadController === controller) {
             activeLoadController = null
+            if (applying) {
+              activeApply = undefined
+              set({ isCatalogActivating: false })
+            }
             if (get().pendingCatalog?.restoreWhenIdle && !catalogIsProtected())
               resumeCatalogRestore()
           }
@@ -1178,7 +1201,10 @@ export const useGameDataStore = create<GameDataState>()(
       },
 
       restoreBundledData: async () => {
+        if (get().isCatalogActivating) return
+        const requestId = activeLoadRequestId
         const bundledSource = await resolveDefaultBundledSource()
+        if (requestId !== activeLoadRequestId || get().isCatalogActivating) return
         if (!bundledSource) {
           set({
             error:
@@ -1188,6 +1214,7 @@ export const useGameDataStore = create<GameDataState>()(
         }
 
         const result = await get().loadCatalog(bundledSource)
+        if (result.kind === 'superseded') return
         const state = get()
         return (
           result.kind === 'applied' &&

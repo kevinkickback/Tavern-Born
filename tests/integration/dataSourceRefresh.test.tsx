@@ -35,6 +35,7 @@ describe('data source refresh feedback', () => {
       },
       isLoading: false,
       isBackgroundRefreshing: false,
+      isCatalogActivating: false,
       loadProgress: null,
       error: null,
       lastDataChangedAt: '2026-01-01T00:00:00.000Z',
@@ -64,6 +65,19 @@ describe('data source refresh feedback', () => {
       }),
     )
     expect(toast.info).not.toHaveBeenCalledWith('Game data is up to date')
+  })
+
+  test('disables checks while the catalog is being applied', async () => {
+    const loadCatalog = useGameDataStore.getState().loadCatalog
+    useGameDataStore.setState({ isCatalogActivating: true })
+    render(<DataSourceConfigurator />)
+    const check = screen.getByRole<HTMLButtonElement>('button', { name: 'Check for Updates' })
+    expect(check.disabled).toBe(true)
+    await userEvent.click(check)
+    expect(loadCatalog).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    await act(() => useGameDataStore.setState({ isCatalogActivating: false }))
+    expect(check.disabled).toBe(false)
   })
 
   test.each([

@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
 import { afterEach, expect, test, vi } from 'vitest'
 import { prepareCatalog } from '@/lib/5etools/catalogCandidate'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
@@ -130,14 +128,17 @@ test('warns about absent optional bundled descriptions without admitting a read 
   }
   const config = { ...online, lastLoaded: '2026-01-01T00:00:00Z' }
   const description = 'class/fluff-class-fighter.json'
-  const read: ReadSourceJson = async (request) => {
+  const read: ReadSourceJson = (request) => {
     if (request.kind === 'bundled') {
-      if (request.path === description) throw new Error(`ENOENT: ${description}`)
-      return JSON.parse(await readFile(resolve('resources/srd/data', request.path), 'utf8'))
+      if (request.path === description) return Promise.reject(new Error(`ENOENT: ${description}`))
+      if (request.path === 'class/index.json') return Promise.resolve({ PHB: 'class-fighter.json' })
+      if (request.path === 'class/class-fighter.json')
+        return Promise.resolve({ class: [{ name: 'Fighter', source: 'PHB' }] })
+      return Promise.resolve({})
     }
     const path = request.kind === 'remote' ? request.url.slice(online.path.length + 6) : ''
-    if (!(path in files)) throw new ResourceHttpError(404, path)
-    return files[path]
+    if (!(path in files)) return Promise.reject(new ResourceHttpError(404, path))
+    return Promise.resolve(files[path])
   }
   const candidate = await prepareCatalog(config, base, signal(), undefined, read)
   expect(candidate.data.classes.map(({ name }) => name)).toContain('Fighter')

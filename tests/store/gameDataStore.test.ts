@@ -1166,6 +1166,19 @@ describe('gameDataStore', () => {
     expect(loadDataFromSourceMock).not.toHaveBeenCalled()
   })
 
+  test('does not switch sources after a newer request completes during bundled manifest lookup', async () => {
+    const manifest = deferred<DataSourceConfig | null>()
+    resolveDefaultBundledSourceMock.mockReturnValueOnce(manifest.promise)
+    const state = useGameDataStore.getState()
+    const removing = state.restoreBundledData()
+    loadDataFromSourceMock.mockResolvedValueOnce(nonempty('New source'))
+    await expect(state.loadCatalog(remote)).resolves.toMatchObject({ kind: 'applied' })
+    manifest.resolve(bundled)
+    await expect(removing).resolves.toBeUndefined()
+    expect(useGameDataStore.getState().dataSourceConfig?.path).toBe(remote.path)
+    expect(loadDataFromSourceMock).toHaveBeenCalledTimes(1)
+  })
+
   test('keeps external data and configuration when bundled loading fails', async () => {
     const existingData = makeGameDataFixture()
     const bundledConfig: DataSourceConfig = {

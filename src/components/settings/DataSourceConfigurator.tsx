@@ -342,8 +342,14 @@ export function DataSourceConfigurator({
   }
 
   const handleRefresh = async () => {
-    const { isLoading, isBackgroundRefreshing, sessionBundledSource } = useGameDataStore.getState()
-    if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
+    const {
+      dataSourceConfig,
+      isLoading,
+      isBackgroundRefreshing,
+      isCatalogActivating,
+      sessionBundledSource,
+    } = useGameDataStore.getState()
+    if (!dataSourceConfig || isLoading || isBackgroundRefreshing || isCatalogActivating) return
     const result = await loadCatalog(dataSourceConfig, true)
     if (result.kind === 'rejected') {
       toast.error('Couldn’t check your additional content', { description: result.message })
@@ -361,12 +367,15 @@ export function DataSourceConfigurator({
     }
   }
   const handleRestoreBundled = async () => {
+    const { isCatalogActivating, isLoading } = useGameDataStore.getState()
+    if (isCatalogActivating || isLoading) return
     if (useCharacterStore.getState().hasUnsavedChanges()) {
       toast.info('Save or discard your character changes before switching game data.')
       return
     }
     try {
       const restored = await restoreBundledData()
+      if (restored === undefined) return
       if (!restored) {
         toast.error('Unable to load the included SRD', {
           description:
@@ -602,7 +611,7 @@ export function DataSourceConfigurator({
                 <Button
                   onClick={() => setConfirmRevertOpen(true)}
                   className="border-warning/50"
-                  disabled={isLoading || hasUnsavedChanges}
+                  disabled={isLoading || isCatalogActivating || hasUnsavedChanges}
                   variant="outline"
                 >
                   Remove Additional Content
@@ -642,7 +651,12 @@ export function DataSourceConfigurator({
               {!selectorOnly && !isSelectingDataSource && dataSourceConfig?.type !== 'bundled' && (
                 <Button
                   onClick={handleRefresh}
-                  disabled={isLoading || isBackgroundRefreshing || !hasActiveDataSource}
+                  disabled={
+                    isLoading ||
+                    isBackgroundRefreshing ||
+                    isCatalogActivating ||
+                    !hasActiveDataSource
+                  }
                   variant="outline"
                   className="gap-2"
                 >
@@ -849,7 +863,10 @@ export function DataSourceConfigurator({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isLoading}>Keep Additional Content</AlertDialogCancel>
-            <AlertDialogAction disabled={isLoading} onClick={() => void handleRestoreBundled()}>
+            <AlertDialogAction
+              disabled={isLoading || isCatalogActivating}
+              onClick={() => void handleRestoreBundled()}
+            >
               Remove Additional Content
             </AlertDialogAction>
           </AlertDialogFooter>
