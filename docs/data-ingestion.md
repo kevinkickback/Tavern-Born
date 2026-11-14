@@ -257,7 +257,9 @@ restores additional content automatically when the saved catalog's rules, source
 resource and record inventories match. Restoration waits for open character workflows and unsaved
 edits to clear. Changed results and results without enough evidence to prove a match wait for
 manual approval in Settings. During startup recovery, a rebuild can also restore new generated
-equipment when existing catalog records and references stay the same. GitHub needs the same
+equipment when existing records, working references and character choices stay the same. An
+unresolved rules-preview link in an item description or creature stat block may gain its
+exact target. GitHub needs the same
 accepted commit. Local folders need a complete matching set of previously recorded file hashes.
 On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active

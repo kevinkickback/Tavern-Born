@@ -258,19 +258,26 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     await act(() =>
       useGameDataStore.setState({
+        loadProgress: { current: 8, total: 25, resource: 'Included SRD: feats.json' },
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toBe('Reading built-in rules · 8/25 files')
+
+    await act(() =>
+      useGameDataStore.setState({
         loadProgress: { current: 28, total: 28, resource: 'Additional content: items.json' },
       }),
     )
-    expect(
-      screen.getByText('Additional content · 28/28 main files · processing catalog'),
-    ).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe(
+      'Processing additional content · 28/28 files',
+    )
 
     await act(() =>
       useGameDataStore.setState({
         loadProgress: { current: 0, total: 0, resource: 'Verifying rebuilt game data' },
       }),
     )
-    expect(screen.getByText('Verifying rebuilt game data…')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe('Verifying game data…')
 
     expect(screen.queryByRole('button', { name: 'Continue with built-in rules' })).toBeNull()
     await act(() =>

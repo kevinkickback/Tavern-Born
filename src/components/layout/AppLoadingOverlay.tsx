@@ -94,10 +94,17 @@ export function AppLoadingOverlay({
   if (isStartupReady) {
     statusLine = 'Ready'
   } else if (isStartupRecovering) {
-    statusLine =
-      loadProgress?.resource === 'Verifying rebuilt game data'
-        ? 'Verifying rebuilt game data…'
-        : 'Restoring additional content…'
+    if (loadProgress?.resource === 'Verifying rebuilt game data') {
+      statusLine = 'Verifying game data…'
+    } else if (recoveryCount) {
+      const layer = recoveryCount.resource.startsWith('Included SRD:')
+        ? 'built-in rules'
+        : 'additional content'
+      const phase = recoveryCount.current === recoveryCount.total ? 'Processing' : 'Reading'
+      statusLine = `${phase} ${layer} · ${recoveryCount.current}/${recoveryCount.total} files`
+    } else {
+      statusLine = 'Restoring additional content…'
+    }
   } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
@@ -174,23 +181,13 @@ export function AppLoadingOverlay({
           aria-atomic="true"
           className="flex items-center justify-center text-xs text-muted-foreground"
         >
-          <span className="min-w-0 text-center leading-4">{statusLine}</span>
+          <span className="min-w-0 truncate text-center leading-4">{statusLine}</span>
           {hasProgress && (
             <span className="ml-3 shrink-0 tabular-nums">
               {loadProgress.current}&thinsp;/&thinsp;{loadProgress.total}
             </span>
           )}
         </div>
-        {recoveryCount && (
-          <p className="text-center text-xs text-muted-foreground">
-            {recoveryCount.resource.startsWith('Included SRD:')
-              ? 'Built-in rules'
-              : 'Additional content'}
-            {' · '}
-            {recoveryCount.current}/{recoveryCount.total} main files
-            {recoveryCount.current === recoveryCount.total && ' · processing catalog'}
-          </p>
-        )}
       </div>
       {error && !isStartupReady && (
         <p className="mt-8 max-w-xs text-center text-xs text-destructive">{error}</p>

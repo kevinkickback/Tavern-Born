@@ -2,7 +2,7 @@ import {
   itemFilterIncludesMagicItems,
   matchesClassChoiceFilter,
 } from '@/lib/character/classChoiceFilters'
-import { normalizeKey } from '@/lib/provenance/normalization'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { computeGameDataFingerprint } from '@/lib/storage/dataCache'
 import type { CatalogResourceProof, DataSourceConfig, GameData, Item5e } from '@/types/5etools'
 import type { NormalizedChoiceOptionFilter } from '@/types/classRules'
@@ -86,26 +86,60 @@ function refersToNewItem(
   value: unknown,
   names: ReadonlySet<string>,
   expandsItemPool: (filter: NormalizedChoiceOptionFilter) => boolean,
+  displayLinks?: ReadonlySet<string>,
 ): boolean {
   if (typeof value === 'string') {
-    if (names.has(normalizeItemName(value)) || /data-hover-type\s*=/i.test(value)) return true
+    if (/data-hover-type\s*=/i.test(value)) return true
     for (const tag of value.matchAll(/\{@item\s+([^}]+)\}/gi)) {
-      const name = tag[1].split('|')[0]
-      // The preview resolves HTML character references after rendering the tag.
-      if (names.has(normalizeItemName(name)) || /&(?:#\d|#x[\da-f]|[a-z])/i.test(name)) return true
+      const [name, source] = tag[1].split('|')
+      // The preview defaults unqualified item links to DMG.
+      if (/[<&"']/.test(source ?? '') || /&(?:#\d|#x[\da-f]|[a-z])/i.test(name)) return true
+      if (
+        names.has(normalizeItemName(name)) &&
+        !(
+          displayLinks &&
+          tag[0].startsWith('{@item ') &&
+          !/[<>&]/.test(name) &&
+          displayLinks.has(itemLinkKey(name, source || 'DMG'))
+        )
+      )
+        return true
     }
-    return false
+    return names.has(
+      normalizeItemName(displayLinks ? value.replace(/\{@item\s+[^}]+\}/gi, '') : value),
+    )
   }
   if (value && typeof value === 'object') {
+    if (Array.isArray(value))
+      return value.some((entry) => refersToNewItem(entry, names, expandsItemPool, displayLinks))
     // Rarity-based choice filters can offer newly generated items without naming them.
     if ('entityType' in value && value.entityType === 'item') {
       const filter = value as NormalizedChoiceOptionFilter
-      if (itemFilterIncludesMagicItems(filter) && (filter.anyOf?.length || expandsItemPool(filter)))
-        return true
+      if (itemFilterIncludesMagicItems(filter) && expandsItemPool(filter)) return true
     }
-    return Object.values(value).some((entry) => refersToNewItem(entry, names, expandsItemPool))
+    return Object.entries(value).some(([field, entry]) =>
+      refersToNewItem(
+        entry,
+        names,
+        expandsItemPool,
+        ['entries', 'entry', 'items'].includes(field) ? displayLinks : undefined,
+      ),
+    )
   }
   return false
+}
+
+function itemLinkKey(name: string, source: string) {
+  return `${normalizeOwnerIdentity(name)}|${normalizeOwnerIdentity(source)}`
+}
+
+function itemPoolUpperBound(filter: NormalizedChoiceOptionFilter): NormalizedChoiceOptionFilter {
+  return {
+    ...filter,
+    requiresProficiency: false,
+    excludedItemProperties: undefined,
+    anyOf: filter.anyOf?.map(itemPoolUpperBound),
+  }
 }
 
 function hasExpandingStartingEquipmentPool(
@@ -169,23 +203,43 @@ export function isAdditiveCatalogRestore(
     return false
 
   // Preserve existing references, including item pools evaluated from the combined catalog.
-  const { lookups: _lookups, ...saved } = prior
+  const { lookups: _lookups, items: _items, itemsBase: _itemsBase, creatures, ...saved } = prior
+  const displayLinks = new Set(additions.map(({ name, source }) => itemLinkKey(name, source)))
   const itemTypes = buildItemTypeLookup(candidate.itemTypes)
-  const expandsItemPool = (filter: NormalizedChoiceOptionFilter) =>
-    filter.entityType === 'item' &&
-    additions.some((item) =>
-      matchesClassChoiceFilter(
-        item,
-        { ...filter, requiresProficiency: false, excludedItemProperties: undefined },
-        {},
-        itemTypes,
-        [],
-        Number.POSITIVE_INFINITY,
-      ),
+  const expandsItemPool = (filter: NormalizedChoiceOptionFilter) => {
+    if (filter.entityType !== 'item') return false
+    const broadFilter = itemPoolUpperBound(filter)
+    return additions.some((item) =>
+      matchesClassChoiceFilter(item, broadFilter, {}, itemTypes, [], Infinity),
     )
+  }
   return (
     !refersToNewItem(saved, addedNames, expandsItemPool) &&
     !refersToNewItem(characters, addedNames, expandsItemPool) &&
+    ![...prior.items, ...prior.itemsBase].some(
+      ({ entries, ...item }) =>
+        refersToNewItem(item, addedNames, expandsItemPool) ||
+        entries?.some((entry) => refersToNewItem(entry, addedNames, expandsItemPool, displayLinks)),
+    ) &&
+    !creatures?.some(
+      ({ ac, trait, action, bonus, reaction, legendary, mythic, variant, ...creature }) =>
+        refersToNewItem(creature, addedNames, expandsItemPool) ||
+        refersToNewItem(
+          [trait, action, bonus, reaction, legendary, mythic, variant],
+          addedNames,
+          expandsItemPool,
+          displayLinks,
+        ) ||
+        ac?.some((entry) => {
+          if (!entry || typeof entry !== 'object' || !('from' in entry))
+            return refersToNewItem(entry, addedNames, expandsItemPool)
+          const { from, ...armorClass } = entry
+          return (
+            refersToNewItem(armorClass, addedNames, expandsItemPool) ||
+            refersToNewItem(from, addedNames, expandsItemPool, displayLinks)
+          )
+        }),
+    ) &&
     !prior.classes.some(({ startingEquipment }) =>
       hasExpandingStartingEquipmentPool(startingEquipment, expandsItemPool),
     ) &&

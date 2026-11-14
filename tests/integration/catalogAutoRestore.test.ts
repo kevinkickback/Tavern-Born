@@ -34,7 +34,9 @@ async function setUpObsoleteCache(
   origin: Exclude<DataSourceConfig, { type: 'bundled' }> = source,
   options?: {
     itemFilter?: boolean
-    encodedLink?: boolean
+    itemLink?: string
+    featLink?: string
+    creature?: 'display' | 'gear'
     fullBundled?: boolean
     beforeLocalActivation?: () => Promise<void>
   },
@@ -125,6 +127,26 @@ async function setUpObsoleteCache(
         ],
       })
     if (path === 'fluff-races.json' && warning) return new Response(null, { status: 503 })
+    if (path === 'bestiary/index.json' && options?.creature)
+      return Response.json({ MM: 'bestiary-mm.json' })
+    if (path === 'bestiary/bestiary-mm.json' && options?.creature)
+      return Response.json({
+        monster: [
+          {
+            name: 'Armored Guard',
+            source: 'MM',
+            ac: [{ ac: 13, from: ['{@item Leather Armor of Fire Resistance}'] }],
+            variant: [
+              { entries: [{ entries: ['It wears {@item Leather Armor of Fire Resistance}.'] }] },
+            ],
+            ...(options.creature === 'gear' && { gear: ['Leather Armor of Fire Resistance|DMG'] }),
+          },
+        ],
+      })
+    if (path === 'items.json' && options?.itemLink)
+      return Response.json({
+        item: [{ name: 'Example Armor', source: 'DMG', entries: [options.itemLink] }],
+      })
     if (path === 'backgrounds.json' && options?.itemFilter)
       return Response.json({
         background: [
@@ -148,9 +170,7 @@ async function setUpObsoleteCache(
         {
           name: feat,
           source: 'PHB',
-          ...(options?.encodedLink && {
-            entries: ['See {@item Leather&#32;Armor of Fire Resistance|DMG}.'],
-          }),
+          ...(options?.featLink && { entries: [options.featLink] }),
         },
       ],
     })
@@ -190,13 +210,19 @@ async function setUpObsoleteCache(
 }
 
 const start = () => useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
+const qualifiedLink = 'See {@item Leather Armor of Fire Resistance|dmg}.'
 
 test.each([
   'match',
   'changed revision',
   'old record edit',
   'old reference',
+  'repaired item link',
+  'repaired creature links',
+  'creature gear reference',
+  'different item link source',
   'encoded old link',
+  'old feat link',
   'old item filter',
   'manual check',
   'matching local files',
@@ -210,7 +236,21 @@ test.each([
   try {
     const { accepted, changeRevision } = await setUpObsoleteCache(origin, {
       itemFilter: condition === 'old item filter',
-      encodedLink: condition === 'encoded old link',
+      itemLink:
+        condition === 'repaired item link'
+          ? qualifiedLink
+          : condition === 'different item link source'
+            ? qualifiedLink.replace('|dmg', '|xdmg')
+            : condition === 'encoded old link'
+              ? qualifiedLink.replace('Leather Armor', 'Leather&#32;Armor')
+              : undefined,
+      featLink: condition === 'old feat link' ? qualifiedLink : undefined,
+      creature:
+        condition === 'repaired creature links'
+          ? 'display'
+          : condition === 'creature gear reference'
+            ? 'gear'
+            : undefined,
       fullBundled: condition === 'match',
       beforeLocalActivation: async () => race?.(),
     })
@@ -219,6 +259,13 @@ test.each([
       (item) => item.magicVariantGenerated && item.name === 'Leather Armor of Fire Resistance',
     )!
     expect(added).toBeDefined()
+    if (condition === 'repaired creature links' || condition === 'creature gear reference')
+      expect(accepted.data.creatures?.find(({ name }) => name === 'Armored Guard')).toMatchObject({
+        ac: [{ ac: 13, from: ['{@item Leather Armor of Fire Resistance}'] }],
+        ...(condition === 'creature gear reference' && {
+          gear: ['Leather Armor of Fire Resistance|DMG'],
+        }),
+      })
     const oldData = {
       ...accepted.data,
       items: accepted.data.items.filter((item) => item.name !== added.name),
@@ -263,7 +310,12 @@ test.each([
     }
     const state = useGameDataStore.getState()
     if (condition === 'local library race') expect(changeLibrary).toHaveBeenCalledOnce()
-    if (condition === 'match' || condition === 'matching local files') {
+    if (
+      condition === 'match' ||
+      condition === 'matching local files' ||
+      condition === 'repaired item link' ||
+      condition === 'repaired creature links'
+    ) {
       expect(state.pendingCatalog?.reason ?? null).toBeNull()
       expect(state.sessionBundledSource).toBeNull()
       expect((await readGameDataCachePair()).cache?.contentFingerprint).toBe(
