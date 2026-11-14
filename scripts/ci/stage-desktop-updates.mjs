@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
 import { createReadStream } from 'node:fs'
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
@@ -120,6 +120,13 @@ async function installedVersion(expectedVersion) {
     { env: { ...process.env, TB_STAGED_EXE: exe }, windowsHide: true },
   )
   return /^\d+\.\d+\.\d+/.exec(stdout.trim())?.[0] ?? null
+}
+
+async function expectAppImageReplaced(oldVersion) {
+  if (kind !== 'appimage') return
+  await assert.rejects(access(join(dirname(exe), `Tavern-Born-${oldVersion}.AppImage`)), {
+    code: 'ENOENT',
+  })
 }
 
 async function importCharacter(page, fixture, name) {
@@ -263,6 +270,7 @@ try {
   })
   assertFeedServed('0.7.0')
   await expect.poll(() => installedVersion('0.7.0'), { timeout }).toBe('0.7.0')
+  await expectAppImageReplaced('0.6.0')
   if (kind === 'deb') await closeDebianRelaunch()
   console.log(`${kind}: updater replaced the published package with v0.7.0.`)
   stage = resolve(second)
@@ -289,6 +297,7 @@ try {
   })
   assertFeedServed('0.7.1')
   await expect.poll(() => installedVersion('0.7.1'), { timeout }).toBe('0.7.1')
+  await expectAppImageReplaced('0.7.0')
   if (kind === 'deb') await closeDebianRelaunch()
   await withVersion('0.7.1', async (page) => {
     await page.getByRole('heading', { name: currentName, exact: true, level: 3 }).click()
