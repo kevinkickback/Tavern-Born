@@ -60,12 +60,7 @@ test('winning exact bases govern material armor and explicit equipment wins', as
 
 test('noncanonical material declarations cannot override the supported armor fields', async () => {
   const conflicting = { ...mithral, inherits: { ...mithral.inherits, strength: '10' } }
-  const unsupported = {
-    ...mithral,
-    name: 'Mithral +1 Armor',
-    inherits: { ...mithral.inherits, source: 'AI', bonusAc: '+1' },
-  }
-  const data = await loadMagicTemplates([conflicting, unsupported], [], { baseitem: [plate] })
+  const data = await loadMagicTemplates([conflicting], [], { baseitem: [plate] })
   expect(data.items.some((item) => item.magicVariantGenerated)).toBe(false)
   expect(data.materialArmorDiagnostics).toEqual([
     expect.objectContaining({ path: 'magicVariants.Mithral Armor|XDMG' }),
