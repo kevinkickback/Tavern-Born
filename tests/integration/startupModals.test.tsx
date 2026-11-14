@@ -247,6 +247,22 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText('Restoring additional content…')).toBeTruthy()
     expect(content?.hasAttribute('inert')).toBe(true)
 
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 28, total: 25, resource: 'Additional content: Complete' },
+      }),
+    )
+    expect(screen.getByText('Restoring additional content…')).toBeTruthy()
+    expect(screen.queryByText(/28\s*\/\s*25/)).toBeNull()
+    expect(content?.hasAttribute('inert')).toBe(true)
+
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 0, total: 0, resource: 'Verifying rebuilt game data' },
+      }),
+    )
+    expect(screen.getByText('Verifying rebuilt game data…')).toBeTruthy()
+
     expect(screen.queryByRole('button', { name: 'Continue with built-in rules' })).toBeNull()
     await act(() =>
       useGameDataStore.setState({ isStartupRecovering: false, isBackgroundRefreshing: false }),

@@ -75,7 +75,8 @@ export function AppLoadingOverlay({
 
   if (!isBlocking) return null
 
-  const hasProgress = !isStartupReady && loadProgress !== null && loadProgress.total > 0
+  const hasProgress =
+    !isStartupReady && !isStartupRecovering && loadProgress !== null && loadProgress.total > 0
   const isProgressComplete =
     hasProgress &&
     (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
@@ -85,7 +86,10 @@ export function AppLoadingOverlay({
   if (isStartupReady) {
     statusLine = 'Ready'
   } else if (isStartupRecovering) {
-    statusLine = 'Restoring additional content…'
+    statusLine =
+      loadProgress?.resource === 'Verifying rebuilt game data'
+        ? 'Verifying rebuilt game data…'
+        : 'Restoring additional content…'
   } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {

@@ -196,10 +196,11 @@ describe('application status bar', () => {
     }
     render(
       <TooltipProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/compendium']}>
           <AppLayout>
             <Routes>
               <Route path="/" element={<p>Characters</p>} />
+              <Route path="/compendium" element={<p>Compendium</p>} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </AppLayout>
@@ -224,6 +225,31 @@ describe('application status bar', () => {
     expect(screen.queryByRole('link', { name: 'Open Game Data' })).toBeNull()
     await act(() => useGameDataStore.setState({ sessionBundledSource: null }))
     expect(screen.queryByRole('region', { name: 'Using built-in rules' })).toBeNull()
+  })
+
+  test('keeps the built-in rules banner off the Character Library', () => {
+    useGameDataStore.setState({
+      sessionBundledSource: {
+        type: 'bundled',
+        path: 'srd/core',
+        packId: 'srd',
+        packVersion: '1',
+        isValid: true,
+      },
+      cacheStatus: 'session-srd',
+    })
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/']}>
+          <AppLayout>
+            <h2>Character cards</h2>
+          </AppLayout>
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    expect(screen.getByRole('heading', { name: 'Character cards' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Open Game Data' })).toBeNull()
+    expect(screen.getByTestId('game-data-status').textContent).toBe('Built-in rules only')
   })
 
   test('a verified rebuild waiting for an edit to finish has no manual restore button', async () => {

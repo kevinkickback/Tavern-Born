@@ -29,7 +29,7 @@ export function AppLayout({ children, onOpenAppUpdate }: AppLayoutProps) {
       <AppSidebar />
       <div className="col-start-3 row-start-2 mt-3 mr-3 flex min-w-0 flex-col overflow-hidden rounded-lg border border-border-strong bg-workspace-canvas">
         <AppHeader />
-        {usingBuiltInRules && !onGameData && (
+        {usingBuiltInRules && pathname !== '/' && !onGameData && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm">
             <div role="status" className="flex items-start gap-2">
               <WarningCircle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />

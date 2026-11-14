@@ -689,6 +689,8 @@ export const useGameDataStore = create<GameDataState>()(
             throw new Error('Background refresh returned empty data; keeping existing cache')
           }
           const cacheIdentity = candidate?.identity ?? config
+          if (candidate && get().isStartupRecovering)
+            loaderOptions.onProgress?.(0, 0, 'Verifying rebuilt game data')
           const prior = get()
           const priorSource = prior.dataSourceConfig
           const hadExternal = priorSource && priorSource.type !== 'bundled'
