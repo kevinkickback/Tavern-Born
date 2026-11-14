@@ -6,6 +6,12 @@ on:
     paths:
       - package.json
       - package-lock.json
+      - electron/main.ts
+      - electron/updateManager.ts
+      - electron/updateEvents.ts
+      - electron/preload.ts
+      - src/App.tsx
+      - src/components/updates/**
       - .github/workflows/desktop-packages.yml
       - scripts/ci/smoke-desktop-package.mjs
 
@@ -37,6 +43,10 @@ jobs:
       - run: npm ci
       - name: Build packages without publishing
         run: npm run dist -- --publish never
+        if: runner.os != 'macOS'
+      - name: Build the macOS test DMG without publishing
+        if: runner.os == 'macOS'
+        run: npm run dist -- --mac dmg --arm64 --publish never -c.extraMetadata.version=0.5.99
       - name: Install and exercise the Windows packages
         if: runner.os == 'Windows'
         shell: pwsh
@@ -70,7 +80,8 @@ jobs:
           mkdir -p "$mount"
           hdiutil attach -mountpoint "$mount" -readonly -nobrowse "${images[0]}"
           trap 'hdiutil detach "$mount"' EXIT
-          node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born"
+          # The unpublished fixture version is below the current public release.
+          node scripts/ci/smoke-desktop-package.mjs "$mount/Tavern-Born.app/Contents/MacOS/Tavern-Born" --release-page
       - name: Exercise Linux AppImage and Debian package
         if: runner.os == 'Linux'
         shell: bash

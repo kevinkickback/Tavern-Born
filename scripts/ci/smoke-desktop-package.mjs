@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { chromium, expect } from '@playwright/test'
 
-const [packageExecutable] = process.argv.slice(2)
+const [packageExecutable, checkMode] = process.argv.slice(2)
 assert(packageExecutable, 'Provide the packaged executable to launch.')
 const executable = resolve(packageExecutable)
 const projectFile = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url))
@@ -135,7 +135,12 @@ try {
       name: 'packaged-smoke.tbc',
       mimeType: 'application/json',
       buffer: Buffer.from(
-        JSON.stringify({ ...imported, name: characterName, background: 'Acolyte', equipment: [] }),
+        JSON.stringify({
+          ...imported,
+          name: characterName,
+          background: 'Acolyte',
+          equipment: [],
+        }),
       ),
     })
     await openCharacter(page)
@@ -143,7 +148,19 @@ try {
     await page.getByRole('button', { name: 'Generate Preview' }).click()
     await expect(page.locator('canvas').first()).toBeVisible({ timeout })
   })
-  await withPackage(openCharacter)
+  await withPackage(async (page) => {
+    await openCharacter(page)
+    if (checkMode === '--release-page') {
+      const result = await page.evaluate(() => window.electronAPI.checkForUpdate())
+      assert.equal(result.data?.status, 'available', JSON.stringify(result))
+      await page.getByRole('button', { name: 'App update available' }).click()
+      await expect(page.getByRole('button', { name: 'Open Download Page' })).toBeVisible({
+        timeout,
+      })
+      await expect(page.getByRole('button', { name: 'Install Now' })).toHaveCount(0)
+      console.log(`Packaged app offered the release-page update to v${result.data.version}.`)
+    }
+  })
 } finally {
   const resolvedProfile = await realpath(profile)
   assert.equal(dirname(resolvedProfile), temp)

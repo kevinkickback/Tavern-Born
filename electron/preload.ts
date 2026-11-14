@@ -54,8 +54,8 @@ const electronAPI = {
 
   checkForUpdate: (): Promise<UpdateResult<unknown>> => ipcRenderer.invoke('update:check'),
   downloadUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:download'),
-  openPortableUpdatePage: (): Promise<UpdateResult> =>
-    ipcRenderer.invoke('update:open-portable-page'),
+  openUpdateDownloadPage: (): Promise<UpdateResult> =>
+    ipcRenderer.invoke('update:open-download-page'),
   cancelUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:cancel'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
   getUpdateStatus: (): Promise<unknown> => ipcRenderer.invoke('update:status'),

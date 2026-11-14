@@ -32,7 +32,7 @@ import {
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
-  openPortableUpdatePage,
+  openUpdateDownloadPage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from './updateManager'
@@ -485,10 +485,10 @@ async function initializeDesktop(): Promise<void> {
     }
   })
 
-  ipcMain.handle('update:open-portable-page', async (event) => {
+  ipcMain.handle('update:open-download-page', async (event) => {
     assertTrustedIpcSender(event)
     try {
-      await openPortableUpdatePage()
+      await openUpdateDownloadPage()
       return { success: true, data: null, error: null }
     } catch (err) {
       return { success: false, data: null, error: (err as Error).message }
