@@ -1,5 +1,5 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { useEffect, useRef } from 'react'
+import { useAppPreferencesHydrated, useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 export function useDataInit() {
@@ -10,10 +10,7 @@ export function useDataInit() {
   const checkCatalogIfDue = useGameDataStore((s) => s.checkCatalogIfDue)
   const autoRefreshGameData = useAppPreferencesStore((s) => s.autoRefreshGameData)
 
-  const preferencesReady = useSyncExternalStore(
-    useAppPreferencesStore.persist.onFinishHydration,
-    useAppPreferencesStore.persist.hasHydrated,
-  )
+  const preferencesReady = useAppPreferencesHydrated()
   const initialized = useRef(false)
 
   useEffect(() => {

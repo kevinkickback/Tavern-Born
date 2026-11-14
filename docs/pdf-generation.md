@@ -16,6 +16,8 @@ the [retained PDF sources](../scripts/pdf-sources/README.md).
 
 Preview and download use the same completed export. Changes to character data, game data, template,
 or preferences invalidate the preview and its report. Export never changes persisted gameplay state.
+If rendering fails, the preview shows the error. Replacing the PDF or changing zoom starts a new
+render.
 The view model uses the [shared spell-state projection](state-management.md#spell-state), including
 source-loss/restoration behavior. Export never mutates saved spell state or independent owners.
 

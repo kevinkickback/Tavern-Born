@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { Section } from '@/components/workspace'
 import { resetAllHints } from '@/lib/storage/hints'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { useAppPreferencesHydrated, useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 interface UpdateCheckStatus {
   status: 'available' | 'not-available' | 'error'
@@ -24,6 +24,7 @@ function isUpdateCheckStatus(value: unknown): value is UpdateCheckStatus {
 }
 
 export function GeneralPanel() {
+  const preferencesReady = useAppPreferencesHydrated()
   const autoUpdate = useAppPreferencesStore((s) => s.autoUpdate)
   const setAutoUpdate = useAppPreferencesStore((s) => s.setAutoUpdate)
 
@@ -131,9 +132,9 @@ export function GeneralPanel() {
             </div>
             <Switch
               checked={autoUpdate}
+              disabled={!preferencesReady}
               onCheckedChange={(v) => {
                 setAutoUpdate(v)
-                void window.electronAPI?.setAutoCheck?.(v)
                 toast.success(
                   v ? 'Automatic update checks enabled' : 'Automatic update checks disabled',
                 )
