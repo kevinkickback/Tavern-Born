@@ -88,9 +88,8 @@ async function closeDebianRelaunch() {
     const page = browser.contexts()[0].pages()[0]
     await expect(page).toHaveTitle(/Tavern Born/i, { timeout })
     const session = await browser.newBrowserCDPSession()
-    const disconnected = browser.waitForEvent('disconnected', { timeout })
     void session.send('Browser.close').catch(() => undefined)
-    await disconnected
+    await expect.poll(() => browser.isConnected(), { timeout }).toBe(false)
   } finally {
     await browser?.close().catch(() => undefined)
   }

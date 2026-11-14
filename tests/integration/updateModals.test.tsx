@@ -28,7 +28,9 @@ describe('update modals', () => {
 
     expect(screen.getByText('Update Available — v2.0.0')).toBeTruthy()
     expect(
-      screen.getByText('A new version is available. Portable builds do not update in place.'),
+      screen.getByText(
+        'Download the new version from the release page and replace your current app.',
+      ),
     ).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Install Now' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open Download Page' }))

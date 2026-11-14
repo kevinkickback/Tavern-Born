@@ -6,9 +6,12 @@ on:
     paths:
       - package.json
       - package-lock.json
+      - electron/main.ts
       - electron/updateManager.ts
       - electron/updateEvents.ts
       - electron/preload.ts
+      - src/App.tsx
+      - src/components/updates/**
       - .github/workflows/desktop-packages.yml
       - scripts/ci/smoke-desktop-package.mjs
 

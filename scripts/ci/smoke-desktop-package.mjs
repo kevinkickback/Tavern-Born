@@ -124,10 +124,13 @@ async function openCharacter(page) {
 try {
   if (checkMode === '--release-page') {
     await withPackage(async (page) => {
-      await page.getByRole('button', { name: 'Get Started', exact: true }).click()
+      const start = page.getByRole('button', { name: 'Get Started', exact: true })
+      const notification = page.getByRole('button', { name: 'App update available' })
       const result = await page.evaluate(() => window.electronAPI.checkForUpdate())
       assert.equal(result.data?.status, 'available', JSON.stringify(result))
-      await page.getByRole('button', { name: 'App update available' }).click()
+      await expect(start.or(notification).first()).toBeVisible()
+      if (await start.isVisible()) await start.click()
+      await notification.click()
       await expect(page.getByRole('button', { name: 'Open Download Page' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Install Now' })).toHaveCount(0)
       console.log(`Packaged app offered the release-page update to v${result.data.version}.`)
