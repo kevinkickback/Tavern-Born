@@ -226,6 +226,34 @@ describe('application status bar', () => {
     expect(screen.queryByRole('region', { name: 'Using built-in rules' })).toBeNull()
   })
 
+  test('a verified rebuild waiting for an edit to finish has no manual restore button', async () => {
+    const user = userEvent.setup()
+    const data = makeGameDataFixture()
+    const config = { type: 'remote' as const, path: 'https://example.test', isValid: true }
+    useGameDataStore.setState({
+      pendingCatalog: {
+        candidate: { config, identity: config, data, keys: [], warnings: [] },
+        reason: 'reload',
+        removals: [],
+        incompleteRemovalPreview: false,
+        restoreWhenIdle: true,
+      },
+    })
+    render(
+      <MemoryRouter>
+        <AppStatusBar />
+        <Routes>
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('link', { name: 'Additional content ready' }))
+    expect(
+      screen.getByText('Restores automatically when you finish character editing.'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Restore additional content' })).toBeNull()
+  })
+
   test('shows active-character save state', () => {
     const character = makeCharacterFixture({ name: 'Aelar' })
     useCharacterStore.setState({

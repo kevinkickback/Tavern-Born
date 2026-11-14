@@ -507,7 +507,7 @@ describe('gameDataStore', () => {
   })
 
   test.each([
-    ['layer-fingerprint', 'reload'],
+    ['layer-fingerprint', 'recovery'],
     ['different-fingerprint', 'recovery'],
   ])('classifies a rebuilt catalog using the accepted fingerprint (%s)', async (fingerprint, reason) => {
     readGameDataSettingsMock.mockReturnValue({
@@ -539,7 +539,7 @@ describe('gameDataStore', () => {
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
-  test('explicit retry can admit a standalone source when the desktop pack is unavailable', async () => {
+  test('explicit retry stages an unverified standalone source when the desktop pack is unavailable', async () => {
     const original = window.electronAPI
     vi.stubGlobal('electronAPI', {
       getBundledManifest: () => Promise.reject(new Error('Unavailable')),
@@ -552,7 +552,11 @@ describe('gameDataStore', () => {
       const catalog = nonempty('Online race')
       loadDataFromSourceMock.mockResolvedValueOnce(catalog)
       await useGameDataStore.getState().loadFromCache({ retry: true })
-      expect(useGameDataStore.getState()).toMatchObject({ gameData: catalog, remoteStartup: null })
+      expect(useGameDataStore.getState()).toMatchObject({
+        gameData: null,
+        remoteStartup: 'setup',
+        pendingCatalog: { reason: 'recovery', candidate: { data: catalog } },
+      })
     } finally {
       vi.unstubAllGlobals()
       if (original) window.electronAPI = original
@@ -573,9 +577,10 @@ describe('gameDataStore', () => {
     })
     await useGameDataStore.getState().loadFromCache({ retry: true })
     expect(useGameDataStore.getState()).toMatchObject({
-      gameData: nonempty('Recovered remote'),
+      gameData: null,
       bundledUnavailable: true,
-      remoteStartup: null,
+      remoteStartup: 'setup',
+      pendingCatalog: { reason: 'recovery', candidate: { data: nonempty('Recovered remote') } },
     })
     expect(loadGameDataSourceStackMock).not.toHaveBeenCalled()
   })

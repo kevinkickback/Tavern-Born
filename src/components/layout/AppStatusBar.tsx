@@ -82,6 +82,7 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const cacheStatus = useGameDataStore((state) => state.cacheStatus)
   const dataReview = useGameDataStore((state) => state.gameData && state.pendingCatalog?.reason)
+  const restoreWhenIdle = useGameDataStore((state) => state.pendingCatalog?.restoreWhenIdle)
   const dataSourceConfig = useGameDataStore((state) =>
     state.gameData ? (state.sessionBundledSource ?? state.dataSourceConfig) : null,
   )
@@ -120,7 +121,9 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
   const DataStatusIcon = dataStatus.icon
   const dataAction =
     dataReview === 'reload'
-      ? 'Restore additional content'
+      ? restoreWhenIdle
+        ? 'Additional content ready'
+        : 'Restore additional content'
       : dataReview === 'review' || dataReview === 'recovery'
         ? 'Review game data'
         : dataReview === 'update'

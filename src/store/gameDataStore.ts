@@ -48,6 +48,29 @@ let cacheMutationQueue: Promise<void> = Promise.resolve()
 const catalogWorkflows = new Set<symbol>()
 const WORKFLOW_MESSAGE = 'Finish the character workflow or save or discard its edits first.'
 
+function catalogIsProtected() {
+  return catalogWorkflows.size > 0 || useGameDataStore.getState().catalogDraftDirty
+}
+
+function resumeCatalogRestore() {
+  // Allow workflow cleanup and any replacement workflow's protection to settle first.
+  queueMicrotask(() => {
+    const state = useGameDataStore.getState()
+    const pending = state.pendingCatalog
+    if (
+      !pending?.restoreWhenIdle ||
+      activeLoadController ||
+      state.isCatalogActivating ||
+      catalogIsProtected()
+    )
+      return
+    void state.loadCatalog(pending.candidate.config, false, {
+      prepared: pending.candidate,
+      confirmed: true,
+    })
+  })
+}
+
 export const STARTUP_CATALOG_TIMEOUT_MS = 15_000
 export const INTERACTIVE_CATALOG_TIMEOUT_MS = 60_000
 const catalogTimeout = (timeoutMs: number) =>
@@ -167,6 +190,7 @@ interface GameDataState {
     additions?: string[]
     incompleteRemovalPreview: boolean
     folderGrant?: string
+    restoreWhenIdle?: true
   } | null
   cacheStatus: CacheStatus
   remoteStartup: RemoteStartupStatus | null
@@ -212,6 +236,7 @@ export const useGameDataStore = create<GameDataState>()(
         catalogWorkflows.add(token)
         return () => {
           catalogWorkflows.delete(token)
+          if (get().pendingCatalog?.restoreWhenIdle && !catalogIsProtected()) resumeCatalogRestore()
         }
       },
       loadProgress: null,
@@ -328,12 +353,13 @@ export const useGameDataStore = create<GameDataState>()(
           : config?.type !== 'bundled' || !desktop
             ? config
             : null
+        const savedCache = pair?.expectedCache ?? availableCache
         if (
           external &&
-          availableCache?.sourceSnapshot.type === external.type &&
-          availableCache.sourceSnapshot.path === external.path
+          savedCache?.sourceSnapshot?.type === external.type &&
+          savedCache.sourceSnapshot.path === external.path
         ) {
-          set({ externalKeys: availableCache.externalKeys })
+          set({ externalKeys: savedCache.externalKeys })
         }
         const openCache = async (source: typeof identity) => {
           if (!availableCache || !source || !isCacheForSource(availableCache, source)) return false
@@ -724,17 +750,54 @@ export const useGameDataStore = create<GameDataState>()(
             hadExternal &&
             ((prior.externalKeys !== undefined && !sameExternalKeys) ||
               (!!cached && (!sameLayers || !isCacheForSource(cached, cacheIdentity))))
+          const recovering = !!prior.sessionBundledSource || !!request?.recovery
+          const verifiedRestore = Boolean(
+            candidate &&
+              recovering &&
+              sameSource &&
+              /^[a-f\d]{64}$/i.test(candidateFingerprint ?? '') &&
+              candidateFingerprint === prior.savedContentFingerprint &&
+              candidateFingerprint === cached?.contentFingerprint &&
+              priorSource?.availableResources &&
+              candidate.config.availableResources &&
+              !candidate.warnings.length &&
+              !candidate.unavailableResources?.length &&
+              !additions.length &&
+              !removals.length &&
+              !incompleteRemovalPreview &&
+              sameExternalKeys &&
+              sameLayers &&
+              cached?.generation &&
+              isCacheForSource(cached, cacheIdentity) &&
+              cached.sourceSnapshot.layers?.every(
+                (layer) => layer.contentFingerprint && layer.entityCount !== undefined,
+              ) !== false,
+          )
+          const restoring = verifiedRestore || (request?.confirmed && pending?.restoreWhenIdle)
+          const stageCatalog = async (review: NonNullable<GameDataState['pendingCatalog']>) => {
+            const recorded = rememberCheck(true, true, expectedCache)
+            set({
+              pendingCatalog: review,
+              isLoading: false,
+              isBackgroundRefreshing: false,
+              loadProgress: null,
+              lastUpdateCheckAt: new Date().toISOString(),
+              catalogWarnings: review.candidate.warnings,
+            })
+            await recorded
+            return { kind: 'staged' } as const
+          }
           if (
             candidate &&
             !request?.confirmed &&
-            (removals.length ||
+            !verifiedRestore &&
+            (recovering ||
+              removals.length ||
               incompleteRemovalPreview ||
-              (background &&
-                (prior.sessionBundledSource || !fingerprintMatches || externalInventoryChanged)) ||
+              (background && (!fingerprintMatches || externalInventoryChanged)) ||
               (sameSourceBaseline && candidateFingerprint !== sameSourceBaseline))
           ) {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
-            const recovering = !!prior.sessionBundledSource || !prior.gameData
             const reason =
               removals.length ||
               (!recovering &&
@@ -742,30 +805,17 @@ export const useGameDataStore = create<GameDataState>()(
                 !candidate.warnings.length)
                 ? 'update'
                 : recovering && sameSource
-                  ? candidateFingerprint === prior.savedContentFingerprint &&
-                    !candidate.warnings.length
-                    ? 'reload'
-                    : 'recovery'
+                  ? 'recovery'
                   : 'review'
-            const recorded = rememberCheck(true, true, expectedCache)
-            set({
-              pendingCatalog: {
-                candidate,
-                expectedCache,
-                reason,
-                additions,
-                removals,
-                incompleteRemovalPreview,
-                ...(folderGrant ? { folderGrant } : {}),
-              },
-              isLoading: false,
-              isBackgroundRefreshing: false,
-              loadProgress: null,
-              lastUpdateCheckAt: new Date().toISOString(),
-              catalogWarnings: candidate.warnings,
+            return await stageCatalog({
+              candidate,
+              expectedCache,
+              reason,
+              additions,
+              removals,
+              incompleteRemovalPreview,
+              ...(folderGrant ? { folderGrant } : {}),
             })
-            await recorded
-            return { kind: 'staged' }
           }
 
           if (requestId !== activeLoadRequestId) return { kind: 'superseded' }
@@ -821,14 +871,27 @@ export const useGameDataStore = create<GameDataState>()(
           // Persist parsed data to IDB cache so next launch is instant.
           // Pass the last known fingerprint so writeGameDataCache can detect
           // unchanged content even when the IDB cache was cleared.
-          const prevChangedAt = get().lastDataChangedAt
-          const prevFingerprint = get().lastContentFingerprint
+          const prevChangedAt = restoring
+            ? (expectedCache?.lastDataChangedAt ?? expectedCache?.cachedAt)
+            : get().lastDataChangedAt
+          const prevFingerprint = restoring
+            ? prior.savedContentFingerprint
+            : get().lastContentFingerprint
           const hadGameData = get().gameData !== null
           let writeStarted = false
           const mutation = enqueueCacheMutation(async () => {
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' } as const
             signal.throwIfAborted()
-            if (catalogWorkflows.size || get().catalogDraftDirty) {
+            if (catalogIsProtected()) {
+              if (verifiedRestore && candidate)
+                return stageCatalog({
+                  candidate,
+                  expectedCache,
+                  reason: 'reload',
+                  incompleteRemovalPreview: false,
+                  removals: [],
+                  restoreWhenIdle: true,
+                })
               if (pending?.candidate === candidate && pending)
                 set({ pendingCatalog: pending, catalogWarnings: pending.candidate.warnings })
               throw new Error(WORKFLOW_MESSAGE)
@@ -854,7 +917,12 @@ export const useGameDataStore = create<GameDataState>()(
                   previousCatalog = previous
                 },
                 ...(expectedCache !== undefined
-                  ? { contentFingerprint, previous: expectedCache }
+                  ? {
+                      contentFingerprint: restoring
+                        ? (prevFingerprint ?? undefined)
+                        : contentFingerprint,
+                      previous: expectedCache,
+                    }
                   : {}),
               })
 
@@ -926,6 +994,8 @@ export const useGameDataStore = create<GameDataState>()(
           if (folderGrant !== get().pendingCatalog?.folderGrant) releaseFolderGrant(folderGrant)
           if (activeLoadController === controller) {
             activeLoadController = null
+            if (get().pendingCatalog?.restoreWhenIdle && !catalogIsProtected())
+              resumeCatalogRestore()
           }
         }
       },
@@ -1048,3 +1118,12 @@ export const useGameDataStore = create<GameDataState>()(
     },
   ),
 )
+
+useGameDataStore.subscribe((state, previous) => {
+  if (
+    previous.catalogDraftDirty &&
+    !state.catalogDraftDirty &&
+    state.pendingCatalog?.restoreWhenIdle
+  )
+    resumeCatalogRestore()
+})

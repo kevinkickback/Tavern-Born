@@ -340,7 +340,7 @@ export function DataSourceConfigurator({
   }
 
   const handleRefresh = async () => {
-    const { isLoading, isBackgroundRefreshing } = useGameDataStore.getState()
+    const { isLoading, isBackgroundRefreshing, sessionBundledSource } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing) return
     const result = await loadCatalog(dataSourceConfig, true)
     if (result.kind === 'rejected') {
@@ -354,7 +354,9 @@ export function DataSourceConfigurator({
             ? 'Game data update available'
             : 'Game data ready for review',
       )
-    } else if (result.kind === 'applied') toast.info('Game data is up to date')
+    } else if (result.kind === 'applied') {
+      toast.info(sessionBundledSource ? 'Additional content restored' : 'Game data is up to date')
+    }
   }
   const handleRestoreBundled = async () => {
     if (useCharacterStore.getState().hasUnsavedChanges()) {
@@ -731,21 +733,27 @@ export function DataSourceConfigurator({
                 </details>
               )}
               <div className="flex flex-wrap items-start gap-2">
-                <Button
-                  disabled={hasUnsavedChanges || isLoading || isCatalogActivating}
-                  onClick={() => void applyCandidate(pending.candidate, true)}
-                >
-                  {pending.reason === 'reload'
-                    ? 'Restore additional content'
-                    : pending.reason === 'recovery'
-                      ? 'Use additional content'
-                      : 'Apply game data update'}
-                </Button>
+                {pending.restoreWhenIdle ? (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    Restores automatically when you finish character editing.
+                  </p>
+                ) : (
+                  <Button
+                    disabled={hasUnsavedChanges || isLoading || isCatalogActivating}
+                    onClick={() => void applyCandidate(pending.candidate, true)}
+                  >
+                    {pending.reason === 'reload'
+                      ? 'Restore additional content'
+                      : pending.reason === 'recovery'
+                        ? 'Use additional content'
+                        : 'Apply game data update'}
+                  </Button>
+                )}
                 {pending.reason !== 'reload' && (
                   <CatalogCharacterImpact candidate={pending.candidate} />
                 )}
               </div>
-              {hasUnsavedChanges && (
+              {hasUnsavedChanges && !pending.restoreWhenIdle && (
                 <p className="text-sm text-muted-foreground">
                   Save or discard character edits first.
                 </p>

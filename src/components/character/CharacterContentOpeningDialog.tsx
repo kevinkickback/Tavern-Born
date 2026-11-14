@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +19,11 @@ export function CharacterContentOpeningDialog({
 }) {
   const { pending, cancel, openLimited, restoreFocus } = opening
   const usingBuiltInRules = useGameDataStore((state) => state.sessionBundledSource !== null)
+  const protectCatalog = useGameDataStore((state) => state.protectCatalog)
+  const open = pending !== null
+  useLayoutEffect(() => {
+    if (open) return protectCatalog()
+  }, [open, protectCatalog])
   const title = useRef<HTMLHeadingElement>(null)
   const dismissed = useRef(false)
   if (!pending) return null

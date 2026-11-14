@@ -252,8 +252,11 @@ a due check. After a failure, the retry delay starts at 15 minutes and doubles u
 The app remembers the delay for the configured source across launches. A missing compatible cache
 allows a recovery check before the daily interval, subject to failure backoff. Manual checks can
 run immediately. Settings shows the configured location, when the content last changed, and when
-it was last successfully checked. Failures and optional warnings appear separately. A changed
-catalog waits for **Apply game data update** in Settings. On relaunch an unapplied preview can be
+it was last successfully checked. Failures and optional warnings appear separately. A rebuild
+restores additional content automatically when the saved catalog's rules, source layers and
+resource and record inventories match. Restoration waits for open character workflows and unsaved
+edits to clear. Changed results and results without enough evidence to prove a match wait for
+manual approval in Settings. On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
 An unchanged check against a matching cache updates check metadata without rewriting the catalog.
