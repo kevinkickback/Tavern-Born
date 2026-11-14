@@ -434,4 +434,18 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
     await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')
     expect(shellOpenExternalMock).not.toHaveBeenCalled()
   })
+
+  test('reports network failures without falling through to the native updater', async () => {
+    releaseFetchMock.mockRejectedValueOnce(
+      build === 'macOS' ? new TypeError('fetch failed') : new Error('net::ERR_CONNECTION_RESET'),
+    )
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'error',
+      error:
+        build === 'macOS'
+          ? 'Could not reach the update server. Check your connection and try again.'
+          : 'No internet connection. Check your connection and try again.',
+    })
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
+  })
 })

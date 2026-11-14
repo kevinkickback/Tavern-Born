@@ -273,6 +273,11 @@ async function checkForReleaseDownload(): Promise<UpdateStatus> {
     if (err instanceof Error && err.name === 'TimeoutError') {
       return setErrorStatus('The update server did not respond in time. Try again.')
     }
+    if (err instanceof TypeError && err.message === 'fetch failed') {
+      return setErrorStatus(
+        'Could not reach the update server. Check your connection and try again.',
+      )
+    }
     if (isConnectivityError(err)) {
       return setOfflineStatus()
     }
