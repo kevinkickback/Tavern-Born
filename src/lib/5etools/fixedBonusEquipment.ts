@@ -336,6 +336,22 @@ export function generateResistanceArmor(
   return generateEquipmentVariants(data, definitions, 'resistanceArmor', fixedItems)
 }
 
+export function generateMaterialArmor(data: GameData, definitions: readonly Row[]) {
+  return generateEquipmentVariants(data, definitions, 'materialArmor')
+}
+
+const MATERIAL_ARMOR_FIELDS = new Set([...INHERITED_FIELDS, 'strength', 'stealth'])
+
+function validMaterialArmor(inherited: Row, material: string): boolean {
+  return (
+    inherited.namePrefix === `${material} ` &&
+    inherited.bonusAc === undefined &&
+    (material === 'Mithral'
+      ? inherited.strength === null && inherited.stealth === false
+      : inherited.strength === undefined && inherited.stealth === undefined)
+  )
+}
+
 function validResistanceArmor(inherited: Row, name: string, source: string): boolean {
   const resistance = inherited.resist
   const entry =
@@ -362,6 +378,7 @@ const FIXED_PATTERNS = {
   armor: /^\+([123]) Armor$/,
   ammunition: /^\+([123]) Ammunition$/,
   resistanceArmor: /^Armor of .+ Resistance$/,
+  materialArmor: /^(Mithral|Adamantine) Armor$/,
 }
 const BASE_VALIDATORS = {
   shield: validShieldBase,
@@ -369,12 +386,14 @@ const BASE_VALIDATORS = {
   armor: validArmorBase,
   ammunition: validAmmunitionBase,
   resistanceArmor: validArmorBase,
+  materialArmor: validArmorBase,
 }
 const CORE_BASE_MATCHERS = {
   weapon: (row: Row) => row.weapon === true,
   armor: isBodyArmor,
   ammunition: isCoreAmmunition,
   resistanceArmor: isBodyArmor,
+  materialArmor: isBodyArmor,
 }
 
 function generateEquipmentVariants(
@@ -386,8 +405,13 @@ function generateEquipmentVariants(
   const shield = family === 'shield'
   const ammunition = family === 'ammunition'
   const resistanceArmor = family === 'resistanceArmor'
-  const baseLabel = shield ? 'Shield' : resistanceArmor ? 'armor' : family
-  const templateLabel = resistanceArmor ? 'resistance armor' : `fixed-${family}`
+  const materialArmor = family === 'materialArmor'
+  const baseLabel = shield ? 'Shield' : resistanceArmor || materialArmor ? 'armor' : family
+  const templateLabel = resistanceArmor
+    ? 'resistance armor'
+    : materialArmor
+      ? 'material armor'
+      : `fixed-${family}`
   const bonusField = family === 'weapon' || ammunition ? 'bonusWeapon' : 'bonusAc'
   const templateFields = ammunition
     ? AMMUNITION_TEMPLATE_FIELDS
@@ -396,11 +420,13 @@ function generateEquipmentVariants(
       : CORE_TEMPLATE_FIELDS
   const inheritedFields = resistanceArmor
     ? RESISTANCE_INHERITED_FIELDS
-    : ammunition
-      ? AMMUNITION_INHERITED_FIELDS
-      : bonusField === 'bonusWeapon'
-        ? WEAPON_INHERITED_FIELDS
-        : INHERITED_FIELDS
+    : materialArmor
+      ? MATERIAL_ARMOR_FIELDS
+      : ammunition
+        ? AMMUNITION_INHERITED_FIELDS
+        : bonusField === 'bonusWeapon'
+          ? WEAPON_INHERITED_FIELDS
+          : INHERITED_FIELDS
   const diagnostics: ItemEntryDiagnostic[] = []
   const diagnose = (path: string, message: string) => {
     if (diagnostics.length < 32) diagnostics.push({ path: `magicVariants.${path}`, message })
@@ -439,7 +465,9 @@ function generateEquipmentVariants(
       inherited.source !== source ||
       (resistanceArmor
         ? !validResistanceArmor(inherited, String(definition.name), source)
-        : inherited.namePrefix !== `+${match[1]} ` || inherited[bonusField] !== `+${match[1]}`) ||
+        : materialArmor
+          ? !validMaterialArmor(inherited, match[1])
+          : inherited.namePrefix !== `+${match[1]} ` || inherited[bonusField] !== `+${match[1]}`) ||
       !Array.isArray(inherited.entries) ||
       !Object.keys(inherited).every((k) => inheritedFields.has(k)) ||
       !Array.isArray(requires) ||
@@ -456,7 +484,7 @@ function generateEquipmentVariants(
       const encoded = JSON.stringify(inherited.entries).replace(
         /\{=([^}]+)}/g,
         (_token, field: string) => {
-          if (field !== bonusField) unsupported = true
+          if (materialArmor || field !== bonusField) unsupported = true
           return String(inherited[bonusField])
         },
       )
