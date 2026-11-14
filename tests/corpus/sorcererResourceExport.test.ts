@@ -12,7 +12,10 @@ import { getCharacterClassResources } from '@/lib/calculations/classResources'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getClassChoiceCandidates } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import {
+  createCharacterSheetViewModel,
+  withoutSheetDescriptions,
+} from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
 import type { GameData } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -111,7 +114,7 @@ async function pdfText(
 }
 
 test.each(stacks)(
-  'prints exact Sorcerer pools, earned recovery, and selected Metamagic in packaged sheets (%s)',
+  'projects exact Sorcerer pools, earned recovery, and selected Metamagic (%s)',
   async (type, root) => {
     const data = composeGameDataLayers([
       await new FiveEToolsDataLoader(
@@ -332,6 +335,12 @@ test.each(stacks)(
       expect(points(atOne)).toBeUndefined()
       expect(atOne.featuresSummary).not.toMatch(heightened)
 
+      const compact = withoutSheetDescriptions(vm).featuresSummary
+      expect(compact).toContain('Twinned Spell')
+      expect(compact).not.toMatch(twinned)
+      expect(compact).not.toMatch(heightened)
+      // Keep both description modes in every physical layout with the bundled catalog.
+      if (type === 'local') continue
       for (const template of [`${origin}-official`, `${origin}-custom`] as const) {
         const full = await pdfText(vm, template, 'full')
         expect(full.full).toMatch(restore)

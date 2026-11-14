@@ -454,7 +454,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     }
     expect(generated.filter((item) => /^\+[123] /.test(item.name))).toHaveLength(327)
   })
-  it('verifies the remaining 367 qualified armor variants in saved inventory and exported sheets', async () => {
+  it('verifies the remaining 367 variants in saved inventory and representative armor PDFs', async () => {
     const groups: Array<[source: string, counts: number[]]> = [
       ['AU', [1, 1, 8]],
       ['AUD', [12]],
@@ -480,6 +480,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(new Set(items.map(({ name, source }) => `${name}|${source}`)).size).toBe(367)
     expect(gameData.materialArmorDiagnostics).toEqual([])
     const lookup = gameData.lookups!
+    let checkedFullRevisedInventory = false
     for (const [source, expected] of groups) {
       const printings = new Map<string, Item5e[]>()
       for (const item of items.filter((item) => item.source === source)) {
@@ -529,6 +530,18 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
             /\{=|\[Item rules text unavailable\]/,
           )
         }
+        const expectedNames = variants.map(({ name }) => name)
+        expect(view.equipmentSummary).toBe(expectedNames.join('\n'))
+        expect(view.magicItems.map(({ name }) => name)).toEqual(expectedNames)
+        if (relativeSwim) expect(view.movement.speeds.swim).toBe(view.walkingSpeed)
+        // Cover both mappers, full inventory rows and each movement projection in real files.
+        const fullRevisedInventory =
+          source === 'XDMG' && template === 'Armor of Vulnerability (Bludgeoning)'
+        if (!classic && !fullRevisedInventory && !relativeSwim) continue
+        if (fullRevisedInventory) {
+          expect(variants).toHaveLength(12)
+          checkedFullRevisedInventory = true
+        }
         const form = (
           await PDFDocument.load(
             await generateTestCharacterSheet(view, classic ? '2014-custom' : '2024-official', {
@@ -539,25 +552,32 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         const names = classic
           ? variants.map((_, i) => form.getTextField(`Adventuring Gear Row ${i + 1}`).getText())
           : form.getTextField('Text_90').getText()?.split('\n')
-        expect(names).toEqual(variants.map(({ name }) => name))
+        expect(names).toEqual(expectedNames)
         if (relativeSwim) {
-          expect(view.movement.speeds.swim).toBe(view.walkingSpeed)
           expect(form.getTextField(classic ? 'Racial Traits' : 'Text_59').getText()).toContain(
             'swim 30 ft.',
           )
         }
       }
     }
+    expect(checkedFullRevisedInventory).toBe(true)
     await clear()
   }, 120_000)
-  it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
+  let itemLayer: Promise<GameData> | undefined
+  function loadItemLayer() {
+    if (itemLayer) return itemLayer
     const files = ['items.json', 'items-base.json', 'magicvariants.json']
-    const raw = collection(readJson(resolve(DATA_ROOT, 'magicvariants.json')), 'magicvariant')
-    const before = structuredClone(raw)
-    const data = await new FiveEToolsDataLoader(
+    itemLayer = new FiveEToolsDataLoader(
       { type: 'local', path: DATA_ROOT, isValid: true, availableResources: files },
       { type: 'local', readJson: async (file) => readJson(resolve(DATA_ROOT, file)) },
     ).loadAllData()
+    return itemLayer
+  }
+
+  it('retains canonical templates and resolves all five actual copied magic definitions', async () => {
+    const raw = collection(readJson(resolve(DATA_ROOT, 'magicvariants.json')), 'magicvariant')
+    const before = structuredClone(raw)
+    const data = await loadItemLayer()
     expect(data.magicVariants).toEqual(before)
     expect(data.magicVariants).toHaveLength(230)
     expect(data.magicVariantDiagnostics).toEqual([])
@@ -586,14 +606,10 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     ).toBeDefined()
   })
   it('projects actual instrument groups, legacy ships and both inherited AIR printings', async () => {
-    const files = ['items.json', 'items-base.json', 'magicvariants.json']
     const raw = readJson(resolve(DATA_ROOT, 'items-base.json')) as {
       itemType: Array<{ abbreviation: string; source: string; entries?: unknown[] }>
     }
-    const data = await new FiveEToolsDataLoader(
-      { type: 'local', path: DATA_ROOT, isValid: true, availableResources: files },
-      { type: 'local', readJson: async (file) => readJson(resolve(DATA_ROOT, file)) },
-    ).loadAllData()
+    const data = await loadItemLayer()
     for (const source of ['PHB', 'XPHB']) {
       const group = data.items.find(
         (item) => item.name === 'Musical Instrument' && item.source === source,

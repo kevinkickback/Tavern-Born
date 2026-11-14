@@ -1,47 +1,17 @@
-# Documentation
+# Developer guides
 
-Read the row matching the task, then only the relevant contract section. Open the architecture map
-when placement or a new boundary is unclear. No task requires preloading every topic guide.
+| Guide | Covers |
+| --- | --- |
+| [Architecture](architecture-map.md) | Code placement, shared UI, and desktop lifecycle |
+| [Game data](data-ingestion.md) | Source trust, composition, refresh, and exact entity identity |
+| [Character state](state-management.md) | Drafts, durable writes, calculations, and save admission |
+| [Provenance](provenance.md) | Who owns each grant and what changes when that owner is removed |
+| [Equipment](equipment.md) | Starting packages, inventory effects, and concrete magic items |
+| [Spellcasting](spell-selection.md) | Earned choices, preparation, fixed grants, and display |
+| [PDF generation](pdf-generation.md) | Sheet projection, templates, and overflow |
+| [Testing](testing-map.md) | Focused checks, real-data checks, and CI |
+| [Changelog](changelog.md) | Release history |
 
-## Choose an owner
-
-| Task | Start here | Load detail when needed |
-| --- | --- | --- |
-| Code placement or shared boundaries | [Architecture](architecture-map.md) | Actual callers and dependency rules |
-| Startup, refresh or user-to-save sequence | [Data flow](data-flow.md) | [Ingestion](data-ingestion.md), [state](state-management.md) |
-| Store writes, drafts or calculations | [State](state-management.md) | [Character format](contracts/character-format.md), [equipment](contracts/equipment-state.md) |
-| Grant/remove/replace or source ownership | [Provenance](provenance.md) | [Feat](contracts/feat-ownership.md), [racial](contracts/racial-ownership.md), [class/actions](contracts/class-ownership.md) |
-| 5etools loading, layering or cache | [Ingestion](data-ingestion.md) | [Race](contracts/race-ingestion.md), [feature UIDs](contracts/feature-references.md), [items](contracts/item-ingestion.md) |
-| Exact saved selection, filters or eligibility | [Reference resolution](contracts/reference-resolution.md) | [Prerequisites](contracts/reference-resolution.md#prerequisite-eligibility) |
-| Components, controllers or selection lists | [React patterns](react-patterns.md) | [Spell selection](contracts/spell-selection.md) |
-| PDF projection, fitting or forms | [PDF generation](pdf-generation.md) | [Template maintenance](../scripts/pdf-sources/README.md) |
-| Verification | [Testing](testing-map.md) | Relevant existing tests and their fixtures |
-| CI, PRs or packaging | [CI/CD](cicd-workflow.md) | [Testing](testing-map.md#commands) |
-| Bundled content or artwork | [Included SRD](data-ingestion.md#included-srd), [artwork](../build/README.md) | Retained provenance and notices |
-| Historical release behavior | [Changelog](changelog.md) | The relevant release section only |
-
-## Current behavior and release requirements
-
-Source and tests determine implemented behavior. These guides describe stable contracts and
-explicit limits; an architecture rule is not proof that every existing caller complies. Current
-character admission and parsed cache compatibility have [separate boundaries](state-management.md#schema-compatibility).
-
-The v1.0 goal is complete required choices through levels 1–20 for all offered classes/subclasses,
-with explicit content limits, shared implementations, measured responsiveness and continued security.
-That qualification is pending; fixture or parser success alone does not prove complete user journeys.
-The public [release tracker](https://github.com/kevinkickback/Tavern-Born/issues/53) tracks scope.
-No pre-v1 compatibility project is required. Released v1.x characters must survive later 1.x updates;
-see the [compatibility policy](state-management.md#schema-compatibility).
-
-## Keeping docs useful
-
-Give each stable contract one owner. Link to it from other guides; keep examples and edge cases in
-the narrow reference instead of repeating them at startup. Update permanent prose for changed shared
-contracts, persisted data, support limits, nonobvious rationale or maintainer operations. Routine
-interaction/copy/layout changes stay in code, relevant tests and the PR.
-Preserve source attribution, explicit missing/unsupported cases and required security/validation gates.
-
-Use issues for outstanding work and the changelog for historical release notes. Keep status, private
-review records, raw logs and assistant configuration outside public guides. Archived evidence is
-immutable context on demand and never current startup guidance. Retain existing section links when
-moving a contract. Avoid file-by-file inventories, generic tutorials and duplicated version history.
+Update a guide when a shared contract, saved format, or support limit changes. Keep routine
+implementation details near the code. See the [v1.0 tracker](https://github.com/kevinkickback/Tavern-Born/issues/53)
+for qualification still in progress.

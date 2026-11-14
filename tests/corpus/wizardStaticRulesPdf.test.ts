@@ -9,7 +9,10 @@ import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
-import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
+import {
+  createCharacterSheetViewModel,
+  withoutSheetDescriptions,
+} from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetTemplateId } from '@/lib/pdf/types'
 import { emptyProvenance } from '@/lib/provenance/ledger'
 import type { GameData } from '@/types/5etools'
@@ -117,6 +120,9 @@ test.each(stacks)(
       const project = (actor = character, primary = current) =>
         createCharacterSheetViewModel(actor, current, primary)
       const vm = project()
+      expect(vm.classResourceRows).toContainEqual(
+        expect.objectContaining({ id: 'wizard-arcane-recovery', max: 1, used: 1 }),
+      )
       expect(vm.declaredClassFeatureSummaries).toEqual([
         {
           text: expect.stringMatching(reuse),
@@ -140,21 +146,30 @@ test.each(stacks)(
       })
       expect(manual.featuresSummary).toContain('Arcane Recovery: An independent personal note.')
 
-      for (const template of [`${origin}-official`, `${origin}-custom`] as const) {
-        const full = await readText(vm, template, 'full')
-        expect(full.all).toContain('Arcane Recovery')
-        expect(full.all).toMatch(reuse)
-        expect(full.notes).toContain('These independent notes')
-        expect(full.notes).toMatch(reuse)
-        for (const rule of recoveryRules) expect(full.all).toMatch(rule)
-        expect(full.all).not.toMatch(source === 'PHB' ? printings[1].reuse : printings[0].reuse)
+      const compact = withoutSheetDescriptions(vm).featuresSummary
+      expect(compact.match(/Arcane Recovery/g)).toHaveLength(1)
+      for (const rule of [...recoveryRules, reuse]) expect(compact).not.toMatch(rule)
+      const fullText = vm.classFeaturesSummary2014
+      for (const rule of [...recoveryRules, reuse]) expect(fullText).toMatch(rule)
+      expect(fullText).not.toMatch(source === 'PHB' ? printings[1].reuse : printings[0].reuse)
 
-        const names = await readText(vm, template, 'names')
-        expect(names.features.match(/Arcane Recovery/g)).toHaveLength(1)
-        for (const rule of [...recoveryRules, reuse]) expect(names.all).not.toMatch(rule)
-        if (template === '2014-custom') {
-          expect(full.form.getTextField('Limited Feature Used 1').getText()).toBe('1')
-          expect(names.form.getTextField('Limited Feature Max Usages 1').getText()).toBe('1')
+      if (type === 'bundled') {
+        for (const template of [`${origin}-official`, `${origin}-custom`] as const) {
+          const full = await readText(vm, template, 'full')
+          expect(full.all).toContain('Arcane Recovery')
+          expect(full.all).toMatch(reuse)
+          expect(full.notes).toContain('These independent notes')
+          expect(full.notes).toMatch(reuse)
+          for (const rule of recoveryRules) expect(full.all).toMatch(rule)
+          expect(full.all).not.toMatch(source === 'PHB' ? printings[1].reuse : printings[0].reuse)
+
+          const names = await readText(vm, template, 'names')
+          expect(names.features.match(/Arcane Recovery/g)).toHaveLength(1)
+          for (const rule of [...recoveryRules, reuse]) expect(names.all).not.toMatch(rule)
+          if (template === '2014-custom') {
+            expect(full.form.getTextField('Limited Feature Used 1').getText()).toBe('1')
+            expect(names.form.getTextField('Limited Feature Max Usages 1').getText()).toBe('1')
+          }
         }
       }
 

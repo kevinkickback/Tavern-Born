@@ -100,6 +100,8 @@ Do not add a persisted field merely to make rendering easier.
 
 ## Calculation context
 
+Filtered views and calculation contexts are reused while the source settings, game-data object and character object are unchanged. Replace the affected object on a store write so derived results are recalculated.
+
 `CharacterCalculationContext` is the pure shared boundary for resolved race/subrace, background,
 classes/subclasses, feats, equipment, rules metadata, typed effects, and effective ability scores.
 React consumers use `useCharacterCalculationContext`.
@@ -146,8 +148,8 @@ multiclass math. There are no top-level class mirrors.
   and earned level in `classChoiceSelections`. Supported selections include class features,
   subclass features, optional features, feats, items, creatures, and named proficiencies.
 - Complete target UIDs remain separate from actual granting owners; missing rules retain intent
-  without borrowing names. [Class ownership](contracts/class-ownership.md) and
-  [feature references](contracts/feature-references.md) own current authority, suspension, restoration
+  without borrowing names. [Class ownership](provenance.md#class-ownership) and
+  [feature references](data-ingestion.md#feature-references) own current authority, suspension, restoration
   and derived feature/proficiency/action rules.
 - Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
   retracts both the normalized selection and its materialized feat state.
@@ -181,7 +183,7 @@ independent daily/racial/Bonus state use `character.spells.spellProfiles`.
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
 `useSpellProvenanceMutations` exposes the addressed batch Finish adapter. Clear and preparation
 withdrawal work without unavailable sources; source suspension preserves ownership and revisions.
-Rest/acquisition event history remains separate work. See [the full spell contract](contracts/spell-selection.md).
+Rest/acquisition event history remains separate work. See [the full spell contract](spell-selection.md).
 
 Each normalized target occurs once in `special:unrestricted`, in either cantrips or known spells.
 Available exact spell metadata determines its current kind for all special owners together. Pure
@@ -192,12 +194,12 @@ retain independent memberships, including conflicting saved kinds when exact met
 
 ## Proficiencies and equipment
 
-See [Equipment state](contracts/equipment-state.md#proficiencies-and-equipment) for canonical
+See [Equipment state](equipment.md#proficiencies-and-equipment) for canonical
 proficiencies, slot ownership, raw-rule absence and physical snapshots.
 
 ## Fixed weapon bonuses
 
-See [Fixed weapon bonuses](contracts/equipment-state.md#fixed-weapon-bonuses) for numeric fields,
+See [Fixed weapon bonuses](equipment.md#fixed-weapon-bonuses) for numeric fields,
 conditional-item exclusions, attunement and shared Action/Review/PDF projection.
 
 ## Character transfers
@@ -221,8 +223,9 @@ one original as a `.tbc` file or all affected originals in one `.tbclib` file, p
 fields. Recovery downloads can exceed the 250 MB limit for ordinary library exports and imports.
 Extract each record from the `characters` array of an oversized backup into its own `.tbc` file
 for individual recovery. An export failure leaves the originals available.
-See [Character format](contracts/character-format.md)
-for the full current admission and breaking-change checklist. Catalog cache schema is independent.
+The [strict schema](../src/types/characterSchema.ts) checks selections, materialized rows and grant owners in both directions before catalog data loads. An unavailable choice may retain intent without a materialized row or tag. If either is present, both must agree. Current catalog eligibility is checked separately.
+
+A breaking change updates the version, schema, empty character, fixtures and recovery checks together. Keep rejected originals exportable until acknowledged. Catalog cache schema is independent.
 
 **Release requirement:** no pre-v1 characters need preservation or a migration project. Existing
 generic recovery stays. Before v1.0 ships, freeze its format; later 1.x updates must preserve released

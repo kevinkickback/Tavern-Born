@@ -187,9 +187,8 @@ function summaries(
 }
 
 const stackCases = packs.flatMap((pack) => editions.map((edition) => ({ pack, edition })))
-const templateCases = stackCases.flatMap(({ pack, edition }) =>
+const bundledTemplateCases = editions.flatMap((edition) =>
   (['official', 'custom'] as const).map((layout) => ({
-    pack,
     edition,
     template: `${edition[0]}-${layout}` as const,
   })),
@@ -807,37 +806,21 @@ test
   },
 )
 
-test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($pack)', async ({
-  pack,
-  edition,
-  template,
-}) => {
+function fiendSheet(pack: string, edition: (typeof editions)[number]) {
   const data = dataFor(pack)
   const [, source] = edition
   const filtered = current(data, source)
-  const view = createCharacterSheetViewModel(
+  return createCharacterSheetViewModel(
     chooseBlade(actor(edition, 20), filtered),
     lookups(data),
     lookups(filtered),
   )
-  const pdf = await generateTestCharacterSheet(view, template, {
-    text: { descriptions: 'full', overflow: 'notes' },
-  })
-  const text = (await PDFDocument.load(pdf))
-    .getForm()
-    .getFields()
-    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .replace(/’/g, "'")
+}
+
+function expectFiendRules(text: string, source: (typeof editions)[number][1]) {
   for (const label of [...labels, 'Eldritch Master']) expect(text).toContain(label)
   expect(text).toContain(bladeName)
   expect(text.toLowerCase()).toContain(bladeClause[source])
-  if (template === '2014-custom')
-    expect(text.toLowerCase().split(bladeClause[source])).toHaveLength(2)
-  expect(
-    view.declaredClassFeatureSummaries?.filter((row) => row.compactText === bladeName),
-  ).toHaveLength(1)
   expect(text.toLowerCase()).not.toContain(bladeClause[source === 'PHB' ? 'XPHB' : 'PHB'])
   expect(text).toMatch(
     /regain all expended (?:Pact Magic )?spell slots when you finish a short or long rest/i,
@@ -850,6 +833,39 @@ test.each(templateCases)('$template prints native Fiend and Pact Magic rules ($p
     expect(text).toMatch(/other than Force/i)
     expect(text).toMatch(/8d10 Psychic damage/i)
   }
+}
+
+test.each(stackCases)('$edition projects native Fiend and Pact Magic rules ($pack)', ({
+  pack,
+  edition,
+}) => {
+  const view = fiendSheet(pack, edition)
+  const text = view.classFeaturesSummary2014.replace(/\s+/g, ' ').replace(/’/g, "'")
+  expectFiendRules(text, edition[1])
+  expect(
+    view.declaredClassFeatureSummaries?.filter((row) => row.compactText === bladeName),
+  ).toHaveLength(1)
+})
+
+test.each(bundledTemplateCases)('$template prints native Fiend and Pact Magic rules', async ({
+  edition,
+  template,
+}) => {
+  const source = edition[1]
+  const view = fiendSheet('bundled', edition)
+  const pdf = await generateTestCharacterSheet(view, template, {
+    text: { descriptions: 'full', overflow: 'notes' },
+  })
+  const text = (await PDFDocument.load(pdf))
+    .getForm()
+    .getFields()
+    .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/’/g, "'")
+  expectFiendRules(text, source)
+  if (template === '2014-custom')
+    expect(text.toLowerCase().split(bladeClause[source])).toHaveLength(2)
 })
 
 function bladeSheetFixture(pack: string, edition: (typeof editions)[number]) {
