@@ -1,5 +1,6 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { getItemEntryIdentity, getRawItems } from './itemEntries'
+import { qualifyArmorTemplate } from './qualifiedArmorTemplates'
 import { DAMAGE_TYPE_LABEL_FALLBACKS } from './rulesetMetadata'
 
 // Bounded adaptation of Renderer.item at 5etools b9061583 (render.js:12942–13382).
@@ -456,12 +457,15 @@ function generateEquipmentVariants(
     generated = new Map<string, Item5e[]>()
   for (const definition of definitions) {
     const match = FIXED_PATTERNS[family].exec(String(definition.name))
-    if (!match) continue
+    const qualified = materialArmor ? qualifyArmorTemplate(definition) : undefined
+    if (!match && !qualified) continue
+    const parameter = match?.[1] ?? ''
     const source = String(definition.source)
-    const supplemental = materialArmor && !match[1]
+    const supplemental = materialArmor && !match?.[1]
     if (
+      !qualified &&
       !(supplemental
-        ? match[2]
+        ? match?.[2]
           ? source === 'AI'
           : source === 'XGE' || source === 'XDMG'
         : source === 'DMG' || source === 'XDMG')
@@ -485,17 +489,21 @@ function generateEquipmentVariants(
           inherited.rarity === 'unknown')) ||
       (definition.hasFluffImages !== undefined && typeof definition.hasFluffImages !== 'boolean') ||
       !validMetadata(inherited) ||
-      definition.type !== (source === 'XDMG' ? 'GV|XDMG' : 'GV|DMG') ||
+      (qualified
+        ? !qualified.valid
+        : definition.type !== (source === 'XDMG' ? 'GV|XDMG' : 'GV|DMG')) ||
       inherited.source !== source ||
-      (resistanceArmor
-        ? !validResistanceArmor(inherited, String(definition.name), source)
-        : materialArmor
-          ? supplemental
-            ? !validSupplementalArmor(inherited, Boolean(match[2]))
-            : !validMaterialArmor(inherited, match[1])
-          : inherited.namePrefix !== `+${match[1]} ` || inherited[bonusField] !== `+${match[1]}`) ||
+      (!qualified &&
+        (resistanceArmor
+          ? !validResistanceArmor(inherited, String(definition.name), source)
+          : materialArmor
+            ? supplemental
+              ? !validSupplementalArmor(inherited, Boolean(match?.[2]))
+              : !validMaterialArmor(inherited, parameter)
+            : inherited.namePrefix !== `+${parameter} ` ||
+              inherited[bonusField] !== `+${parameter}`)) ||
       !Array.isArray(inherited.entries) ||
-      !Object.keys(inherited).every((k) => inheritedFields.has(k)) ||
+      !Object.keys(inherited).every((k) => inheritedFields.has(k) || qualified?.fields.has(k)) ||
       !Array.isArray(requires) ||
       !requires.every((row) => record(row)) ||
       (definition.excludes !== undefined && !excludes) ||
@@ -510,8 +518,12 @@ function generateEquipmentVariants(
       const encoded = JSON.stringify(inherited.entries).replace(
         /\{=([^}]+)}/g,
         (_token, field: string) => {
-          if (field !== bonusField || inherited[bonusField] === undefined) unsupported = true
-          return String(inherited[bonusField])
+          if (
+            (field !== bonusField && !(qualified && field === 'bonusWeapon')) ||
+            inherited[field] === undefined
+          )
+            unsupported = true
+          return String(inherited[field])
         },
       )
       if (unsupported) throw new Error('Unsupported property injector')
@@ -566,8 +578,13 @@ function generateEquipmentVariants(
       ])
         delete output[key]
       for (const [key, value] of Object.entries(inherited))
-        if (!['namePrefix', 'nameSuffix', 'entries', 'reprintedAs'].includes(key))
+        if (!['namePrefix', 'nameSuffix', 'entries', 'reprintedAs', 'propertyAdd'].includes(key))
           output[key] = structuredClone(value)
+      if (qualified) {
+        if (qualified.manualAc) delete output.bonusAc
+        if (qualified.swim) output.modifySpeed = { equal: { swim: 'walk' } }
+        if (qualified.properties) output.property = qualified.properties
+      }
       output.name = `${inherited.namePrefix ?? ''}${base.name}${inherited.nameSuffix ?? ''}`
       output.entries = structuredClone([...entries, ...((base.entries ?? []) as unknown[])])
       const baseName = String(base.name)
@@ -576,6 +593,7 @@ function generateEquipmentVariants(
       output.magicVariantGenerated = {
         base: { name: baseName, source: baseSource },
         template: { name: String(definition.name), source },
+        ...(qualified?.swim ? { minimumSwimFromWalk: true } : {}),
       }
       output.startingEquipmentCategory = 'Other'
       const key = identity(output)

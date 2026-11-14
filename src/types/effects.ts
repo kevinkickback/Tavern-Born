@@ -85,6 +85,10 @@ interface CharacterEffectBase {
 /** A typed modifier declaration. Rules prose is preserved in `condition` rather than evaluated. */
 export type CharacterEffect =
   | (CharacterEffectBase & {
+      target: { kind: 'speed'; mode: 'climb' | 'swim' | 'fly' | 'burrow' }
+      operation: { kind: 'minimum-from-walk' }
+    })
+  | (CharacterEffectBase & {
       target: NumericEffectTarget
       operation: NumericEffectOperation | { kind: 'conditional-note'; note: string }
     })

@@ -22,6 +22,42 @@ const item: Item5e = {
 }
 
 describe('equipment commands', () => {
+  test('exact item training applies on equip and when restoring restrictions', () => {
+    const wearer = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'elven',
+          name: 'Elven Chain Shirt',
+          source: 'XDMG',
+          type: 'MA|XPHB',
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+      variantRules: { ignoreEquipRestrictions: true },
+    })
+    const armor = wearer.equipment[0]
+    const catalog = new Map<string, Item5e>([
+      ['revised', { name: armor.name, source: 'XDMG', type: armor.type, grantsProficiency: true }],
+    ])
+    expect(getArmorEquipRestriction(armor, [], [], catalog)).toBeNull()
+    expect(getArmorEquipRestriction({ ...armor, source: 'DMG' }, [], [], catalog)?.kind).toBe(
+      'missing-proficiency',
+    )
+    expect(getArmorEquipRestriction({ ...armor, name: 'Chain Shirt' }, [], [], catalog)?.kind).toBe(
+      'missing-proficiency',
+    )
+    expect(getArmorEquipRestriction(armor, [{ ...armor, id: 'other' }], [], catalog)?.kind).toBe(
+      'slot-conflict',
+    )
+    expect(setEquipmentRestrictionsIgnoredCommand(wearer, false, [], catalog).equipment).toEqual([
+      armor,
+    ])
+    expect(
+      setEquipmentRestrictionsIgnoredCommand(wearer, false, [], new Map()).equipment?.[0].equipped,
+    ).toBe(false)
+  })
+
   test('equipping and enforcing restrictions use the same proficiency and slot policy', () => {
     const heavy = { id: 'heavy', name: 'Plate', type: 'HA', quantity: 1, equipped: true }
     const light = { id: 'light', name: 'Leather', type: 'LA', quantity: 1, equipped: true }

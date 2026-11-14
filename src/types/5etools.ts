@@ -419,6 +419,7 @@ export interface Item5e {
   magicVariantGenerated?: {
     base: { name: string; source: string }
     template: { name: string; source: string }
+    minimumSwimFromWalk?: true
   }
   page?: number
   srd?: boolean | string

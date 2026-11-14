@@ -46,6 +46,19 @@ The generator applies the authored name affix and retains the base's physical fi
 Mithral +1 contributes the declared AC bonus and removes Strength and Stealth penalties.
 Gleaming, Cast-Off, and Smoldering preserve their rules as item text.
 
+The remaining qualified body-armor templates use the same exact base and printing
+rules. Authored attunement, structured defense, and supported fixed AC apply through
+the equipment consumers. Elven Chain supplies training for its own exact item.
+Mariner's and Ruidium Armor grant a swim speed at least as high as current walking
+speed while worn and, where declared, attuned. A higher independent swim speed and
+an exact swim override remain effective.
+
+Inventory and rule text retain the authored details for manual effects, including
+underwater triggers, curses, Drow sunlight degradation, and Enspelled Armor's
+creation-time spell selection and charges. Barding belongs to animal gear. The
+editionless Molten Bronze Skin template has no compatible base under the upstream
+default because its requirements explicitly name classic PHB printings.
+
 ### Fixed-bonus weapons
 
 The canonical +1, +2 and +3 weapon templates generate concrete weapons from direct
