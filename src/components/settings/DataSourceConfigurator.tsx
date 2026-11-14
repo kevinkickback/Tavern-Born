@@ -75,6 +75,8 @@ export function DataSourceConfigurator({
   const isCatalogActivating = useGameDataStore((state) => state.isCatalogActivating)
   const catalogWarnings = useGameDataStore((state) => state.catalogWarnings)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
+  const rollbackDisabled =
+    isLoading || isBackgroundRefreshing || isCatalogActivating || hasUnsavedChanges
   const restoreBundledData = useGameDataStore((state) => state.restoreBundledData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
   const autoRefreshGameData = useAppPreferencesStore((state) => state.autoRefreshGameData)
@@ -786,7 +788,7 @@ export function DataSourceConfigurator({
         >
           <Button
             variant="outline"
-            disabled={isLoading || isCatalogActivating || hasUnsavedChanges}
+            disabled={rollbackDisabled}
             onClick={() => setConfirmRollback(true)}
           >
             Restore previous game data
@@ -803,6 +805,7 @@ export function DataSourceConfigurator({
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
+                  disabled={rollbackDisabled}
                   onClick={async () => {
                     if (await rollbackCatalog()) toast.success('Previous game data restored')
                   }}

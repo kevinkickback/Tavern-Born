@@ -1096,9 +1096,14 @@ export const useGameDataStore = create<GameDataState>()(
       },
 
       rollbackCatalog: async () => {
-        const previous = get().previousCatalog
-        if (!previous || get().isLoading || get().isCatalogActivating) return false
-        if (catalogWorkflows.size || get().catalogDraftDirty) {
+        const {
+          previousCatalog: previous,
+          isLoading,
+          isBackgroundRefreshing,
+          isCatalogActivating,
+        } = get()
+        if (!previous || isLoading || isBackgroundRefreshing || isCatalogActivating) return false
+        if (catalogIsProtected()) {
           set({ error: WORKFLOW_MESSAGE })
           return false
         }
@@ -1108,8 +1113,11 @@ export const useGameDataStore = create<GameDataState>()(
           () => controller.abort(catalogTimeout(INTERACTIVE_CATALOG_TIMEOUT_MS)),
           INTERACTIVE_CATALOG_TIMEOUT_MS,
         )
-        set({ isCatalogActivating: true, error: null })
+        // Invalidate a completed check that is still finishing its async cleanup.
+        ++activeLoadRequestId
         activeLoadController?.abort()
+        activeLoadController = null
+        set({ isCatalogActivating: true, error: null })
         try {
           return await enqueueCacheMutation(async () => {
             const installed = await settleOnAbort(resolveDefaultBundledSource(), signal)

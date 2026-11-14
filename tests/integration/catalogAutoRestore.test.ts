@@ -37,19 +37,13 @@ async function setUpObsoleteCache(
     itemLink?: string
     featLink?: string
     creature?: 'display' | 'gear'
-    fullBundled?: boolean
     beforeLocalActivation?: () => Promise<void>
   },
 ) {
   vi.stubGlobal('electronAPI', {
     getBundledManifest: () => Promise.resolve(installed),
     readBundledJson: async (path: string) => {
-      if (
-        origin === source ||
-        options?.fullBundled ||
-        path === 'skills.json' ||
-        path === 'items-base.json'
-      )
+      if (path === 'skills.json' || path === 'items-base.json')
         return JSON.parse(await readFile(resolve('resources/srd/data', path), 'utf8'))
       if (path === 'feats.json') return { feat: [{ name: 'Built-in feat', source: 'PHB' }] }
       if (path === 'items.json')
@@ -251,7 +245,6 @@ test.each([
           : condition === 'creature gear reference'
             ? 'gear'
             : undefined,
-      fullBundled: condition === 'match',
       beforeLocalActivation: async () => race?.(),
     })
     const { settings } = await readGameDataCachePair()

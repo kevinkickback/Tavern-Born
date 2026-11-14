@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
@@ -29,6 +29,7 @@ test.each([
   local,
 ])('keeps transport failures separate from verified $type removals', async (source) => {
   let unavailable: 'temporary' | 'missing' | undefined
+  let holdRead: Promise<void> | undefined
   const resource = 'fluff-backgrounds.json'
   const files: Record<string, unknown> = {
     'feats.json': {
@@ -39,8 +40,9 @@ test.each([
     },
     [resource]: { backgroundFluff: [] },
   }
-  const readRemote = (input: string) => {
+  const readRemote = async (input: string) => {
     const path = input.slice(remote.path.length + '/data/'.length)
+    if (path === 'feats.json') await holdRead
     if (path === resource && unavailable)
       return Promise.resolve(new Response(null, { status: unavailable === 'missing' ? 404 : 503 }))
     return Promise.resolve(
@@ -49,8 +51,9 @@ test.each([
   }
   vi.stubGlobal('fetch', readRemote)
   vi.stubGlobal('electronAPI', {
-    readLocalJson: (path: string) => {
+    readLocalJson: async (path: string) => {
       const file = path.slice(local.path.length + 1)
+      if (file === 'feats.json') await holdRead
       if (file === resource && unavailable === 'temporary')
         return Promise.reject(new Error('EBUSY: file is in use'))
       if (!(file in files) || (file === resource && unavailable === 'missing'))
@@ -148,8 +151,29 @@ test.each([
   )
   const { loadFromCache } = useGameDataStore.getState()
   await loadFromCache()
-  await user.click(screen.getByRole('button', { name: 'Restore previous game data' }))
-  await user.click(screen.getByRole('button', { name: /^Restore$/ }))
+  const rollback = screen.getByRole('button', { name: 'Restore previous game data' })
+  await user.click(rollback)
+  const confirm = screen.getByRole('button', { name: /^Restore$/ })
+  let releaseRead = () => {}
+  holdRead = new Promise<void>((resolve) => {
+    releaseRead = resolve
+  })
+  let checking: ReturnType<typeof loadCatalog> | undefined
+  try {
+    await act(() => {
+      checking = loadCatalog(accepted.dataSourceConfig!, true)
+    })
+    expect((confirm as HTMLButtonElement).disabled).toBe(true)
+    expect((rollback as HTMLButtonElement).disabled).toBe(true)
+    expect(await useGameDataStore.getState().rollbackCatalog()).toBe(false)
+    expect((await readGameDataCachePair()).previous).toBeDefined()
+  } finally {
+    await act(async () => {
+      releaseRead()
+      await checking
+    })
+  }
+  await user.click(confirm)
   await waitFor(async () =>
     expect((await readGameDataCachePair()).cache?.sourceSnapshot.resources).toContain(resource),
   )
