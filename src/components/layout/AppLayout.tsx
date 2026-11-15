@@ -2,6 +2,8 @@ import { WarningCircle } from '@phosphor-icons/react'
 import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { getSettingsSection, isSettingsPath } from '@/lib/navigation/settingsNavigation'
+import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { AppHeader } from './AppHeader'
 import { AppSidebar } from './AppSidebar'
@@ -18,6 +20,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, onOpenAppUpdate }: AppLayoutProps) {
   const [librarySidebar, setLibrarySidebar] = useState<HTMLDivElement | null>(null)
+  const secondarySidebarOpen = useAppPreferencesStore((state) => state.secondarySidebarOpen)
   const usingBuiltInRules = useGameDataStore((state) => state.sessionBundledSource !== null)
   const { pathname, search } = useLocation()
   const onGameData = isSettingsPath(pathname) && getSettingsSection(search).id === 'data'
@@ -25,7 +28,12 @@ export function AppLayout({ children, onOpenAppUpdate }: AppLayoutProps) {
   return (
     <div
       id={APP_INTERACTIVE_CONTENT_ID}
-      className="grid h-screen grid-cols-[4rem_14rem_minmax(0,1fr)] grid-rows-[2rem_minmax(0,1fr)_2.25rem] overflow-hidden bg-app-shell"
+      className={cn(
+        'grid h-screen grid-rows-[2rem_minmax(0,1fr)_2.25rem] overflow-hidden bg-app-shell',
+        secondarySidebarOpen
+          ? 'grid-cols-[4rem_14rem_minmax(0,1fr)]'
+          : 'grid-cols-[4rem_0px_minmax(0,1fr)]',
+      )}
     >
       <AppTitleBar />
       <AppSidebar libraryControlsRef={setLibrarySidebar} />

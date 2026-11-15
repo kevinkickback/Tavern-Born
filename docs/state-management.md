@@ -12,7 +12,8 @@ verified in the owning store, command, and tests.
 | Preferences | Theme, home-card size, update preference, UI settings | `appPreferencesStore.ts` |
 
 Zustand persistence uses `src/lib/storage/idb-storage.ts`. Parsed game data has its own cache in
-`dataCache.ts`. Accordion/sidebar collapse state uses local storage, and Electron stores native
+`dataCache.ts`. The secondary workspace sidebar is an app preference and defaults to open.
+Individual accordion and pane collapse preferences use local storage. Electron stores native
 window bounds separately. PDF export page/content overrides and description/overflow settings are local UI preferences keyed by character and template (`sheetExportPreferences.ts`); they never alter character inventory, preparation, or rules text. Missing or invalid text settings fall back to full descriptions with ellipsis shortening.
 
 Uploaded portraits also have a separate IndexedDB gallery (`portraitLibrary.ts`), capped at 20 images

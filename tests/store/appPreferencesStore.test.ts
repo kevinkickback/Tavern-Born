@@ -31,6 +31,7 @@ describe('appPreferencesStore', () => {
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
+      secondarySidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
     })
@@ -93,6 +94,7 @@ describe('appPreferencesStore', () => {
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: 100,
+      secondarySidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
     })
@@ -102,6 +104,20 @@ describe('appPreferencesStore', () => {
     useAppPreferencesStore.getState().setCompendiumFiltersOpen(false)
 
     expect(useAppPreferencesStore.getState().compendiumFiltersOpen).toBe(false)
+  })
+
+  test('toggles the secondary sidebar without editing the active character', () => {
+    const character = makeCharacterFixture()
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacter: character,
+      activeCharacterId: character.id,
+    })
+    useAppPreferencesStore.getState().toggleSecondarySidebar()
+    expect(useAppPreferencesStore.getState().secondarySidebarOpen).toBe(false)
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+    useAppPreferencesStore.getState().toggleSecondarySidebar()
+    expect(useAppPreferencesStore.getState().secondarySidebarOpen).toBe(true)
   })
 
   test('remembers the character collection view mode', () => {
@@ -128,7 +144,13 @@ describe('appPreferencesStore', () => {
 
     const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
 
-    const rehydrateState = {
+    const rehydrateState: {
+      homeCardSize: number
+      themeAccent: string
+      themeAppearance: string
+      autoRefreshGameData: boolean
+      secondarySidebarOpen?: boolean
+    } = {
       homeCardSize: 999,
       themeAccent: 'invalid',
       themeAppearance: 'invalid',
@@ -140,5 +162,6 @@ describe('appPreferencesStore', () => {
     expect(rehydrateState.homeCardSize).toBe(MAX_HOME_CARD_SIZE)
     expect(rehydrateState.themeAccent).toBe('blue')
     expect(rehydrateState.themeAppearance).toBe('dark')
+    expect(rehydrateState.secondarySidebarOpen).toBe(true)
   })
 })

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -19,6 +20,7 @@ function renderSidebar(path = '/build/class') {
 
 describe('desktop workspace navigation', () => {
   beforeEach(() => {
+    useAppPreferencesStore.setState({ secondarySidebarOpen: true })
     useCharacterStore.setState({
       characters: [],
       activeCharacterId: null,
@@ -83,11 +85,24 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
-  test('keeps the context pane open without a collapse control', () => {
+  test('toggles the secondary sidebar from the primary rail without losing focus', async () => {
+    const user = userEvent.setup()
     renderSidebar()
 
-    expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /context pane/i })).toBeNull()
+    const sidebar = screen.getByRole('complementary', { name: 'Builder navigation' })
+    const toggle = screen.getByRole('button', { name: 'Collapse secondary sidebar' })
+    expect(toggle.getAttribute('aria-controls')).toBe(sidebar.id)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    toggle.focus()
+    await user.keyboard('{Enter}')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByRole('button', { name: 'Expand secondary sidebar' })).toBe(toggle)
+    expect(screen.queryByRole('link', { name: 'Class' })).toBeNull()
+    expect(document.activeElement).toBe(toggle)
+
+    await user.keyboard(' ')
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBe(sidebar)
   })
 
   test('disables character-scoped workspaces until a character is active', () => {
@@ -128,12 +143,14 @@ describe('desktop workspace navigation', () => {
     const labels = screen
       .getByRole('navigation', { name: 'Primary workspaces' })
       .querySelectorAll('button[aria-label]')
-    expect(Array.from(labels, (button) => button.getAttribute('aria-label')).slice(0, 5)).toEqual([
+    expect(Array.from(labels, (button) => button.getAttribute('aria-label'))).toEqual([
       'Characters',
       'Builder',
       'Rules',
       'Character Sheet',
       'Compendium',
+      'Collapse secondary sidebar',
+      'Settings',
     ])
   })
 

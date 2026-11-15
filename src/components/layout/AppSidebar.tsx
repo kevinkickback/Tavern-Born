@@ -27,6 +27,7 @@ import {
   PawPrint,
   PersonSimple,
   PuzzlePiece,
+  Sidebar,
   SlidersHorizontal,
   Sparkle,
   Sword,
@@ -45,6 +46,7 @@ import {
   SETTINGS_SECTIONS,
 } from '@/lib/navigation/settingsNavigation'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { SidebarSectionHeading } from './SidebarSectionHeading'
 import { getSidebarRowClassName } from './sidebarRowStyles'
@@ -54,6 +56,7 @@ const CharacterReadinessBadge = lazy(() =>
     default: module.CharacterReadinessBadge,
   })),
 )
+const SECONDARY_SIDEBAR_ID = 'secondary-workspace-sidebar'
 
 interface ContextItem {
   label: string
@@ -312,6 +315,11 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
   const location = useLocation()
   const navigate = useNavigate()
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const secondarySidebarOpen = useAppPreferencesStore((state) => state.secondarySidebarOpen)
+  const toggleSecondarySidebar = useAppPreferencesStore((state) => state.toggleSecondarySidebar)
+  const sidebarActionLabel = secondarySidebarOpen
+    ? 'Collapse secondary sidebar'
+    : 'Expand secondary sidebar'
   const activeWorkspace =
     workspaces.find((workspace) => workspace.matches(location.pathname)) ?? workspaces[0]
   const isLibrary = location.pathname === '/'
@@ -328,7 +336,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
             const active = workspace.id === activeWorkspace.id
             const unavailable = Boolean(workspace.requiresCharacter && !activeCharacter)
 
-            return (
+            const button = (
               <Tooltip key={workspace.id}>
                 <TooltipTrigger asChild>
                   <button
@@ -341,7 +349,6 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                     }}
                     className={cn(
                       'relative flex size-12 items-center justify-center rounded-md border text-[1.625rem] transition-colors',
-                      workspace.id === 'settings' && 'mt-auto',
                       unavailable
                         ? 'cursor-not-allowed border-muted-foreground/20 bg-background/5 text-muted-foreground/35'
                         : active
@@ -362,13 +369,42 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                 </TooltipContent>
               </Tooltip>
             )
+            return workspace.id === 'settings' ? (
+              <div key={workspace.id} className="mt-auto flex flex-col gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={sidebarActionLabel}
+                      aria-expanded={secondarySidebarOpen}
+                      aria-controls={SECONDARY_SIDEBAR_ID}
+                      onClick={toggleSecondarySidebar}
+                      className="flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
+                    >
+                      <Sidebar weight={secondarySidebarOpen ? 'fill' : 'regular'} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    {sidebarActionLabel}
+                  </TooltipContent>
+                </Tooltip>
+                {button}
+              </div>
+            ) : (
+              button
+            )
           })}
         </nav>
       </aside>
 
       <aside
+        id={SECONDARY_SIDEBAR_ID}
         aria-label={`${activeWorkspace.label} navigation`}
-        className="col-start-2 row-start-2 flex w-56 min-w-0 flex-col overflow-hidden bg-transparent"
+        className={cn(
+          'col-start-2 row-start-2 w-56 min-w-0 flex-col overflow-hidden bg-transparent',
+          secondarySidebarOpen ? 'flex' : 'hidden',
+        )}
+        hidden={!secondarySidebarOpen}
       >
         <nav className="min-w-56 flex-1 overflow-y-auto px-2 py-2" aria-label="Workspace pages">
           {isLibrary ? (

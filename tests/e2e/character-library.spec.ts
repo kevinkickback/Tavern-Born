@@ -102,6 +102,10 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
 
   await listView.focus()
+  const gridBox = (await gridView.boundingBox())!
+  const listBox = (await listView.boundingBox())!
+  expect(listBox.y).toBe(gridBox.y)
+  expect(listBox.x).toBeGreaterThan(gridBox.x + gridBox.width)
   await listView.press('Space')
   await expect(listView).toHaveAttribute('aria-pressed', 'true')
   await expect(gridView).toHaveAttribute('aria-pressed', 'false')
@@ -111,13 +115,14 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await gridView.click()
   await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
 
-  const dimensions = await sidebar.locator('button').evaluateAll((controls) =>
+  const rows = filters.getByRole('button').or(sidebar.getByRole('combobox'))
+  const dimensions = await rows.evaluateAll((controls) =>
     controls.map((el) => {
       const style = getComputedStyle(el)
       return [style.height, style.width, style.fontSize, style.paddingLeft]
     }),
   )
-  expect(dimensions).toHaveLength(8)
+  expect(dimensions).toHaveLength(6)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const standardRow = await page
     .getByRole('link', { name: 'General', exact: true })
@@ -126,6 +131,58 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
       return [style.height, style.width, style.fontSize, style.paddingLeft]
     })
   for (const row of dimensions) expect(row).toEqual(standardRow)
+})
+
+test('secondary sidebar stays collapsed across workspaces and reloads', async ({ page }) => {
+  const rail = page.getByRole('navigation', { name: 'Primary workspaces' })
+  const toggle = rail.getByRole('button', { name: /^(Collapse|Expand) secondary sidebar$/ })
+  const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  const filter = sidebar.getByRole('button', { name: '2024 0' })
+  await filter.click()
+  const content = page.locator('main')
+  const status = page.getByRole('status', { name: 'Application status' })
+  const sidebarWidth = (await sidebar.boundingBox())!.width
+  const openContent = (await content.boundingBox())!
+  const openStatus = (await status.boundingBox())!
+
+  await toggle.focus()
+  await toggle.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(sidebar).toHaveCount(0)
+  await expect(filter).toHaveCount(0)
+  await expect(toggle).toBeFocused()
+  expect((await content.boundingBox())!.width - openContent.width).toBeCloseTo(sidebarWidth)
+  expect((await status.boundingBox())!.width - openStatus.width).toBeCloseTo(sidebarWidth)
+
+  await toggle.press('Space')
+  await expect(filter).toHaveAttribute('aria-pressed', 'true')
+  await toggle.click()
+  await rail.getByRole('button', { name: 'Settings', exact: true }).click()
+  const settingsSidebar = page.getByRole('complementary', { name: 'Settings navigation' })
+  await expect(page.getByRole('region', { name: 'General', exact: true })).toBeVisible()
+  await expect(settingsSidebar).toHaveCount(0)
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const path = '/src/store/appPreferencesStore.ts'
+        const { useAppPreferencesStore } = await import(path)
+        const stored = await useAppPreferencesStore.persist
+          .getOptions()
+          .storage.getItem('app-preferences-storage')
+        return stored?.state.secondarySidebarOpen
+      }),
+    )
+    .toBe(false)
+
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-library-seed')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(settingsSidebar).toHaveCount(0)
+  await toggle.click()
+  const appearance = settingsSidebar.getByRole('link', { name: 'Appearance' })
+  await appearance.click()
+  await expect(appearance).toHaveAttribute('aria-current', 'page')
 })
 
 test('character library filters, cancels deletion, then persists a confirmed deletion', async ({

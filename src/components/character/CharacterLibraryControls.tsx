@@ -3,6 +3,7 @@ import { BookOpen, ListBullets, SquaresFour, Users, WarningCircle } from '@phosp
 import { useId } from 'react'
 import { SidebarSectionHeading } from '@/components/layout/SidebarSectionHeading'
 import { getSidebarRowClassName } from '@/components/layout/sidebarRowStyles'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -12,11 +13,6 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
-
-const layoutViews = [
-  { id: 'gallery', label: 'Grid', icon: SquaresFour },
-  { id: 'list', label: 'List', icon: ListBullets },
-] as const
 
 const libraryFilters = [
   { id: 'all', label: 'All', icon: Users },
@@ -39,28 +35,26 @@ interface CharacterLibraryControlsProps {
   onGroupChange: (group: LibraryGroup) => void
 }
 
-interface LibraryOptionProps {
+interface LibraryFilterOptionProps {
   label: string
-  ariaLabel: string
   icon: Icon
   selected: boolean
   onClick: () => void
-  count?: number | null
+  count: number | null
 }
 
-function LibraryOption({
+function LibraryFilterOption({
   label,
-  ariaLabel,
   icon: Icon,
   selected,
   onClick,
   count,
-}: LibraryOptionProps) {
+}: LibraryFilterOptionProps) {
   return (
     <li>
       <button
         type="button"
-        aria-label={ariaLabel}
+        aria-label={count === null ? `${label}, checking characters` : `${label} ${count}`}
         aria-pressed={selected}
         onClick={onClick}
         className={cn(
@@ -75,9 +69,7 @@ function LibraryOption({
           aria-hidden="true"
         />
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        {count !== undefined && (
-          <span className="text-xs tabular-nums text-muted-foreground">{count ?? '…'}</span>
-        )}
+        <span className="text-xs tabular-nums text-muted-foreground">{count ?? '…'}</span>
       </button>
     </li>
   )
@@ -103,29 +95,36 @@ export function CharacterLibraryControls({
     <>
       <section aria-labelledby={viewId}>
         <SidebarSectionHeading id={viewId}>View</SidebarSectionHeading>
-        <ul className="space-y-0.5">
-          {layoutViews.map(({ id, label, icon }) => (
-            <LibraryOption
-              key={id}
-              label={label}
-              ariaLabel={`${label} view`}
-              icon={icon}
-              selected={viewMode === id}
-              onClick={() => setViewMode(id)}
-            />
-          ))}
-        </ul>
+        <div className="mx-2 grid grid-cols-2 gap-0.5 rounded-md border border-border bg-muted/30 p-0.5">
+          <Button
+            variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-8 gap-1.5 shadow-none"
+            aria-label="Grid view"
+            aria-pressed={viewMode === 'gallery'}
+            onClick={() => setViewMode('gallery')}
+          >
+            <SquaresFour aria-hidden="true" /> Grid
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-8 gap-1.5 shadow-none"
+            aria-label="List view"
+            aria-pressed={viewMode === 'list'}
+            onClick={() => setViewMode('list')}
+          >
+            <ListBullets aria-hidden="true" /> List
+          </Button>
+        </div>
       </section>
       <section aria-labelledby={filterId} className="mt-5">
         <SidebarSectionHeading id={filterId}>Filter</SidebarSectionHeading>
         <ul className="space-y-0.5">
           {libraryFilters.map(({ id, label, icon }) => (
-            <LibraryOption
+            <LibraryFilterOption
               key={id}
               label={label}
-              ariaLabel={
-                counts[id] === null ? `${label}, checking characters` : `${label} ${counts[id]}`
-              }
               icon={icon}
               selected={filter === id}
               onClick={() => onFilterChange(id)}
