@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
 export const CHARACTER_CARD_REVEAL_CLASS =
-  'motion-safe:transition-opacity [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:pointer-events-none [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:opacity-0'
+  'motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-in-out [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:pointer-events-none [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:opacity-0'
 
 interface CharacterCardFrameProps {
   image?: string | null
@@ -153,7 +153,7 @@ export function CharacterCardFrame({
                 data-slot="character-card-date"
                 className={cn(
                   CHARACTER_CARD_REVEAL_CLASS,
-                  'flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[10px] leading-none text-muted-foreground italic',
+                  'flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-none text-muted-foreground italic',
                 )}
               >
                 <Clock className="size-3 shrink-0" />

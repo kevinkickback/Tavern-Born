@@ -126,8 +126,11 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       const classes = card.getByRole('list', { name: 'Class levels' })
       const date = card.locator('[data-slot="character-card-date"]')
       const actions = card.locator('[data-slot="character-card-actions"]')
+      const duplicate = actions.getByRole('button', { name: `Duplicate ${name}` })
       const revealedDetails = [version, date, actions]
 
+      await expect(date).toHaveCSS('font-size', '11px')
+      await expect(actions).toHaveCSS('transition-duration', '0.2s')
       await expect(card.getByLabel(/Character ready|items? to review/)).toHaveCount(0)
       await expect(level).toBeVisible()
       expect(await classes.getByRole('listitem').allTextContents()).toEqual([
@@ -147,6 +150,8 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       if (viewportWidth === 1280) {
         expect(cardBox.width).toBe(360)
         expect(cardBox.height).toBe(240)
+        await expect(duplicate).toHaveCSS('width', '36px')
+        await expect(duplicate).toHaveCSS('height', '36px')
       } else {
         expect(cardBox.width).toBeGreaterThan(260)
         expect(cardBox.width).toBeLessThan(360)
@@ -168,6 +173,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
       await card.hover()
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
+      await expect(card).toHaveCSS('translate', '0px -2px')
       const hoveredCardBox = (await card.boundingBox())!
       const hoveredLevelBox = (await level.boundingBox())!
       expect(hoveredLevelBox.y - hoveredCardBox.y).toBe(levelBox.y - cardBox.y)
@@ -175,12 +181,38 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual((await classes.boundingBox())!.x)
       await page.mouse.move(0, 0)
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
-      await page.getByRole('button', { name: `Duplicate ${name}` }).focus()
+      await duplicate.focus()
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
       await page.getByRole('searchbox', { name: 'Search characters' }).focus()
     }
     expect(badgeColors[0]).not.toBe(badgeColors[1])
   }
+
+  const card = page.locator('[data-slot="card"]').filter({
+    has: page.getByRole('heading', { name: names[0], exact: true }),
+  })
+  const hitArea = page.locator('[data-slot="character-card-hit-area"]').filter({ has: card })
+  const actions = card.locator('[data-slot="character-card-actions"]')
+  const { width, height } = (await hitArea.boundingBox())!
+  await hitArea.hover({ position: { x: width / 2, y: height - 1 } })
+  await expect(card).toHaveCSS('translate', '0px -2px')
+  await expect(actions).toHaveCSS('opacity', '1')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(card).toHaveCSS('translate', 'none')
+  await expect(actions).toHaveCSS('transition-duration', '0s')
+  await expect(actions).toHaveCSS('opacity', '1')
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.setViewportSize({ width: 1280, height: 768 })
+  await page.getByRole('button', { name: 'Sort & Group' }).click()
+  await page.getByRole('button', { name: 'Select Multiple' }).click()
+  const selectionBox = (await hitArea.boundingBox())!
+  const bottomEdge = { x: selectionBox.width / 2, y: selectionBox.height - 1 }
+  await hitArea.hover({ position: bottomEdge })
+  await expect(card).toHaveCSS('translate', '0px -2px')
+  await hitArea.click({ position: bottomEdge })
+  await expect(card.getByRole('checkbox', { name: `Select ${names[0]}` })).toBeChecked()
 })
 
 test('malformed and schema-invalid imports show distinct errors without changing the library', async ({
