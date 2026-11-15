@@ -843,7 +843,7 @@
     },
     {
       "file": "src/lib/calculations/spellUtils.ts",
-      "sha256": "58dc686b09ba37e912c823b4b9377b18e6cb032da28dc68ffc3f4cc0229b32f9"
+      "sha256": "2f861e1d7a723586a6f047c940d80a46df5cf024a7a1b2d4b1eb8af3cfb089d4"
     },
     {
       "file": "src/lib/calculations/weaponBonuses.ts",
@@ -872,6 +872,10 @@
     {
       "file": "src/lib/character/startingEquipmentGrants.ts",
       "sha256": "55f7f082b5b560187ca7c5783d622d40113f0588e227b89b6f8c56a9591929fc"
+    },
+    {
+      "file": "src/lib/displayLabels.ts",
+      "sha256": "868e4aa9583fca0ff6c12000a99de064c930363686da86e34f8283eb3a7cf28b"
     },
     {
       "file": "src/lib/provenance/featSelectionIdentity.ts",

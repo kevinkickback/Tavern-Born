@@ -24,12 +24,12 @@ export function getSpellcastingStatDisplay(classData: Class5e): string {
   return `${stat}${progression}`
 }
 
-function capitalizeProficiencyEntry(text: string): string {
-  // A leading item reference has a display field separate from its lookup name and source.
-  return capitalizeLabel(text).replace(
-    /^\{@item ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/,
+function capitalizeItemProficiency(text: string): string {
+  // Standalone item labels have a display field separate from their lookup name and source.
+  return text.replace(
+    /^\s*\{@item ([^|{}]+)(?:\|([^|{}]*))?(?:\|([^{}]*))?}\s*$/,
     (_, name: string, source = '', label?: string) =>
-      `{@item ${name}|${source}|${capitalizeLabel(label?.trim() || name)}}`,
+      `{@item ${name}|${source}|${capitalizeLabel(label?.trim() ? label : name)}}`,
   )
 }
 
@@ -41,9 +41,8 @@ export function formatProficiencyList(
     values
       ?.flatMap((value) => {
         if (value && typeof value === 'object' && 'full' in value && typeof value.full === 'string')
-          return [renderEntry(capitalizeProficiencyEntry(value.full.trim()))]
+          return [renderEntry(value.full)]
         if (typeof value !== 'string') return []
-        const label = capitalizeProficiencyEntry(value.trim())
         const category = value.trim().toLowerCase()
         const key =
           kind === 'armor'
@@ -51,19 +50,20 @@ export function formatProficiencyList(
             : kind === 'weapon'
               ? /^(simple|martial)( weapons?)?$/.exec(category)
               : null
+        const itemLabel = capitalizeItemProficiency(value)
         return [
           renderEntry(
             key
-              ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${label}}`
+              ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${capitalizeLabel(value.trim())}}`
               : kind === 'weapon'
-                ? label.replace(
+                ? itemLabel.replace(
                     /\{@filter ([^|{}]+)\|items\|([^{}]+)}/gi,
                     (tag, label: string, clauses: string) => {
                       const filter = getWeaponPreviewFilterKey(clauses)
                       return filter ? `{@proficiency ${filter}|weapon|${label}}` : tag
                     },
                   )
-                : label,
+                : itemLabel,
           ),
         ]
       })
