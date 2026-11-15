@@ -198,6 +198,7 @@ function App() {
   useEffect(() => {
     const api = window.electronAPI
     if (!api?.onUpdateAvailable) return
+    let subscribed = true
     let updateToast: ReturnType<typeof toast.info> | undefined
     const unsubscribeAvailable = api.onUpdateAvailable((data) => {
       setUpdateData(data)
@@ -213,7 +214,23 @@ function App() {
       if (updateToast !== undefined) toast.dismiss(updateToast)
       updateToast = undefined
     })
+    void api
+      .getUpdateStatus?.()
+      .then((status) => {
+        if (!subscribed || status.status !== 'downloaded' || !status.version) return
+        if (status.error) {
+          toast.error('Could not install the update', {
+            description: `${status.error} Close and reopen Tavern Born to try again.`,
+          })
+          return
+        }
+        const { version } = status
+        setUpdateData((data) => data ?? { version, changelog: null, useReleaseDownloadPage: false })
+        setHasAppUpdate(true)
+      })
+      .catch(() => undefined)
     return () => {
+      subscribed = false
       unsubscribeAvailable()
       unsubscribeUnavailable?.()
     }

@@ -195,18 +195,39 @@ describe('installUpdate', () => {
     initAutoUpdater()
   })
 
-  test('installs silently and relaunches the packaged app', () => {
+  test('keeps a downloaded update ready and reports a synchronous install failure', async () => {
     appState.isPackaged = true
 
-    installUpdate()
+    expect(installUpdate).toThrow('Download the update before restarting.')
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    updaterHandler('update-not-available')({} as never)
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+    })
+    await downloadUpdate()
+    expect(downloadUpdateMock).not.toHaveBeenCalled()
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
 
+    quitAndInstallMock.mockImplementationOnce(() => {
+      updaterHandler('error')(new Error('Installer failed') as never)
+    })
+    expect(installUpdate).toThrow('Installer failed')
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
     expect(quitAndInstallMock).toHaveBeenCalledWith(true, true)
+    expect(getUpdateStatus()).toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+      error: 'Installer failed',
+    })
+    expect(installUpdate).toThrow('Close and reopen Tavern Born')
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
   })
 
   test('does not invoke the installer during development', () => {
     appState.isPackaged = false
 
-    installUpdate()
+    expect(installUpdate).toThrow('An in-app restart is unavailable for this build.')
 
     expect(quitAndInstallMock).not.toHaveBeenCalled()
   })
@@ -394,7 +415,7 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
     await expect(downloadUpdate()).rejects.toThrow(
       'Install this update from the release download page',
     )
-    installUpdate()
+    expect(installUpdate).toThrow('An in-app restart is unavailable for this build.')
 
     expect(downloadUpdateMock).not.toHaveBeenCalled()
     expect(quitAndInstallMock).not.toHaveBeenCalled()
