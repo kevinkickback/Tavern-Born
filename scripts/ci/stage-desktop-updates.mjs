@@ -240,6 +240,51 @@ async function install(page, version, legacy) {
     .click()
   await page.getByRole('button', { name: 'Install Now' }).click()
   await expect(page.getByRole('heading', { name: 'Update Ready' })).toBeVisible({ timeout })
+  if (!legacy) {
+    const pending = page.getByTestId('character-save-status')
+    await expect(pending).toHaveText('Unsaved changes')
+    const denied = await page.evaluate(async () => {
+      try {
+        await window.electronAPI.installUpdate()
+        return false
+      } catch (error) {
+        return String(error).includes('Save your character before restarting.')
+      }
+    })
+    assert(denied, 'The main process must refuse to install with a dirty character.')
+
+    await page.getByRole('button', { name: 'Later', exact: true }).click()
+    await expect(pending).toHaveText('Unsaved changes')
+    const status = await page.evaluate(() => window.electronAPI.checkForUpdate())
+    assert.equal(status.data?.status, 'downloaded')
+    await page.getByRole('button', { name: 'App update available', exact: true }).click()
+    await page.getByRole('button', { name: 'Install Now' }).click()
+    await page.evaluate(() => {
+      window.addEventListener('beforeunload', (event) => event.preventDefault(), { once: true })
+    })
+    const ready = page.getByRole('dialog', { name: 'Update Ready' })
+    let dismissal = Promise.resolve()
+    let dismissalError
+    const onDialog = (dialog) => {
+      dismissal = dialog.dismiss().catch((error) => {
+        // Electron can complete the veto before Playwright answers the CDP dialog event.
+        if (dialog.type() !== 'beforeunload' || !String(error).includes('No dialog is showing')) {
+          dismissalError = error
+        }
+      })
+    }
+    page.on('dialog', onDialog)
+    try {
+      await ready.getByRole('button', { name: 'Save and restart' }).click()
+      await expect(ready.getByRole('alert')).toContainText('The window kept your changes open')
+      await dismissal
+      if (dismissalError) throw dismissalError
+    } finally {
+      page.off('dialog', onDialog)
+    }
+    await expect(pending).toHaveText('Character saved')
+    await ready.getByRole('button', { name: 'Restart', exact: true }).click()
+  }
   return true
 }
 
@@ -290,9 +335,16 @@ try {
     )
   })
   await withVersion('0.7.0', async (page) => {
-    await expect(
-      page.getByRole('heading', { name: currentName, exact: true, level: 3 }),
-    ).toBeVisible({ timeout })
+    await page.getByRole('heading', { name: currentName, exact: true, level: 3 }).click({ timeout })
+    await page.getByRole('button', { name: 'Builder', exact: true }).click()
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: 'Level up character', exact: true })
+      .click()
+    const levelUp = page.getByRole('dialog', { name: 'Level Up Character' })
+    await levelUp.getByRole('button', { name: 'Level Up', exact: true }).first().click()
+    await expect(levelUp.getByText('2', { exact: true })).toBeVisible()
+    await levelUp.getByRole('button', { name: 'Close', exact: true }).first().click()
     return install(page, '0.7.1', false)
   })
   assertFeedServed('0.7.1')
@@ -304,6 +356,14 @@ try {
     await expect(page.getByRole('banner').getByText(currentName, { exact: true })).toBeVisible({
       timeout,
     })
+    await page.getByRole('button', { name: 'Builder', exact: true }).click()
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: 'Level up character', exact: true })
+      .click()
+    await expect(
+      page.getByRole('dialog', { name: 'Level Up Character' }).getByText('2', { exact: true }),
+    ).toBeVisible()
   })
   console.log(
     `${kind}: published v0.6.0 → staged v0.7.0 → staged v0.7.1, legacy backup and compatible reopen passed.`,

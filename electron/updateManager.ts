@@ -32,6 +32,10 @@ let autoCheckTimer: ReturnType<typeof setInterval> | null = null
 let startupCheckTimeout: ReturnType<typeof setTimeout> | null = null
 let devSimInterval: ReturnType<typeof setInterval> | null = null
 let useReleaseDownloadPage = false
+let downloadedUpdate: { status: 'downloaded'; version: string; error?: string } | null = null
+let installHandoff: { recover: () => void; failed: boolean } | null = null
+let nativeChecks = 0
+let nativeDownloads = 0
 
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
@@ -130,6 +134,21 @@ function setStatus(status: UpdateStatus) {
   currentStatus = status
 }
 
+function markUpdateDownloaded(version: string) {
+  downloadedUpdate = { status: 'downloaded', version }
+  sendToRenderer('update-downloaded', { version })
+}
+
+function failInstallerHandoff(error: string) {
+  if (!downloadedUpdate || !installHandoff || installHandoff.failed) return
+  installHandoff.failed = true
+  downloadedUpdate = {
+    ...downloadedUpdate,
+    error: error || 'The updater could not start the installer.',
+  }
+  installHandoff.recover()
+}
+
 function setErrorStatus(message: string): UpdateStatus {
   const status: UpdateStatus = { status: 'error', error: message }
   setStatus(status)
@@ -164,6 +183,8 @@ export async function fetchChangelog(version: string): Promise<string | null> {
 
 export function initAutoUpdater() {
   useReleaseDownloadPage = process.platform === 'darwin' || !!process.env.PORTABLE_EXECUTABLE_DIR
+  downloadedUpdate = null
+  installHandoff = null
   if (useReleaseDownloadPage) return
 
   autoUpdater.autoDownload = false
@@ -171,12 +192,14 @@ export function initAutoUpdater() {
   autoUpdater.allowDowngrade = false
 
   autoUpdater.on('checking-for-update', () => {
+    if (downloadedUpdate) return
     setStatus({ status: 'checking' })
     sendToRenderer('update-checking')
   })
 
   autoUpdater.on('update-available', async (info: UpdateInfo) => {
     const changelog = await fetchChangelog(info.version)
+    if (downloadedUpdate) return
     const status: UpdateStatus = {
       status: 'available',
       version: info.version,
@@ -191,11 +214,16 @@ export function initAutoUpdater() {
   })
 
   autoUpdater.on('update-not-available', (_info: UpdateInfo) => {
+    if (downloadedUpdate) return
     setStatus({ status: 'not-available' })
     sendToRenderer('update-not-available')
   })
 
   autoUpdater.on('error', (err: Error) => {
+    if (downloadedUpdate) {
+      failInstallerHandoff(err.message)
+      return
+    }
     // In unpacked (--dir) builds, app-update.yml is absent — treat as not-available.
     if (err.message.includes('app-update.yml')) {
       setStatus({ status: 'not-available' })
@@ -210,6 +238,7 @@ export function initAutoUpdater() {
   })
 
   autoUpdater.on('download-progress', (progress: ProgressInfo) => {
+    if (downloadedUpdate) return
     setStatus({ status: 'downloading', progress })
     sendToRenderer('download-progress', {
       percentage: progress.percent,
@@ -220,8 +249,7 @@ export function initAutoUpdater() {
   })
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    setStatus({ status: 'downloaded', version: info.version })
-    sendToRenderer('update-downloaded', { version: info.version })
+    markUpdateDownloaded(info.version)
   })
 }
 
@@ -286,6 +314,8 @@ async function checkForReleaseDownload(): Promise<UpdateStatus> {
 }
 
 export async function checkForUpdate(): Promise<UpdateStatus> {
+  if (downloadedUpdate) return downloadedUpdate
+
   if (!app.isPackaged) {
     setStatus({ status: 'not-available' })
     sendToRenderer('update-not-available')
@@ -300,9 +330,12 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     return checkForReleaseDownload()
   }
 
+  nativeChecks += 1
   try {
     setStatus({ status: 'checking' })
     const checkResult = await autoUpdater.checkForUpdates()
+    const statusAfterCheck = getUpdateStatus()
+    if (statusAfterCheck.status === 'downloaded') return statusAfterCheck
     const nextVersion = checkResult?.updateInfo?.version
 
     if (nextVersion && compareSemver(nextVersion, app.getVersion()) > 0) {
@@ -324,14 +357,22 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     setStatus({ status: 'not-available' })
     return { status: 'not-available' }
   } catch (err) {
+    const statusAfterCheck = getUpdateStatus()
+    if (statusAfterCheck.status === 'downloaded') return statusAfterCheck
     if (isConnectivityError(err)) {
       return setOfflineStatus()
     }
     return setErrorStatus((err as Error).message)
+  } finally {
+    nativeChecks -= 1
   }
 }
 
 export async function downloadUpdate(): Promise<void> {
+  if (downloadedUpdate) {
+    sendToRenderer('update-downloaded', { version: downloadedUpdate.version })
+    return
+  }
   if (!app.isPackaged) {
     if (devSimInterval) return
     const mockVersion = currentStatus.version ?? '99.0.0'
@@ -347,7 +388,7 @@ export async function downloadUpdate(): Promise<void> {
       if (progress >= 100) {
         if (devSimInterval) clearInterval(devSimInterval)
         devSimInterval = null
-        sendToRenderer('update-downloaded', { version: mockVersion })
+        markUpdateDownloaded(mockVersion)
       }
     }, 800)
     return
@@ -361,12 +402,14 @@ export async function downloadUpdate(): Promise<void> {
 
   const token = new CancellationToken()
   cancellationToken = token
+  nativeDownloads += 1
   try {
     await autoUpdater.downloadUpdate(token)
   } catch (error) {
     if (!token.cancelled) throw error
   } finally {
     if (cancellationToken === token) cancellationToken = null
+    nativeDownloads -= 1
   }
 }
 
@@ -400,15 +443,37 @@ export function cancelDownload(): boolean {
   return false
 }
 
-export function installUpdate(): void {
+export function assertUpdateCanInstall() {
   if (!app.isPackaged || useReleaseDownloadPage) {
-    return
+    throw new Error('An in-app restart is unavailable for this build.')
   }
-  autoUpdater.quitAndInstall(true, true)
+  if (!downloadedUpdate) throw new Error('Download the update before restarting.')
+  if (downloadedUpdate.error) {
+    throw new Error('Close and reopen Tavern Born before trying the update again.')
+  }
+  if (nativeChecks > 0 || nativeDownloads > 0) {
+    throw new Error('Wait for the current update request to finish, then try again.')
+  }
+}
+
+export function installUpdate(recover: () => void): void {
+  assertUpdateCanInstall()
+  installHandoff = { recover, failed: false }
+  try {
+    autoUpdater.quitAndInstall(true, true)
+  } catch (error) {
+    failInstallerHandoff(error instanceof Error ? error.message : String(error))
+  }
+}
+
+export function acknowledgeInstallerHandoff(): boolean {
+  const failed = installHandoff?.failed ?? false
+  installHandoff = null
+  return failed
 }
 
 export function getUpdateStatus(): UpdateStatus {
-  return currentStatus
+  return downloadedUpdate ?? currentStatus
 }
 
 export function startAutoCheckSchedule() {

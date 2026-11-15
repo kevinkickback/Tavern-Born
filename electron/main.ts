@@ -10,6 +10,7 @@ import {
   type IpcMainInvokeEvent,
   ipcMain,
   Menu,
+  autoUpdater as nativeAutoUpdater,
   session,
   shell,
 } from 'electron'
@@ -25,6 +26,8 @@ import { createCatalogService } from './catalogService'
 import { readLocalCatalogResource } from './localCatalogResource'
 import { isTrustedRendererUrl, rendererRootFileUrl } from './security'
 import {
+  acknowledgeInstallerHandoff,
+  assertUpdateCanInstall,
   cancelDownload,
   checkForUpdate,
   downloadUpdate,
@@ -55,6 +58,7 @@ let openingMainWindow = false
 let mainWindowReadyToShow = false
 let hasUnsavedChanges = false
 let forceClose = false
+let updateRestart: { window: BrowserWindow; cancelClose: (message: string) => void } | null = null
 let localDataRoots = new Set<string>()
 let selectingLocalDataRoot = false
 let pendingLocalDataRoot: string | null = null
@@ -239,6 +243,11 @@ async function createWindow(): Promise<void> {
   })
 
   mainWindow.on('close', (event) => {
+    if (hasUnsavedChanges && updateRestart && updateRestart.window === mainWindow) {
+      event.preventDefault()
+      updateRestart.cancelClose('Save your character before restarting.')
+      return
+    }
     if (hasUnsavedChanges && !forceClose) {
       event.preventDefault()
       mainWindow?.webContents.send('app:confirmClose')
@@ -247,6 +256,7 @@ async function createWindow(): Promise<void> {
 }
 
 async function activateMainWindow(): Promise<void> {
+  if (updateRestart) return
   if (desktopState === 'closing') {
     reopenAfterClose = true
     return
@@ -264,6 +274,42 @@ async function activateMainWindow(): Promise<void> {
     await createWindow()
   } finally {
     openingMainWindow = false
+  }
+}
+
+async function restartToInstallUpdate(window: BrowserWindow): Promise<void> {
+  assertUpdateCanInstall()
+  if (updateRestart) return
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const contents = window.webContents
+      const cancelClose = (message: string) => {
+        window.removeListener('closed', resolve)
+        contents.removeListener('will-prevent-unload', onPrevented)
+        reject(new Error(message))
+      }
+      const onPrevented = () => cancelClose('The window kept your changes open. Try again.')
+      updateRestart = { window, cancelClose }
+      window.once('closed', resolve)
+      contents.once('will-prevent-unload', onPrevented)
+      try {
+        window.close()
+      } catch (error) {
+        cancelClose(error instanceof Error ? error.message : String(error))
+      }
+    })
+    // Keep the restart pending during Electron's synchronous window-all-closed notification.
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    await flushWindowStateWrites()
+    installUpdate(() => {
+      updateRestart = null
+      void activateMainWindow().catch(console.error)
+    })
+  } catch (error) {
+    updateRestart = null
+    if (window.isDestroyed()) void activateMainWindow().catch(console.error)
+    throw error
   }
 }
 
@@ -435,8 +481,8 @@ async function initializeDesktop(): Promise<void> {
     owner.once('destroyed', close)
   })
   ipcMain.on('state:setUnsavedChanges', (event, value: unknown) => {
-    if (!isTrustedIpcSender(event)) return
-    hasUnsavedChanges = !!value
+    if (!isTrustedIpcSender(event) || event.sender !== mainWindow?.webContents) return
+    if (typeof value === 'boolean') hasUnsavedChanges = value
   })
 
   ipcMain.on('app:forceClose', (event) => {
@@ -503,7 +549,10 @@ async function initializeDesktop(): Promise<void> {
 
   ipcMain.handle('update:install', (event) => {
     assertTrustedIpcSender(event)
-    installUpdate()
+    const window = mainWindow
+    if (!window || event.sender !== window.webContents) throw new Error('Update request rejected.')
+    if (hasUnsavedChanges) throw new Error('Save your character before restarting.')
+    return restartToInstallUpdate(window)
   })
 
   ipcMain.handle('update:status', (event) => {
@@ -569,8 +618,13 @@ if (app.requestSingleInstanceLock()) {
   app.on('activate', () => {
     void activateMainWindow()
   })
+  nativeAutoUpdater.on('before-quit-for-update', () => {
+    if (!acknowledgeInstallerHandoff()) return
+    // The pinned updater emits this immediately before its own app.quit().
+    app.once('before-quit', (event) => event.preventDefault())
+  })
   app.on('window-all-closed', async () => {
-    if (process.platform === 'darwin') return
+    if (process.platform === 'darwin' || updateRestart) return
 
     desktopState = 'closing'
     await flushWindowStateWrites()

@@ -75,6 +75,7 @@ vi.mock('electron-updater', () => ({
 }))
 
 import {
+  acknowledgeInstallerHandoff,
   cancelDownload,
   checkForUpdate,
   compareSemver,
@@ -191,22 +192,105 @@ describe('updateManager offline safeguards', () => {
 describe('installUpdate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    netState.online = true
     delete process.env.PORTABLE_EXECUTABLE_DIR
     initAutoUpdater()
   })
 
-  test('installs silently and relaunches the packaged app', () => {
+  test.each([
+    'synchronous',
+    'asynchronous',
+  ] as const)('recovers from a %s error before quit handoff', async (timing) => {
     appState.isPackaged = true
+    const recover = vi.fn()
 
-    installUpdate()
+    expect(() => installUpdate(recover)).toThrow('Download the update before restarting.')
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    updaterHandler('update-not-available')({} as never)
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+    })
+    await downloadUpdate()
+    expect(downloadUpdateMock).not.toHaveBeenCalled()
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
 
+    const emitFailure = () => updaterHandler('error')(new Error('Installer failed') as never)
+    if (timing === 'synchronous') quitAndInstallMock.mockImplementationOnce(emitFailure)
+    installUpdate(recover)
+    if (timing === 'asynchronous') emitFailure()
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
     expect(quitAndInstallMock).toHaveBeenCalledWith(true, true)
+    expect(recover).toHaveBeenCalledTimes(1)
+    expect(acknowledgeInstallerHandoff()).toBe(true)
+    expect(acknowledgeInstallerHandoff()).toBe(false)
+    expect(getUpdateStatus()).toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+      error: 'Installer failed',
+    })
+    expect(() => installUpdate(recover)).toThrow('Close and reopen Tavern Born')
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('releases the installer failure listener at a successful quit handoff', () => {
+    appState.isPackaged = true
+    const recover = vi.fn()
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    installUpdate(recover)
+    expect(acknowledgeInstallerHandoff()).toBe(false)
+    updaterHandler('error')(new Error('After handoff') as never)
+    expect(recover).not.toHaveBeenCalled()
+    expect(getUpdateStatus()).toEqual({ status: 'downloaded', version: '2.0.0' })
+  })
+
+  test('keeps an in-flight check error separate from installer handoff', async () => {
+    appState.isPackaged = true
+    let rejectCheck: ((error: Error) => void) | undefined
+    checkForUpdatesMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectCheck = reject
+        }),
+    )
+    const checking = checkForUpdate()
+    expect(checkForUpdatesMock).toHaveBeenCalledTimes(1)
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    const recover = vi.fn()
+    expect(() => installUpdate(recover)).toThrow('Wait for the current update request')
+    updaterHandler('error')(new Error('Previous check failed') as never)
+    rejectCheck?.(new Error('Previous check failed'))
+    await expect(checking).resolves.toEqual({ status: 'downloaded', version: '2.0.0' })
+    installUpdate(recover)
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+    expect(recover).not.toHaveBeenCalled()
+  })
+
+  test('waits for a cancelled native download to settle before installing a ready update', async () => {
+    appState.isPackaged = true
+    let finishDownload: (() => void) | undefined
+    downloadUpdateMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDownload = resolve
+        }),
+    )
+    const download = downloadUpdate()
+    expect(cancelDownload()).toBe(true)
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    const recover = vi.fn()
+    expect(() => installUpdate(recover)).toThrow('Wait for the current update request')
+    finishDownload?.()
+    await download
+    installUpdate(recover)
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+    expect(recover).not.toHaveBeenCalled()
   })
 
   test('does not invoke the installer during development', () => {
     appState.isPackaged = false
 
-    installUpdate()
+    expect(() => installUpdate(vi.fn())).toThrow('An in-app restart is unavailable for this build.')
 
     expect(quitAndInstallMock).not.toHaveBeenCalled()
   })
@@ -394,7 +478,7 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
     await expect(downloadUpdate()).rejects.toThrow(
       'Install this update from the release download page',
     )
-    installUpdate()
+    expect(() => installUpdate(vi.fn())).toThrow('An in-app restart is unavailable for this build.')
 
     expect(downloadUpdateMock).not.toHaveBeenCalled()
     expect(quitAndInstallMock).not.toHaveBeenCalled()
