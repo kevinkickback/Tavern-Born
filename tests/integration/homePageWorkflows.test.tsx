@@ -660,14 +660,20 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     })
 
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'List view' }))
+    const { unmount } = render(<HomeWithSidebar />)
+    const views = within(screen.getByRole('region', { name: 'Views' }))
+    await user.click(views.getByRole('button', { name: 'List view' }))
 
     expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')
     expect(screen.getByRole('button', { name: 'Actions for Alpha' })).toBeTruthy()
     expect(screen.getByText('Dragonborn (Draconblood: Brass) · Fighter')).toBeTruthy()
     expect(useCharacterStore.getState().characters[0].subrace).toBe(
       'Dragonborn (Draconblood; Brass)',
+    )
+    unmount()
+    render(<HomeWithSidebar />)
+    expect(screen.getByRole('button', { name: 'List view' }).getAttribute('aria-pressed')).toBe(
+      'true',
     )
   })
 

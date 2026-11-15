@@ -4,10 +4,8 @@ import {
   CopySimple,
   DotsThreeVertical,
   DownloadSimple,
-  ListBullets,
   MagnifyingGlass,
   Plus,
-  SquaresFour,
   Trash,
   Upload,
   UserCircle,
@@ -23,9 +21,9 @@ import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterContentOpeningDialog } from '@/components/character/CharacterContentOpeningDialog'
 import {
   CharacterLibraryControls,
+  type LibraryFilter,
   type LibraryGroup,
   type LibrarySort,
-  type LibraryView,
 } from '@/components/character/CharacterLibraryControls'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
@@ -265,7 +263,6 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
   )
   const gameData = useGameDataStore((state) => state.gameData)
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
-  const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
@@ -274,7 +271,7 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false)
   const [importReport, setImportReport] = useState<CharacterImportReport | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [libraryView, setLibraryView] = useState<LibraryView>('all')
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all')
   const [sortBy, setSortBy] = useState<LibrarySort>('recent')
   const [groupBy, setGroupBy] = useState<LibraryGroup>('none')
   const [selectionMode, setSelectionMode] = useState(false)
@@ -291,7 +288,7 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
   }, [characters, gameData])
 
   const needsAttention = useLibraryAttention(characters, gameData, additionalContentCharacterIds)
-  const checkingAttention = libraryView === 'attention' && !needsAttention
+  const checkingAttention = libraryFilter === 'attention' && !needsAttention
   const viewCounts = useMemo(() => {
     const classicCount = characters.filter((character) => character.originSystem === '2014').length
     return {
@@ -305,10 +302,10 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     const sorted = characters.filter((character) => {
-      if (libraryView === 'attention' && !needsAttention?.has(character.id)) return false
+      if (libraryFilter === 'attention' && !needsAttention?.has(character.id)) return false
       if (
-        (libraryView === '2014' || libraryView === '2024') &&
-        character.originSystem !== libraryView
+        (libraryFilter === '2014' || libraryFilter === '2024') &&
+        character.originSystem !== libraryFilter
       )
         return false
       if (!query) return true
@@ -330,7 +327,7 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
       return getTotalCharacterLevel(a) - getTotalCharacterLevel(b)
     })
     return sorted
-  }, [characters, libraryView, needsAttention, searchQuery, sortBy])
+  }, [characters, libraryFilter, needsAttention, searchQuery, sortBy])
 
   const groupedCharacters = useMemo(() => {
     if (groupBy === 'none') return null
@@ -659,8 +656,8 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
         createPortal(
           <CharacterLibraryControls
             counts={viewCounts}
-            view={libraryView}
-            onViewChange={setLibraryView}
+            filter={libraryFilter}
+            onFilterChange={setLibraryFilter}
             sort={sortBy}
             onSortChange={setSortBy}
             group={groupBy}
@@ -722,26 +719,6 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
                 <CheckSquare />
               </Button>
             )}
-            <div className="flex h-9 items-center rounded-md border border-border bg-muted/30 p-0.5">
-              <Button
-                variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-8 shadow-none"
-                aria-label="Gallery view"
-                onClick={() => setViewMode('gallery')}
-              >
-                <SquaresFour />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-8 shadow-none"
-                aria-label="List view"
-                onClick={() => setViewMode('list')}
-              >
-                <ListBullets />
-              </Button>
-            </div>
           </div>
         </WorkspaceToolbar>
       </div>
@@ -798,7 +775,7 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
                   ? 'Checking which characters need attention…'
                   : searchQuery.trim()
                     ? `No characters match “${searchQuery}”`
-                    : 'No characters in this view.'}
+                    : 'No characters match this filter.'}
             </h2>
             {characters.length === 0 && (
               <p className="mt-1 text-sm text-muted-foreground">
