@@ -17,13 +17,14 @@ describe('PortraitCardPreview', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
-  test('shows level details, disabled action buttons, and last modified text', () => {
+  test('previews the ruleset, class details, and date with the actions hidden', () => {
     render(
       <PortraitCardPreview
         name="Aelar"
         level={3}
         race="Elf"
-        characterClass="Wizard"
+        classes={[{ name: 'Wizard', source: 'XPHB', levels: 3 }]}
+        originSystem="2024"
         lastModified="2026-04-06T12:00:00.000Z"
       />,
     )
@@ -32,10 +33,10 @@ describe('PortraitCardPreview', () => {
     expect(screen.getByText('Level 3')).toBeTruthy()
     expect(screen.getByText('Elf')).toBeTruthy()
     expect(screen.getByText('Wizard')).toBeTruthy()
+    expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('2024')
     expect(screen.getByText(/Last modified:/)).toBeTruthy()
 
     expect(screen.queryByRole('button')).toBeNull()
-    expect(document.querySelectorAll('[data-slot="button"]')).toHaveLength(3)
   })
 
   test('enlarges the complete card canvas with the available preview width', () => {

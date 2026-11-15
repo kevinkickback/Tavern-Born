@@ -19,7 +19,7 @@ import {
   savePortrait,
 } from '@/lib/portraitLibrary'
 import { cn } from '@/lib/utils'
-import type { PortraitTransform } from '@/types/character'
+import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
 interface PortraitPickerProps {
   portrait?: string | null
@@ -27,7 +27,8 @@ interface PortraitPickerProps {
   name?: string
   level?: number
   race?: string
-  characterClass?: string
+  classes?: readonly CharacterClassEntry[]
+  originSystem?: OriginSystem
   gender?: string
   lastModified?: string
   onPortraitChange: (portrait: string | null) => void
@@ -41,7 +42,8 @@ export function PortraitPicker({
   name,
   level,
   race,
-  characterClass,
+  classes,
+  originSystem,
   gender,
   lastModified,
   onPortraitChange,
@@ -289,7 +291,8 @@ export function PortraitPicker({
           name={name}
           level={level}
           race={race}
-          characterClass={characterClass}
+          classes={classes}
+          originSystem={originSystem}
           gender={gender}
           lastModified={lastModified}
           transform={t}

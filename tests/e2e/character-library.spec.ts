@@ -44,6 +44,9 @@ test('character library filters, cancels deletion, then persists a confirmed del
 }) => {
   const main = page.locator('main')
   const search = page.getByRole('searchbox', { name: 'Search characters' })
+  const bravoCard = main.locator('[data-slot="card"]').filter({
+    has: page.getByRole('heading', { name: 'Bravo Mage', exact: true }),
+  })
 
   await test.step('filter the library by character metadata', async () => {
     await search.fill('wizard')
@@ -54,6 +57,7 @@ test('character library filters, cancels deletion, then persists a confirmed del
   })
 
   await test.step('cancel leaves the character untouched', async () => {
+    await bravoCard.hover()
     await main.getByRole('button', { name: 'Delete Bravo Mage' }).click()
     const dialog = page.getByRole('alertdialog', { name: 'Delete character?' })
     await expect(dialog.getByText('This action cannot be undone.')).toBeVisible()
@@ -62,6 +66,7 @@ test('character library filters, cancels deletion, then persists a confirmed del
   })
 
   await test.step('confirm removes only the target and survives reload', async () => {
+    await bravoCard.hover()
     await main.getByRole('button', { name: 'Delete Bravo Mage' }).click()
     await page.getByRole('button', { name: 'Delete Character' }).click()
     await expect(page.getByText('Character deleted')).toBeVisible()
@@ -80,6 +85,86 @@ test('character library filters, cancels deletion, then persists a confirmed del
     await expect(page.getByText('Alpha Hero').first()).toBeVisible()
     await expect(page.getByText('Bravo Mage')).toHaveCount(0)
   })
+})
+
+test('gallery keeps edition badges and long multiclass cards clear of the revealed actions', async ({
+  page,
+}) => {
+  const names = [
+    'Irelia Tisesh of the Ashen Court and Keeper of the Northern Gate',
+    'W'.repeat(100),
+  ]
+  const editions = ['2014', '2024']
+  await seedAppState(page, {
+    sourcePath: 'e2e-library-seed',
+    activeCharacterId: 'library-alpha',
+    characters: loadLibraryCharacters().map((character, index) => ({
+      ...character,
+      name: names[index],
+      originSystem: editions[index],
+      portrait: 'assets/images/characters/placeholder_char_card.jpg',
+      initialClass: { name: 'Fighter', source: 'PHB' },
+      classProgression: [
+        { name: 'Fighter', source: 'PHB', levels: 3 },
+        { name: 'Wizard', source: 'PHB', levels: 2 },
+        { name: 'Rogue', source: 'PHB', levels: 1 },
+      ],
+    })),
+  })
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-library-seed')
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+  for (const viewportWidth of [1280, 620]) {
+    await page.setViewportSize({ width: viewportWidth, height: 768 })
+    const badgeColors = []
+    for (const [index, name] of names.entries()) {
+      const heading = page.getByRole('heading', { name, exact: true })
+      const card = page.locator('[data-slot="card"]').filter({ has: heading })
+      const version = card.getByText(editions[index], { exact: true })
+      const classes = card.getByRole('list', { name: 'Class levels' })
+      const actions = card.locator('[data-slot="character-card-actions"]')
+
+      await expect(version).toBeVisible()
+      await expect(card.getByLabel(/Character ready|items? to review/)).toHaveCount(0)
+      await expect(card.getByText('Level 6')).toBeVisible()
+      await expect(classes.getByRole('listitem')).toHaveText(['Fighter3', 'Wizard2', 'Rogue1'])
+      await expect(heading).toHaveAttribute('title', name)
+      badgeColors.push(await version.evaluate((badge) => getComputedStyle(badge).backgroundColor))
+
+      const cardBox = (await card.boundingBox())!
+      const nameBox = (await heading.boundingBox())!
+      const badgeBox = (await version.boundingBox())!
+      const classBox = (await classes.boundingBox())!
+      if (viewportWidth === 1280) {
+        expect(cardBox.width).toBe(360)
+        expect(cardBox.height).toBe(240)
+      } else {
+        expect(cardBox.width).toBeGreaterThan(260)
+        expect(cardBox.width).toBeLessThan(360)
+        expect(cardBox.height).toBeCloseTo((cardBox.width * 2) / 3, 0)
+      }
+      expect(nameBox.x).toBeGreaterThan(badgeBox.x + badgeBox.width)
+      expect(nameBox.x + nameBox.width).toBeLessThan(cardBox.x + cardBox.width)
+      expect(nameBox.y + nameBox.height).toBeLessThan(classBox.y)
+      expect(await classes.evaluate((list) => list.scrollHeight)).toBeLessThanOrEqual(
+        Math.ceil(classBox.height),
+      )
+
+      await page.mouse.move(0, 0)
+      await expect(actions).toHaveCSS('opacity', '0')
+      await card.hover()
+      await expect(actions).toHaveCSS('opacity', '1')
+      const actionsBox = (await actions.boundingBox())!
+      expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual(classBox.x)
+      await page.mouse.move(0, 0)
+      await expect(actions).toHaveCSS('opacity', '0')
+      await page.getByRole('button', { name: `Duplicate ${name}` }).focus()
+      await expect(actions).toHaveCSS('opacity', '1')
+      await page.getByRole('searchbox', { name: 'Search characters' }).focus()
+    }
+    expect(badgeColors[0]).not.toBe(badgeColors[1])
+  }
 })
 
 test('malformed and schema-invalid imports show distinct errors without changing the library', async ({

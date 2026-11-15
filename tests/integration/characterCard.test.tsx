@@ -31,6 +31,7 @@ describe('CharacterCard', () => {
       screen.getByRole('img', { name: 'Accessible Hero portrait' }).getAttribute('src'),
     ).toContain('placeholder_char_card.jpg')
     expect(screen.getByText('Level 1').textContent).toBe('Level 1')
+    expect(screen.getByTitle('5e Legacy (2014)').textContent).toBe('2014')
     const detailIcons = container.querySelectorAll('[data-slot="character-card-detail-icon"]')
     expect(detailIcons).toHaveLength(3)
     for (const icon of detailIcons) {
@@ -53,6 +54,10 @@ describe('CharacterCard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete Accessible Hero' }))
     expect(onDelete).toHaveBeenCalledWith('card-actions')
+    expect(onLoad).not.toHaveBeenCalled()
+
+    const actionArea = container.querySelector('[data-slot="character-card-actions"]')!
+    await user.click(actionArea)
     expect(onLoad).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('heading', { name: 'Accessible Hero' }))
@@ -96,7 +101,7 @@ describe('CharacterCard', () => {
     const user = userEvent.setup()
     render(
       <CharacterCard
-        character={makeCharacterFixture({ name: 'Expanded Hero' })}
+        character={makeCharacterFixture({ name: 'Expanded Hero', originSystem: '2024' })}
         onLoad={vi.fn()}
         onDelete={vi.fn()}
         onExport={vi.fn()}
@@ -106,6 +111,7 @@ describe('CharacterCard', () => {
     )
 
     const indicator = screen.getByLabelText(/Additional content/)
+    expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('2024')
     expect(indicator.className).toContain('rounded-md')
     expect(indicator.className).toContain('bg-primary/85')
     expect(indicator.textContent).toBe('Additional content')
