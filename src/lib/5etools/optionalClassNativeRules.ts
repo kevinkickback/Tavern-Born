@@ -2,7 +2,7 @@ import type { OptFeatureProg } from '@/types/5etools'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { OptionalDeclarationOwner } from './optionalClassDeclarationStructure'
 import type { OptionalClassAdoptionRoot } from './optionalClassFeatureRules'
-import generated from './optionalClassNativeRules.generated.json' with { type: 'json' }
+import generated from './optionalClassNativeRules.generated'
 
 export interface OptionalNativeAdoptionRoot extends Omit<OptionalClassAdoptionRoot, 'owner'> {
   owner: OptionalDeclarationOwner

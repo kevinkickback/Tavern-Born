@@ -2,6 +2,10 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
+import {
+  createGameDataAvailabilityIndex,
+  getUnavailableCharacterContent,
+} from '@/lib/character/additionalContentAvailability'
 import { clearGameDataCache, readGameDataCachePair } from '@/lib/storage/dataCache'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -31,7 +35,17 @@ test.each([
   let unavailable: 'temporary' | 'missing' | undefined
   let holdRead: Promise<void> | undefined
   const resource = 'fluff-backgrounds.json'
+  const backgrounds = [
+    { name: 'Sage', source: 'PHB' },
+    { name: 'Sage', source: 'XPHB' },
+  ]
+  const items = [
+    { name: 'Sentinel Shield', source: 'DMG' },
+    { name: 'Sentinel Shield', source: 'XDMG' },
+  ]
   const files: Record<string, unknown> = {
+    'backgrounds.json': { background: backgrounds },
+    'items.json': { item: items },
     'feats.json': {
       feat: [
         { name: 'Test Feat', source: 'PHB' },
@@ -108,12 +122,19 @@ test.each([
       { name: 'New Feat', source: 'PHB' },
     ],
   }
+  files['backgrounds.json'] = { background: backgrounds.slice(1) }
+  files['items.json'] = { item: items.slice(1) }
   expect(await loadCatalog(accepted.dataSourceConfig!)).toEqual({ kind: 'staged' })
-  expect(useGameDataStore.getState().pendingCatalog?.removals).toEqual([
-    resource,
-    expect.stringMatching(/retired feat.*phb/i),
-  ])
   const staged = useGameDataStore.getState().pendingCatalog!
+  expect(staged.removals).toHaveLength(4)
+  expect(staged.removals).toEqual(
+    expect.arrayContaining([
+      resource,
+      expect.stringMatching(/retired feat.*phb/i),
+      expect.stringMatching(/sage.*\bphb\b/i),
+      expect.stringMatching(/sentinel shield.*\bdmg\b/i),
+    ]),
+  )
   const releaseWorkflow = useGameDataStore.getState().protectCatalog()
   try {
     expect(
@@ -128,14 +149,29 @@ test.each([
   }
   expect((await readGameDataCachePair()).cache).toEqual(acceptedPair.cache)
 
-  useCharacterStore.setState({
-    characters: [
-      makeCharacterFixture({
-        name: 'Affected Hero',
-        feats: [{ id: 'retired', name: 'Retired Feat', source: 'PHB', description: '' }],
-      }),
+  const saved = makeCharacterFixture({
+    name: 'Affected Hero',
+    background: 'Sage',
+    backgroundSource: 'PHB',
+    feats: [{ id: 'retired', name: 'Retired Feat', source: 'PHB', description: '' }],
+    equipment: [
+      {
+        id: 'shield',
+        name: 'Sentinel Shield',
+        source: 'DMG',
+        type: 'S',
+        quantity: 1,
+        equipped: true,
+      },
     ],
   })
+  useCharacterStore.setState({ characters: [saved] })
+  const withdrawnReferences = () => [
+    ...getUnavailableCharacterContent(
+      saved,
+      createGameDataAvailabilityIndex(useGameDataStore.getState().gameData!),
+    ),
+  ]
   const user = userEvent.setup()
   render(<DataSourceConfigurator />)
   await user.click(screen.getByText('Added content'))
@@ -151,6 +187,13 @@ test.each([
   )
   const { loadFromCache } = useGameDataStore.getState()
   await loadFromCache()
+  expect(withdrawnReferences()).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: 'Sage', source: 'PHB' }),
+      expect.objectContaining({ name: 'Sentinel Shield', source: 'DMG' }),
+    ]),
+  )
+  expect(useCharacterStore.getState().characters).toEqual([saved])
   const rollback = screen.getByRole('button', { name: 'Restore previous game data' })
   await user.click(rollback)
   const confirm = screen.getByRole('button', { name: /^Restore$/ })
@@ -179,4 +222,8 @@ test.each([
   )
   expect((await readGameDataCachePair()).previous).toBeUndefined()
   expect(useGameDataStore.getState().lastContentFingerprint).toMatch(/^[a-f0-9]{64}$/)
+  expect(
+    withdrawnReferences().some(({ name }) => name === 'Sage' || name === 'Sentinel Shield'),
+  ).toBe(false)
+  expect(useCharacterStore.getState().characters).toEqual([saved])
 })

@@ -15,6 +15,7 @@ import { parseAdditionalSpellBlocks } from './additionalSpells'
 import { observeCatalogResources } from './catalogResourceProof'
 import {
   assertLayerDependencies,
+  composeGameDataLayers,
   externalCatalogKeys,
   hasCatalogRecords,
   loadGameDataSourceStack,
@@ -189,16 +190,18 @@ async function prepareResolvedCatalog(
         },
       )
     : loadDataFromSource(admitted, options, scan.reader)
-  const data = await settleOnAbort(load, signal)
+  const loaded = await settleOnAbort(load, signal)
   if (issues.length) throw new Error(`Could not load required game data. ${issues.join('; ')}`)
-  if (!base) assertLayerDependencies(data, data)
+  // Exact feature targets can live in a different indexed document in the same source.
+  const data = base ? loaded : composeGameDataLayers([loaded])
+  if (!base) assertLayerDependencies(data, loaded)
   const magicIssue = data.magicVariantDiagnostics?.find(
     ({ message }) => !message.startsWith('Reference collides'),
   )
   if (magicIssue) throw new Error(`${magicIssue.path}: ${magicIssue.message}`)
-  const missingSpell = getMissingSubclassSpell(data, additional ?? data)
+  const missingSpell = getMissingSubclassSpell(data, additional ?? loaded)
   if (missingSpell) throw new Error(missingSpell)
-  const keys = externalCatalogKeys(additional ?? data)
+  const keys = externalCatalogKeys(additional ?? loaded)
   if (!keys.length) throw new Error('The additional source has no usable game data.')
   admitted.resourceProof =
     scan.warnings.length || scan.unavailable.length ? undefined : observation?.proof()

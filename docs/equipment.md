@@ -11,9 +11,11 @@ references can fill multiple units. Validate the exact count, group, mundane or 
 and proficiency clauses against the current declaration. Unknown or ambiguous rules leave
 setup pending. Groups are choice pools and cannot become inventory rows.
 
-Each grant lot retains its original role, entry address, exact target and physical inventory ID.
+Each grant lot retains its role, entry address, exact target and physical inventory ID.
 Remaining owned quantity is issued minus cumulative consumption, floored at zero. Refresh
-cannot reissue consumed copies. Replace or remove only the remaining owned copies, preserving
+preserves consumption when an unchanged address still matches. A unique fixed printing that
+moves within the same package option can retain its lot and spent quantity. Replace or remove
+only the remaining owned copies, preserving
 manual surplus and other providers. Unavailable rules preserve the snapshot. A never-issued
 grant requires explicit Apply when its exact rules return.
 

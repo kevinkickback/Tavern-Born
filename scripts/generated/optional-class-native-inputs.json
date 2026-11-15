@@ -78,7 +78,7 @@
     },
     {
       "file": "scripts/generate-optional-class-native-rules.mjs",
-      "sha256": "e9e9ddfa80acea8669c367083ac5dbfd1ac1244444d8cd762b994d9abc4f1eb3"
+      "sha256": "b5ee9edd9837da6303b3fc6d4bc48a2018f1e9d1e5d1d1e429e1020dcf789e7e"
     },
     {
       "file": "scripts/lib/optional-class-declaration-semantics.json",
@@ -91,6 +91,10 @@
     {
       "file": "scripts/lib/optional-class-native-source.mjs",
       "sha256": "496362041ee881da0a8536f885e785d0b5686bb9a525c67b7c3e71617534dc34"
+    },
+    {
+      "file": "scripts/lib/shared-registry-source.mjs",
+      "sha256": "bf6809b28310684c62108b2193fae948f3d8e7346fcaed69e6d83c816096bbbe"
     },
     {
       "file": "src/lib/5etools/additionalSpellIdentity.ts",
@@ -278,7 +282,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
+      "sha256": "f548c7fc45a9e61178ad235c1ba4fd6b35f43aa1d82e729f1de0b42cb762f79f"
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
@@ -602,7 +606,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "2a0acb6ee16587ae74e5614b376cea277e2ce5504719becd4f808d447ca25cd5"
+      "sha256": "a0e5b7567b5256c21755e69a04aedd4420013c7e5f9b3658083f56bfc0810c51"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
@@ -718,7 +722,7 @@
     },
     {
       "file": "src/lib/calculations/abilityScores.ts",
-      "sha256": "213ce4585dc7459a48252a84fe8ebc4bd5e7eb9ba0e70ee4d21ce522b79fa6a5"
+      "sha256": "783b7cfe6c38431699745202d9ec2dc610faafcfc8b27ada7d6debd3ea04698f"
     },
     {
       "file": "src/lib/calculations/armorClass.ts",
@@ -782,7 +786,7 @@
     },
     {
       "file": "src/lib/character/startingEquipmentGrants.ts",
-      "sha256": "110e498ddc440833fe2b5b6a7ebc681710994cb4cae5a9b91a086cd58df1c4ff"
+      "sha256": "55f7f082b5b560187ca7c5783d622d40113f0588e227b89b6f8c56a9591929fc"
     },
     {
       "file": "src/lib/provenance/featSelectionIdentity.ts",
