@@ -146,6 +146,37 @@ test('conditional HTTPS check preserves the cache and stages an edited indexed c
   expect(useGameDataStore.getState().gameData?.spells[0].name).toBe('Updated Spell')
 })
 
+test('records missing HTTPS hashes during an unchanged check without replacing the cache', async () => {
+  const { getBytes } = installSource()
+  const { loadCatalog } = useGameDataStore.getState()
+  expect(await loadCatalog(source)).toMatchObject({ kind: 'applied' })
+  const { cache } = await readGameDataCachePair()
+  const config = useGameDataStore.getState().dataSourceConfig
+  if (config?.type !== 'remote' || !config.resourceProof) throw new Error('Missing HTTPS proof')
+  useGameDataStore.setState({
+    dataSourceConfig: {
+      ...config,
+      resourceProof: {
+        kind: 'remote',
+        entries: config.resourceProof.entries.map(([path, stamp]) => [
+          path,
+          stamp?.replace(/#[a-f\d]{64}$/, '') ?? null,
+        ]),
+      },
+    },
+  })
+  const bytes = getBytes()
+  expect(await check()).toEqual({ kind: 'applied', changed: false })
+  expect(getBytes()).toBeGreaterThan(bytes)
+  const refreshed = await readGameDataCachePair()
+  expect(refreshed.cache).toEqual(cache)
+  const accepted = refreshed.settings?.dataSourceConfig
+  expect(accepted?.type === 'remote' && accepted.resourceProof?.entries).toContainEqual([
+    'feats.json',
+    expect.stringMatching(/^e"feat"#[a-f\d]{64}$/),
+  ])
+})
+
 test.each([
   'network',
   'not-found',
@@ -159,9 +190,11 @@ test.each([
   expect(fetch.mock.calls.some(([, init]) => new Headers(init?.headers).has('If-None-Match'))).toBe(
     true,
   )
-  expect((await readGameDataCachePair()).settings?.dataSourceConfig).toMatchObject({
-    resourceProof: undefined,
-  })
+  const config = (await readGameDataCachePair()).settings?.dataSourceConfig
+  expect(config?.type === 'remote' && config.resourceProof?.entries).toContainEqual([
+    'spells/index.json',
+    expect.stringMatching(/^#[a-f\d]{64}$/),
+  ])
 
   documents.set('languages.json', {
     body: { language: [{ name: 'Test language', source: 'PHB' }] },

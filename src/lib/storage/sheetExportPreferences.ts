@@ -1,15 +1,15 @@
 import {
   type CharacterSheetPageOptions,
-  DEFAULT_SHEET_TEXT_OPTIONS,
+  DEFAULT_SHEET_PRESENTATION_OPTIONS,
   type SheetContentChoices,
-  type SheetTextOptions,
+  type SheetPresentationOptions,
 } from '@/lib/pdf/types'
 
 const KEY = 'tb:sheet-export-preferences:v1'
 export interface SheetExportPreferences {
   pages: CharacterSheetPageOptions
   content: SheetContentChoices
-  text?: SheetTextOptions
+  text?: SheetPresentationOptions
 }
 
 export function readSheetExportPreferences(): Record<string, SheetExportPreferences> {
@@ -30,10 +30,16 @@ export function readSheetExportPreferences(): Record<string, SheetExportPreferen
             ([, ids]) => Array.isArray(ids) && ids.every((id) => typeof id === 'string'),
           ),
         ) as SheetContentChoices
-        const text: SheetTextOptions = {
+        const text: SheetPresentationOptions = {
           descriptions: value.text?.descriptions === 'names' ? 'names' : 'full',
           overflow:
-            value.text?.overflow === 'notes' ? 'notes' : DEFAULT_SHEET_TEXT_OPTIONS.overflow,
+            value.text?.overflow === 'notes'
+              ? 'notes'
+              : DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow,
+          images:
+            value.text?.images === 'grayscale' || value.text?.images === 'none'
+              ? value.text.images
+              : 'color',
         }
         return [[context, { pages, content, text }]]
       }),

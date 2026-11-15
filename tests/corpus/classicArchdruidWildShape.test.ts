@@ -13,7 +13,7 @@ import {
   createCharacterSheetViewModel,
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
-import { DEFAULT_SHEET_TEXT_OPTIONS } from '@/lib/pdf/types'
+import { DEFAULT_SHEET_PRESENTATION_OPTIONS } from '@/lib/pdf/types'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -205,7 +205,7 @@ test.each([
   const view = createCharacterSheetViewModel(character('PHB', 20), current, current)
   for (const descriptions of ['full', 'names'] as const) {
     const bytes = await generateTestCharacterSheet(view, template, {
-      text: { ...DEFAULT_SHEET_TEXT_OPTIONS, descriptions },
+      text: { ...DEFAULT_SHEET_PRESENTATION_OPTIONS, descriptions },
     })
     const fields = (await PDFDocument.load(bytes)).getForm().getFields()
     const text = fields

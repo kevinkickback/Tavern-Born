@@ -199,8 +199,10 @@ owns those choices. Dialog title/actions stay visible on short viewports.
   race name/source; manual adjustments and unrepresented senses still qualify.
 - The shared gameplay-trait helper excludes descriptive Age while retaining the ancestry's
   original reference text and the character's Age field.
-- 2014 forms support portrait and source-qualified organization/custom emblem images; 2024 forms
-  have no portrait fields. Faction text alone cannot identify artwork.
+- Customize PDF offers color, greyscale, or no images on the 2014 forms. This controls the
+  character portrait and source-qualified organization or custom emblem. It leaves template
+  artwork intact. The 2024 forms have no portrait or emblem fields. Faction text alone cannot
+  identify artwork. When an MPMB emblem is absent or omitted, its image slot is blank.
 - Organization and ally prose resolves 5etools tags to plain text for PDF output while leaving
   saved character text and source-qualified selections unchanged.
 - Action columns exclude inactive entries, weapon attacks already printed in the attack table,

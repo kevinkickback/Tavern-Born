@@ -12,7 +12,8 @@ verified in the owning store, command, and tests.
 | Preferences | Theme, home-card size, update preference, UI settings | `appPreferencesStore.ts` |
 
 Zustand persistence uses `src/lib/storage/idb-storage.ts`. Parsed game data has its own cache in
-`dataCache.ts`. Accordion/sidebar collapse state uses local storage, and Electron stores native
+`dataCache.ts`. The secondary workspace sidebar is an app preference and defaults to open.
+Individual accordion and pane collapse preferences use local storage. Electron stores native
 window bounds separately. PDF export page/content overrides and description/overflow settings are local UI preferences keyed by character and template (`sheetExportPreferences.ts`); they never alter character inventory, preparation, or rules text. Missing or invalid text settings fall back to full descriptions with ellipsis shortening.
 
 Uploaded portraits also have a separate IndexedDB gallery (`portraitLibrary.ts`), capped at 20 images
@@ -210,7 +211,9 @@ conditional-item exclusions, attunement and shared Action/Review/PDF projection.
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved
 record and changes only ID, collision-free name, and timestamps. `.tbc` export contains one complete
 current character; `.tbclib` is a versioned JSON envelope of complete saved characters for selected
-or entire-library backups. Import accepts multiple `.tbc`/JSON files or a `.tbclib` backup, validates
+or entire-library backups. On desktop, both export actions confirm success after the save dialog
+and file write complete. The browser download path cannot observe completion. Import accepts
+multiple `.tbc`/JSON files or a `.tbclib` backup, validates
 each character through the store's compatibility path, and retains valid entries when others fail.
   The store resolves ID and name collisions against the latest library state. Saved
 source-qualified choices and portraits remain in each record even if the current catalog lacks their

@@ -36,6 +36,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
+import { isSettingsPath } from '@/lib/navigation/settingsNavigation'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
@@ -72,9 +73,10 @@ const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
 ]
 
 function getPageDetails(pathname: string) {
-  return PAGE_DETAILS.find(([prefix]) =>
-    prefix === '/' ? pathname === '/' : pathname.startsWith(prefix),
-  )
+  return PAGE_DETAILS.find(([prefix]) => {
+    if (prefix === '/settings') return isSettingsPath(pathname)
+    return prefix === '/' ? pathname === '/' : pathname.startsWith(prefix)
+  })
 }
 
 export function AppHeader() {

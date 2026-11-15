@@ -1,8 +1,23 @@
-import { defineConfig } from 'vite'
+import { defineConfig, normalizePath, type Rollup } from 'vite'
 import electron from 'vite-plugin-electron/simple'
 import { createRendererConfig } from './renderer'
 
 const renderer = createRendererConfig()
+
+// Zod mentions pure annotations in prose in these two comments. See zod#6619.
+const onwarn: Rollup.WarningHandlerWithDefault = (warning, warn) => {
+  if (warning.code === 'INVALID_ANNOTATION' && warning.id) {
+    const id = normalizePath(warning.id)
+    if (
+      (id.endsWith('/node_modules/zod/v4/core/regexes.js') &&
+        warning.message.includes('Anchors a pattern source.')) ||
+      (id.endsWith('/node_modules/zod/v4/core/util.js') &&
+        warning.message.includes('Wrapped in a `@__PURE__` IIFE:'))
+    )
+      return
+  }
+  warn(warning)
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,7 +31,7 @@ export default defineConfig({
     electron({
       main: {
         entry: { main: 'electron/main.ts', catalogWorker: 'electron/catalogWorker.ts' },
-        vite: { resolve: renderer.resolve },
+        vite: { resolve: renderer.resolve, build: { rollupOptions: { onwarn } } },
       },
       preload: {
         input: 'electron/preload.ts',
@@ -37,6 +52,7 @@ export default defineConfig({
     // Keep warnings just above that intentional boundary so future regressions still surface.
     chunkSizeWarningLimit: 600,
     rollupOptions: {
+      onwarn,
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined

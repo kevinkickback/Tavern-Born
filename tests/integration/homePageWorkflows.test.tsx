@@ -1,10 +1,17 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { CharacterLibrarySidebarContext } from '@/components/layout/characterLibrarySidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import { MAX_LIBRARY_BACKUP_SIZE } from '@/lib/character/characterTransfer'
+import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import {
   CURRENT_CHARACTER_SCHEMA_VERSION,
   UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
@@ -118,11 +125,32 @@ function GameDataDestination() {
   )
 }
 
+function HomeWithSidebar() {
+  const [sidebar, setSidebar] = useState<HTMLDivElement | null>(null)
+  return (
+    <MemoryRouter>
+      <TooltipProvider>
+        <AppSidebar libraryControlsRef={setSidebar} />
+        <CharacterLibrarySidebarContext.Provider value={sidebar}>
+          <HomePage />
+        </CharacterLibrarySidebarContext.Provider>
+      </TooltipProvider>
+    </MemoryRouter>
+  )
+}
+
 describe('home page integration workflows', () => {
+  const protectCatalog = useGameDataStore.getState().protectCatalog
+
   beforeEach(() => {
     vi.clearAllMocks()
     resetCharacterStore()
-    useGameDataStore.setState({ gameData: null, dataSourceConfig: null })
+    useGameDataStore.setState({
+      gameData: null,
+      dataSourceConfig: null,
+      sessionBundledSource: null,
+      protectCatalog,
+    })
     useAppPreferencesStore.setState({ characterViewMode: 'gallery' })
   })
 
@@ -131,6 +159,48 @@ describe('home page integration workflows', () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     useCharacterStore.setState(libraryActions)
+  })
+
+  test.each([
+    false,
+    true,
+  ])('opens with limited access and explains fallback when active (%s)', async (fallback) => {
+    const user = userEvent.setup()
+    const release = vi.fn()
+    const protect = vi.fn(() => release)
+    const character = makeCharacterFixture({
+      name: 'Affected Library',
+      race: 'External',
+      raceSource: 'TEST',
+    })
+    useCharacterStore.setState({ characters: [character], isActiveCharacterDirty: false })
+    useGameDataStore.setState({
+      protectCatalog: protect,
+      gameData: makeGameDataFixture(),
+      dataSourceConfig: null,
+      sessionBundledSource: fallback
+        ? { type: 'bundled', path: 'srd/core', packId: 'srd', packVersion: '1', isValid: true }
+        : null,
+    })
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('button', { name: `load-${character.id}` }))
+    expect(screen.getByRole('dialog', { name: 'Additional content unavailable' })).toBeTruthy()
+    expect(protect).toHaveBeenCalledOnce()
+    expect(release).not.toHaveBeenCalled()
+    expect(screen.getByText('External (TEST)')).toBeTruthy()
+    expect(Boolean(screen.queryByText(/Tavern Born is using built-in rules/))).toBe(fallback)
+    expect(screen.getByRole('link', { name: 'Game Data settings' }).getAttribute('href')).toBe(
+      fallback ? '/settings?section=data#game-data-update' : '/settings?section=data',
+    )
+    expect(useCharacterStore.getState().activeCharacter).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Open with limited access' }))
+    expect(release).toHaveBeenCalledOnce()
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    expect(useCharacterStore.getState().characters[0]).toBe(character)
   })
 
   test('dismisses the missing rules dialog or visits Game Data and rechecks on reopen', async () => {
@@ -253,8 +323,7 @@ describe('home page integration workflows', () => {
     const deletion = vi
       .spyOn(useCharacterStore.getState(), 'deleteCharacters')
       .mockRejectedValueOnce(new Error('Storage unavailable'))
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
+    render(<HomeWithSidebar />)
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
     await user.click(screen.getByRole('button', { name: 'select-first' }))
     await user.click(screen.getByRole('button', { name: 'select-second' }))
@@ -466,9 +535,8 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     })
 
-    render(<HomePage />)
+    render(<HomeWithSidebar />)
 
-    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
 
     await user.click(screen.getByRole('button', { name: 'select-c1' }))
@@ -499,6 +567,82 @@ describe('home page integration workflows', () => {
     expect(screen.getByTestId('card-c2')).toBeTruthy()
   })
 
+  test('Pending Choices and readiness badges reflect saved filters and current catalog content', async () => {
+    const user = userEvent.setup()
+    const base = makeCharacterFixture({
+      id: 'ready',
+      name: 'Ready',
+      race: 'Library Fixture Ancestry',
+      allowedSources: ['PHB', 'TEST'],
+      variantRules: { abilityScoreMethod: 'custom' },
+    })
+    const background = {
+      name: 'Library Fixture Background',
+      source: 'TEST',
+      startingEquipment: [{ a: [{ value: 100 }], b: [{ value: 200 }] }],
+    }
+    const ready = applyCharacterCommandResult(
+      base,
+      applyBackgroundSelectionCommand(base, base.provenance, background, ['a'], new Map()),
+    )
+    const missing = {
+      ...ready,
+      id: 'missing',
+      name: 'Missing Rules',
+      raceSource: 'OTHER',
+      allowedSources: ['PHB', 'TEST', 'OTHER'],
+    }
+    const incomplete = { ...base, id: 'incomplete', name: 'Incomplete', background: '' }
+    useCharacterStore.setState({ characters: [ready, missing, incomplete] })
+    const race = { name: 'Library Fixture Ancestry', source: 'PHB', ability: [{ str: 2, dex: 1 }] }
+    const data = makeGameDataFixture({
+      races: [race],
+      backgrounds: [background],
+      classes: [
+        makeClassFixture({ name: 'Fighter', classFeatures: [], casterProgression: undefined }),
+      ],
+    })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    render(<HomeWithSidebar />)
+
+    await user.click(await screen.findByRole('button', { name: 'Pending Choices 2' }))
+    expect(screen.queryByTestId('card-ready')).toBeNull()
+    expect(screen.getByTestId('card-missing')).toBeTruthy()
+    expect(screen.getByTestId('card-incomplete')).toBeTruthy()
+
+    const restored = {
+      ...data,
+      races: [...data.races, { ...race, source: 'OTHER' }],
+    }
+    act(() => {
+      useGameDataStore.setState({
+        gameData: { ...restored, lookups: buildGameDataLookups(restored) },
+      })
+    })
+    expect(
+      screen.getByRole('heading', { name: 'Checking which characters need attention…' }),
+    ).toBeTruthy()
+    expect(
+      (await screen.findByRole('button', { name: 'Pending Choices 1' })).getAttribute(
+        'aria-pressed',
+      ),
+    ).toBe('true')
+    expect(screen.queryByTestId('card-missing')).toBeNull()
+    expect(screen.getByTestId('card-incomplete')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'All 3' }))
+    act(() => {
+      useCharacterStore.setState({
+        activeCharacterId: ready.id,
+        activeCharacter: { ...ready, allowedSources: ['PHB'] },
+        isActiveCharacterDirty: true,
+      })
+    })
+    await user.click(screen.getByRole('button', { name: 'List view' }))
+    expect(screen.getByLabelText('Character ready')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Pending Choices 1' })).toBeTruthy()
+  })
+
   test('switches to the dense list view and remembers the choice', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
@@ -516,8 +660,9 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     })
 
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'List view' }))
+    const { unmount } = render(<HomeWithSidebar />)
+    const views = within(screen.getByRole('region', { name: 'View' }))
+    await user.click(views.getByRole('button', { name: 'List view' }))
 
     expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')
     expect(screen.getByRole('button', { name: 'Actions for Alpha' })).toBeTruthy()
@@ -525,9 +670,14 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters[0].subrace).toBe(
       'Dragonborn (Draconblood; Brass)',
     )
+    unmount()
+    render(<HomeWithSidebar />)
+    expect(screen.getByRole('button', { name: 'List view' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    )
   })
 
-  test('keeps creation commands in the collection instead of the search toolbar', () => {
+  test('puts Import and Export in the toolbar and keeps New Character in the collection', () => {
     useCharacterStore.setState({
       characters: [makeCharacterFixture({ id: 'c1', name: 'Alpha' })],
       activeCharacterId: null,
@@ -541,7 +691,10 @@ describe('home page integration workflows', () => {
     expect(
       within(toolbar as HTMLElement).queryByRole('button', { name: 'New Character' }),
     ).toBeNull()
-    expect(within(toolbar as HTMLElement).queryByRole('button', { name: 'Import' })).toBeNull()
+    expect(within(toolbar as HTMLElement).getByRole('button', { name: 'Import' })).toBeTruthy()
+    expect(
+      within(toolbar as HTMLElement).getByRole('button', { name: 'Export Library' }),
+    ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'New Character' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Import' })).toBeTruthy()
   })
@@ -680,7 +833,7 @@ describe('home page integration workflows', () => {
     })
   })
 
-  test('exports the saved library or only selected characters as one backup', async () => {
+  test('downloads the saved library or selected characters in the browser without a completion toast', async () => {
     const user = userEvent.setup()
     const first = makeCharacterFixture({ id: 'first', name: 'Alpha' })
     const second = makeCharacterFixture({ id: 'second', name: 'Bravo' })
@@ -699,9 +852,8 @@ describe('home page integration workflows', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:library-backup')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
 
-    render(<HomePage />)
+    render(<HomeWithSidebar />)
     await user.click(screen.getByRole('button', { name: 'Export Library' }))
-    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
     await user.click(screen.getByRole('button', { name: 'select-first' }))
     await user.click(screen.getByRole('button', { name: 'Export Selected' }))
@@ -709,7 +861,51 @@ describe('home page integration workflows', () => {
     expect(downloads).toHaveLength(2)
     expect(downloads.every((link) => link.download.endsWith('.tbclib'))).toBe(true)
     expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  test('confirms full and selected library exports only after desktop save', async () => {
+    const user = userEvent.setup()
+    const first = makeCharacterFixture({ id: 'first', name: 'Alpha' })
+    const second = makeCharacterFixture({ id: 'second', name: 'Bravo' })
+    useCharacterStore.setState({ characters: [first, second] })
+    let completeSave!: (saved: boolean) => void
+    const pendingSave = new Promise<boolean>((resolve) => {
+      completeSave = resolve
+    })
+    const saveCharacterFile = vi
+      .fn<(filename: string, text: string) => Promise<boolean>>()
+      .mockReturnValueOnce(pendingSave)
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('Disk unavailable'))
+      .mockResolvedValueOnce(true)
+    vi.stubGlobal('electronAPI', { saveCharacterFile })
+
+    render(<HomeWithSidebar />)
+    const exportLibrary = screen.getByRole('button', { name: 'Export Library' })
+    await user.click(exportLibrary)
+    await user.click(exportLibrary)
+    expect(saveCharacterFile).toHaveBeenCalledTimes(1)
+    const [[filename, text]] = saveCharacterFile.mock.calls
+    expect(filename).toMatch(/^tavern-born-library-\d{4}-\d{2}-\d{2}\.tbclib$/)
+    expect(JSON.parse(text)).toMatchObject({ version: 1, characters: [first, second] })
+    expect(toast.success).not.toHaveBeenCalled()
+    await act(async () => completeSave(true))
     expect(toast.success).toHaveBeenCalledWith('2 characters exported')
+
+    await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
+    await user.click(screen.getByRole('button', { name: 'select-first' }))
+    const exportSelected = screen.getByRole('button', { name: 'Export Selected' })
+    await user.click(exportSelected)
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    expect(toast.error).not.toHaveBeenCalled()
+    await user.click(exportSelected)
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    expect(toast.error).toHaveBeenCalledWith('Disk unavailable')
+    await user.click(exportSelected)
+    expect(JSON.parse(saveCharacterFile.mock.calls[3][1])).toMatchObject({
+      characters: [first],
+    })
     expect(toast.success).toHaveBeenCalledWith('1 character exported')
   })
 

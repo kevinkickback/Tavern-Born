@@ -93,11 +93,19 @@ describe('2014 saved PDF compatibility', () => {
         textFields: AFFECTED_TEXT_FIELDS,
         checkboxFields: AFFECTED_CHECKBOX_FIELDS,
       },
-      { templateId: '2014-custom', cleanupProfile: 'mpmb-2014' },
+      {
+        templateId: '2014-custom',
+        cleanupProfile: 'mpmb-2014',
+        organizationImageFieldName: 'Symbol',
+      },
     )
     const output = await PDFDocument.load(outputBytes)
     expect(output.getPageCount()).toBe(6)
     const form = output.getForm()
+    const symbol = form.getButton('Symbol').acroField.getWidgets()[0]
+    expect(symbol.getRectangle().width).toBe(0)
+    expect(symbol.dict.has(PDFName.of('AP'))).toBe(false)
+    expect(symbol.dict.has(PDFName.of('MK'))).toBe(false)
 
     expect(form.getTextField('AC Armor Bonus').getText()).toBe('16')
     expect(form.getDropdown('AC Armor Description').getSelected()).toEqual(['Mithral Plate'])

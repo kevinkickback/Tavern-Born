@@ -203,7 +203,7 @@ export function BuildClassAsiSection({
               value="feat"
               checked={mode === 'feat'}
               onChange={() => onSetAsiModeByLevel(levelKey, 'feat')}
-              className="accent-accent-9"
+              className="accent-primary"
             />
             Take a Feat
           </label>
@@ -217,7 +217,7 @@ export function BuildClassAsiSection({
                 onSetAsiModeByLevel(levelKey, 'asi')
                 onClearFeatSelectionsForAsi(level)
               }}
-              className="accent-accent-9"
+              className="accent-primary"
             />
             Ability Score Increase
           </label>

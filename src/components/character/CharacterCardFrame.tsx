@@ -1,8 +1,13 @@
 import { Clock, Crown, Sword, User } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { getOriginSystemLabel } from '@/lib/calculations/originSystem'
 import { getPortraitCssTransform, resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
-import type { PortraitTransform } from '@/types/character'
+import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
+
+export const CHARACTER_CARD_REVEAL_CLASS =
+  'motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-in-out [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:pointer-events-none [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:opacity-0'
 
 interface CharacterCardFrameProps {
   image?: string | null
@@ -10,13 +15,15 @@ interface CharacterCardFrameProps {
   name?: string
   level?: number
   race?: string
-  characterClass?: string
+  classes?: readonly CharacterClassEntry[]
+  originSystem?: OriginSystem
   gender?: string
   lastModified?: string
   transform?: PortraitTransform
-  cardSize?: number
   portraitTransition?: boolean
-  actions?: ReactNode
+  preview?: boolean
+  selectionControl?: ReactNode
+  statusBadge?: ReactNode
 }
 
 export function CharacterCardFrame({
@@ -25,18 +32,20 @@ export function CharacterCardFrame({
   name,
   level,
   race,
-  characterClass,
+  classes = [],
+  originSystem,
   gender,
   lastModified,
   transform,
-  cardSize = 360,
   portraitTransition = false,
-  actions,
+  preview = false,
+  selectionControl,
+  statusBadge,
 }: CharacterCardFrameProps) {
-  const sizeVariant = cardSize <= 300 ? 'small' : cardSize <= 380 ? 'medium' : 'large'
-  const isSmall = sizeVariant === 'small'
-  const isMedium = sizeVariant === 'medium'
-  const detailIconClass = cn('text-primary', isSmall ? 'size-3.5' : 'size-4')
+  const displayName = name || 'Unnamed Character'
+  const detailIconClass = 'size-3.5 shrink-0 text-primary @[300px]:size-4'
+  const showClassLevels = classes.length > 1
+  const revealClass = !preview && CHARACTER_CARD_REVEAL_CLASS
 
   return (
     <>
@@ -60,38 +69,38 @@ export function CharacterCardFrame({
       <div className="absolute inset-x-0 top-0 h-[20%] bg-gradient-to-b from-background/60 via-background/15 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-background/70 via-background/25 to-transparent" />
 
-      <div
-        className={cn(
-          'absolute inset-y-0 right-0 z-[1] flex flex-col items-end text-right',
-          isSmall ? 'w-[69%] p-2.5' : isMedium ? 'w-[63%] p-3.5' : 'w-[56%] p-4',
-        )}
-      >
-        <div className="ml-auto flex max-w-full flex-col items-end">
-          <h3
+      <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
+        {selectionControl}
+        {originSystem && (
+          <Badge
+            variant="outline"
+            title={getOriginSystemLabel(originSystem)}
             className={cn(
-              'max-w-full whitespace-normal break-normal [overflow-wrap:normal] hyphens-none text-right font-display font-bold leading-tight text-foreground',
-              isSmall ? 'text-[0.95rem]' : isMedium ? 'text-[1.15rem]' : 'text-[1.45rem]',
+              revealClass,
+              'px-1.5 font-semibold tabular-nums shadow-sm',
+              originSystem === '2014'
+                ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
+                : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
             )}
           >
-            {name || 'Unnamed Character'}
-          </h3>
-        </div>
+            {originSystem}
+          </Badge>
+        )}
+        {statusBadge}
+      </div>
+
+      <div className="absolute inset-y-0 right-0 left-[36%] z-[1] flex min-w-0 flex-col items-end gap-1 py-2 pr-2.5 text-right @[300px]:gap-2 @[300px]:py-3.5 @[300px]:pr-3.5">
+        <h3
+          title={displayName}
+          className="line-clamp-1 w-full shrink-0 wrap-anywhere font-display text-[clamp(1.0625rem,7.2cqw,1.8rem)] leading-[1.1] font-bold text-foreground @[250px]:line-clamp-2"
+        >
+          {displayName}
+        </h3>
 
         {typeof level === 'number' ? (
-          <div
-            className={cn('mt-auto flex w-full flex-col items-end', isSmall ? 'gap-2' : 'gap-3')}
-          >
-            <div
-              className={cn(
-                'flex flex-col items-end',
-                isSmall
-                  ? 'gap-1 text-[0.9rem]'
-                  : isMedium
-                    ? 'gap-1.5 text-[0.95rem]'
-                    : 'gap-2 text-[1.02rem]',
-              )}
-            >
-              <div className="flex items-center gap-2 text-foreground/90">
+          <>
+            <div className="my-auto flex min-h-0 w-full flex-col items-end gap-1 text-sm leading-[1.25] text-foreground/90 @[300px]:gap-1.5 @[300px]:text-[0.95rem]">
+              <div className="flex shrink-0 items-center gap-2">
                 <span className="font-semibold">Level {level}</span>
                 <Crown
                   data-slot="character-card-detail-icon"
@@ -101,8 +110,10 @@ export function CharacterCardFrame({
                 />
               </div>
               {race && (
-                <div className="flex items-center gap-2 text-foreground/90">
-                  <span className="font-medium">{race}</span>
+                <div className="flex min-w-0 max-w-full shrink-0 items-center gap-2">
+                  <span className="truncate font-medium" title={race}>
+                    {race}
+                  </span>
                   <User
                     data-slot="character-card-detail-icon"
                     data-detail-icon="race"
@@ -111,33 +122,51 @@ export function CharacterCardFrame({
                   />
                 </div>
               )}
-              {characterClass && (
-                <div className="flex items-center gap-2 text-foreground/90">
-                  <span className="font-medium">{characterClass}</span>
+              {classes.length > 0 && (
+                <div className="flex min-h-0 w-full justify-end gap-2">
+                  <ul
+                    aria-label="Class levels"
+                    className="min-w-0 overflow-y-auto overscroll-contain font-medium [scrollbar-width:thin]"
+                  >
+                    {classes.map(({ name, source, levels }) => (
+                      <li
+                        key={JSON.stringify([name, source])}
+                        className="flex justify-end"
+                        title={showClassLevels ? `${name} ${levels}` : name}
+                      >
+                        <span className="truncate">{name}</span>
+                        {showClassLevels && (
+                          <span className="shrink-0 whitespace-pre tabular-nums">{` ${levels}`}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                   <Sword
                     data-slot="character-card-detail-icon"
                     data-detail-icon="class"
-                    className={detailIconClass}
+                    className={cn(detailIconClass, 'mt-0.5')}
                     weight="fill"
                   />
                 </div>
               )}
             </div>
 
-            {actions}
-
-            {lastModified && (
+            {(lastModified || preview) && (
               <span
+                data-slot="character-card-date"
                 className={cn(
-                  'flex max-w-full items-center gap-1 whitespace-nowrap text-muted-foreground italic',
-                  isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs',
+                  revealClass,
+                  'flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-none text-muted-foreground italic',
                 )}
               >
-                <Clock size={isSmall ? 10 : 12} />
-                Last modified: {new Date(lastModified).toLocaleDateString()}
+                <Clock className="size-3 shrink-0" />
+                <span className="truncate">
+                  Last modified:{' '}
+                  {lastModified ? new Date(lastModified).toLocaleDateString() : 'Unsaved'}
+                </span>
               </span>
             )}
-          </div>
+          </>
         ) : (
           <div className="mt-auto text-xs italic text-muted-foreground">
             {gender || 'Unspecified'}
