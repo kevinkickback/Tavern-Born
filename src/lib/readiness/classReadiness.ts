@@ -1,4 +1,8 @@
 import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  getArmorReplication,
+} from '@/lib/5etools/artificerArmorReplication'
+import {
   getClassChoiceSlotLevels,
   getProgressiveChoiceGainCount,
   getProgressiveChoiceReviewLevel,
@@ -300,6 +304,23 @@ export function validateClassChoices(
       if (original.id === epicBoon?.choiceId) continue
       if ((orderNeedsRecovery || orderRulesUnavailable) && original.id === order?.id) continue
       const choice = resolveHistoricalProficiencyChoice(character, original)
+      if (
+        choice.id === ARMOR_REPLICATION_CHOICE_ID &&
+        choice.level <= entry.levels &&
+        !getArmorReplication(classData, subclassData, catalogs)?.available
+      ) {
+        issues.push(
+          readinessIssue(
+            classChoiceReadinessId(choice.id),
+            'blocking',
+            'class',
+            'Restore Armor Replication',
+            'Restore the exact Improved Armorer and Replicate Magic Item rules for this required plan.',
+            classChoiceTarget(entry, choice.level, choice.id),
+          ),
+        )
+        continue
+      }
       if (
         choice.level <= entry.levels &&
         getHistoricalProficiencyRule(choice.id) &&

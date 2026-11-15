@@ -1,3 +1,7 @@
+import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  isArmorReplicationSelection,
+} from '@/lib/5etools/artificerArmorReplication'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { findClassReference } from '@/lib/5etools/classReference'
@@ -30,7 +34,14 @@ export function getEffectiveClassChoiceSelections(
       })
       .map((row) => [row.id, row]),
   )
-  return (character.classChoiceSelections ?? []).map((selection) => {
+  const selections = character.classChoiceSelections ?? []
+  const armorCount = selections.filter((row) => row.choiceId === ARMOR_REPLICATION_CHOICE_ID).length
+  return selections.map((selection) => {
+    if (
+      selection.choiceId === ARMOR_REPLICATION_CHOICE_ID &&
+      (armorCount !== 1 || !isArmorReplicationSelection(selection))
+    )
+      return selection.inactive ? selection : { ...selection, inactive: true }
     const owner = optionalClassOwner({
       name: selection.className,
       source: selection.classSource,

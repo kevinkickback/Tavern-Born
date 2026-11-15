@@ -23,6 +23,14 @@ const owner: OptionalDeclarationOwner = ['class', 'wizard', 'phb']
 const target = 'class-feature|spellcasting|wizard|phb|1|phb'
 const key = optionalDeclarationKey(owner, target, 1)
 const catalog = buildClassChoiceFeatureCatalogs
+const mysticArtsOwner: OptionalDeclarationOwner = [
+  'subclass',
+  'monk',
+  'xphb',
+  'warrior of the mystic arts',
+  'au',
+]
+const mysticArtsTarget = 'subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au'
 
 test.each([
   { label: 'linked numeric headings', eligible: true },
@@ -67,6 +75,66 @@ test.each([
   }
 })
 
+test.each([
+  'archived',
+  'page citations and numeric labels',
+  'missing citation',
+  'different rules text',
+  'wrong rank link',
+] as const)('Mystic Arts casting with %s', (version) => {
+  const layer = makeClassCastingLayer('class/class-monk.json', (document) => {
+    if (version === 'archived') return
+    const subclass = document.subclass.find(
+      (row) =>
+        row.name === 'Warrior of the Mystic Arts' &&
+        row.classSource === 'XPHB' &&
+        row.source === 'AU',
+    )!
+    subclass.page = 11
+    const table = (subclass.subclassTableGroups as { colLabels: string[] }[]).find((group) =>
+      group.colLabels.some((label) => label.includes('|level=1|')),
+    )!
+    table.colLabels = table.colLabels.map((label) =>
+      label.replace(/\d+(?:st|nd|rd|th)/, (rank) => rank.slice(0, -2)),
+    )
+    if (version === 'wrong rank link')
+      table.colLabels = table.colLabels.map((label) =>
+        label.replace('{@filter 1|spells|level=1', '{@filter 1|spells|level=2'),
+      )
+    const features = document.subclassFeature.filter(
+      (row) =>
+        row.classSource === 'XPHB' &&
+        row.subclassShortName === 'Mystic Arts' &&
+        row.subclassSource === 'AU' &&
+        row.level === 3 &&
+        row.source === 'AU',
+    )
+    features.forEach((row) => {
+      row.page = 11
+    })
+    const spellcasting = features.find((row) => row.name === 'Spellcasting')!
+    const entries = spellcasting.entries as [string, ...Array<{ page?: number }>]
+    for (const [offset, entry] of entries.slice(1).entries()) {
+      if (typeof entry !== 'string') entry.page = offset < 3 ? 11 : 12
+    }
+    if (version === 'missing citation') delete entries[7].page
+    if (version === 'different rules text') entries[0] = 'An altered casting declaration.'
+  })
+  const eligible = version === 'archived' || version === 'page citations and numeric labels'
+  const sources = catalog(layer)
+  const gain = getClassCastingGainAuthority(
+    sources,
+    mysticArtsOwner,
+    mysticArtsTarget,
+    3,
+    'class-cantrip',
+    3,
+  )
+  const access = getClassCastingLevelAccess(sources, mysticArtsOwner, mysticArtsTarget, 3, 3)
+  expect(gain?.gain).toEqual(eligible ? { level: 3, count: 2 } : undefined)
+  expect(access?.maxSpellLevel).toBe(eligible ? 1 : undefined)
+})
+
 test('all actual bundled packages qualify without adding producers or inferring absent subclasses', () => {
   const data = makeBundledClassCastingData()
   const offered = CLASS_CASTING_PRODUCERS.filter(
@@ -85,7 +153,7 @@ test('all actual bundled packages qualify without adding producers or inferring 
       (count, row) => count + (row.declarationAlternatives?.length ?? 0),
       0,
     ),
-  ).toBe(24)
+  ).toBe(25)
   for (const value of [data, JSON.parse(JSON.stringify(data)) as typeof data])
     for (const producer of offered) {
       const d = producer.declaration
@@ -98,7 +166,9 @@ test('all actual bundled packages qualify without adding producers or inferring 
   for (const row of CLASS_CASTING_PRODUCERS.filter(
     (row) => row.declaration.owner[0] === 'subclass',
   ))
-    expect(row.declarationAlternatives).toBeUndefined()
+    if (row.declaration.target === mysticArtsTarget)
+      expect(row.declarationAlternatives).toHaveLength(1)
+    else expect(row.declarationAlternatives).toBeUndefined()
 })
 
 test.each([

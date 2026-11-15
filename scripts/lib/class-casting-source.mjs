@@ -1,6 +1,59 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+const mysticArtsTarget = 'subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au'
+
+/** The published AU package adds these citations to the pinned Monk declaration. */
+function withMysticArtsPageCitations(raw) {
+  const subclass = (raw.subclass ?? []).filter(
+    (row) =>
+      row.name === 'Warrior of the Mystic Arts' &&
+      row.shortName === 'Mystic Arts' &&
+      row.source === 'AU' &&
+      row.className === 'Monk' &&
+      row.classSource === 'XPHB',
+  )
+  const features = (raw.subclassFeature ?? []).filter(
+    (row) =>
+      row.className === 'Monk' &&
+      row.classSource === 'XPHB' &&
+      row.subclassShortName === 'Mystic Arts' &&
+      row.subclassSource === 'AU' &&
+      row.level === 3 &&
+      row.source === 'AU',
+  )
+  const wrapper = features.find((row) => row.name === 'Warrior of the Mystic Arts')
+  const casting = features.find((row) => row.name === 'Spellcasting')
+  if (subclass.length !== 1 || features.length !== 2 || !wrapper || !casting)
+    throw Error('Missing exact Mystic Arts casting package')
+
+  const pages = new Map([
+    ['Cantrips', 11],
+    ['Spell Slots', 11],
+    ['Prepared Spells of Level 1+', 11],
+    ['Changing Your Prepared Spells', 12],
+    ['Spellcasting Ability', 12],
+    ['Spellcasting Focus', 12],
+    ['Multiclassing', 12],
+  ])
+  return {
+    ...raw,
+    subclass: raw.subclass.map((row) => (row === subclass[0] ? { ...row, page: 11 } : row)),
+    subclassFeature: raw.subclassFeature.map((row) => {
+      if (row === wrapper) return { ...row, page: 11 }
+      if (row !== casting) return row
+      return {
+        ...row,
+        page: 11,
+        entries: row.entries.map((entry) => {
+          const page = pages.get(entry?.name)
+          return page === undefined ? entry : { ...entry, page }
+        }),
+      }
+    }),
+  }
+}
+
 /** Use production parsing/copy preparation; the explicit reviewed target set supplies meaning. */
 export async function deriveClassCastingRegistry(
   server,
@@ -147,6 +200,20 @@ export async function deriveClassCastingRegistry(
       ...(phbSchool ? { schools: phbSchool, unrestrictedGains: [3, 8, 14, 20] } : {}),
     }
   })
+  if (targets.includes(mysticArtsTarget)) {
+    const monks = documents.find(({ file }) => file === 'class-monk.json')
+    const producer = producers.find((row) => row.declaration.target === mysticArtsTarget)
+    if (!monks || !producer) throw Error('Missing Mystic Arts casting producer')
+    const alternatives = declarations.collectOptionalDeclarationCertificates(
+      withMysticArtsPageCitations(monks.raw),
+      new Set([mysticArtsTarget]),
+    )
+    if (alternatives.length !== 1) throw Error('Ambiguous Mystic Arts casting package')
+    const alternative = summarize(alternatives[0])
+    if (alternative.certificate === producer.declaration.certificate)
+      throw Error('Mystic Arts casting package did not change')
+    producer.declarationAlternatives = [alternative]
+  }
   const bundledIndex = read('class/index.json', 'bundled')
   const bundledDocuments = [...new Set(Object.values(bundledIndex))]
     .sort()
