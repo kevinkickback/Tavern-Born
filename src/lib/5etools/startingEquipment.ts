@@ -649,7 +649,7 @@ export function hasInvalidStartingEquipmentPackage(
     const keys = getBlockChoiceKeys(block)
     // Existing format-15 saves use `_` to address the fixed branch.
     if (keys.length) return !keys.includes(choice.toLowerCase())
-    return choice !== '_' || !Object.hasOwn(block, '_') || !Array.isArray(block._)
+    return choice !== '_' || !Object.getOwnPropertyDescriptor(block, '_') || !Array.isArray(block._)
   })
 }
 
