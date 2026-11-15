@@ -266,9 +266,10 @@ export function BuildBackgroundPage() {
 
   const applyPackage = (choices: string[], itemChoices: StartingEquipmentItemChoices) => {
     if (!selectedBg) return
-    const active = backgroundEquipmentBlocks.map((_, index) =>
-      equipmentBlocks.find((block) => block.index === index)?.isFixed ? '' : (choices[index] ?? ''),
-    )
+    const active = backgroundEquipmentBlocks.map((_, index) => {
+      const block = equipmentBlocks.find((block) => block.index === index)
+      return block?.isFixed ? '' : choices[index] || block?.choiceKeys[0] || ''
+    })
     if (hasInvalidStartingEquipmentPackage(backgroundEquipmentBlocks, active)) {
       setEquipmentDraft({ character, background: selectedBg, choices: active, itemChoices })
       return
