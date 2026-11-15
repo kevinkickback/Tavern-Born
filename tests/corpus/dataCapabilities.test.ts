@@ -17,7 +17,10 @@ import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { parseConditions, parseTrapHazards } from '@/lib/5etools/parsers'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
-import { isSelectableEquipmentItem } from '@/lib/calculations/itemClassification'
+import {
+  getNormalizedItemTraits,
+  isSelectableEquipmentItem,
+} from '@/lib/calculations/itemClassification'
 import { addManualEquipmentBatchCommand } from '@/lib/character/commands/equipmentCommands'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 import { renderEntriesToText } from '@/lib/entryText'
@@ -34,6 +37,14 @@ import {
 } from '../fixtures/pdfTemplates'
 
 const DATA_ROOT = resolve(process.cwd(), 'data')
+const stygianSpearCollision = {
+  path: 'magicVariants.Stygian Spear|CoA',
+  message: 'Reference collides with concrete equipment; concrete item retained.',
+}
+const classicWarningBaseDiagnostic = {
+  path: 'magicVariants.Weapon of Warning|DMG',
+  message: 'Ambiguous or unsupported direct public weapon base.',
+}
 
 vi.unmock('@/lib/storage/idb-storage')
 
@@ -454,7 +465,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     }
     expect(generated.filter((item) => /^\+[123] /.test(item.name))).toHaveLength(327)
   })
-  it('verifies the remaining 367 variants in saved inventory and representative armor PDFs', async () => {
+  it('verifies the remaining 367 armor variants in saved inventory and representative PDFs', async () => {
     const groups: Array<[source: string, counts: number[]]> = [
       ['AU', [1, 1, 8]],
       ['AUD', [12]],
@@ -470,11 +481,13 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
       ['VGM', [4]],
       ['XDMG', [2, 2, 2, 2, ...Array<number>(14).fill(12)]],
     ]
-    const generated = gameData.items.filter((item) => item.magicVariantGenerated)
     const existing =
       /^(?:\+[123] |Armor of .+ Resistance$|Armor of Gleaming$|(?:Mithral(?: \+1)?|Adamantine|Cast-Off|Smoldering) Armor$)/
-    const items = generated.filter(
-      (item) => !existing.test(item.magicVariantGenerated!.template.name),
+    const items = gameData.items.filter(
+      (item) =>
+        item.magicVariantGenerated &&
+        getNormalizedItemTraits(item).isArmor &&
+        !existing.test(item.magicVariantGenerated.template.name),
     )
     expect(items).toHaveLength(367)
     expect(new Set(items.map(({ name, source }) => `${name}|${source}`)).size).toBe(367)
@@ -555,7 +568,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         expect(names).toEqual(expectedNames)
         if (relativeSwim) {
           expect(form.getTextField(classic ? 'Racial Traits' : 'Text_59').getText()).toContain(
-            'swim 30 ft.',
+            'Swim 30 ft.',
           )
         }
       }
@@ -580,8 +593,13 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const data = await loadItemLayer()
     expect(data.magicVariants).toEqual(before)
     expect(data.magicVariants).toHaveLength(230)
-    expect(data.magicVariantDiagnostics).toEqual([])
-    expect(data.items.filter((item) => item.magicVariantReference)).toHaveLength(230)
+    expect(data.magicVariantDiagnostics).toEqual([stygianSpearCollision])
+    expect(data.items.filter((item) => item.magicVariantReference)).toHaveLength(229)
+    const spears = data.items.filter(
+      (item) => item.name === 'Stygian Spear' && item.source === 'CoA',
+    )
+    expect(spears).toHaveLength(1)
+    expect(spears[0]).not.toHaveProperty('magicVariantReference')
     for (const name of [
       'All-Seeing Blade of the Guardian',
       'Resistant Blade of the Guardian',
@@ -754,7 +772,14 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     // Mystic base and order-bonus setup now have source-qualified selectors; absence of
     // diagnostics here is structural coverage, not complete legal progression qualification.
     expect(setupIssues).toEqual([])
-    expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual([])
+    expect(report.issues.filter((issue) => issue.code !== 'choice-diagnostic')).toEqual(
+      [stygianSpearCollision, classicWarningBaseDiagnostic].map((diagnostic) => ({
+        ...diagnostic,
+        code: 'magic-variant-diagnostic',
+        collection: 'magicVariants',
+        entity: 'Magic item templates',
+      })),
+    )
     expect(layerDependencyIssues).toEqual([])
     const terrain = classes
       .find((row) => row.name === 'Ranger' && row.source === 'PHB')!
