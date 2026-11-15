@@ -27,9 +27,118 @@ const CHARACTER_ROUTES = [
   '/character-sheet/2024/custom',
 ] as const
 
+const accentSwatches = [
+  ['Infernal', 'rose', '#b83f4b'],
+  ['Radiant', 'radiant', '#dbb65c'],
+  ['Grove', 'green', '#4f9269'],
+  ['Arcane', 'blue', '#617cc5'],
+  ['Eldritch', 'violet', '#9564b8'],
+  ['Chroma', 'chroma', '#8ab9b2'],
+] as const
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-route-guard-seed')
+})
+
+test('each appearance accent uses its exact swatch and readable light and dark shades', async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const path = '/src/store/appPreferencesStore.ts'
+    const { useAppPreferencesStore } = await import(path)
+    const storage = useAppPreferencesStore.persist.getOptions().storage
+    const existing = await storage.getItem('app-preferences-storage')
+    await storage.setItem('app-preferences-storage', {
+      state: { ...existing?.state, themeAccent: 'rose' },
+      version: 0,
+    })
+    localStorage.setItem('tb.theme.accent', 'rose')
+  })
+  await page.goto('/#/settings?section=appearance')
+  await page.reload()
+  const panel = page.getByRole('region', { name: 'Appearance', exact: true })
+  const root = page.locator('#root')
+  await expect(panel.getByRole('radio', { name: 'Infernal', exact: true })).toBeChecked()
+
+  for (const mode of ['Light', 'Dark'] as const) {
+    await panel.getByText(mode, { exact: true }).click()
+    await expect(root).toHaveAttribute('data-appearance', mode.toLowerCase())
+    for (const [label, id, hex] of accentSwatches) {
+      const radio = panel.getByRole('radio', { name: label, exact: true })
+      const swatch = panel.locator(`label [data-accent="${id}"]`)
+      const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16))
+      await expect(swatch).toHaveCSS('background-color', `rgb(${channels.join(', ')})`)
+      await panel.getByText(label, { exact: true }).click()
+      await expect(radio).toBeChecked()
+      await expect(root).toHaveAttribute('data-accent', id)
+
+      const colors = await page.evaluate(() => {
+        const style = getComputedStyle(document.documentElement)
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1
+        const context = canvas.getContext('2d')!
+        const readColor = (value: string, background?: string) => {
+          if (!CSS.supports('color', value)) throw new Error(`Invalid color ${value}`)
+          context.clearRect(0, 0, 1, 1)
+          if (background) {
+            context.fillStyle = background
+            context.fillRect(0, 0, 1, 1)
+          }
+          context.fillStyle = value
+          context.fillRect(0, 0, 1, 1)
+          return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3)
+        }
+        const read = (name: string) => readColor(style.getPropertyValue(name).trim())
+        const preview = document.createElement('span')
+        preview.dataset.rulesPreviewActive = 'true'
+        document.body.append(preview)
+        const previewStyle = getComputedStyle(preview)
+        const result = {
+          base: read('--color-accent-9'),
+          primary: read('--primary'),
+          onPrimary: read('--primary-foreground'),
+          sidebar: read('--app-shell'),
+          surface: read('--surface-raised'),
+          ring: read('--ring'),
+          previewText: readColor(previewStyle.color),
+          previewSurface: readColor(
+            previewStyle.backgroundColor,
+            style.getPropertyValue('--surface-raised'),
+          ),
+        }
+        preview.remove()
+        return result
+      })
+      const luminance = ([r, g, b]: number[]) => {
+        const linear = (channel: number) => {
+          const s = channel / 255
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+      }
+      const contrast = (a: number[], b: number[]) => {
+        const [first, second] = [luminance(a), luminance(b)]
+        return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
+      }
+      expect(colors.base).toEqual(channels)
+      expect(contrast(colors.primary, colors.onPrimary)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.primary, colors.sidebar)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.primary, colors.surface)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.ring, colors.sidebar)).toBeGreaterThanOrEqual(3)
+      expect(contrast(colors.previewText, colors.previewSurface)).toBeGreaterThanOrEqual(4.5)
+    }
+  }
+
+  await page.route('**/src/main.tsx', (route) => route.abort())
+  await page.reload()
+  await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS(
+    'background-color',
+    'rgb(138, 185, 178)',
+  )
+  await page.unroute('**/src/main.tsx')
+  await page.reload()
+  await expect(panel.getByRole('radio', { name: 'Chroma', exact: true })).toBeChecked()
 })
 
 test('Compendium source search stays above the app footer with a scrollable list', async ({

@@ -20,19 +20,13 @@ const SCALE_LABELS: Record<UiScale, string> = {
   120: 'XL',
 }
 
-const ACCENT_CONFIG: Record<
-  AccentTheme,
-  { label: string; dot: string; ring: string; swatch: string }
-> = {
-  blue: { label: 'Arcane', dot: 'bg-blue-500', ring: 'ring-blue-500', swatch: 'bg-blue-500' },
-  violet: {
-    label: 'Eldritch',
-    dot: 'bg-violet-500',
-    ring: 'ring-violet-500',
-    swatch: 'bg-violet-500',
-  },
-  green: { label: 'Grove', dot: 'bg-green-600', ring: 'ring-green-600', swatch: 'bg-green-600' },
-  rose: { label: 'Crimson', dot: 'bg-rose-700', ring: 'ring-rose-700', swatch: 'bg-rose-700' },
+const ACCENT_LABELS: Record<AccentTheme, string> = {
+  rose: 'Infernal',
+  radiant: 'Radiant',
+  green: 'Grove',
+  blue: 'Arcane',
+  violet: 'Eldritch',
+  chroma: 'Chroma',
 }
 
 export function AppearancePanel() {
@@ -120,9 +114,7 @@ export function AppearancePanel() {
                     <div
                       className={cn(
                         'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
-                        isSelected
-                          ? 'text-[color:var(--color-accent-12)] dark:text-accent-foreground'
-                          : 'text-foreground',
+                        isSelected ? 'text-[color:var(--color-accent-12)]' : 'text-foreground',
                       )}
                     >
                       {isDark ? (
@@ -149,13 +141,7 @@ export function AppearancePanel() {
               className="flex flex-wrap gap-2"
             >
               {ACCENT_THEMES.map((accent) => {
-                const { label } = ACCENT_CONFIG[accent]
                 const isSelected = themeAccent === accent
-                let stripeClass = ''
-                if (accent === 'blue') stripeClass = 'bg-blue-500'
-                else if (accent === 'violet') stripeClass = 'bg-violet-500'
-                else if (accent === 'green') stripeClass = 'bg-green-600'
-                else if (accent === 'rose') stripeClass = 'bg-rose-700'
                 return (
                   <Label
                     key={accent}
@@ -170,7 +156,7 @@ export function AppearancePanel() {
                     <RadioGroupItem value={accent} className="sr-only" />
                     {/* Mini accent preview with left stripe */}
                     <div className="flex h-10">
-                      <div className={cn('h-full w-3', stripeClass)} />
+                      <div data-accent={accent} className="h-full w-3 bg-[var(--tb-accent-base)]" />
                       <div className="h-full flex-1 bg-muted" />
                     </div>
                     {isSelected && (
@@ -179,12 +165,10 @@ export function AppearancePanel() {
                     <div
                       className={cn(
                         'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
-                        isSelected
-                          ? 'text-[color:var(--color-accent-12)] dark:text-accent-foreground'
-                          : 'text-foreground',
+                        isSelected ? 'text-[color:var(--color-accent-12)]' : 'text-foreground',
                       )}
                     >
-                      {label}
+                      {ACCENT_LABELS[accent]}
                     </div>
                   </Label>
                 )

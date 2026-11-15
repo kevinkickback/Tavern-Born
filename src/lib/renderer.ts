@@ -432,7 +432,7 @@ function renderTags(text: string): string {
 
   result = result.replace(/{@dice ([^}]+)}/g, (_match, content: string) => {
     const [roll, display] = content.split('|')
-    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">${pickDisplay(roll, display)}</span>`
+    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-foreground">${pickDisplay(roll, display)}</span>`
   })
   result = result.replace(
     /{@damage ([^}]+)}/g,
@@ -440,11 +440,11 @@ function renderTags(text: string): string {
   )
   result = result.replace(
     /{@hit ([^}]+)}/g,
-    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/20 text-primary-foreground">+$1</span>',
+    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/20 text-foreground">+$1</span>',
   )
   result = result.replace(
     /{@dc ([^}]+)}/g,
-    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/20 text-primary-foreground">DC $1</span>',
+    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/20 text-foreground">DC $1</span>',
   )
   for (const replaceTag of entityTagRenderers) {
     result = replaceTag(result)
@@ -494,7 +494,7 @@ function renderTags(text: string): string {
   )
   result = result.replace(
     /{@scaledice ([^}]+)}/g,
-    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">$1</span>',
+    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-foreground">$1</span>',
   )
   result = result.replace(
     /{@scaledamage ([^}]+)}/g,

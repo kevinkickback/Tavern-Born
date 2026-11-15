@@ -5,7 +5,7 @@ const { setThemePreferencesMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/themeManager', () => ({
-  ACCENT_THEMES: ['blue', 'violet', 'green', 'orange'],
+  ACCENT_THEMES: ['rose', 'radiant', 'green', 'blue', 'violet', 'chroma'],
   APPEARANCE_THEMES: ['light', 'dark'],
   getStoredAccentTheme: () => 'blue',
   getStoredAppearanceTheme: () => 'light',
