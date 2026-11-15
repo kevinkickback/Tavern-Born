@@ -101,8 +101,8 @@ test('actual overview shows independent effect-aware parent/child casting withou
   character.effectFlags = { active: true }
   const section = await overview(character, [parent])
   expect(section.getAllByText('Parent (Child)').length).toBeGreaterThan(0)
-  expect(section.getByText(/intelligence.*Save DC 16.*Spell attack \+7/)).toBeTruthy()
-  expect(section.getByText(/wisdom.*Save DC 18.*Spell attack \+10/)).toBeTruthy()
+  expect(section.getByText(/Intelligence.*Save DC 16.*Spell attack \+7/)).toBeTruthy()
+  expect(section.getByText(/Wisdom.*Save DC 18.*Spell attack \+10/)).toBeTruthy()
   expect(section.queryByText(/Prepared limit/)).toBeNull()
   expect(section.queryByText('Spell slots')).toBeNull()
   expect(useCharacterStore.getState().activeCharacter).toEqual(character)
@@ -118,7 +118,7 @@ test('active mandatory suite with no eligible rows still shows its casting summa
   character.abilityScores.intelligence = 16
   const section = await overview(character, [race])
   expect(section.getByText('No spells selected.')).toBeTruthy()
-  expect(section.getByText(/intelligence.*Save DC 13.*Spell attack \+5/)).toBeTruthy()
+  expect(section.getByText(/Intelligence.*Save DC 13.*Spell attack \+5/)).toBeTruthy()
 })
 
 test('unselected ability remains explicitly unknown despite numeric effects', async () => {
@@ -176,9 +176,9 @@ test('class preparation limits and slot pools remain class-specific beside racia
   character.abilityScores.wisdom = 18
   const section = await overview(character, [race], [wizard], sourceData)
   expect(
-    section.getByText(/intelligence.*Save DC 13.*Spell attack \+5.*Prepared limit 4/),
+    section.getByText(/Intelligence.*Save DC 13.*Spell attack \+5.*Prepared limit 4/),
   ).toBeTruthy()
-  expect(section.getByText(/wisdom.*Save DC 14.*Spell attack \+6/)).toBeTruthy()
+  expect(section.getByText(/Wisdom.*Save DC 14.*Spell attack \+6/)).toBeTruthy()
   expect(section.getAllByText(/Prepared limit/)).toHaveLength(1)
   expect(section.getByText('Level 1: 2/2')).toBeTruthy()
 })

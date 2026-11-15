@@ -129,6 +129,6 @@ test("Mariner's Armor uses final walking speed only while worn", async () => {
   expect(view(false).movement.speeds.swim ?? 0).toBe(0)
   expect(view(true).movement.speeds.walk).toBe(40)
   expect(view(true).movement.speeds.swim).toBe(40)
-  expect(view(true).additionalMovementSummary).toContain('swim 40 ft.')
+  expect(view(true).additionalMovementSummary).toContain('Swim 40 ft.')
   expect(view(true, await loadMagicTemplates([])).movement.speeds.swim ?? 0).toBe(0)
 })

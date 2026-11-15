@@ -112,7 +112,7 @@ describe('BuildReviewPage', () => {
       ...current,
       proficiencies: {
         ...current.proficiencies,
-        languages: ['deep speech', 'Draconic (SRD)'],
+        languages: ['deep speech', 'Draconic (SRD)', 'iSpeak (NPC)'],
       },
     }
     useCharacterStore.setState({ activeCharacter: character })
@@ -123,7 +123,7 @@ describe('BuildReviewPage', () => {
     )
 
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Character overview' }))
-    expect(screen.getByText('Deep Speech, Draconic (SRD)')).toBeTruthy()
+    expect(screen.getByText('Deep Speech, Draconic (SRD), iSpeak (NPC)')).toBeTruthy()
     expect(screen.getByTestId('review-movement-walk').textContent).toBe('Walk 35 ft.')
     expect(screen.getByText(/Strength \+2/)).toBeTruthy()
     expect(useCharacterStore.getState().activeCharacter).toBe(character)

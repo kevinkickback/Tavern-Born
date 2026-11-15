@@ -71,6 +71,16 @@ describe('CompendiumEntryDetails', () => {
       />,
     )
     expect(screen.getByText('15 feet')).toBeTruthy()
+    rerender(
+      <CompendiumEntryDetails
+        selectedEntry={{
+          ...entry,
+          type: 'Spell',
+          data: { ...spell, range: { type: 'sphere', distance: { type: 'miles', amount: 1 } } },
+        }}
+      />,
+    )
+    expect(screen.getByText('1 mile')).toBeTruthy()
   })
 
   test('renders creature statistics, traits, and actions', () => {

@@ -82,22 +82,26 @@ function getSingularUnit(unit: string): string {
   }
 }
 
-export function formatRange(range: SpellRange | undefined): string {
+export function formatRange(
+  range: SpellRange | undefined,
+  { showAreaDistance = false }: { showAreaDistance?: boolean } = {},
+): string {
   if (!range) return 'N/A'
   if (range.type === 'special') return 'Special'
 
-  if (AREA_RANGE_TYPES.has(range.type)) return 'Self'
+  const distance = range.distance
+  const showMeasuredArea = showAreaDistance && distance?.amount != null
+  if (AREA_RANGE_TYPES.has(range.type) && !showMeasuredArea) return 'Self'
 
-  if (range.type === 'point') {
-    const dist = range.distance
-    if (!dist) return 'N/A'
-    const distFull = RANGE_DIST_TYPE_TO_FULL[dist.type?.toLowerCase()]
+  if (range.type === 'point' || showMeasuredArea) {
+    if (!distance) return 'N/A'
+    const distFull = RANGE_DIST_TYPE_TO_FULL[distance.type?.toLowerCase()]
     if (distFull) return distFull
-    if (dist.amount !== undefined) {
-      const unit = dist.amount === 1 ? getSingularUnit(dist.type) : dist.type
-      return `${dist.amount} ${unit}`
+    if (distance.amount !== undefined) {
+      const unit = distance.amount === 1 ? getSingularUnit(distance.type) : distance.type
+      return `${distance.amount} ${unit}`
     }
-    return dist.type ?? 'N/A'
+    return distance.type ?? 'N/A'
   }
 
   const directFull = RANGE_DIST_TYPE_TO_FULL[range.type?.toLowerCase()]

@@ -206,7 +206,6 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
   const recursiveLookup = useRawRecursiveLookup()
   const entryList = getRenderableEntries(selectedEntry)
   const spell = selectedEntry.type === 'Spell' ? selectedEntry.data : null
-  const areaDistance = spell?.range?.type !== 'point' ? spell?.range?.distance : undefined
 
   return (
     <div className="space-y-4">
@@ -246,9 +245,7 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
               <div>
                 <span className="text-muted-foreground">Range: </span>
                 <span className="font-medium">
-                  {areaDistance?.amount != null
-                    ? `${areaDistance.amount} ${areaDistance.type}`
-                    : formatRange(spell.range)}
+                  {formatRange(spell.range, { showAreaDistance: true })}
                 </span>
               </div>
             )}
