@@ -78,8 +78,8 @@ describe('movement calculations', () => {
 
     expect(effective.speeds).toEqual({ walk: 35, climb: 40, phase: 5 })
     expect(getWalkingSpeed(effective)).toBe(35)
-    expect(formatEffectiveMovement(effective)).toBe('walk 35 ft., climb 40 ft., phase 5 ft.')
-    expect(getAdditionalMovementSummary(effective)).toBe('climb 40 ft., phase 5 ft.')
+    expect(formatEffectiveMovement(effective)).toBe('Walk 35 ft., Climb 40 ft., Phase 5 ft.')
+    expect(getAdditionalMovementSummary(effective)).toBe('Climb 40 ft., Phase 5 ft.')
   })
 
   test('routes typed speed effects through the same adjustment and override stack', () => {

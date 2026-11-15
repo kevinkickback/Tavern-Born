@@ -1,6 +1,8 @@
 import { ArrowCounterClockwise, Check, LockSimple, Plus } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
+export { formatProficiencyLabel as formatProfLabel } from '@/lib/displayLabels'
+
 export type ProficiencyRowState = 'chosen' | 'granted' | 'available' | 'unavailable'
 
 const choiceSelectedClass = 'bg-primary/10 text-foreground hover:bg-primary/15'
@@ -11,15 +13,6 @@ export function proficiencyRowClass(state: ProficiencyRowState, hasPendingChoice
   if (state === 'granted') return fixedSelectedClass
   if (state === 'unavailable' && hasPendingChoices) return 'bg-muted/30 text-muted-foreground'
   return 'bg-surface-raised text-foreground hover:bg-surface-hover'
-}
-
-export function formatProfLabel(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(
-      /(^|[\s/-])([a-z])/g,
-      (_, sep: string, letter: string) => `${sep}${letter.toUpperCase()}`,
-    )
 }
 
 export function ProficiencyStatus({ state }: { state: ProficiencyRowState }) {

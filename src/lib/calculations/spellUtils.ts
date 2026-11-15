@@ -1,5 +1,6 @@
 import { SP_SCHOOL_ABV_TO_FULL } from '@/lib/5etools/constants'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import type {
   CastingTime,
   Spell5e,
@@ -30,7 +31,7 @@ export function formatSpellDisplayName(storedName: string, canonicalName?: strin
 
 export function getSchoolName(abbreviation: string | undefined): string {
   if (!abbreviation) return 'Unknown'
-  return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? abbreviation
+  return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? capitalizeLabel(abbreviation)
 }
 
 const SP_TIME_SINGLETONS = new Set(['action', 'bonus', 'reaction', 'round'])
@@ -39,8 +40,7 @@ export function formatCastingTime(time: CastingTime[] | undefined): string {
   if (!time || time.length === 0) return 'N/A'
   const t = time[0]
   const unitKey = t.unit.toLowerCase()
-  const unitDisplay =
-    unitKey === 'bonus' ? 'Bonus Action' : unitKey.charAt(0).toUpperCase() + unitKey.slice(1)
+  const unitDisplay = unitKey === 'bonus' ? 'Bonus Action' : capitalizeLabel(unitKey)
   if (t.number === 1 && SP_TIME_SINGLETONS.has(unitKey)) {
     return unitDisplay
   }

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useMovement } from '@/hooks/character/useMovement'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import { cn } from '@/lib/utils'
 import type { MovementAdjustment, MovementMode } from '@/types/character'
 
@@ -249,8 +250,8 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
                     <div key={adjustment.id} className="flex items-center gap-3 px-3 py-2.5">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{adjustment.label}</p>
-                        <p className="text-xs capitalize text-muted-foreground">
-                          {adjustment.mode}
+                        <p className="text-xs text-muted-foreground">
+                          {capitalizeLabel(adjustment.mode)}
                         </p>
                       </div>
                       <span
@@ -296,9 +297,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
                   const overrideId = `${overrideIdPrefix}-${mode}`
                   return (
                     <div key={mode} className="space-y-1.5">
-                      <Label htmlFor={overrideId} className="capitalize">
-                        {mode}
-                      </Label>
+                      <Label htmlFor={overrideId}>{capitalizeLabel(mode)}</Label>
                       <Input
                         id={overrideId}
                         type="number"

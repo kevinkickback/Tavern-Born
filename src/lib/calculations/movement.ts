@@ -1,3 +1,4 @@
+import { capitalizeLabel } from '@/lib/displayLabels'
 import type { Race5e } from '@/types/5etools'
 import type { Character, CharacterMovement, MovementMode } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -156,7 +157,7 @@ export function getWalkingSpeed(movement: EffectiveMovement): number {
 }
 
 function formatMode(mode: string, value: number): string {
-  return `${mode} ${value} ft.`
+  return `${capitalizeLabel(mode)} ${value} ft.`
 }
 
 /** Formats every known and preserved movement mode for Builder and text exports. */
@@ -177,10 +178,10 @@ export function formatEffectiveMovement(movement: EffectiveMovement): string {
   for (const [mode, value] of Object.entries(movement.other).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
-    if (value === true) parts.push(`${mode} (special)`)
+    if (value === true) parts.push(`${capitalizeLabel(mode)} (special)`)
   }
   for (const mode of movement.unresolvedInheritedModes) {
-    parts.push(`${mode} (inherits an unresolved walking speed)`)
+    parts.push(`${capitalizeLabel(mode)} (inherits an unresolved walking speed)`)
   }
   return parts.join(', ') || '—'
 }

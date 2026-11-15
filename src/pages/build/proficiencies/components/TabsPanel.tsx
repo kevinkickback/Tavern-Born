@@ -15,6 +15,7 @@ import { ABILITY_NAMES } from '@/lib/calculations/abilityScores'
 import type { RaceDisplaySelection } from '@/lib/calculations/raceDisplay'
 import type { SkillExpertiseAction } from '@/lib/character/skillExpertiseChoices'
 import type { SkillProficiencyAction } from '@/lib/character/skillProficiencyChoices'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -396,7 +397,7 @@ export function BuildProficienciesTabsPanel({
       }
       return [
         ...TYPE_ORDER.filter((t) => buckets[t].length > 0).map((t) => ({
-          label: t.charAt(0).toUpperCase() + t.slice(1),
+          label: capitalizeLabel(t),
           items: buckets[t],
         })),
         ...(buckets.unknown.length > 0 ? [{ label: 'Other', items: buckets.unknown }] : []),

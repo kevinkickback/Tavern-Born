@@ -45,6 +45,7 @@ import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import {
   buildItemDetailFields,
   getDamageSummary,
@@ -527,12 +528,12 @@ export function EquipmentPage() {
                                       <Badge
                                         variant="outline"
                                         className={cn(
-                                          'h-5 shrink-0 px-1.5 text-[10px] capitalize',
+                                          'h-5 shrink-0 px-1.5 text-[10px]',
                                           RARITY_COLORS[item.rarity.toLowerCase()] ??
                                             RARITY_COLORS.unknown,
                                         )}
                                       >
-                                        {item.rarity}
+                                        {capitalizeLabel(item.rarity)}
                                       </Badge>
                                     )}
                                   </div>
@@ -658,12 +659,11 @@ export function EquipmentPage() {
                             <Badge
                               variant="outline"
                               className={cn(
-                                'capitalize',
                                 RARITY_COLORS[selectedItem.rarity.toLowerCase()] ??
                                   RARITY_COLORS.unknown,
                               )}
                             >
-                              {selectedItem.rarity}
+                              {capitalizeLabel(selectedItem.rarity)}
                             </Badge>
                           )}
                           {selectedItem.equipped && <Badge variant="secondary">Equipped</Badge>}

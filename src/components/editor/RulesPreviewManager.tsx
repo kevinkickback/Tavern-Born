@@ -849,6 +849,15 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
   }, [state.pinned])
 
   useEffect(() => {
+    const restorePreviewFocus = (trigger: HTMLElement | null) => {
+      if (!trigger?.isConnected) return
+      returningFocusRef.current = true
+      try {
+        trigger.focus({ preventScroll: true })
+      } finally {
+        returningFocusRef.current = false
+      }
+    }
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       const target = event.target
@@ -858,31 +867,32 @@ export function RulesPreviewManager({ children }: { children: ReactNode }) {
               '[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"]',
             )
           : null
-      if (targetOverlay && !targetOverlay.hasAttribute('data-rules-preview-layer')) return
       const current = stateRef.current
-      if (current.chain.length > 0) {
+      const newest = current.chain[current.chain.length - 1]
+      const isHostTrigger =
+        target === newest?.sourceElement && !!portalRoot && targetOverlay?.contains(portalRoot)
+      if (
+        targetOverlay &&
+        !targetOverlay.hasAttribute('data-rules-preview-layer') &&
+        !isHostTrigger
+      )
+        return
+      if (newest) {
         event.preventDefault()
         event.stopPropagation()
         dispatch({ type: 'close-newest' })
+        if (targetOverlay?.id === newest.id) restorePreviewFocus(newest.sourceElement)
         return
       }
       if (!current.pinned) return
       event.preventDefault()
       event.stopPropagation()
       dispatch({ type: 'close-pinned' })
-      const returnFocus = returnFocusRef.current
-      if (returnFocus?.isConnected) {
-        returningFocusRef.current = true
-        try {
-          returnFocus.focus()
-        } finally {
-          returningFocusRef.current = false
-        }
-      }
+      restorePreviewFocus(returnFocusRef.current)
     }
     document.addEventListener('keydown', handleEscape, true)
     return () => document.removeEventListener('keydown', handleEscape, true)
-  }, [])
+  }, [portalRoot])
 
   const openReference = useCallback(
     (trigger: HTMLElement, lookup: RecursiveLookup) => {

@@ -3,6 +3,12 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useRawRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
+import {
+  formatCastingTime,
+  formatDuration,
+  formatRange,
+  getSchoolName,
+} from '@/lib/calculations/spellUtils'
 import type { CompendiumEntry } from '@/lib/compendiumEntries'
 import { CreatureStatBlock } from '@/pages/compendium/CreatureStatBlock'
 import type { Class5e, Item5e } from '@/types/5etools'
@@ -198,22 +204,9 @@ function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
 
 export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetailsProps) {
   const recursiveLookup = useRawRecursiveLookup()
-  const spellLevel = typeof selectedEntry.data.level === 'number' ? selectedEntry.data.level : null
-  const spellSchool = typeof selectedEntry.data.school === 'string' ? selectedEntry.data.school : ''
-
-  const firstTime = isRecord(asArray(selectedEntry.data.time)[0])
-    ? (asArray(selectedEntry.data.time)[0] as Record<string, unknown>)
-    : null
-
-  const range = isRecord(selectedEntry.data.range) ? selectedEntry.data.range : null
-  const distance = isRecord(range?.distance) ? range.distance : null
-
-  const firstDuration = isRecord(asArray(selectedEntry.data.duration)[0])
-    ? (asArray(selectedEntry.data.duration)[0] as Record<string, unknown>)
-    : null
-  const durationInner = isRecord(firstDuration?.duration) ? firstDuration.duration : null
-
   const entryList = getRenderableEntries(selectedEntry)
+  const spell = selectedEntry.type === 'Spell' ? selectedEntry.data : null
+  const areaDistance = spell?.range?.type !== 'point' ? spell?.range?.distance : undefined
 
   return (
     <div className="space-y-4">
@@ -231,44 +224,38 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
       <Separator />
 
       <div className="space-y-3">
-        {selectedEntry.type === 'Spell' && (
+        {spell && (
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm p-4 bg-muted/50 rounded-lg">
             <div>
               <span className="text-muted-foreground">Level: </span>
               <span className="font-medium">
-                {spellLevel === 0 ? 'Cantrip' : `Level ${spellLevel ?? '?'}`}
+                {spell.level === 0 ? 'Cantrip' : `Level ${spell.level ?? '?'}`}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground">School: </span>
-              <span className="font-medium capitalize">{spellSchool}</span>
+              <span className="font-medium">{getSchoolName(spell.school)}</span>
             </div>
-            {firstTime && (
+            {!!spell.time?.length && (
               <div>
                 <span className="text-muted-foreground">Casting Time: </span>
-                <span className="font-medium">
-                  {String(firstTime.number ?? '')} {String(firstTime.unit ?? '')}
-                </span>
+                <span className="font-medium">{formatCastingTime(spell.time)}</span>
               </div>
             )}
-            {distance && (
+            {spell.range && (
               <div>
                 <span className="text-muted-foreground">Range: </span>
                 <span className="font-medium">
-                  {String(distance.amount ?? distance.type ?? '')}{' '}
-                  {distance.amount != null ? String(distance.type ?? '') : ''}
+                  {areaDistance?.amount != null
+                    ? `${areaDistance.amount} ${areaDistance.type}`
+                    : formatRange(spell.range)}
                 </span>
               </div>
             )}
-            {firstDuration && (
+            {!!spell.duration?.length && (
               <div>
                 <span className="text-muted-foreground">Duration: </span>
-                <span className="font-medium capitalize">
-                  {String(firstDuration.type ?? '')}
-                  {durationInner
-                    ? ` ${String(durationInner.amount ?? '')} ${String(durationInner.type ?? '')}`
-                    : ''}
-                </span>
+                <span className="font-medium">{formatDuration(spell.duration)}</span>
               </div>
             )}
           </div>
