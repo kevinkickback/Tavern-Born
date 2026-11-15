@@ -90,7 +90,7 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await expect(addItemDialog.getByText('Bag of Holding')).toBeVisible()
   const potionOption = addItemDialog.getByRole('button', { name: /^Potion of Healing\b/ })
   const pickerRarityColors = await potionOption
-    .getByText('common', { exact: true })
+    .getByText('Common', { exact: true })
     .evaluate((badge) => {
       const style = getComputedStyle(badge)
       return {
@@ -113,7 +113,7 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
   await expect(page.getByRole('button', { name: 'Inspect Potion of Healing' })).toBeVisible()
   const inventoryRarityColors = await page
     .getByRole('button', { name: 'Inspect Potion of Healing' })
-    .getByText('common', { exact: true })
+    .getByText('Common', { exact: true })
     .evaluate((badge) => {
       const style = getComputedStyle(badge)
       return {

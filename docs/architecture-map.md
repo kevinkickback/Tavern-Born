@@ -58,8 +58,9 @@ preview survives route changes and virtual row unmounts.
 
 Two transient shells roll forward without moving the shell under the pointer. An explicit pin
 action controls the one independent draggable snapshot. Escape closes the newest transient
-first and restores focus without reopening the trigger. Ordinary dialogs, menus and listboxes
-retain their own focus and Escape behavior.
+first. If focus was inside it, Escape returns focus to its trigger without reopening it.
+Escape also dismisses a transient preview when its Creator trigger has focus. Other dialogs,
+menus and listboxes retain their own Escape behavior.
 
 The creator hosts the stable portal inside its viewport-fixed modal boundary before Radix hides
 siblings. Host changes clear transient previews and preserve the pin. Use Floating UI with the
@@ -67,6 +68,10 @@ existing collision fallback, hover corridors and fade-only entry. Preview scroll
 inside its own shell.
 
 Noninteractive compact text and PDF can use the lower-level renderer.
+
+Format derived labels when rendering them. Reuse the shared label helpers to capitalize visible
+text while preserving authored casing and acronyms. Keep the original values for character saves,
+filtering and source-qualified reference lookups.
 
 ## Desktop lifecycle
 

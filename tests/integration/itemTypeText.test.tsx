@@ -380,7 +380,7 @@ describe('category-text display contexts and storage boundary', () => {
         onChange={vi.fn()}
       />,
     )
-    fireEvent.mouseMove(screen.getByRole('button', { name: 'musical instruments' }))
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Musical instruments' }))
     const preview = await screen.findByRole('dialog', { name: 'Musical Instrument preview' })
     expect(preview.textContent).toContain('Instrument category guidance.')
     expect(preview.textContent).toContain('Standard instrument rules.')
@@ -417,7 +417,7 @@ describe('category-text display contexts and storage boundary', () => {
         onChange={vi.fn()}
       />,
     )
-    fireEvent.mouseMove(screen.getByRole('button', { name: 'musical instruments' }))
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Musical instruments' }))
     expect(
       (await screen.findByRole('dialog', { name: 'Musical Instrument preview' })).textContent,
     ).not.toContain('Instrument category guidance.')
@@ -440,7 +440,7 @@ describe('category-text display contexts and storage boundary', () => {
         onChange={vi.fn()}
       />,
     )
-    fireEvent.mouseMove(screen.getByRole('button', { name: 'musical instruments' }))
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Musical instruments' }))
     expect(
       (await screen.findByRole('dialog', { name: 'Musical Instrument preview' })).textContent,
     ).toContain('Instrument category guidance.')

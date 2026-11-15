@@ -39,9 +39,9 @@ describe('CompendiumEntryDetails', () => {
       source: 'TEST',
       level: 1,
       school: 'E',
-      time: [],
-      range: { type: 'special' },
-      duration: [],
+      time: [{ number: 1, unit: 'reaction' }],
+      range: { type: 'point', distance: { type: 'self' } },
+      duration: [{ type: 'timed', duration: { amount: 1, type: 'round' } }],
       entries: [],
     } as Spell5e
     const entry = {
@@ -53,10 +53,34 @@ describe('CompendiumEntryDetails', () => {
       data: spell,
     } as CompendiumEntry
 
-    render(<CompendiumEntryDetails selectedEntry={entry} />)
+    const { rerender } = render(<CompendiumEntryDetails selectedEntry={entry} />)
 
     expect(screen.getByText('No description available for this entry.')).toBeTruthy()
     expect(screen.queryByText('Level 1 E')).toBeNull()
+    expect(screen.getByText('Enchantment')).toBeTruthy()
+    expect(screen.getByText('Reaction')).toBeTruthy()
+    expect(screen.getByText('Self')).toBeTruthy()
+    expect(screen.getByText('1 round')).toBeTruthy()
+    rerender(
+      <CompendiumEntryDetails
+        selectedEntry={{
+          ...entry,
+          type: 'Spell',
+          data: { ...spell, range: { type: 'cone', distance: { type: 'feet', amount: 15 } } },
+        }}
+      />,
+    )
+    expect(screen.getByText('15 feet')).toBeTruthy()
+    rerender(
+      <CompendiumEntryDetails
+        selectedEntry={{
+          ...entry,
+          type: 'Spell',
+          data: { ...spell, range: { type: 'sphere', distance: { type: 'miles', amount: 1 } } },
+        }}
+      />,
+    )
+    expect(screen.getByText('1 mile')).toBeTruthy()
   })
 
   test('renders creature statistics, traits, and actions', () => {

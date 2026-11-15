@@ -99,7 +99,7 @@ const GAME_DATA: GameData = {
         weapons: [
           'simple weapons',
           '{@item Mace|PHB}',
-          '{@item Sling|PHB}',
+          '{@item sling|PHB}',
           'Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property',
         ],
         skills: [],
@@ -250,6 +250,12 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   await trigger.focus()
   await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await trigger.press('Escape')
+  await expect(pin).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await expect(page.getByRole('alertdialog', { name: 'Discard character creation?' })).toHaveCount(
+    0,
+  )
   await trigger.press('Enter')
   await expect(pin.getByTitle('Unpin tooltip')).toBeFocused()
   expect(await pin.evaluate((node) => Boolean(node.closest('[aria-hidden="true"]')))).toBe(false)
@@ -456,7 +462,7 @@ test('draft books supply race, class and background details while linked items r
   await expect(sling).not.toContainText('Supplemental draft guidance.')
   await page.mouse.move(5, 5)
   await expect(sling).toBeHidden()
-  await wizard.getByRole('button', { name: 'simple weapons', exact: true }).hover()
+  await wizard.getByRole('button', { name: 'Simple weapons', exact: true }).hover()
   const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
   await expect(simple.getByRole('button', { name: 'Training Dart (TCE)' })).toBeVisible()
   await expect(simple.getByText('Longsword', { exact: false })).toHaveCount(0)
@@ -464,7 +470,7 @@ test('draft books supply race, class and background details while linked items r
   await expect(mace).toContainText('Supplemental draft guidance.')
   await page.mouse.move(5, 5)
   await expect(simple).toBeHidden()
-  await wizard.getByRole('button', { name: 'light', exact: true }).hover()
+  await wizard.getByRole('button', { name: 'Light', exact: true }).hover()
   const armor = page.getByRole('dialog', { name: 'Light Armor preview', exact: true })
   await expect(armor.getByRole('button', { name: 'Leather Armor (PHB)' })).toBeVisible()
   await expect(armor.getByText('Shield', { exact: false })).toHaveCount(0)
@@ -493,10 +499,24 @@ test('Builder class training uses the active character books', async ({ page }) 
   await openExistingCharacter(page)
   await page.getByRole('button', { name: 'Builder', exact: true }).click()
   await page.getByRole('link', { name: 'Class', exact: true }).click()
-  await page.getByRole('button', { name: 'simple weapons', exact: true }).hover()
+  const trigger = page.getByRole('button', { name: 'Simple weapons', exact: true })
+  await trigger.focus()
   const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
-  await expect(simple.getByRole('button', { name: 'Mace (PHB)' })).toBeVisible()
+  const maceTrigger = simple.getByRole('button', { name: 'Mace (PHB)' })
+  await expect(maceTrigger).toBeVisible()
   await expect(simple.getByText('Training Dart', { exact: false })).toHaveCount(0)
+  await maceTrigger.focus()
+  const mace = page.getByRole('dialog', { name: 'Mace preview', exact: true })
+  await expect(mace).toContainText('The mace has an available description.')
+  await expect(mace).not.toContainText('Supplemental draft guidance.')
+  await mace.getByTitle('Pin tooltip').focus()
+  await page.keyboard.press('Escape')
+  await expect(mace).toBeHidden()
+  await expect(maceTrigger).toBeFocused()
+  await expect(simple).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(simple).toBeHidden()
+  await expect(trigger).toBeFocused()
   await page.getByRole('button', { name: 'Finesse or Light', exact: true }).hover()
   const qualified = page.getByRole('dialog', {
     name: 'Martial Weapons with Finesse or Light preview',

@@ -42,7 +42,7 @@ describe('class proficiency previews', () => {
     const druid = JSON.parse(readFileSync('resources/srd/data/class/class-druid.json', 'utf8'))
     const classic = druid.class.find((row: { source: string }) => row.source === 'PHB')
     const armor = formatProficiencyList(classic.startingProficiencies.armor, 'armor')
-    expect(armor).toContain('druids will not wear armor or use shields made of metal')
+    expect(armor).toContain('shields (druids will not wear armor or use shields made of metal')
     expect(armor).not.toContain('data-hover-name="shield"')
     const rogue = JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8'))
     const revised = rogue.class.find((row: { source: string }) => row.source === 'XPHB')
@@ -50,6 +50,21 @@ describe('class proficiency previews', () => {
     expect(weapons).toContain('Finesse or Light')
     expect(weapons).toMatch(/data-hover-type="proficiency"[^>]*>Finesse or Light</)
     expect(weapons).not.toContain('data-hover-name="martial"')
+  })
+
+  test('capitalizes standalone item labels while preserving their keys and compound prose', () => {
+    const bard = JSON.parse(readFileSync('resources/srd/data/class/class-bard.json', 'utf8'))
+    const classic = bard.class.find((row: { source: string }) => row.source === 'PHB')
+    const body = document.createElement('div')
+    body.innerHTML = formatProficiencyList(classic.startingProficiencies.tools) ?? ''
+    expect(body.textContent).toBe('three musical instruments of your choice')
+    body.innerHTML =
+      formatProficiencyList(['{@item hand crossbow|phb|hand crossbows} or darts']) ?? ''
+    expect(body.textContent).toBe('hand crossbows or darts')
+    body.innerHTML = formatProficiencyList(classic.startingProficiencies.weapons, 'weapon') ?? ''
+    const crossbow = body.querySelector('[data-hover-name="hand crossbow"]')
+    expect(crossbow?.textContent).toBe('Hand crossbows')
+    expect(crossbow?.getAttribute('data-hover-source')).toBe('phb')
   })
 
   test.each([

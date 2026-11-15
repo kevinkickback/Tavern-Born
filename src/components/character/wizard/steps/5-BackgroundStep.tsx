@@ -6,6 +6,7 @@ import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockName
 import { formatBackgroundAbilityPatterns } from '@/lib/calculations/abilityScoreDisplay'
 import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
+import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
@@ -296,7 +297,7 @@ export function BackgroundStep({
 function getBackgroundProficiencyDisplay(blocks: unknown[] | undefined): string {
   if (!Array.isArray(blocks) || blocks.length === 0) return 'None'
   const names = extractProficiencyBlockNames(blocks)
-  return names.length > 0 ? names.join(', ') : 'None'
+  return names.length > 0 ? names.map(formatProficiencyLabel).join(', ') : 'None'
 }
 
 function getEntryBaseKey(entry: unknown): string {

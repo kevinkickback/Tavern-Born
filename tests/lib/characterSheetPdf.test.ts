@@ -299,7 +299,7 @@ describe('characterSheetPdf', () => {
     expect(form.getTextField('ClassLevel').getText()).toBe('Barbarian 3, Fighter 1')
     const features = form.getTextField('Features and Traits').getText()?.replace(/\s+/gu, ' ')
     expect(features).toContain('Barbarian — Path of the Ancestral Guardian')
-    expect(features).toContain('Additional movement: swim 35 ft.')
+    expect(features).toContain('Additional movement: Swim 35 ft.')
   })
 
   test('2014 languages populate dedicated Language fields', () => {

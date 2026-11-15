@@ -329,7 +329,7 @@ test('revised Gift of the Depths follows walking speed while preserving a faster
       .movement.speeds.swim,
   ).toBe(45)
   const vm = createCharacterSheetViewModel(selected, fixture.lookups, fixture.lookups)
-  expect(vm.additionalMovementSummary).toBe('swim 35 ft.')
+  expect(vm.additionalMovementSummary).toBe('Swim 35 ft.')
   const noSpell = fixture.calc(selected, { ...fixture.lookups, spellsByKey: {} })
   expect(noSpell.fixedClassSpellStatuses).toContainEqual(
     expect.objectContaining({ featureName: 'Gift of the Depths', active: false }),
@@ -352,10 +352,10 @@ test('previews source-derived swim speed before saving the walking override', as
   const modal = render(<MovementModal open onOpenChange={() => {}} />)
   try {
     const user = userEvent.setup()
-    expect(screen.getByText('walk 30 ft., swim 30 ft.')).toBeTruthy()
+    expect(screen.getByText('Walk 30 ft., Swim 30 ft.')).toBeTruthy()
     await user.click(screen.getByText('Exact movement overrides'))
     await user.type(screen.getByLabelText(/^walk$/i), '40')
-    expect(screen.getByText('walk 40 ft., swim 40 ft.')).toBeTruthy()
+    expect(screen.getByText('Walk 40 ft., Swim 40 ft.')).toBeTruthy()
     expect(useCharacterStore.getState().activeCharacter).toBe(selected)
     await user.click(screen.getByRole('button', { name: 'Save movement' }))
     const saved = useCharacterStore.getState().activeCharacter!

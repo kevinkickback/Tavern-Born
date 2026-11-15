@@ -1,5 +1,6 @@
 import { SP_SCHOOL_ABV_TO_FULL } from '@/lib/5etools/constants'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import type {
   CastingTime,
   Spell5e,
@@ -30,7 +31,7 @@ export function formatSpellDisplayName(storedName: string, canonicalName?: strin
 
 export function getSchoolName(abbreviation: string | undefined): string {
   if (!abbreviation) return 'Unknown'
-  return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? abbreviation
+  return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? capitalizeLabel(abbreviation)
 }
 
 const SP_TIME_SINGLETONS = new Set(['action', 'bonus', 'reaction', 'round'])
@@ -39,8 +40,7 @@ export function formatCastingTime(time: CastingTime[] | undefined): string {
   if (!time || time.length === 0) return 'N/A'
   const t = time[0]
   const unitKey = t.unit.toLowerCase()
-  const unitDisplay =
-    unitKey === 'bonus' ? 'Bonus Action' : unitKey.charAt(0).toUpperCase() + unitKey.slice(1)
+  const unitDisplay = unitKey === 'bonus' ? 'Bonus Action' : capitalizeLabel(unitKey)
   if (t.number === 1 && SP_TIME_SINGLETONS.has(unitKey)) {
     return unitDisplay
   }
@@ -82,22 +82,26 @@ function getSingularUnit(unit: string): string {
   }
 }
 
-export function formatRange(range: SpellRange | undefined): string {
+export function formatRange(
+  range: SpellRange | undefined,
+  { showAreaDistance = false }: { showAreaDistance?: boolean } = {},
+): string {
   if (!range) return 'N/A'
   if (range.type === 'special') return 'Special'
 
-  if (AREA_RANGE_TYPES.has(range.type)) return 'Self'
+  const distance = range.distance
+  const showMeasuredArea = showAreaDistance && distance?.amount != null
+  if (AREA_RANGE_TYPES.has(range.type) && !showMeasuredArea) return 'Self'
 
-  if (range.type === 'point') {
-    const dist = range.distance
-    if (!dist) return 'N/A'
-    const distFull = RANGE_DIST_TYPE_TO_FULL[dist.type?.toLowerCase()]
+  if (range.type === 'point' || showMeasuredArea) {
+    if (!distance) return 'N/A'
+    const distFull = RANGE_DIST_TYPE_TO_FULL[distance.type?.toLowerCase()]
     if (distFull) return distFull
-    if (dist.amount !== undefined) {
-      const unit = dist.amount === 1 ? getSingularUnit(dist.type) : dist.type
-      return `${dist.amount} ${unit}`
+    if (distance.amount !== undefined) {
+      const unit = distance.amount === 1 ? getSingularUnit(distance.type) : distance.type
+      return `${distance.amount} ${unit}`
     }
-    return dist.type ?? 'N/A'
+    return distance.type ?? 'N/A'
   }
 
   const directFull = RANGE_DIST_TYPE_TO_FULL[range.type?.toLowerCase()]
