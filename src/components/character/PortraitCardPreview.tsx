@@ -1,26 +1,24 @@
-import { CopySimple, DownloadSimple, Trash } from '@phosphor-icons/react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
-import { Button } from '@/components/ui/button'
 import {
   CHARACTER_CARD_LOGICAL_HEIGHT,
   CHARACTER_CARD_LOGICAL_WIDTH,
 } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
-import type { PortraitTransform } from '@/types/character'
+import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
 interface PortraitCardPreviewProps {
   image?: string | null
   name?: string
   level?: number
   race?: string
-  characterClass?: string
+  classes?: readonly CharacterClassEntry[]
+  originSystem?: OriginSystem
   gender?: string
   lastModified?: string
   transform?: PortraitTransform
   className?: string
   fit?: 'width' | 'contain'
-  showActions?: boolean
   onWidthChange?: (width: number) => void
 }
 
@@ -29,13 +27,13 @@ export function PortraitCardPreview({
   name,
   level,
   race,
-  characterClass,
+  classes,
+  originSystem,
   gender,
   lastModified,
   transform,
   className,
   fit = 'width',
-  showActions = true,
   onWidthChange,
 }: PortraitCardPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -84,14 +82,16 @@ export function PortraitCardPreview({
         className,
       )}
     >
-      <div
+      <section
         data-slot="portrait-card-preview"
-        className="group relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm"
+        aria-label="Portrait card preview"
+        tabIndex={originSystem || lastModified ? 0 : undefined}
+        className="group/card relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
         style={previewWidth === null ? undefined : { width: previewWidth }}
       >
         <div
           data-slot="portrait-card-preview-canvas"
-          className="absolute left-0 top-0 origin-top-left"
+          className="@container absolute left-0 top-0 origin-top-left"
           style={{
             width: CHARACTER_CARD_LOGICAL_WIDTH,
             height: CHARACTER_CARD_LOGICAL_HEIGHT,
@@ -104,45 +104,15 @@ export function PortraitCardPreview({
             name={name}
             level={level}
             race={race}
-            characterClass={characterClass}
+            classes={classes}
+            originSystem={originSystem}
             gender={gender}
             lastModified={lastModified}
             transform={transform}
-            cardSize={CHARACTER_CARD_LOGICAL_WIDTH}
             portraitTransition
-            actions={
-              showActions && typeof level === 'number' ? (
-                <div className="pointer-events-none flex gap-3" aria-hidden="true">
-                  <Button
-                    variant="outline"
-                    size="default"
-                    tabIndex={-1}
-                    className="h-9 min-w-11 bg-background/55 px-3 backdrop-blur-sm"
-                  >
-                    <CopySimple className="size-5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    tabIndex={-1}
-                    className="h-9 min-w-11 bg-background/55 px-3 backdrop-blur-sm"
-                  >
-                    <DownloadSimple className="size-5" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="default"
-                    tabIndex={-1}
-                    className="h-9 min-w-11 px-3"
-                  >
-                    <Trash className="size-5" />
-                  </Button>
-                </div>
-              ) : undefined
-            }
           />
         </div>
-      </div>
+      </section>
     </div>
   )
 }

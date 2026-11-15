@@ -1,8 +1,10 @@
 import { CopySimple, DownloadSimple, Trash } from '@phosphor-icons/react'
-import { memo } from 'react'
+import { type MouseEvent, memo } from 'react'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
-import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
-import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
+import {
+  CHARACTER_CARD_REVEAL_CLASS,
+  CharacterCardFrame,
+} from '@/components/character/CharacterCardFrame'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,7 +25,6 @@ interface CharacterCardProps {
   selectionMode?: boolean
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
-  cardSize?: number
   highlighted?: boolean
   usesAdditionalContent?: boolean
   isLibraryPending?: boolean
@@ -39,23 +40,21 @@ export const CharacterCard = memo(function CharacterCard({
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
-  cardSize = 340,
   highlighted = false,
   usesAdditionalContent = false,
   isLibraryPending = false,
 }: CharacterCardProps) {
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
-  const isSmall = cardSize <= 300
-  const isMedium = cardSize > 300 && cardSize <= 380
-  const actionButtonClass = isSmall
-    ? 'h-8 min-w-10 px-2.5'
-    : isMedium
-      ? 'h-9 min-w-11 px-3'
-      : 'h-10 min-w-12 px-3.5'
-  const actionIconClass = isSmall ? 'size-4' : 'size-5'
+  const actionButtonClass = 'size-auto aspect-square w-full p-0'
 
-  const handleCardClick = () => {
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (
+      event.target instanceof Element &&
+      event.target.closest('[data-slot="character-card-actions"]')
+    ) {
+      return
+    }
     if (selectionMode) {
       if (isLibraryPending) return
       onToggleSelect?.(character.id)
@@ -66,107 +65,101 @@ export const CharacterCard = memo(function CharacterCard({
 
   return (
     <Card
-      ref={routeFocusRef}
-      className={cn(
-        'group relative aspect-[3/2] cursor-pointer overflow-hidden border transition-colors hover:border-accent',
-        isActive && 'border-2 border-accent',
-        isSelected && 'ring-2 ring-primary/50',
-        routeFocusHighlighted && 'animate-route-focus',
-      )}
+      data-slot="character-card-hit-area"
+      className="group/card block cursor-pointer rounded-none border-0 bg-transparent p-0 shadow-none"
       onClick={handleCardClick}
     >
-      <CharacterCardFrame
-        image={character.portrait}
-        imageAlt={`${character.name || 'Character'} portrait`}
-        name={character.name}
-        level={getTotalCharacterLevel(character)}
-        race={getRaceDisplayName(character.race, character.subrace)}
-        characterClass={getCharacterClassEntries(character)[0]?.name ?? ''}
-        lastModified={character.lastModified}
-        transform={character.portraitTransform}
-        cardSize={cardSize}
-        actions={
-          !selectionMode ? (
-            <TooltipProvider delayDuration={300}>
-              <div className={cn('flex', isSmall ? 'gap-2' : 'gap-3')}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="default"
-                      aria-label={`Duplicate ${character.name || 'character'}`}
-                      disabled={isLibraryPending}
-                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onDuplicate(character)
-                      }}
-                    >
-                      <CopySimple className={actionIconClass} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Duplicate character</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="default"
-                      aria-label={`Export ${character.name || 'character'}`}
-                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onExport(character)
-                      }}
-                    >
-                      <DownloadSimple className={actionIconClass} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Export character</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="default"
-                      aria-label={`Delete ${character.name || 'character'}`}
-                      disabled={isLibraryPending}
-                      className={actionButtonClass}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onDelete(character.id)
-                      }}
-                    >
-                      <Trash className={actionIconClass} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Delete character</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-          ) : undefined
-        }
-      />
+      <Card
+        ref={routeFocusRef}
+        className={cn(
+          '@container relative aspect-[3/2] overflow-hidden border transition-colors group-hover/card:border-accent motion-safe:transition-[border-color,translate] motion-safe:duration-200 motion-safe:ease-out motion-safe:group-hover/card:-translate-y-0.5',
+          isActive && 'border-2 border-accent',
+          isSelected && 'ring-2 ring-primary/50',
+          routeFocusHighlighted && 'animate-route-focus',
+        )}
+      >
+        <CharacterCardFrame
+          image={character.portrait}
+          imageAlt={`${character.name || 'Character'} portrait`}
+          name={character.name}
+          level={getTotalCharacterLevel(character)}
+          race={getRaceDisplayName(character.race, character.subrace)}
+          classes={getCharacterClassEntries(character)}
+          originSystem={character.originSystem}
+          lastModified={character.lastModified}
+          transform={character.portraitTransform}
+          statusBadge={!selectionMode && usesAdditionalContent && <AdditionalContentBadge />}
+          selectionControl={
+            selectionMode && (
+              <Checkbox
+                disabled={isLibraryPending}
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect?.(character.id)}
+                onClick={(event) => event.stopPropagation()}
+                aria-label={`Select ${character.name || 'character'}`}
+                className="border-white shadow-md"
+              />
+            )
+          }
+        />
 
-      {!selectionMode && (isActive || usesAdditionalContent) && (
-        <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
-          {isActive && <CharacterReadinessBadge character={character} className="shadow-sm" />}
-          {usesAdditionalContent && <AdditionalContentBadge />}
-        </div>
-      )}
-
-      {selectionMode && (
-        <div className="absolute left-3 top-3 z-10">
-          <Checkbox
-            disabled={isLibraryPending}
-            checked={isSelected}
-            onCheckedChange={() => onToggleSelect?.(character.id)}
-            onClick={(event) => event.stopPropagation()}
-            aria-label={`Select ${character.name || 'character'}`}
-            className="border-white shadow-md"
-          />
-        </div>
-      )}
+        {!selectionMode && (
+          <TooltipProvider delayDuration={300}>
+            <div
+              data-slot="character-card-actions"
+              className={cn(
+                'absolute bottom-3 left-2.5 z-10 grid w-[7.125rem] max-w-[calc(36%-0.625rem)] grid-cols-3 gap-[3px]',
+                CHARACTER_CARD_REVEAL_CLASS,
+              )}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label={`Duplicate ${character.name || 'character'}`}
+                    disabled={isLibraryPending}
+                    className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                    onClick={() => onDuplicate(character)}
+                  >
+                    <CopySimple className="size-[18px]" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Duplicate character</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label={`Export ${character.name || 'character'}`}
+                    className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                    onClick={() => onExport(character)}
+                  >
+                    <DownloadSimple className="size-[18px]" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Export character</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    aria-label={`Delete ${character.name || 'character'}`}
+                    disabled={isLibraryPending}
+                    className={actionButtonClass}
+                    onClick={() => onDelete(character.id)}
+                  >
+                    <Trash className="size-[18px]" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete character</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        )}
+      </Card>
     </Card>
   )
 })

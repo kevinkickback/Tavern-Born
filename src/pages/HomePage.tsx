@@ -627,7 +627,6 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
-        cardSize={360}
         highlighted={focusCharacterName && character.id === activeCharacterId}
         usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
         isLibraryPending={isLibraryPending}

@@ -39,7 +39,8 @@ export function PortraitPage({ readinessFocus }: PortraitPageProps = {}) {
             name={activeCharacter.name}
             level={getTotalCharacterLevel(activeCharacter)}
             race={getRaceDisplayName(activeCharacter.race, activeCharacter.subrace)}
-            characterClass={getCharacterClassEntries(activeCharacter)[0]?.name ?? ''}
+            classes={getCharacterClassEntries(activeCharacter)}
+            originSystem={activeCharacter.originSystem}
             lastModified={activeCharacter.lastModified}
             onPortraitChange={(p) => updateActiveCharacter({ portrait: p ?? undefined })}
             onTransformChange={(t) => updateActiveCharacter({ portraitTransform: t })}

@@ -139,7 +139,8 @@ export function BasicsStep({
       name={data.name}
       level={1}
       race={getRaceDisplayName(data.race, data.subrace) || 'Race'}
-      characterClass={data.class || 'Class'}
+      classes={[{ name: data.class || 'Class', source: data.classSource, levels: 1 }]}
+      originSystem={data.originSystem}
       gender={data.gender}
       onPortraitChange={handlePortraitChange}
       onTransformChange={handleTransformChange}

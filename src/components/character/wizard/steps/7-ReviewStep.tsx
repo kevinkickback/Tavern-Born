@@ -103,10 +103,10 @@ export function ReviewStep({
             name={data.name}
             level={1}
             race={getRaceDisplayName(data.race, data.subrace)}
-            characterClass={data.class}
+            classes={data.class ? [{ name: data.class, source: data.classSource, levels: 1 }] : []}
+            originSystem={data.originSystem}
             gender={data.gender}
             transform={data.portraitTransform}
-            showActions={false}
           />
         </div>
 
