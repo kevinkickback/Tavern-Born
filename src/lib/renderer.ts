@@ -52,6 +52,7 @@ function sanitizeRenderedHtml(html: string): string {
       'table',
       'tbody',
       'td',
+      'tfoot',
       'th',
       'thead',
       'tr',
@@ -59,6 +60,7 @@ function sanitizeRenderedHtml(html: string): string {
     ],
     ALLOWED_ATTR: [
       'class',
+      'colspan',
       'data-hover-name',
       'data-hover-class-name',
       'data-hover-class-source',
@@ -78,6 +80,23 @@ function sanitizeRenderedHtml(html: string): string {
 
 const entryArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
+function renderTableCell(cell: unknown): string {
+  if (typeof cell === 'number' && Number.isFinite(cell)) return String(cell)
+  if (!cell || typeof cell !== 'object' || !('type' in cell) || cell.type !== 'cell')
+    return renderEntry(cell)
+  if ('entry' in cell && cell.entry != null) return renderTableCell(cell.entry)
+  if (!('roll' in cell) || !cell.roll || typeof cell.roll !== 'object') return ''
+  const { exact, min, max, pad } = cell.roll as Record<string, unknown>
+  const format = (value: unknown) =>
+    typeof value === 'number' && Number.isSafeInteger(value)
+      ? String(value).padStart(pad === true ? 2 : 0, '0')
+      : ''
+  if (exact != null) return format(exact)
+  const start = format(min)
+  const end = format(max)
+  return start && end ? `${start}-${end}` : ''
+}
+
 export function renderEntry(entry: unknown): string {
   if (typeof entry === 'string') {
     return sanitizeRenderedHtml(renderTags(entry))
@@ -92,6 +111,7 @@ export function renderEntry(entry: unknown): string {
       caption?: string
       colLabels?: string[]
       rows?: unknown[][]
+      footnotes?: unknown[]
       subclassFeature?: string
       optionalfeature?: string
     }
@@ -154,15 +174,22 @@ export function renderEntry(entry: unknown): string {
       const thead = headers ? `<thead><tr>${headers}</tr></thead>` : ''
       const tbody = entryArray(entryObj.rows)
         .filter(Array.isArray)
-        .map((row) => {
-          const cells = row
-            .map((cell) => `<td class="border border-border p-2 text-sm">${renderEntry(cell)}</td>`)
-            .join('')
-          return `<tr>${cells}</tr>`
-        })
+        .map(
+          (row) =>
+            `<tr>${row
+              .map(
+                (cell) =>
+                  `<td class="border border-border p-2 text-sm">${renderTableCell(cell)}</td>`,
+              )
+              .join('')}</tr>`,
+        )
         .join('')
+      const notes = entryArray(entryObj.footnotes).map(renderEntry).filter(Boolean)
+      const footer = notes.length
+        ? `<tfoot><tr><td colspan="${entryArray(entryObj.colLabels).length || 1}">${notes.join(' ')}</td></tr></tfoot>`
+        : ''
       return sanitizeRenderedHtml(
-        `<table class="w-full border-collapse my-3">${caption}${thead}<tbody>${tbody}</tbody></table>`,
+        `<table class="w-full border-collapse my-3">${caption}${thead}<tbody>${tbody}</tbody>${footer}</table>`,
       )
     }
 
@@ -403,10 +430,10 @@ function renderTags(text: string): string {
       return `<span class="text-secondary font-medium italic cursor-help" title="Subclass: ${safeName}" data-hover-type="subclass" data-hover-name="${safeName}" data-hover-source="${toAttr(resolvedSubclassSource)}" data-hover-class-name="${toAttr(className)}" data-hover-class-source="${toAttr(resolvedClassSource)}">${pickDisplay(name, display)}</span>`
     })
 
-  result = result.replace(
-    /{@dice ([^}]+)}/g,
-    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">$1</span>',
-  )
+  result = result.replace(/{@dice ([^}]+)}/g, (_match, content: string) => {
+    const [roll, display] = content.split('|')
+    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">${pickDisplay(roll, display)}</span>`
+  })
   result = result.replace(
     /{@damage ([^}]+)}/g,
     '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-destructive/20 text-destructive-foreground">$1</span>',

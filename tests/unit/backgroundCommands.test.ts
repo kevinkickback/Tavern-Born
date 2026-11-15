@@ -1,12 +1,112 @@
 import { describe, expect, test } from 'vitest'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
-import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
-import { makeSourceTag } from '@/lib/provenance'
+import {
+  applyBackgroundAbilityChoicesCommand,
+  applyBackgroundSelectionCommand,
+} from '@/lib/character/commands/backgroundCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { resolveFeatChoiceCommand } from '@/lib/character/commands/featCommands'
+import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Background5e, Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('background commands', () => {
+  test('reapplying a refreshed printing replaces its fixed grants and keeps independent grants', () => {
+    const before = {
+      name: 'Acolyte',
+      source: 'XPHB',
+      skillProficiencies: [{ insight: true, religion: true }],
+      feats: [{ 'magic initiate|xphb': true }],
+    } as Background5e
+    const next = {
+      ...before,
+      skillProficiencies: [{ stealth: true }],
+      feats: [{ 'alert|xphb': true }],
+      ability: [{ choose: { weighted: { from: ['dex', 'con', 'int'], weights: [2, 1] } } }],
+    }
+    const character = makeCharacterFixture({ originSystem: '2024', background: '', equipment: [] })
+    const lookup = buildItemLookup([])
+    let current = applyCharacterCommandResult(
+      character,
+      applyBackgroundSelectionCommand(character, character.provenance, before, [], lookup),
+    )
+    const independent = makeSourceTag('class', 'Cleric', 'fixed', 'XPHB')
+    current = {
+      ...current,
+      provenance: addGrant(current.provenance, 'skills', 'insight', independent),
+    }
+    const refreshed = applyCharacterCommandResult(
+      current,
+      applyBackgroundSelectionCommand(current, current.provenance, next, [], lookup),
+    )
+    expect(refreshed.proficiencies.skills).toEqual(['insight', 'stealth'])
+    expect(refreshed.provenance.proficiencies.skills.insight).toEqual([independent])
+    expect(refreshed.provenance.feats.alert).toHaveLength(1)
+    expect(refreshed.provenance.feats['magic initiate']).toBeUndefined()
+    const setup = applyBackgroundAbilityChoicesCommand(refreshed, refreshed.provenance, next, 0, [
+      'intelligence',
+      'wisdom',
+    ])
+    expect(setup.characterPatch.backgroundAsiChoices).toEqual(['intelligence', 'wisdom'])
+    expect(setup.provenanceUpdate.abilityBonuses).toContainEqual(
+      expect.objectContaining({ ability: 'intelligence', value: 2 }),
+    )
+    expect(setup.provenanceUpdate.abilityBonuses).not.toContainEqual(
+      expect.objectContaining({ ability: 'wisdom' }),
+    )
+  })
+
+  test('a current fixed origin feat supersedes an obsolete fallback choice from the same printing', () => {
+    const background = { name: 'Acolyte', source: 'XPHB' } as Background5e
+    const blank = makeCharacterFixture({ originSystem: '2024', background: '' })
+    const lookup = buildItemLookup([])
+    const started = applyCharacterCommandResult(
+      blank,
+      applyBackgroundSelectionCommand(blank, blank.provenance, background, [], lookup),
+    )
+    const fallback = started.provenance.choices.find((choice) => choice.domain === 'feats')!
+    const chosen = applyCharacterCommandResult(
+      started,
+      resolveFeatChoiceCommand(started, started.provenance, fallback.id, {
+        name: 'Alert',
+        source: 'XPHB',
+      }),
+    )
+    const refreshed = applyBackgroundSelectionCommand(
+      chosen,
+      chosen.provenance,
+      { ...background, feats: [{ 'magic initiate|xphb': true }] },
+      [],
+      lookup,
+    )
+    expect(refreshed.provenanceUpdate.feats['magic initiate']).toHaveLength(1)
+    expect(refreshed.provenanceUpdate.feats.alert).toBeUndefined()
+    expect(refreshed.provenanceUpdate.choices.some(({ id }) => id === fallback.id)).toBe(false)
+  })
+
+  test('rejects a withdrawn saved package instead of applying a different branch', () => {
+    const background = {
+      name: 'Acolyte',
+      source: 'PHB',
+      startingEquipment: [{ a: [{ value: 500 }] }],
+    } as Background5e
+    const actor = makeCharacterFixture({
+      background: 'Acolyte',
+      backgroundSource: 'PHB',
+      backgroundEquipmentChoices: ['b'],
+    })
+    expect(() =>
+      applyBackgroundSelectionCommand(
+        actor,
+        actor.provenance,
+        background,
+        actor.backgroundEquipmentChoices!,
+        buildItemLookup([]),
+      ),
+    ).toThrow(/current Background starting equipment package/)
+  })
+
   test('applies identity, proficiencies, equipment, and currency in one result', () => {
     const pouch = { name: 'Pouch', source: 'PHB', type: 'G' } as Item5e
     const background = {

@@ -110,7 +110,7 @@ export function validateStartingEquipment(
           `Finish ${role === 'class' ? 'Class' : 'Background'} starting equipment`,
           pkg.issues?.length
             ? [...new Set(pkg.issues)].slice(0, 3).join(' ')
-            : 'Apply the current package to receive its available starting grants. Spent items and gold stay spent.',
+            : 'Apply the current package to update its starting grants. Spent items and gold stay spent.',
           navigation,
         ),
       )

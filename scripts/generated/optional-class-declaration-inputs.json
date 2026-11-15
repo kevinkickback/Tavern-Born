@@ -98,7 +98,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "e321fb1ce838ccb9661958e991cf38601bf1616db50b5ef9d47b54e20f8313cf"
+      "sha256": "f548c7fc45a9e61178ad235c1ba4fd6b35f43aa1d82e729f1de0b42cb762f79f"
     },
     {
       "file": "src/lib/5etools/featureRulesSignature.ts",
@@ -170,7 +170,7 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "2685d9bfe4543352479da7324e31ff013b024078aac425e78dcddeb6cd257355"
+      "sha256": "a7f42d96cb2ae54c198e4fe8319ec4dcf8018fc66ce8a97dee865444559fbdf6"
     },
     {
       "file": "src/types/actions.ts",
@@ -194,7 +194,7 @@
     },
     {
       "file": "src/types/effects.ts",
-      "sha256": "9297518959b78cccc0fe2f17b3b20791fd8ee6a0f03ff5fb1307640e7818c51d"
+      "sha256": "6fd7a0db46c2205d38af443871c000427eb7c46eb0c6de2e927c6ea88b6dbb47"
     },
     {
       "file": "src/types/feat.ts",

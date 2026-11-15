@@ -18,6 +18,7 @@ import type {
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
+import { composeBackgroundSources } from './backgroundSources'
 import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -501,6 +502,10 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   )
 
   for (const key of collectionKeys) {
+    if (key === 'backgrounds') {
+      composed.backgrounds = composeBackgroundSources(composed, layers)
+      continue
+    }
     if (key === 'optionalClassSections') {
       composed.optionalClassSections = mergeOptionalClassSections(layers)
       continue

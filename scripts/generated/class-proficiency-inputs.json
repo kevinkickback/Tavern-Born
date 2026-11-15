@@ -132,7 +132,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "c26a70838565798afbf159bbb48c31d9018a884f058546ac70e0a7b3e35f7f7f"
+      "sha256": "f548c7fc45a9e61178ad235c1ba4fd6b35f43aa1d82e729f1de0b42cb762f79f"
     },
     {
       "file": "src/lib/5etools/concreteToolProficiencies.ts",

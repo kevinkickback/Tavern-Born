@@ -33,6 +33,16 @@ export function validateOriginAbilityChoices(
 
   const backgroundBlock =
     calculation.abilityScores.backgroundAbilityData.blocks[character.backgroundAsiBlockIndex ?? 0]
+  if (!backgroundBlock && calculation.abilityScores.backgroundAbilityData.blocks.length > 0)
+    issues.push(
+      readinessIssue(
+        'background:ability-choices',
+        'blocking',
+        'ability-scores',
+        'Review background ability choices',
+        'The saved ability method is unavailable. Choose a current background method and abilities.',
+      ),
+    )
   if (backgroundBlock) {
     const selected = (character.backgroundAsiChoices ?? [])
       .map(normalizeAbilityName)

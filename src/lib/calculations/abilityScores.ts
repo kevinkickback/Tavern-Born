@@ -315,7 +315,7 @@ export function buildBackgroundBonuses(
   const bonuses: Partial<Record<AbilityName, number>> = {}
   for (let i = 0; i < block.weights.length; i++) {
     const ability = normalizeAbilityName(choices[i] ?? '')
-    if (!ability || seen.has(ability)) continue
+    if (!ability || !block.from.includes(ability) || seen.has(ability)) continue
     seen.add(ability)
     bonuses[ability] = (bonuses[ability] ?? 0) + block.weights[i]
   }

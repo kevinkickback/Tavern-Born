@@ -9,6 +9,7 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
+import { prepareBackgroundSources } from './backgroundSources'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import {
   type CopyResolutionDiagnostic,
@@ -505,6 +506,11 @@ export class FiveEToolsDataLoader {
         return fluffEntries ? { ...background, fluffEntries } : background
       })
     }
+    gameData.backgrounds = prepareBackgroundSources(
+      gameData,
+      gameData.backgrounds,
+      options?.deferCopyResolutionErrors,
+    )
 
     throwIfAborted(options?.signal)
 

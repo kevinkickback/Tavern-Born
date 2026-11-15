@@ -73,11 +73,50 @@ function matchesPhysical(item: Equipment, ref: StartingEquipmentReference): bool
 export interface StartingEquipmentResolvedLot {
   key: string
   reference: StartingEquipmentReference
+  /** A fixed item can retain its owned lot when an earlier row moves its address. */
+  fixed?: true
   /** Unavailable source/choice retains an existing physical lot without issuing a new one. */
   item?: Omit<Equipment, 'id' | 'equipped' | 'attuned'>
 }
 
-/** Source restoration can make previously unavailable grants issuable; consumption is never missing. */
+function getLotAddress(key: string): [number, string, number] | undefined {
+  try {
+    const address: unknown = JSON.parse(key)
+    if (
+      Array.isArray(address) &&
+      address.length === 6 &&
+      Number.isInteger(address[0]) &&
+      typeof address[1] === 'string' &&
+      Number.isInteger(address[2])
+    )
+      return [address[0], address[1], address[2]]
+  } catch {
+    return undefined
+  }
+}
+
+function findShiftedFixedLot(
+  previous: StartingEquipmentGrant['items'][number],
+  owned: readonly StartingEquipmentGrant['items'][number][],
+  desired: readonly StartingEquipmentResolvedLot[],
+  genericChoices: Readonly<Record<string, unknown>>,
+) {
+  const address = getLotAddress(previous.key)
+  if (!address || previous.reference.kind !== 'item' || genericChoices[address.join(':')])
+    return undefined
+  const reference = previous.reference
+  const sameBranchAndItem = (lot: { key: string; reference: StartingEquipmentReference }) => {
+    if (lot.reference.kind !== 'item' || !sameStartingReference(reference, lot.reference))
+      return false
+    const next = getLotAddress(lot.key)
+    return next?.[0] === address[0] && next[1] === address[1]
+  }
+  if (owned.filter(sameBranchAndItem).length !== 1) return undefined
+  const matches = desired.filter(sameBranchAndItem)
+  return matches.length === 1 && matches[0].fixed ? matches[0] : undefined
+}
+
+/** Detect additions and removals in the current package without treating consumption as missing. */
 export function needsStartingEquipmentApplication(
   character: Character,
   role: StartingEquipmentRole,
@@ -89,14 +128,19 @@ export function needsStartingEquipmentApplication(
 ): boolean {
   if (pkg.unavailablePackage) return false
   const grant = character.startingEquipmentGrants?.[role]
+  const lots = pkg.lots ?? []
   return (
-    (pkg.lots ?? []).some(
+    lots.some(
       (lot) =>
         lot.item &&
         !grant?.items.some(
           (owned) => owned.key === lot.key && owned.issuedQuantity === lot.item?.quantity,
         ),
-    ) || CURRENCY_KEYS.some((coin) => (grant?.declaredCurrency[coin] ?? 0) !== pkg.currency[coin])
+    ) ||
+    !!grant?.items.some(
+      (owned) => owned.remainingQuantity > 0 && !lots.some(({ key }) => key === owned.key),
+    ) ||
+    CURRENCY_KEYS.some((coin) => (grant?.declaredCurrency[coin] ?? 0) !== pkg.currency[coin])
   )
 }
 
@@ -119,6 +163,10 @@ export function reconcileStartingEquipmentGrant(
 ): Partial<Character> {
   const previous = character.startingEquipmentGrants?.[role] ?? emptyStartingGrant()
   const sameOwner = sameStartingReference(previous.owner, owner)
+  const genericChoices =
+    (role === 'class'
+      ? character.classEquipmentItemChoices?.[`${owner?.name}|${owner?.source}`]
+      : character.backgroundEquipmentItemChoices) ?? {}
   const wanted = new Map(desired.map((lot) => [lot.key, lot]))
   if (wanted.size !== desired.length)
     throw new RangeError('Starting equipment slots are ambiguous.')
@@ -139,7 +187,9 @@ export function reconcileStartingEquipmentGrant(
     })
   }
   for (const lot of previous.items) {
-    const next = sameOwner ? wanted.get(lot.key) : undefined
+    const next = sameOwner
+      ? (wanted.get(lot.key) ?? findShiftedFixedLot(lot, previous.items, desired, genericChoices))
+      : undefined
     if (
       next &&
       next.reference.kind === lot.reference.kind &&
@@ -147,7 +197,7 @@ export function reconcileStartingEquipmentGrant(
         ? next.reference.name === lot.reference.name
         : lot.reference.kind === 'item' && sameStartingReference(next.reference, lot.reference))
     ) {
-      retained.set(lot.key, lot)
+      retained.set(next.key, next.key === lot.key ? lot : { ...lot, key: next.key })
     } else if (lot.remainingQuantity > 0) subtract(lot.equipmentId, lot.remainingQuantity)
   }
   const items: StartingEquipmentGrant['items'] = []

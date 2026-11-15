@@ -27,6 +27,106 @@ test('prepares a personal HTTPS source using one read per file and no provider A
   expect(urls.every((url) => url.startsWith(`${online.path}/data/`))).toBe(true)
 })
 
+test.each([
+  true,
+  false,
+])('standalone admission requires the exact cross-file feature target (present: %s)', async (exact) => {
+  const target = 'Training|Guardian|XPHB|2|XPHB'
+  const feature = {
+    name: 'Training',
+    className: 'Guardian',
+    classSource: 'XPHB',
+    source: 'XPHB',
+  }
+  const payloads: Record<string, unknown> = {
+    'class/index.json': { Guardian: 'class-guardian.json', Scout: 'class-scout.json' },
+    'class/class-guardian.json': {
+      class: [{ name: 'Guardian', source: 'XPHB' }],
+      classFeature: [
+        { ...feature, level: 1, entries: ['Different gain.'] },
+        { ...feature, source: 'PHB', level: 2, entries: ['Different printing.'] },
+        ...(exact ? [{ ...feature, level: 2, entries: ['Exact training.'] }] : []),
+      ],
+    },
+    'class/class-scout.json': {
+      class: [{ name: 'Scout', source: 'XPHB', classFeatures: [target] }],
+    },
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.replace(`${online.path}/data/`, '')
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  const preparation = prepareCatalog(online, undefined, signal())
+  if (!exact) {
+    await expect(preparation).rejects.toThrow(target)
+    return
+  }
+  const { data } = await preparation
+  expect(data.classes.find(({ name }) => name === 'Scout')?.classFeatureRefs).toMatchObject([
+    { ref: target, feature: { ...feature, level: 2, entries: ['Exact training.'] } },
+  ])
+})
+
+test.each([
+  'complete',
+  'missing',
+  'cycle',
+  'ambiguous',
+])('background copy chains require complete exact ancestry: %s', async (mode) => {
+  const ancestor = {
+    name: 'Courtier',
+    source: 'PHB',
+    page: 50,
+    skillProficiencies: [{ insight: true }],
+    entries: [{ type: 'entries', name: 'Contact', entries: ['Accepted ancestor.'] }],
+  }
+  const first = {
+    name: 'Informant',
+    source: 'PHB',
+    _copy: { name: 'Courtier', source: 'PHB' },
+    skillProficiencies: null,
+  }
+  const second = {
+    name: 'Agent',
+    source: 'XGE',
+    _copy: {
+      name: 'Informant',
+      source: 'PHB',
+      _mod: { entries: { mode: 'appendArr', items: ['Exact child addition.'] } },
+    },
+  }
+  const background = [
+    { ...ancestor, source: 'XGE', entries: ['Wrong printing.'] },
+    first,
+    second,
+    ...(mode === 'missing'
+      ? []
+      : [
+          mode === 'cycle' ? { ...ancestor, _copy: { name: 'Agent', source: 'XGE' } } : ancestor,
+          ...(mode === 'ambiguous' ? [ancestor] : []),
+        ]),
+  ]
+  vi.stubGlobal('fetch', (url: string) =>
+    Promise.resolve(
+      url.endsWith('/data/backgrounds.json') ? json({ background }) : json(null, 404),
+    ),
+  )
+  const result = prepareCatalog(online, undefined, signal())
+  if (mode !== 'complete') {
+    await expect(result).rejects.toThrow(/copied record|duplicate background identity/i)
+    return
+  }
+  const agent = (await result).data.backgrounds.find(({ name }) => name === 'Agent')
+  expect(agent).toMatchObject({
+    name: 'Agent',
+    source: 'XGE',
+    entries: [ancestor.entries[0], 'Exact child addition.'],
+  })
+  expect(agent).not.toHaveProperty('skillProficiencies')
+  expect(agent).not.toHaveProperty('page')
+  expect(agent).not.toHaveProperty('_copy')
+})
+
 test('a valid external layer cannot mask a metadata-only Included SRD', async () => {
   const itemEntry = [{ name: 'Loose text', source: 'PHB', entriesTemplate: ['Shared text.'] }]
   vi.stubGlobal('window', {

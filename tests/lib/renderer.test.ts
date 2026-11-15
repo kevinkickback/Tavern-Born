@@ -84,6 +84,36 @@ describe('renderEntry', () => {
     expect(result).toContain('<td')
   })
 
+  test('preserves numeric values, authored cells, padded rolls and footnotes in table text', () => {
+    const table = {
+      type: 'table',
+      colLabels: ['Roll', 'Result'],
+      rows: [
+        [{ type: 'cell', roll: { exact: 1, pad: true } }, 0],
+        [{ type: 'cell', roll: { min: 2, max: 8, pad: true } }, 'Keep going'],
+        [
+          { type: 'cell', entry: '{@b Face card}', roll: { exact: 9 } },
+          { type: 'cell', roll: { min: 10 } },
+        ],
+      ],
+      footnotes: ['{@i Roll again} when instructed.'],
+    }
+    const preview = document.createElement('div')
+    preview.innerHTML = renderEntry(table)
+    expect([...preview.querySelectorAll('tbody td')].map((cell) => cell.textContent)).toEqual([
+      '01',
+      '0',
+      '02-08',
+      'Keep going',
+      'Face card',
+      '',
+    ])
+    expect(preview.querySelector('tfoot em')?.textContent).toBe('Roll again')
+    expect(renderEntriesToText([table])).toBe(
+      'Roll Result 01 0 02-08 Keep going Face card Roll again when instructed.',
+    )
+  })
+
   test('renders inset by flattening its entries', () => {
     const result = renderEntry({ type: 'inset', entries: ['Inset text.'] })
     expect(result).toBe('<p>Inset text.</p>')

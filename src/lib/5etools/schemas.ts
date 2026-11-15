@@ -88,10 +88,16 @@ const BackgroundSchema = z
   .object({
     name: z.string(),
     source: z.string(),
-    skillProficiencies: z.array(z.any()).optional(),
-    entries: z.array(z.any()).optional(),
+    skillProficiencies: z.array(z.any()).nullish(),
+    entries: z.array(z.any()).nullish(),
   })
   .passthrough()
+  .refine(
+    (record) =>
+      (record.skillProficiencies !== null && record.entries !== null) ||
+      (!!record._copy && typeof record._copy === 'object' && !Array.isArray(record._copy)),
+    'Only a copied background can remove inherited entries or proficiencies with null',
+  )
 
 export const BackgroundDataSchema = z
   .object({

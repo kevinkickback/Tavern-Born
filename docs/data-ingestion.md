@@ -229,6 +229,16 @@ usage bucket. Equivalent casing and order preserve identity. Duplicate descripto
 The evaluator activates one valid suite, while the save retains its applied snapshot.
 [Native spell parser tests](../tests/lib/5etools/raceSpells.test.ts)
 
+### Background copies
+
+Resolve mechanical copies against winning exact name and source pairs before normalizing origin
+rules. A copy keeps its own printing and can inherit equipment, proficiencies and entries, remove
+inherited fields with null, or apply supported array edits. Chains resolve recursively. Missing,
+ambiguous, cyclic or unsupported copies reject the candidate. An overlay can supply the exact
+parent. Source-local optional fluff attaches to its own printing. Background version expansion
+and independent fluff copies remain unsupported.
+[Pinned background copy rules](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js#L4727-L4734)
+
 ## Feature references
 
 The shared UID codec follows the pinned [5etools class reference format](https://github.com/5etools-mirror-3/5etools-src/blob/e5d052071b635f58cc8006e9727053eaf78ea8f9/js/utils.js).
@@ -251,6 +261,9 @@ selected owner, declaring feature and target identities separate. Intro presenta
 declared intro references. Raw unavailable details may remain readable without granting rules.
 Legacy stored name/source descriptions can enrich only on one unique owner/level match.
 
+A standalone external catalog also resolves cross-document class-feature targets before checking
+required references. This path supports recovery when the Included pack is unavailable.
+
 Builder follows the selected class and subclass's direct references, including exact targets
 printed under another class. This keeps inherited descriptions and the Epic Boon choice tied
 to the selected owner. Supported resource counters also require a matching declared feature
@@ -263,10 +276,15 @@ pool, or a fixed number of slot-free casts. Existing counters take precedence. S
 uses belong to the actual class or subclass owner and the qualified feature. Spell preparation
 and manual use tracking have separate rules.
 
-### Internal subclass-feature copies
+### Subclass copies
+
+Subclass-owner copies support one declared parent and retain the exact child owner. The supported
+contract covers gameplay fields and qualified references. Website-only flags and owner-level
+version or template expansion are outside that contract.
 
 Resolve copies before reference expansion, with the shared data-only copy engine. Match all seven
-fields and retain the copied row's owner and level. Nested references keep their original targets.
+subclass-feature identity fields and retain the copied row's owner and level. Nested references
+keep their original targets.
 The indexed `_meta.dependencies.subclassFeature` scope supplies copy parents and exact referenced
 features. Dependency rows stay in their producer documents. Missing, ambiguous, cyclic, unsafe or
 unsupported copies fail the required class resource. [Copy tests](../tests/lib/5etools/subclassFeatureCopies.test.ts)
@@ -366,6 +384,15 @@ traps and hazards. Parser-owned `_sourceType` keeps each kind distinct in overla
 references. Condition/status tags default to PHB. Disease and trap/hazard tags default to DMG.
 Disease previews require a disease tag. Compendium reference availability is global. Character
 condition controls and immunity names exclude diseases and statuses.
+
+## Rule text in previews and sheets
+
+Previews and the plain-text PDF projection share the entry renderer. Nested entries, lists,
+tables, exact reference labels and supported tags retain their text. Table cells can display
+authored entries, numbers, or exact and bounded rolls with their declared padding. Table
+footnotes follow the rows. An authored `{@dice}` label supplies the text when present.
+Rolls and conditional text remain instructions for the player. Unsupported entry shapes and
+site-specific layouts do not supply mechanics or inferred rules.
 
 ## Items and starting equipment
 

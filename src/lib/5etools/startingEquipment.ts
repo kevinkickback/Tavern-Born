@@ -340,7 +340,7 @@ function resolveEntries(
       fixed.entry,
       reference,
     )
-    lots.push({ key, reference, item })
+    lots.push({ key, reference, item, fixed: true })
     if (item) resolved.push(item)
     if (fixed.diagnostic) {
       issues.push(fixed.diagnostic)
@@ -471,6 +471,7 @@ function resolveEntries(
           reference,
         ),
         reference,
+        fixed: true,
         item: item._unresolved ? undefined : item,
       })
       resolved.push(item)
@@ -635,6 +636,17 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
     }
   }
   return keys.sort()
+}
+
+export function hasInvalidStartingEquipmentPackage(
+  blocks: readonly unknown[],
+  choices: readonly string[],
+): boolean {
+  return choices.some((choice, index) => {
+    if (!choice) return false
+    const block = normalizeChoiceBlock(blocks[index])
+    return !block || !getBlockChoiceKeys(block).includes(choice.toLowerCase())
+  })
 }
 
 function unavailableDruidPackage(
