@@ -143,11 +143,16 @@ test('secondary sidebar stays collapsed across workspaces and reloads', async ({
   await expect(toggle.locator('.lucide-panel-left-close')).toBeVisible()
   const filter = sidebar.getByRole('button', { name: '2024 0' })
   await filter.click()
-  const content = page.locator('main')
+  const content = page.locator('main').locator('..')
   const status = page.getByRole('status', { name: 'Application status' })
   const sidebarWidth = (await sidebar.boundingBox())!.width
   const openContent = (await content.boundingBox())!
   const openStatus = (await status.boundingBox())!
+  const shellBounds = (await shell.boundingBox())!
+  const railBounds = (await rail.locator('..').boundingBox())!
+  const rightGap = shellBounds.x + shellBounds.width - (openContent.x + openContent.width)
+  const reclaimedWidth = sidebarWidth - rightGap
+  expect(rightGap).toBeGreaterThan(0)
   await shell.evaluate((element) => {
     element.addEventListener('transitionrun', (event) => {
       if (
@@ -172,10 +177,16 @@ test('secondary sidebar stays collapsed across workspaces and reloads', async ({
   await expect(shell).toHaveAttribute('data-sidebar-transitions', '1')
   await expect
     .poll(async () => (await content.boundingBox())!.width - openContent.width)
-    .toBeCloseTo(sidebarWidth)
+    .toBeCloseTo(reclaimedWidth)
   await expect
     .poll(async () => (await status.boundingBox())!.width - openStatus.width)
-    .toBeCloseTo(sidebarWidth)
+    .toBeCloseTo(reclaimedWidth)
+  const closedContent = (await content.boundingBox())!
+  expect(closedContent.x - (railBounds.x + railBounds.width)).toBeCloseTo(rightGap)
+  expect(shellBounds.x + shellBounds.width - (closedContent.x + closedContent.width)).toBeCloseTo(
+    rightGap,
+  )
+  await expect(page.locator('#secondary-workspace-sidebar')).toHaveCSS('opacity', '0')
 
   await toggle.press('Space')
   await expect(filter).toHaveAttribute('aria-pressed', 'true')
@@ -185,7 +196,7 @@ test('secondary sidebar stays collapsed across workspaces and reloads', async ({
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(shell).toHaveCSS('transition-property', 'none')
   await toggle.click()
-  expect((await content.boundingBox())!.width - openContent.width).toBeCloseTo(sidebarWidth)
+  expect((await content.boundingBox())!.width - openContent.width).toBeCloseTo(reclaimedWidth)
   await rail.getByRole('button', { name: 'Settings', exact: true }).click()
   const settingsSidebar = page.getByRole('complementary', { name: 'Settings navigation' })
   await expect(page.getByRole('region', { name: 'General', exact: true })).toBeVisible()

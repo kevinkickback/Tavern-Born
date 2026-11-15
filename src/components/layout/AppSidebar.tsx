@@ -404,7 +404,10 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
         aria-label={`${activeWorkspace.label} navigation`}
         aria-hidden={secondarySidebarOpen ? undefined : true}
         inert={!secondarySidebarOpen}
-        className="col-start-2 row-start-2 flex min-w-0 flex-col overflow-hidden bg-transparent"
+        className={cn(
+          'col-start-2 row-start-2 flex min-w-0 flex-col overflow-hidden bg-transparent transition-opacity duration-200 ease-out motion-reduce:transition-none',
+          !secondarySidebarOpen && 'opacity-0',
+        )}
       >
         <nav className="min-w-56 flex-1 overflow-y-auto px-2 py-2" aria-label="Workspace pages">
           {isLibrary ? (

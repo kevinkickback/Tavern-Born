@@ -41,6 +41,25 @@ test.beforeEach(async ({ page }) => {
   await ensureStartupPromptResolved(page, 'e2e-route-guard-seed')
 })
 
+test('Appearance aligns theme and accent controls when the workspace has room', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/#/settings?section=appearance')
+  const panel = page.getByRole('region', { name: 'Appearance', exact: true })
+  const theme = panel.getByText('Theme Mode', { exact: true })
+  const accent = panel.getByText('Accent Color', { exact: true })
+  await expect(accent).toBeVisible()
+  expect((await accent.boundingBox())!.y).toBeCloseTo((await theme.boundingBox())!.y)
+  const first = panel.getByText('Infernal', { exact: true })
+  const last = panel.getByText('Chroma', { exact: true })
+  expect((await last.boundingBox())!.y).toBeCloseTo((await first.boundingBox())!.y)
+
+  await page.setViewportSize({ width: 720, height: 720 })
+  expect((await accent.boundingBox())!.y).toBeGreaterThan((await theme.boundingBox())!.y)
+  expect((await last.boundingBox())!.y).toBeGreaterThan((await first.boundingBox())!.y)
+})
+
 test('each appearance accent uses its exact swatch and readable light and dark shades', async ({
   page,
 }) => {

@@ -50,9 +50,9 @@ export function AppearancePanel() {
       <Section
         title="Appearance"
         description="Choose your color scheme and accent."
-        className="pt-0"
+        className="@container pt-0"
       >
-        <div className="flex flex-wrap gap-6">
+        <div className="grid gap-3 @min-[28rem]:grid-cols-[auto_minmax(0,1fr)]">
           {/* Theme Mode */}
           <div className="space-y-3 shrink-0">
             <p className="text-sm font-medium">Theme Mode</p>
@@ -130,10 +130,8 @@ export function AppearancePanel() {
             </RadioGroup>
           </div>
 
-          <div className="w-px self-stretch bg-border shrink-0" />
-
           {/* Accent Color */}
-          <div className="space-y-3 min-w-0">
+          <div className="min-w-0 space-y-3 @min-[28rem]:border-l @min-[28rem]:border-border @min-[28rem]:pl-3">
             <p className="text-sm font-medium">Accent Color</p>
             <RadioGroup
               value={themeAccent}
