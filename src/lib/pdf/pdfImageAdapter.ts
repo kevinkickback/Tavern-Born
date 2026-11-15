@@ -43,10 +43,18 @@ export async function applySheetImage(
 
   if (source && mode !== 'none') {
     try {
-      const location = findAttachedWidgetLocation(pdfDoc, field.acroField.getWidgets())
-      const blob = location && (await loadImage(source, resolve))
-      if (location && blob) {
-        const { x, y, width, height } = location.widget.getRectangle()
+      const widgets = field.acroField.getWidgets()
+      const location = findAttachedWidgetLocation(pdfDoc, widgets)
+      const widget = location?.widget ?? widgets[0]
+      const pages = pdfDoc.getPages()
+      // Some templates retain the widget's page reference without listing it as an annotation.
+      const pageRef = widgets[0]?.P()?.tag
+      const page = location
+        ? pages[location.pageIndex]
+        : (pages.find((candidate) => candidate.ref.tag === pageRef) ?? pages[0])
+      const blob = widget && page && (await loadImage(source, resolve))
+      if (blob) {
+        const { x, y, width, height } = widget.getRectangle()
         const grayscale = mode === 'grayscale'
         const bytes = grayscale ? null : new Uint8Array(await blob.arrayBuffer())
         const image =
@@ -58,7 +66,7 @@ export async function applySheetImage(
                   : await convertImageToPng(blob, grayscale),
               )
         const size = image.scaleToFit(width, height)
-        pdfDoc.getPage(location.pageIndex).drawImage(image, {
+        page.drawImage(image, {
           ...size,
           x: x + (width - size.width) / 2,
           y: y + (height - size.height) / 2,
