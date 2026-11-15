@@ -171,6 +171,53 @@ describe('EquipmentPage item details', () => {
     expect(within(statistics).queryByText('L')).toBeNull()
   })
 
+  test.each([
+    { savedName: baseRelic.name, savedSource: undefined, item: baseRelic },
+    {
+      savedName: 'Base|Relic',
+      savedSource: 'PHB',
+      item: { ...baseRelic, name: 'Base', source: 'Relic|PHB' },
+    },
+  ])('shows saved physical values without substituting a different item for $savedName', ({
+    savedName,
+    savedSource,
+    item,
+  }) => {
+    const character = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'saved',
+          name: savedName,
+          source: savedSource,
+          type: 'M',
+          quantity: 2,
+          equipped: false,
+          dmg1: '1d4',
+          dmgType: 's',
+          weight: 2,
+          description: 'Saved rules text.',
+        },
+      ],
+    })
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+    const catalog = useGameDataStore.getState().gameData!
+    useGameDataStore.setState({
+      gameData: {
+        ...catalog,
+        lookups: {
+          ...catalog.lookups!,
+          itemLookup: new Map([[`${item.name}|${item.source}`.toLowerCase(), item]]),
+        },
+      },
+    })
+    renderPage()
+    const statistics = screen.getByRole('region', { name: 'Item statistics' })
+    expect(within(statistics).getByText('1d4 Slashing')).toBeTruthy()
+    expect(within(statistics).getByText('2 lb each')).toBeTruthy()
+    expect(screen.getByText('Saved rules text.')).toBeTruthy()
+    expect(screen.queryByText('Resolved base-item tooltip text.')).toBeNull()
+  })
+
   test('recovers property names when the saved lookup only contains Versatile', () => {
     const character = useCharacterStore.getState().activeCharacter!
     const withProperties = {

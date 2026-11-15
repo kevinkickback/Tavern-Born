@@ -15,6 +15,7 @@ import {
   isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
 import { renderEntryCached } from '@/lib/entryRenderCache'
+import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
 
@@ -240,6 +241,9 @@ export const ItemCard = memo(function ItemCard({
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? RARITY_COLORS.unknown
   const itemPropertyByAbbr = useItemPropertyLookup()
+  const physicalDetails = buildCatalogItemDetailFields(item, itemPropertyByAbbr).filter(
+    ({ label }) => label === 'Damage' || label === 'Range' || label === 'Value',
+  )
   const armorCategoryLabel = getArmorCategoryLabel(
     getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory,
   )
@@ -308,6 +312,15 @@ export const ItemCard = memo(function ItemCard({
           </Badge>
         )}
       </div>
+      {physicalDetails.length > 0 && (
+        <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {physicalDetails.map(({ label, value }) => (
+            <span key={label} className="flex gap-1">
+              {label} <span className="font-medium text-foreground">{value}</span>
+            </span>
+          ))}
+        </span>
+      )}
       {description && (
         <p
           className={cn(

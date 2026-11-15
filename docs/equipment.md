@@ -85,3 +85,22 @@ training for its own exact item. Editionless Molten Bronze Skin has no eligible 
 base because the authored requirements explicitly name classic PHB printings.
 
 Generation changes invalidate the parsed cache. Saved inventory retains its facts and prose, and live effects resume when the exact source returns.
+
+## Weapon and ammunition template support
+
+Qualified weapon and loose ammunition templates preserve the exact public base's physical facts,
+including damage, range, properties and eligible Weapon Mastery. Source edition and authored
+requirements select the base. An exact concrete printing takes precedence. Generated forms belong
+to Other for starting equipment.
+
+| Rules | Behavior |
+| --- | --- |
+| Fixed weapon attack and damage bonuses | Apply audited declarations to the owning equipped weapon, with attunement when its printing requires it. Dragon Slayer and Giant Slayer apply their standing +1 this way. Changed declarations stay visible for manual use until qualified. |
+| Target conditions, activation and charges | Use the item's authored text for Dragon Slayer's extra damage, Flame Tongue's active flames, Warning's initiative benefits, and Enspelled spell binding and charges. |
+| Loose ammunition | Preserve the physical ammunition and authored text. Apply Slaying, Walloping, and Adamantine per hit, and handle classic silvering and adamantine prices manually. |
+| Forms with additional rules dependencies | Templates that change attack modes, base properties, value, bearer eligibility, or mutable bonuses remain reference entries until those mechanics can be represented faithfully. Examples include Energy Bow's Force attacks, Defender's AC transfer, and Drow sunlight degradation. |
+
+Focus staves, animal barding, and the classic Warning net remain reference-only template matches.
+Authored concrete staves stay available under their own identities. Dedicated magic-item
+descriptions print in the 2014 custom sheet. Other supported sheets include the inventory and
+weapon values in their corresponding fields.
