@@ -94,8 +94,9 @@ On macOS and Windows Portable, the update dialog links to the official release d
 Install the new Mac app from its DMG or replace the portable executable with the new download.
 Upgrading from macOS v0.6.0 or earlier starts on the
 [GitHub releases page](https://github.com/kevinkickback/Tavern-Born/releases).
-On Windows Setup and Linux, a completed download offers Restart or Save and restart. Later keeps
-the downloaded update ready for the current app session. The renderer waits for the character save
+On Windows Setup and Linux, Download starts the transfer. A completed download opens at Restart
+or Save and restart whenever the dialog is reopened during the current app session. Normal quit
+leaves installation for an explicit restart request. The renderer waits for the character save
 and the main process waits for the editor window to close before running the installer. A close
 veto leaves the editor open. The app reopens its window and displays errors reported before the
 updater hands off the quit. Packaged update tests verify the platform installer and relaunch paths.

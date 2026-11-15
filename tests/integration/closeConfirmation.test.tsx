@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ipcRenderer } from 'electron'
 import { type PropsWithChildren, StrictMode } from 'react'
@@ -56,12 +56,12 @@ vi.mock('@/components/updates/ChangelogModal', () => ({
   ChangelogModal: ({
     open,
     version,
-    onInstall,
+    onDownload,
     onOpenDownloadPage,
   }: {
     open: boolean
     version: string
-    onInstall?: () => void
+    onDownload?: () => void
     onOpenDownloadPage?: () => Promise<void>
   }) =>
     open ? (
@@ -70,15 +70,11 @@ vi.mock('@/components/updates/ChangelogModal', () => ({
           Open Download Page
         </button>
       ) : (
-        <button type="button" onClick={onInstall}>
-          Install {version}
+        <button type="button" onClick={onDownload}>
+          Download {version}
         </button>
       )
     ) : null,
-}))
-vi.mock('@/components/updates/UpdateProgressModal', () => ({
-  UpdateProgressModal: ({ open, version }: { open: boolean; version: string }) =>
-    open ? <p>Downloading {version}</p> : null,
 }))
 vi.mock('@/pages/HomePage', () => ({ RoutedHomePage: () => <div>Home page</div> }))
 
@@ -95,6 +91,9 @@ describe('close-confirmation preload and application lifecycle', () => {
   beforeEach(() => {
     ipcRenderer.removeAllListeners()
     vi.clearAllMocks()
+    bridge.invoke.mockImplementation(async (channel) =>
+      channel === 'update:download' ? { success: true } : undefined,
+    )
     vi.stubGlobal('electronAPI', api)
     window.location.hash = '/'
   })
@@ -135,18 +134,18 @@ describe('close-confirmation preload and application lifecycle', () => {
       announce('0.7.0')
     })
     await user.click(screen.getByRole('button', { name: 'App update available' }))
-    const install = await screen.findByRole('button', { name: 'Install 0.7.0' })
+    const install = await screen.findByRole('button', { name: 'Download 0.7.0' })
     act(() => {
       ipcRenderer.emit('update-not-available', {})
     })
     expect(screen.queryByRole('button', { name: 'App update available' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Install 0.7.0' })).toBe(install)
+    expect(screen.getByRole('button', { name: 'Download 0.7.0' })).toBe(install)
 
     await user.click(install)
     act(() => {
       announce('0.8.0')
     })
-    expect(screen.getByText('Downloading 0.7.0')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Downloading v0.7.0...' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'App update available' })).toBeTruthy()
   })
 
@@ -171,7 +170,59 @@ describe('close-confirmation preload and application lifecycle', () => {
     await user.click(await screen.findByRole('button', { name: 'Open Download Page' }))
     expect(bridge.invoke).toHaveBeenCalledWith('update:open-download-page')
     expect(bridge.invoke).not.toHaveBeenCalledWith('update:download')
-    expect(screen.queryByRole('button', { name: 'Install 0.7.1' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Download 0.7.1' })).toBeNull()
+  })
+
+  test('reopens a completed download directly after dismissing it', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    act(() => {
+      ipcRenderer.emit(
+        'update-available',
+        {},
+        {
+          version: '0.7.0',
+          changelog: null,
+          useReleaseDownloadPage: false,
+        },
+      )
+    })
+    const action = screen.getByRole('button', { name: 'App update available' })
+    const open = () => user.click(action)
+    await open()
+    await user.click(await screen.findByRole('button', { name: 'Download 0.7.0' }))
+    expect(screen.getByRole('heading', { name: 'Downloading v0.7.0...' })).toBeTruthy()
+    act(() => ipcRenderer.emit('update-downloaded', {}, { version: '0.7.0' }))
+
+    const dismissals = [
+      () => user.click(screen.getByRole('button', { name: 'Later' })),
+      () => user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' })),
+      () => user.keyboard('{Escape}'),
+    ]
+    for (const dismiss of dismissals) {
+      await dismiss()
+      expect(screen.queryByRole('dialog')).toBeNull()
+      await waitFor(() => expect(document.activeElement).toBe(action))
+      await open()
+      expect(screen.getByRole('dialog', { name: 'Update Ready' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Restart' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Download 0.7.0' })).toBeNull()
+    }
+    expect(bridge.invoke.mock.calls.filter(([channel]) => channel === 'update:download')).toEqual([
+      ['update:download'],
+    ])
+    expect(bridge.invoke).not.toHaveBeenCalledWith('update:install')
+  })
+
+  test('opens directly to Restart after reloading a renderer with a completed download', async () => {
+    const user = userEvent.setup()
+    bridge.invoke.mockImplementation(async (channel) =>
+      channel === 'update:status' ? { status: 'downloaded', version: '0.7.0' } : undefined,
+    )
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'App update available' }))
+    expect(screen.getByRole('dialog', { name: 'Update Ready' })).toBeTruthy()
+    expect(bridge.invoke).not.toHaveBeenCalledWith('update:download')
   })
 
   test('delivers no event or payload and removes the exact wrapper', () => {

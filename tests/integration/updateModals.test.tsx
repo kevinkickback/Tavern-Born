@@ -33,7 +33,7 @@ describe('update modals', () => {
         'Download the new version from the release page and replace your current app.',
       ),
     ).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Install Now' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open Download Page' }))
     expect(onOpenDownloadPage).toHaveBeenCalledTimes(1)
   })
@@ -53,7 +53,7 @@ describe('update modals', () => {
             version="2.0.0"
             changelog="Release notes"
             updateAvailable
-            onInstall={vi.fn()}
+            onDownload={vi.fn()}
           />
         </>
       )
@@ -64,6 +64,7 @@ describe('update modals', () => {
     action.focus()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(document.activeElement).toBe(action))
   })
@@ -141,7 +142,6 @@ describe('update modals', () => {
 
   test('can defer a downloaded update and wait for durable save before a requested restart', async () => {
     const user = userEvent.setup()
-    let notifyDownloaded: (() => void) | undefined
     let acknowledgeSave: (() => void) | undefined
     let dirty = true
     const store = useCharacterStore.getState()
@@ -159,18 +159,15 @@ describe('update modals', () => {
         downloadUpdate: vi.fn(async () => ({ success: true })),
         installUpdate,
         onDownloadProgress: vi.fn(() => vi.fn()),
-        onUpdateDownloaded: vi.fn((callback: () => void) => {
-          notifyDownloaded = callback
-          return vi.fn()
-        }),
         onUpdateError: vi.fn(() => vi.fn()),
         onUpdateCancelled: vi.fn(() => vi.fn()),
       },
     })
     const onOpenChange = vi.fn()
-    const modal = <UpdateProgressModal version="2.0.0" open onOpenChange={onOpenChange} />
+    const modal = (
+      <UpdateProgressModal version="2.0.0" open downloaded onOpenChange={onOpenChange} />
+    )
     const { rerender } = render(modal)
-    act(() => notifyDownloaded?.())
     await user.click(screen.getByRole('button', { name: 'Later' }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
     expect(save).not.toHaveBeenCalled()
@@ -178,7 +175,6 @@ describe('update modals', () => {
 
     rerender(<UpdateProgressModal version="2.0.0" open={false} onOpenChange={onOpenChange} />)
     rerender(modal)
-    act(() => notifyDownloaded?.())
     await user.click(screen.getByRole('button', { name: 'Save and restart' }))
     expect(save).toHaveBeenCalledTimes(1)
     expect(installUpdate).not.toHaveBeenCalled()

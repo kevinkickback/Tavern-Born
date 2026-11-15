@@ -139,6 +139,20 @@ export interface UnavailableCharacterContent {
   source?: string
 }
 
+export function getSavedSpellReferences(character: Character) {
+  return [
+    ...character.spells.spellProfiles.flatMap((profile) => [
+      ...profile.cantrips,
+      ...profile.spellsKnown,
+      ...profile.preparedSpells,
+      ...(profile.fixedSpells ?? []),
+      ...(profile.alwaysPreparedSpells ?? []),
+      ...(profile.choices ?? []).flatMap((choice) => choice.selected),
+    ]),
+    ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
+  ]
+}
+
 /** Exact saved targets. An empty character filter leaves the full loaded catalog authoritative. */
 export function* getUnavailableCharacterContent(
   saved: Character,
@@ -287,18 +301,7 @@ export function* getUnavailableCharacterContent(
     if (itemIsMissing(item, index)) yield item
   }
 
-  const spellReferences = character.spells.spellProfiles.flatMap((profile) => [
-    ...profile.cantrips,
-    ...profile.spellsKnown,
-    ...profile.preparedSpells,
-    ...(profile.fixedSpells ?? []),
-    ...(profile.alwaysPreparedSpells ?? []),
-    ...(profile.choices ?? []).flatMap((choice) => choice.selected),
-  ])
-  for (const reference of [
-    ...spellReferences,
-    ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
-  ]) {
+  for (const reference of getSavedSpellReferences(character)) {
     const spell = parseSpellReference(reference)
     if (spellMissing(spell)) yield spell
   }

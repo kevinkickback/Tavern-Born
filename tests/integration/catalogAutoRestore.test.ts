@@ -1,9 +1,20 @@
+import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { del, set } from 'idb-keyval'
+import { del, get, set } from 'idb-keyval'
 import { afterEach, expect, test, vi } from 'vitest'
 import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { savedCharactersSurviveRebuild } from '@/lib/character/catalogRebuildCompatibility'
+import {
+  buildClassChoiceFeatureCatalogs,
+  getCharacterClassChoices,
+} from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { createEmptyCharacter } from '@/lib/character/createCharacter'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import {
   clearGameDataCache,
   computeGameDataFingerprint,
@@ -12,9 +23,11 @@ import {
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { DataSourceConfig } from '@/types/5etools'
+import type { DataSourceConfig, Spell5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { readLocalCatalogResource } from '../../electron/localCatalogResource'
 import { itemTextTypes } from '../fixtures/itemEntryFixtures'
+import { makePsionicFixture } from '../fixtures/psionicFixtures'
 
 const refreshMetadataWrite = vi.hoisted(() => vi.fn(async () => {}))
 
@@ -43,16 +56,7 @@ afterEach(async () => {
   await del('character-storage')
 })
 
-async function setUpObsoleteCache(
-  origin: Exclude<DataSourceConfig, { type: 'bundled' }> = source,
-  options?: {
-    itemFilter?: boolean
-    itemLink?: string
-    featLink?: string
-    creature?: 'display' | 'gear'
-    beforeLocalActivation?: () => Promise<void>
-  },
-) {
+async function setUpObsoleteCache(origin: Exclude<DataSourceConfig, { type: 'bundled' }> = source) {
   vi.stubGlobal('electronAPI', {
     getBundledManifest: () => Promise.resolve(installed),
     readBundledJson: async (path: string) => {
@@ -77,10 +81,12 @@ async function setUpObsoleteCache(
         ? { observed: true, stamp: result.stamp }
         : { observed: true, stamp: result.stamp, data: JSON.parse(result.text) }
     },
-    approveLocalDataRoot: () => options?.beforeLocalActivation?.(),
+    approveLocalDataRoot: () => beforeLocalActivation?.(),
   })
+  let beforeLocalActivation: (() => Promise<void>) | undefined
   let feat = 'Original feat'
   let warning = false
+  let upstreamMetadata = {}
   let head = revision
   let holdRead: Promise<void> | undefined
   const fetch = vi.fn(async (url: string) => {
@@ -134,50 +140,14 @@ async function setUpObsoleteCache(
         ],
       })
     if (path === 'fluff-races.json' && warning) return new Response(null, { status: 503 })
-    if (path === 'bestiary/index.json' && options?.creature)
-      return Response.json({ MM: 'bestiary-mm.json' })
-    if (path === 'bestiary/bestiary-mm.json' && options?.creature)
-      return Response.json({
-        monster: [
-          {
-            name: 'Armored Guard',
-            source: 'MM',
-            ac: [{ ac: 13, from: ['{@item Leather Armor of Fire Resistance}'] }],
-            variant: [
-              { entries: [{ entries: ['It wears {@item Leather Armor of Fire Resistance}.'] }] },
-            ],
-            ...(options.creature === 'gear' && { gear: ['Leather Armor of Fire Resistance|DMG'] }),
-          },
-        ],
-      })
-    if (path === 'items.json' && options?.itemLink)
-      return Response.json({
-        item: [{ name: 'Example Armor', source: 'DMG', entries: [options.itemLink] }],
-      })
-    if (path === 'backgrounds.json' && options?.itemFilter)
-      return Response.json({
-        background: [
-          {
-            name: 'Armor Collector',
-            source: 'PHB',
-            entries: [
-              {
-                type: 'entries',
-                name: 'Equipment:',
-                entries: ['Choose {@filter light armor|items|type=LA}.'],
-              },
-            ],
-          },
-        ],
-      })
     if (path !== 'feats.json') return new Response(null, { status: 404 })
     await holdRead
     return Response.json({
+      ...upstreamMetadata,
       feat: [
         {
           name: feat,
           source: 'PHB',
-          ...(options?.featLink && { entries: [options.featLink] }),
         },
       ],
     })
@@ -200,9 +170,15 @@ async function setUpObsoleteCache(
   useGameDataStore.setState(initial)
   return {
     accepted: obsolete,
+    beforeActivation: (callback: () => Promise<void>) => {
+      beforeLocalActivation = callback
+    },
     fetch,
     changeRevision: () => {
       head = 'b'.repeat(40)
+    },
+    changeUpstreamMetadata: () => {
+      upstreamMetadata = { parserIgnoresThis: true }
     },
     changeContent: () => {
       feat = 'Updated feat'
@@ -217,99 +193,162 @@ async function setUpObsoleteCache(
 }
 
 const start = () => useGameDataStore.getState().loadFromCache({ checkForUpdates: true })
-const qualifiedLink = 'See {@item Leather Armor of Fire Resistance|dmg}.'
+const item = {
+  id: 'inventory-hat',
+  name: 'Fixture Hat',
+  source: 'DMG',
+  type: 'G',
+  quantity: 1,
+  equipped: true,
+}
+
+test('same printing does not establish that a saved class or spell still works', () => {
+  const character = createEmptyCharacter({
+    name: 'Saved character',
+    classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+  })
+  character.spells.spellProfiles[0].cantrips = ['Fire Bolt|PHB']
+  const fighter = { name: 'Fighter', source: 'PHB', hd: { faces: 10 } }
+  const bolt: Spell5e = {
+    name: 'Fire Bolt',
+    source: 'PHB',
+    level: 0,
+    school: 'V',
+    time: [{ number: 1, unit: 'action' }],
+    range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+    duration: [{ type: 'instant' }],
+    entries: ['1d10 fire damage'],
+  }
+  const old = { ...createEmptyGameData(), classes: [fighter], spells: [bolt] }
+  expect(savedCharactersSurviveRebuild(old, old, [character])).toBe(true)
+  expect(
+    savedCharactersSurviveRebuild(
+      old,
+      { ...old, spells: [{ ...bolt, entries: ['2d10 cold damage'] }] },
+      [character],
+    ),
+  ).toBe(false)
+  expect(
+    savedCharactersSurviveRebuild(old, { ...old, classes: [{ ...fighter, hd: { faces: 6 } }] }, [
+      character,
+    ]),
+  ).toBe(false)
+})
+
+test.skipIf(!existsSync('data/psionics.json') || !existsSync('data/class/class-mystic.json'))(
+  'checks a saved psionic printing even when the source is filtered',
+  () => {
+    const { data, character: fixture } = makePsionicFixture()
+    const character = createEmptyCharacter({
+      name: fixture.name,
+      allowedSources: fixture.allowedSources,
+      classProgression: fixture.classProgression,
+      initialClass: fixture.initialClass,
+    })
+    const catalogs = buildClassChoiceFeatureCatalogs(data)
+    const cls = data.classes.find(({ name }) => name === 'Mystic')!
+    const subclass = cls.subclasses?.find(({ name }) => name === 'Order of the Avatar')
+    const choice = getCharacterClassChoices(
+      cls,
+      subclass,
+      createOptionalClassFeatureActivity(character, catalogs),
+      catalogs,
+    ).find(({ label }) => label === 'Psionic Talents')!
+    const talent = (data.psionics ?? []).find(({ name }) => name === 'Mind Thrust')!
+    const withTalent = applyCharacterCommandResult(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        choice,
+        [{ entityType: 'psionic', name: talent.name, source: talent.source }],
+        { classes: data.classes, catalogs },
+      ),
+    )
+    const saved = characterPersistenceSchema.parse({ ...withTalent, allowedSources: [] })
+    const changed = {
+      ...data,
+      psionics: data.psionics?.map((row) =>
+        row === talent ? { ...row, entries: ['Changed talent damage'] } : row,
+      ),
+    }
+    expect(savedCharactersSurviveRebuild(data, data, [saved])).toBe(true)
+    expect(savedCharactersSurviveRebuild(data, changed, [saved])).toBe(false)
+  },
+)
 
 test.each([
-  'match',
-  'changed revision',
-  'old record edit',
-  'old reference',
-  'repaired item link',
-  'repaired creature links',
-  'creature gear reference',
-  'different item link source',
-  'encoded old link',
-  'old feat link',
-  'old item filter',
-  'manual check',
-  'matching local files',
-  'changed local bytes',
-  'local library race',
-] as const)('handles an additive startup rebuild with %s', async (condition) => {
-  const isLocal = condition.includes('local')
-  const folder = isLocal ? await mkdtemp(join(tmpdir(), 'tavern-restore-')) : undefined
-  const origin = folder ? { type: 'local' as const, path: folder, isValid: true } : github
-  let race: (() => Promise<void>) | undefined
+  { condition: 'same GitHub commit', kind: 'github', restores: true },
+  { condition: 'same HTTPS inputs without a validator', kind: 'https', restores: true },
+  { condition: 'same folder inputs', kind: 'local', restores: true },
+  { condition: 'different GitHub commit', kind: 'github', restores: false },
+  { condition: 'changed HTTPS input', kind: 'https', restores: false },
+  { condition: 'changed local bytes', kind: 'local', restores: false },
+  { condition: 'missing prior HTTPS hashes', kind: 'https', restores: false },
+  { condition: 'missing saved choice', kind: 'github', restores: false },
+  { condition: 'changed saved item benefit', kind: 'github', restores: false },
+  { condition: 'unsupported saved character', kind: 'github', restores: false },
+  { condition: 'manual check', kind: 'github', restores: false },
+  { condition: 'library race', kind: 'local', restores: false },
+])('handles startup reparse with $condition', async ({ condition, kind, restores }) => {
+  const folder = kind === 'local' ? await mkdtemp(join(tmpdir(), 'tavern-restore-')) : undefined
+  const origin = folder
+    ? { type: 'local' as const, path: folder, isValid: true }
+    : kind === 'https'
+      ? source
+      : github
+  const changedLibrary = vi.fn(() => set('character-storage', { state: { characters: [] } }))
   try {
-    const { accepted, changeRevision } = await setUpObsoleteCache(origin, {
-      itemFilter: condition === 'old item filter',
-      itemLink:
-        condition === 'repaired item link'
-          ? qualifiedLink
-          : condition === 'different item link source'
-            ? qualifiedLink.replace('|dmg', '|xdmg')
-            : condition === 'encoded old link'
-              ? qualifiedLink.replace('Leather Armor', 'Leather&#32;Armor')
-              : undefined,
-      featLink: condition === 'old feat link' ? qualifiedLink : undefined,
-      creature:
-        condition === 'repaired creature links'
-          ? 'display'
-          : condition === 'creature gear reference'
-            ? 'gear'
-            : undefined,
-      beforeLocalActivation: async () => race?.(),
-    })
+    const { accepted, changeRevision, changeUpstreamMetadata, beforeActivation } =
+      await setUpObsoleteCache(origin)
+    if (condition === 'library race') beforeActivation(changedLibrary)
     const { settings } = await readGameDataCachePair()
-    const added = accepted.data.items.find(
-      (item) => item.magicVariantGenerated && item.name === 'Leather Armor of Fire Resistance',
-    )!
-    expect(added).toBeDefined()
-    if (condition === 'repaired creature links' || condition === 'creature gear reference')
-      expect(accepted.data.creatures?.find(({ name }) => name === 'Armored Guard')).toMatchObject({
-        ac: [{ ac: 13, from: ['{@item Leather Armor of Fire Resistance}'] }],
-        ...(condition === 'creature gear reference' && {
-          gear: ['Leather Armor of Fire Resistance|DMG'],
-        }),
-      })
-    const { materialArmorDiagnostics, ...previousData } = accepted.data
-    expect(materialArmorDiagnostics).toEqual([])
+    // Same source can yield different parsed rows after a parser upgrade.
     const oldData = {
-      ...previousData,
-      items: accepted.data.items.filter((item) => item.name !== added.name),
-      feats:
-        condition === 'old record edit'
-          ? accepted.data.feats.map((feat) => ({
-              ...feat,
-              name: feat.name === 'Original feat' ? 'Previous feat' : feat.name,
-            }))
-          : accepted.data.feats,
+      ...accepted.data,
+      lookups: undefined,
+      feats: accepted.data.feats.map((row) =>
+        row.name === 'Original feat' ? { ...row, entries: ['Old parser output'] } : row,
+      ),
+      items: accepted.data.items
+        .filter((row) => !row.magicVariantGenerated)
+        .map((row) =>
+          condition === 'changed saved item benefit' && row.name === item.name
+            ? { ...row, bonusAc: '+1' }
+            : row,
+        ),
     }
     const fingerprint = computeGameDataFingerprint(oldData)
-    const externalKeys = accepted.externalKeys?.filter(
-      (key) => !key.includes(added.name.toLowerCase()),
-    )
     await set('tb:game-data-cache', {
       ...accepted,
       data: oldData,
       contentFingerprint: fingerprint,
-      externalKeys,
+      externalKeys: accepted.externalKeys?.filter(
+        (key) => !key.includes('leather armor of fire resistance'),
+      ),
     })
     await set(GAME_DATA_SETTINGS_KEY, {
-      state: { ...settings, lastContentFingerprint: fingerprint },
+      state: {
+        ...settings,
+        lastContentFingerprint: fingerprint,
+        ...(condition === 'missing prior HTTPS hashes' && {
+          dataSourceConfig: { ...settings?.dataSourceConfig, resourceProof: undefined },
+        }),
+      },
     })
-    if (condition === 'changed revision') changeRevision()
-    const addSavedReference = () =>
-      set('character-storage', {
-        state: { characters: [{ equipment: [{ name: added.name, source: added.source }] }] },
-      })
-    if (condition === 'old reference') await addSavedReference()
+    const character = createEmptyCharacter({
+      name: 'Saved character',
+      equipment: [condition === 'missing saved choice' ? { ...item, name: 'Missing item' } : item],
+      ...(condition === 'unsupported saved character' && { schemaVersion: 0 }),
+    })
+    const savedLibrary = { state: { characters: [character] } }
+    await set('character-storage', savedLibrary)
+    if (condition === 'different GitHub commit') changeRevision()
+    if (condition === 'changed HTTPS input') changeUpstreamMetadata()
     if (condition === 'changed local bytes' && folder) {
       const path = join(folder, 'feats.json')
       await writeFile(path, `${await readFile(path, 'utf8')}\n`)
     }
-    const changeLibrary = vi.fn(addSavedReference)
-    if (condition === 'local library race') race = changeLibrary
     if (condition === 'manual check') {
       await useGameDataStore.getState().loadFromCache({ checkForUpdates: false })
       await useGameDataStore.getState().loadCatalog(origin, true)
@@ -317,23 +356,19 @@ test.each([
       await (await start()).backgroundRefresh
     }
     const state = useGameDataStore.getState()
-    if (condition === 'local library race') expect(changeLibrary).toHaveBeenCalledOnce()
-    if (
-      condition === 'match' ||
-      condition === 'matching local files' ||
-      condition === 'repaired item link' ||
-      condition === 'repaired creature links'
-    ) {
-      expect(state.pendingCatalog?.reason ?? null).toBeNull()
+    const { cache, expectedCache } = await readGameDataCachePair()
+    if (condition === 'library race') expect(changedLibrary).toHaveBeenCalledOnce()
+    if (restores) {
+      expect(state.pendingCatalog).toBeNull()
       expect(state.sessionBundledSource).toBeNull()
-      expect((await readGameDataCachePair()).cache?.contentFingerprint).toBe(
-        accepted.contentFingerprint,
-      )
-      expect(state.lastDataChangedAt).not.toBe(originalDate)
+      expect(state.cacheStatus).toBe('fetched')
+      expect(cache?.contentFingerprint).toBe(accepted.contentFingerprint)
+      expect(cache?.generation).not.toBe(accepted.generation)
+      expect(await get('character-storage')).toEqual(savedLibrary)
     } else {
       expect(state.pendingCatalog).not.toBeNull()
       expect(state.sessionBundledSource).not.toBeNull()
-      expect((await readGameDataCachePair()).expectedCache?.contentFingerprint).toBe(fingerprint)
+      expect(expectedCache?.generation).toBe(accepted.generation)
     }
   } finally {
     if (folder) await rm(folder, { recursive: true, force: true })
