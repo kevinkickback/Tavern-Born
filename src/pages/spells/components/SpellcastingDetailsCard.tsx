@@ -111,7 +111,7 @@ export function SpellcastingDetailsCard({
                       </p>
                     </div>
                     {detail.spellcastingAbility ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
                         {capitalizeLabel(detail.spellcastingAbility)}
                       </Badge>
                     ) : null}
@@ -167,7 +167,7 @@ export function SpellcastingDetailsCard({
                       </p>
                     </div>
                     {ability ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
                         {capitalizeLabel(normalizedAbility ?? ability)}
                       </Badge>
                     ) : null}

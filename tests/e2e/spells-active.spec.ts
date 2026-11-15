@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSpells'
+import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
@@ -142,4 +144,41 @@ test('@focused active-character spell workflow: profile switch, independent remo
   await expect(wizardSpells.getByTitle('Prepared', { exact: true })).toBeVisible()
   await druidTab.click()
   await expect(entangle.getByTitle('Prepared — click to unprepare')).toBeVisible()
+})
+
+test('class and racial casting badges display the shared ability casing', async ({ page }) => {
+  const { gameData } = makeManagedClassSpellBrowserFixtures()
+  const race = {
+    name: 'Racial caster',
+    source: 'PHB',
+    additionalSpells: [{ ability: 'wis', known: { 1: ['light#c'] } }],
+  } as Race5e
+  const character = refreshNativeRacialSpellState(
+    makeCharacterFixture({
+      id: 'spell-badge-e2e',
+      name: 'Mixed casters',
+      race: race.name,
+      raceSource: race.source,
+      allowedSources: ['PHB'],
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    }),
+    { parentRace: race, subraceIsNested: false },
+  )
+  const catalog = { ...gameData, races: [race], lookups: undefined }
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-casting-badge', catalog)
+  await seedAppState(page, {
+    sourcePath: 'e2e-casting-badge',
+    gameData: catalog,
+    characters: [character],
+    activeCharacterId: character.id,
+  })
+  await page.reload()
+  await selectCharacterFromHome(page, character.name)
+  await page.getByRole('link', { name: 'Spells' }).click()
+  for (const label of ['Intelligence', 'Wisdom']) {
+    const badge = page.locator('[data-slot="badge"]').filter({ hasText: new RegExp(`^${label}$`) })
+    await expect(badge).toBeVisible()
+    await expect(badge).toHaveCSS('text-transform', 'none')
+  }
 })
