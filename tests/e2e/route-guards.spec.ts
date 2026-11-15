@@ -103,16 +103,34 @@ test('public settings and compendium routes remain available without a character
   await test.step('settings', async () => {
     await page.goto('/#/settings')
     await expect(page).toHaveURL(/\/#\/settings$/)
-    await expect(page.getByRole('tablist', { name: 'Settings category' })).toBeVisible()
+    const sidebar = page.getByRole('complementary', { name: 'Settings navigation' })
+    await expect(sidebar.getByRole('link')).toHaveText([
+      'General',
+      'Appearance',
+      'Game Data',
+      'About',
+    ])
+    await expect(sidebar.getByRole('link', { name: 'General' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('tablist', { name: 'Settings category' })).toHaveCount(0)
 
-    await page.getByRole('tab', { name: 'Appearance' }).click()
+    const appearance = sidebar.getByRole('link', { name: 'Appearance' })
+    await appearance.click()
     await expect(page).toHaveURL(/\/#\/settings\?section=appearance$/)
+    await expect(appearance).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('radio', { name: 'Dark' })).toBeAttached()
     await expect(page.getByRole('radio', { name: 'Arcane' })).toBeAttached()
 
     await page.getByText('Light', { exact: true }).click()
     await expect(page.getByRole('radio', { name: 'Light' })).toBeChecked()
     await page.getByText('Eldritch', { exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Eldritch' })).toBeChecked()
+    await sidebar.getByRole('link', { name: 'Game Data', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Game Data', exact: true })).toBeVisible()
+    await page.goBack()
+    await expect(appearance).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('radio', { name: 'Eldritch' })).toBeChecked()
     expect(pageErrors).toEqual([])
   })
@@ -126,9 +144,40 @@ test('public settings and compendium routes remain available without a character
 
   await test.step('character-sheet attribution', async () => {
     await page.goto('/#/settings?section=about#character-sheet-pdf-2014-custom')
-    await expect(page.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('link', { name: 'About', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     await expect(
       page.getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' }),
     ).toBeVisible()
+  })
+
+  await test.step('settings bookmarks accepted by the router keep their sidebar context', async () => {
+    await page.goto('/#/settings/?section=data#game-data-update')
+    const sidebar = page.getByRole('complementary', { name: 'Settings navigation' })
+    await expect(sidebar.getByRole('link', { name: 'Game Data', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('region', { name: 'Game Data', exact: true })).toBeVisible()
+
+    await page.goto('/#/Settings?section=about#character-sheet-pdf-2014-custom')
+    await expect(sidebar.getByRole('link', { name: 'About', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(
+      page.getByRole('heading', { name: 'Settings', level: 1, exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' }),
+    ).toBeVisible()
+    await page.goto('/#/sett%69ngs?section=appearance')
+    await expect(sidebar.getByRole('link', { name: 'Appearance' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('radio', { name: 'Dark', exact: true })).toBeAttached()
   })
 })

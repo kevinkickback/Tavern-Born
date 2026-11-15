@@ -10,6 +10,7 @@ import {
   Certificate,
   ClipboardText,
   Crown,
+  Database,
   Eye,
   FilePdf,
   Gear,
@@ -19,8 +20,10 @@ import {
   Heartbeat,
   IdentificationCard,
   Image,
+  Info,
   MagicWand,
   Medal,
+  Palette,
   PawPrint,
   PersonSimple,
   PuzzlePiece,
@@ -36,9 +39,15 @@ import {
 import { lazy, type Ref, Suspense } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  getSettingsSection,
+  isSettingsPath,
+  SETTINGS_SECTIONS,
+} from '@/lib/navigation/settingsNavigation'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { SidebarSectionHeading } from './SidebarSectionHeading'
+import { getSidebarRowClassName } from './sidebarRowStyles'
 
 const CharacterReadinessBadge = lazy(() =>
   import('@/components/character/CharacterReadinessBadge').then((module) => ({
@@ -60,7 +69,7 @@ interface ContextGroup {
 }
 
 interface Workspace {
-  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium'
+  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium' | 'settings'
   label: string
   path: string
   icon: Icon
@@ -69,13 +78,15 @@ interface Workspace {
   requiresCharacter?: boolean
 }
 
+const settingsIcons = { general: Gear, appearance: Palette, data: Database, about: Info }
+
 const workspaces: Workspace[] = [
   {
     id: 'start',
     label: 'Characters',
     path: '/',
     icon: Users,
-    matches: (pathname) => pathname === '/' || pathname.startsWith('/settings'),
+    matches: (pathname) => pathname === '/',
     groups: [
       {
         label: 'Character Library',
@@ -261,10 +272,33 @@ const workspaces: Workspace[] = [
       },
     ],
   },
+  {
+    id: 'settings',
+    label: 'Settings',
+    path: '/settings',
+    icon: Gear,
+    matches: isSettingsPath,
+    groups: [
+      {
+        label: 'Settings',
+        items: SETTINGS_SECTIONS.map(({ id, label, search }) => ({
+          label,
+          path: '/settings',
+          search,
+          icon: settingsIcons[id],
+        })),
+      },
+    ],
+  },
 ]
 
 function isContextItemActive(pathname: string, locationSearch: string, item: ContextItem) {
   const { path, search } = item
+  if (path === '/settings')
+    return (
+      isSettingsPath(pathname) &&
+      getSettingsSection(locationSearch).id === getSettingsSection(search ?? '').id
+    )
   if (search !== undefined) {
     const currentTypes = new URLSearchParams(locationSearch).getAll('type').sort()
     const itemTypes = new URLSearchParams(search).getAll('type').sort()
@@ -307,6 +341,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                     }}
                     className={cn(
                       'relative flex size-12 items-center justify-center rounded-md border text-[1.625rem] transition-colors',
+                      workspace.id === 'settings' && 'mt-auto',
                       unavailable
                         ? 'cursor-not-allowed border-muted-foreground/20 bg-background/5 text-muted-foreground/35'
                         : active
@@ -328,22 +363,6 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
               </Tooltip>
             )
           })}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label="Settings"
-                onClick={() => navigate('/settings')}
-                className="relative mt-auto flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
-              >
-                <Gear />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
-              Settings
-            </TooltipContent>
-          </Tooltip>
         </nav>
       </aside>
 
@@ -369,12 +388,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                           to={`${item.path}${item.search ?? ''}`}
                           aria-label={item.ariaLabel}
                           aria-current={active ? 'page' : undefined}
-                          className={cn(
-                            'relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',
-                            active
-                              ? 'bg-secondary text-primary font-medium'
-                              : 'text-[color:var(--navigation-foreground)] hover:bg-secondary/70 hover:text-foreground',
-                          )}
+                          className={getSidebarRowClassName(active)}
                         >
                           {active && (
                             <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-primary" />

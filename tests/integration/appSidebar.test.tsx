@@ -196,10 +196,15 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: '5.5e (2024) Lost Loot' })).toBeTruthy()
   })
 
-  test('keeps a route back to the library from Settings', () => {
+  test('shows a Settings sidebar and keeps a route back to the library', async () => {
+    const user = userEvent.setup()
     renderSidebar('/settings')
 
+    expect(screen.getByRole('complementary', { name: 'Settings navigation' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-current')).toBe(
+      'page',
+    )
+    await user.click(screen.getByRole('button', { name: 'Characters' }))
     expect(screen.getByRole('complementary', { name: 'Characters navigation' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Characters' }).getAttribute('href')).toBe('/')
   })
 })

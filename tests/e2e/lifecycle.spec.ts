@@ -135,9 +135,9 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await page.getByRole('heading', { name: fixture.name, exact: true }).click()
   await missingRules.getByRole('link', { name: 'Game Data settings' }).click()
   await expect(page).toHaveURL(/\/settings\?section=data$/)
-  await expect(page.getByRole('tab', { name: 'Game Data', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
+  await expect(page.getByRole('link', { name: 'Game Data', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
   )
   await page.goBack()
   await selectCharacterFromHome(page, fixture.name)

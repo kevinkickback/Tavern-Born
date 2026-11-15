@@ -110,6 +110,22 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(page.getByRole('button', { name: 'Actions for Charlie Revised' })).toHaveCount(0)
   await gridView.click()
   await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
+
+  const dimensions = await sidebar.locator('button').evaluateAll((controls) =>
+    controls.map((el) => {
+      const style = getComputedStyle(el)
+      return [style.height, style.width, style.fontSize, style.paddingLeft]
+    }),
+  )
+  expect(dimensions).toHaveLength(8)
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  const standardRow = await page
+    .getByRole('link', { name: 'General', exact: true })
+    .evaluate((el) => {
+      const style = getComputedStyle(el)
+      return [style.height, style.width, style.fontSize, style.paddingLeft]
+    })
+  for (const row of dimensions) expect(row).toEqual(standardRow)
 })
 
 test('character library filters, cancels deletion, then persists a confirmed deletion', async ({

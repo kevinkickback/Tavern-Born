@@ -1,6 +1,7 @@
 import { WarningCircle } from '@phosphor-icons/react'
 import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { getSettingsSection, isSettingsPath } from '@/lib/navigation/settingsNavigation'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { AppHeader } from './AppHeader'
 import { AppSidebar } from './AppSidebar'
@@ -19,8 +20,7 @@ export function AppLayout({ children, onOpenAppUpdate }: AppLayoutProps) {
   const [librarySidebar, setLibrarySidebar] = useState<HTMLDivElement | null>(null)
   const usingBuiltInRules = useGameDataStore((state) => state.sessionBundledSource !== null)
   const { pathname, search } = useLocation()
-  const onGameData =
-    pathname === '/settings' && new URLSearchParams(search).get('section') === 'data'
+  const onGameData = isSettingsPath(pathname) && getSettingsSection(search).id === 'data'
 
   return (
     <div
