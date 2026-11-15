@@ -96,20 +96,18 @@ export function ReviewStep({
 
   return (
     <div className="@container shrink-0">
-      <div className="grid items-start gap-3 @2xl:grid-cols-2 @4xl:grid-cols-12">
-        <div className="flex min-w-0 justify-center @4xl:col-span-4">
-          <PortraitCardPreview
-            className="max-w-[22.5rem]"
-            image={data.portrait}
-            name={data.name}
-            level={1}
-            race={data.race}
-            classes={data.class ? [{ name: data.class, source: data.classSource, levels: 1 }] : []}
-            originSystem={data.originSystem}
-            gender={data.gender}
-            transform={data.portraitTransform}
-          />
-        </div>
+      <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-12">
+        <PortraitCardPreview
+          className="@4xl:col-span-4"
+          image={data.portrait}
+          name={data.name}
+          level={1}
+          race={data.race}
+          classes={data.class ? [{ name: data.class, source: data.classSource, levels: 1 }] : []}
+          originSystem={data.originSystem}
+          gender={data.gender}
+          transform={data.portraitTransform}
+        />
 
         <div className="min-w-0 rounded-lg border border-border bg-card/60 p-3 @4xl:col-span-4">
           <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
@@ -168,7 +166,7 @@ export function ReviewStep({
           </div>
         </div>
 
-        <div className="min-w-0 space-y-2 self-stretch rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-7">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-7">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Sparkle className="h-4 w-4 text-primary" weight="fill" />
@@ -213,7 +211,7 @@ export function ReviewStep({
           </div>
         </div>
 
-        <div className="min-w-0 space-y-2 self-stretch rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-5">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-5">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-primary" weight="fill" />
             <h4 className="text-sm font-semibold">Additional Content</h4>

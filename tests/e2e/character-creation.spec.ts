@@ -816,8 +816,13 @@ test('revised background bonuses update review, starting HP, and the saved chara
       ),
     )
   expect(portraitBounds!.y).toBeCloseTo(snapshotBounds!.y)
-  expect(portraitBounds!.width).toBeLessThanOrEqual(360)
   expect(snapshotBounds!.y).toBeCloseTo(variantBounds!.y)
+  expect(portraitBounds!.height).toBeCloseTo(snapshotBounds!.height, 1)
+  expect(snapshotBounds!.height).toBeCloseTo(variantBounds!.height, 1)
+  const portraitGap = snapshotBounds!.x - (portraitBounds!.x + portraitBounds!.width)
+  const rulesGap = variantBounds!.x - (snapshotBounds!.x + snapshotBounds!.width)
+  expect(portraitGap).toBeGreaterThan(0)
+  expect(portraitGap).toBeCloseTo(rulesGap, 0)
   expect(scoresBounds!.y).toBeCloseTo(contentBounds!.y)
   expect(scoresBounds!.height).toBeCloseTo(contentBounds!.height)
   expect(scoresBounds!.y).toBeGreaterThan(portraitBounds!.y)
@@ -847,6 +852,15 @@ test('revised background bonuses update review, starting HP, and the saved chara
   expect((await content.boundingBox())!.height).toBeGreaterThan(contentBounds!.height)
   await page.setViewportSize({ width: 900, height: 720 })
   await expect.poll(measurePairedRow).toEqual({ y: 0, height: 0 })
+  await expect
+    .poll(async () => (await variant.boundingBox())!.y - (await snapshot.boundingBox())!.y)
+    .toBeGreaterThan(0)
+  await expect
+    .poll(
+      async () =>
+        (await reviewPortrait.boundingBox())!.height - (await snapshot.boundingBox())!.height,
+    )
+    .toBeCloseTo(0, 1)
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect
