@@ -62,11 +62,33 @@ const check = () => {
   return state.loadCatalog(state.dataSourceConfig!, true)
 }
 
-test('the desktop renderer relays a bodyless 304 to the catalog worker', async () => {
+function oversizedResponse(cancel?: () => void) {
+  const chunk = new Uint8Array(1024 * 1024)
+  let remaining = 54
+  return new Response(
+    new ReadableStream({
+      pull(controller) {
+        controller.enqueue(chunk)
+        if (--remaining === 0) controller.close()
+      },
+      cancel,
+    }),
+  )
+}
+
+test.each([
+  { status: 304, reply: { unchanged: true } },
+  { status: 200, reply: { error: 'Remote JSON resource exceeds the 50 MiB size limit' } },
+])('the desktop renderer reports a $status response to the catalog worker', async ({
+  status,
+  reply,
+}) => {
   let receive: ((message: CatalogWorkerMessage) => void) | undefined
   const path = `${source.path}/data/feats.json`
   const proof: CatalogResourceProof = { kind: 'remote', entries: [['feats.json', 'e"one"']] }
-  const fetch = vi.fn(() => Promise.resolve(new Response(null, { status: 304 })))
+  const cancel = vi.fn()
+  const response = status === 304 ? new Response(null, { status }) : oversizedResponse(cancel)
+  const fetch = vi.fn(() => Promise.resolve(response))
   vi.stubGlobal('fetch', fetch)
   const sendCatalogMessage = vi.fn((message: CatalogRequestMessage) => {
     if (message.kind === 'run')
@@ -95,11 +117,38 @@ test('the desktop renderer relays a bodyless 304 to the catalog worker', async (
     'read-result',
     'drop',
   ])
-  expect(sendCatalogMessage.mock.calls[1][0]).toMatchObject({ reply: { unchanged: true } })
+  expect(sendCatalogMessage.mock.calls[1][0]).toEqual(expect.objectContaining({ reply }))
+  expect(cancel).toHaveBeenCalledTimes(status === 304 ? 0 : 1)
   expect(fetch).toHaveBeenCalledWith(
     path,
     expect.objectContaining({ headers: new Headers({ 'If-None-Match': '"one"' }) }),
   )
+})
+
+test('an oversized configured resource leaves the previously accepted catalog active', async () => {
+  const { fetch } = installSource()
+  const originalFetch = fetch.getMockImplementation()!
+  expect(await useGameDataStore.getState().loadCatalog(source)).toMatchObject({ kind: 'applied' })
+  const active = useGameDataStore.getState().gameData
+  const pair = await readGameDataCachePair()
+
+  fetch.mockImplementation((url, options) =>
+    url.endsWith('/spells/spells-phb.json')
+      ? Promise.resolve(oversizedResponse())
+      : originalFetch(url, options),
+  )
+  expect(await check()).toMatchObject({
+    kind: 'rejected',
+    message: expect.stringContaining('50 MiB size limit'),
+  })
+  expect(useGameDataStore.getState().gameData).toBe(active)
+  const afterFailure = await readGameDataCachePair()
+  expect(afterFailure.cache).toEqual(pair.cache)
+  expect(afterFailure.settings).toEqual(pair.settings)
+  expect(afterFailure.refreshCheck?.consecutiveFailures).toBe(1)
+
+  fetch.mockImplementation(originalFetch)
+  expect(await check()).toEqual({ kind: 'applied', changed: false })
 })
 
 test('conditional HTTPS check preserves the cache and stages an edited indexed child for manual Apply', async () => {

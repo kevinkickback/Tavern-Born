@@ -2,6 +2,7 @@ import type { DataSourceConfig } from '@/types/5etools'
 import { parseRemoteDataSourceUrl } from './urlUtils'
 
 export const DATA_REQUEST_TIMEOUT_MS = 15_000
+const MAX_REMOTE_JSON_BYTES = 50 * 1024 * 1024
 
 export interface JsonResourceReader {
   readonly type: DataSourceConfig['type']
@@ -94,10 +95,46 @@ export function buildRemoteResourceUrl(baseUrl: string, relativePath: string): s
   return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath.split('/').map(encodeURIComponent).join('/')}`
 }
 
+export async function readRemoteResourceBytes(response: Response): Promise<ArrayBuffer> {
+  const reader = response.body?.getReader()
+  if (!reader) return new ArrayBuffer(0)
+
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      size += value.byteLength
+      if (size > MAX_REMOTE_JSON_BYTES) {
+        void reader.cancel().catch(() => {})
+        throw new Error('Remote JSON resource exceeds the 50 MiB size limit')
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return bytes.buffer
+}
+
+async function parseRemoteResponse(response: Response, url: string): Promise<unknown> {
+  if (!response.ok) {
+    void response.body?.cancel().catch(() => {})
+    throw new ResourceHttpError(response.status, url)
+  }
+  return JSON.parse(new TextDecoder().decode(await readRemoteResourceBytes(response)))
+}
+
 export async function readRemoteJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { signal })
-  if (!response.ok) throw new ResourceHttpError(response.status, url)
-  return response.json()
+  return parseRemoteResponse(await fetch(url, { signal }), url)
 }
 
 const isEntityTag = (value: string) => /^(?:W\/)?"[\x21\x23-\x7e\x80-\xff]*"$/.test(value)
@@ -153,11 +190,11 @@ async function readBrowserRemote(
   if ('unchanged' in result)
     return { observed: true, unchanged: true } satisfies ResourceObservation
   const { response, stamp } = result
-  if (!response.ok) {
-    void response.body?.cancel().catch(() => {})
-    throw new ResourceHttpError(response.status, request.url)
-  }
-  return { observed: true, stamp, data: await response.json() } satisfies ResourceObservation
+  return {
+    observed: true,
+    stamp,
+    data: await parseRemoteResponse(response, request.url),
+  } satisfies ResourceObservation
 }
 
 const readBrowserJson: ReadSourceJson = (request, signal) =>

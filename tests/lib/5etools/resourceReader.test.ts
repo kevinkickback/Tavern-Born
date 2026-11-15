@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { buildRemoteResourceUrl, createJsonResourceReader } from '@/lib/5etools/resourceReader'
+import {
+  buildRemoteResourceUrl,
+  createJsonResourceReader,
+  readRemoteResourceBytes,
+} from '@/lib/5etools/resourceReader'
 
 function makeJsonResponse(data: unknown, ok = true) {
   return new Response(JSON.stringify(data), { status: ok ? 200 : 404 })
@@ -34,6 +38,68 @@ describe('5etools resource readers', () => {
       'https://raw.githubusercontent.com/example/5etools-src/main/data/spells/index.json',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
+  })
+
+  test('preserves the complete response at the 50 MiB limit', async () => {
+    const chunk = new Uint8Array(1024 * 1024)
+    chunk[0] = 17
+    chunk[chunk.length - 1] = 23
+    let remaining = 50
+    const response = new Response(
+      new ReadableStream({
+        pull(controller) {
+          controller.enqueue(chunk)
+          if (--remaining === 0) controller.close()
+        },
+      }),
+    )
+    const bytes = new Uint8Array(await readRemoteResourceBytes(response))
+    expect(bytes.byteLength).toBe(50 * 1024 * 1024)
+    expect(bytes[0]).toBe(17)
+    expect(bytes[bytes.length - 1]).toBe(23)
+  })
+
+  test.each([
+    undefined,
+    'e"current"',
+  ])('cancels an over-limit response during a remote read with validator %s', async (stamp) => {
+    const chunk = new Uint8Array(1024 * 1024)
+    const cancel = vi.fn()
+    let remaining = 54
+    const response = new Response(
+      new ReadableStream({
+        pull(controller) {
+          controller.enqueue(chunk)
+          if (--remaining === 0) controller.close()
+        },
+        cancel,
+      }),
+    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const reader = createJsonResourceReader(
+      { type: 'remote', path: 'https://example.com/5etools', isValid: true },
+      undefined,
+      stamp ? () => ({ stamp }) : undefined,
+    )
+
+    await expect(reader.readJson('items.json')).rejects.toThrow('50 MiB size limit')
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(response.body?.locked).toBe(false)
+  })
+
+  test('retains a conditional 304 without reading a body', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 304 })))
+    const reader = createJsonResourceReader(
+      { type: 'remote', path: 'https://example.com/5etools', isValid: true },
+      undefined,
+      () => ({ stamp: 'e"current"' }),
+    )
+
+    await expect(reader.readJson('items.json')).resolves.toEqual({
+      observed: true,
+      unchanged: true,
+    })
+    expect(globalThis.fetch).toHaveBeenCalledOnce()
   })
 
   test('reads local JSON using the configured platform separator', async () => {
