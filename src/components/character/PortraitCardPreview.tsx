@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { CharacterCardActions } from '@/components/character/CharacterCardActions'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
 import {
   CHARACTER_CARD_LOGICAL_HEIGHT,
@@ -85,8 +86,7 @@ export function PortraitCardPreview({
       <section
         data-slot="portrait-card-preview"
         aria-label="Portrait card preview"
-        tabIndex={originSystem || lastModified ? 0 : undefined}
-        className="group/card relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm"
         style={previewWidth === null ? undefined : { width: previewWidth }}
       >
         <div
@@ -110,7 +110,9 @@ export function PortraitCardPreview({
             lastModified={lastModified}
             transform={transform}
             portraitTransition
+            preview
           />
+          <CharacterCardActions name={name} />
         </div>
       </section>
     </div>

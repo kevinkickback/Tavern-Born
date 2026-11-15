@@ -17,8 +17,8 @@ describe('PortraitCardPreview', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
-  test('previews the ruleset, class details, and date with the actions hidden', () => {
-    render(
+  test('previews ruleset, class, date, and visual-only actions', () => {
+    const { container } = render(
       <PortraitCardPreview
         name="Aelar"
         level={3}
@@ -34,9 +34,11 @@ describe('PortraitCardPreview', () => {
     expect(screen.getByText('Elf')).toBeTruthy()
     expect(screen.getByText('Wizard')).toBeTruthy()
     expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('2024')
-    expect(screen.getByRole('region', { name: 'Portrait card preview' }).tabIndex).toBe(0)
     expect(screen.getByText(/Last modified:/)).toBeTruthy()
 
+    const actions = container.querySelector('[data-slot="character-card-actions"]')
+    expect(actions?.hasAttribute('inert')).toBe(true)
+    expect(actions?.querySelectorAll('button')).toHaveLength(3)
     expect(screen.queryByRole('button')).toBeNull()
   })
 

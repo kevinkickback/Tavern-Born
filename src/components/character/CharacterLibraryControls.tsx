@@ -1,5 +1,12 @@
 import type { Icon } from '@phosphor-icons/react'
-import { BookOpen, ListBullets, SquaresFour, Users, WarningCircle } from '@phosphor-icons/react'
+import {
+  BookOpen,
+  CheckSquare,
+  ListBullets,
+  SquaresFour,
+  Users,
+  WarningCircle,
+} from '@phosphor-icons/react'
 import { useId } from 'react'
 import { SidebarSectionHeading } from '@/components/layout/SidebarSectionHeading'
 import { getSidebarRowClassName } from '@/components/layout/sidebarRowStyles'
@@ -33,6 +40,9 @@ interface CharacterLibraryControlsProps {
   onSortChange: (sort: LibrarySort) => void
   group: LibraryGroup
   onGroupChange: (group: LibraryGroup) => void
+  selectionMode: boolean
+  selectionDisabled: boolean
+  onToggleSelection: () => void
 }
 
 interface LibraryFilterOptionProps {
@@ -83,6 +93,9 @@ export function CharacterLibraryControls({
   onSortChange,
   group,
   onGroupChange,
+  selectionMode,
+  selectionDisabled,
+  onToggleSelection,
 }: CharacterLibraryControlsProps) {
   const viewId = useId()
   const filterId = useId()
@@ -168,6 +181,22 @@ export function CharacterLibraryControls({
           </SelectContent>
         </Select>
       </section>
+      {counts.all !== 0 && (
+        <div className="mt-5 border-t border-border pt-2">
+          <button
+            type="button"
+            disabled={selectionDisabled}
+            onClick={onToggleSelection}
+            className={cn(
+              getSidebarRowClassName(selectionMode),
+              'w-full text-left focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50',
+            )}
+          >
+            <CheckSquare className="size-4 shrink-0" aria-hidden="true" />
+            {selectionMode ? 'Cancel Selection' : 'Select Multiple'}
+          </button>
+        </div>
+      )}
     </>
   )
 }

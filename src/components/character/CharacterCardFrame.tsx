@@ -21,6 +21,7 @@ interface CharacterCardFrameProps {
   lastModified?: string
   transform?: PortraitTransform
   portraitTransition?: boolean
+  preview?: boolean
   selectionControl?: ReactNode
   statusBadge?: ReactNode
 }
@@ -37,12 +38,14 @@ export function CharacterCardFrame({
   lastModified,
   transform,
   portraitTransition = false,
+  preview = false,
   selectionControl,
   statusBadge,
 }: CharacterCardFrameProps) {
   const displayName = name || 'Unnamed Character'
   const detailIconClass = 'size-3.5 shrink-0 text-primary @[300px]:size-4'
   const showClassLevels = classes.length > 1
+  const revealClass = !preview && CHARACTER_CARD_REVEAL_CLASS
 
   return (
     <>
@@ -73,7 +76,7 @@ export function CharacterCardFrame({
             variant="outline"
             title={getOriginSystemLabel(originSystem)}
             className={cn(
-              CHARACTER_CARD_REVEAL_CLASS,
+              revealClass,
               'px-1.5 font-semibold tabular-nums shadow-sm',
               originSystem === '2014'
                 ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
@@ -148,17 +151,18 @@ export function CharacterCardFrame({
               )}
             </div>
 
-            {lastModified && (
+            {(lastModified || preview) && (
               <span
                 data-slot="character-card-date"
                 className={cn(
-                  CHARACTER_CARD_REVEAL_CLASS,
+                  revealClass,
                   'flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-none text-muted-foreground italic',
                 )}
               >
                 <Clock className="size-3 shrink-0" />
                 <span className="truncate">
-                  Last modified: {new Date(lastModified).toLocaleDateString()}
+                  Last modified:{' '}
+                  {lastModified ? new Date(lastModified).toLocaleDateString() : 'Unsaved'}
                 </span>
               </span>
             )}

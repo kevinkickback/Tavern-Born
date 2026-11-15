@@ -296,7 +296,26 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await page.setViewportSize({ width: 1280, height: 1000 })
   await expect(dialog.getByRole('button', { name: 'Clear Portrait' })).toBeInViewport()
   await expect(dialog.getByText('Adjust portrait', { exact: true })).toBeVisible()
-  await expect(dialog.locator('[data-slot=portrait-card-preview]')).toContainText('Level 1')
+  const preview = dialog.getByRole('region', { name: 'Portrait card preview' })
+  await expect(preview).toContainText('Level 1')
+  await expect(preview.getByText('2014', { exact: true })).toHaveCSS('opacity', '1')
+  await expect(preview.getByText('Last modified: Unsaved')).toBeVisible()
+  const previewActions = preview.locator('[data-slot="character-card-actions"]')
+  await expect(previewActions).toHaveCSS('opacity', '1')
+  await expect(previewActions.locator('button')).toHaveCount(3)
+  await expect(preview.getByRole('button')).toHaveCount(0)
+  const libraryHeader = dialog.getByRole('heading', { name: 'Portrait Library' }).locator('..')
+  const libraryRule = await libraryHeader.evaluate((header) => {
+    const line = getComputedStyle(header, '::after')
+    return {
+      width: Number.parseFloat(line.width),
+      ruleColor: line.backgroundColor,
+      paneColor: getComputedStyle(header.parentElement!).backgroundColor,
+    }
+  })
+  expect(libraryRule.width).toBeGreaterThan(16)
+  expect(libraryRule.ruleColor).not.toBe(libraryRule.paneColor)
+  expect(libraryRule.paneColor).not.toBe('rgba(0, 0, 0, 0)')
   const zoom = dialog.getByRole('slider', { name: 'Zoom' })
   await expect(zoom).toBeInViewport()
   const tones = await dialog.evaluate((modal) => {
@@ -769,7 +788,37 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await expect(
     reviewPortrait.getByRole('img', { name: 'Character portrait card preview' }),
   ).toBeVisible()
-  await expect(reviewPortrait.getByRole('button', { includeHidden: true })).toHaveCount(0)
+  await expect(reviewPortrait.getByText('2024', { exact: true })).toHaveCSS('opacity', '1')
+  await expect(reviewPortrait.getByText('Last modified: Unsaved')).toBeVisible()
+  const reviewActions = reviewPortrait.locator('[data-slot="character-card-actions"]')
+  await expect(reviewActions).toHaveCSS('opacity', '1')
+  await expect(reviewActions.locator('button')).toHaveCount(3)
+  await expect(reviewPortrait.getByRole('button')).toHaveCount(0)
+  const snapshot = dialog.getByText('Character Snapshot', { exact: true }).locator('..')
+  const variant = dialog.getByRole('heading', { name: 'Variant Rules' }).locator('../..')
+  const scores = dialog.getByRole('heading', { name: 'Ability Scores' }).locator('../../..')
+  const content = dialog.getByRole('heading', { name: 'Additional Content' }).locator('../..')
+  const footer = dialog.locator('footer')
+  const [portraitBounds, snapshotBounds, variantBounds, scoresBounds, contentBounds, footerBounds] =
+    await Promise.all(
+      [reviewPortrait, snapshot, variant, scores, content, footer].map((part) =>
+        part.boundingBox(),
+      ),
+    )
+  expect(portraitBounds!.y).toBeCloseTo(snapshotBounds!.y)
+  expect(portraitBounds!.width).toBeLessThanOrEqual(360)
+  expect(snapshotBounds!.y).toBeCloseTo(variantBounds!.y)
+  expect(scoresBounds!.y).toBeCloseTo(contentBounds!.y)
+  expect(scoresBounds!.y).toBeGreaterThan(portraitBounds!.y)
+  expect(scoresBounds!.y + scoresBounds!.height).toBeLessThan(footerBounds!.y)
+  expect(contentBounds!.y + contentBounds!.height).toBeLessThan(footerBounds!.y)
+  await page.setViewportSize({ width: 720, height: 720 })
+  await expect
+    .poll(async () => (await variant.boundingBox())!.y - (await snapshot.boundingBox())!.y)
+    .toBeGreaterThan(0)
+  await content.scrollIntoViewIfNeeded()
+  await expect(content.getByRole('heading', { name: 'Additional Content' })).toBeInViewport()
+  await page.setViewportSize({ width: 1280, height: 720 })
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect

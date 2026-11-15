@@ -77,6 +77,7 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(toolbar.getByRole('button', { name: 'Import', exact: true })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: 'Export Library' })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: /^(grid|gallery|list) view$/i })).toHaveCount(0)
+  await expect(toolbar.getByRole('button', { name: 'Select Multiple' })).toHaveCount(0)
   await expect(toolbar.getByRole('combobox')).toHaveCount(0)
 
   await filters.getByRole('button', { name: '2024 1' }).click()
@@ -87,11 +88,11 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(page.getByRole('button', { name: 'New Character', exact: true })).toBeVisible()
   await search.clear()
 
-  await toolbar.getByRole('button', { name: 'Select Multiple' }).click()
+  await sidebar.getByRole('button', { name: 'Select Multiple' }).click()
   await page.getByRole('button', { name: 'Select visible', exact: true }).click()
   await filters.getByRole('button', { name: '2014 2' }).click()
   await expect(page.getByText('1 selected (1 hidden)')).toBeVisible()
-  await toolbar.getByRole('button', { name: 'Cancel Selection' }).click()
+  await sidebar.getByRole('button', { name: 'Cancel Selection' }).click()
 
   await sidebar.getByRole('combobox', { name: 'Sort', exact: true }).click()
   await page.getByRole('option', { name: 'Name (A–Z)' }).click()
@@ -306,6 +307,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
     for (const [index, name] of names.entries()) {
       const heading = page.getByRole('heading', { name, exact: true })
       const card = page.locator('[data-slot="card"]').filter({ has: heading })
+      await card.scrollIntoViewIfNeeded()
       const version = card.getByText(editions[index], { exact: true })
       const level = card.getByText('Level 6')
       const classes = card.getByRole('list', { name: 'Class levels' })
@@ -358,8 +360,9 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
       await card.hover()
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
-      await expect(card).toHaveCSS('translate', '0px -2px')
+      await expect(card).toHaveCSS('translate', 'none')
       const hoveredCardBox = (await card.boundingBox())!
+      expect(hoveredCardBox.y).toBe(cardBox.y)
       const hoveredLevelBox = (await level.boundingBox())!
       expect(hoveredLevelBox.y - hoveredCardBox.y).toBe(levelBox.y - cardBox.y)
       const actionsBox = (await actions.boundingBox())!
@@ -380,7 +383,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
   const actions = card.locator('[data-slot="character-card-actions"]')
   const { width, height } = (await hitArea.boundingBox())!
   await hitArea.hover({ position: { x: width / 2, y: height - 1 } })
-  await expect(card).toHaveCSS('translate', '0px -2px')
+  await expect(card).toHaveCSS('translate', 'none')
   await expect(actions).toHaveCSS('opacity', '1')
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -394,7 +397,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
   const selectionBox = (await hitArea.boundingBox())!
   const bottomEdge = { x: selectionBox.width / 2, y: selectionBox.height - 1 }
   await hitArea.hover({ position: bottomEdge })
-  await expect(card).toHaveCSS('translate', '0px -2px')
+  await expect(card).toHaveCSS('translate', 'none')
   await hitArea.click({ position: bottomEdge })
   await expect(card.getByRole('checkbox', { name: `Select ${names[0]}` })).toBeChecked()
 })

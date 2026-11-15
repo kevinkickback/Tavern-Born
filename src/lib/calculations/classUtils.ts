@@ -37,37 +37,35 @@ export function formatProficiencyList(
   values: readonly unknown[] | undefined,
   kind?: 'armor' | 'weapon',
 ): string | null {
-  return (
-    values
-      ?.flatMap((value) => {
-        if (value && typeof value === 'object' && 'full' in value && typeof value.full === 'string')
-          return [renderEntry(value.full)]
-        if (typeof value !== 'string') return []
-        const category = value.trim().toLowerCase()
-        const key =
-          kind === 'armor'
-            ? /^(light|medium|heavy)( armor)?$|^(shield)s?$/.exec(category)
-            : kind === 'weapon'
-              ? /^(simple|martial)( weapons?)?$/.exec(category)
-              : null
-        const itemLabel = capitalizeItemProficiency(value)
-        return [
-          renderEntry(
-            key
-              ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${capitalizeLabel(value.trim())}}`
-              : kind === 'weapon'
-                ? itemLabel.replace(
-                    /\{@filter ([^|{}]+)\|items\|([^{}]+)}/gi,
-                    (tag, label: string, clauses: string) => {
-                      const filter = getWeaponPreviewFilterKey(clauses)
-                      return filter ? `{@proficiency ${filter}|weapon|${label}}` : tag
-                    },
-                  )
-                : itemLabel,
-          ),
-        ]
-      })
-      .filter(Boolean)
-      .join(', ') || null
-  )
+  const labels = values
+    ?.flatMap((value) => {
+      if (value && typeof value === 'object' && 'full' in value && typeof value.full === 'string')
+        return [value.full]
+      if (typeof value !== 'string') return []
+      const category = value.trim().toLowerCase()
+      const key =
+        kind === 'armor'
+          ? /^(light|medium|heavy)( armor)?$|^(shield)s?$/.exec(category)
+          : kind === 'weapon'
+            ? /^(simple|martial)( weapons?)?$/.exec(category)
+            : null
+      const itemLabel = capitalizeItemProficiency(value)
+      return [
+        key
+          ? `{@proficiency ${key[1] ?? key[3]}|${kind}|${capitalizeLabel(value.trim())}}`
+          : kind === 'weapon'
+            ? itemLabel.replace(
+                /\{@filter ([^|{}]+)\|items\|([^{}]+)}/gi,
+                (tag, label: string, clauses: string) => {
+                  const filter = getWeaponPreviewFilterKey(clauses)
+                  return filter ? `{@proficiency ${filter}|weapon|${label}}` : tag
+                },
+              )
+            : itemLabel,
+      ]
+    })
+    .filter(Boolean)
+    .join(', ')
+
+  return labels ? renderEntry(labels) : null
 }

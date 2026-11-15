@@ -323,7 +323,7 @@ describe('home page integration workflows', () => {
     const deletion = vi
       .spyOn(useCharacterStore.getState(), 'deleteCharacters')
       .mockRejectedValueOnce(new Error('Storage unavailable'))
-    render(<HomePage />)
+    render(<HomeWithSidebar />)
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
     await user.click(screen.getByRole('button', { name: 'select-first' }))
     await user.click(screen.getByRole('button', { name: 'select-second' }))
@@ -535,7 +535,7 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     })
 
-    render(<HomePage />)
+    render(<HomeWithSidebar />)
 
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
 
@@ -852,7 +852,7 @@ describe('home page integration workflows', () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:library-backup')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
 
-    render(<HomePage />)
+    render(<HomeWithSidebar />)
     await user.click(screen.getByRole('button', { name: 'Export Library' }))
     await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
     await user.click(screen.getByRole('button', { name: 'select-first' }))

@@ -33,7 +33,7 @@ const accentSwatches = [
   ['Grove', 'green', '#4f9269'],
   ['Arcane', 'blue', '#617cc5'],
   ['Eldritch', 'violet', '#9564b8'],
-  ['Chroma', 'chroma', '#8ab9b2'],
+  ['Chroma', 'chroma', '#d8e8e5'],
 ] as const
 
 test.beforeEach(async ({ page }) => {
@@ -153,7 +153,7 @@ test('each appearance accent uses its exact swatch and readable light and dark s
   await page.reload()
   await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS(
     'background-color',
-    'rgb(138, 185, 178)',
+    'rgb(216, 232, 229)',
   )
   await page.unroute('**/src/main.tsx')
   await page.reload()

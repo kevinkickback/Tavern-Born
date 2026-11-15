@@ -1,6 +1,5 @@
 import {
   CheckCircle,
-  CheckSquare,
   CopySimple,
   DotsThreeVertical,
   DownloadSimple,
@@ -661,6 +660,9 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
             onSortChange={setSortBy}
             group={groupBy}
             onGroupChange={setGroupBy}
+            selectionMode={selectionMode}
+            selectionDisabled={isLibraryPending}
+            onToggleSelection={handleToggleSelectionMode}
           />,
           librarySidebar,
         )}
@@ -703,19 +705,6 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
                 onClick={() => exportLibrary(characters)}
               >
                 <DownloadSimple /> Export Library
-              </Button>
-            )}
-            {characters.length > 0 && (
-              <Button
-                variant={selectionMode ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-9"
-                aria-label={selectionMode ? 'Cancel Selection' : 'Select Multiple'}
-                title={selectionMode ? 'Cancel Selection' : 'Select Multiple'}
-                disabled={isLibraryPending}
-                onClick={handleToggleSelectionMode}
-              >
-                <CheckSquare />
               </Button>
             )}
           </div>
