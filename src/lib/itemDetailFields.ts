@@ -1,4 +1,5 @@
 import { getItemPropertyLabel } from '@/lib/5etools/itemProperties'
+import { DAMAGE_TYPE_LABEL_FALLBACKS } from '@/lib/5etools/rulesetMetadata'
 import { formatCopperValue } from '@/lib/calculations/currency'
 import {
   getArmorCategoryLabel,
@@ -69,20 +70,14 @@ export function getInventoryItemTypeLabel(item: Equipment): Exclude<ItemCategory
   return getInventoryItemClassification(item).label
 }
 
-function toTitleCase(value: string): string {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ')
-}
-
 export function getDamageSummary(item: ItemFactValues, itemData?: Item5e): string | null {
   const primaryDamage = item.dmg1 ?? itemData?.dmg1
   if (!primaryDamage) return null
 
-  const damageTypeKey = item.dmgType ?? itemData?.dmgType
-  const damageType = damageTypeKey ? ` ${toTitleCase(damageTypeKey)}` : ''
+  const damageTypeKey = (item.dmgType ?? itemData?.dmgType)?.trim()
+  const damageType = damageTypeKey
+    ? ` ${DAMAGE_TYPE_LABEL_FALLBACKS[damageTypeKey.toUpperCase()] ?? damageTypeKey.replace(/^./, (letter) => letter.toUpperCase())}`
+    : ''
   const versatileDamage = item.dmg2 ?? itemData?.dmg2
   if (versatileDamage) return `${primaryDamage}${damageType} (${versatileDamage} versatile)`
   return `${primaryDamage}${damageType}`
@@ -100,9 +95,8 @@ export function getPropertySummary(
 
 function getArmorTypeLabel(item: ItemFactValues): string | null {
   const armorType = getNormalizedItemTraits(item).armorCategory
-  if (armorType === 'none') return null
   if (armorType === 'shield') return 'Shield'
-  return `${toTitleCase(armorType)} Armor`
+  return getArmorCategoryLabel(armorType)
 }
 
 export function buildItemDetailFields(

@@ -345,11 +345,17 @@ test('@focused configured Sorcerer keeps each package, picker and result in its 
   )
   await expect(second.getByText('Component Pouch', { exact: true })).toBeVisible()
   await expect(third.getByText("Dungeoneer's Pack", { exact: true })).toBeVisible()
-  await expect(
-    card
-      .getByRole('region', { name: 'Class starting equipment included equipment', exact: true })
-      .getByText('2× Dagger', { exact: true }),
-  ).toBeVisible()
+  const dagger = card
+    .getByRole('region', { name: 'Class starting equipment included equipment', exact: true })
+    .getByRole('button', { name: '2× Dagger', exact: true })
+  await expect(dagger).toBeVisible()
+  await dagger.focus()
+  await dagger.press('Enter')
+  const preview = page.getByRole('dialog', { name: 'Dagger preview', exact: true })
+  await expect(preview).toContainText('1d4 Piercing')
+  await expect(preview).toContainText('Finesse')
+  await page.keyboard.press('Escape')
+  await expect(preview).toBeHidden()
   expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   await card.screenshot({ path: info.outputPath('sorcerer-starting-equipment.png') })
   const equipmentColors = () =>

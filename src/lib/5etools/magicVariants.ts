@@ -190,17 +190,31 @@ export function appendMagicVariantReferences(data: GameData): void {
   const weapons = generateFixedBonusWeapons(data, result.definitions)
   const armor = generateFixedBonusArmor(data, result.definitions)
   const ammunition = generateFixedBonusAmmunition(data, result.definitions)
-  const fixedItems = [...shields.items, ...weapons.items, ...armor.items, ...ammunition.items]
-  const resistanceArmor = generateResistanceArmor(data, result.definitions, fixedItems)
+  const resistanceArmor = generateResistanceArmor(data, result.definitions)
+  const materialArmor = generateMaterialArmor(data, result.definitions)
   data.fixedShieldDiagnostics = shields.diagnostics
   data.fixedWeaponDiagnostics = weapons.diagnostics
   data.fixedArmorDiagnostics = armor.diagnostics
   data.fixedAmmunitionDiagnostics = ammunition.diagnostics
   data.resistanceArmorDiagnostics = resistanceArmor.diagnostics
-  data.items = [...data.items, ...fixedItems, ...resistanceArmor.items]
-  const materialArmor = generateMaterialArmor(data, result.definitions)
   data.materialArmorDiagnostics = materialArmor.diagnostics
-  data.items.push(...materialArmor.items)
+  const families = [shields, weapons, armor, ammunition, resistanceArmor, materialArmor]
+  const ambiguous = new Set(families.flatMap((family) => family.ambiguousIdentities))
+  const generated = new Map<string, Item5e>()
+  for (const item of families.flatMap((family) => family.items)) {
+    const key = tuple(item.name, item.source)
+    if (ambiguous.has(key)) continue
+    if (generated.has(key)) {
+      ambiguous.add(key)
+      generated.delete(key)
+      if (result.diagnostics.length < 32)
+        result.diagnostics.push({
+          path: `magicVariants.${item.name}|${item.source}`,
+          message: 'Ambiguous generated equipment across template families.',
+        })
+    } else generated.set(key, item)
+  }
+  data.items = [...data.items, ...generated.values()]
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )

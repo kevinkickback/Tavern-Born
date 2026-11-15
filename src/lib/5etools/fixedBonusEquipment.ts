@@ -1,6 +1,11 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { getItemEntryIdentity, getRawItems } from './itemEntries'
 import { qualifyArmorTemplate } from './qualifiedArmorTemplates'
+import {
+  getWeaponTemplateBaseText,
+  qualifyWeaponTemplate,
+  weaponTemplateBaseFields,
+} from './qualifiedWeaponTemplates'
 import { DAMAGE_TYPE_LABEL_FALLBACKS } from './rulesetMetadata'
 
 // Bounded adaptation of Renderer.item at 5etools b9061583 (render.js:12942–13382).
@@ -329,12 +334,8 @@ export function generateFixedBonusAmmunition(data: GameData, definitions: readon
   return generateEquipmentVariants(data, definitions, 'ammunition')
 }
 
-export function generateResistanceArmor(
-  data: GameData,
-  definitions: readonly Row[],
-  fixedItems: readonly Item5e[],
-) {
-  return generateEquipmentVariants(data, definitions, 'resistanceArmor', fixedItems)
+export function generateResistanceArmor(data: GameData, definitions: readonly Row[]) {
+  return generateEquipmentVariants(data, definitions, 'resistanceArmor')
 }
 
 export function generateMaterialArmor(data: GameData, definitions: readonly Row[]) {
@@ -414,8 +415,7 @@ function generateEquipmentVariants(
   data: GameData,
   definitions: readonly Row[],
   family: keyof typeof FIXED_PATTERNS,
-  otherGenerated: readonly Item5e[] = [],
-): { items: Item5e[]; diagnostics: ItemEntryDiagnostic[] } {
+) {
   const shield = family === 'shield'
   const ammunition = family === 'ammunition'
   const resistanceArmor = family === 'resistanceArmor'
@@ -453,11 +453,17 @@ function generateEquipmentVariants(
     const key = identity(value)
     groups.set(key, [...(groups.get(key) ?? []), value])
   }
-  const occupied = new Set([...data.items, ...data.itemsBase, ...otherGenerated].map(identity)),
+  const occupied = new Set([...data.items, ...data.itemsBase].map(identity)),
     generated = new Map<string, Item5e[]>()
   for (const definition of definitions) {
     const match = FIXED_PATTERNS[family].exec(String(definition.name))
-    const qualified = materialArmor ? qualifyArmorTemplate(definition) : undefined
+    const inherited = record(definition.inherits)
+    const qualifiedArmor = materialArmor ? qualifyArmorTemplate(definition) : undefined
+    const qualifiedWeapon =
+      family === 'weapon' || ammunition
+        ? qualifyWeaponTemplate(definition, inherited ?? {}, ammunition)
+        : undefined
+    const qualified = qualifiedArmor ?? qualifiedWeapon
     if (!match && !qualified) continue
     const parameter = match?.[1] ?? ''
     const source = String(definition.source)
@@ -471,22 +477,29 @@ function generateEquipmentVariants(
         : source === 'DMG' || source === 'XDMG')
     )
       continue
-    const baseSource = (supplemental ? definition.edition === 'classic' : source === 'DMG')
+    const baseSource = (
+        supplemental || qualifiedWeapon
+          ? definition.edition === 'classic'
+          : source === 'DMG'
+      )
         ? 'PHB'
         : 'XPHB',
       path = `${definition.name}|${source}`
-    const inherited = record(definition.inherits),
-      requires = definition.requires,
+    const requires = definition.requires,
       excludes = record(definition.excludes)
+    const templateEntries = qualifiedWeapon?.entries ?? inherited?.entries
     if (
       !inherited ||
       !Object.keys(definition).every((key) => templateFields.has(key)) ||
-      (ammunition && (definition.ammo !== true || !hasSupportedAmmunitionTags(inherited))) ||
+      (ammunition &&
+        ((definition.ammo !== true &&
+          !(qualifiedWeapon?.mixedAmmunitionTemplate && definition.ammo === undefined)) ||
+          !hasSupportedAmmunitionTags(inherited))) ||
       (!shield &&
         (!validMetadata(definition) ||
           !inherited.rarity ||
           inherited.rarity === 'none' ||
-          inherited.rarity === 'unknown')) ||
+          (inherited.rarity === 'unknown' && !qualifiedWeapon?.mundaneAmmunition))) ||
       (definition.hasFluffImages !== undefined && typeof definition.hasFluffImages !== 'boolean') ||
       !validMetadata(inherited) ||
       (qualified
@@ -502,7 +515,7 @@ function generateEquipmentVariants(
               : !validMaterialArmor(inherited, parameter)
             : inherited.namePrefix !== `+${parameter} ` ||
               inherited[bonusField] !== `+${parameter}`)) ||
-      !Array.isArray(inherited.entries) ||
+      !Array.isArray(templateEntries) ||
       !Object.keys(inherited).every((k) => inheritedFields.has(k) || qualified?.fields.has(k)) ||
       !Array.isArray(requires) ||
       !requires.every((row) => record(row)) ||
@@ -512,23 +525,24 @@ function generateEquipmentVariants(
       diagnose(path, `Unsupported ${templateLabel} template shape.`)
       continue
     }
-    let entries: unknown[]
+    let encodedEntries: string
     try {
-      let unsupported = false
-      const encoded = JSON.stringify(inherited.entries).replace(
-        /\{=([^}]+)}/g,
-        (_token, field: string) => {
-          if (
-            (field !== bonusField && !(qualified && field === 'bonusWeapon')) ||
-            inherited[field] === undefined
-          )
-            unsupported = true
-          return String(inherited[field])
-        },
-      )
-      if (unsupported) throw new Error('Unsupported property injector')
-      entries = JSON.parse(encoded)
+      encodedEntries = JSON.stringify(templateEntries)
     } catch {
+      diagnose(path, `Unsupported ${templateLabel} entries.`)
+      continue
+    }
+    const injectors = [...encodedEntries.matchAll(/\{=([^}]+)}/g)].map((match) => match[1])
+    if (
+      injectors.some(
+        (field) =>
+          !(qualifiedWeapon && weaponTemplateBaseFields.has(field)) &&
+          !(
+            (field === bonusField || (qualifiedArmor && field === 'bonusWeapon')) &&
+            inherited[field] !== undefined
+          ),
+      )
+    ) {
       diagnose(path, `Unsupported ${templateLabel} text injector.`)
       continue
     }
@@ -563,6 +577,21 @@ function generateEquipmentVariants(
         continue
       }
       if (shield && !matchesTemplate(base)) continue
+      let missingBaseText = false
+      const entries = JSON.parse(
+        encodedEntries.replace(/\{=([^}]+)}/g, (_token, field: string) => {
+          const value =
+            qualifiedWeapon && weaponTemplateBaseFields.has(field)
+              ? getWeaponTemplateBaseText(field, base)
+              : String(inherited[field])
+          if (value === undefined) missingBaseText = true
+          return JSON.stringify(value ?? '').slice(1, -1)
+        }),
+      ) as unknown[]
+      if (missingBaseText) {
+        diagnose(path, `Unsupported ${templateLabel} base text injector.`)
+        continue
+      }
       const output = structuredClone(base) as unknown as Item5e
       for (const key of [
         'value',
@@ -578,12 +607,16 @@ function generateEquipmentVariants(
       ])
         delete output[key]
       for (const [key, value] of Object.entries(inherited))
-        if (!['namePrefix', 'nameSuffix', 'entries', 'reprintedAs', 'propertyAdd'].includes(key))
+        if (
+          !['namePrefix', 'nameSuffix', 'entries', 'reprintedAs', 'propertyAdd'].includes(key) &&
+          !qualifiedWeapon?.manualFields.has(key) &&
+          !(qualifiedWeapon && key === 'bonusWeapon' && !qualifiedWeapon.hasFixedBonus)
+        )
           output[key] = structuredClone(value)
-      if (qualified) {
-        if (qualified.manualAc) delete output.bonusAc
-        if (qualified.swim) output.modifySpeed = { equal: { swim: 'walk' } }
-        if (qualified.properties) output.property = qualified.properties
+      if (qualifiedArmor) {
+        if (qualifiedArmor.manualAc) delete output.bonusAc
+        if (qualifiedArmor.swim) output.modifySpeed = { equal: { swim: 'walk' } }
+        if (qualifiedArmor.properties) output.property = qualifiedArmor.properties
       }
       output.name = `${inherited.namePrefix ?? ''}${base.name}${inherited.nameSuffix ?? ''}`
       output.entries = structuredClone([...entries, ...((base.entries ?? []) as unknown[])])
@@ -593,7 +626,7 @@ function generateEquipmentVariants(
       output.magicVariantGenerated = {
         base: { name: baseName, source: baseSource },
         template: { name: String(definition.name), source },
-        ...(qualified?.swim ? { minimumSwimFromWalk: true } : {}),
+        ...(qualifiedArmor?.swim ? { minimumSwimFromWalk: true } : {}),
       }
       output.startingEquipmentCategory = 'Other'
       const key = identity(output)
@@ -607,10 +640,12 @@ function generateEquipmentVariants(
       generated.set(key, [...(generated.get(key) ?? []), output])
     }
   }
-  const items = [...generated.values()].flatMap((rows) => {
+  const ambiguousIdentities: string[] = []
+  const items = [...generated.entries()].flatMap(([key, rows]) => {
     if (rows.length === 1) return rows
+    ambiguousIdentities.push(key)
     diagnose(`${rows[0].name}|${rows[0].source}`, `Ambiguous generated ${family} identity.`)
     return []
   })
-  return { items, diagnostics }
+  return { items, diagnostics, ambiguousIdentities }
 }
