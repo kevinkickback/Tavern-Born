@@ -106,6 +106,29 @@ describe('BuildReviewPage', () => {
     vi.clearAllMocks()
   })
 
+  test('formats derived overview labels without rewriting the saved proficiencies', async () => {
+    const current = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...current,
+      proficiencies: {
+        ...current.proficiencies,
+        languages: ['deep speech', 'Draconic (SRD)', 'iSpeak (NPC)'],
+      },
+    }
+    useCharacterStore.setState({ activeCharacter: character })
+    render(
+      <MemoryRouter>
+        <BuildReviewPage />
+      </MemoryRouter>,
+    )
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Character overview' }))
+    expect(screen.getByText('Deep Speech, Draconic (SRD), iSpeak (NPC)')).toBeTruthy()
+    expect(screen.getByTestId('review-movement-walk').textContent).toBe('Walk 35 ft.')
+    expect(screen.getByText(/Strength \+2/)).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+  })
+
   test('shows one additional-content note across tabs until the exact rules return', async () => {
     const user = userEvent.setup()
     const exact = useGameDataStore.getState().gameData!
@@ -236,7 +259,7 @@ describe('BuildReviewPage', () => {
     await user.click(screen.getByText('Content sources'))
     expect(screen.getByText('Test Source').closest('ul')?.className).toContain('list-disc')
     expect(screen.queryByText('Rules & reminders')).toBeNull()
-    expect(screen.getByText('walk 35 ft.')).toBeTruthy()
+    expect(screen.getByText('Walk 35 ft.')).toBeTruthy()
 
     await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
 

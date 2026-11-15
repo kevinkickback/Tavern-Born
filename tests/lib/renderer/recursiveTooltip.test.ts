@@ -1,11 +1,241 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { parseItemProperties, parseItems, parseItemTypes } from '@/lib/5etools/parsers/basic'
+import { associatePrimaryItemTypes } from '@/lib/5etools/primaryItemTypes'
+import { formatProficiencyList } from '@/lib/calculations/classUtils'
 import {
   buildRecursiveLookup,
   getRecursiveTooltipData,
   markRecursiveTooltipReferences,
+  resolveRecursiveEntity,
 } from '@/lib/renderer/recursiveTooltip'
 import type { Creature5e, Item5e, Spell5e } from '@/types/5etools'
+
+describe('class proficiency previews', () => {
+  test('uses the source categories and exact base equipment from Included data', () => {
+    const itemsBase = parseItems(
+      JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8')),
+    ) as Item5e[]
+    const getCategory = (name: string, source: string) =>
+      getRecursiveTooltipData(
+        { kind: 'proficiency', name, source },
+        buildRecursiveLookup({ itemsBase }),
+        name,
+      ).html
+
+    const simple = getCategory('simple', 'weapon')
+    expect(simple).toContain('Dagger (PHB)')
+    expect(simple).toContain('Dagger (XPHB)')
+    expect(simple).not.toContain('Longsword')
+    expect(simple).not.toContain('Wooden Staff')
+    expect(getCategory('martial', 'weapon')).toContain('Longsword (XPHB)')
+    expect(getCategory('light', 'armor')).toContain('Leather Armor (XPHB)')
+    expect(getCategory('medium', 'armor')).toContain('Half Plate Armor (XPHB)')
+    expect(getCategory('heavy', 'armor')).toContain('Plate Armor (XPHB)')
+    expect(getCategory('shield', 'armor')).toContain('Shield (XPHB)')
+  })
+
+  test('preserves structured source wording and leaves qualified grants distinct', () => {
+    const druid = JSON.parse(readFileSync('resources/srd/data/class/class-druid.json', 'utf8'))
+    const classic = druid.class.find((row: { source: string }) => row.source === 'PHB')
+    const armor = formatProficiencyList(classic.startingProficiencies.armor, 'armor')
+    expect(armor).toContain('shields (druids will not wear armor or use shields made of metal')
+    expect(armor).not.toContain('data-hover-name="shield"')
+    const rogue = JSON.parse(readFileSync('resources/srd/data/class/class-rogue.json', 'utf8'))
+    const revised = rogue.class.find((row: { source: string }) => row.source === 'XPHB')
+    const weapons = formatProficiencyList(revised.startingProficiencies.weapons, 'weapon')
+    expect(weapons).toContain('Finesse or Light')
+    expect(weapons).toMatch(/data-hover-type="proficiency"[^>]*>Finesse or Light</)
+    expect(weapons).not.toContain('data-hover-name="martial"')
+  })
+
+  test('capitalizes standalone item labels while preserving their keys and compound prose', () => {
+    const bard = JSON.parse(readFileSync('resources/srd/data/class/class-bard.json', 'utf8'))
+    const classic = bard.class.find((row: { source: string }) => row.source === 'PHB')
+    const body = document.createElement('div')
+    body.innerHTML = formatProficiencyList(classic.startingProficiencies.tools) ?? ''
+    expect(body.textContent).toBe('three musical instruments of your choice')
+    body.innerHTML =
+      formatProficiencyList(['{@item hand crossbow|phb|hand crossbows} or darts']) ?? ''
+    expect(body.textContent).toBe('hand crossbows or darts')
+    body.innerHTML = formatProficiencyList(classic.startingProficiencies.weapons, 'weapon') ?? ''
+    const crossbow = body.querySelector('[data-hover-name="hand crossbow"]')
+    expect(crossbow?.textContent).toBe('Hand crossbows')
+    expect(crossbow?.getAttribute('data-hover-source')).toBe('phb')
+  })
+
+  test.each([
+    ['monk', 'Light', ['Hand Crossbow', 'Scimitar', 'Shortsword']],
+    ['rogue', 'Finesse or Light', ['Hand Crossbow', 'Rapier', 'Scimitar', 'Shortsword', 'Whip']],
+  ])('previews the Included revised %s filter using exact property definitions', (className, label, names) => {
+    const document = JSON.parse(
+      readFileSync(`resources/srd/data/class/class-${className}.json`, 'utf8'),
+    )
+    const revised = document.class.find((row: { source: string }) => row.source === 'XPHB')
+    const source = JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8'))
+    const items = parseItems(source) as Item5e[]
+    const missingProperty = {
+      ...items.find((item) => item.name === 'Rapier' && item.source === 'XPHB')!,
+      name: 'Unknown Property',
+      property: ['L|UNKNOWN'],
+    }
+    const lookup = buildRecursiveLookup(
+      composeGameDataLayers([
+        {
+          ...createEmptyGameData(),
+          itemTypes: parseItemTypes(source),
+          itemsBase: [
+            ...items.filter((item) => item.source === 'XPHB'),
+            missingProperty,
+            { ...missingProperty, name: 'Different Property', property: ['L|HB'] },
+            { ...missingProperty, name: 'Ambiguous Property', property: ['L|DUP'] },
+            { ...missingProperty, name: 'Whitespace Property', property: [{ uid: ' l | xPhB ' }] },
+            { ...missingProperty, name: 'Unnamed Property', property: ['LIGHT|HB'] },
+            { ...missingProperty, name: 'Unknown Type', type: 'M|UNKNOWN', property: ['L|XPHB'] },
+          ],
+          itemProperties: [
+            ...parseItemProperties(source),
+            { abbreviation: 'L', source: 'HB', name: 'Long' },
+            { abbreviation: 'L', source: 'DUP', name: 'Long' },
+            { abbreviation: 'L', source: 'DUP', name: 'Light' },
+            { abbreviation: 'LIGHT', source: 'HB' },
+          ],
+        },
+      ]),
+    )
+    const formatted = formatProficiencyList(revised.startingProficiencies.weapons, 'weapon')
+    const parser = new DOMParser()
+    const links = [
+      ...parser
+        .parseFromString(formatted ?? '', 'text/html')
+        .querySelectorAll<HTMLElement>('[data-hover-type="proficiency"]'),
+    ]
+    const trigger = links.find((link) => link.textContent === label)
+    expect(trigger).toBeDefined()
+    const preview = getRecursiveTooltipData(
+      {
+        kind: 'proficiency',
+        name: trigger?.dataset.hoverName ?? '',
+        source: trigger?.dataset.hoverSource,
+      },
+      lookup,
+      label,
+    )
+    expect(
+      [
+        ...parser
+          .parseFromString(preview.html ?? '', 'text/html')
+          .querySelectorAll<HTMLElement>('[data-hover-type="item"]'),
+      ].map((link) => [link.dataset.hoverName, link.dataset.hoverSource]),
+    ).toEqual([...names, 'Whitespace Property'].sort().map((name) => [name, 'XPHB']))
+  })
+
+  test('keeps unsupported weapon filter clauses as readable text', () => {
+    const html = formatProficiencyList(
+      [
+        '{@filter Excluded|items|type=martial weapon|property=!light}',
+        '{@filter Restricted|items|type=martial weapon|property=light|source=XPHB}',
+        '{@filter Empty|items|type=martial weapon|property=light;;finesse}',
+      ],
+      'weapon',
+    )
+    expect(html).toContain('Excluded')
+    expect(html).toContain('Restricted')
+    expect(html).toContain('Empty')
+    expect(html).not.toContain('data-hover-type')
+  })
+
+  test('keeps category snapshots distinct across lookup changes and excludes ambiguous bases', () => {
+    const mace: Item5e = {
+      name: 'Mace',
+      source: 'PHB',
+      type: 'M',
+      weaponCategory: 'simple',
+      startingEquipmentCategory: 'Basic',
+    }
+    const reference = { kind: 'proficiency', name: 'simple', source: 'weapon' }
+    const original = buildRecursiveLookup({ itemsBase: [mace] })
+    const filtered = buildRecursiveLookup({
+      itemsBase: [{ ...mace, sourceIdentityConflict: true }],
+    })
+    const first = getRecursiveTooltipData(reference, original, 'simple')
+    const second = getRecursiveTooltipData(reference, filtered, 'simple')
+    expect(first.html).toContain('Mace (PHB)')
+    expect(second.html).toContain('No matching base equipment')
+    expect(first.key).not.toBe(second.key)
+    expect(getRecursiveTooltipData(reference, original, 'simple')).toBe(first)
+  })
+
+  test('classifies base equipment using its exact primary type definition', () => {
+    const itemsBase = associatePrimaryItemTypes(
+      [
+        {
+          name: 'Example Armor',
+          source: 'HB',
+          type: 'TEST|HB',
+          startingEquipmentCategory: 'Basic',
+        },
+        { name: 'Example Gear', source: 'PHB', type: 'TEST', startingEquipmentCategory: 'Basic' },
+        {
+          name: 'Invalid Armor',
+          source: 'PHB',
+          type: 'MA|PHB|extra',
+          startingEquipmentCategory: 'Basic',
+        },
+        {
+          name: 'Ambiguous Armor',
+          source: 'HB',
+          type: 'MA|HB',
+          startingEquipmentCategory: 'Basic',
+        },
+      ],
+      [
+        { abbreviation: 'TEST', source: 'PHB', name: 'Adventuring Gear' },
+        { abbreviation: 'TEST', source: 'HB', name: 'Medium Armor' },
+        { abbreviation: 'MA', source: 'HB', name: 'Medium Armor' },
+        { abbreviation: 'MA', source: 'HB', name: 'Adventuring Gear' },
+      ],
+      [],
+    )
+    const preview = getRecursiveTooltipData(
+      { kind: 'proficiency', name: 'medium', source: 'armor' },
+      buildRecursiveLookup({ itemsBase }),
+      'medium',
+    )
+    expect(preview.html).toContain('Example Armor (HB)')
+    expect(preview.html).not.toContain('Example Gear')
+    expect(preview.html).not.toContain('Invalid Armor')
+    expect(preview.html).not.toContain('Ambiguous Armor')
+  })
+
+  test('keeps literal item names in generated nested links', () => {
+    const item: Item5e = {
+      name: 'C&copy; Armor',
+      source: 'HB',
+      type: 'MA',
+      startingEquipmentCategory: 'Basic',
+    }
+    const lookup = buildRecursiveLookup({ itemsBase: [item] })
+    const preview = getRecursiveTooltipData(
+      { kind: 'proficiency', name: 'medium', source: 'armor' },
+      lookup,
+      'medium',
+    )
+    const html = new DOMParser().parseFromString(preview.html ?? '', 'text/html')
+    const reference = html.querySelector<HTMLElement>('[data-hover-name]')
+    expect(reference?.textContent).toBe('C&copy; Armor (HB)')
+    expect(
+      resolveRecursiveEntity(
+        lookup.items,
+        reference?.dataset.hoverName ?? '',
+        reference?.dataset.hoverSource,
+      ),
+    ).toBe(item)
+  })
+})
 
 describe('buildRecursiveLookup', () => {
   test('builds source-qualified and deterministic name-only maps from explicit collections', () => {

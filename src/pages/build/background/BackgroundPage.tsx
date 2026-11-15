@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  AnchoredHint,
   WorkspaceBody,
   WorkspacePage,
   WorkspacePaneHeader,
@@ -21,22 +22,29 @@ import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useBackgroundLookup, useFeatLookup, useItemLookup } from '@/hooks/data/useGameData'
 import { useStartingEquipmentPolicy } from '@/hooks/data/useStartingEquipment'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
 import { buildBackgroundLookup } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
+  getBackgroundEquipmentBlocks,
   getSelectedEquipmentPackage,
+  hasInvalidStartingEquipmentPackage,
   resolveBackgroundEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { needsStartingEquipmentApplication } from '@/lib/character/startingEquipmentGrants'
+import {
+  needsStartingEquipmentApplication,
+  sameStartingReference,
+} from '@/lib/character/startingEquipmentGrants'
 import { resolveFixedFeatGrant } from '@/lib/featGrants'
 import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -47,12 +55,20 @@ import {
   getBackgroundToolNames,
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Feat5e, Spell5e } from '@/types/5etools'
+import type { Background5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { Character, StartingEquipmentItemChoices } from '@/types/character'
 
 type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
   provenanceChoiceId?: string
+}
+
+type EquipmentDraft = {
+  character: Character
+  background: Background5e
+  choices: string[]
+  itemChoices: StartingEquipmentItemChoices
 }
 
 function getFeatLinkTarget(name: string, source: string) {
@@ -66,6 +82,7 @@ const BACKGROUND_BONUSES_LINK = {
   pathname: '/build/ability-scores',
   search: createSearchParams({ focus: 'background-bonuses' }).toString(),
 }
+const EQUIPMENT_HINT_ID = 'background-starting-equipment'
 
 export function BuildBackgroundPage() {
   const [searchParams] = useSearchParams()
@@ -88,8 +105,19 @@ export function BuildBackgroundPage() {
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
+  const [equipmentDraft, setEquipmentDraft] = useState<EquipmentDraft>()
+  const [showEquipmentHint, setShowEquipmentHint] = useState(
+    () => !isHintDismissed(EQUIPMENT_HINT_ID),
+  )
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
+
+  useEffect(() => subscribeToHintReset(() => setShowEquipmentHint(true)), [])
+
+  const dismissEquipmentHint = () => {
+    setHintDismissed(EQUIPMENT_HINT_ID, true)
+    setShowEquipmentHint(false)
+  }
 
   const filteredBackgrounds = useMemo(() => {
     const q = bgSearch.trim().toLowerCase()
@@ -128,6 +156,13 @@ export function BuildBackgroundPage() {
   const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
   const bgEquipmentChoices = character?.backgroundEquipmentChoices ?? []
   const bgEquipmentItemChoices = character?.backgroundEquipmentItemChoices ?? {}
+  const draft =
+    equipmentDraft?.character === character && equipmentDraft?.background === selectedBg
+      ? equipmentDraft
+      : undefined
+  const packageChoices = draft?.choices ?? bgEquipmentChoices
+  const packageItems = draft?.itemChoices ?? bgEquipmentItemChoices
+  const backgroundEquipmentBlocks = getBackgroundEquipmentBlocks(selectedBg?.startingEquipment)
   const equipmentPolicy = useStartingEquipmentPolicy('background', selectedBg)
 
   const equipmentBlocks = useMemo(
@@ -135,12 +170,29 @@ export function BuildBackgroundPage() {
       resolveBackgroundEquipmentBlocks(
         selectedBg?.startingEquipment,
         itemLookup,
-        bgEquipmentItemChoices,
+        packageItems,
         equipmentPolicy,
       ),
-    [selectedBg?.startingEquipment, itemLookup, bgEquipmentItemChoices, equipmentPolicy],
+    [selectedBg?.startingEquipment, itemLookup, packageItems, equipmentPolicy],
   )
   const configurableEquipmentBlocks = equipmentBlocks
+  const canShowEquipmentHint =
+    showEquipmentHint &&
+    character?.originSystem === '2024' &&
+    !!equipmentPolicy?.ownerAvailable &&
+    equipmentBlocks.some((block) => !block.isFixed && block.choiceKeys.length > 1)
+  const equipmentHintPosition = useAnchoredHintPosition({
+    enabled: canShowEquipmentHint,
+    selector: '[data-background-equipment-hint]',
+  })
+  const needsPackageApplication =
+    !!character &&
+    !!equipmentPolicy?.ownerAvailable &&
+    needsStartingEquipmentApplication(
+      character,
+      'background',
+      getSelectedEquipmentPackage(equipmentBlocks, packageChoices),
+    )
   const optionCountByBackground = useMemo(() => {
     const counts = new Map<string, number>()
     for (const bg of backgrounds) {
@@ -235,6 +287,20 @@ export function BuildBackgroundPage() {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
 
+  const applyPackage = (choices: string[], itemChoices: StartingEquipmentItemChoices) => {
+    if (!selectedBg) return
+    const active = backgroundEquipmentBlocks.map((_, index) => {
+      const block = equipmentBlocks.find((block) => block.index === index)
+      return block?.isFixed ? '' : choices[index] || block?.choiceKeys[0] || ''
+    })
+    if (hasInvalidStartingEquipmentPackage(backgroundEquipmentBlocks, active)) {
+      setEquipmentDraft({ character, background: selectedBg, choices: active, itemChoices })
+      return
+    }
+    applyBackgroundSelection(selectedBg, active, active.length ? itemChoices : {})
+    setEquipmentDraft(undefined)
+  }
+
   const handleBackground = (name: string, bgSource?: string) => {
     const bg = resolveBackgroundReference(
       { name, source: bgSource },
@@ -242,7 +308,22 @@ export function BuildBackgroundPage() {
       { backgroundsByKey: rawBackgroundLookup },
     )
     if (!bg) return
-    applyBackgroundSelection(bg)
+    const sameOwner = sameStartingReference(
+      { name: character.background, source: character.backgroundSource ?? '' },
+      bg,
+    )
+    if (
+      !sameOwner ||
+      !hasInvalidStartingEquipmentPackage(
+        getBackgroundEquipmentBlocks(bg.startingEquipment),
+        bgEquipmentChoices,
+      )
+    )
+      applyBackgroundSelection(
+        bg,
+        sameOwner ? bgEquipmentChoices : [],
+        sameOwner ? bgEquipmentItemChoices : undefined,
+      )
     if (detailCollapsed) setDetailCollapsed(false)
     setCompactPane('right')
   }
@@ -524,7 +605,7 @@ export function BuildBackgroundPage() {
 
                     {backgroundConfigurationPanel}
 
-                    {configurableEquipmentBlocks.length > 0 && (
+                    {(configurableEquipmentBlocks.length > 0 || needsPackageApplication) && (
                       <div
                         ref={equipmentChoiceRef}
                         className={cn(
@@ -532,38 +613,28 @@ export function BuildBackgroundPage() {
                           equipmentChoiceHighlighted && 'animate-route-focus',
                         )}
                       >
-                        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <div
+                          data-background-equipment-hint
+                          className="mb-2 w-fit text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                        >
                           Starting Equipment
                         </div>
                         <StartingEquipmentBlocks
                           blocks={configurableEquipmentBlocks}
-                          choices={bgEquipmentChoices}
-                          itemChoices={bgEquipmentItemChoices}
+                          choices={packageChoices}
+                          itemChoices={packageItems}
                           label="Background starting equipment"
-                          needsApplication={
-                            !!equipmentPolicy?.ownerAvailable &&
-                            needsStartingEquipmentApplication(
-                              character,
-                              'background',
-                              getSelectedEquipmentPackage(equipmentBlocks, bgEquipmentChoices),
-                            )
-                          }
-                          onApply={() =>
-                            applyBackgroundSelection(
-                              selectedBg,
-                              bgEquipmentChoices,
-                              bgEquipmentItemChoices,
-                            )
-                          }
+                          needsApplication={needsPackageApplication}
+                          onApply={() => applyPackage(packageChoices, packageItems)}
                           onBlockChange={(block, value) => {
-                            const next = [...bgEquipmentChoices]
-                            while (next.length <= block) next.push('a')
+                            const next = [...packageChoices]
+                            while (next.length <= block) next.push('')
                             next[block] = value
-                            applyBackgroundSelection(selectedBg, next, bgEquipmentItemChoices)
+                            applyPackage(next, packageItems)
                           }}
                           onItemChange={(_, __, key, items) =>
-                            applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
-                              ...bgEquipmentItemChoices,
+                            applyPackage(packageChoices, {
+                              ...packageItems,
                               [key]: items,
                             })
                           }
@@ -585,6 +656,16 @@ export function BuildBackgroundPage() {
           }
         />
       </WorkspaceBody>
+
+      <AnchoredHint
+        position={canShowEquipmentHint ? equipmentHintPosition : null}
+        width={288}
+        onDismiss={dismissEquipmentHint}
+        dismissLabel="Dismiss background starting equipment hint"
+      >
+        Use the package tabs to choose the items and coin your background grants. Class starting
+        equipment is handled separately.
+      </AnchoredHint>
 
       <FeatSelectionModal
         open={featModalOpen}

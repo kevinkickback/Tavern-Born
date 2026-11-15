@@ -19,7 +19,7 @@ import {
   savePortrait,
 } from '@/lib/portraitLibrary'
 import { cn } from '@/lib/utils'
-import type { PortraitTransform } from '@/types/character'
+import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
 interface PortraitPickerProps {
   portrait?: string | null
@@ -27,7 +27,8 @@ interface PortraitPickerProps {
   name?: string
   level?: number
   race?: string
-  characterClass?: string
+  classes?: readonly CharacterClassEntry[]
+  originSystem?: OriginSystem
   gender?: string
   lastModified?: string
   onPortraitChange: (portrait: string | null) => void
@@ -41,7 +42,8 @@ export function PortraitPicker({
   name,
   level,
   race,
-  characterClass,
+  classes,
+  originSystem,
   gender,
   lastModified,
   onPortraitChange,
@@ -289,7 +291,8 @@ export function PortraitPicker({
           name={name}
           level={level}
           race={race}
-          characterClass={characterClass}
+          classes={classes}
+          originSystem={originSystem}
           gender={gender}
           lastModified={lastModified}
           transform={t}
@@ -305,7 +308,9 @@ export function PortraitPicker({
     <section
       className={cn(
         'flex w-full flex-col overflow-hidden',
-        isCreator ? 'rounded-lg border border-border md:min-h-32 md:flex-1' : 'h-full',
+        isCreator
+          ? 'rounded-lg border border-border bg-workspace-pane md:min-h-32 md:flex-1'
+          : 'h-full',
       )}
     >
       <WorkspacePaneHeader
@@ -315,7 +320,7 @@ export function PortraitPicker({
           !isCreator && 'pr-20',
           isCreator && [
             'h-auto border-0 bg-transparent px-2 pt-2 [&_h2]:text-base [&_h2]:normal-case [&_h2]:tracking-normal [&_h2]:text-foreground',
-            headingRule,
+            'after:h-px after:flex-1 after:bg-border-strong',
           ],
         )}
       />

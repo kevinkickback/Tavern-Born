@@ -42,8 +42,8 @@ export async function loadStandardJourneyData() {
 export function getStandardJourneyCatalog(
   data: Awaited<ReturnType<typeof loadStandardJourneyData>>,
   edition: Character['originSystem'],
+  sources = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')!.abbreviations,
 ) {
-  const sources = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')!.abbreviations
   const raw = buildGameDataLookups(data)
   const previous = useGameDataStore.getState().gameData
   useGameDataStore.setState({ gameData: { ...data, lookups: raw } })

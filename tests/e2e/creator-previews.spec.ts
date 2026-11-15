@@ -37,6 +37,12 @@ const items = associateItemTypeEntries(
         type: 'G',
         entries: ['This detail belongs to the draft books.'],
       },
+      { name: 'Training Dart', source: 'TCE', type: 'R', weaponCategory: 'simple' },
+      { name: 'Leather Armor', source: 'PHB', type: 'LA', ac: 11 },
+      { name: 'Shield', source: 'PHB', type: 'S', ac: 2 },
+      { name: 'Longsword', source: 'PHB', type: 'M', weaponCategory: 'martial' },
+      { name: 'Whip', source: 'PHB', type: 'M', weaponCategory: 'martial', property: ['F'] },
+      { name: 'Shortsword', source: 'TCE', type: 'M', weaponCategory: 'martial', property: ['L'] },
     ],
   }) as Item5e[],
   [
@@ -89,7 +95,14 @@ const GAME_DATA: GameData = {
       hd: { faces: 10, number: 1 },
       proficiency: ['str', 'con'],
       startingProficiencies: {
-        weapons: ['simple weapons', '{@item Mace|PHB}', '{@item Sling|PHB}'],
+        armor: ['light', 'medium', 'shield'],
+        weapons: [
+          'simple weapons',
+          '{@item Mace|PHB}',
+          '{@item sling|PHB}',
+          'Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property',
+        ],
+        tools: ["{@item thieves' tools|PHB}", "{@item tinker's tools|PHB}"],
         skills: [],
       },
       classFeatures: [
@@ -128,6 +141,10 @@ const GAME_DATA: GameData = {
     { name: 'Restrained', source: 'PHB', entries: ['A restrained creature has limited movement.'] },
   ],
   itemsBase: items,
+  itemProperties: [
+    { abbreviation: 'F', source: 'PHB', name: 'Finesse' },
+    { abbreviation: 'L', source: 'PHB', name: 'Light' },
+  ],
 }
 
 test.use({ viewport: { width: 1280, height: 900 } })
@@ -147,11 +164,11 @@ type CaptureWindow = Window & {
   __creatorPreviewCapture?: { stopped: boolean; frames: PreviewFrame[] }
 }
 
-async function openRace(page: Page) {
+async function openExistingCharacter(page: Page) {
   const existing: Character = {
     ...(JSON.parse(readFileSync('tests/fixtures/equipment-e2e.tbc', 'utf8')) as Character),
     name: 'Existing character',
-    allowedSources: [],
+    allowedSources: ['PHB'],
     originSystem: '2014',
   }
   await page.goto('/')
@@ -163,6 +180,10 @@ async function openRace(page: Page) {
   })
   await page.reload()
   await openCharacterFromHome(page, 'Existing character')
+}
+
+async function openRace(page: Page) {
+  await openExistingCharacter(page)
   await page.getByRole('button', { name: 'New Character' }).first().click()
   const wizard = page.getByRole('dialog', { name: 'Create New Character', exact: true })
   await wizard.getByLabel('Character Name').fill('Preview draft')
@@ -170,6 +191,12 @@ async function openRace(page: Page) {
   await wizard.getByText('5e Legacy (2014)', { exact: true }).click()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   await wizard.getByRole('button', { name: 'None', exact: true }).click()
+  const supplementHeading = wizard.getByRole('heading', { name: 'Supplements', exact: true })
+  expect(
+    await supplementHeading.evaluate((heading) =>
+      Number.parseFloat(getComputedStyle(heading, '::after').width),
+    ),
+  ).toBeGreaterThan(16)
   await wizard.getByRole('button', { name: /Tasha's Cauldron/ }).click()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(wizard.getByPlaceholder('Search races...')).toBeVisible()
@@ -230,6 +257,12 @@ test('keyboard pins remain accessible immutable snapshots through step, discard 
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   await trigger.focus()
   await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await trigger.press('Escape')
+  await expect(pin).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await expect(page.getByRole('alertdialog', { name: 'Discard character creation?' })).toHaveCount(
+    0,
+  )
   await trigger.press('Enter')
   await expect(pin.getByTitle('Unpin tooltip')).toBeFocused()
   expect(await pin.evaluate((node) => Boolean(node.closest('[aria-hidden="true"]')))).toBe(false)
@@ -412,6 +445,19 @@ test('draft books supply race, class and background details while linked items r
   await page.mouse.move(5, 5)
   await expect(lens).toBeHidden()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
+  const training = wizard.getByRole('heading', { name: 'Training', exact: true }).locator('..')
+  const armorRow = training.getByRole('heading', { name: 'Armor Proficiencies' }).locator('..')
+  const [light, medium, shield] = await Promise.all(
+    ['Light', 'Medium', 'Shield'].map((name) =>
+      armorRow.getByRole('button', { name, exact: true }).boundingBox(),
+    ),
+  )
+  expect(light!.y).toBe(medium!.y)
+  expect(medium!.y).toBe(shield!.y)
+  await expect(armorRow).toContainText('Light, Medium, Shield')
+  await expect(
+    training.getByRole('heading', { name: 'Tool Proficiencies' }).locator('..'),
+  ).toContainText("Thieves' tools, Tinker's tools")
   await wizard.getByRole('button', { name: 'Combat Reading', exact: true }).hover()
   await page
     .getByRole('dialog', { name: 'Combat Reading preview', exact: true })
@@ -434,9 +480,30 @@ test('draft books supply race, class and background details while linked items r
   await expect(sling).toContainText('1 sp')
   await expect(sling).not.toContainText('The mace has an available description.')
   await expect(sling).not.toContainText('Supplemental draft guidance.')
-  await expect(wizard.getByText('simple weapons', { exact: false })).toBeVisible()
   await page.mouse.move(5, 5)
   await expect(sling).toBeHidden()
+  await wizard.getByRole('button', { name: 'Simple weapons', exact: true }).hover()
+  const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
+  await expect(simple.getByRole('button', { name: 'Training Dart (TCE)' })).toBeVisible()
+  await expect(simple.getByText('Longsword', { exact: false })).toHaveCount(0)
+  await simple.getByRole('button', { name: 'Mace (PHB)', exact: true }).hover()
+  await expect(mace).toContainText('Supplemental draft guidance.')
+  await page.mouse.move(5, 5)
+  await expect(simple).toBeHidden()
+  await wizard.getByRole('button', { name: 'Light', exact: true }).hover()
+  const armor = page.getByRole('dialog', { name: 'Light Armor preview', exact: true })
+  await expect(armor.getByRole('button', { name: 'Leather Armor (PHB)' })).toBeVisible()
+  await expect(armor.getByText('Shield', { exact: false })).toHaveCount(0)
+  await page.mouse.move(5, 5)
+  await expect(armor).toBeHidden()
+  await wizard.getByRole('button', { name: 'Finesse or Light', exact: true }).hover()
+  const qualified = page.getByRole('dialog', {
+    name: 'Martial Weapons with Finesse or Light preview',
+  })
+  await expect(qualified.getByRole('button', { name: 'Shortsword (TCE)' })).toBeVisible()
+  await expect(qualified.getByText('Longsword', { exact: false })).toHaveCount(0)
+  await page.mouse.move(5, 5)
+  await expect(qualified).toBeHidden()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   const backgroundReferences = wizard.getByRole('button', { name: 'Reading Lens', exact: true })
   await expect(backgroundReferences).toHaveCount(2)
@@ -446,4 +513,34 @@ test('draft books supply race, class and background details while linked items r
     await page.mouse.move(5, 5)
     await expect(lens).toBeHidden()
   }
+})
+
+test('Builder class training uses the active character books', async ({ page }) => {
+  await openExistingCharacter(page)
+  await page.getByRole('button', { name: 'Builder', exact: true }).click()
+  await page.getByRole('link', { name: 'Class', exact: true }).click()
+  const trigger = page.getByRole('button', { name: 'Simple weapons', exact: true })
+  await trigger.focus()
+  const simple = page.getByRole('dialog', { name: 'Simple Weapons preview', exact: true })
+  const maceTrigger = simple.getByRole('button', { name: 'Mace (PHB)' })
+  await expect(maceTrigger).toBeVisible()
+  await expect(simple.getByText('Training Dart', { exact: false })).toHaveCount(0)
+  await maceTrigger.focus()
+  const mace = page.getByRole('dialog', { name: 'Mace preview', exact: true })
+  await expect(mace).toContainText('The mace has an available description.')
+  await expect(mace).not.toContainText('Supplemental draft guidance.')
+  await mace.getByTitle('Pin tooltip').focus()
+  await page.keyboard.press('Escape')
+  await expect(mace).toBeHidden()
+  await expect(maceTrigger).toBeFocused()
+  await expect(simple).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(simple).toBeHidden()
+  await expect(trigger).toBeFocused()
+  await page.getByRole('button', { name: 'Finesse or Light', exact: true }).hover()
+  const qualified = page.getByRole('dialog', {
+    name: 'Martial Weapons with Finesse or Light preview',
+  })
+  await expect(qualified.getByRole('button', { name: 'Whip (PHB)' })).toBeVisible()
+  await expect(qualified.getByText('Shortsword', { exact: false })).toHaveCount(0)
 })

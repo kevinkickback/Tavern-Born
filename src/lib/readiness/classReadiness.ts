@@ -1,4 +1,8 @@
 import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  getArmorReplication,
+} from '@/lib/5etools/artificerArmorReplication'
+import {
   getClassChoiceSlotLevels,
   getProgressiveChoiceGainCount,
   getProgressiveChoiceReviewLevel,
@@ -301,6 +305,23 @@ export function validateClassChoices(
       if ((orderNeedsRecovery || orderRulesUnavailable) && original.id === order?.id) continue
       const choice = resolveHistoricalProficiencyChoice(character, original)
       if (
+        choice.id === ARMOR_REPLICATION_CHOICE_ID &&
+        choice.level <= entry.levels &&
+        !getArmorReplication(classData, subclassData, catalogs)?.available
+      ) {
+        issues.push(
+          readinessIssue(
+            classChoiceReadinessId(choice.id),
+            'blocking',
+            'class',
+            'Restore Armor Replication',
+            'Restore the exact Improved Armorer and Replicate Magic Item rules for this required plan.',
+            classChoiceTarget(entry, choice.level, choice.id),
+          ),
+        )
+        continue
+      }
+      if (
         choice.level <= entry.levels &&
         getHistoricalProficiencyRule(choice.id) &&
         !selections.get(choice.id)?.proficiencyAtGain
@@ -379,17 +400,24 @@ export function validateClassChoices(
         calculation.classChoices.prerequisites,
       )
       const savedChoice = selections.get(choice.id)
-      const countedSelections = eligibleOptionKeys
-        ? storedSelection.filter(
-            (option) =>
-              eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
-              (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
-                option.entityType,
-              ) ||
-                (!!savedChoice &&
-                  effectiveRoutes.featureIds.has(getClassChoiceFeatureId(savedChoice, option)))),
-          )
-        : storedSelection
+      const countedSelections =
+        choice.kind === 'psionic' && character.mysticDisciplineReplacements?.length
+          ? effectiveRoutes.selectedOptions
+              .filter((row) => row.choice.id === choice.id)
+              .map((row) => row.option)
+          : eligibleOptionKeys
+            ? storedSelection.filter(
+                (option) =>
+                  eligibleOptionKeys.has(getClassChoiceOptionKey(option)) &&
+                  (!['classFeature', 'subclassFeature', 'optionalFeature', 'psionic'].includes(
+                    option.entityType,
+                  ) ||
+                    (!!savedChoice &&
+                      effectiveRoutes.featureIds.has(
+                        getClassChoiceFeatureId(savedChoice, option),
+                      ))),
+              )
+            : storedSelection
       const count =
         choice.kind === 'creature'
           ? Number(

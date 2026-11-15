@@ -34,6 +34,7 @@ type CopyKind =
   | 'monster'
   | 'race'
   | 'subrace'
+  | 'background'
   | 'itemType'
   | 'class'
   | 'subclassFeature'
@@ -171,7 +172,7 @@ function key(value: Record<string, unknown>, kind?: CopyKind): string {
       field('source', subclassSource),
     ])
   }
-  if (kind === 'class') {
+  if (kind === 'class' || kind === 'background') {
     const fields = ['name', 'source'].map((field) => ownValue(value, field))
     return fields.every((field) => typeof field === 'string' && field.trim())
       ? JSON.stringify(fields.map((field) => (field as string).trim().toLowerCase()))
@@ -703,7 +704,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
 ): { records: T[]; diagnostics: CopyResolutionDiagnostic[] } {
   const byKey = new Map<string, T>()
   const ambiguous = new Set<string>()
-  const requiresExactIdentity = kind === 'class' || kind === 'subclassFeature'
+  const simpleOwnedCopy = kind === 'class' || kind === 'background'
+  const requiresExactIdentity = simpleOwnedCopy || kind === 'subclassFeature'
   const kindLabel = kind === 'subclassFeature' ? 'subclass-feature' : kind
   for (const record of records) {
     const identity = key(record, kind)
@@ -728,10 +730,10 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       const own = clone(record) as Record5e
       const copy = directive(ownValue(own, '_copy'))
       if (
-        kind === 'class' &&
+        simpleOwnedCopy &&
         Object.keys(copy).some((field) => !['name', 'source', '_preserve', '_mod'].includes(field))
       )
-        throw new Error('unsupported class copy transformation')
+        throw new Error(`unsupported ${kindLabel} copy transformation`)
       if (requiresExactIdentity) {
         if (!identity) throw new Error(`invalid ${kindLabel} identity`)
         if (ambiguous.has(identity)) throw new Error(`ambiguous ${kindLabel} identity`)
@@ -765,8 +767,8 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
       if (ownValue(inherited, '_copy'))
         throw new Error(`unresolved parent ${copy[parentField]}|${copy.source}`)
       materializeCopy(own, inherited, kind, templateByKey)
-      if (kind === 'class' && (own.name !== record.name || own.source !== record.source))
-        throw new Error('class copy changed its declared identity')
+      if (simpleOwnedCopy && (own.name !== record.name || own.source !== record.source))
+        throw new Error(`${kindLabel} copy changed its declared identity`)
       resolved.set(memoKey, own as T)
       return own as T
     } catch (error) {

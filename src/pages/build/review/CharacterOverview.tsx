@@ -57,6 +57,7 @@ import {
   resolveOrganizationImageSrc,
 } from '@/lib/character/organizationConstants'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import { capitalizeLabel, formatProficiencyLabel } from '@/lib/displayLabels'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import type { CharacterAction } from '@/types/actions'
 import type { Character, Feat, Feature } from '@/types/character'
@@ -162,7 +163,9 @@ function ProficiencyList({ label, values }: { label: string; values: readonly st
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </h3>
-      <p className="mt-1 text-sm">{values.length ? values.join(', ') : 'None'}</p>
+      <p className="mt-1 text-sm">
+        {values.length ? values.map(formatProficiencyLabel).join(', ') : 'None'}
+      </p>
     </div>
   )
 }
@@ -426,19 +429,14 @@ export function CharacterOverview({
         </div>
         <div className="flex flex-wrap gap-2">
           {Object.entries(calculation.movement.speeds).map(([mode, speed]) => (
-            <Badge
-              key={mode}
-              variant="outline"
-              className="capitalize"
-              data-testid={`review-movement-${mode}`}
-            >
-              {mode} {speed} ft.
+            <Badge key={mode} variant="outline" data-testid={`review-movement-${mode}`}>
+              {capitalizeLabel(mode)} {speed} ft.
             </Badge>
           ))}
           {calculation.movement.hover && <Badge variant="outline">Hover</Badge>}
           {calculation.senses.map((sense) => (
             <Badge key={sense.type} variant="outline">
-              {sense.type}
+              {capitalizeLabel(sense.type)}
               {sense.range != null ? ` ${sense.range} ft.` : ''}
             </Badge>
           ))}
@@ -462,7 +460,8 @@ export function CharacterOverview({
                 <div className="mt-1 grid grid-cols-2 gap-1 text-sm sm:grid-cols-3">
                   {savingThrows.map((save) => (
                     <span key={save.ability}>
-                      {save.proficient ? '●' : '○'} {save.ability} {save.modifierString}
+                      {save.proficient ? '●' : '○'} {capitalizeLabel(save.ability)}{' '}
+                      {save.modifierString}
                     </span>
                   ))}
                 </div>
@@ -474,8 +473,8 @@ export function CharacterOverview({
                 <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                   {skills.map((skill) => (
                     <span key={skill.name}>
-                      {skill.expertise ? '◆' : skill.proficient ? '●' : '○'} {skill.name}{' '}
-                      {skill.modifierString}
+                      {skill.expertise ? '◆' : skill.proficient ? '●' : '○'}{' '}
+                      {formatProficiencyLabel(skill.name)} {skill.modifierString}
                     </span>
                   ))}
                 </div>
@@ -711,7 +710,7 @@ export function CharacterOverview({
                 <div key={detail.profileId} className="rounded-lg border border-border p-3 text-sm">
                   <strong>{detail.sourceName}</strong>
                   <p className="mt-1 text-muted-foreground">
-                    {detail.spellcastingAbility ?? 'Unselected ability'} · Save DC{' '}
+                    {capitalizeLabel(detail.spellcastingAbility ?? 'Unselected ability')} · Save DC{' '}
                     {detail.spellSaveDC ?? '—'} · Spell attack{' '}
                     {detail.spellAttackBonus == null
                       ? '—'
@@ -806,7 +805,7 @@ export function CharacterOverview({
                       }
                     >
                       <div className="space-y-1">
-                        {item.rarity && <p>{item.rarity}</p>}
+                        {item.rarity && <p>{capitalizeLabel(item.rarity)}</p>}
                         {rulesEntries.length ? (
                           <GameContent entry={rulesEntries} />
                         ) : (

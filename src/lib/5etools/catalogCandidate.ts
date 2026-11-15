@@ -4,18 +4,29 @@ import {
   computeGameDataFingerprint,
   type GameDataLayerCacheMetadataByRole,
 } from '@/lib/storage/dataCache'
-import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
+import type {
+  CatalogResourceProof,
+  DataSourceConfig,
+  GameData,
+  GameDataSourceStack,
+} from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
+import { observeCatalogResources } from './catalogResourceProof'
 import {
   assertLayerDependencies,
+  composeGameDataLayers,
   externalCatalogKeys,
   hasCatalogRecords,
   loadGameDataSourceStack,
 } from './contentLayers'
 import type { DataLoaderOptions } from './dataLoader'
 import { loadDataFromSource } from './dataLoader'
-import { createJsonResourceReader, type ReadSourceJson } from './resourceReader'
+import {
+  createJsonResourceReader,
+  isMissingCatalogResource,
+  type ReadSourceJson,
+} from './resourceReader'
 import { resolveSourceRevision } from './sourceRevision'
 import { hasUniqueSpellRouteSource } from './spellRouteSources'
 import { inspectCatalogResources } from './validator'
@@ -26,6 +37,7 @@ export interface PreparedCatalog {
   data: GameData
   keys: string[]
   warnings: string[]
+  unavailableResources?: string[]
   revision?: string
   layerMetadata?: GameDataLayerCacheMetadataByRole
 }
@@ -66,9 +78,67 @@ export async function prepareCatalog(
 ): Promise<PreparedCatalog> {
   onProgress?.(0, 0, 'Checking source')
   const source = await resolveSourceRevision(config, signal, read)
-  const reader = createJsonResourceReader(source.readConfig, read)
+  return prepareResolvedCatalog(source, base, signal, onProgress, read)
+}
+
+export async function checkCatalogRevision(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  verifiedRevision: string | CatalogResourceProof,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+): Promise<PreparedCatalog | null> {
+  onProgress?.(0, 0, 'Checking source')
+  const source = await resolveSourceRevision(config, signal, read)
+  signal.throwIfAborted()
+  if (typeof verifiedRevision === 'string' && source.revision === verifiedRevision) return null
+  return prepareResolvedCatalog(
+    source,
+    base,
+    signal,
+    onProgress,
+    read,
+    typeof verifiedRevision === 'object' ? verifiedRevision : undefined,
+  )
+}
+
+function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+): Promise<PreparedCatalog>
+function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress: DataLoaderOptions['onProgress'],
+  read: ReadSourceJson | undefined,
+  priorProof: CatalogResourceProof | undefined,
+): Promise<PreparedCatalog | null>
+async function prepareResolvedCatalog(
+  source: Awaited<ReturnType<typeof resolveSourceRevision>>,
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  onProgress?: DataLoaderOptions['onProgress'],
+  read?: ReadSourceJson,
+  priorProof?: CatalogResourceProof,
+): Promise<PreparedCatalog | null> {
+  const { config } = source
+  const observation = source.revision
+    ? undefined
+    : observeCatalogResources(source.readConfig, read, signal)
+  if (observation && (await observation.matches(priorProof))) return null
+  const reader = observation?.reader ?? createJsonResourceReader(source.readConfig, read)
   const scan = await settleOnAbort(
-    inspectCatalogResources(reader, config.availableResources ?? [], signal),
+    inspectCatalogResources(
+      reader,
+      config.availableResources ?? [],
+      signal,
+      !!config.lastLoaded && !config.availableResources,
+    ),
     signal,
   )
   const admitted = { ...source.config, isValid: true, availableResources: scan.resources }
@@ -83,13 +153,22 @@ export async function prepareCatalog(
     onResourceFailure: (resource: string, failure: { required: boolean; cause?: unknown }) => {
       const detail = failure.cause instanceof Error ? ` — ${failure.cause.message}` : ''
       const message = `${resource}${detail}`
+      const fromBase = resource.startsWith('Included SRD: ')
+      const file = resource.replace(/^Additional content: /, '')
+      const previouslyAvailable = !fromBase && config.availableResources?.includes(file)
+      const missing = isMissingCatalogResource(fromBase ? 'bundled' : config.type, failure.cause)
+      const refreshingIndexedClass =
+        file.startsWith('class/fluff-class-') &&
+        (config.lastLoaded || config.availableResources?.includes('class/index.json'))
       if (
         failure.required ||
-        (resource.endsWith('book/book-tce.json') &&
-          config.availableResources?.includes('book/book-tce.json'))
+        (!missing && (fromBase || previouslyAvailable || refreshingIndexedClass))
       ) {
         issues.push(message)
-      } else scan.warnings.push(message)
+      } else if (fromBase || !missing) {
+        scan.warnings.push(message)
+        if (!missing) scan.unavailable.push(file)
+      }
     },
   }
   const load = base
@@ -111,23 +190,28 @@ export async function prepareCatalog(
         },
       )
     : loadDataFromSource(admitted, options, scan.reader)
-  const data = await settleOnAbort(load, signal)
+  const loaded = await settleOnAbort(load, signal)
   if (issues.length) throw new Error(`Could not load required game data. ${issues.join('; ')}`)
-  if (!base) assertLayerDependencies(data, data)
+  // Exact feature targets can live in a different indexed document in the same source.
+  const data = base ? loaded : composeGameDataLayers([loaded])
+  if (!base) assertLayerDependencies(data, loaded)
   const magicIssue = data.magicVariantDiagnostics?.find(
     ({ message }) => !message.startsWith('Reference collides'),
   )
   if (magicIssue) throw new Error(`${magicIssue.path}: ${magicIssue.message}`)
-  const missingSpell = getMissingSubclassSpell(data, additional ?? data)
+  const missingSpell = getMissingSubclassSpell(data, additional ?? loaded)
   if (missingSpell) throw new Error(missingSpell)
-  const keys = externalCatalogKeys(additional ?? data)
+  const keys = externalCatalogKeys(additional ?? loaded)
   if (!keys.length) throw new Error('The additional source has no usable game data.')
+  admitted.resourceProof =
+    scan.warnings.length || scan.unavailable.length ? undefined : observation?.proof()
   return {
     config: admitted,
     identity,
     data,
     keys,
     warnings: scan.warnings,
+    ...(scan.unavailable.length ? { unavailableResources: scan.unavailable } : {}),
     revision: source.revision,
     layerMetadata,
   }

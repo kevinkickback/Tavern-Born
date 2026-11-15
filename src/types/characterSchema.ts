@@ -92,7 +92,7 @@ const managedClassSpellChoiceSchema = z
         .max(1200)
         .transform((value) => (value.startsWith('feature-spells:') ? value : value.toLowerCase())),
       z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
-      z.number().int().nonnegative(),
+      finiteInteger().nonnegative(),
     ]),
     target: z
       .object({
@@ -107,6 +107,11 @@ const managedClassSpellChoiceSchema = z
   .strict()
 
 /** Any legal ability score, including magical boosted maximums. */
+// Keep format 15 integer admission for fields without an explicit safe-integer limit.
+function finiteInteger() {
+  return z.number().refine(Number.isInteger, 'Expected an integer')
+}
+
 const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
 
 const originSystemSchema = z.enum(['2014', '2024'])
@@ -146,8 +151,8 @@ const hitPointGainSchema = z
     classSource: z.string().min(1),
     classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
     characterLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
-    hitDie: z.number().int().positive(),
-    dieResult: z.number().int().positive(),
+    hitDie: finiteInteger().positive(),
+    dieResult: finiteInteger().positive(),
     method: z.enum(['average', 'rolled', 'manual']),
   })
   .refine((gain) => gain.dieResult <= gain.hitDie, {
@@ -158,7 +163,7 @@ const hitPointGainSchema = z
 const hitPointAdjustmentSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  amount: z.number().int(),
+  amount: finiteInteger(),
   mode: z.enum(['flat', 'per-level']),
   sourceType: z.enum(['manual', 'item', 'feat', 'other']),
   sourceRef: z.string().optional(),
@@ -168,7 +173,7 @@ const hitPointAdjustmentSchema = z.object({
 const armorClassAdjustmentSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  amount: z.number().int(),
+  amount: finiteInteger(),
   sourceType: z.enum(['manual', 'item', 'feat', 'other']),
   sourceRef: z.string().optional(),
   createdAt: z.string(),
@@ -177,9 +182,9 @@ const armorClassAdjustmentSchema = z.object({
 const movementModeSchema = z.enum(['walk', 'climb', 'swim', 'fly', 'burrow'])
 
 const characterMovementSchema = z.object({
-  speeds: z.record(movementModeSchema, z.number().int().nonnegative()),
+  speeds: z.partialRecord(movementModeSchema, finiteInteger().nonnegative()),
   hover: z.boolean().optional(),
-  other: z.record(z.union([z.number().int().nonnegative(), z.boolean()])).optional(),
+  other: z.record(z.string(), z.union([finiteInteger().nonnegative(), z.boolean()])).optional(),
   unresolvedInheritedModes: z.array(movementModeSchema).optional(),
   source: z.object({
     kind: z.enum(['race', 'manual']),
@@ -192,7 +197,7 @@ const movementAdjustmentSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   mode: z.string().min(1),
-  amount: z.number().int(),
+  amount: finiteInteger(),
   sourceType: z.enum(['manual', 'item', 'feat', 'other']),
   sourceRef: z.string().optional(),
   createdAt: z.string(),
@@ -301,7 +306,7 @@ const characterEffectBaseSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   source: characterEffectSourceSchema,
-  priority: z.number().int().optional(),
+  priority: finiteInteger().optional(),
   requirements: z.array(characterEffectRequirementSchema).optional(),
   condition: z.string().min(1).optional(),
 })
@@ -337,13 +342,13 @@ const manualActionSchema = z.object({
     .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
     .optional(),
   proficient: z.boolean().optional(),
-  attackBonus: z.number().int().optional(),
+  attackBonus: finiteInteger().optional(),
   save: z
     .object({
       ability: z
         .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
         .optional(),
-      dc: z.number().int().nonnegative(),
+      dc: finiteInteger().nonnegative(),
     })
     .optional(),
   range: z.string().optional(),
@@ -351,7 +356,7 @@ const manualActionSchema = z.object({
     .array(
       z.object({
         dice: z.string().min(1).optional(),
-        bonus: z.number().int(),
+        bonus: finiteInteger(),
         damageType: z.string().min(1).optional(),
       }),
     )
@@ -359,7 +364,7 @@ const manualActionSchema = z.object({
   properties: z.array(z.string()).optional(),
   mastery: z.array(z.object({ name: z.string().min(1), source: z.string().optional() })).optional(),
   resourceCost: z
-    .object({ resourceId: z.string().min(1), amount: z.number().int().positive() })
+    .object({ resourceId: z.string().min(1), amount: finiteInteger().positive() })
     .optional(),
   recharge: z
     .object({
@@ -443,7 +448,7 @@ const featureSchema = z.object({
   name: z.string().min(1),
   source: z.string().min(1),
   description: z.string(),
-  level: z.number().int().optional(),
+  level: finiteInteger().optional(),
 })
 
 const featOptionSelectionsSchema = z.object({
@@ -466,7 +471,7 @@ const featSchema = z.object({
   options: featOptionSelectionsSchema.optional(),
   className: z.string().optional(),
   classSource: z.string().optional(),
-  classLevel: z.number().int().min(1).optional(),
+  classLevel: finiteInteger().min(1).optional(),
   epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
 })
 
@@ -501,7 +506,7 @@ const equipmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
-  quantity: z.number().int().min(0),
+  quantity: finiteInteger().min(0),
   equipped: z.boolean(),
   attuned: z.boolean().optional(),
   description: z.string().optional(),
@@ -553,7 +558,7 @@ const currencySchema = z.object({
 const startingItemReferenceSchema = z
   .object({ name: z.string().trim().min(1), source: z.string().trim().min(1) })
   .strict()
-const startingItemChoicesSchema = z.record(z.array(startingItemReferenceSchema))
+const startingItemChoicesSchema = z.record(z.string(), z.array(startingItemReferenceSchema))
 const startingEquipmentGrantSchema = z
   .object({
     owner: startingItemReferenceSchema.optional(),
@@ -579,8 +584,8 @@ const startingEquipmentGrantSchema = z
   .strict()
 
 const hitPointsSchema = z.object({
-  current: z.number().int().min(0),
-  temporary: z.number().int().min(0),
+  current: finiteInteger().min(0),
+  temporary: finiteInteger().min(0),
 })
 
 const portraitTransformSchema = z.object({
@@ -610,7 +615,7 @@ const characterDetailsSchema = z.object({
   flaws: z.string().optional(),
   goals: z.string().optional(),
   fears: z.string().optional(),
-  age: z.number().int().optional(),
+  age: finiteInteger().optional(),
   height: z.string().optional(),
   weight: z.string().optional(),
   eyes: z.string().optional(),
@@ -707,7 +712,7 @@ const featSourceTagSchema = sourceTagSchema.superRefine((tag, context) => {
 
 const spellSourceTagSchema = sourceTagSchema
   .extend({
-    spellGrantedAtLevel: z.number().int().min(1).optional(),
+    spellGrantedAtLevel: finiteInteger().min(1).optional(),
     spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
   })
   .strict()
@@ -731,7 +736,7 @@ const spellSourceTagSchema = sourceTagSchema
 
 const abilityBonusProvenanceRecordSchema = z.object({
   ability: z.string(),
-  value: z.number().int(),
+  value: finiteInteger(),
   sourceTag: sourceTagSchema,
 })
 
@@ -739,8 +744,8 @@ const choiceRecordSchema = z.object({
   id: z.string(),
   domain: choiceDomainSchema,
   sourceTag: sourceTagSchema,
-  chooseCount: z.number().int().min(1),
-  amount: z.number().int().optional(),
+  chooseCount: finiteInteger().min(1),
+  amount: finiteInteger().optional(),
   optionPool: z.array(z.string()),
   selected: z.array(z.string()),
   selectedRefs: z
@@ -755,8 +760,8 @@ const choiceRecordSchema = z.object({
   status: choiceStatusSchema,
 })
 
-const sourceTagListMapSchema = z.record(z.array(sourceTagSchema))
-const spellSourceTagListMapSchema = z.record(z.array(spellSourceTagSchema))
+const sourceTagListMapSchema = z.record(z.string(), z.array(sourceTagSchema))
+const spellSourceTagListMapSchema = z.record(z.string(), z.array(spellSourceTagSchema))
 
 const proficiencyProvenanceSchema = z.object({
   armor: sourceTagListMapSchema,
@@ -772,7 +777,7 @@ const provenanceLedgerSchema = z.object({
   proficiencies: proficiencyProvenanceSchema,
   abilityBonuses: z.array(abilityBonusProvenanceRecordSchema),
   features: sourceTagListMapSchema,
-  feats: z.record(z.array(featSourceTagSchema)),
+  feats: z.record(z.string(), z.array(featSourceTagSchema)),
   spells: spellSourceTagListMapSchema,
   equipment: sourceTagListMapSchema,
   choices: z.array(choiceRecordSchema),
@@ -812,8 +817,8 @@ export const wizardAbilitiesSchema = z.object({
 
 const spellSlotLevelSchema = z
   .object({
-    max: z.number().int().min(0),
-    used: z.number().int().min(0),
+    max: finiteInteger().min(0),
+    used: finiteInteger().min(0),
   })
   .refine((sl) => sl.used <= sl.max, {
     message: 'Spell slots used cannot exceed max',
@@ -823,7 +828,7 @@ const spellSlotLevelSchema = z
 const spellSlotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
 const spellSlotsSchema = z
-  .record(z.coerce.number().int(), spellSlotLevelSchema)
+  .record(z.coerce.number().refine(Number.isInteger, 'Expected an integer'), spellSlotLevelSchema)
   .transform((slots) => {
     const normalized: Record<number, z.infer<typeof spellSlotLevelSchema>> = {}
     for (const level of spellSlotLevels) {
@@ -838,8 +843,8 @@ const raceSpellChoiceSchema = z
     level: z.number().int().min(0).max(MAX_CHARACTER_LEVEL),
     source: z.enum(['known', 'innate', 'prepared']),
     usage: z.string().regex(/^(direct|will|ritual|daily:(pb|[1-9]\d*e?)|rest:[1-9]\d*e?)$/),
-    dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
-    count: z.number().int().positive(),
+    dailyUses: z.union([finiteInteger().positive(), z.literal('pb')]).optional(),
+    count: finiteInteger().positive(),
     isCantrip: z.boolean(),
     filter: z
       .object({ level: z.number().int().min(0).max(9), classes: z.array(z.string().min(1)) })
@@ -867,7 +872,7 @@ const racialSpellStateSchema = z
         .object({
           reference: z.string().min(1),
           isCantrip: z.boolean(),
-          dailyUses: z.union([z.number().int().positive(), z.literal('pb')]).optional(),
+          dailyUses: z.union([finiteInteger().positive(), z.literal('pb')]).optional(),
         })
         .strict(),
     ),
@@ -913,7 +918,7 @@ const spellSelectionSchema = z
   .object({
     spellProfiles: z.array(spellProfileSchema).min(1, 'At least one spell profile must exist'),
     spellSlots: spellSlotsSchema,
-    pactSpellSlots: spellSlotsSchema.default({}),
+    pactSpellSlots: spellSlotsSchema.prefault({}),
   })
   .refine(
     (selection) => {
@@ -939,11 +944,11 @@ const spellSelectionSchema = z
 /** Full character schema for file import / data integrity checks. */
 const asiChoiceSchema = z.object({
   id: z.string(),
-  level: z.number().int(),
+  level: finiteInteger(),
   className: z.string(),
   classSource: z.string().min(1),
   epicBoonTarget: z.string().refine(isEpicBoonTarget).optional(),
-  abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
+  abilityChanges: z.record(z.string(), z.union([z.literal(1), z.literal(2)])),
 })
 
 const racialDefenseOwnerSchema = z
@@ -996,8 +1001,8 @@ export const characterSchema = z
     subraceSource: z.string().optional(),
     background: z.string(),
     backgroundSource: z.string().optional(),
-    currency: currencySchema.default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }).optional(),
-    experiencePoints: z.number().int().min(0).default(0),
+    currency: currencySchema.optional(),
+    experiencePoints: finiteInteger().min(0).default(0),
     classProgression: z.array(characterClassEntrySchema),
     abilityScores: abilityScoresSchema,
     proficiencies: proficienciesSchema,
@@ -1007,7 +1012,7 @@ export const characterSchema = z
     variantRules: variantRulesSchema.optional(),
     raceAsiChoices: z.array(z.array(z.string())).optional(),
     raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
-    backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
+    backgroundAsiBlockIndex: finiteInteger().nonnegative().optional(),
     backgroundEquipmentChoices: z.array(z.string()).optional(),
     backgroundEquipmentItemChoices: startingItemChoicesSchema.optional(),
     backgroundAsiChoices: z.array(z.string()).optional(),
@@ -1019,15 +1024,15 @@ export const characterSchema = z
       })
       .strict()
       .optional(),
-    classEquipmentChoices: z.record(z.array(z.string())).optional(),
-    classEquipmentItemChoices: z.record(startingItemChoicesSchema).optional(),
+    classEquipmentChoices: z.record(z.string(), z.array(z.string())).optional(),
+    classEquipmentItemChoices: z.record(z.string(), startingItemChoicesSchema).optional(),
     spells: spellSelectionSchema,
     equipment: z.array(equipmentSchema),
     visions: z
       .array(
         z.object({
           type: z.string().min(1),
-          range: z.number().int().positive().optional(),
+          range: finiteInteger().positive().optional(),
         }),
       )
       .optional(),
@@ -1035,12 +1040,12 @@ export const characterSchema = z
     hitPointsInitialized: z.boolean().optional(),
     hitPointGains: z.array(hitPointGainSchema).optional(),
     hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
-    maxHitPointsOverride: z.number().int().min(1).optional(),
-    armorClassOverride: z.number().int().min(0).optional(),
+    maxHitPointsOverride: finiteInteger().min(1).optional(),
+    armorClassOverride: finiteInteger().min(0).optional(),
     armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
     movement: characterMovementSchema,
     movementAdjustments: z.array(movementAdjustmentSchema).optional(),
-    movementOverrides: z.record(z.number().int().nonnegative()).optional(),
+    movementOverrides: z.record(z.string(), finiteInteger().nonnegative()).optional(),
     movementHoverOverride: z.boolean().optional(),
     racialDefenses: racialDefenseStateSchema.optional(),
     details: characterDetailsSchema,
@@ -1050,10 +1055,25 @@ export const characterSchema = z
     specialFeats: z.array(featSchema).optional(),
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
+    mysticDisciplineReplacements: z
+      .array(
+        z.strictObject({
+          classLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
+          choiceId: classChoiceIdSchema,
+          slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+          from: z.strictObject({
+            name: z.string().trim().min(1),
+            source: z.string().trim().min(1),
+          }),
+          to: z.strictObject({ name: z.string().trim().min(1), source: z.string().trim().min(1) }),
+        }),
+      )
+      .max(MAX_CHARACTER_LEVEL - 1)
+      .optional(),
     optionalClassFeatureAdoptions: z.array(optionalClassAdoptionSchema).optional(),
     managedClassSpellChoices: z.array(managedClassSpellChoiceSchema).optional(),
     managedClassSpellRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
-    fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
+    fixedFeatOptions: z.record(z.string(), featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema,
     inspiration: z.boolean().optional(),
     deathSaves: z
@@ -1063,13 +1083,13 @@ export const characterSchema = z
       })
       .optional(),
     conditions: z.array(z.string()).optional(),
-    exhaustion: z.number().int().min(0).optional(),
-    hitDiceUsed: z.record(z.number().int().min(0)).optional(),
+    exhaustion: finiteInteger().min(0).optional(),
+    hitDiceUsed: z.record(z.string(), finiteInteger().min(0)).optional(),
     ritualCasting: z.boolean().optional(),
-    classResources: z.record(z.number().int().min(0)).optional(),
+    classResources: z.record(z.string(), finiteInteger().min(0)).optional(),
     manualEffects: z.array(characterEffectSchema).optional(),
     suppressedEffectIds: z.array(z.string().min(1)).optional(),
-    effectFlags: z.record(z.boolean()).optional(),
+    effectFlags: z.record(z.string(), z.boolean()).optional(),
     manualActions: z.array(manualActionSchema).optional(),
     createdAt: z.string(),
     lastModified: z.string(),
@@ -1312,7 +1332,7 @@ export const characterSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.too_big,
           maximum: MAX_CHARACTER_LEVEL,
-          type: 'number',
+          origin: 'number',
           inclusive: true,
           message: `Total class levels cannot exceed ${MAX_CHARACTER_LEVEL} (got ${totalLevels})`,
           path: ['classProgression'],

@@ -4,6 +4,7 @@ import { formatModifier, normalizeAbilityName } from '@/lib/calculations/ability
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import type { RacialSpellcastingDetail } from '@/lib/calculations/spellProfiles.casting'
 import { getClassIconUrl } from '@/lib/classIcons'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import { cn } from '@/lib/utils'
 import type { SpellProfile } from '@/types/character'
 
@@ -110,8 +111,8 @@ export function SpellcastingDetailsCard({
                       </p>
                     </div>
                     {detail.spellcastingAbility ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
-                        {detail.spellcastingAbility}
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {capitalizeLabel(detail.spellcastingAbility)}
                       </Badge>
                     ) : null}
                   </div>
@@ -166,8 +167,8 @@ export function SpellcastingDetailsCard({
                       </p>
                     </div>
                     {ability ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
-                        {normalizedAbility ?? ability}
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {capitalizeLabel(normalizedAbility ?? ability)}
                       </Badge>
                     ) : null}
                   </div>

@@ -25,6 +25,7 @@ import {
 } from './companionFamilies'
 import { getCompanionSelectionStates } from './companionSelections'
 import { getFeatureOptionSelectionStates } from './featureOptionSelections'
+import { getMysticDisciplineState } from './mysticDisciplineReplacement'
 import { createOptionalClassFeatureActivity } from './optionalClassFeatureActivity'
 
 export interface GameDataAvailabilityIndex {
@@ -138,6 +139,20 @@ export interface UnavailableCharacterContent {
   source?: string
 }
 
+export function getSavedSpellReferences(character: Character) {
+  return [
+    ...character.spells.spellProfiles.flatMap((profile) => [
+      ...profile.cantrips,
+      ...profile.spellsKnown,
+      ...profile.preparedSpells,
+      ...(profile.fixedSpells ?? []),
+      ...(profile.alwaysPreparedSpells ?? []),
+      ...(profile.choices ?? []).flatMap((choice) => choice.selected),
+    ]),
+    ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
+  ]
+}
+
 /** Exact saved targets. An empty character filter leaves the full loaded catalog authoritative. */
 export function* getUnavailableCharacterContent(
   saved: Character,
@@ -206,12 +221,20 @@ export function* getUnavailableCharacterContent(
       index.featureOptions,
     ).map((state) => [state.selection.choiceId, state]),
   )
+  const mysticSlots = character.mysticDisciplineReplacements?.length
+    ? getMysticDisciplineState(character, index.featureOptions).slots
+    : []
   for (const selection of getEffectiveClassChoiceSelections(
     character,
     index.choiceClasses ?? [],
     index.featureOptions,
   )) {
     if (selection.inactive) continue
+    const disciplines = mysticSlots.filter((slot) => slot.selection.choiceId === selection.choiceId)
+    if (disciplines.length) {
+      for (const slot of disciplines) if (!slot.printing) yield slot.current
+      continue
+    }
     if (
       (isClassProficiencyChoiceId(selection.choiceId) &&
         !proficiencyStates.get(selection.choiceId)?.choice) ||
@@ -278,18 +301,7 @@ export function* getUnavailableCharacterContent(
     if (itemIsMissing(item, index)) yield item
   }
 
-  const spellReferences = character.spells.spellProfiles.flatMap((profile) => [
-    ...profile.cantrips,
-    ...profile.spellsKnown,
-    ...profile.preparedSpells,
-    ...(profile.fixedSpells ?? []),
-    ...(profile.alwaysPreparedSpells ?? []),
-    ...(profile.choices ?? []).flatMap((choice) => choice.selected),
-  ])
-  for (const reference of [
-    ...spellReferences,
-    ...Object.values(character.fixedFeatOptions ?? {}).flatMap((options) => options.spells ?? []),
-  ]) {
+  for (const reference of getSavedSpellReferences(character)) {
     const spell = parseSpellReference(reference)
     if (spellMissing(spell)) yield spell
   }

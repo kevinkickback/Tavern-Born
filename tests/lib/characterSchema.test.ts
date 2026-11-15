@@ -32,6 +32,36 @@ describe('characterPersistenceSchema', () => {
     expect(result.success ? [] : result.error.issues).toEqual([])
   })
 
+  test('preserves sparse format 15 records and existing spell-slot normalization', () => {
+    const character = makeCharacterFixture()
+    const largeInteger = Number.MAX_SAFE_INTEGER + 1
+    const stored = JSON.parse(
+      JSON.stringify({
+        ...character,
+        currency: undefined,
+        experiencePoints: largeInteger,
+        details: { ...character.details, age: largeInteger },
+        movement: { speeds: { swim: 30 }, source: { kind: 'manual', name: 'Table ruling' } },
+        spells: {
+          ...character.spells,
+          spellSlots: { '02': { max: 2, used: 1 } },
+          pactSpellSlots: undefined,
+        },
+      }),
+    )
+    const reopened = characterPersistenceSchema.parse(stored)
+
+    expect(reopened).not.toHaveProperty('currency')
+    expect(reopened.experiencePoints).toBe(largeInteger)
+    expect(reopened.details.age).toBe(largeInteger)
+    expect(reopened.movement?.speeds).toEqual({ swim: 30 })
+    expect(reopened.spells.spellSlots).toEqual({
+      ...character.spells.spellSlots,
+      2: { max: 2, used: 1 },
+    })
+    expect(reopened.spells.pactSpellSlots).toEqual(character.spells.spellSlots)
+  })
+
   test.each([
     { bladesingerAnyRace: true },
     { bladesingerAnyRace: false },

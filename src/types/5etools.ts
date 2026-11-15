@@ -284,6 +284,7 @@ export interface OptionalFeatureLike {
 export interface ItemProperty5e {
   abbreviation: string
   source: string
+  sourceIdentityConflict?: true
   entries?: Array<{ type?: string; name?: string; entries?: unknown[] }>
   [key: string]: unknown
 }
@@ -418,6 +419,7 @@ export interface Item5e {
   magicVariantGenerated?: {
     base: { name: string; source: string }
     template: { name: string; source: string }
+    minimumSwimFromWalk?: true
   }
   page?: number
   srd?: boolean | string
@@ -447,7 +449,7 @@ export interface Item5e {
   range?: string
   mastery?: string[]
   ac?: number
-  strength?: string
+  strength?: string | null
   stealth?: boolean
   /** True for wondrous items (rings, amulets, cloaks, belts, etc.). */
   wondrous?: boolean
@@ -620,6 +622,15 @@ type ExternalDataSourceConfig = DataSourceConfigBase & {
   /** Top-level resources confirmed during source validation. Missing unlisted families are absent. */
   availableResources?: string[]
   acceptedRevision?: string
+  /** GitHub revision whose accepted catalog passed a complete check without warnings. */
+  verifiedRevision?: string
+  /** Inputs observed while preparing the accepted catalog, including confirmed absences. */
+  resourceProof?: CatalogResourceProof
+}
+
+export interface CatalogResourceProof {
+  kind: 'local' | 'remote'
+  entries: [path: string, stamp: string | null][]
 }
 
 export type BundledDataSourceConfig = DataSourceConfigBase & {
@@ -658,6 +669,13 @@ export interface GameData {
   /** Winning raw Shield bases, retaining malformed and duplicate generation inputs. */
   fixedShieldBases?: unknown[]
   fixedShieldDiagnostics?: ItemEntryDiagnostic[]
+  /** Winning raw core item identities before ordinary base-item deduplication. */
+  fixedEquipmentBases?: unknown[]
+  fixedWeaponDiagnostics?: ItemEntryDiagnostic[]
+  fixedArmorDiagnostics?: ItemEntryDiagnostic[]
+  fixedAmmunitionDiagnostics?: ItemEntryDiagnostic[]
+  resistanceArmorDiagnostics?: ItemEntryDiagnostic[]
+  materialArmorDiagnostics?: ItemEntryDiagnostic[]
   /** Shared descriptive fragments from items-base.json; never inventory records. */
   itemEntries?: ItemEntry5e[]
   /** Raw optional support rows retain malformed overlays for bounded diagnostics. */

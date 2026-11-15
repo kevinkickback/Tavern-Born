@@ -2,6 +2,7 @@ import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
 import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
 import type { BundledSrdManifestSummary } from './bundledResources'
 import type { UpdateEventPayloads, UpdateSignal } from './updateEvents'
+import type { UpdateStatus } from './updateManager'
 
 function onIpcEvent(channel: 'app:confirmClose' | UpdateSignal, callback: () => void): () => void {
   const listener = () => callback()
@@ -54,11 +55,11 @@ const electronAPI = {
 
   checkForUpdate: (): Promise<UpdateResult<unknown>> => ipcRenderer.invoke('update:check'),
   downloadUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:download'),
-  openPortableUpdatePage: (): Promise<UpdateResult> =>
-    ipcRenderer.invoke('update:open-portable-page'),
+  openUpdateDownloadPage: (): Promise<UpdateResult> =>
+    ipcRenderer.invoke('update:open-download-page'),
   cancelUpdate: (): Promise<UpdateResult> => ipcRenderer.invoke('update:cancel'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
-  getUpdateStatus: (): Promise<unknown> => ipcRenderer.invoke('update:status'),
+  getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
   setAutoCheck: (enabled: boolean): Promise<void> =>
     ipcRenderer.invoke('update:set-auto-check', enabled),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('update:get-version'),

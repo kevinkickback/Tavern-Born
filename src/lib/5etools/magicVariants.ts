@@ -1,6 +1,14 @@
 import type { GameData, Item5e, ItemEntryDiagnostic } from '@/types/5etools'
 import { resolveCopiedRecords } from './copyResolution'
-import { generateFixedBonusShields } from './fixedBonusShields'
+import {
+  generateFixedBonusAmmunition,
+  generateFixedBonusArmor,
+  generateFixedBonusShields,
+  generateFixedBonusWeapons,
+  generateMaterialArmor,
+  generateResistanceArmor,
+} from './fixedBonusEquipment'
+import { stripMagicVariantLineage } from './itemEntries'
 
 // Data-only reference adaptation of Renderer.item and SourceUtil at 5etools b9061583:
 // https://github.com/5etools-mirror-3/5etools-src/tree/b9061583536101068b3a59d27e886d1fa664e366/js
@@ -146,8 +154,8 @@ export function resolveMagicVariants(rows: readonly unknown[]): {
     // is legitimate; an explicit unusable source must not fall back to the raw copy owner.
     const source = 'source' in inherits ? text(inherits.source) : target.source
     const projection = {
-      ...row,
-      ...inherits,
+      ...stripMagicVariantLineage(row),
+      ...stripMagicVariantLineage(inherits),
       name: target.name,
       source,
       type: row.type,
@@ -174,10 +182,39 @@ function isGenericType(value: unknown): value is string {
 
 /** References follow concrete copy resolution and can never replace an actual equipment tuple. */
 export function appendMagicVariantReferences(data: GameData): void {
+  // Raw copy directives must not mint application-owned provenance.
+  data.items = data.items.map(stripMagicVariantLineage)
+  data.itemsBase = data.itemsBase.map(stripMagicVariantLineage)
   const result = resolveMagicVariants(data.magicVariants ?? [])
-  const generated = generateFixedBonusShields(data, result.definitions)
-  data.fixedShieldDiagnostics = generated.diagnostics
-  data.items = [...data.items, ...generated.items]
+  const shields = generateFixedBonusShields(data, result.definitions)
+  const weapons = generateFixedBonusWeapons(data, result.definitions)
+  const armor = generateFixedBonusArmor(data, result.definitions)
+  const ammunition = generateFixedBonusAmmunition(data, result.definitions)
+  const resistanceArmor = generateResistanceArmor(data, result.definitions)
+  const materialArmor = generateMaterialArmor(data, result.definitions)
+  data.fixedShieldDiagnostics = shields.diagnostics
+  data.fixedWeaponDiagnostics = weapons.diagnostics
+  data.fixedArmorDiagnostics = armor.diagnostics
+  data.fixedAmmunitionDiagnostics = ammunition.diagnostics
+  data.resistanceArmorDiagnostics = resistanceArmor.diagnostics
+  data.materialArmorDiagnostics = materialArmor.diagnostics
+  const families = [shields, weapons, armor, ammunition, resistanceArmor, materialArmor]
+  const ambiguous = new Set(families.flatMap((family) => family.ambiguousIdentities))
+  const generated = new Map<string, Item5e>()
+  for (const item of families.flatMap((family) => family.items)) {
+    const key = tuple(item.name, item.source)
+    if (ambiguous.has(key)) continue
+    if (generated.has(key)) {
+      ambiguous.add(key)
+      generated.delete(key)
+      if (result.diagnostics.length < 32)
+        result.diagnostics.push({
+          path: `magicVariants.${item.name}|${item.source}`,
+          message: 'Ambiguous generated equipment across template families.',
+        })
+    } else generated.set(key, item)
+  }
+  data.items = [...data.items, ...generated.values()]
   const occupied = new Set(
     [...data.items, ...data.itemsBase].map((item) => tuple(item.name, item.source)),
   )

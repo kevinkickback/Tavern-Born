@@ -8,6 +8,7 @@ import {
   formatEquipmentOptionEntries,
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
+import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { cn } from '@/lib/utils'
 import {
   getBackgroundEntries,
@@ -184,8 +185,8 @@ function BackgroundDetails2014({
             {skillNames.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {skillNames.map((name) => (
-                  <Badge key={name} variant="secondary" className="capitalize text-xs">
-                    {name}
+                  <Badge key={name} variant="secondary" className="text-xs">
+                    {formatProficiencyLabel(name)}
                   </Badge>
                 ))}
               </div>
@@ -207,8 +208,8 @@ function BackgroundDetails2014({
           {languageNames.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {languageNames.map((name) => (
-                <Badge key={name} variant="secondary" className="capitalize text-xs">
-                  {name}
+                <Badge key={name} variant="secondary" className="text-xs">
+                  {formatProficiencyLabel(name)}
                 </Badge>
               ))}
             </div>
@@ -227,8 +228,8 @@ function BackgroundDetails2014({
           {toolNames.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {toolNames.map((name) => (
-                <Badge key={name} variant="secondary" className="capitalize text-xs">
-                  {name}
+                <Badge key={name} variant="secondary" className="text-xs">
+                  {formatProficiencyLabel(name)}
                 </Badge>
               ))}
             </div>

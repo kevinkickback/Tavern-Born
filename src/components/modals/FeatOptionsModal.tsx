@@ -38,6 +38,7 @@ import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdent
 import { getFeatExpertiseSkillPool } from '@/lib/character/featExpertiseSelections'
 import { canChangeSkilledSkills, getSkilledSkillPool } from '@/lib/character/featSkillSelections'
 import { assignSavedFeatSpells, createFeatSpellMatcher } from '@/lib/character/featSpellChoices'
+import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
@@ -289,7 +290,7 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
                   tabIndex={atLimit ? -1 : 0}
                   className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
                 />
-                <span className="text-sm capitalize">{name}</span>
+                <span className="text-sm">{formatProficiencyLabel(name)}</span>
                 {step.domain === 'skills' &&
                   eligibleSkills &&
                   !eligibleSkills.has(normalizeKey(name)) && (
@@ -391,7 +392,7 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
                   name="optFeature"
                   checked={isSelected}
                   onChange={() => onChange(f.name)}
-                  className="size-4 shrink-0 accent-[var(--color-accent-9)]"
+                  className="size-4 shrink-0 accent-primary"
                 />
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-medium">{f.name}</span>
@@ -446,13 +447,13 @@ const ExpertiseStep = memo(function ExpertiseStep({
             type="button"
             onClick={() => onChange(name)}
             className={cn(
-              'px-3 py-1.5 rounded-lg border text-sm capitalize transition-colors',
+              'px-3 py-1.5 rounded-lg border text-sm transition-colors',
               value === name
                 ? 'border-accent bg-accent/10 text-foreground'
                 : 'border-border hover:border-accent/50 hover:bg-muted/40',
             )}
           >
-            {name}
+            {formatProficiencyLabel(name)}
           </button>
         ))}
       </div>

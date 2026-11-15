@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
-import { HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION } from '../helpers/electronEnvironment'
 
 const source = 'https://catalog-refresh.example.test/rules'
 const characterName = 'Saved Catalog Worker Hero'
@@ -56,10 +55,6 @@ function catalogStamp(page: Page, damage = false) {
 }
 
 test.skip(!existsSync(resolve('resources/srd/manifest.json')), 'requires the Included SRD')
-test.skip(
-  HAS_WINDOWS_ELECTRON_SANDBOX_REGRESSION && process.env.TAVERN_BORN_RUN_CATALOG_SMOKE !== '1',
-  'Windows build has upstream Electron sandbox crash 0x80000003',
-)
 
 test('opens the wizard and a saved Builder character during catalog refresh', async ({
   browserName: _browserName,
@@ -72,6 +67,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     ),
   )
   const app = await electron.launch({
+    chromiumSandbox: process.platform === 'win32',
     args: ['.', `--user-data-dir=${testInfo.outputPath('user-data')}`],
     env: environment,
   })
@@ -172,7 +168,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await expect(page.getByRole('heading', { level: 3, name: characterName })).toBeVisible()
 
     await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('tab', { name: 'Game Data', exact: true }).click()
+    await page.getByRole('link', { name: 'Game Data', exact: true }).click()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await page.getByLabel('Web Address').fill(source)
     await expect(page.getByText('Compatible game data found')).toBeVisible()
@@ -189,6 +185,9 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
       fixtureKey,
     )
     await page.reload()
+    // The recent successful check is still fresh. Trigger a refresh without waiting a day.
+    await expect(status).toHaveText('Additional Content Loaded')
+    await page.getByRole('button', { name: 'Check for Updates' }).click()
     await expect(status).toHaveText('Checking for game data updates')
     await app.evaluate(
       (_electron, key) => (Reflect.get(globalThis, key) as RefreshFixture).requested,
@@ -245,7 +244,9 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await expect(update).toBeHidden()
 
     // Isolate cache repair on the final reload from another background update check.
-    const startupCheck = page.getByRole('tabpanel', { name: 'Game Data' }).getByRole('switch')
+    const startupCheck = page
+      .getByRole('region', { name: 'Game Data', exact: true })
+      .getByRole('switch')
     await expect(startupCheck).toBeChecked()
     await startupCheck.click()
     await expect(startupCheck).not.toBeChecked()

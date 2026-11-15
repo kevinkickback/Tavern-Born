@@ -657,6 +657,9 @@ describe('CharacterSheetPage', () => {
 
   test('runs an export preflight before downloading a sheet', async () => {
     const user = userEvent.setup()
+    useCharacterStore.setState({
+      activeCharacter: makeCharacterFixture({ details: { faction: 'The Harpers' } }),
+    })
     renderPage()
 
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
@@ -665,6 +668,7 @@ describe('CharacterSheetPage', () => {
 
     expect(screen.getByRole('alertdialog')).toBeTruthy()
     expect(screen.getByText('Before you download')).toBeTruthy()
+    expect(screen.getByText('Organization emblem is missing')).toBeTruthy()
     const summary = screen.getByText(/Character choices to review/)
     expect(summary.closest('details')?.open).toBe(false)
     await user.click(summary)
@@ -672,6 +676,16 @@ describe('CharacterSheetPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Go Back' }))
     expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
+    screen.getByRole('combobox', { name: 'Images' }).focus()
+    await user.keyboard('{Enter}{End}{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
+    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+    expect(screen.getByText(/Character choices to review/)).toBeTruthy()
+    expect(screen.queryByText('Organization emblem is missing')).toBeNull()
   })
 
   test('dismisses the Optional Pages hint when the menu is opened and remembers it across visits', async () => {
@@ -905,6 +919,7 @@ describe('CharacterSheetPage', () => {
     expect(vi.mocked(generateFilledCharacterSheetPdf).mock.calls.slice(-1)[0]?.[3]?.text).toEqual({
       descriptions: 'names',
       overflow: 'notes',
+      images: 'color',
     })
     expect(useCharacterStore.getState().activeCharacter).toBe(before)
   })

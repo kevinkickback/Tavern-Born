@@ -1,4 +1,4 @@
-import type { PDFDocument } from '@cantoo/pdf-lib'
+import { type PDFDocument, PDFName, PDFNumber, type PDFObject } from '@cantoo/pdf-lib'
 
 /**
  * Typed accessors for pdf-lib internal structures that are not exposed by the
@@ -11,15 +11,14 @@ import type { PDFDocument } from '@cantoo/pdf-lib'
 export type AcroWidget = {
   getRectangle: () => { x: number; y: number; width: number; height: number }
   setRectangle: (value: { x: number; y: number; width: number; height: number }) => void
-  P: () => { tag: string } | undefined
   dict: AcroDict
 }
 
 type AcroDict = {
-  has: (name: unknown) => boolean
-  delete: (name: unknown) => void
-  get: (name: unknown) => unknown
-  set: (name: unknown, value: unknown) => void
+  has: (name: PDFName) => boolean
+  delete: (name: PDFName) => void
+  get: (name: PDFName) => unknown
+  set: (name: PDFName, value: PDFObject) => void
 }
 
 export type FieldWithInternals = {
@@ -36,10 +35,6 @@ export type FormWithInternals = {
   }
 }
 
-type PageWithRef = {
-  ref: { tag: string }
-}
-
 /**
  * Cast any pdf-lib field to FieldWithInternals.  Returns null and logs a
  * warning if the expected `acroField` property is absent.
@@ -54,14 +49,12 @@ export function asFieldWithInternals(field: unknown): FieldWithInternals | null 
   return field as FieldWithInternals
 }
 
-/**
- * Cast a pdf-lib page to its internal shape to read the /P reference tag.
- * Returns undefined if the shape is not present (template-safe).
- */
-export function getPageRefTag(page: unknown): string | undefined {
-  const p = page as Partial<PageWithRef>
-  if (!p.ref || typeof p.ref !== 'object') return undefined
-  return typeof p.ref.tag === 'string' ? p.ref.tag : undefined
+export function hideFieldWidgets(field: FieldWithInternals) {
+  for (const widget of field.acroField.getWidgets()) {
+    widget.setRectangle({ x: 0, y: 0, width: 0, height: 0 })
+    for (const key of ['AP', 'A', 'AA', 'MK']) widget.dict.delete(PDFName.of(key))
+    widget.dict.set(PDFName.of('F'), PDFNumber.of(34))
+  }
 }
 
 export function findAttachedWidgetLocation(

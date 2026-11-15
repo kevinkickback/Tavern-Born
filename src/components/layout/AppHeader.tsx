@@ -24,12 +24,11 @@ import {
   TrendUp,
   Users,
 } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
 import { HitPointsModal } from '@/components/modals/HitPointsModal'
-import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AnchoredHint } from '@/components/workspace'
@@ -37,6 +36,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
+import { isSettingsPath } from '@/lib/navigation/settingsNavigation'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
@@ -44,6 +44,11 @@ import { useCharacterStore } from '@/store/characterStore'
 const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
 const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
 const STAT_MENUS_HINT_WIDTH = 340
+const LevelUpModal = lazy(() =>
+  import('@/components/modals/LevelUpModal').then(({ LevelUpModal }) => ({
+    default: LevelUpModal,
+  })),
+)
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/review', 'Character Review', ClipboardText],
@@ -68,9 +73,10 @@ const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
 ]
 
 function getPageDetails(pathname: string) {
-  return PAGE_DETAILS.find(([prefix]) =>
-    prefix === '/' ? pathname === '/' : pathname.startsWith(prefix),
-  )
+  return PAGE_DETAILS.find(([prefix]) => {
+    if (prefix === '/settings') return isSettingsPath(pathname)
+    return prefix === '/' ? pathname === '/' : pathname.startsWith(prefix)
+  })
 }
 
 export function AppHeader() {
@@ -79,6 +85,7 @@ export function AppHeader() {
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
+  const [levelUpRequested, setLevelUpRequested] = useState(false)
   const [armorClassOpen, setArmorClassOpen] = useState(false)
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
@@ -259,7 +266,10 @@ export function AppHeader() {
                   data-level-up-button="true"
                   aria-label="Level up character"
                   disabled={!activeCharacter}
-                  onClick={() => setLevelUpOpen(true)}
+                  onClick={() => {
+                    setLevelUpRequested(true)
+                    setLevelUpOpen(true)
+                  }}
                 >
                   <TrendUp />
                   <span className="hidden 2xl:inline">Level Up</span>
@@ -293,11 +303,15 @@ export function AppHeader() {
         </div>
       </header>
 
-      <LevelUpModal
-        key={activeCharacter?.id ?? 'no-character'}
-        open={levelUpOpen}
-        onOpenChange={setLevelUpOpen}
-      />
+      {levelUpRequested && (
+        <Suspense fallback={null}>
+          <LevelUpModal
+            key={activeCharacter?.id ?? 'no-character'}
+            open={levelUpOpen}
+            onOpenChange={setLevelUpOpen}
+          />
+        </Suspense>
+      )}
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
     </TooltipProvider>

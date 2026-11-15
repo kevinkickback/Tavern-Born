@@ -12,6 +12,7 @@ import {
 } from '@/lib/character/commands/equipmentCommands'
 import { setStartingCurrencyCommand } from '@/lib/character/startingEquipmentGrants'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 import type { Currency, Equipment } from '@/types/character'
 
@@ -46,6 +47,7 @@ export function useEquipment(): EquipmentState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const armorTraining = calculationContext?.character.proficiencies.armor
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
   const attunementLimit = calculationContext?.equipment.attunementLimit ?? MAX_ATTUNEMENT_SLOTS
 
   const equipment = character?.equipment ?? []
@@ -144,6 +146,7 @@ export function useEquipment(): EquipmentState {
           item,
           equipment,
           armorTraining ?? character.proficiencies.armor,
+          itemLookup,
         )
         if (restriction?.kind === 'slot-conflict') {
           toast.warning(
@@ -161,7 +164,7 @@ export function useEquipment(): EquipmentState {
 
       patchEquipment(equipment.map((e) => (e.id === id ? { ...e, equipped: !e.equipped } : e)))
     },
-    [character, equipment, patchEquipment, armorTraining],
+    [character, equipment, patchEquipment, armorTraining, itemLookup],
   )
 
   const setRestrictionsIgnored = useCallback(
@@ -169,10 +172,10 @@ export function useEquipment(): EquipmentState {
       if (!character) return
       updateCharacter(
         character.id,
-        setEquipmentRestrictionsIgnoredCommand(character, ignored, armorTraining),
+        setEquipmentRestrictionsIgnoredCommand(character, ignored, armorTraining, itemLookup),
       )
     },
-    [character, updateCharacter, armorTraining],
+    [character, updateCharacter, armorTraining, itemLookup],
   )
 
   const toggleAttune = useCallback(

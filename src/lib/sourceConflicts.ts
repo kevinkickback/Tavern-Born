@@ -11,6 +11,7 @@ import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { pruneNonracialSpellSelections } from '@/lib/character/commands/sourceSpellPruningCommand'
 import { setRacialSpellChoice } from '@/lib/character/commands/spellCommands'
+import { replayMysticDisciplines } from '@/lib/character/mysticDisciplineHistory'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, CharacterClassChoiceSelection, SpellProfile } from '@/types/character'
@@ -90,10 +91,18 @@ export function detectSourceConflicts(
       )
     }
   }
+  const disciplineSlots = character.mysticDisciplineReplacements?.length
+    ? replayMysticDisciplines(character).slots
+    : []
   for (const choice of effectiveSelections ?? character.classChoiceSelections ?? []) {
     if (choice.inactive && (effectiveSelections || !isFeatureLiteralChoiceId(choice.choiceId)))
       continue
-    for (const option of choice.selected)
+    const currentDisciplines = disciplineSlots.filter(
+      (slot) => slot.selection.choiceId === choice.choiceId,
+    )
+    for (const option of currentDisciplines.length
+      ? currentDisciplines.map((slot) => slot.current)
+      : choice.selected)
       flag(
         option.name,
         option.entityType === 'featureOption'

@@ -2,6 +2,8 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { SettingsPage } from '@/pages/SettingsPage'
 
 vi.mock('@/components/settings/GeneralPanel', () => ({
@@ -23,7 +25,12 @@ vi.mock('@/components/settings/AboutPanel', () => ({
 function renderSettings(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <SettingsPage />
+      <TooltipProvider>
+        <AppSidebar />
+        <main>
+          <SettingsPage />
+        </main>
+      </TooltipProvider>
     </MemoryRouter>,
   )
 }
@@ -31,56 +38,51 @@ function renderSettings(path: string) {
 describe('settings page categories', () => {
   afterEach(cleanup)
 
-  test('switches settings sections with the in-page tabs', async () => {
+  test('switches settings sections from sidebar links', async () => {
     const user = userEvent.setup()
     renderSettings('/settings')
 
     expect(screen.getByText('General settings panel')).toBeTruthy()
+    expect(screen.queryByRole('tablist')).toBeNull()
+    expect(screen.getByRole('link', { name: 'General' }).getAttribute('aria-current')).toBe('page')
 
-    await user.click(screen.getByRole('tab', { name: 'Appearance' }))
+    await user.click(screen.getByRole('link', { name: 'Appearance' }))
     expect(screen.getByText('Appearance settings panel')).toBeTruthy()
     expect(screen.queryByText('General settings panel')).toBeNull()
 
-    await user.click(screen.getByRole('tab', { name: 'Game Data' }))
+    await user.click(screen.getByRole('link', { name: 'Game Data' }))
     expect(screen.getByText('Game data settings panel')).toBeTruthy()
 
-    await user.click(screen.getByRole('tab', { name: 'About' }))
+    await user.click(screen.getByRole('link', { name: 'About' }))
     expect(screen.getByText('About settings panel')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'About' }).getAttribute('aria-current')).toBe('page')
   })
 
-  test('moves focus and selection through the tab bar with arrow, Home, and End keys', async () => {
+  test('navigates the sidebar with Tab and activates the focused link with Enter', async () => {
     const user = userEvent.setup()
     renderSettings('/settings')
 
-    const general = screen.getByRole('tab', { name: 'General' })
-    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1])
+    const general = screen.getByRole('link', { name: 'General' })
     general.focus()
 
-    await user.keyboard('{ArrowRight}')
-    const appearance = screen.getByRole('tab', { name: 'Appearance' })
+    await user.tab()
+    const appearance = screen.getByRole('link', { name: 'Appearance' })
     expect(document.activeElement).toBe(appearance)
-    expect(appearance.getAttribute('aria-selected')).toBe('true')
-    const panel = document.getElementById(appearance.getAttribute('aria-controls')!)
-    expect(panel?.getAttribute('role')).toBe('tabpanel')
-    expect(panel?.getAttribute('aria-labelledby')).toBe(appearance.id)
-    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0, -1, -1])
-
-    await user.keyboard('{End}')
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
-    expect(screen.getByText('About settings panel')).toBeTruthy()
-
-    await user.keyboard('{Home}')
-    expect(document.activeElement).toBe(general)
-    await user.keyboard('{ArrowLeft}')
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
+    expect(appearance.getAttribute('aria-current')).toBeNull()
+    await user.keyboard('{Enter}')
+    expect(appearance.getAttribute('aria-current')).toBe('page')
+    expect(general.getAttribute('aria-current')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Appearance' }).textContent).toContain(
+      'Appearance settings panel',
+    )
   })
 
   test('supports direct links to a settings section', () => {
     renderSettings('/settings?section=appearance')
 
     expect(screen.getByText('Appearance settings panel')).toBeTruthy()
-    expect(screen.getByRole('tab', { name: 'Appearance' }).getAttribute('aria-selected')).toBe(
-      'true',
+    expect(screen.getByRole('link', { name: 'Appearance' }).getAttribute('aria-current')).toBe(
+      'page',
     )
   })
 
@@ -88,5 +90,6 @@ describe('settings page categories', () => {
     renderSettings('/settings?section=unknown')
 
     expect(screen.getByText('General settings panel')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'General' }).getAttribute('aria-current')).toBe('page')
   })
 })

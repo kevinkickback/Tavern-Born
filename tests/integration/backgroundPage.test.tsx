@@ -1,10 +1,12 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
+import { applyBackgroundSelectionCommand } from '@/lib/character/commands/backgroundCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { emptyProvenance } from '@/lib/character/createCharacter'
 import { BuildBackgroundPage } from '@/pages/build/background/BackgroundPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -61,6 +63,52 @@ describe('BackgroundPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test('collects both replacement packages before applying a refreshed background', async () => {
+    const blank = useCharacterStore.getState().activeCharacter!
+    const before = {
+      ...background,
+      startingEquipment: [
+        { a: [{ value: 100 }], b: [{ value: 200 }] },
+        { a: [{ value: 300 }], b: [{ value: 400 }] },
+      ],
+    }
+    const actor = applyCharacterCommandResult(
+      blank,
+      applyBackgroundSelectionCommand(blank, blank.provenance, before, ['b', 'b'], new Map()),
+    )
+    useCharacterStore.setState({ activeCharacter: actor, characters: [actor] })
+    const next = {
+      ...before,
+      startingEquipment: before.startingEquipment.map(({ a }) => ({ a })),
+    }
+    const data = makeGameDataFixture({ backgrounds: [next], feats: [feat] })
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildBackgroundPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    const user = userEvent.setup()
+    const choose = (index: number) =>
+      within(
+        screen.getByRole('tablist', { name: `Background starting equipment choice ${index}` }),
+      ).getByRole('tab', { name: 'Package A' })
+    await user.click(choose(1))
+    expect(choose(1).getAttribute('aria-selected')).toBe('true')
+    expect(useCharacterStore.getState().activeCharacter?.backgroundEquipmentChoices).toEqual([
+      'b',
+      'b',
+    ])
+    await user.click(choose(2))
+    expect(useCharacterStore.getState().activeCharacter?.backgroundEquipmentChoices).toEqual([
+      'a',
+      'a',
+    ])
+    expect(useCharacterStore.getState().activeCharacter?.currency?.gp).toBe(actor.currency!.gp - 2)
   })
 
   test('selects a 2024 background without forcing fixed-feat configuration', async () => {

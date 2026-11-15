@@ -14,9 +14,11 @@ import type {
   GameData,
   GameDataSourceStack,
   ItemEntry5e,
+  ItemProperty5e,
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
+import { composeBackgroundSources } from './backgroundSources'
 import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -33,7 +35,7 @@ import {
 } from './dataLoader'
 import { isNativeResilienceIntro } from './draconicResilience'
 import { getNativeDraconicFeatureOwner } from './draconicSubclassFeatureSource'
-import { mergeFixedShieldBases } from './fixedBonusShields'
+import { mergeFixedEquipmentBases, mergeFixedShieldBases } from './fixedBonusEquipment'
 import {
   auditFixedLayerMultiplicity,
   auditProficiencySubclassLayerMultiplicity,
@@ -138,6 +140,21 @@ function itemPropertyIdentity(value: unknown): string {
   const abbreviation = normalizeIdentityPart(record.abbreviation)
   if (!abbreviation) return recordIdentity(value)
   return `item-property:${abbreviation}|${normalizeIdentityPart(record.source)}`
+}
+
+function markItemPropertyConflicts(properties: readonly ItemProperty5e[]): ItemProperty5e[] {
+  const seen = new Set<string>()
+  const conflicts = new Set<string>()
+  for (const property of properties) {
+    const uid = itemPropertyIdentity(property)
+    if (seen.has(uid)) conflicts.add(uid)
+    seen.add(uid)
+  }
+  return properties.map((property) =>
+    conflicts.has(itemPropertyIdentity(property))
+      ? { ...property, sourceIdentityConflict: true }
+      : property,
+  )
 }
 
 function subraceIdentity(value: unknown): string {
@@ -485,6 +502,10 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
   )
 
   for (const key of collectionKeys) {
+    if (key === 'backgrounds') {
+      composed.backgrounds = composeBackgroundSources(composed, layers)
+      continue
+    }
     if (key === 'optionalClassSections') {
       composed.optionalClassSections = mergeOptionalClassSections(layers)
       continue
@@ -504,7 +525,13 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     if (
       key === 'magicVariantDiagnostics' ||
       key === 'fixedShieldBases' ||
-      key === 'fixedShieldDiagnostics'
+      key === 'fixedShieldDiagnostics' ||
+      key === 'fixedEquipmentBases' ||
+      key === 'fixedArmorDiagnostics' ||
+      key === 'fixedAmmunitionDiagnostics' ||
+      key === 'resistanceArmorDiagnostics' ||
+      key === 'materialArmorDiagnostics' ||
+      key === 'fixedWeaponDiagnostics'
     )
       continue
     if (key === 'itemTypes') {
@@ -554,7 +581,9 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
                 ? auditSpellRouteMultiplicity(layerValues as GameData['spells'], 'spell-layer')
                 : key === 'languages' || key === 'creatures' || key === 'itemMasteries'
                   ? auditFixedLayerMultiplicity(layerValues as object[], 'named')
-                  : layerValues
+                  : key === 'itemProperties'
+                    ? markItemPropertyConflicts(layerValues as ItemProperty5e[])
+                    : layerValues
       return mergeCollection(merged, audited, getIdentity as (value: unknown) => string)
     }, [])
     ;(composed as unknown as Record<GameDataCollectionKey, unknown>)[key] = values
@@ -595,6 +624,7 @@ export function composeGameDataLayers(layers: readonly GameData[]): GameData {
     ),
   )
   composed.fixedShieldBases = mergeFixedShieldBases(layers)
+  composed.fixedEquipmentBases = mergeFixedEquipmentBases(layers)
   const concreteItemCount = composed.items.length
   retainRawItems(composed)
   const rawToolInputs = [...composed.items, ...composed.itemsBase]

@@ -14,7 +14,9 @@ import {
   getNormalizedItemTraits,
   isSelectableEquipmentItem,
 } from '@/lib/calculations/itemClassification'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import { renderEntryCached } from '@/lib/entryRenderCache'
+import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
 import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
 
@@ -240,6 +242,9 @@ export const ItemCard = memo(function ItemCard({
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? RARITY_COLORS.unknown
   const itemPropertyByAbbr = useItemPropertyLookup()
+  const physicalDetails = buildCatalogItemDetailFields(item, itemPropertyByAbbr).filter(
+    ({ label }) => label === 'Damage' || label === 'Range' || label === 'Value',
+  )
   const armorCategoryLabel = getArmorCategoryLabel(
     getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory,
   )
@@ -264,11 +269,8 @@ export const ItemCard = memo(function ItemCard({
         {!armorCategoryLabel && <Badge variant="outline">{primaryCategoryLabel}</Badge>}
         {armorCategoryLabel && <Badge variant="outline">{armorCategoryLabel}</Badge>}
         {normalizedRarity && normalizedRarity.toLowerCase() !== 'none' && (
-          <Badge
-            variant="outline"
-            className={cn('capitalize text-xs px-1.5 py-0 h-5', rarityColorClass)}
-          >
-            {normalizedRarity}
+          <Badge variant="outline" className={cn('text-xs px-1.5 py-0 h-5', rarityColorClass)}>
+            {capitalizeLabel(normalizedRarity)}
           </Badge>
         )}
         {item.reqAttune && (
@@ -308,6 +310,15 @@ export const ItemCard = memo(function ItemCard({
           </Badge>
         )}
       </div>
+      {physicalDetails.length > 0 && (
+        <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {physicalDetails.map(({ label, value }) => (
+            <span key={label} className="flex gap-1">
+              {label} <span className="font-medium text-foreground">{value}</span>
+            </span>
+          ))}
+        </span>
+      )}
       {description && (
         <p
           className={cn(
@@ -356,13 +367,7 @@ export function ItemSelectionModal({
         const rightRank = rarityRank.get(right) ?? Number.POSITIVE_INFINITY
         return leftRank - rightRank || left.localeCompare(right)
       })
-      .map((r) => ({
-        value: r,
-        label: r
-          .split(' ')
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' '),
-      }))
+      .map((rarity) => ({ value: rarity, label: capitalizeLabel(rarity) }))
   }, [filteredItems])
 
   const filterSections: FilterSection[] = [

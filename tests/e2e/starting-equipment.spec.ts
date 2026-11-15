@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeConfiguredStartingEquipmentScenario } from '../fixtures/configuredStartingEquipmentFixtures'
 import { makeStartingEquipmentScenario } from '../fixtures/startingEquipmentFixtures'
 import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from './helpers/startup'
@@ -24,6 +25,107 @@ async function pick(page: Page, name: string) {
     .filter({ has: page.getByText(name, { exact: true }) })
     .click({ position: { x: 8, y: 8 } })
 }
+
+test('@focused the background package hint is dismissible and specific to 2024 characters', async ({
+  page,
+}) => {
+  const { character: classic, data } = makeStartingEquipmentScenario()
+  const revised = makeCharacterFixture({
+    id: 'revised-hero',
+    name: 'Revised Hero',
+    originSystem: '2024',
+    allowedSources: ['TEST'],
+    race: '',
+    raceSource: undefined,
+    classProgression: [],
+    background: '',
+    backgroundSource: undefined,
+  })
+  data.backgrounds.push({
+    name: 'Revised Courier',
+    source: 'TEST',
+    edition: 'one',
+    startingEquipment: [{ a: [{ value: 1000 }], b: [{ value: 5000 }] }],
+  })
+  data.sources.push({
+    name: 'Equipment Test Source',
+    abbreviation: 'TEST',
+    hasCharacterOptions: true,
+    group: 'other',
+  })
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.goto('/')
+  await seedAppState(page, {
+    sourcePath: 'e2e-background-equipment-hint',
+    gameData: data,
+    characters: [classic, revised],
+  })
+  await page.reload()
+
+  const hint = page.getByRole('button', { name: 'Dismiss background starting equipment hint' })
+  const details = page.getByRole('tab', { name: 'Background details', exact: true })
+  const openBackground = async (name: string) => {
+    await selectCharacterFromHome(page, name)
+    await page.getByRole('link', { name: 'Background', exact: true }).click()
+    await expect(details).toBeVisible()
+  }
+  const equipmentChoices = async () => {
+    const tabs = page.getByRole('tablist', { name: 'Background starting equipment choice 1' })
+    await expect(tabs).toBeVisible()
+    await tabs.scrollIntoViewIfNeeded()
+    return tabs
+  }
+
+  await openBackground(classic.name)
+  await details.click()
+  await equipmentChoices()
+  await expect(hint).toHaveCount(0)
+
+  await page.goto('/')
+  await openBackground(revised.name)
+  await expect(hint).toHaveCount(0)
+  await page.getByRole('button', { name: /Revised Courier/ }).click()
+  const tabs = await equipmentChoices()
+  await expect(hint).toBeVisible()
+  const alternate = tabs.getByRole('tab', { name: 'Package B', exact: true })
+  await alternate.click()
+  await expect(alternate).toHaveAttribute('aria-selected', 'true')
+  await hint.click()
+  await expect(hint).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () =>
+      (await readPersistedCharacters(page)).find(
+        (row) => !!row && typeof row === 'object' && 'id' in row && row.id === revised.id,
+      ),
+    )
+    .toMatchObject({ background: 'Revised Courier' })
+  await page.goto('/')
+  await openBackground(revised.name)
+  await details.click()
+  await equipmentChoices()
+  await expect(hint).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
+  await page.goto('/')
+  await openBackground(revised.name)
+  await details.click()
+  await equipmentChoices()
+  await expect(hint).toBeVisible()
+
+  await page.getByRole('button', { name: 'Rules', exact: true }).click()
+  await page.getByRole('link', { name: 'Additional Content', exact: true }).click()
+  const source = page.getByRole('button', { name: /Equipment Test Source/ })
+  await source.click()
+  await expect(source).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: 'Builder', exact: true }).click()
+  await page.getByRole('link', { name: 'Background', exact: true }).click()
+  await details.click()
+  await equipmentChoices()
+  await expect(hint).toHaveCount(0)
+})
 
 test('@focused starting packages support keyboard tabs, independent quantities, details and strict reopen', async ({
   page,
@@ -345,11 +447,17 @@ test('@focused configured Sorcerer keeps each package, picker and result in its 
   )
   await expect(second.getByText('Component Pouch', { exact: true })).toBeVisible()
   await expect(third.getByText("Dungeoneer's Pack", { exact: true })).toBeVisible()
-  await expect(
-    card
-      .getByRole('region', { name: 'Class starting equipment included equipment', exact: true })
-      .getByText('2× Dagger', { exact: true }),
-  ).toBeVisible()
+  const dagger = card
+    .getByRole('region', { name: 'Class starting equipment included equipment', exact: true })
+    .getByRole('button', { name: '2× Dagger', exact: true })
+  await expect(dagger).toBeVisible()
+  await dagger.focus()
+  await dagger.press('Enter')
+  const preview = page.getByRole('dialog', { name: 'Dagger preview', exact: true })
+  await expect(preview).toContainText('1d4 Piercing')
+  await expect(preview).toContainText('Finesse')
+  await page.keyboard.press('Escape')
+  await expect(preview).toBeHidden()
   expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   await card.screenshot({ path: info.outputPath('sorcerer-starting-equipment.png') })
   const equipmentColors = () =>

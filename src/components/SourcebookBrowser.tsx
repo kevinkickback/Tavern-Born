@@ -137,7 +137,14 @@ export function SourcebookBrowser({
         )}
         {visibleGroups.map(({ group, books }) => (
           <section key={group} className="space-y-2">
-            <h4 className="flex items-baseline gap-2 text-sm font-semibold">
+            <h4
+              className={cn(
+                'flex gap-2 text-sm font-semibold',
+                isWizard
+                  ? 'items-center after:h-px after:flex-1 after:bg-border-strong'
+                  : 'items-baseline',
+              )}
+            >
               {groupLabels.get(group) ?? group}
               <span aria-hidden="true" className="text-xs font-normal text-muted-foreground">
                 {books.length}

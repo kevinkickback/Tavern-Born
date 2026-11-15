@@ -121,9 +121,13 @@ export function BuildAbilityScoresPage() {
         : null,
     [character, normalizedBackground],
   )
-  const backgroundBlockIndex = character?.backgroundAsiBlockIndex ?? 0
-  const backgroundChoices = character?.backgroundAsiChoices ?? EMPTY_BACKGROUND_ASI_CHOICES
-  const currentBackgroundBlock = bgAsiData.blocks[backgroundBlockIndex] ?? bgAsiData.blocks[0]
+  const savedBackgroundBlock = character?.backgroundAsiBlockIndex ?? 0
+  const backgroundBlockIndex = bgAsiData.blocks[savedBackgroundBlock] ? savedBackgroundBlock : 0
+  const backgroundChoices =
+    savedBackgroundBlock === backgroundBlockIndex
+      ? (character?.backgroundAsiChoices ?? EMPTY_BACKGROUND_ASI_CHOICES)
+      : EMPTY_BACKGROUND_ASI_CHOICES
+  const currentBackgroundBlock = bgAsiData.blocks[backgroundBlockIndex]
   const hasFixedBackgroundAssignment = isFixedBackgroundAbilityBlock(currentBackgroundBlock)
   const abilitySourceRows = useMemo(() => {
     const rows = getSourcesRowsBySection('build-ability-scores')
@@ -145,9 +149,9 @@ export function BuildAbilityScoresPage() {
     if (!backgroundAbilityEntity || !currentBackgroundBlock || !hasFixedBackgroundAssignment) {
       return
     }
-    const alreadySet = currentBackgroundBlock.from.every(
-      (ability, index) => backgroundChoices[index] === ability,
-    )
+    const alreadySet =
+      savedBackgroundBlock === backgroundBlockIndex &&
+      currentBackgroundBlock.from.every((ability, index) => backgroundChoices[index] === ability)
     if (!alreadySet) {
       reconcileBackgroundAbilityChoices(backgroundAbilityEntity, backgroundBlockIndex, [
         ...currentBackgroundBlock.from,
@@ -160,6 +164,7 @@ export function BuildAbilityScoresPage() {
     currentBackgroundBlock,
     hasFixedBackgroundAssignment,
     reconcileBackgroundAbilityChoices,
+    savedBackgroundBlock,
   ])
 
   const asiBonuses = useMemo(() => {

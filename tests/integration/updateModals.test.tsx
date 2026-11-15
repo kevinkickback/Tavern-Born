@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
+import { useCharacterStore } from '@/store/characterStore'
 
 describe('update modals', () => {
   afterEach(() => {
@@ -28,9 +29,11 @@ describe('update modals', () => {
 
     expect(screen.getByText('Update Available — v2.0.0')).toBeTruthy()
     expect(
-      screen.getByText('A new version is available. Portable builds do not update in place.'),
+      screen.getByText(
+        'Download the new version from the release page and replace your current app.',
+      ),
     ).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Install Now' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Download' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Open Download Page' }))
     expect(onOpenDownloadPage).toHaveBeenCalledTimes(1)
   })
@@ -50,7 +53,7 @@ describe('update modals', () => {
             version="2.0.0"
             changelog="Release notes"
             updateAvailable
-            onInstall={vi.fn()}
+            onDownload={vi.fn()}
           />
         </>
       )
@@ -61,6 +64,7 @@ describe('update modals', () => {
     action.focus()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(document.activeElement).toBe(action))
   })
@@ -134,6 +138,56 @@ describe('update modals', () => {
     })
     expect(screen.getByText('Download Cancelled')).toBeTruthy()
     expect(screen.queryByText('Update Failed')).toBeNull()
+  })
+
+  test('can defer a downloaded update and wait for durable save before a requested restart', async () => {
+    const user = userEvent.setup()
+    let acknowledgeSave: (() => void) | undefined
+    let dirty = true
+    const store = useCharacterStore.getState()
+    vi.spyOn(store, 'hasUnsavedChanges').mockImplementation(() => dirty)
+    const save = vi.spyOn(store, 'saveActiveCharacter').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          acknowledgeSave = resolve
+        }),
+    )
+    const installUpdate = vi.fn(async () => undefined)
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        downloadUpdate: vi.fn(async () => ({ success: true })),
+        installUpdate,
+        onDownloadProgress: vi.fn(() => vi.fn()),
+        onUpdateError: vi.fn(() => vi.fn()),
+        onUpdateCancelled: vi.fn(() => vi.fn()),
+      },
+    })
+    const onOpenChange = vi.fn()
+    const modal = (
+      <UpdateProgressModal version="2.0.0" open downloaded onOpenChange={onOpenChange} />
+    )
+    const { rerender } = render(modal)
+    await user.click(screen.getByRole('button', { name: 'Later' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(save).not.toHaveBeenCalled()
+    expect(installUpdate).not.toHaveBeenCalled()
+
+    rerender(<UpdateProgressModal version="2.0.0" open={false} onOpenChange={onOpenChange} />)
+    rerender(modal)
+    await user.click(screen.getByRole('button', { name: 'Save and restart' }))
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(installUpdate).not.toHaveBeenCalled()
+
+    await act(async () => acknowledgeSave?.())
+    expect(screen.getByRole('alert').textContent).toMatch(/still has unsaved changes/)
+    expect(installUpdate).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Save and restart' }))
+    dirty = false
+    await act(async () => acknowledgeSave?.())
+    expect(save).toHaveBeenCalledTimes(2)
+    expect(installUpdate).toHaveBeenCalledTimes(1)
   })
 
   test.each([

@@ -340,7 +340,7 @@ function resolveEntries(
       fixed.entry,
       reference,
     )
-    lots.push({ key, reference, item })
+    lots.push({ key, reference, item, fixed: true })
     if (item) resolved.push(item)
     if (fixed.diagnostic) {
       issues.push(fixed.diagnostic)
@@ -471,6 +471,7 @@ function resolveEntries(
           reference,
         ),
         reference,
+        fixed: true,
         item: item._unresolved ? undefined : item,
       })
       resolved.push(item)
@@ -635,6 +636,21 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
     }
   }
   return keys.sort()
+}
+
+export function hasInvalidStartingEquipmentPackage(
+  blocks: readonly unknown[],
+  choices: readonly string[],
+): boolean {
+  return choices.some((choice, index) => {
+    if (!choice) return false
+    const block = normalizeChoiceBlock(blocks[index])
+    if (!block) return true
+    const keys = getBlockChoiceKeys(block)
+    // Existing format-15 saves use `_` to address the fixed branch.
+    if (keys.length) return !keys.includes(choice.toLowerCase())
+    return choice !== '_' || !Object.getOwnPropertyDescriptor(block, '_') || !Array.isArray(block._)
+  })
 }
 
 function unavailableDruidPackage(

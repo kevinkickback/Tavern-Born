@@ -79,7 +79,18 @@ describe('source compatibility', () => {
         { name: 'Legacy', source: 'XGE' },
         { name: 'Revised', source: 'EFA', edition: 'one' },
       ],
-      items: [{ name: 'Revised Item', source: 'CUSTOM', srd52: true }],
+      items: [
+        { name: 'Revised Item', source: 'CUSTOM', srd52: true },
+        {
+          name: 'Generated Variant',
+          source: 'XGE',
+          edition: 'one',
+          magicVariantGenerated: {
+            base: { name: 'Plate Armor', source: 'XPHB' },
+            template: { name: 'Armor Template', source: 'XGE' },
+          },
+        },
+      ],
     } as Partial<GameData>)
 
     expect(collectRevisedSourceAbbreviations(gameData)).toEqual(

@@ -231,6 +231,12 @@ describe('getPdfExportPreflight', () => {
       ]),
     )
     expect(result.issues.every((issue) => issue.severity === 'warning')).toBe(true)
+    expect(getPdfDownloadPreflight(result, 'none').issues).toEqual([])
+    for (const images of ['color', 'grayscale'] as const) {
+      expect(getPdfDownloadPreflight(result, images).issues.map((issue) => issue.id)).toEqual([
+        'organization-image',
+      ])
+    }
 
     viewModel.organizationImage = 'data:image/png;base64,AAAA'
     expect(

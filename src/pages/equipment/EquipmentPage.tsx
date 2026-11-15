@@ -16,7 +16,7 @@ import {
 } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
+import { GameContent } from '@/components/editor/GameContent'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
@@ -41,9 +41,11 @@ import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { RARITY_COLORS } from '@/lib/5etools/constants'
+import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getItemRulesEntries } from '@/lib/5etools/itemTypeEntries'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import {
   buildItemDetailFields,
   getDamageSummary,
@@ -180,11 +182,10 @@ export function EquipmentPage() {
   }, [equipment, focusedItemId])
   const selectedItem =
     equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
-  const selectedItemData = selectedItem
-    ? itemLookup.get(
-        `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
-      )
-    : undefined
+  const selectedItemData = useMemo(
+    () => (selectedItem ? resolveItemReference(selectedItem, itemLookup) : undefined),
+    [selectedItem, itemLookup],
+  )
   const itemTextContext = useItemTextContext()
   const selectedItemEntries = getItemRulesEntries(selectedItemData, itemTextContext)
   const selectedItemDetailFields = selectedItem
@@ -527,12 +528,12 @@ export function EquipmentPage() {
                                       <Badge
                                         variant="outline"
                                         className={cn(
-                                          'h-5 shrink-0 px-1.5 text-[10px] capitalize',
+                                          'h-5 shrink-0 px-1.5 text-[10px]',
                                           RARITY_COLORS[item.rarity.toLowerCase()] ??
                                             RARITY_COLORS.unknown,
                                         )}
                                       >
-                                        {item.rarity}
+                                        {capitalizeLabel(item.rarity)}
                                       </Badge>
                                     )}
                                   </div>
@@ -658,12 +659,11 @@ export function EquipmentPage() {
                             <Badge
                               variant="outline"
                               className={cn(
-                                'capitalize',
                                 RARITY_COLORS[selectedItem.rarity.toLowerCase()] ??
                                   RARITY_COLORS.unknown,
                               )}
                             >
-                              {selectedItem.rarity}
+                              {capitalizeLabel(selectedItem.rarity)}
                             </Badge>
                           )}
                           {selectedItem.equipped && <Badge variant="secondary">Equipped</Badge>}
@@ -703,7 +703,7 @@ export function EquipmentPage() {
                             Description
                           </h3>
                           <div className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert">
-                            <RenderedEntryWithTooltip
+                            <GameContent
                               entry={selectedItemEntries}
                               recursiveLookup={recursiveLookup}
                             />

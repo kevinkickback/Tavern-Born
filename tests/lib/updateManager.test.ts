@@ -75,6 +75,7 @@ vi.mock('electron-updater', () => ({
 }))
 
 import {
+  acknowledgeInstallerHandoff,
   cancelDownload,
   checkForUpdate,
   compareSemver,
@@ -82,7 +83,7 @@ import {
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
-  openPortableUpdatePage,
+  openUpdateDownloadPage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from '../../electron/updateManager'
@@ -191,22 +192,105 @@ describe('updateManager offline safeguards', () => {
 describe('installUpdate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    netState.online = true
     delete process.env.PORTABLE_EXECUTABLE_DIR
     initAutoUpdater()
   })
 
-  test('installs silently and relaunches the packaged app', () => {
+  test.each([
+    'synchronous',
+    'asynchronous',
+  ] as const)('recovers from a %s error before quit handoff', async (timing) => {
     appState.isPackaged = true
+    const recover = vi.fn()
 
-    installUpdate()
+    expect(() => installUpdate(recover)).toThrow('Download the update before restarting.')
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    updaterHandler('update-not-available')({} as never)
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+    })
+    await downloadUpdate()
+    expect(downloadUpdateMock).not.toHaveBeenCalled()
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
 
+    const emitFailure = () => updaterHandler('error')(new Error('Installer failed') as never)
+    if (timing === 'synchronous') quitAndInstallMock.mockImplementationOnce(emitFailure)
+    installUpdate(recover)
+    if (timing === 'asynchronous') emitFailure()
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
     expect(quitAndInstallMock).toHaveBeenCalledWith(true, true)
+    expect(recover).toHaveBeenCalledTimes(1)
+    expect(acknowledgeInstallerHandoff()).toBe(true)
+    expect(acknowledgeInstallerHandoff()).toBe(false)
+    expect(getUpdateStatus()).toEqual({
+      status: 'downloaded',
+      version: '2.0.0',
+      error: 'Installer failed',
+    })
+    expect(() => installUpdate(recover)).toThrow('Close and reopen Tavern Born')
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('releases the installer failure listener at a successful quit handoff', () => {
+    appState.isPackaged = true
+    const recover = vi.fn()
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    installUpdate(recover)
+    expect(acknowledgeInstallerHandoff()).toBe(false)
+    updaterHandler('error')(new Error('After handoff') as never)
+    expect(recover).not.toHaveBeenCalled()
+    expect(getUpdateStatus()).toEqual({ status: 'downloaded', version: '2.0.0' })
+  })
+
+  test('keeps an in-flight check error separate from installer handoff', async () => {
+    appState.isPackaged = true
+    let rejectCheck: ((error: Error) => void) | undefined
+    checkForUpdatesMock.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectCheck = reject
+        }),
+    )
+    const checking = checkForUpdate()
+    expect(checkForUpdatesMock).toHaveBeenCalledTimes(1)
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    const recover = vi.fn()
+    expect(() => installUpdate(recover)).toThrow('Wait for the current update request')
+    updaterHandler('error')(new Error('Previous check failed') as never)
+    rejectCheck?.(new Error('Previous check failed'))
+    await expect(checking).resolves.toEqual({ status: 'downloaded', version: '2.0.0' })
+    installUpdate(recover)
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+    expect(recover).not.toHaveBeenCalled()
+  })
+
+  test('waits for a cancelled native download to settle before installing a ready update', async () => {
+    appState.isPackaged = true
+    let finishDownload: (() => void) | undefined
+    downloadUpdateMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDownload = resolve
+        }),
+    )
+    const download = downloadUpdate()
+    expect(cancelDownload()).toBe(true)
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    const recover = vi.fn()
+    expect(() => installUpdate(recover)).toThrow('Wait for the current update request')
+    finishDownload?.()
+    await download
+    installUpdate(recover)
+    expect(quitAndInstallMock).toHaveBeenCalledTimes(1)
+    expect(recover).not.toHaveBeenCalled()
   })
 
   test('does not invoke the installer during development', () => {
     appState.isPackaged = false
 
-    installUpdate()
+    expect(() => installUpdate(vi.fn())).toThrow('An in-app restart is unavailable for this build.')
 
     expect(quitAndInstallMock).not.toHaveBeenCalled()
   })
@@ -272,7 +356,7 @@ describe('update event lifecycle', () => {
     expect(rendererSendMock).toHaveBeenLastCalledWith('update-available', {
       version: '2.1.0',
       changelog: 'Detailed release notes',
-      isPortable: false,
+      useReleaseDownloadPage: false,
     })
   })
 
@@ -365,38 +449,62 @@ describe('download cancellation lifecycle', () => {
   })
 })
 
-describe('portable update safeguards', () => {
+describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')
+  const nodeFetchMock = vi.fn()
+  const releaseFetchMock = build === 'macOS' ? nodeFetchMock : netFetchMock
+
   beforeEach(() => {
     vi.clearAllMocks()
     appState.isPackaged = true
     netState.online = true
-    process.env.PORTABLE_EXECUTABLE_DIR = 'C:/Portable/Tavern-Born'
+    vi.stubEnv(
+      'PORTABLE_EXECUTABLE_DIR',
+      build === 'Windows Portable' ? 'C:/Portable/Tavern-Born' : undefined,
+    )
+    Object.defineProperty(process, 'platform', { value: build === 'macOS' ? 'darwin' : 'win32' })
+    vi.stubGlobal('fetch', nodeFetchMock)
     initAutoUpdater()
   })
 
   afterEach(() => {
-    delete process.env.PORTABLE_EXECUTABLE_DIR
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+    if (platform) Object.defineProperty(process, 'platform', platform)
     initAutoUpdater()
   })
 
-  test('does not download or install updates in portable mode', async () => {
+  test('never uses the native updater', async () => {
     await expect(downloadUpdate()).rejects.toThrow(
-      'Automatic updates are unavailable in portable builds',
+      'Install this update from the release download page',
     )
-    installUpdate()
+    expect(() => installUpdate(vi.fn())).toThrow('An in-app restart is unavailable for this build.')
 
     expect(downloadUpdateMock).not.toHaveBeenCalled()
     expect(quitAndInstallMock).not.toHaveBeenCalled()
+    expect(onMock).not.toHaveBeenCalled()
   })
 
   test('opens the exact GitHub release page after an update is found', async () => {
-    netFetchMock.mockResolvedValueOnce({
+    releaseFetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ tag_name: 'v2.0.0', body: 'Release notes' }),
     })
-    await checkForUpdate()
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'available',
+      version: '2.0.0',
+      changelog: 'Release notes',
+    })
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
+    expect(releaseFetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/kevinkickback/Tavern-Born/releases/latest',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    )
+    if (build === 'macOS') {
+      expect(releaseFetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+    }
 
-    await openPortableUpdatePage()
+    await openUpdateDownloadPage()
 
     expect(shellOpenExternalMock).toHaveBeenCalledWith(
       'https://github.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0',
@@ -404,12 +512,24 @@ describe('portable update safeguards', () => {
   })
 
   test('refuses to open a download page before an update is available', async () => {
-    netFetchMock.mockResolvedValueOnce({ ok: false })
+    releaseFetchMock.mockResolvedValueOnce({ ok: false })
     await checkForUpdate()
 
-    await expect(openPortableUpdatePage()).rejects.toThrow(
-      'No portable update is currently available',
-    )
+    await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')
     expect(shellOpenExternalMock).not.toHaveBeenCalled()
+  })
+
+  test('reports network failures without falling through to the native updater', async () => {
+    releaseFetchMock.mockRejectedValueOnce(
+      build === 'macOS' ? new TypeError('fetch failed') : new Error('net::ERR_CONNECTION_RESET'),
+    )
+    await expect(checkForUpdate()).resolves.toEqual({
+      status: 'error',
+      error:
+        build === 'macOS'
+          ? 'Could not reach the update server. Check your connection and try again.'
+          : 'No internet connection. Check your connection and try again.',
+    })
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
   })
 })

@@ -5,6 +5,7 @@ import path from 'node:path'
 import ts from 'typescript'
 import { createServer } from 'vite'
 import { deriveOptionalNativeRules } from './lib/optional-class-native-source.mjs'
+import { emitSharedRegistryModule } from './lib/shared-registry-source.mjs'
 
 const checking = process.argv.includes('--check')
 const root = process.argv.find((arg) => arg.startsWith('--data='))?.slice(7) ?? 'data'
@@ -75,6 +76,7 @@ try {
     'scripts/lib/optional-class-native-source.mjs',
     'scripts/lib/optional-class-native-semantics.json',
     'scripts/lib/optional-class-declaration-semantics.json',
+    'scripts/lib/shared-registry-source.mjs',
     'src/lib/5etools/optionalClassFeatureRules.generated.json',
     'src/lib/5etools/parsers/classes.ts',
     'src/lib/5etools/optionalClassDeclarationStructure.ts',
@@ -109,18 +111,23 @@ try {
   const upstream = execFileSync('git', ['-C', '.tmp/5etools-src', 'rev-parse', 'HEAD'], {
     encoding: 'utf8',
   }).trim()
-  const runtime = { version: 1, roots: derived.roots, pools: derived.pools }
-  for (const [file, value] of [
-    ['src/lib/5etools/optionalClassNativeRules.generated.json', runtime],
+  const runtime = JSON.parse(
+    JSON.stringify({ version: 1, roots: derived.roots, pools: derived.pools }),
+  )
+  for (const [file, source] of [
+    [
+      'src/lib/5etools/optionalClassNativeRules.generated.ts',
+      emitSharedRegistryModule(runtime, 'scripts/generate-optional-class-native-rules.mjs', true),
+    ],
     [
       'scripts/generated/optional-class-native-inputs.json',
-      { version: 1, upstream, inputs, helpers },
+      JSON.stringify({ version: 1, upstream, inputs, helpers }, null, 2) + '\n',
     ],
   ]) {
     const bytes = execFileSync(
       process.execPath,
       ['node_modules/@biomejs/biome/bin/biome', 'format', '--stdin-file-path', file],
-      { input: JSON.stringify(value, null, 2) + '\n', encoding: 'utf8', windowsHide: true },
+      { input: source, encoding: 'utf8', windowsHide: true },
     )
     if (checking) {
       if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== bytes)

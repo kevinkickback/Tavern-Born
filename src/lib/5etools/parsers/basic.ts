@@ -10,6 +10,7 @@ import type {
 import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
 import { auditConditionalOptionalFeatures } from '../conditionalProficiencySource'
 import { auditFixedLayerMultiplicity } from '../fixedProficiencySource'
+import { stripMagicVariantLineage } from '../itemEntries'
 import { parseMagicVariantTemplates, resolveMagicVariants } from '../magicVariants'
 import { parsePrimaryItemTypes } from '../primaryItemTypes'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
@@ -66,7 +67,10 @@ export function parseItems(data: unknown): unknown[] {
   // Every input owns its category so copies cannot inherit Basic from an unrelated base record.
   const append = (values: unknown[], category: 'Basic' | 'Other') => {
     items.push(
-      ...values.map((item) => ({ ...asObject(item), startingEquipmentCategory: category })),
+      ...values.map((item) => ({
+        ...stripMagicVariantLineage(asObject(item)),
+        startingEquipmentCategory: category,
+      })),
     )
   }
   if (obj.item) append(asArray(obj.item), 'Other')

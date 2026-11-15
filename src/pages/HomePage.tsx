@@ -1,29 +1,33 @@
 import {
   CheckCircle,
-  CheckSquare,
   CopySimple,
   DotsThreeVertical,
   DownloadSimple,
-  Funnel,
-  ListBullets,
   MagnifyingGlass,
   Plus,
-  SquaresFour,
   Trash,
   Upload,
   UserCircle,
   Users,
   WarningCircle,
 } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useContext, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterContentOpeningDialog } from '@/components/character/CharacterContentOpeningDialog'
+import {
+  CharacterLibraryControls,
+  type LibraryFilter,
+  type LibraryGroup,
+  type LibrarySort,
+} from '@/components/character/CharacterLibraryControls'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
+import { CharacterLibrarySidebarContext } from '@/components/layout/characterLibrarySidebar'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,15 +56,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
 import { useCharacterContentOpening } from '@/hooks/character/useCharacterContentOpening'
+import { useLibraryAttention } from '@/hooks/character/useLibraryAttention'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
@@ -88,9 +86,6 @@ import { useCharacterStore, validateCharacterData } from '@/store/characterStore
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
-type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
-type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
-
 function downloadPreparedFile(file: PreparedCharacterDownload | PreparedLibraryRecoveryDownload) {
   const dataBlob = 'blob' in file ? file.blob : new Blob([file.text], { type: 'application/json' })
   const url = URL.createObjectURL(dataBlob)
@@ -102,6 +97,14 @@ function downloadPreparedFile(file: PreparedCharacterDownload | PreparedLibraryR
   } finally {
     URL.revokeObjectURL(url)
   }
+}
+
+function savePreparedCharacterFile(file: PreparedCharacterDownload): Promise<boolean> {
+  if (window.electronAPI?.saveCharacterFile) {
+    return window.electronAPI.saveCharacterFile(file.filename, file.text)
+  }
+  downloadPreparedFile(file)
+  return Promise.resolve(false)
 }
 
 interface CharacterImportReport {
@@ -246,10 +249,12 @@ function CharacterListRow({
 }
 
 interface HomePageProps {
+  showCompatibilityDialog?: boolean
   readinessFocus?: string | null
 }
 
-export function HomePage({ readinessFocus }: HomePageProps = {}) {
+export function HomePage({ readinessFocus, showCompatibilityDialog = true }: HomePageProps = {}) {
+  const librarySidebar = useContext(CharacterLibrarySidebarContext)
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
@@ -265,7 +270,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   )
   const gameData = useGameDataStore((state) => state.gameData)
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
-  const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
@@ -274,11 +278,11 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false)
   const [importReport, setImportReport] = useState<CharacterImportReport | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<SortOption>('recent')
-  const [groupBy, setGroupBy] = useState<GroupByOption>('none')
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all')
+  const [sortBy, setSortBy] = useState<LibrarySort>('recent')
+  const [groupBy, setGroupBy] = useState<LibraryGroup>('none')
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const focusCharacterName = readinessFocus === 'identity:name'
   const additionalContentCharacterIds = useMemo(() => {
     if (!gameData) return new Set<string>()
@@ -290,9 +294,27 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     )
   }, [characters, gameData])
 
+  const needsAttention = useLibraryAttention(characters, gameData, additionalContentCharacterIds)
+  const checkingAttention = libraryFilter === 'attention' && !needsAttention
+  const viewCounts = useMemo(() => {
+    const classicCount = characters.filter((character) => character.originSystem === '2014').length
+    return {
+      all: characters.length,
+      '2014': classicCount,
+      '2024': characters.length - classicCount,
+      attention: needsAttention?.size ?? null,
+    }
+  }, [characters, needsAttention])
+
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     const sorted = characters.filter((character) => {
+      if (libraryFilter === 'attention' && !needsAttention?.has(character.id)) return false
+      if (
+        (libraryFilter === '2014' || libraryFilter === '2024') &&
+        character.originSystem !== libraryFilter
+      )
+        return false
       if (!query) return true
       return [
         character.name,
@@ -312,7 +334,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       return getTotalCharacterLevel(a) - getTotalCharacterLevel(b)
     })
     return sorted
-  }, [characters, searchQuery, sortBy])
+  }, [characters, libraryFilter, needsAttention, searchQuery, sortBy])
 
   const groupedCharacters = useMemo(() => {
     if (groupBy === 'none') return null
@@ -334,6 +356,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const allSelected =
     sortedCharacters.length > 0 &&
     sortedCharacters.every((character) => selectedCharacterIds.includes(character.id))
+  const hiddenSelectionCount =
+    selectedCharacterIds.length -
+    sortedCharacters.filter((character) => selectedCharacterIds.includes(character.id)).length
 
   const handleLoadCharacter = useCallback(
     (id: string) => {
@@ -423,12 +448,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     (character: Character) =>
       runCharacterExport(
         async () => {
-          const file = prepareCharacterDownload(character)
-          if (!window.electronAPI?.saveCharacterFile) {
-            downloadPreparedFile(file)
-            return
-          }
-          if (await window.electronAPI.saveCharacterFile(file.filename, file.text)) {
+          if (await savePreparedCharacterFile(prepareCharacterDownload(character))) {
             toast.success('Character exported successfully')
           }
         },
@@ -463,14 +483,17 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
     }
   }, [unsupportedCharacters])
 
-  const exportLibrary = (selected: readonly Character[]) => {
-    try {
-      downloadPreparedFile(prepareLibraryDownload(selected))
-      toast.success(`${selected.length} character${selected.length === 1 ? '' : 's'} exported`)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not export the library backup.')
-    }
-  }
+  const exportLibrary = (selected: readonly Character[]) =>
+    runCharacterExport(
+      async () => {
+        if (await savePreparedCharacterFile(prepareLibraryDownload(selected))) {
+          toast.success(`${selected.length} character${selected.length === 1 ? '' : 's'} exported`)
+        }
+      },
+      (error) => {
+        toast.error(error instanceof Error ? error.message : 'Could not export the library backup.')
+      },
+    )
 
   const handleExportSelected = () => {
     const selected = characters.filter((character) => selectedCharacterIds.includes(character.id))
@@ -609,7 +632,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
-        cardSize={360}
         highlighted={focusCharacterName && character.id === activeCharacterId}
         usesAdditionalContent={additionalContentCharacterIds.has(character.id)}
         isLibraryPending={isLibraryPending}
@@ -634,14 +656,30 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
 
   return (
     <WorkspacePage>
+      {librarySidebar &&
+        createPortal(
+          <CharacterLibraryControls
+            counts={viewCounts}
+            filter={libraryFilter}
+            onFilterChange={setLibraryFilter}
+            sort={sortBy}
+            onSortChange={setSortBy}
+            group={groupBy}
+            onGroupChange={setGroupBy}
+            selectionMode={selectionMode}
+            selectionDisabled={isLibraryPending}
+            onToggleSelection={handleToggleSelectionMode}
+          />,
+          librarySidebar,
+        )}
       <div className="shrink-0 bg-surface-raised">
-        <WorkspaceToolbar className="h-11 gap-3 border-b border-border-subtle bg-transparent px-4">
+        <WorkspaceToolbar className="h-auto min-h-11 flex-wrap gap-x-3 gap-y-1 border-b border-border-subtle bg-transparent px-4 py-1">
           {isLibraryPending && (
             <span role="status" className="text-xs text-muted-foreground">
               Saving changes…
             </span>
           )}
-          <div className="relative min-w-56 flex-1">
+          <div className="relative min-w-44 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
             <Input
               type="search"
@@ -652,10 +690,19 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
               className="h-9 border-border-strong bg-workspace-pane pl-9 pr-20 shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground">
-              {sortedCharacters.length} / {characters.length}
+              {checkingAttention ? '…' : sortedCharacters.length} / {characters.length}
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-2 border-l border-border pl-3">
+          <div className="flex max-w-full flex-wrap items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 px-2"
+              disabled={isLibraryPending}
+              onClick={handleImportCharacter}
+            >
+              <Upload /> Import
+            </Button>
             {characters.length > 0 && (
               <Button
                 variant="ghost"
@@ -666,92 +713,21 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                 <DownloadSimple /> Export Library
               </Button>
             )}
-            <Button
-              variant={filterPanelOpen ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-9 gap-1.5 px-3"
-              aria-expanded={filterPanelOpen}
-              onClick={() => setFilterPanelOpen((open) => !open)}
-            >
-              <Funnel /> Sort & Group
-            </Button>
-            <div className="flex h-9 items-center rounded-md border border-border bg-muted/30 p-0.5">
-              <Button
-                variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-8 shadow-none"
-                aria-label="Gallery view"
-                onClick={() => setViewMode('gallery')}
-              >
-                <SquaresFour />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="size-8 shadow-none"
-                aria-label="List view"
-                onClick={() => setViewMode('list')}
-              >
-                <ListBullets />
-              </Button>
-            </div>
           </div>
         </WorkspaceToolbar>
-
-        {filterPanelOpen && characters.length > 0 && (
-          <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Sort
-            </span>
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-              <SelectTrigger className="h-8 w-44 bg-workspace-pane text-xs shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recently Modified</SelectItem>
-                <SelectItem value="name-asc">Name (A–Z)</SelectItem>
-                <SelectItem value="name-desc">Name (Z–A)</SelectItem>
-                <SelectItem value="level-desc">Level (High–Low)</SelectItem>
-                <SelectItem value="level-asc">Level (Low–High)</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Group
-            </span>
-            <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupByOption)}>
-              <SelectTrigger className="h-8 w-36 bg-workspace-pane text-xs shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="class">Class</SelectItem>
-                <SelectItem value="alignment">Alignment</SelectItem>
-                <SelectItem value="player">Player</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant={selectionMode ? 'secondary' : 'ghost'}
-              size="sm"
-              className="ml-auto h-8 gap-1.5"
-              disabled={isLibraryPending}
-              onClick={handleToggleSelectionMode}
-            >
-              <CheckSquare /> {selectionMode ? 'Cancel Selection' : 'Select Multiple'}
-            </Button>
-          </div>
-        )}
       </div>
 
       {selectionMode && (
         <div className="flex h-10 shrink-0 items-center gap-3 border-b border-primary/30 bg-primary/10 px-3">
           <Checkbox
-            disabled={isLibraryPending}
+            disabled={isLibraryPending || checkingAttention}
             checked={allSelected}
             onCheckedChange={handleToggleAllSelection}
+            aria-label={allSelected ? 'Deselect visible characters' : 'Select visible characters'}
           />
           <button
             type="button"
-            disabled={isLibraryPending}
+            disabled={isLibraryPending || checkingAttention}
             className="text-xs font-medium"
             onClick={handleToggleAllSelection}
           >
@@ -759,6 +735,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
           </button>
           <span className="text-xs text-muted-foreground">
             {selectedCharacterIds.length} selected
+            {!checkingAttention && hiddenSelectionCount > 0 && ` (${hiddenSelectionCount} hidden)`}
           </span>
           <Button
             variant="outline"
@@ -782,13 +759,23 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       )}
 
       <WorkspaceBody>
-        {characters.length === 0 ? (
+        {sortedCharacters.length === 0 ? (
           <div className="flex h-full min-h-72 flex-col items-center justify-center px-6 text-center">
             <Users className="size-10 text-muted-foreground" weight="duotone" />
-            <h2 className="mt-4 text-base font-semibold">No Characters Yet</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create your first character or import an existing Tavern-Born file.
-            </p>
+            <h2 className="mt-4 text-base font-semibold">
+              {characters.length === 0
+                ? 'No Characters Yet'
+                : checkingAttention
+                  ? 'Checking which characters need attention…'
+                  : searchQuery.trim()
+                    ? `No characters match “${searchQuery}”`
+                    : 'No characters match this filter.'}
+            </h2>
+            {characters.length === 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Create your first character or import an existing Tavern-Born file.
+              </p>
+            )}
             <div className="mt-4 flex gap-2">
               <Button
                 size="sm"
@@ -798,20 +785,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
               >
                 <Plus /> New Character
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={isLibraryPending}
-                onClick={handleImportCharacter}
-              >
-                <Upload /> Import
-              </Button>
             </div>
-          </div>
-        ) : sortedCharacters.length === 0 ? (
-          <div className="flex h-full min-h-72 items-center justify-center text-sm text-muted-foreground">
-            No characters match “{searchQuery}”
           </div>
         ) : (
           <div className={cn(viewMode === 'gallery' && 'p-4')}>
@@ -826,15 +800,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                     onClick={() => setShowCreateWizard(true)}
                   >
                     New Character
-                  </button>
-                  <span className="h-4 w-px bg-border" />
-                  <button
-                    type="button"
-                    className="cursor-pointer text-muted-foreground hover:text-primary"
-                    disabled={isLibraryPending}
-                    onClick={handleImportCharacter}
-                  >
-                    Import
                   </button>
                 </div>
                 {[...groupedCharacters.entries()].map(([group, groupCharacters]) => (
@@ -862,7 +827,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                 )}
               >
                 {viewMode === 'gallery' ? (
-                  <div className="grid aspect-[3/2] min-h-44 grid-rows-2 overflow-hidden rounded-xl border border-dashed border-border bg-muted/10 text-center">
+                  <div className="grid aspect-[3/2] min-h-44 overflow-hidden rounded-xl border border-dashed border-border bg-muted/10 text-center">
                     <button
                       type="button"
                       aria-label="New Character"
@@ -874,20 +839,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                       <Plus className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                       <span className="text-sm font-semibold">New Character</span>
                       <span className="text-[11px] text-muted-foreground">Start from scratch</span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Import"
-                      data-character-action="import"
-                      className="group relative flex min-h-0 cursor-pointer flex-col items-center justify-center gap-1.5 border-t border-dashed border-border px-4 transition-colors hover:bg-primary/10 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                      disabled={isLibraryPending}
-                      onClick={handleImportCharacter}
-                    >
-                      <Upload className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
-                      <span className="text-sm font-semibold">Import</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Open a .tbc or .tbclib file
-                      </span>
                     </button>
                   </div>
                 ) : (
@@ -901,15 +852,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
                     >
                       New Character
                     </button>
-                    <span className="h-4 w-px bg-border" />
-                    <button
-                      type="button"
-                      className="cursor-pointer text-muted-foreground hover:text-primary"
-                      disabled={isLibraryPending}
-                      onClick={handleImportCharacter}
-                    >
-                      Import
-                    </button>
                   </div>
                 )}
                 {sortedCharacters.map(renderCharacter)}
@@ -920,12 +862,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
-      <UnsupportedCharactersDialog
-        count={unsupportedCharacters.length}
-        onExport={handleExportUnsupportedCharacters}
-        isPending={isLibraryPending}
-        onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
-      />
+      {showCompatibilityDialog && (
+        <UnsupportedCharactersDialog
+          count={unsupportedCharacters.length}
+          onExport={handleExportUnsupportedCharacters}
+          isPending={isLibraryPending}
+          onAcknowledge={() => runLibraryAction(dismissUnsupportedCharacters, reportLibraryError)}
+        />
+      )}
       <Dialog open={importReport !== null} onOpenChange={(open) => !open && setImportReport(null)}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -1071,7 +1015,14 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   )
 }
 
-export function RoutedHomePage() {
+export function RoutedHomePage({
+  showCompatibilityDialog,
+}: Pick<HomePageProps, 'showCompatibilityDialog'>) {
   const [searchParams] = useSearchParams()
-  return <HomePage readinessFocus={getReadinessFocus(searchParams)} />
+  return (
+    <HomePage
+      readinessFocus={getReadinessFocus(searchParams)}
+      showCompatibilityDialog={showCompatibilityDialog}
+    />
+  )
 }

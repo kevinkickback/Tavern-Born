@@ -388,6 +388,62 @@ describe('starting equipment source, quantities and ownership', () => {
     expect(needsStartingEquipmentApplication(c, 'class', pkg)).toBe(false)
   })
 
+  test('requires Apply for withdrawn lots but preserves temporarily missing physical printings', () => {
+    const current = actor()
+    const grant = current.startingEquipmentGrants!.class!
+    const { key, reference, equipmentId } = grant.items[0]
+    const removed = { lots: [], currency: grant.declaredCurrency }
+    const unavailable = { ...removed, lots: [{ key, reference }] }
+    expect(needsStartingEquipmentApplication(current, 'class', unavailable)).toBe(false)
+    expect(
+      needsStartingEquipmentApplication(current, 'class', { ...removed, unavailablePackage: true }),
+    ).toBe(false)
+    expect(needsStartingEquipmentApplication(current, 'class', removed)).toBe(true)
+
+    const manual = { ...current.equipment.find((row) => row.id === equipmentId)!, id: 'manual' }
+    const applied = reconcileStartingEquipmentGrant(
+      { ...current, equipment: [...current.equipment, manual] },
+      'class',
+      grant.owner,
+      removed.lots,
+      removed.currency,
+    )
+    expect(applied.equipment).toContainEqual(manual)
+    expect(applied.equipment?.some(({ id }) => id === equipmentId)).toBe(false)
+    expect(applied.currency).toEqual(current.currency)
+  })
+
+  test('a shifted unique fixed lot retains its exact inventory ID and spent quantity', () => {
+    const background = {
+      name: 'Acolyte',
+      source: 'PHB',
+      startingEquipment: [{ a: ['Longsword|PHB', { item: 'Dagger|PHB', quantity: 2 }] }],
+    } as Background5e
+    let current = makeCharacterFixture({ background: '', equipment: [] })
+    current = apply(
+      current,
+      applyBackgroundSelectionCommand(current, current.provenance, background, ['a'], lookup),
+    )
+    const dagger = current.equipment.find(({ name }) => name === 'Dagger')!
+    current = apply(
+      current,
+      updateEquipmentQuantityCommand(current, current.provenance, dagger.id, 1),
+    )
+    const next = {
+      ...background,
+      startingEquipment: [{ a: [{ item: 'Dagger|PHB', quantity: 2 }] }],
+    }
+    const refreshed = apply(
+      current,
+      applyBackgroundSelectionCommand(current, current.provenance, next, ['a'], lookup),
+    )
+    expect(refreshed.equipment).toEqual([{ ...dagger, quantity: 1 }])
+    expect(refreshed.startingEquipmentGrants?.background?.items).toMatchObject([
+      { equipmentId: dagger.id, issuedQuantity: 2, remainingQuantity: 1, consumedQuantity: 1 },
+    ])
+    expect(refreshed.backgroundEquipmentChoices).toEqual(['a'])
+  })
+
   test('occupied inventory and consumed IDs remain distinct even when timestamp/random repeat', () => {
     const time = vi.spyOn(Date, 'now').mockReturnValue(100)
     const random = vi.spyOn(Math, 'random').mockReturnValue(0.5)

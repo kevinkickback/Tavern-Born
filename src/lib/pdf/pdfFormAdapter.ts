@@ -25,22 +25,25 @@ import {
   setTextMatrix,
   TextAlignment,
 } from '@cantoo/pdf-lib'
+import { resolveOrganizationImageSrc } from '@/lib/character/organizationConstants'
 import { getOfficial2014FontBounds } from '@/lib/pdf/official2014Text'
 import { fitOfficial2024Text, getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import {
   type AcroWidget,
   asFieldWithInternals,
-  type FieldWithInternals,
   type FormWithInternals,
+  hideFieldWidgets,
 } from '@/lib/pdf/pdfFieldInternals'
-import { embedOrganizationImage, embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
+import { applySheetImage } from '@/lib/pdf/pdfImageAdapter'
 import { omitPdfPages } from '@/lib/pdf/pdfPageSelection'
 import { fitPdfText } from '@/lib/pdf/pdfTextLayout'
 import type {
   CharacterSheetCleanupProfile,
   CharacterSheetFieldMap,
   CharacterSheetTemplateId,
+  SheetImageMode,
 } from '@/lib/pdf/types'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 
 const MPMB_BUTTON_KEEP_PATTERNS = [
   /^Portrait$/i,
@@ -113,6 +116,7 @@ export async function fillCharacterSheetDocument(
     organizationImageFieldName?: string
     portrait?: string
     organizationImage?: string
+    imageMode?: SheetImageMode
     additionalSpellPages?: CharacterSheetFieldMap[]
     spellPageIndex?: number
     excludedPageIndices?: number[]
@@ -246,14 +250,23 @@ export async function fillCharacterSheetDocument(
     updateDirtyFieldAppearances(form)
   }
   replaceCheckboxOffAppearances(pdfDoc, form, options.templateId)
-  if (options.portrait && options.portraitFieldName) {
-    await embedPortraitImage(pdfDoc, options.portrait, options.portraitFieldName)
-  }
-  if (options.organizationImage && options.organizationImageFieldName) {
-    await embedOrganizationImage(
+  if (options.portraitFieldName) {
+    await applySheetImage(
       pdfDoc,
+      fieldIndex.get(options.portraitFieldName),
+      options.portrait,
+      resolvePortraitSrc,
+      options.imageMode,
+    )
+  }
+  if (options.organizationImageFieldName) {
+    await applySheetImage(
+      pdfDoc,
+      fieldIndex.get(options.organizationImageFieldName),
       options.organizationImage,
-      options.organizationImageFieldName,
+      resolveOrganizationImageSrc,
+      options.imageMode,
+      cleanupProfile === 'mpmb-2014',
     )
   }
   // Keep the generated appearances' default font available to external readers after edits.
@@ -522,16 +535,6 @@ function fit2024TextAppearances(
     for (const appearanceWidget of field.acroField.getWidgets())
       appearanceWidget.dict.set(PDFName.of('DA'), appearance)
     if (fitted.truncated) onTextTruncated?.(field.getName())
-  }
-}
-
-function hideFieldWidgets(field: FieldWithInternals) {
-  for (const widget of field.acroField.getWidgets() as AcroWidget[]) {
-    widget.setRectangle({ x: 0, y: 0, width: 0, height: 0 })
-    widget.dict.delete(PDFName.of('AP'))
-    widget.dict.delete(PDFName.of('A'))
-    widget.dict.delete(PDFName.of('AA'))
-    widget.dict.set(PDFName.of('F'), PDFNumber.of(34))
   }
 }
 

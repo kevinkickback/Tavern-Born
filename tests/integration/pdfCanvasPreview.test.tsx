@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const pdfMocks = vi.hoisted(() => ({
@@ -21,6 +21,40 @@ afterEach(() => {
 })
 
 describe('PdfCanvasPreview resource lifecycle', () => {
+  test('renders replacement bytes after a preview error', async () => {
+    const destroyFailed = vi.fn(async () => undefined)
+    pdfMocks.getDocument
+      .mockReturnValueOnce({
+        promise: Promise.reject(new Error('Could not read the PDF.')),
+        destroy: destroyFailed,
+      })
+      .mockReturnValueOnce({
+        promise: Promise.resolve({
+          numPages: 1,
+          getPage: vi.fn(async () => ({
+            getViewport: ({ scale }: { scale: number }) => ({
+              width: 900 * scale,
+              height: 1200 * scale,
+            }),
+            render: () => ({ promise: Promise.resolve(), cancel: vi.fn() }),
+          })),
+        }),
+        destroy: vi.fn(async () => undefined),
+      })
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      {} as CanvasRenderingContext2D,
+    )
+
+    const view = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
+    expect(await screen.findByText('Could not read the PDF.')).toBeTruthy()
+
+    view.rerender(<PdfCanvasPreview pdfBytes={new Uint8Array([2])} />)
+    await waitFor(() => expect(view.container.querySelector('canvas')).toBeTruthy())
+    expect(screen.queryByText('Could not read the PDF.')).toBeNull()
+    expect(pdfMocks.getDocument).toHaveBeenLastCalledWith({ data: new Uint8Array([2]) })
+    expect(destroyFailed).toHaveBeenCalledTimes(1)
+  })
+
   test('destroys a pending loading task on unmount', async () => {
     const destroy = vi.fn(async () => undefined)
     pdfMocks.getDocument.mockReturnValue({
@@ -33,6 +67,38 @@ describe('PdfCanvasPreview resource lifecycle', () => {
     view.unmount()
 
     expect(destroy).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not start painting a page that arrives after unmount', async () => {
+    const renderPage = vi.fn(() => ({ promise: Promise.resolve(), cancel: vi.fn() }))
+    const page = {
+      getViewport: ({ scale }: { scale: number }) => ({
+        width: 900 * scale,
+        height: 1200 * scale,
+      }),
+      render: renderPage,
+    }
+    let resolvePage!: (value: typeof page) => void
+    const pendingPage = new Promise<typeof page>((resolve) => {
+      resolvePage = resolve
+    })
+    const getPage = vi.fn(() => pendingPage)
+    const destroy = vi.fn(async () => undefined)
+    pdfMocks.getDocument.mockReturnValue({
+      promise: Promise.resolve({ numPages: 1, getPage }),
+      destroy,
+    })
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      {} as CanvasRenderingContext2D,
+    )
+
+    const view = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
+    await waitFor(() => expect(getPage).toHaveBeenCalledWith(1))
+    view.unmount()
+    await act(async () => resolvePage(page))
+
+    expect(destroy).toHaveBeenCalledTimes(1)
+    expect(renderPage).not.toHaveBeenCalled()
   })
 
   test('cancels an active render and destroys its document when zoom changes', async () => {
@@ -48,9 +114,8 @@ describe('PdfCanvasPreview resource lifecycle', () => {
         }),
         render: renderPage,
       })),
-      destroy,
     }
-    pdfMocks.getDocument.mockReturnValue({ promise: Promise.resolve(pdf), destroy: vi.fn() })
+    pdfMocks.getDocument.mockReturnValue({ promise: Promise.resolve(pdf), destroy })
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
       {} as CanvasRenderingContext2D,
     )

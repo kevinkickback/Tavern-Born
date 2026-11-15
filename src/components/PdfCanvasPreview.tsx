@@ -1,5 +1,5 @@
 import { Sparkle } from '@phosphor-icons/react'
-import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
@@ -21,7 +21,6 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
   useEffect(() => {
     let canceled = false
     let loadingTask: PDFDocumentLoadingTask | null = null
-    let pdf: PDFDocumentProxy | null = null
     let renderTask: RenderTask | null = null
     const container = containerRef.current
     if (!container) return
@@ -33,19 +32,14 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
     const render = async () => {
       try {
         loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() })
-        pdf = await loadingTask.promise
-        loadingTask = null
-
-        if (canceled) {
-          await pdf.destroy()
-          pdf = null
-          return
-        }
+        const pdf = await loadingTask.promise
 
         for (let i = 1; i <= pdf.numPages; i++) {
           if (canceled) return
 
           const page = await pdf.getPage(i)
+          if (canceled) return
+
           const unscaledViewport = page.getViewport({ scale: 1 })
           const displayScale =
             (PREVIEW_WIDTH_AT_100_PERCENT / unscaledViewport.width) * (zoom / 100)
@@ -89,24 +83,19 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
     return () => {
       canceled = true
       renderTask?.cancel()
-      if (loadingTask) {
-        void loadingTask.destroy().catch(() => undefined)
-      } else if (pdf) {
-        void pdf.destroy().catch(() => undefined)
-      }
+      void loadingTask?.destroy().catch(() => undefined)
     }
   }, [pdfBytes, zoom])
 
-  if (error) {
-    return (
-      <div className="flex min-h-full items-center justify-center px-6">
-        <p className="text-sm text-destructive">{error}</p>
-      </div>
-    )
-  }
-
   return (
     <div className="relative min-h-full p-4">
+      {error && (
+        <div className="flex min-h-full items-center justify-center px-6">
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        </div>
+      )}
       {rendering && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-workspace-canvas/90">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -115,7 +104,7 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
           </div>
         </div>
       )}
-      <div ref={containerRef} className="space-y-4" />
+      <div ref={containerRef} className="space-y-4" hidden={error !== null} />
     </div>
   )
 }

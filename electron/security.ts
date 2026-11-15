@@ -1,4 +1,14 @@
 import { isAbsolute, relative, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+export function rendererRootFileUrl(directory: string, platform = process.platform): string {
+  // Match Chromium's drive-letter serialization without case-folding the rest of the path.
+  const path =
+    platform === 'win32'
+      ? directory.replace(/^([a-z]):(?=[\\/])/, (_, drive: string) => `${drive.toUpperCase()}:`)
+      : directory
+  return pathToFileURL(path, { windows: platform === 'win32' }).href
+}
 
 export function isPathWithinRoot(rootPath: string, targetPath: string): boolean {
   const relativeTarget = relative(rootPath, targetPath)

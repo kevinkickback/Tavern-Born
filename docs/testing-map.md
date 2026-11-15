@@ -1,102 +1,38 @@
-# Testing map
+# Testing
 
-Protect behavior at the narrowest useful layer. Run focused checks while implementing; the finished
-PR revision receives the broad [CI gates](cicd-workflow.md#validation). Add local checks for data or
-platform coverage CI cannot exercise and for unresolved shared-boundary uncertainty.
-
-## Layers
-
-| Layer | Protects | Location |
-| --- | --- | --- |
-| Unit/domain | Calculations, commands, parsers, schemas, reconciliation | `tests/lib/`, `tests/unit/` |
-| Hook/store | React adapters and async state boundaries | `tests/hooks/`, `tests/store/` |
-| Integration | Component workflows with controlled dependencies | `tests/integration/` |
-| Browser | Critical journeys and persistence across reload | `tests/e2e/` |
-| Electron | IPC, updater, security, desktop startup | `tests/electron/`, `tests/electron-smoke/` |
-| Corpus | Assumptions about the external local catalog | `tests/corpus/` |
-| Workflow | Executable CI/release gates | `tests/workflow/` |
-
-Prefer domain matrices for combinatorial rules, integration for wiring, and browser tests for
-complete journeys. A new test should protect a distinct behavior or failure, not repeat a lower
-layer's assertions. Routine wording, layout and documentation edits need appropriate text/link
-review rather than tests that mirror strings.
-
-## Shared setup
-
-`config/vitest.config.ts` separates Node tests from DOM suites. Hooks, stores, integration and `.tsx` tests
-use jsdom; `.test.ts` files that need rendering, storage, sanitization or `window.electronAPI` declare
-`// @vitest-environment jsdom` explicitly. Pure tests use Node. Keep per-file isolation and the shared
-`tests/setup.ts`: fake IndexedDB/default no-op adapter in both environments, browser shims only in
-jsdom. Persistence tests override the adapter to exercise real transactions.
-
-Reusable character and active-store factories live in `tests/fixtures/`. Large `.tbc` fixtures serve
-import/PDF and cross-surface contracts. Derive expectations independently of production helpers;
-fixture generation alone does not establish correctness.
-
-## Patterns and coverage
-
-- Assert public outcomes and complete materialization/provenance together. Use `test.each` for
-  ruleset and input matrices; keep exact source/owner identities in collision cases.
-- Test pending writes, acknowledgement, rejection/retry and overlapping revisions at the durable
-  storage boundary; see [saved-library transactions](state-management.md#saved-library-transactions).
-- Distinguish required ingestion failure from optional degradation. Deterministic fixtures own
-  expectations; guarded corpus checks verify real upstream assumptions.
-- Use roles, accessible names and keyboard paths for interactions. Test retained intent and exact
-  restoration as well as successful selection when ownership or source access can change.
-- Coverage thresholds in Vitest are floors. Remove obsolete/duplicate cases only when supported
-  behavior remains covered at a stronger layer. Preserve meaningful assertions, budgets and timeouts.
-
-The golden journeys cover 2014 Variant Human/Arcane Trickster and 2024 Human/Eldritch Knight through
-level 20. The progression matrix covers core level/HP transitions. Neither qualifies every offered
-class/subclass's required choices. Guarded corpus tests and generated fixtures add source/readiness
-checks; complete creator qualification remains a separate release obligation.
-
-## E2E conventions
-
-`@focused` marks narrow diagnostic journeys; `@golden` marks complete release-blocking progression.
-Seed startup deterministically and assert important intermediate choices, readiness, save and reload.
-CI uses two isolated shards with one worker each; retries and timeouts remain configured in
-`config/playwright.config.ts`. Their union must preserve the full suite. Local runs use the same config.
-Data-dependent checks skip when the required external `data/` is absent; a skip is not a pass.
+Put rule combinations in domain tests, adapter behavior in integration tests, and complete journeys
+in Playwright. For changes to identity or ownership, cover a conflicting source and the inverse
+operation as well as success. Persistence tests should exercise acknowledgement, a write failure
+and reopening. Establish expected results from the contract independently of the helper under test.
 
 ## Commands
 
-Use Node 24.15 or later in the Node 24 line. Common focused and individual checks:
+Use Node 24.15 or later in the Node 24 line.
 
-```text
-npm test -- tests/path/to/affected.test.ts --maxWorkers=4
-npm run test:e2e -- tests/e2e/affected.spec.ts
-npx biome ci .
-npm run check:health
-npm run build
-npm run check:bundle
-npm run test:coverage
-npm run test:e2e
-npm run test:electron
-```
+| Need | Command |
+| --- | --- |
+| Focused test | `npm test -- tests/path/to/file.test.ts` |
+| Default suite | `npm test` |
+| Default suite with coverage | `npm run test:coverage` |
+| Focused browser checks | `npm run test:e2e -- tests/e2e/affected.spec.ts` |
+| Full Chromium and desktop smoke | `npm run test:e2e` and `npm run test:electron` |
+| Standard subclass journeys | `npm run test:journeys:standard` |
+| Local PR checks | `npm run check:pr` |
 
-`build` includes type checking. `npm run check:pr` remains available for a complete local gate when
-needed; it is not an automatic duplicate of completed-head CI. Add broader local validation for
-concrete cross-cutting uncertainty, shared setup/security changes or CI gaps. After a correction,
-rerun affected checks; repeat successful broad validation only for a new change, failure or concern.
-Documentation-only work uses text, links/anchors and scope checks plus independent review.
-Every published final head needs both required CI gates and advisory disposition. Documentation-only
-PRs use the scope/text/link path described in [CI validation](cicd-workflow.md#validation).
+For a local full run on a machine with spare cores and memory, try
+`npm test -- --maxWorkers=8`. This runs the same cases. Use fewer workers if the machine is busy.
 
-CI splits the complete Vitest suite across two native coverage parts. Its collection-only config
-preserves source coverage but leaves the threshold decision to the required combined report under
-the main test config. Ordinary local `test:coverage` remains a complete run with the same floors.
+Vitest separates Node and jsdom. Use jsdom only for tests that need browser APIs or rendering.
+Shared setup provides browser shims and a no-op persistence adapter. Storage tests exercise the
+real transaction path. Keep runs isolated when fixtures or stores can change.
 
-Electron smoke requires a display on Linux. It skips local Windows builds 26200–26399 because of
-upstream Electron issue 52098 (`0x80000003` during sandboxed child initialization). Keep CI coverage;
-never use `--no-sandbox` to make this check pass. Remove the skip once the pinned runtime is fixed.
-Before an authorized release, also run `npm run test:e2e:release` and `npm run check:release` locally.
-`npm run lint` writes fixes. `npx biome ci .` is read-only.
+The default suite uses the bundled catalog and runs additional guarded cases when the configured
+local `data/` is present. A skipped case supplies no evidence. Run affected configured-catalog
+checks when changing the source, rule, or fixture they cover. The Standard journeys use a separate
+config. The [source compatibility workflow](../.github/workflows/source-compatibility.yml) runs remote
+checks separately.
 
-## Runtime reachability review
-
-`check:dead-code` covers the full project, including tests and tooling.
-`report:dead-code:production` is a nonblocking runtime-graph diagnostic using Knip's production
-markers. Inspect actual callers before deleting findings: test-only use does not prove production
-reachability, while tooling and asset consumers may sit outside that graph. Do not blanket-ignore
-findings. Bundle, SRD manifest and PDF-template checks cover packaged assets outside the source graph.
+The [PR workflow](../.github/workflows/ci.yml) validates the whole diff. Code changes run checks,
+build, merged Vitest coverage, Chromium and Linux Electron smoke. Documentation-only changes use
+scope, text, and link checks. Both required checks apply to the final PR revision. For changes to
+installers, see the [desktop package workflow](../.github/workflows/desktop-packages.yml).

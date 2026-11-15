@@ -19,6 +19,12 @@ describe('isProficientWithWeapon', () => {
   })
   it('matches an exact source-derived weapon name', () => {
     expect(isProficientWithWeapon(['training blade'], { name: 'Training Blade' })).toBe(true)
+    const named = ['{@item rapier|phb|rapiers}']
+    expect(isProficientWithWeapon(named, { name: 'Rapier', source: 'PHB' })).toBe(true)
+    expect(isProficientWithWeapon(named, { name: 'Rapier', source: 'XPHB' })).toBe(false)
+    expect(isProficientWithWeapon(['{@item rapier}'], { name: 'Rapier', source: 'PHB' })).toBe(
+      false,
+    )
   })
 
   it('matches category labels without accepting another category', () => {

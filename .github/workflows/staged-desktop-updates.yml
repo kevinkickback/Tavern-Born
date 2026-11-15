@@ -1,0 +1,114 @@
+name: Stage desktop updates
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - electron/updateManager.ts
+      - electron/updateEvents.ts
+      - electron/main.ts
+      - electron/preload.ts
+      - src/App.tsx
+      - src/components/updates/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/staged-desktop-updates.yml
+      - scripts/ci/stage-desktop-updates.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staged-desktop-updates-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  stage:
+    name: Staged updates (${{ matrix.kind }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: setup
+            os: windows-latest
+          - kind: appimage
+            os: ubuntu-26.04
+          - kind: deb
+            os: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Read the published version's character fixture
+        shell: bash
+        run: |
+          git -c maintenance.auto=false fetch --depth=1 origin refs/tags/v0.6.0
+          git show FETCH_HEAD:tests/fixtures/equipment-e2e.tbc > "$RUNNER_TEMP/tb-legacy-character.tbc"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:bundle -- --require-srd
+      - name: Build two unpublished packages for a loopback feed
+        shell: bash
+        run: |
+          platform=linux
+          if [[ "$RUNNER_OS" == Windows ]]; then platform=win; fi
+          for version in 0.7.0 0.7.1; do
+            npx --no-install electron-builder "--$platform" --publish never \
+              -c.extraMetadata.version="$version" -c.directories.output="$RUNNER_TEMP/tb-stage-$version" \
+              "-c.$platform.publish.provider=generic" \
+              "-c.$platform.publish.url=http://127.0.0.1:41937" \
+              "-c.$platform.publish.useMultipleRangeRequest=false"
+          done
+      - name: Upgrade the published Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'Tavern-Born-Setup-0.6.0.exe'
+          $url = 'https://github.com/kevinkickback/Tavern-Born/releases/download/v0.6.0/Tavern-Born-Setup-0.6.0.exe'
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          if ((Get-FileHash -LiteralPath $installer).Hash -ne '3561abb9e2b0df5d1e086cad8a39d31ba195a0e609a7b23dbf501808d6e47e04') {
+            throw 'Published Windows setup checksum differs.'
+          }
+          $destination = Join-Path $env:RUNNER_TEMP 'tb-upgrade-install'
+          $setup = Start-Process -FilePath $installer -ArgumentList "/S /D=$destination" -Wait -PassThru -WindowStyle Hidden
+          if ($setup.ExitCode -ne 0) { throw "Published installer exited $($setup.ExitCode)." }
+          node scripts/ci/stage-desktop-updates.mjs setup (Join-Path $destination 'Tavern-Born.exe') `
+            (Join-Path $env:RUNNER_TEMP 'tb-stage-0.7.0') (Join-Path $env:RUNNER_TEMP 'tb-stage-0.7.1') `
+            (Join-Path $env:RUNNER_TEMP 'tb-legacy-character.tbc')
+          exit $LASTEXITCODE
+      - name: Upgrade the published Linux AppImage
+        if: matrix.kind == 'appimage'
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          url=https://github.com/kevinkickback/Tavern-Born/releases/download/v0.6.0
+          image=Tavern-Born-0.6.0.AppImage
+          curl --fail --location --retry 3 --output "$image" "$url/$image"
+          printf '%s  %s\n' 38b5154a490d6d994ab75d71f27f8bf6bf6ef1dd045570f412902f7dc289f6ca "$image" | sha256sum -c
+          chmod +x "$image"
+          probe="$GITHUB_WORKSPACE/scripts/ci/stage-desktop-updates.mjs"
+          xvfb-run --auto-servernum node "$probe" appimage "$image" \
+            "$RUNNER_TEMP/tb-stage-0.7.0" "$RUNNER_TEMP/tb-stage-0.7.1" "$RUNNER_TEMP/tb-legacy-character.tbc"
+
+      - name: Upgrade the published Debian package
+        if: matrix.kind == 'deb'
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          deb=tavern-born_0.6.0_amd64.deb
+          curl --fail --location --retry 3 --output "$deb" \
+            "https://github.com/kevinkickback/Tavern-Born/releases/download/v0.6.0/$deb"
+          printf '%s  %s\n' 1f47725aaf7b4cc8b7bfadf4f9d94fe0e988eb32fe37eb735754f48c96f1c340 "$deb" | sha256sum -c
+          sudo apt-get update
+          sudo apt-get install -y "./$deb"
+          deb_executable="$(dpkg-query -L tavern-born | grep -E '^/opt/[^/]+/tavern-born$')"
+          sudo chown "$USER" "$(dirname "$deb_executable")/resources/app-update.yml"
+          xvfb-run --auto-servernum node "$GITHUB_WORKSPACE/scripts/ci/stage-desktop-updates.mjs" deb "$deb_executable" \
+            "$RUNNER_TEMP/tb-stage-0.7.0" "$RUNNER_TEMP/tb-stage-0.7.1" "$RUNNER_TEMP/tb-legacy-character.tbc"

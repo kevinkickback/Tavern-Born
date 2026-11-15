@@ -13,6 +13,7 @@ import {
   getNormalizedItemTraits,
   inferArmorCategory,
 } from '@/lib/calculations/itemClassification'
+import { capitalizeLabel, formatProficiencyLabel } from '@/lib/displayLabels'
 import { cn } from '@/lib/utils'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
@@ -43,12 +44,6 @@ function formatWeight(weight?: number): string {
   return `${weight} lb.`
 }
 
-function formatArmorType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
-  if (!typeCode) return '—'
-  const code = typeCode.split('|')[0].toUpperCase()
-  return typeByAbbr?.[code] ?? typeCode
-}
-
 function formatDamageType(code?: string): string {
   if (!code) return '—'
   return DAMAGE_TYPE_LABELS[code] ?? code
@@ -62,11 +57,11 @@ function formatProperties(
   return props.map((property) => getItemPropertyLabel(property, propertyByAbbr ?? {})).join(', ')
 }
 
-function formatToolType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
+function formatItemType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
   if (!typeCode) return '—'
   const code = typeCode.split('|')[0].toUpperCase()
   const label = typeByAbbr?.[code] ?? typeCode
-  return label.charAt(0).toUpperCase() + label.slice(1)
+  return capitalizeLabel(label)
 }
 
 function formatLanguageType(type?: string): string {
@@ -151,7 +146,7 @@ function DetailMetric({ label, children }: { label: string; children: React.Reac
 
 function ArmorDetails({ item }: { item: Item5e }) {
   const itemTypeByAbbr = useItemTypeLookup()
-  const armorType = formatArmorType(item.type, itemTypeByAbbr)
+  const armorType = formatItemType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
   const mastery = formatMasteryList(item.mastery)
 
@@ -179,7 +174,7 @@ function ArmorDetails({ item }: { item: Item5e }) {
 function WeaponDetails({ item }: { item: Item5e }) {
   const itemPropertyByAbbr = useItemPropertyLookup()
   const weaponType = item.weaponCategory
-    ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${
+    ? `${capitalizeLabel(item.weaponCategory)} ${
         item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
       }`
     : '—'
@@ -193,9 +188,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
         {item.weaponCategory && (
-          <Badge variant="secondary" className="capitalize">
-            {item.weaponCategory}
-          </Badge>
+          <Badge variant="secondary">{capitalizeLabel(item.weaponCategory)}</Badge>
         )}
         {edition && <Badge variant="outline">{edition} Edition</Badge>}
         {mastery && <Badge variant="outline">Mastery: {mastery}</Badge>}
@@ -226,7 +219,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
 
 function ToolDetails({ item }: { item: Item5e }) {
   const itemTypeByAbbr = useItemTypeLookup()
-  const toolType = formatToolType(item.type, itemTypeByAbbr)
+  const toolType = formatItemType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
 
   return (
@@ -471,9 +464,7 @@ function ItemDetails({
   } else {
     detailContent = (
       <div className="flex flex-wrap gap-1.5">
-        <Badge variant="secondary" className="capitalize">
-          {focused.category}
-        </Badge>
+        <Badge variant="secondary">{capitalizeLabel(focused.category)}</Badge>
       </div>
     )
   }
@@ -481,7 +472,7 @@ function ItemDetails({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-xl font-display font-bold capitalize">{displayName}</h2>
+        <h2 className="text-xl font-display font-bold">{formatProficiencyLabel(displayName)}</h2>
         <p className="text-sm text-muted-foreground">
           {focused.isProficient ? (
             <span className="font-medium text-primary">Proficient</span>
@@ -527,8 +518,12 @@ export function BuildProficienciesDetailsPanel({
           ) : focused.type === 'skill' ? (
             <div className="space-y-3">
               <div>
-                <h2 className="text-xl font-display font-bold capitalize">{focused.name}</h2>
-                <p className="text-sm text-muted-foreground capitalize">{focused.ability} check</p>
+                <h2 className="text-xl font-display font-bold">
+                  {formatProficiencyLabel(focused.name)}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {capitalizeLabel(focused.ability)} check
+                </p>
               </div>
               <Separator />
               <div className="grid grid-cols-3 gap-3">
@@ -574,8 +569,8 @@ export function BuildProficienciesDetailsPanel({
           ) : focused.type === 'save' ? (
             <div className="space-y-3">
               <div>
-                <h2 className="text-xl font-display font-bold capitalize">
-                  {focused.ability} Save
+                <h2 className="text-xl font-display font-bold">
+                  {capitalizeLabel(focused.ability)} Save
                 </h2>
                 <p className="text-sm text-muted-foreground">Saving Throw</p>
               </div>

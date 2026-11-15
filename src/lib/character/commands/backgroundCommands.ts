@@ -2,20 +2,24 @@ import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockName
 import {
   assertStartingEquipmentSelections,
   getBackgroundEquipmentBlocks,
+  hasInvalidStartingEquipmentPackage,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import {
   createStartingEquipmentPolicy,
   type StartingEquipmentPolicy,
 } from '@/lib/5etools/startingEquipmentPolicy'
-import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { buildBackgroundBonuses, getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
 import {
   ensureOriginSystemInvariants,
   normalizeBackgroundForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { reconcileSkillExpertise } from '@/lib/calculations/skills'
-import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
+import {
+  removeFeatChoiceCommand,
+  retractFeatChoiceOptionsForSources,
+} from '@/lib/character/commands/featCommands'
 import { reconcileFixedFeatOptionsCommand } from '@/lib/character/commands/fixedFeatCommands'
 import {
   reconcileStartingEquipmentGrant,
@@ -26,16 +30,87 @@ import {
   addGrant,
   applyBackgroundGrants,
   diffProficiencyGrants,
+  emptyProvenance,
   iterateProficiencyBlocks,
   makeSourceTag,
   reconcileBackgroundChange,
+  removeGrantsBySourceRef,
   toProficiencyBlocks,
 } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Background5e, Item5e } from '@/types/5etools'
 import type { Character, StartingEquipmentItemChoices } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import { applyCharacterCommandResult, getFeatChoiceSelectedRefs } from './featCommandSupport'
+
+const proficiencyDomains = ['skills', 'languages', 'tools'] as const
+const fixedBackgroundDomains = new Set<string>([...proficiencyDomains, 'feats'])
+
+function isBackgroundOwner(tag: SourceTag, background: Background5e) {
+  return (
+    tag.sourceType === 'background' &&
+    normalizeOwnerIdentity(tag.sourceName) === normalizeOwnerIdentity(background.name) &&
+    normalizeOwnerIdentity(tag.sourceRef) === normalizeOwnerIdentity(background.source)
+  )
+}
+
+function retractChangedBackgroundFeats(
+  character: Character,
+  ledger: ProvenanceLedger,
+  background: Background5e,
+): CharacterCommandResult {
+  const saved = ledger.choices.filter(
+    (choice) => choice.domain === 'feats' && isBackgroundOwner(choice.sourceTag, background),
+  )
+  if (!saved.length) return { characterPatch: {}, provenanceUpdate: ledger }
+  const current = applyBackgroundGrants(background, emptyProvenance()).choices
+  const retired = saved.filter(
+    (choice) =>
+      !current.some(
+        (option) =>
+          option.domain === 'feats' &&
+          option.id === choice.id &&
+          option.chooseCount === choice.chooseCount &&
+          JSON.stringify([...option.optionPool].sort()) ===
+            JSON.stringify([...choice.optionPool].sort()),
+      ),
+  )
+  let working = { ...character, provenance: ledger }
+  for (const choice of retired)
+    for (const feat of getFeatChoiceSelectedRefs(choice))
+      working = applyCharacterCommandResult(
+        working,
+        removeFeatChoiceCommand(working, working.provenance, choice.id, feat.name, feat.source),
+      )
+  const retiredChoices = new Set(retired.map(({ id }) => id))
+  return {
+    characterPatch: { spells: working.spells, proficiencies: working.proficiencies },
+    provenanceUpdate: {
+      ...working.provenance,
+      choices: working.provenance.choices.filter((choice) => !retiredChoices.has(choice.id)),
+    },
+  }
+}
+
+function projectBackgroundAbilityGrants(
+  ledger: ProvenanceLedger,
+  background: Background5e,
+  blockIndex: number,
+  choices: string[],
+) {
+  let result = {
+    ...ledger,
+    abilityBonuses: ledger.abilityBonuses.filter(
+      ({ sourceTag }) => !isBackgroundOwner(sourceTag, background),
+    ),
+  }
+  const sourceTag = makeSourceTag('background', background.name, 'choice', background.source)
+  const bonuses = buildBackgroundBonuses(getBackgroundAbilityData(background), blockIndex, choices)
+  for (const [ability, value] of Object.entries(bonuses))
+    result = addAbilityBonus(result, { ability, value, sourceTag })
+  return result
+}
 
 export function applyBackgroundSelectionCommand(
   character: Character,
@@ -56,32 +131,53 @@ export function applyBackgroundSelectionCommand(
 
   const oldBackgroundName = character.background || undefined
   const isBackgroundChanged =
-    oldBackgroundName !== background.name ||
-    (character.backgroundSource ?? '') !== (background.source ?? '')
+    normalizeOwnerIdentity(oldBackgroundName) !== normalizeOwnerIdentity(background.name) ||
+    normalizeOwnerIdentity(character.backgroundSource) !== normalizeOwnerIdentity(background.source)
   const retracted = isBackgroundChanged
     ? retractFeatChoiceOptionsForSources(character, ledger, [
         { sourceType: 'background', sourceName: oldBackgroundName },
       ])
-    : { characterPatch: {}, provenanceUpdate: ledger }
+    : retractChangedBackgroundFeats(character, ledger, normalizedBackground)
   const workingCharacter = { ...character, ...retracted.characterPatch }
   let provenanceUpdate = isBackgroundChanged
     ? reconcileBackgroundChange(retracted.provenanceUpdate, oldBackgroundName)
-    : retracted.provenanceUpdate
+    : removeGrantsBySourceRef(
+        retracted.provenanceUpdate,
+        'background',
+        background.name,
+        background.source,
+        undefined,
+        {
+          normalizeIdentity: true,
+          preserve: (tag, domain) =>
+            tag.grantType !== 'fixed' || !domain || !fixedBackgroundDomains.has(domain),
+        },
+      )
   provenanceUpdate = applyBackgroundGrants(normalizedBackground, provenanceUpdate, {
     suppressLanguageGrants: character.originSystem === '2024',
   })
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
+  if (!isBackgroundChanged && character.originSystem === '2024')
+    provenanceUpdate = projectBackgroundAbilityGrants(
+      provenanceUpdate,
+      normalizedBackground,
+      character.backgroundAsiBlockIndex ?? 0,
+      character.backgroundAsiChoices ?? [],
+    )
 
   let proficiencies = { ...workingCharacter.proficiencies }
-  if (oldBackgroundName && isBackgroundChanged) {
-    for (const domain of ['skills', 'languages', 'tools'] as const) {
-      const { toRemove } = diffProficiencyGrants(
-        retracted.provenanceUpdate,
-        domain,
-        'background',
-        oldBackgroundName,
-      )
+  if (oldBackgroundName) {
+    for (const domain of proficiencyDomains) {
+      const toRemove = isBackgroundChanged
+        ? diffProficiencyGrants(retracted.provenanceUpdate, domain, 'background', oldBackgroundName)
+            .toRemove
+        : Object.keys(ledger.proficiencies[domain]).filter(
+            (key) =>
+              ledger.proficiencies[domain][key].some(
+                (tag) => tag.grantType === 'fixed' && isBackgroundOwner(tag, background),
+              ) && !provenanceUpdate.proficiencies[domain][key]?.length,
+          )
       if (toRemove.length === 0) continue
       proficiencies = {
         ...proficiencies,
@@ -115,6 +211,8 @@ export function applyBackgroundSelectionCommand(
   }
 
   const blocks = getBackgroundEquipmentBlocks(background.startingEquipment)
+  if (hasInvalidStartingEquipmentPackage(blocks, blockChoices))
+    throw new RangeError('Choose a current Background starting equipment package.')
   const policy =
     policyOverride ??
     createStartingEquipmentPolicy(
@@ -220,42 +318,19 @@ export function applyBackgroundAbilityChoicesCommand(
     character.originSystem,
   )
   if (!normalizedBackground) return { characterPatch: {}, provenanceUpdate: ledger }
-  const block = getBackgroundAbilityData(normalizedBackground).blocks[blockIndex]
-  if (!block) return { characterPatch: {}, provenanceUpdate: ledger }
-
-  let provenanceUpdate: ProvenanceLedger = {
-    ...ledger,
-    abilityBonuses: ledger.abilityBonuses.filter(
-      (bonus) =>
-        !(
-          bonus.sourceTag.sourceType === 'background' &&
-          bonus.sourceTag.sourceName === background.name
-        ),
-    ),
-  }
-  const sourceTag = makeSourceTag(
-    'background',
-    normalizedBackground.name,
-    'choice',
-    normalizedBackground.source,
-  )
-  const seen = new Set<string>()
-  for (let index = 0; index < block.weights.length; index++) {
-    const ability = normalizeAbilityName(choices[index] ?? '')
-    if (!ability || seen.has(ability)) continue
-    seen.add(ability)
-    provenanceUpdate = addAbilityBonus(provenanceUpdate, {
-      ability,
-      value: block.weights[index],
-      sourceTag,
-    })
-  }
+  const abilityData = getBackgroundAbilityData(normalizedBackground)
+  if (!abilityData.blocks[blockIndex]) return { characterPatch: {}, provenanceUpdate: ledger }
 
   return {
     characterPatch: {
       backgroundAsiBlockIndex: blockIndex,
       backgroundAsiChoices: choices,
     },
-    provenanceUpdate,
+    provenanceUpdate: projectBackgroundAbilityGrants(
+      ledger,
+      normalizedBackground,
+      blockIndex,
+      choices,
+    ),
   }
 }

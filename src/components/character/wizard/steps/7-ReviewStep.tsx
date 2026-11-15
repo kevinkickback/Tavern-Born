@@ -95,94 +95,49 @@ export function ReviewStep({
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-stretch gap-4 md:flex-row">
-        <div className="w-full max-w-[420px] shrink-0">
-          <PortraitCardPreview
-            image={data.portrait}
-            name={data.name}
-            level={1}
-            race={getRaceDisplayName(data.race, data.subrace)}
-            characterClass={data.class}
-            gender={data.gender}
-            transform={data.portraitTransform}
-            showActions={false}
+    <div className="@container shrink-0">
+      <div className="grid gap-3 @2xl:grid-cols-2 @4xl:grid-cols-12">
+        <PortraitCardPreview
+          className="@4xl:col-span-4"
+          image={data.portrait}
+          name={data.name}
+          level={1}
+          race={data.race}
+          classes={data.class ? [{ name: data.class, source: data.classSource, levels: 1 }] : []}
+          originSystem={data.originSystem}
+          gender={data.gender}
+          transform={data.portraitTransform}
+        />
+
+        <div className="min-w-0 rounded-lg border border-border bg-card/60 p-3 @4xl:col-span-4">
+          <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+            Character Snapshot
+          </div>
+          <InfoRow label="Background" value={data.background} />
+          <InfoRow label="Ruleset" value={getOriginSystemLabel(data.originSystem)} />
+          <InfoRow label="Size" value={sizeValue} />
+          <InfoRow label="Speed" value={speedValue} />
+          <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
+            <span className="text-xs text-muted-foreground">Darkvision</span>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-xs font-semibold',
+                hasDarkvision ? 'text-success' : 'text-muted-foreground',
+              )}
+            >
+              {hasDarkvision && <Eye className="h-3.5 w-3.5" />}
+              {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
+            </span>
+          </div>
+          <InfoRow
+            label="Race"
+            value={[getRaceDisplayName(data.race, data.subrace), data.raceSource]
+              .filter(Boolean)
+              .join(' · ')}
           />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="rounded-lg border border-border bg-card/60 p-3 h-full">
-            <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-              Character Snapshot
-            </div>
-            <InfoRow label="Background" value={data.background} />
-            <InfoRow label="Ruleset" value={getOriginSystemLabel(data.originSystem)} />
-            <InfoRow label="Size" value={sizeValue} />
-            <InfoRow label="Speed" value={speedValue} />
-            <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">
-              <span className="text-xs text-muted-foreground">Darkvision</span>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs font-semibold',
-                  hasDarkvision ? 'text-success' : 'text-muted-foreground',
-                )}
-              >
-                {hasDarkvision && <Eye className="h-3.5 w-3.5" />}
-                {hasDarkvision ? `${displayRace?.darkvision} ft` : 'None'}
-              </span>
-            </div>
-            <InfoRow label="Race Source" value={data.raceSource} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Sparkle className="h-4 w-4 text-primary" weight="fill" />
-              <h4 className="text-sm font-semibold">Ability Scores</h4>
-            </div>
-            <Badge variant="secondary" className="font-mono">
-              Method: {data.abilityScoreMethod.replace(/-/g, ' ')}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 xl:grid-cols-3 gap-2">
-            {ABILITY_NAMES.map((ability) => {
-              const base = data.abilityScores[ability]
-              const bonus = abilityBonuses[ability] ?? 0
-              const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
-              const mod = getAbilityModifier(total)
-              return (
-                <div
-                  key={ability}
-                  className="border rounded-lg bg-card/60 border-border flex flex-col items-center justify-center gap-0.5 p-2"
-                >
-                  <div className="text-xs font-semibold text-primary uppercase">
-                    {ABILITY_ABBREVIATIONS[ability]}
-                  </div>
-                  <div className="text-2xl font-bold font-mono leading-none">{total}</div>
-                  {bonus !== 0 && (
-                    <div className="text-xs font-semibold leading-none text-success-foreground">
-                      {base}+{bonus}
-                      {base + bonus > total && ' (capped)'}
-                    </div>
-                  )}
-                  <div
-                    className={cn(
-                      'text-sm font-semibold',
-                      mod >= 0 ? 'text-success-foreground' : 'text-destructive',
-                    )}
-                  >
-                    {formatModifier(mod)}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @2xl:col-span-2 @4xl:col-span-4">
           <div className="flex items-center gap-2">
             <Sparkle className="h-4 w-4 text-primary" weight="fill" />
             <h4 className="text-sm font-semibold">Variant Rules</h4>
@@ -210,41 +165,86 @@ export function ReviewStep({
             })}
           </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" weight="fill" />
-          <h4 className="text-sm font-semibold">Additional Content</h4>
-          {hasRestrictedSources && (
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-7">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkle className="h-4 w-4 text-primary" weight="fill" />
+              <h4 className="text-sm font-semibold">Ability Scores</h4>
+            </div>
             <Badge variant="secondary" className="font-mono">
-              {allowedSources.length}
+              Method: {data.abilityScoreMethod.replace(/-/g, ' ')}
             </Badge>
-          )}
-        </div>
-
-        {hasRestrictedSources ? (
-          <div className="flex flex-wrap gap-2">
-            {allowedSources.map((abbr) => {
-              const sourceName = sourceLabelByAbbreviation.get(abbr)
+          </div>
+          <div className="grid grid-cols-3 gap-2 @4xl:grid-cols-6">
+            {ABILITY_NAMES.map((ability) => {
+              const base = data.abilityScores[ability]
+              const bonus = abilityBonuses[ability] ?? 0
+              const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
+              const mod = getAbilityModifier(total)
               return (
                 <div
-                  key={abbr}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-2.5 py-1"
+                  key={ability}
+                  className="border rounded-lg bg-card/60 border-border flex flex-col items-center justify-center gap-0.5 p-2"
                 >
-                  <span className="text-xs font-semibold font-mono">{abbr}</span>
-                  {sourceName && (
-                    <span className="text-xs text-muted-foreground">{sourceName}</span>
+                  <div className="text-xs font-semibold text-primary uppercase">
+                    {ABILITY_ABBREVIATIONS[ability]}
+                  </div>
+                  <div className="text-2xl font-bold font-mono leading-none">{total}</div>
+                  {bonus !== 0 && (
+                    <div className="text-center text-xs font-semibold leading-none text-success-foreground">
+                      {base}+{bonus}
+                      {base + bonus > total && ' (capped)'}
+                    </div>
                   )}
+                  <div
+                    className={cn(
+                      'text-sm font-semibold',
+                      mod >= 0 ? 'text-success-foreground' : 'text-destructive',
+                    )}
+                  >
+                    {formatModifier(mod)}
+                  </div>
                 </div>
               )
             })}
           </div>
-        ) : (
-          <div className="rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground">
-            No additional sourcebooks selected. Core rules for this edition are included.
+        </div>
+
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-5">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-primary" weight="fill" />
+            <h4 className="text-sm font-semibold">Additional Content</h4>
+            {hasRestrictedSources && (
+              <Badge variant="secondary" className="font-mono">
+                {allowedSources.length}
+              </Badge>
+            )}
           </div>
-        )}
+
+          {hasRestrictedSources ? (
+            <div className="flex flex-wrap gap-2">
+              {allowedSources.map((abbr) => {
+                const sourceName = sourceLabelByAbbreviation.get(abbr)
+                return (
+                  <div
+                    key={abbr}
+                    className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-2.5 py-1"
+                  >
+                    <span className="text-xs font-semibold font-mono">{abbr}</span>
+                    {sourceName && (
+                      <span className="text-xs text-muted-foreground">{sourceName}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground">
+              No additional sourcebooks selected. Core rules for this edition are included.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

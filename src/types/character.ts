@@ -140,6 +140,14 @@ export interface CharacterClassChoiceSelection {
   selected: CharacterClassChoiceOption[]
 }
 
+export interface MysticDisciplineReplacement {
+  classLevel: number
+  choiceId: string
+  slotLevel: number
+  from: { name: string; source: string }
+  to: { name: string; source: string }
+}
+
 export interface FavoredEnemySetup {
   mode: 'type' | 'humanoid-races'
   humanoidsConfirmed?: true
@@ -256,6 +264,9 @@ export interface Character {
 
   /** Structured choices owned by a source-qualified class feature or progression. */
   classChoiceSelections?: CharacterClassChoiceSelection[]
+
+  /** One optional known-discipline replacement per recorded Mystic level gain. */
+  mysticDisciplineReplacements?: MysticDisciplineReplacement[]
 
   /** Explicit optional class-feature intent. Permission and saved setup never imply adoption. */
   optionalClassFeatureAdoptions?: OptionalClassFeatureAdoption[]

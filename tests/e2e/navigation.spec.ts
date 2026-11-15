@@ -123,9 +123,15 @@ test('opens an update requested from the toast after the startup overlay clears'
         getAppVersion: () => Promise.resolve('0.0.0'),
         onConfirmClose: () => () => {},
         onUpdateAvailable: (
-          callback: (update: { version: string; changelog: null; isPortable: boolean }) => void,
+          callback: (update: {
+            version: string
+            changelog: null
+            useReleaseDownloadPage: boolean
+          }) => void,
         ) => {
-          queueMicrotask(() => callback({ version: '1.2.3', changelog: null, isPortable: false }))
+          queueMicrotask(() =>
+            callback({ version: '1.2.3', changelog: null, useReleaseDownloadPage: false }),
+          )
           return () => {}
         },
       },

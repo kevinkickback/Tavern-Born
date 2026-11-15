@@ -10,6 +10,7 @@ import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import type { NativeRacialSpellOwner } from '@/lib/calculations/nativeRacialSpells'
 import { getSpellProfileDisplayLabel } from '@/lib/calculations/raceDisplay'
 import { parseSpellReference } from '@/lib/calculations/spellIdentity'
+import { capitalizeLabel } from '@/lib/displayLabels'
 import type { SpellProfile } from '@/types/character'
 
 interface Props {
@@ -98,7 +99,7 @@ export function NativeRacialSpellControls({
                 <SelectContent>
                   {profile.castingAbilityOptions?.map((ability) => (
                     <SelectItem key={ability} value={ability}>
-                      {normalizeAbilityName(ability) ?? ability}
+                      {capitalizeLabel(normalizeAbilityName(ability) ?? ability)}
                     </SelectItem>
                   ))}
                 </SelectContent>

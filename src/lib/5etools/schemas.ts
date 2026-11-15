@@ -18,8 +18,8 @@ export const OptionalClassBookDataSchema = z.union([
 
 const PsionicCostSchema = z
   .object({
-    min: z.number().finite().int().nonnegative(),
-    max: z.number().finite().int().nonnegative(),
+    min: z.number().nonnegative().refine(Number.isInteger, 'Expected an integer'),
+    max: z.number().nonnegative().refine(Number.isInteger, 'Expected an integer'),
   })
   .strict()
   .refine((row) => row.min <= row.max)
@@ -82,16 +82,22 @@ export const RaceDataSchema = z
   })
   .passthrough()
 
-export const IndexSchema = z.record(z.string())
+export const IndexSchema = z.record(z.string(), z.string())
 
 const BackgroundSchema = z
   .object({
     name: z.string(),
     source: z.string(),
-    skillProficiencies: z.array(z.any()).optional(),
-    entries: z.array(z.any()).optional(),
+    skillProficiencies: z.array(z.any()).nullish(),
+    entries: z.array(z.any()).nullish(),
   })
   .passthrough()
+  .refine(
+    (record) =>
+      (record.skillProficiencies !== null && record.entries !== null) ||
+      (!!record._copy && typeof record._copy === 'object' && !Array.isArray(record._copy)),
+    'Only a copied background can remove inherited entries or proficiencies with null',
+  )
 
 export const BackgroundDataSchema = z
   .object({

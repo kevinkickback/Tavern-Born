@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
@@ -44,6 +45,7 @@ interface AppPreferencesState {
   autoRefreshGameData: boolean
   autoUpdate: boolean
   uiScale: UiScale
+  secondarySidebarOpen: boolean
   compendiumFiltersOpen: boolean
   characterViewMode: CharacterViewMode
   setHomeCardSize: (size: number) => void
@@ -52,6 +54,7 @@ interface AppPreferencesState {
   setAutoRefreshGameData: (enabled: boolean) => void
   setAutoUpdate: (enabled: boolean) => void
   setUiScale: (scale: UiScale) => void
+  toggleSecondarySidebar: () => void
   setCompendiumFiltersOpen: (open: boolean) => void
   setCharacterViewMode: (mode: CharacterViewMode) => void
 }
@@ -65,10 +68,13 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: DEFAULT_UI_SCALE,
+      secondarySidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
 
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
+      toggleSecondarySidebar: () =>
+        set((state) => ({ secondarySidebarOpen: !state.secondarySidebarOpen })),
       setCompendiumFiltersOpen: (open) => set({ compendiumFiltersOpen: open }),
       setCharacterViewMode: (mode) => set({ characterViewMode: mode }),
 
@@ -92,6 +98,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         autoRefreshGameData: state.autoRefreshGameData,
         autoUpdate: state.autoUpdate,
         uiScale: state.uiScale,
+        secondarySidebarOpen: state.secondarySidebarOpen,
         compendiumFiltersOpen: state.compendiumFiltersOpen,
         characterViewMode: state.characterViewMode,
       }),
@@ -105,6 +112,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
         state.autoRefreshGameData = state.autoRefreshGameData !== false
         state.autoUpdate = state.autoUpdate !== false
+        state.secondarySidebarOpen = state.secondarySidebarOpen !== false
         state.compendiumFiltersOpen = state.compendiumFiltersOpen !== false
         state.characterViewMode = state.characterViewMode === 'list' ? 'list' : 'gallery'
         const validScales: number[] = [...UI_SCALE_OPTIONS]
@@ -113,3 +121,10 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
     },
   ),
 )
+
+export function useAppPreferencesHydrated() {
+  return useSyncExternalStore(
+    useAppPreferencesStore.persist.onFinishHydration,
+    useAppPreferencesStore.persist.hasHydrated,
+  )
+}

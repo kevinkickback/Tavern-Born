@@ -24,13 +24,14 @@ export function setEquipmentRestrictionsIgnoredCommand(
   character: Character,
   ignored: boolean,
   armorTraining = character.proficiencies.armor,
+  catalog?: ReadonlyMap<string, Item5e>,
 ): Partial<Character> {
   return {
     variantRules: { ...character.variantRules, ignoreEquipRestrictions: ignored },
     ...(ignored
       ? {}
       : {
-          equipment: enforceArmorEquipmentRestrictions(character.equipment, armorTraining)
+          equipment: enforceArmorEquipmentRestrictions(character.equipment, armorTraining, catalog)
             .equipment,
         }),
   }

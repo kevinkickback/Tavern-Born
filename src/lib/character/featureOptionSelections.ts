@@ -97,7 +97,13 @@ export interface FeatureOptionSelectionState {
   choice?: NormalizedCharacterChoice
   options: ClassChoiceOptionView[]
   recovery: boolean
-  details: Array<{ name: string; damageType?: string; entries: unknown[]; available: boolean }>
+  details: Array<{
+    name: string
+    source?: string
+    damageType?: string
+    entries: unknown[]
+    available: boolean
+  }>
   affinity?: { available: boolean; entries: unknown[] }
   landWard?: string
   storm?: StormAuraRules

@@ -35,6 +35,7 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { resolveClassProgressionRules } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
+import { getPsionicKey } from '@/lib/5etools/psionics'
 import {
   checkMulticlassRequirements,
   getAbilityModifier,
@@ -42,12 +43,17 @@ import {
   MAX_CHARACTER_LEVEL,
   rollDie,
 } from '@/lib/calculations/gameRules'
+import { hasCurrentCharacterSourceContext } from '@/lib/character/characterSourceContext'
 import {
   addMulticlass,
   applyLevelDown,
   applyLevelUp,
   type LevelUpHitPointChoice,
 } from '@/lib/character/commands/classCommands'
+import {
+  getMysticDisciplineReplacementOptions,
+  getMysticDisciplineSlotKey,
+} from '@/lib/character/mysticDisciplineReplacement'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
@@ -59,7 +65,7 @@ import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { CharacterClassEntry, MysticDisciplineReplacement } from '@/types/character'
 
 interface LevelUpModalProps {
   open: boolean
@@ -83,7 +89,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { classes } = useFilteredGameData()
-  const rawClasses = useGameDataStore((state) => state.gameData?.classes ?? EMPTY_CLASSES)
+  const sourceData = useGameDataStore((state) => state.gameData)
+  const rawClasses = sourceData?.classes ?? EMPTY_CLASSES
   const allClasses = rawClasses.length > 0 ? rawClasses : classes
 
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
@@ -92,6 +99,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [pendingLevelUp, setPendingLevelUp] = useState<PendingLevelUp | null>(null)
   const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
   const [hpDieResult, setHpDieResult] = useState('')
+  const [disciplineFrom, setDisciplineFrom] = useState('')
+  const [disciplineTo, setDisciplineTo] = useState('')
   const ignoreRestrictionsId = useId()
   const manualHpRollId = useId()
 
@@ -145,7 +154,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       liveClasses,
     )
   }
-  const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
+  const commitLevelUp = (
+    pending: PendingLevelUp,
+    hpChoice: LevelUpHitPointChoice,
+    replacement?: Omit<MysticDisciplineReplacement, 'classLevel'>,
+  ) => {
     if (
       !resolvePendingClass(pending, useGameDataStore.getState().gameData?.classes ?? allClasses)
     ) {
@@ -163,19 +176,40 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       const newProgression = classProgression.map((entry, index) =>
         index === targetIndex ? { ...entry, levels: pending.classLevel } : entry,
       )
-      const result = applyLevelUp(
-        character,
-        character.provenance,
-        newProgression,
-        hpChoice,
-        calculationContext,
-      )
+      let result: ReturnType<typeof applyLevelUp>
+      try {
+        if (useCharacterStore.getState().activeCharacter !== character)
+          throw new RangeError('The character changed. Review the level before confirming.')
+        if (
+          replacement &&
+          !hasCurrentCharacterSourceContext(
+            useCharacterStore.getState().activeCharacter,
+            character,
+            useGameDataStore.getState().gameData,
+            sourceData,
+          )
+        )
+          throw new RangeError(
+            'The discipline source changed. Review the choices before confirming.',
+          )
+        result = applyLevelUp(
+          character,
+          character.provenance,
+          newProgression,
+          hpChoice,
+          calculationContext,
+          replacement,
+        )
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not add the level.')
+        return
+      }
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
       })
       toast.success(`${pending.className} is now level ${pending.classLevel}.`)
-      return
+      return true
     }
 
     const selectedClass = findClass(pending.className, pending.classSource)
@@ -212,11 +246,22 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     })
     toast.success(`Added ${pending.className} (level 1).`)
     setMulticlassSelection('')
+    return true
   }
 
+  const replacementOptions = (pending: PendingLevelUp) =>
+    pending.kind === 'existing'
+      ? getMysticDisciplineReplacementOptions(
+          character,
+          calculationContext.classChoices.catalogs,
+          pending.className,
+          pending.classSource,
+          pending.classLevel,
+        )
+      : undefined
   const beginLevelUp = (pending: PendingLevelUp) => {
     const averageHitPoints = character.variantRules?.averageHitPoints !== false
-    if (averageHitPoints) {
+    if (averageHitPoints && !replacementOptions(pending)) {
       const dieResult = Math.floor(pending.hitDie / 2) + 1
       commitLevelUp(pending, {
         className: pending.className,
@@ -228,6 +273,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       })
       return
     }
+    setDisciplineFrom('')
+    setDisciplineTo('')
     setHpEntryMethod('rolled')
     setHpDieResult('')
     setPendingLevelUp(pending)
@@ -305,7 +352,21 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const lastClassName =
     lastPersistedGain?.className ?? classProgression[classProgression.length - 1]?.name ?? ''
 
-  const parsedHpDieResult = Number.parseInt(hpDieResult, 10)
+  const averagePending =
+    pendingLevelUp != null && character.variantRules?.averageHitPoints !== false
+  const pendingHpMethod = averagePending ? 'average' : hpEntryMethod
+  const parsedHpDieResult =
+    averagePending && pendingLevelUp
+      ? Math.floor(pendingLevelUp.hitDie / 2) + 1
+      : Number.parseInt(hpDieResult, 10)
+  const availableReplacements = pendingLevelUp ? replacementOptions(pendingLevelUp) : undefined
+  const outgoing = availableReplacements?.outgoing.find(
+    (slot) => getMysticDisciplineSlotKey(slot) === disciplineFrom,
+  )
+  const incoming = availableReplacements?.incoming.find(
+    (row) => getPsionicKey(row.name, row.source) === disciplineTo,
+  )
+  const replacementReady = !disciplineFrom || (!!outgoing?.current.source && !!incoming)
   const validHpDieResult =
     pendingLevelUp != null &&
     !!resolvePendingClass(pendingLevelUp) &&
@@ -350,7 +411,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
               classLevel: pendingLevelUp.classLevel,
               hitDie: pendingLevelUp.hitDie,
               dieResult: parsedHpDieResult,
-              method: hpEntryMethod,
+              method: pendingHpMethod,
             },
             calculationContext,
           )
@@ -359,16 +420,29 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       : currentEffectiveMaxHp
 
   const handleConfirmHitPoints = () => {
-    if (!pendingLevelUp || !validHpDieResult) return
-    commitLevelUp(pendingLevelUp, {
-      className: pendingLevelUp.className,
-      classSource: pendingLevelUp.classSource,
-      classLevel: pendingLevelUp.classLevel,
-      hitDie: pendingLevelUp.hitDie,
-      dieResult: parsedHpDieResult,
-      method: hpEntryMethod,
-    })
-    setPendingLevelUp(null)
+    if (!pendingLevelUp || !validHpDieResult || !replacementReady) return
+    const replacement =
+      outgoing?.current.source && incoming
+        ? {
+            choiceId: outgoing.selection.choiceId,
+            slotLevel: outgoing.original.slotLevel,
+            from: { name: outgoing.current.name, source: outgoing.current.source },
+            to: { name: incoming.name, source: incoming.source },
+          }
+        : undefined
+    const committed = commitLevelUp(
+      pendingLevelUp,
+      {
+        className: pendingLevelUp.className,
+        classSource: pendingLevelUp.classSource,
+        classLevel: pendingLevelUp.classLevel,
+        hitDie: pendingLevelUp.hitDie,
+        dieResult: parsedHpDieResult,
+        method: pendingHpMethod,
+      },
+      replacement,
+    )
+    if (committed) setPendingLevelUp(null)
   }
 
   return (
@@ -574,7 +648,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       >
         <DialogContent className="border-border bg-workspace-detail sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Hit Point Increase</DialogTitle>
+            <DialogTitle>{averagePending ? 'Confirm Level Up' : 'Hit Point Increase'}</DialogTitle>
             <DialogDescription>
               {pendingLevelUp
                 ? `${pendingLevelUp.className} level ${pendingLevelUp.classLevel} uses a d${pendingLevelUp.hitDie} hit die.`
@@ -584,67 +658,125 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
           {pendingLevelUp && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  aria-label={`Roll d${pendingLevelUp.hitDie}`}
-                  onClick={() => {
-                    setHpEntryMethod('rolled')
-                    setHpDieResult(String(rollDie(pendingLevelUp.hitDie)))
-                  }}
-                  className={cn(
-                    'rounded-md border p-3 text-left transition-colors',
-                    hpEntryMethod === 'rolled'
-                      ? 'border-primary/60 bg-primary/10'
-                      : 'border-border bg-workspace-pane hover:border-primary/40',
-                  )}
-                >
-                  <span className="block text-sm font-semibold">Roll d{pendingLevelUp.hitDie}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    Roll within Tavern Born
-                  </span>
-                </button>
+              {!averagePending && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    aria-label={`Roll d${pendingLevelUp.hitDie}`}
+                    onClick={() => {
+                      setHpEntryMethod('rolled')
+                      setHpDieResult(String(rollDie(pendingLevelUp.hitDie)))
+                    }}
+                    className={cn(
+                      'rounded-md border p-3 text-left transition-colors',
+                      hpEntryMethod === 'rolled'
+                        ? 'border-primary/60 bg-primary/10'
+                        : 'border-border bg-workspace-pane hover:border-primary/40',
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">
+                      Roll d{pendingLevelUp.hitDie}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Roll within Tavern Born
+                    </span>
+                  </button>
 
-                <div
-                  className={cn(
-                    'rounded-md border p-3 transition-colors',
-                    hpEntryMethod === 'manual'
-                      ? 'border-primary/60 bg-primary/10'
-                      : 'border-border bg-workspace-pane',
-                  )}
-                >
-                  <Label htmlFor={manualHpRollId} className="text-sm font-semibold">
-                    Enter a roll
-                  </Label>
-                  <Input
-                    id={manualHpRollId}
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={pendingLevelUp.hitDie}
-                    value={hpEntryMethod === 'manual' ? hpDieResult : ''}
-                    placeholder={`1–${pendingLevelUp.hitDie}`}
-                    className="mt-2 h-8"
-                    aria-invalid={
-                      hpEntryMethod === 'manual' && hpDieResult !== '' && !validHpDieResult
-                    }
-                    onFocus={() => {
-                      setHpEntryMethod('manual')
-                      setHpDieResult('')
-                    }}
-                    onChange={(event) => {
-                      setHpEntryMethod('manual')
-                      setHpDieResult(event.target.value)
-                    }}
-                  />
+                  <div
+                    className={cn(
+                      'rounded-md border p-3 transition-colors',
+                      hpEntryMethod === 'manual'
+                        ? 'border-primary/60 bg-primary/10'
+                        : 'border-border bg-workspace-pane',
+                    )}
+                  >
+                    <Label htmlFor={manualHpRollId} className="text-sm font-semibold">
+                      Enter a roll
+                    </Label>
+                    <Input
+                      id={manualHpRollId}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={pendingLevelUp.hitDie}
+                      value={hpEntryMethod === 'manual' ? hpDieResult : ''}
+                      placeholder={`1–${pendingLevelUp.hitDie}`}
+                      className="mt-2 h-8"
+                      aria-invalid={
+                        hpEntryMethod === 'manual' && hpDieResult !== '' && !validHpDieResult
+                      }
+                      onFocus={() => {
+                        setHpEntryMethod('manual')
+                        setHpDieResult('')
+                      }}
+                      onChange={(event) => {
+                        setHpEntryMethod('manual')
+                        setHpDieResult(event.target.value)
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {(availableReplacements || disciplineFrom) && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Replace a known discipline</p>
+                  <Select
+                    value={disciplineFrom || 'keep'}
+                    onValueChange={(value) => {
+                      setDisciplineFrom(value === 'keep' ? '' : value)
+                      setDisciplineTo('')
+                    }}
+                  >
+                    <SelectTrigger aria-label="Discipline to replace">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="keep">Keep current disciplines</SelectItem>
+                      {availableReplacements?.outgoing.map((slot) => (
+                        <SelectItem
+                          key={getMysticDisciplineSlotKey(slot)}
+                          value={getMysticDisciplineSlotKey(slot)}
+                        >
+                          {slot.current.name} ({slot.current.source})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!!disciplineFrom && (
+                    <Select
+                      value={disciplineTo}
+                      onValueChange={setDisciplineTo}
+                      disabled={!outgoing}
+                    >
+                      <SelectTrigger aria-label="New discipline">
+                        <SelectValue placeholder="Choose a new discipline" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableReplacements?.incoming.map((row) => {
+                          const key = getPsionicKey(row.name, row.source)
+                          return (
+                            <SelectItem key={key} value={key}>
+                              {row.name} ({row.source})
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
 
               <div className="rounded-md border border-border bg-workspace-pane p-4 text-center">
                 {validHpDieResult && hpIncrease != null ? (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      {hpEntryMethod === 'rolled' ? 'Rolled' : 'Entered'} {parsedHpDieResult}
+                      {averagePending
+                        ? 'Average'
+                        : hpEntryMethod === 'rolled'
+                          ? 'Rolled'
+                          : 'Entered'}{' '}
+                      {parsedHpDieResult}
                       {' + '}
                       {conModifier >= 0 ? `+${conModifier}` : conModifier} CON
                     </p>
@@ -673,7 +805,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
             <Button variant="outline" onClick={() => setPendingLevelUp(null)}>
               Cancel
             </Button>
-            <Button disabled={!validHpDieResult} onClick={handleConfirmHitPoints}>
+            <Button
+              disabled={!validHpDieResult || !replacementReady}
+              onClick={handleConfirmHitPoints}
+            >
               Confirm Level Up
             </Button>
           </DialogFooter>

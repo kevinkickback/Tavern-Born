@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
-import { parseItems } from '@/lib/5etools/parsers/basic'
+import { parseItemProperties, parseItems } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
@@ -19,6 +19,7 @@ export function makeConfiguredStartingEquipmentScenario(
   const parsed = parseClassDocument(
     JSON.parse(readFileSync(`data/class/class-${name.toLowerCase()}.json`, 'utf8')),
   )
+  const baseItems = JSON.parse(readFileSync('data/items-base.json', 'utf8'))
   const data = composeGameDataLayers([
     {
       ...createEmptyGameData(),
@@ -26,7 +27,8 @@ export function makeConfiguredStartingEquipmentScenario(
       classFeatures: parsed.classFeatures as ClassFeature[],
       classCastingSources: parsed.classCastingSources,
       items: parseItems(JSON.parse(readFileSync('data/items.json', 'utf8'))) as Item5e[],
-      itemsBase: parseItems(JSON.parse(readFileSync('data/items-base.json', 'utf8'))) as Item5e[],
+      itemsBase: parseItems(baseItems) as Item5e[],
+      itemProperties: parseItemProperties(baseItems),
       sources: ['PHB', 'XPHB'].map((abbreviation) => ({
         abbreviation,
         name: abbreviation,

@@ -1,9 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
+import { RequireActiveCharacter } from '@/components/layout/RequireActiveCharacter'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import {
   AlertDialog,
@@ -18,9 +19,9 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
 import { useDataInit } from '@/hooks/data/useDataInit'
+import { useAppUpdatePreference } from '@/hooks/useAppUpdatePreference'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
-import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 const TOAST_VIEWPORT_OFFSET = { bottom: '3rem' }
@@ -123,11 +124,6 @@ function WorkspaceRoute({ onReady }: { onReady: (ready: boolean) => void }) {
   return <Outlet />
 }
 
-function RequireActiveCharacter() {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  return activeCharacter ? <Outlet /> : <Navigate to="/" replace />
-}
-
 function CloseConfirmDialog() {
   const [open, setOpen] = useState(false)
 
@@ -161,6 +157,7 @@ function CloseConfirmDialog() {
 
 function App() {
   useDataInit()
+  useAppUpdatePreference()
 
   const themeAccent = useAppPreferencesStore((s) => s.themeAccent)
   const themeAppearance = useAppPreferencesStore((s) => s.themeAppearance)
@@ -170,17 +167,28 @@ function App() {
   const [updateData, setUpdateData] = useState<{
     version: string
     changelog: string | null
-    isPortable: boolean
+    useReleaseDownloadPage: boolean
   } | null>(null)
   const [changelogOpen, setChangelogOpen] = useState(false)
   const [hasAppUpdate, setHasAppUpdate] = useState(false)
   const [progressVersion, setProgressVersion] = useState<string | null>(null)
+  const [downloadedVersion, setDownloadedVersion] = useState<string | null>(null)
+  const progressOpen = progressVersion !== null || (changelogOpen && downloadedVersion !== null)
+  const updateReturnFocus = useRef<HTMLElement | null>(null)
   const [initialRouteReady, setInitialRouteReady] = useState(false)
   const [startupComplete, setStartupComplete] = useState(false)
-  const workspaceRoute = <WorkspaceRoute onReady={setInitialRouteReady} />
+  const workspaceRoute = (
+    <Suspense fallback={initialRouteReady ? <RouteLoadingFallback /> : null}>
+      <WorkspaceRoute onReady={setInitialRouteReady} />
+    </Suspense>
+  )
   const canOpenStartupDialogs = initialRouteReady && startupComplete
   const finishStartup = useCallback(() => setStartupComplete(true), [])
-  const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
+  const openAppUpdate = useCallback(() => {
+    const active = document.activeElement
+    updateReturnFocus.current = active instanceof HTMLElement ? active : null
+    setChangelogOpen(true)
+  }, [])
 
   useLayoutEffect(() => {
     setAccentTheme(themeAccent)
@@ -195,14 +203,9 @@ function App() {
   }, [uiScale])
 
   useEffect(() => {
-    if (!window.electronAPI?.setAutoCheck) return
-    const { autoUpdate } = useAppPreferencesStore.getState()
-    void window.electronAPI.setAutoCheck(autoUpdate)
-  }, [])
-
-  useEffect(() => {
     const api = window.electronAPI
     if (!api?.onUpdateAvailable) return
+    let subscribed = true
     let updateToast: ReturnType<typeof toast.info> | undefined
     const unsubscribeAvailable = api.onUpdateAvailable((data) => {
       setUpdateData(data)
@@ -218,9 +221,28 @@ function App() {
       if (updateToast !== undefined) toast.dismiss(updateToast)
       updateToast = undefined
     })
+    const unsubscribeDownloaded = api.onUpdateDownloaded?.(({ version }) => {
+      setDownloadedVersion(version)
+    })
+    void api
+      .getUpdateStatus?.()
+      .then((status) => {
+        if (!subscribed || status.status !== 'downloaded' || !status.version) return
+        if (status.error) {
+          toast.error('Could not install the update', {
+            description: `${status.error} Close and reopen Tavern Born to try again.`,
+          })
+          return
+        }
+        const { version } = status
+        setDownloadedVersion((downloaded) => downloaded ?? version)
+      })
+      .catch(() => undefined)
     return () => {
+      subscribed = false
       unsubscribeAvailable()
       unsubscribeUnavailable?.()
+      unsubscribeDownloaded?.()
     }
   }, [openAppUpdate])
 
@@ -228,40 +250,40 @@ function App() {
     <TooltipProvider delayDuration={300}>
       <RulesPreviewManager>
         <HashRouter>
-          <AppLayout onOpenAppUpdate={hasAppUpdate ? openAppUpdate : undefined}>
-            <Suspense fallback={initialRouteReady ? <RouteLoadingFallback /> : null}>
-              <Routes>
-                <Route element={<RequireActiveCharacter />}>
-                  <Route path="/build" element={<Navigate to="/build/race" replace />} />
-                  <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
-                  <Route element={workspaceRoute}>
-                    <Route path="/build/race" element={<BuildRacePage />} />
-                    <Route path="/build/class" element={<BuildClassPage />} />
-                    <Route path="/build/background" element={<BuildBackgroundPage />} />
-                    <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
-                    <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-                    <Route path="/build/review" element={<BuildReviewPage />} />
-                    <Route path="/build/adjustments" element={<AdjustmentsPage />} />
-                    <Route path="/feats" element={<FeatsPage />} />
-                    <Route path="/spells" element={<SpellsPage />} />
-                    <Route path="/equipment" element={<EquipmentPage />} />
-                    <Route path="/rules" element={<RulesPage />} />
-                    <Route path="/details/portrait" element={<PortraitPage />} />
-                    <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-                    <Route path="/details/conditions" element={<ConditionsPage />} />
-                    <Route path="/sources" element={<SourcesPage />} />
-                    <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
-                  </Route>
-                </Route>
+          <AppLayout
+            onOpenAppUpdate={hasAppUpdate || downloadedVersion ? openAppUpdate : undefined}
+          >
+            <Routes>
+              <Route element={<RequireActiveCharacter />}>
+                <Route path="/build" element={<Navigate to="/build/race" replace />} />
+                <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
                 <Route element={workspaceRoute}>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/compendium" element={<CompendiumPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/build/race" element={<BuildRacePage />} />
+                  <Route path="/build/class" element={<BuildClassPage />} />
+                  <Route path="/build/background" element={<BuildBackgroundPage />} />
+                  <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+                  <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                  <Route path="/build/review" element={<BuildReviewPage />} />
+                  <Route path="/build/adjustments" element={<AdjustmentsPage />} />
+                  <Route path="/feats" element={<FeatsPage />} />
+                  <Route path="/spells" element={<SpellsPage />} />
+                  <Route path="/equipment" element={<EquipmentPage />} />
+                  <Route path="/rules" element={<RulesPage />} />
+                  <Route path="/details/portrait" element={<PortraitPage />} />
+                  <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+                  <Route path="/details/conditions" element={<ConditionsPage />} />
+                  <Route path="/sources" element={<SourcesPage />} />
+                  <Route path="/character-sheet/*" element={<CharacterSheetRoutes />} />
                 </Route>
-                <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
-                <Route path="*" element={workspaceRoute} />
-              </Routes>
-            </Suspense>
+              </Route>
+              <Route element={workspaceRoute}>
+                <Route path="/" element={<HomePage showCompatibilityDialog={startupComplete} />} />
+                <Route path="/compendium" element={<CompendiumPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
+              <Route path="*" element={workspaceRoute} />
+            </Routes>
           </AppLayout>
           <Toaster
             position="bottom-right"
@@ -277,13 +299,13 @@ function App() {
           {canOpenStartupDialogs && updateData && (
             <Suspense fallback={null}>
               <ChangelogModal
-                open={changelogOpen}
+                open={changelogOpen && !downloadedVersion}
                 onOpenChange={setChangelogOpen}
                 version={updateData.version}
                 changelog={updateData.changelog}
                 updateAvailable
-                onInstall={
-                  updateData.isPortable
+                onDownload={
+                  updateData.useReleaseDownloadPage
                     ? undefined
                     : () => {
                         setChangelogOpen(false)
@@ -291,10 +313,10 @@ function App() {
                       }
                 }
                 onOpenDownloadPage={
-                  updateData.isPortable
+                  updateData.useReleaseDownloadPage
                     ? async () => {
                         try {
-                          const result = await window.electronAPI.openPortableUpdatePage()
+                          const result = await window.electronAPI.openUpdateDownloadPage()
                           if (!result.success) {
                             toast.error('Could not open the download page', {
                               description: result.error ?? undefined,
@@ -314,10 +336,15 @@ function App() {
             </Suspense>
           )}
           <UpdateProgressModal
-            open={progressVersion !== null}
-            version={progressVersion ?? ''}
+            open={progressOpen && canOpenStartupDialogs}
+            version={downloadedVersion ?? progressVersion ?? ''}
+            downloaded={downloadedVersion !== null}
+            onCloseAutoFocus={() => updateReturnFocus.current?.focus()}
             onOpenChange={(open) => {
-              if (!open) setProgressVersion(null)
+              if (!open) {
+                setChangelogOpen(false)
+                setProgressVersion(null)
+              }
             }}
           />
         </HashRouter>

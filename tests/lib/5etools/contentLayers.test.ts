@@ -15,6 +15,47 @@ import { makeClassFixture, makeGameDataFixture } from '../../fixtures/gameDataFi
 import { createCurrentCharacterSheetViewModel } from '../../fixtures/pdfTemplates'
 
 describe('game-data content layers', () => {
+  test('background copies follow exact winning raw mechanics and keep only their own fluff', () => {
+    const parent = {
+      name: 'Courtier',
+      source: 'PHB',
+      skillProficiencies: [{ insight: true }],
+      fluffEntries: ['Parent only.'],
+    }
+    const child = {
+      name: 'Informant',
+      source: 'XGE',
+      _copy: { name: parent.name, source: parent.source },
+      fluffEntries: ['Informant only.'],
+    }
+    const layers = [
+      makeGameDataFixture({ backgrounds: [parent, child] }),
+      makeGameDataFixture({
+        backgrounds: [
+          { ...parent, skillProficiencies: [{ deception: true }] },
+          { ...parent, source: 'XPHB', skillProficiencies: [{ persuasion: true }] },
+        ],
+      }),
+    ]
+    const first = composeGameDataLayers(layers)
+    const next = composeGameDataLayers([
+      first,
+      makeGameDataFixture({
+        backgrounds: [{ ...parent, skillProficiencies: [{ stealth: true }] }],
+      }),
+    ])
+    expect(first.backgrounds.find(({ name }) => name === child.name)).toMatchObject({
+      source: 'XGE',
+      skillProficiencies: [{ deception: true }],
+      fluffEntries: child.fluffEntries,
+    })
+    expect(next.backgrounds.find(({ name }) => name === child.name)).toMatchObject({
+      source: 'XGE',
+      skillProficiencies: [{ stealth: true }],
+      fluffEntries: child.fluffEntries,
+    })
+  })
+
   test.each([
     ['classFeature', 'class'],
     ['classFeature', 'subclass'],

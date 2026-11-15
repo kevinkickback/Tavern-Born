@@ -1,3 +1,5 @@
+import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 import { getArmorCategory } from './armorClass'
 import { getNormalizedItemTraits } from './itemClassification'
@@ -28,6 +30,7 @@ export function getArmorEquipRestriction(
   item: Equipment,
   equippedItems: readonly Equipment[],
   armorProficiencies: string[],
+  catalog?: ReadonlyMap<string, Item5e>,
 ): ArmorEquipRestriction | null {
   const armorType = getArmorCategory(item)
   if (armorType === 'none') return null
@@ -41,6 +44,8 @@ export function getArmorEquipRestriction(
   })
   if (conflictingItem) return { kind: 'slot-conflict', conflictingItem }
   if (!hasArmorProficiency(armorProficiencies, armorType)) {
+    const data = resolveItemReference(item, catalog)
+    if (data?.grantsProficiency === true && !data.magicVariantReference) return null
     return { kind: 'missing-proficiency', armorType }
   }
   return null
@@ -50,13 +55,14 @@ export function getArmorEquipRestriction(
 export function enforceArmorEquipmentRestrictions(
   equipment: Equipment[],
   armorProficiencies: string[],
+  catalog?: ReadonlyMap<string, Item5e>,
 ): EnforcedArmorEquipment {
   const retainedEquipped: Equipment[] = []
   const unequippedIds: string[] = []
 
   const nextEquipment = equipment.map((item) => {
     if (!item.equipped) return item
-    if (getArmorEquipRestriction(item, retainedEquipped, armorProficiencies)) {
+    if (getArmorEquipRestriction(item, retainedEquipped, armorProficiencies, catalog)) {
       unequippedIds.push(item.id)
       return { ...item, equipped: false }
     }

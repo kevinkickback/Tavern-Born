@@ -244,6 +244,19 @@ export function deriveStructuredItemEffects(
       )
     }
 
+    if (
+      data.magicVariantGenerated?.minimumSwimFromWalk &&
+      data.modifySpeed?.equal?.swim === 'walk'
+    ) {
+      effects.push({
+        id: itemEffectId(item, 'speed:minimum-from-walk:swim'),
+        label: `${data.name} swimming speed`,
+        target: { kind: 'speed', mode: 'swim' },
+        operation: { kind: 'minimum-from-walk' },
+        source,
+        requirements,
+      })
+    }
     const equalModes = new Set(Object.keys(data.modifySpeed?.equal ?? {}))
     for (const [mode, value] of Object.entries(data.modifySpeed?.static ?? {})) {
       if (!mode.trim() || !Number.isFinite(value)) continue

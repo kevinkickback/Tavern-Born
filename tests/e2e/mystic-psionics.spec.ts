@@ -1,6 +1,13 @@
 import { existsSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import {
+  buildClassChoiceFeatureCatalogs,
+  getCharacterClassChoices,
+} from '@/lib/character/classChoiceOptions'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makePsionicFixture } from '../fixtures/psionicFixtures'
 import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from './helpers/startup'
@@ -10,11 +17,159 @@ async function open(page: Page, label: string) {
   const level = page.getByRole('button', { name: /^Level 1,/ })
   if ((await level.getAttribute('data-state')) === 'closed') await level.click()
   await page
-    .getByRole('group', { name: label, exact: true })
-    .getByRole('button', { name: /^(Choose|Edit|Review saved choice)$/ })
+    .getByRole('button', { name: `Edit ${label}`, exact: true })
+    .or(
+      page
+        .getByRole('group', { name: label, exact: true })
+        .getByRole('button', { name: /^(Choose|Edit|Review saved choice)$/ }),
+    )
     .click()
   return page.getByRole('dialog')
 }
+
+test('Mystic replaces a bonus discipline in Level Up and restores it on level removal', async ({
+  page,
+}) => {
+  test.skip(
+    !existsSync('data/class/class-mystic.json') || !existsSync('data/psionics.json'),
+    'Configured Mystic catalog is unavailable',
+  )
+  const { data, character } = makePsionicFixture()
+  const catalogs = buildClassChoiceFeatureCatalogs(data)
+  const cls = data.classes.find((row) => row.name === 'Mystic')!
+  const order = cls.subclasses?.find((row) => row.name === 'Order of the Avatar')
+  const choice = getCharacterClassChoices(
+    cls,
+    order,
+    createOptionalClassFeatureActivity(character, catalogs),
+    catalogs,
+  ).find((row) => row.label === 'Bonus Disciplines')!
+  const psionics = data.psionics ?? []
+  const [first, second, ordinary, correction] = psionics.filter(
+    (row) => row.type === 'D' && row.order === 'Avatar',
+  )
+  const initial = [first, second]
+  const incoming = psionics.find((row) => row.type === 'D' && row.order === 'Nomad')!
+  const classChoice = getCharacterClassChoices(
+    cls,
+    order,
+    createOptionalClassFeatureActivity(character, catalogs),
+    catalogs,
+  ).find((row) => row.label === 'Psionic Disciplines')!
+  const withBonus = applyCharacterCommandResult(
+    character,
+    applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      character.provenance,
+      choice,
+      initial.map(({ name, source }) => ({ entityType: 'psionic', name, source })),
+      { classes: data.classes, catalogs },
+    ),
+  )
+  const prepared = applyCharacterCommandResult(
+    withBonus,
+    applyClassChoiceSelectionWithGrantsCommand(
+      withBonus,
+      withBonus.provenance,
+      classChoice,
+      [{ entityType: 'psionic', name: ordinary.name, source: ordinary.source }],
+      { classes: data.classes, catalogs },
+    ),
+  )
+  await page.goto('/')
+  await seedAppState(page, {
+    sourcePath: 'e2e-mystic-replacement',
+    gameData: data,
+    characters: [prepared],
+    activeCharacterId: prepared.id,
+  })
+  await page.reload()
+  await selectCharacterFromHome(page, prepared.name)
+  await page.getByRole('banner').getByRole('button', { name: 'Level Up' }).click()
+  const levelDialog = page.getByRole('dialog', { name: 'Level Up Character' })
+  await levelDialog.getByRole('button', { name: 'Level Up', exact: true }).first().click()
+  const confirm = page.getByRole('dialog', { name: 'Confirm Level Up' })
+  await confirm.getByRole('combobox', { name: 'Discipline to replace' }).click()
+  await page.getByRole('option', { name: new RegExp(initial[0].name) }).click()
+  await confirm.getByRole('combobox', { name: 'New discipline' }).click()
+  await page.getByRole('option', { name: new RegExp(incoming.name) }).click()
+  await confirm.getByRole('button', { name: 'Confirm Level Up' }).click()
+  await levelDialog.getByRole('button', { name: 'Close', exact: true }).last().click()
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  const saved = async () =>
+    characterPersistenceSchema.parse(
+      (await readPersistedCharacters(page)).find(
+        (row) => !!row && typeof row === 'object' && 'id' in row && row.id === prepared.id,
+      ),
+    )
+  await expect
+    .poll(async () => (await saved()).mysticDisciplineReplacements?.[0]?.to.name)
+    .toBe(incoming.name)
+  expect((await saved()).features.map((row) => row.name)).toContain(incoming.name)
+  expect((await saved()).features.map((row) => row.name)).not.toContain(initial[0].name)
+  const beforeEdit = await saved()
+  const absent = { ...data, psionics: psionics.filter((row) => row !== incoming) }
+  absent.lookups = buildGameDataLookups(absent)
+  for (const gameData of [absent, data]) {
+    await seedAppState(page, {
+      sourcePath: 'e2e-mystic-replacement',
+      gameData,
+      characters: [beforeEdit],
+      activeCharacterId: prepared.id,
+    })
+    await page.reload()
+    await selectCharacterFromHome(page, prepared.name)
+    if (gameData === absent) {
+      const recovery = await open(page, 'Bonus Disciplines')
+      await recovery.getByRole('textbox', { name: /Search/ }).fill(incoming.name)
+      await expect(
+        recovery.locator('button[aria-pressed="true"]').filter({ hasText: incoming.name }),
+      ).toBeVisible()
+      await recovery.getByRole('button', { name: 'Confirm', exact: true }).click()
+      await expect(recovery).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Save character', exact: true })).toBeDisabled()
+    }
+  }
+  const bonusDialog = await open(page, 'Bonus Disciplines')
+  const search = bonusDialog.getByRole('textbox', { name: /Search/ })
+  const card = (name: string) =>
+    bonusDialog.locator('button[aria-pressed]').filter({ hasText: name })
+  await search.fill(incoming.name)
+  await expect(card(incoming.name)).toHaveAttribute('aria-pressed', 'true')
+  await search.fill(initial[0].name)
+  await expect(card(initial[0].name)).toHaveCount(0)
+  await bonusDialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(bonusDialog).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save character', exact: true })).toBeDisabled()
+  expect(await saved()).toEqual(beforeEdit)
+
+  await open(page, 'Bonus Disciplines')
+  await search.fill(initial[1].name)
+  await card(initial[1].name).click({ position: { x: 8, y: 8 } })
+  await search.fill(ordinary.name)
+  await expect(card(ordinary.name)).toBeDisabled()
+  await search.fill(correction.name)
+  await card(correction.name).click({ position: { x: 8, y: 8 } })
+  await bonusDialog.getByRole('button', { name: 'Confirm', exact: true }).click()
+  await expect(bonusDialog).toHaveCount(0)
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect
+    .poll(async () => (await saved()).features.map((row) => row.name))
+    .toContain(correction.name)
+  expect((await saved()).mysticDisciplineReplacements).toEqual(
+    beforeEdit.mysticDisciplineReplacements,
+  )
+  expect((await saved()).features.map((row) => row.name)).toContain(incoming.name)
+
+  await page.getByRole('banner').getByRole('button', { name: 'Level Up' }).click()
+  await levelDialog.getByRole('button', { name: /^Remove last level/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove', exact: true }).click()
+  await levelDialog.getByRole('button', { name: 'Close', exact: true }).last().click()
+  await page.getByRole('button', { name: 'Save character', exact: true }).click()
+  await expect.poll(async () => (await saved()).classProgression[0].levels).toBe(1)
+  expect((await saved()).mysticDisciplineReplacements).toBeUndefined()
+  expect((await saved()).features.map((row) => row.name)).toContain(initial[0].name)
+})
 for (const edition of ['2014', '2024'] as const)
   test(`@focused configured Mystic ${edition} setup chooses, strictly reopens, cancels, recovers sources and clears owned choices`, async ({
     page,

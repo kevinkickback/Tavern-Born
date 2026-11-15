@@ -1,5 +1,9 @@
 import { utilityProcess, type WebContents } from 'electron'
-import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
+import type {
+  CatalogReply,
+  CatalogRequestMessage,
+  CatalogWorkerMessage,
+} from '@/lib/5etools/catalogProtocol'
 import type { JsonSourceRead } from '@/lib/5etools/resourceReader'
 
 type LocalRead = Exclude<JsonSourceRead, { kind: 'remote' }>
@@ -7,7 +11,9 @@ type LocalRead = Exclude<JsonSourceRead, { kind: 'remote' }>
 export function createCatalogService(
   owner: WebContents,
   entry: string,
-  readFile: (request: LocalRead) => Promise<string>,
+  readFile: (
+    request: LocalRead,
+  ) => Promise<Extract<CatalogReply, { text: string } | { stamp: string }>>,
   authorizeLocal: (root: string) => () => void,
 ) {
   const child = utilityProcess.fork(entry, [], { serviceName: 'Tavern Born Catalog' })
@@ -29,7 +35,7 @@ export function createCatalogService(
       return
     }
 
-    const reply = (value: { text: string } | { error: string }) => {
+    const reply = (value: CatalogReply) => {
       if (!closed && jobs.has(message.id))
         child.postMessage({
           kind: 'read-result',
@@ -43,13 +49,12 @@ export function createCatalogService(
       job.verify?.()
       if (request.kind === 'local' && request.root !== job.root)
         throw new Error('The catalog request is outside its data directory.')
-      const text = await readFile(request)
+      const result = await readFile(request)
       job.verify?.()
-      return text
+      return result
     }
-    void readAuthorized().then(
-      (text) => reply({ text }),
-      (error: unknown) => reply({ error: error instanceof Error ? error.message : String(error) }),
+    void readAuthorized().then(reply, (error: unknown) =>
+      reply({ error: error instanceof Error ? error.message : String(error) }),
     )
   })
   child.on('exit', () => {

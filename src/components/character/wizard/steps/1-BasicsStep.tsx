@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 import type { StepProps } from '../types'
@@ -138,8 +137,9 @@ export function BasicsStep({
       transform={data.portraitTransform}
       name={data.name}
       level={1}
-      race={getRaceDisplayName(data.race, data.subrace) || 'Race'}
-      characterClass={data.class || 'Class'}
+      race={data.race || 'Race'}
+      classes={[{ name: data.class || 'Class', source: data.classSource, levels: 1 }]}
+      originSystem={data.originSystem}
       gender={data.gender}
       onPortraitChange={handlePortraitChange}
       onTransformChange={handleTransformChange}

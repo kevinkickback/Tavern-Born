@@ -53,7 +53,7 @@ test('Review and PDF keep independent fire while exact refresh removes acid/pois
     </TooltipProvider>,
   )
   const combat = screen.getByText('Damage immunities').closest('details')!
-  expect(within(combat).getByText('acid')).toBeTruthy()
+  expect(within(combat).getByText('Acid')).toBeTruthy()
   act(() =>
     install([
       {
@@ -65,10 +65,10 @@ test('Review and PDF keep independent fire while exact refresh removes acid/pois
   expect(screen.queryByText('Damage immunities')).toBeNull()
   expect(screen.queryByText('Condition immunities')).toBeNull()
   const resistance = screen.getByText('Damage resistances').parentElement!
-  expect(resistance.textContent).toContain('fire')
+  expect(resistance.textContent).toContain('Fire')
   await useCharacterStore.getState().saveActiveCharacter()
   act(() => install([]))
-  expect(screen.getByText('Damage resistances').parentElement?.textContent).toContain('fire')
+  expect(screen.getByText('Damage resistances').parentElement?.textContent).toContain('Fire')
   const reopened = characterPersistenceSchema.parse(
     JSON.parse(JSON.stringify(useCharacterStore.getState().characters[0])),
   )

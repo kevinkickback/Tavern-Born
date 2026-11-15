@@ -12,6 +12,7 @@ interface PendingOpen {
   previousId: string | null
   name: string
   missing: UnavailableCharacterContent[]
+  gameData: ReturnType<typeof useGameDataStore.getState>['gameData']
 }
 
 function inspectCharacter(id: string) {
@@ -30,6 +31,7 @@ function inspectCharacter(id: string) {
     id,
     previousId: state.activeCharacterId,
     name: character.name,
+    gameData,
     missing: [...missing.values()],
   }
 }
@@ -48,6 +50,7 @@ export function useCharacterContentOpening(onOpened?: () => void) {
       const state = useCharacterStore.getState()
       cancel()
       if (
+        useGameDataStore.getState().isCatalogActivating ||
         state.activeCharacterId !== request.previousId ||
         !state.characters.some((row) => row.id === request.id)
       )
@@ -60,6 +63,7 @@ export function useCharacterContentOpening(onOpened?: () => void) {
 
   const requestOpen = useCallback(
     (id: string) => {
+      if (useGameDataStore.getState().isCatalogActivating) return
       const request = inspectCharacter(id)
       if (!request) cancel()
       else if (request.missing.length) setPending(request)
@@ -77,7 +81,12 @@ export function useCharacterContentOpening(onOpened?: () => void) {
     requestOpen,
     cancel,
     openLimited: () => {
-      if (pending) finish(pending)
+      if (!pending) return
+      if (pending.gameData !== useGameDataStore.getState().gameData) {
+        if (useCharacterStore.getState().activeCharacterId === pending.previousId)
+          requestOpen(pending.id)
+        else cancel()
+      } else finish(pending)
     },
   }
 }

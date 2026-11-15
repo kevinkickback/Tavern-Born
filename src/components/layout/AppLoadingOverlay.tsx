@@ -14,6 +14,7 @@ export function AppLoadingOverlay({
 }) {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
+  const isStartupRecovering = useGameDataStore((s) => s.isStartupRecovering)
   const cacheStatus = useGameDataStore((s) => s.cacheStatus)
   const gameData = useGameDataStore((s) => s.gameData)
   const loadProgress = useGameDataStore((s) => s.loadProgress)
@@ -34,6 +35,7 @@ export function AppLoadingOverlay({
   const isLoadingOverlay =
     (initialRoutePending && remoteStartup !== 'setup') ||
     shouldStayVisible ||
+    isStartupRecovering ||
     Boolean(gameData && isLoading)
   const isStartupReady = Boolean(
     onStartupComplete && !isLoadingOverlay && gameData && remoteStartup !== 'setup',
@@ -73,7 +75,16 @@ export function AppLoadingOverlay({
 
   if (!isBlocking) return null
 
-  const hasProgress = !isStartupReady && loadProgress !== null && loadProgress.total > 0
+  const hasProgress =
+    !isStartupReady && !isStartupRecovering && loadProgress !== null && loadProgress.total > 0
+  const recoveryCount =
+    isStartupRecovering &&
+    loadProgress &&
+    loadProgress.current >= 0 &&
+    loadProgress.current <= loadProgress.total &&
+    loadProgress.total > 0
+      ? loadProgress
+      : null
   const isProgressComplete =
     hasProgress &&
     (loadProgress.resource === 'Complete' || loadProgress.resource.endsWith(': Complete'))
@@ -82,6 +93,18 @@ export function AppLoadingOverlay({
   let statusLine: string
   if (isStartupReady) {
     statusLine = 'Ready'
+  } else if (isStartupRecovering) {
+    if (loadProgress?.resource === 'Verifying rebuilt game data') {
+      statusLine = 'Verifying game data…'
+    } else if (recoveryCount) {
+      const layer = recoveryCount.resource.startsWith('Included SRD:')
+        ? 'built-in rules'
+        : 'additional content'
+      const phase = recoveryCount.current === recoveryCount.total ? 'Processing' : 'Reading'
+      statusLine = `${phase} ${layer} · ${recoveryCount.current}/${recoveryCount.total} files`
+    } else {
+      statusLine = 'Restoring additional content…'
+    }
   } else if (remoteStartup === 'unavailable') {
     statusLine = 'Game data is unavailable.'
   } else if (remoteStartup === 'loading-srd') {
@@ -158,7 +181,7 @@ export function AppLoadingOverlay({
           aria-atomic="true"
           className="flex items-center justify-center text-xs text-muted-foreground"
         >
-          <span className="min-w-0 text-center leading-4">{statusLine}</span>
+          <span className="min-w-0 truncate text-center leading-4">{statusLine}</span>
           {hasProgress && (
             <span className="ml-3 shrink-0 tabular-nums">
               {loadProgress.current}&thinsp;/&thinsp;{loadProgress.total}

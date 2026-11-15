@@ -11,19 +11,20 @@ import { Switch } from '@/components/ui/switch'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { Section } from '@/components/workspace'
 import { resetAllHints } from '@/lib/storage/hints'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { useAppPreferencesHydrated, useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 interface UpdateCheckStatus {
-  status: 'available' | 'not-available' | 'error'
+  status: 'available' | 'downloaded' | 'not-available' | 'error'
   error?: string
 }
 
 function isUpdateCheckStatus(value: unknown): value is UpdateCheckStatus {
   if (!value || typeof value !== 'object' || !('status' in value)) return false
-  return ['available', 'not-available', 'error'].includes(String(value.status))
+  return ['available', 'downloaded', 'not-available', 'error'].includes(String(value.status))
 }
 
 export function GeneralPanel() {
+  const preferencesReady = useAppPreferencesHydrated()
   const autoUpdate = useAppPreferencesStore((s) => s.autoUpdate)
   const setAutoUpdate = useAppPreferencesStore((s) => s.setAutoUpdate)
 
@@ -88,6 +89,12 @@ export function GeneralPanel() {
       }
       if (result.data.status === 'available') {
         setStatusMessage('Update available!')
+      } else if (result.data.status === 'downloaded') {
+        setStatusMessage(
+          result.data.error
+            ? 'Close and reopen Tavern Born before trying the update again.'
+            : 'Update ready to install.',
+        )
       } else if (result.data.status === 'not-available') {
         setStatusMessage('You are on the latest version.')
       } else {
@@ -131,9 +138,9 @@ export function GeneralPanel() {
             </div>
             <Switch
               checked={autoUpdate}
+              disabled={!preferencesReady}
               onCheckedChange={(v) => {
                 setAutoUpdate(v)
-                void window.electronAPI?.setAutoCheck?.(v)
                 toast.success(
                   v ? 'Automatic update checks enabled' : 'Automatic update checks disabled',
                 )

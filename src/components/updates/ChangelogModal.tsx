@@ -21,7 +21,7 @@ interface ChangelogModalProps {
   changelog: string | null
   loading?: boolean
   updateAvailable?: boolean
-  onInstall?: () => void
+  onDownload?: () => void
   onOpenDownloadPage?: () => void | Promise<void>
 }
 
@@ -32,7 +32,7 @@ export function ChangelogModal({
   changelog,
   loading = false,
   updateAvailable = false,
-  onInstall,
+  onDownload,
   onOpenDownloadPage,
 }: ChangelogModalProps) {
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -62,9 +62,9 @@ export function ChangelogModal({
           </DialogTitle>
           <DialogDescription>
             {updateAvailable
-              ? onInstall
-                ? 'A new version is ready to install. Review the changes below.'
-                : 'A new version is available. Portable builds do not update in place.'
+              ? onDownload
+                ? 'A new version is ready to download. Review the changes below.'
+                : 'Download the new version from the release page and replace your current app.'
               : 'Changes included in this version.'}
           </DialogDescription>
         </DialogHeader>
@@ -94,7 +94,7 @@ export function ChangelogModal({
         </ScrollArea>
 
         <DialogFooter>
-          {updateAvailable && onInstall ? (
+          {updateAvailable && onDownload ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Skip
@@ -102,10 +102,10 @@ export function ChangelogModal({
               <Button
                 onClick={() => {
                   returnFocus.current = null
-                  onInstall()
+                  onDownload()
                 }}
               >
-                Install Now
+                Download
               </Button>
             </>
           ) : updateAvailable && onOpenDownloadPage ? (

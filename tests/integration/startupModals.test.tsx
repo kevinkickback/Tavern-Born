@@ -41,6 +41,7 @@ function resetGameDataStore() {
     dataSourceConfig: null,
     isLoading: false,
     isBackgroundRefreshing: false,
+    isStartupRecovering: false,
     loadProgress: null,
     error: null,
     cacheStatus: 'unknown',
@@ -224,6 +225,66 @@ describe('startup integration: loading overlay and startup modal', () => {
     render(<AppLoadingOverlay />)
 
     expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+  })
+
+  test('keeps the workspace blocked until startup recovery settles', async () => {
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: makeGameDataFixture(),
+      cacheStatus: 'session-srd',
+      isBackgroundRefreshing: true,
+      isStartupRecovering: true,
+    })
+    render(
+      <>
+        <div id={APP_INTERACTIVE_CONTENT_ID}>
+          <button type="button">Open character</button>
+        </div>
+        <AppLoadingOverlay />
+      </>,
+    )
+    const content = document.getElementById(APP_INTERACTIVE_CONTENT_ID)
+    expect(screen.getByText('Restoring additional content…')).toBeTruthy()
+    expect(content?.hasAttribute('inert')).toBe(true)
+
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 28, total: 25, resource: 'Additional content: Complete' },
+      }),
+    )
+    expect(screen.getByText('Restoring additional content…')).toBeTruthy()
+    expect(screen.queryByText(/28\s*\/\s*25/)).toBeNull()
+    expect(content?.hasAttribute('inert')).toBe(true)
+
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 8, total: 25, resource: 'Included SRD: feats.json' },
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toBe('Reading built-in rules · 8/25 files')
+
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 28, total: 28, resource: 'Additional content: items.json' },
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toBe(
+      'Processing additional content · 28/28 files',
+    )
+
+    await act(() =>
+      useGameDataStore.setState({
+        loadProgress: { current: 0, total: 0, resource: 'Verifying rebuilt game data' },
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toBe('Verifying game data…')
+
+    expect(screen.queryByRole('button', { name: 'Continue with built-in rules' })).toBeNull()
+    await act(() =>
+      useGameDataStore.setState({ isStartupRecovering: false, isBackgroundRefreshing: false }),
+    )
+    expect(screen.queryByTestId('app-loading-overlay')).toBeNull()
+    expect(content?.hasAttribute('inert')).toBe(false)
   })
 
   test('AppLoadingOverlay distinguishes cache inspection from source loading', () => {

@@ -3,6 +3,13 @@ import {
   getArmorModelConfiguration,
   resolveArmorModelOption,
 } from '@/lib/5etools/artificerArmorModels'
+import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  createArmorPlanClassifier,
+  getArmorReplication,
+  getReservedArtificerPlanKeys,
+  isArtificerReplicatePlanChoice,
+} from '@/lib/5etools/artificerArmorReplication'
 import { readArtificerInfusionPlans } from '@/lib/5etools/artificerInfusionPlans'
 import {
   BLESSED_STRIKES_ID,
@@ -43,14 +50,18 @@ import {
 import { normalizePsionicChoices, psionicSlotIsCurrent } from '@/lib/5etools/psionicChoices'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { decodePsionicChoiceId, PSIONIC_CLASS_SOURCE } from '@/lib/5etools/psionicIdentity'
-import { resolvePsionic } from '@/lib/5etools/psionics'
+import { getPsionicKey, resolvePsionic } from '@/lib/5etools/psionics'
 import { getCurrentWeaponProficiencies } from '@/lib/calculations/weaponProficiency'
 import { isValidKenseiSelection } from '@/lib/schema/legacySubclassChoiceValidation'
 import {
   type ClassChoiceFeatureCatalogs,
   scopeClassChoiceFeatureCatalogs,
 } from './classChoiceFeatureCatalogs'
-import { getCreatureTypes, matchesClassChoiceFilter } from './classChoiceFilters'
+import {
+  getCreatureTypes,
+  itemFilterIncludesMagicItems,
+  matchesClassChoiceFilter,
+} from './classChoiceFilters'
 
 export {
   buildClassChoiceFeatureCatalogs,
@@ -231,6 +242,7 @@ import {
   hasDeclaredInvocationSpells,
 } from './declaredInvocationPrerequisites'
 import { getFighterStylePair } from './fighterStyleChoices'
+import { replayMysticDisciplines } from './mysticDisciplineHistory'
 import { getOptionalClassPoolSection } from './optionalClassAdoptionRules'
 import {
   createOptionalClassFeatureActivity,
@@ -246,6 +258,7 @@ import {
 } from './warlockInvocationSource'
 
 export interface ClassChoiceOptionView {
+  selectionKey?: string
   reference: NormalizedChoiceOptionReference
   availability: 'eligible' | 'retained'
   displayLabel?: string
@@ -399,20 +412,10 @@ function getFilteredCatalog(
   catalogs: ClassChoiceCatalogs,
 ): readonly ChoiceCatalogEntity[] {
   if (filter.entityType !== 'item') return getCatalog(filter.entityType, catalogs)
-  const includesMagicItems =
-    (filter.rarities?.length ?? 0) > 0 ||
-    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate))
-  const candidates = includesMagicItems
+  const candidates = itemFilterIncludesMagicItems(filter)
     ? [...catalogs.itemsBase, ...catalogs.items]
     : catalogs.itemsBase
   return candidates.filter(isSelectableEquipmentItem)
-}
-
-function getFilteredCatalogIncludesMagicItems(filter: NormalizedChoiceOptionFilter): boolean {
-  return (
-    (filter.rarities?.length ?? 0) > 0 ||
-    filter.anyOf?.some((candidate) => getFilteredCatalogIncludesMagicItems(candidate)) === true
-  )
 }
 
 function getRawFeatureTypes(entity: ChoiceCatalogEntity): string[] {
@@ -972,6 +975,51 @@ export function resolveClassChoiceOptions(
   character?: Character,
   knownWarlockCantrips?: InvocationCantripsByOwner,
 ): ClassChoiceOptionView[] {
+  if (choice.id === ARMOR_REPLICATION_CHOICE_ID) {
+    const setup = getArmorReplication(
+      choice.owner,
+      { name: choice.owner.subclassName ?? '', source: choice.owner.subclassSource ?? '' },
+      catalogs,
+    )
+    const plan = setup?.plan
+    const current =
+      setup?.available &&
+      plan &&
+      classLevel >= setup.choice.level &&
+      (!character || permitsClassRuleSource(character, setup.choice.owner.source))
+    const armor = current
+      ? createArmorPlanClassifier([...catalogs.items, ...catalogs.itemsBase])
+      : undefined
+    const reserved = getReservedArtificerPlanKeys(character, plan?.id ?? '')
+    const generalCharacter = character && {
+      ...character,
+      classChoiceSelections: character.classChoiceSelections?.filter(
+        (row) => row.choiceId !== ARMOR_REPLICATION_CHOICE_ID,
+      ),
+    }
+    const options =
+      plan && armor && setup
+        ? resolveClassChoiceOptions(
+            plan,
+            catalogs,
+            [],
+            setup.choice.level,
+            generalCharacter,
+          ).filter(
+            ({ reference, availability }) =>
+              availability === 'eligible' &&
+              armor(reference.name, reference.source) &&
+              !reserved.has(getClassChoiceOptionKey(reference)),
+          )
+        : []
+    const eligible = new Set(options.map(({ reference }) => getClassChoiceOptionKey(reference)))
+    return [
+      ...options,
+      ...saved
+        .filter((reference) => !eligible.has(getClassChoiceOptionKey(reference)))
+        .map((reference) => resolveExplicitOption(reference, catalogs, 'retained')),
+    ]
+  }
   const named = getNamedSubclassSpellRule(choice.id)
   if (named) {
     const { owner } = named
@@ -1448,6 +1496,9 @@ export function resolveClassChoiceOptions(
       { level: { level, class: { name: choice.owner.name, source: choice.owner.source } } },
     ],
   })
+  const reservedArtificerPlans = isArtificerReplicatePlanChoice(choice)
+    ? getReservedArtificerPlanKeys(character, ARMOR_REPLICATION_CHOICE_ID)
+    : undefined
   const byKey = new Map(
     resolved
       .map((option) =>
@@ -1474,6 +1525,7 @@ export function resolveClassChoiceOptions(
           : { ...option, availability: 'retained' as const }
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
+      .filter((option) => !reservedArtificerPlans?.has(getClassChoiceOptionKey(option.reference)))
       .flatMap((option) => {
         if (bladeSource === 'xphb' && isPactBladeOption(option.reference, bladeSource)) {
           return bladePact
@@ -1942,10 +1994,18 @@ function resolvePsionicChoiceOptions(
       )
       .flatMap((row) =>
         row.selected
-          .filter((option) => option.entityType === 'psionic')
-          .map(getClassChoiceOptionKey),
+          .filter(
+            (option) =>
+              option.entityType === 'psionic' &&
+              (!character?.mysticDisciplineReplacements?.length ||
+                relation?.pool === 'talent' ||
+                decodePsionicChoiceId(row.choiceId)?.pool === 'talent'),
+          )
+          .map((option) => getPsionicKey(option.name, option.source ?? '')),
       ),
   )
+  if (relation?.pool === 'talent' && character?.mysticDisciplineReplacements?.length)
+    for (const target of replayMysticDisciplines(character).replacementTargetKeys) other.add(target)
   const views = new Map<string, ClassChoiceOptionView>()
   if (current)
     for (const row of catalogs.psionics ?? []) {
@@ -1957,7 +2017,7 @@ function resolvePsionicChoiceOptions(
         choice.optionFilter?.psionicTypes?.includes(row.type) &&
         (!choice.optionFilter?.psionicOrders ||
           choice.optionFilter.psionicOrders.includes(row.order ?? '')) &&
-        !other.has(key) &&
+        !other.has(getPsionicKey(row.name, row.source)) &&
         (!prior || psionicSlotIsCurrent(choice, saved, prior.slotLevel, classLevel))
       if (eligible)
         views.set(key, {
@@ -2202,6 +2262,13 @@ export function getClassChoiceCandidates(
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
       getScionConfiguration(classData, subclass, catalogs?.classes),
       getArmorModelConfiguration(classData, subclass, catalogs?.classes),
+      classData.name && classData.source && subclass?.name && subclass.source
+        ? getArmorReplication(
+            { name: classData.name, source: classData.source },
+            { name: subclass.name, source: subclass.source },
+            catalogs,
+          )?.choice
+        : undefined,
     ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }

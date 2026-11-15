@@ -9,6 +9,7 @@ import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import { collectRevisedSourceAbbreviations } from '@/lib/sourceCompatibility'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
+import { prepareBackgroundSources } from './backgroundSources'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import {
   type CopyResolutionDiagnostic,
@@ -16,7 +17,7 @@ import {
   resolveCopiedRecords,
 } from './copyResolution'
 import { createEmptyGameData } from './emptyGameData'
-import { getFixedShieldBases } from './fixedBonusShields'
+import { getFixedEquipmentBases, getFixedShieldBases } from './fixedBonusEquipment'
 import { expandItemEntries, parseItemEntries, retainRawItems } from './itemEntries'
 import {
   associateItemTypeEntries,
@@ -505,10 +506,16 @@ export class FiveEToolsDataLoader {
         return fluffEntries ? { ...background, fluffEntries } : background
       })
     }
+    gameData.backgrounds = prepareBackgroundSources(
+      gameData,
+      gameData.backgrounds,
+      options?.deferCopyResolutionErrors,
+    )
 
     throwIfAborted(options?.signal)
 
     retainRawItems(gameData)
+    gameData.fixedEquipmentBases = getFixedEquipmentBases(gameData)
     const concreteItemCount = gameData.items.length
     const rawToolInputs = [...gameData.items, ...gameData.itemsBase]
     const resolvedItems = resolveCopiedRecords(rawToolInputs, 'item')
@@ -628,10 +635,16 @@ export class FiveEToolsDataLoader {
           }
           const fluffFile = `class/${file.replace(/^class-/, 'fluff-class-')}`
           try {
-            fluff = parseClassFluff(await this.loadResource(fluffFile, options?.signal))
+            const document = await this.loadResource(fluffFile, options?.signal)
+            if (options?.strictCandidate && !Array.isArray(asObject(document).classFluff))
+              throw new SyntaxError('Expected a class description collection')
+            fluff = parseClassFluff(document)
           } catch (error) {
             if (isAbortError(error)) throw error
-            options?.onResourceFailure?.(fluffFile, { required: false })
+            options?.onResourceFailure?.(fluffFile, {
+              required: false,
+              ...(options.strictCandidate ? { cause: error } : {}),
+            })
           }
           documents.set(file, classData)
           return { file, fluff }

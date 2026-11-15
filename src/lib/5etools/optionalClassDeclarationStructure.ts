@@ -144,6 +144,7 @@ const parentDerived = new Set([
   'introFeatureRef',
   'levelFeatures',
   'normalizedRules',
+  'scopedSubclassFeatureDependencies',
   'isSpellcaster',
   'spellSlotProgression',
   'fluffEntries',

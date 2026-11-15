@@ -12,7 +12,8 @@ verified in the owning store, command, and tests.
 | Preferences | Theme, home-card size, update preference, UI settings | `appPreferencesStore.ts` |
 
 Zustand persistence uses `src/lib/storage/idb-storage.ts`. Parsed game data has its own cache in
-`dataCache.ts`. Accordion/sidebar collapse state uses local storage, and Electron stores native
+`dataCache.ts`. The secondary workspace sidebar is an app preference and defaults to open.
+Individual accordion and pane collapse preferences use local storage. Electron stores native
 window bounds separately. PDF export page/content overrides and description/overflow settings are local UI preferences keyed by character and template (`sheetExportPreferences.ts`); they never alter character inventory, preparation, or rules text. Missing or invalid text settings fall back to full descriptions with ellipsis shortening.
 
 Uploaded portraits also have a separate IndexedDB gallery (`portraitLibrary.ts`), capped at 20 images
@@ -100,6 +101,8 @@ Do not add a persisted field merely to make rendering easier.
 
 ## Calculation context
 
+Filtered views and calculation contexts are reused while the source settings, game-data object and character object are unchanged. Replace the affected object on a store write so derived results are recalculated.
+
 `CharacterCalculationContext` is the pure shared boundary for resolved race/subrace, background,
 classes/subclasses, feats, equipment, rules metadata, typed effects, and effective ability scores.
 React consumers use `useCharacterCalculationContext`.
@@ -146,12 +149,15 @@ multiclass math. There are no top-level class mirrors.
   and earned level in `classChoiceSelections`. Supported selections include class features,
   subclass features, optional features, feats, items, creatures, and named proficiencies.
 - Complete target UIDs remain separate from actual granting owners; missing rules retain intent
-  without borrowing names. [Class ownership](contracts/class-ownership.md) and
-  [feature references](contracts/feature-references.md) own current authority, suspension, restoration
+  without borrowing names. [Class ownership](provenance.md#class-ownership) and
+  [feature references](data-ingestion.md#feature-references) own current authority, suspension, restoration
   and derived feature/proficiency/action rules.
 - Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
   retracts both the normalized selection and its materialized feat state.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
+- The EFA Armorer earns a separate Armor Replication plan at level 9. Its Armor plan must be
+  distinct from the Artificer's other plans. The historical editor uses the level-9 plan tier. The
+  sheet lists the plan with the subclass feature and shows the additional active-item slot as Armor only.
 - Optional-feature variant reconciliation scopes persisted choices against the complete loaded class
   catalog, but activates only choices that remain available after character source filtering.
 - Level-down/class removal retracts choices, grants, ASIs and numeric spell choices owned by removed levels.
@@ -181,7 +187,7 @@ independent daily/racial/Bonus state use `character.spells.spellProfiles`.
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
 `useSpellProvenanceMutations` exposes the addressed batch Finish adapter. Clear and preparation
 withdrawal work without unavailable sources; source suspension preserves ownership and revisions.
-Rest/acquisition event history remains separate work. See [the full spell contract](contracts/spell-selection.md).
+Rest/acquisition event history remains separate work. See [the full spell contract](spell-selection.md).
 
 Each normalized target occurs once in `special:unrestricted`, in either cantrips or known spells.
 Available exact spell metadata determines its current kind for all special owners together. Pure
@@ -192,12 +198,12 @@ retain independent memberships, including conflicting saved kinds when exact met
 
 ## Proficiencies and equipment
 
-See [Equipment state](contracts/equipment-state.md#proficiencies-and-equipment) for canonical
+See [Equipment state](equipment.md#proficiencies-and-equipment) for canonical
 proficiencies, slot ownership, raw-rule absence and physical snapshots.
 
 ## Fixed weapon bonuses
 
-See [Fixed weapon bonuses](contracts/equipment-state.md#fixed-weapon-bonuses) for numeric fields,
+See [Fixed weapon bonuses](equipment.md#fixed-weapon-bonuses) for numeric fields,
 conditional-item exclusions, attunement and shared Action/Review/PDF projection.
 
 ## Character transfers
@@ -205,7 +211,9 @@ conditional-item exclusions, attunement and shared Action/Review/PDF projection.
 `characterTransfer.ts` owns copy/import/export policy. Duplicate deep-clones the complete saved
 record and changes only ID, collision-free name, and timestamps. `.tbc` export contains one complete
 current character; `.tbclib` is a versioned JSON envelope of complete saved characters for selected
-or entire-library backups. Import accepts multiple `.tbc`/JSON files or a `.tbclib` backup, validates
+or entire-library backups. On desktop, both export actions confirm success after the save dialog
+and file write complete. The browser download path cannot observe completion. Import accepts
+multiple `.tbc`/JSON files or a `.tbclib` backup, validates
 each character through the store's compatibility path, and retains valid entries when others fail.
   The store resolves ID and name collisions against the latest library state. Saved
 source-qualified choices and portraits remain in each record even if the current catalog lacks their
@@ -221,13 +229,21 @@ one original as a `.tbc` file or all affected originals in one `.tbclib` file, p
 fields. Recovery downloads can exceed the 250 MB limit for ordinary library exports and imports.
 Extract each record from the `characters` array of an oversized backup into its own `.tbc` file
 for individual recovery. An export failure leaves the originals available.
-See [Character format](contracts/character-format.md)
-for the full current admission and breaking-change checklist. Catalog cache schema is independent.
+The [strict schema](../src/types/characterSchema.ts) checks selections, materialized rows and grant owners in both directions before catalog data loads. An unavailable choice may retain intent without a materialized row or tag. If either is present, both must agree. Current catalog eligibility is checked separately.
+
+A breaking change updates the version, schema, empty character, fixtures and recovery checks together. Keep rejected originals exportable until acknowledged. Catalog cache schema is independent.
 
 **Release requirement:** no pre-v1 characters need preservation or a migration project. Existing
 generic recovery stays. Before v1.0 ships, freeze its format; later 1.x updates must preserve released
 v1.x characters through compatible changes or an explicitly designed and reviewed upgrade path.
 That promise is a release requirement; the current strict-version gate does not implement it yet.
+
+The character format version is independent of the 2014 or 2024 game ruleset. Creator selects the
+ruleset before saving a character. A saved character can change its enabled sources within that
+edition. Catalog refresh and rollback preserve exact saved background and equipment references.
+Select the same exact background again to apply refreshed fixed proficiencies and origin feats
+while keeping its package selections and independent grants. Current background ability rules
+determine which saved selections contribute bonuses.
 
 ## Checklist for new state
 

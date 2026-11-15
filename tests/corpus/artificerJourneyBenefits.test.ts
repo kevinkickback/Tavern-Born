@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
+import { PDFDocument, PDFTextField } from '@cantoo/pdf-lib'
 import { expect, test } from 'vitest'
 import { getAlchemistChemicalDefenses } from '@/lib/5etools/artificerAlchemistSpells'
 import {
@@ -10,10 +11,13 @@ import {
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
 import { getProgressiveChoiceGainCount } from '@/lib/5etools/classChoiceNormalization'
+import { getClassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { parseItems, parseOptionalFeatures } from '@/lib/5etools/parsers/basic'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import { getEarnedSubclassSpellGrants } from '@/lib/5etools/subclassSpells'
 import { prepareToolProficiencySources } from '@/lib/5etools/toolProficiencySource'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getEffectiveClassChoiceSelections } from '@/lib/character/classChoiceActivity'
 import {
   buildClassChoiceFeatureCatalogs,
   createClassChoiceCatalogs,
@@ -21,14 +25,25 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { getClassProficiencyWorkflow } from '@/lib/character/classProficiencyWorkflow'
-import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
+import {
+  applyClassChoiceSelectionWithGrantsCommand,
+  reconcileClassChoiceSelections,
+} from '@/lib/character/commands/classChoiceCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/historicalProficiencyCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getEpicBoonSlots } from '@/lib/character/epicBoonSlots'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
+import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
+import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Class5e, ClassFeature, Item5e, OptionalFeatureLike } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { generateTestCharacterSheet } from '../fixtures/pdfTemplates'
+import {
+  getStandardJourneyCatalog,
+  loadStandardJourneyData,
+} from '../fixtures/standardJourneyCatalog'
 
 const file = 'data/class/class-artificer.json'
 const read = (path: string) => JSON.parse(readFileSync(path, 'utf8'))
@@ -536,6 +551,247 @@ test.skipIf(!existsSync(file))(
       { name: 'Amulet of Health', slotLevel: 14 },
     ])
   },
+)
+
+test.skipIf(!existsSync(file))(
+  'revised Armorer earns and retains a distinct Armor plan through source loss and rollback',
+  async () => {
+    const { catalogs, primary, raw, paths } = getStandardJourneyCatalog(
+      await loadStandardJourneyData(),
+      '2024',
+      ['EFA', 'XDMG'],
+    )
+    const { cls, subclass } = paths.find(
+      ({ cls, subclass }) =>
+        cls.name === 'Artificer' && cls.source === 'EFA' && subclass.name === 'Armorer',
+    )!
+    const choices = getClassChoiceCandidates(cls, subclass, catalogs)
+    const plan = choices.find((row) => row.label === 'Replicate Magic Item')!
+    const armor = choices.find((row) => row.label === 'Armor Replication')!
+    expect(armor.level).toBe(9)
+    const authority = { classes: primary.classChoiceClasses, catalogs }
+    const reference = (name: string, source = 'XDMG') => ({
+      entityType: 'item' as const,
+      name,
+      source,
+    })
+    let character = actor('EFA', 9)
+    const owner = character.classProgression[0]
+    Object.assign(owner, { subclass: 'Armorer', subclassSource: 'EFA' })
+    character = applyCharacterCommandResult(
+      character,
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        plan,
+        [reference('+1 Shield')],
+        authority,
+        undefined,
+        '',
+        2,
+      ),
+    )
+    const candidates = (current = catalogs, level = character.classProgression[0].levels) =>
+      resolveClassChoiceOptions(armor, current, [], level, character)
+        .filter(({ availability }) => availability === 'eligible')
+        .map(({ reference }) => reference.name)
+    expect(candidates(catalogs, 8)).toEqual([])
+    expect(candidates()).toEqual(
+      expect.arrayContaining(['+1 Armor', 'Sentinel Shield', 'Repulsion Shield']),
+    )
+    expect(candidates()).not.toContain('+1 Shield')
+    expect(candidates()).not.toContain('Bag of Holding')
+    expect(candidates(catalogs, 20)).not.toContain('Elven Chain')
+    for (const invalid of [
+      reference('+1 Shield'),
+      reference('Bag of Holding'),
+      reference('Sentinel Shield', 'DMG'),
+    ])
+      expect(() =>
+        applyClassChoiceSelectionWithGrantsCommand(
+          character,
+          character.provenance,
+          armor,
+          [invalid],
+          authority,
+        ),
+      ).toThrow(/distinct Armor plan/)
+
+    const select = (name: string) =>
+      applyCharacterCommandResult(
+        character,
+        applyClassChoiceSelectionWithGrantsCommand(
+          character,
+          character.provenance,
+          armor,
+          [reference(name)],
+          authority,
+        ),
+      )
+    character = select('Sentinel Shield')
+    const prior = character.classChoiceSelections!.find((row) => row.choiceId === plan.id)!
+    expect(() =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        character,
+        character.provenance,
+        plan,
+        [reference('Sentinel Shield')],
+        authority,
+        undefined,
+        getOptionalPoolSelectionHandle(prior),
+        6,
+      ),
+    ).toThrow()
+    character = select('+1 Armor')
+    character = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(character)))
+    const saved = character.classChoiceSelections!.find((row) => row.choiceId === armor.id)!
+    expect(saved).toMatchObject({
+      subclassName: 'Armorer',
+      subclassSource: 'EFA',
+      classLevel: 9,
+      selected: [{ name: '+1 Armor', source: 'XDMG', slotLevel: 9 }],
+    })
+    const missingItem = {
+      ...catalogs,
+      items: catalogs.items.filter((row) => row.name !== '+1 Armor' || row.source !== 'XDMG'),
+    }
+    expect(
+      resolveClassChoiceOptions(armor, missingItem, saved.selected, 9, character),
+    ).toContainEqual(
+      expect.objectContaining({
+        reference: expect.objectContaining({ name: '+1 Armor' }),
+        availability: 'retained',
+      }),
+    )
+    expect(candidates()).toContain('+1 Armor')
+    const noGrant = {
+      ...cls,
+      subclasses: cls.subclasses?.map((row) =>
+        row === subclass
+          ? {
+              ...row,
+              subclassFeatureRefs: row.subclassFeatureRefs?.filter(
+                (ref) => ref.name !== 'Improved Armorer',
+              ),
+            }
+          : row,
+      ),
+    }
+    const missingRules = {
+      ...catalogs,
+      classes: catalogs.classes!.map((row) => (row === cls ? noGrant : row)),
+    }
+    const calculation = createCharacterCalculationContext(
+      character,
+      {
+        ...primary,
+        classChoiceClasses: missingRules.classes,
+        classChoiceFeatureCatalogs: missingRules,
+      },
+      raw,
+    )
+    expect(validateClassChoices(character, calculation, missingRules)).toContainEqual(
+      expect.objectContaining({ title: 'Restore Armor Replication', severity: 'blocking' }),
+    )
+    expect(character.classChoiceSelections).toContainEqual(saved)
+    const validCalculation = createCharacterCalculationContext(character, primary, raw)
+    expect(
+      validateClassChoices(character, validCalculation, catalogs).map(({ title }) => title),
+    ).not.toContain('Restore Armor Replication')
+    const planCandidates = new Map(catalogs.classFeatureCandidates)
+    planCandidates.delete(
+      getClassFeatureIdentity({
+        name: plan.label,
+        source: 'EFA',
+        className: 'Artificer',
+        classSource: 'EFA',
+        level: 2,
+      })!,
+    )
+    const planRulesMissing = {
+      ...catalogs,
+      classFeatures: catalogs.classFeatures.filter(
+        (row) => row.name !== plan.label || row.source !== 'EFA',
+      ),
+      classFeatureCandidates: planCandidates,
+    }
+    expect(candidates(planRulesMissing)).toEqual([])
+    expect(validateClassChoices(character, validCalculation, planRulesMissing)).toContainEqual(
+      expect.objectContaining({ title: 'Restore Armor Replication', severity: 'blocking' }),
+    )
+    for (const records of [
+      [{ ...saved, subclassSource: 'TCE' }],
+      [{ ...saved, classLevel: 8 }],
+      [saved, saved],
+    ]) {
+      const altered = characterPersistenceSchema.parse(
+        JSON.parse(JSON.stringify({ ...character, classChoiceSelections: [prior, ...records] })),
+      )
+      const active = getEffectiveClassChoiceSelections(
+        altered,
+        primary.classChoiceClasses,
+        catalogs,
+      )
+      expect(active.filter((row) => row.choiceId === armor.id && !row.inactive)).toEqual([])
+      const context = createCharacterCalculationContext(altered, primary, raw)
+      expect(validateClassChoices(altered, context, catalogs)).toContainEqual(
+        expect.objectContaining({ title: 'Finish Armor Replication', severity: 'blocking' }),
+      )
+      expect(
+        getClassStaticFeatureSummaries(altered, catalogs, false)
+          .map((row) => row.text)
+          .join(' '),
+      ).not.toContain('Known Armor plan:')
+    }
+    const staleHint = {
+      ...character,
+      classChoiceSelections: [prior, { ...saved, inactive: true }],
+    }
+    expect(
+      getEffectiveClassChoiceSelections(staleHint, primary.classChoiceClasses, catalogs).find(
+        (row) => row.choiceId === armor.id,
+      )?.inactive,
+    ).toBeUndefined()
+    expect(
+      getClassStaticFeatureSummaries(staleHint, catalogs, false)
+        .map((row) => row.text)
+        .join(' '),
+    ).toContain('Known Armor plan: +1 Armor.')
+    expect(() =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        staleHint,
+        staleHint.provenance,
+        plan,
+        [reference('+1 Armor')],
+        authority,
+        undefined,
+        getOptionalPoolSelectionHandle(prior),
+        6,
+      ),
+    ).toThrow()
+    const lowered = reconcileClassChoiceSelections(character.classChoiceSelections, [
+      { ...owner, levels: 8 },
+    ])
+    expect(lowered).toEqual([prior])
+    const changed = reconcileClassChoiceSelections(character.classChoiceSelections, [
+      { ...owner, subclass: 'Artillerist' },
+    ])
+    expect(changed).toEqual([prior])
+
+    const view = createCharacterSheetViewModel(character, raw, primary)
+    const pdf = await PDFDocument.load(
+      await generateTestCharacterSheet(view, '2024-custom', { text: { overflow: 'notes' } }),
+    )
+    const text = pdf
+      .getForm()
+      .getFields()
+      .flatMap((field) => (field instanceof PDFTextField ? [field.getText() ?? ''] : []))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+    expect(text).toContain('Maximum active magic items: 4 (one reserved for Armor).')
+    expect(text).toContain('Known Armor plan: +1 Armor.')
+  },
+  30_000,
 )
 
 test.skipIf(!existsSync(file))(

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PDFDocument, PDFName, TextAlignment } from '@cantoo/pdf-lib'
+import { PDFDict, PDFDocument, PDFName, TextAlignment } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
 import {
   buildBackgroundLookup,
@@ -299,7 +299,7 @@ describe('characterSheetPdf', () => {
     expect(form.getTextField('ClassLevel').getText()).toBe('Barbarian 3, Fighter 1')
     const features = form.getTextField('Features and Traits').getText()?.replace(/\s+/gu, ' ')
     expect(features).toContain('Barbarian — Path of the Ancestral Guardian')
-    expect(features).toContain('Additional movement: swim 35 ft.')
+    expect(features).toContain('Additional movement: Swim 35 ft.')
   })
 
   test('2014 languages populate dedicated Language fields', () => {
@@ -1309,6 +1309,47 @@ describe('characterSheetPdf', () => {
     const location = widget ? findAttachedWidgetLocation(document, [widget]) : null
     expect(location?.pageIndex).toBe(1)
     expect(location?.widget).toBe(widget)
+  })
+
+  test.each([
+    { hasPageReference: true, targetPageIndex: 1 },
+    { hasPageReference: false, targetPageIndex: 0 },
+  ])('embeds a portrait without a page annotation on page index $targetPageIndex', async ({
+    hasPageReference,
+    targetPageIndex,
+  }) => {
+    const template = await PDFDocument.create()
+    template.addPage([600, 800])
+    const secondPage = template.addPage([600, 800])
+    const portrait = template.getForm().createButton('Portrait')
+    portrait.addToPage('Portrait', secondPage, { x: 20, y: 640, width: 120, height: 100 })
+    const [widget] = portrait.acroField.getWidgets()
+    secondPage.node.Annots()?.remove(0)
+    if (!hasPageReference) widget.dict.delete(PDFName.of('P'))
+    expect(findAttachedWidgetLocation(template, [widget])).toBeNull()
+
+    const image = readFileSync(join(process.cwd(), 'public/assets/images/ui/logo.png'))
+    const output = await PDFDocument.load(
+      await fillCharacterSheetPdf(
+        await template.save(),
+        { textFields: {}, checkboxFields: {} },
+        {
+          portrait: `data:image/png;base64,${image.toString('base64')}`,
+          portraitFieldName: 'Portrait',
+        },
+      ),
+    )
+
+    const imagePages = output
+      .getPages()
+      .map(
+        (page) =>
+          page.node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)?.keys().length ?? 0,
+      )
+    expect(imagePages).toEqual(targetPageIndex === 1 ? [0, 1] : [1, 0])
+    expect(
+      output.getForm().getButton('Portrait').acroField.getWidgets()[0].getRectangle().width,
+    ).toBe(0)
   })
 
   test('embeds a custom organization image into the 2014 symbol field', async () => {

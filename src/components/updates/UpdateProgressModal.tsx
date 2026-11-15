@@ -8,11 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useCharacterStore } from '@/store/characterStore'
 
 interface UpdateProgressModalProps {
   open: boolean
   version: string
+  downloaded?: boolean
   onOpenChange: (open: boolean) => void
+  onCloseAutoFocus?: () => void
 }
 
 function formatBytes(bytes: number): string {
@@ -23,28 +26,37 @@ function formatBytes(bytes: number): string {
   return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`
 }
 
-type UpdatePhase = 'downloading' | 'downloaded' | 'error' | 'cancelled'
+type DownloadPhase = 'downloading' | 'error' | 'cancelled'
 
-export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgressModalProps) {
-  const [phase, setPhase] = useState<UpdatePhase>('downloading')
+export function UpdateProgressModal({
+  open,
+  version,
+  downloaded = false,
+  onOpenChange,
+  onCloseAutoFocus,
+}: UpdateProgressModalProps) {
+  const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('downloading')
+  const phase = downloaded ? 'downloaded' : downloadPhase
   const [percentage, setPercentage] = useState(0)
   const [bytesPerSecond, setBytesPerSecond] = useState(0)
   const [total, setTotal] = useState(0)
   const [transferred, setTransferred] = useState(0)
-  const [restartCountdown, setRestartCountdown] = useState<number | null>(null)
+  const [restarting, setRestarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cancelledRef = useRef(false)
+  const restartRequested = useRef(false)
+  const draftDirty = useCharacterStore((state) => state.hasUnsavedChanges())
 
   const beginDownload = useCallback(async () => {
     const api = window.electronAPI
     if (!api) {
-      setPhase('error')
+      setDownloadPhase('error')
       setError('Updates are only available in the desktop app.')
       return
     }
 
     cancelledRef.current = false
-    setPhase('downloading')
+    setDownloadPhase('downloading')
     setPercentage(0)
     setBytesPerSecond(0)
     setTotal(0)
@@ -54,12 +66,12 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
     try {
       const result = await api.downloadUpdate()
       if (!result.success && !cancelledRef.current) {
-        setPhase('error')
+        setDownloadPhase('error')
         setError(result.error ?? 'The update download could not be started.')
       }
     } catch (downloadError) {
       if (cancelledRef.current) return
-      setPhase('error')
+      setDownloadPhase('error')
       setError(
         downloadError instanceof Error
           ? downloadError.message
@@ -71,12 +83,13 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   useEffect(() => {
     if (!open) {
       cancelledRef.current = false
-      setPhase('downloading')
+      setDownloadPhase('downloading')
       setPercentage(0)
       setBytesPerSecond(0)
       setTotal(0)
       setTransferred(0)
-      setRestartCountdown(null)
+      restartRequested.current = false
+      setRestarting(false)
       setError(null)
       return
     }
@@ -87,7 +100,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       unsubs.push(
         window.electronAPI.onDownloadProgress((data) => {
           if (cancelledRef.current) return
-          setPhase('downloading')
+          setDownloadPhase('downloading')
           setPercentage(data.percentage)
           setBytesPerSecond(data.bytesPerSecond)
           setTotal(data.total)
@@ -96,17 +109,9 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       )
 
       unsubs.push(
-        window.electronAPI.onUpdateDownloaded(() => {
-          if (cancelledRef.current) return
-          setPhase('downloaded')
-          setRestartCountdown(3)
-        }),
-      )
-
-      unsubs.push(
         window.electronAPI.onUpdateError((data) => {
           if (cancelledRef.current) return
-          setPhase('error')
+          setDownloadPhase('error')
           setError(data.message)
         }),
       )
@@ -114,33 +119,51 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       unsubs.push(
         window.electronAPI.onUpdateCancelled(() => {
           cancelledRef.current = true
-          setPhase('cancelled')
+          setDownloadPhase('cancelled')
         }),
       )
     }
 
     // Subscribe before starting the download so immediate progress/error events
     // cannot be lost between opening the dialog and mounting this effect.
-    void beginDownload()
+    if (!downloaded) void beginDownload()
 
     return () => {
       unsubs.forEach((unsub) => {
         unsub()
       })
     }
-  }, [beginDownload, open])
+  }, [beginDownload, downloaded, open])
 
-  useEffect(() => {
-    if (restartCountdown === null || restartCountdown <= 0) return
-    const timer = setTimeout(() => setRestartCountdown(restartCountdown - 1), 1000)
-    return () => clearTimeout(timer)
-  }, [restartCountdown])
-
-  useEffect(() => {
-    if (restartCountdown === 0) {
-      window.electronAPI?.installUpdate()
+  const handleRestart = useCallback(async () => {
+    const api = window.electronAPI
+    if (!api || restartRequested.current) return
+    restartRequested.current = true
+    setRestarting(true)
+    setError(null)
+    try {
+      const draft = useCharacterStore.getState()
+      if (draft.hasUnsavedChanges()) await draft.saveActiveCharacter()
+      if (useCharacterStore.getState().hasUnsavedChanges()) {
+        throw new Error('Your character still has unsaved changes. Save again before restarting.')
+      }
+      await api.installUpdate()
+    } catch (restartError) {
+      restartRequested.current = false
+      setRestarting(false)
+      setError(restartError instanceof Error ? restartError.message : 'The app could not restart.')
     }
-  }, [restartCountdown])
+  }, [])
+
+  useEffect(() => {
+    const protectDraft = (event: BeforeUnloadEvent) => {
+      if (restartRequested.current && useCharacterStore.getState().hasUnsavedChanges()) {
+        event.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', protectDraft)
+    return () => window.removeEventListener('beforeunload', protectDraft)
+  }, [])
 
   const handleCancel = useCallback(() => {
     window.electronAPI?.cancelUpdate()
@@ -155,11 +178,22 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   }, [onOpenChange])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!restartRequested.current) onOpenChange(nextOpen)
+      }}
+    >
       <DialogContent
         className="w-full max-w-xs sm:max-w-sm p-3 sm:p-6"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        closeDisabled={restarting}
+        onCloseAutoFocus={onCloseAutoFocus}
+        onPointerDownOutside={(event) => {
+          if (!downloaded || restartRequested.current) event.preventDefault()
+        }}
+        onEscapeKeyDown={(event) => {
+          if (!downloaded || restartRequested.current) event.preventDefault()
+        }}
       >
         <DialogHeader>
           <DialogTitle>
@@ -170,7 +204,10 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
           </DialogTitle>
           <DialogDescription>
             {phase === 'downloading' && 'Please wait while the update is being downloaded.'}
-            {phase === 'downloaded' && `Restarting in ${restartCountdown}s...`}
+            {phase === 'downloaded' &&
+              (draftDirty
+                ? 'Save your character and restart to install the update.'
+                : 'Restart Tavern Born to install the update.')}
             {phase === 'error' && (error ?? 'An error occurred during download.')}
             {phase === 'cancelled' && 'The download was cancelled.'}
           </DialogDescription>
@@ -201,9 +238,21 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
         )}
 
         {phase === 'downloaded' && (
-          <div className="flex items-center justify-center py-4">
-            <SpinnerGap size={24} className="animate-spin text-primary" />
-            <span className="ml-2 text-sm text-muted-foreground">Installing update...</span>
+          <div className="space-y-3">
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" disabled={restarting} onClick={handleDismiss}>
+                Later
+              </Button>
+              <Button size="sm" disabled={restarting} onClick={() => void handleRestart()}>
+                {restarting && <SpinnerGap size={14} className="animate-spin" />}
+                {restarting ? 'Preparing to restart…' : draftDirty ? 'Save and restart' : 'Restart'}
+              </Button>
+            </div>
           </div>
         )}
 

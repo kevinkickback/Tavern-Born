@@ -1,14 +1,17 @@
 import { Backpack } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
+import { GameContent } from '@/components/editor/GameContent'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import {
   type BackgroundStartingPackage,
   formatEquipmentOptionEntries,
   getEquipmentBlockSelection,
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
+import { resolveRecursiveEntity } from '@/lib/renderer/recursiveTooltip'
 import type { StartingEquipmentItemChoices, StartingItemReference } from '@/types/character'
 
 interface StartingEquipmentBlocksProps {
@@ -32,6 +35,7 @@ export function StartingEquipmentBlocks({
   needsApplication,
   onApply,
 }: StartingEquipmentBlocksProps) {
+  const recursiveLookup = useRecursiveLookup()
   const contents = (block: number, option: string, pkg: BackgroundStartingPackage) => {
     const currency = formatEquipmentOptionEntries({ ...pkg, items: [], genericChoices: [] })
     return (
@@ -52,18 +56,34 @@ export function StartingEquipmentBlocks({
         ))}
         {(pkg.items.length > 0 || currency.length > 0) && (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground">
-            {pkg.items.map((item) => (
-              <li
-                key={JSON.stringify([item.name, item.source ?? null])}
-                className="inline-flex max-w-full flex-wrap items-baseline gap-x-1"
-              >
-                <span className="font-medium break-words">
-                  {item.quantity > 1 ? `${item.quantity}× ` : ''}
-                  {item.name}
-                </span>
-                {item.source && <span className="text-muted-foreground">({item.source})</span>}
-              </li>
-            ))}
+            {pkg.items.map((item) => {
+              const itemLabel = `${item.quantity > 1 ? `${item.quantity}× ` : ''}${item.name}`
+              const hasPreview =
+                item.source &&
+                !/[|{}<>]/.test(item.name + item.source) &&
+                resolveRecursiveEntity(recursiveLookup.items, item.name, item.source)
+              return (
+                <li
+                  key={JSON.stringify([item.name, item.source ?? null])}
+                  className="inline-flex max-w-full flex-wrap items-baseline gap-x-1"
+                >
+                  <div className="min-w-0 font-medium break-words">
+                    {hasPreview ? (
+                      <GameContent
+                        entry={`{@item ${item.name}|${item.source}|${itemLabel}}`.replace(
+                          /&/g,
+                          '&amp;',
+                        )}
+                        recursiveLookup={recursiveLookup}
+                      />
+                    ) : (
+                      itemLabel
+                    )}
+                  </div>
+                  {item.source && <span className="text-muted-foreground">({item.source})</span>}
+                </li>
+              )
+            })}
             {currency.map((entry) => (
               <li key={`currency:${entry}`} className="font-medium">
                 {entry}

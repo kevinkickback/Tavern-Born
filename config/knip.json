@@ -5,6 +5,7 @@
     "electron/catalogWorker.ts!",
     "electron/preload.ts!",
     "public/theme-init.js!",
+    "src/styles/accent-colors.css!",
     "scripts/**/*.{js,mjs,ts}",
     "tests/**/*.{test,spec}.{ts,tsx}",
     "config/vite.e2e.ts"

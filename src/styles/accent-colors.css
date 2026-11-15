@@ -1,0 +1,28 @@
+:root,
+[data-accent="blue"] {
+  --tb-accent-base: #617cc5;
+}
+
+[data-accent="rose"] {
+  --tb-accent-base: #b83f4b;
+}
+
+[data-accent="radiant"] {
+  --tb-accent-base: #dbb65c;
+}
+
+[data-accent="green"] {
+  --tb-accent-base: #4f9269;
+}
+
+[data-accent="violet"] {
+  --tb-accent-base: #9564b8;
+}
+
+[data-accent="chroma"] {
+  --tb-accent-base: #292d2d;
+}
+
+[data-accent="chroma"]:is([data-appearance="dark"], [data-appearance="dark"] *) {
+  --tb-accent-base: #d8e8e5;
+}

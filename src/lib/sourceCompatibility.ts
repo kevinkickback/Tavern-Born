@@ -106,8 +106,11 @@ function isRevisedEntity(value: unknown): value is { source: string } {
     edition?: unknown
     srd52?: unknown
     basicRules2024?: unknown
+    magicVariantGenerated?: unknown
   }
   return (
+    // A generated item's base edition describes the concrete variant, not its sourcebook.
+    !entity.magicVariantGenerated &&
     typeof entity.source === 'string' &&
     (entity.edition === 'one' || entity.srd52 === true || entity.basicRules2024 === true)
   )

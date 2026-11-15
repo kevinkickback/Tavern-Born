@@ -18,12 +18,14 @@ const dataSourceFixture = vi.hoisted(() => ({
   type: 'local' as 'local' | 'bundled' | 'remote',
   hasReprints: true,
   sessionSrd: false,
+  catalogDraftDirty: false,
 }))
 
 vi.mock('@/store/gameDataStore', () => {
   const getState = () => ({
     dataSourceConfig: { type: dataSourceFixture.type },
     sessionBundledSource: dataSourceFixture.sessionSrd ? { type: 'bundled' } : null,
+    catalogDraftDirty: dataSourceFixture.catalogDraftDirty,
     gameData: {
       sources: [
         { name: "Player's Handbook", abbreviation: 'PHB', group: 'core' },
@@ -77,6 +79,9 @@ vi.mock('@/store/gameDataStore', () => {
       (selector: (state: unknown) => unknown) => selector(getState()),
       {
         getState,
+        setState: (state: { catalogDraftDirty: boolean }) => {
+          dataSourceFixture.catalogDraftDirty = state.catalogDraftDirty
+        },
         subscribe: () => () => undefined,
       },
     ),

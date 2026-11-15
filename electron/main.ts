@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, extname, isAbsolute, join, normalize, sep } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { mkdir, open, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   app,
   BrowserWindow,
@@ -10,6 +10,7 @@ import {
   type IpcMainInvokeEvent,
   ipcMain,
   Menu,
+  autoUpdater as nativeAutoUpdater,
   session,
   shell,
 } from 'electron'
@@ -22,8 +23,11 @@ import {
   resolveBundledPackRoot,
 } from './bundledResources'
 import { createCatalogService } from './catalogService'
-import { isPathWithinRoot, isTrustedRendererUrl } from './security'
+import { readLocalCatalogResource } from './localCatalogResource'
+import { isTrustedRendererUrl, rendererRootFileUrl } from './security'
 import {
+  acknowledgeInstallerHandoff,
+  assertUpdateCanInstall,
   cancelDownload,
   checkForUpdate,
   downloadUpdate,
@@ -31,7 +35,7 @@ import {
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
-  openPortableUpdatePage,
+  openUpdateDownloadPage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from './updateManager'
@@ -45,11 +49,16 @@ import {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const RENDERER_ROOT_URL = pathToFileURL(join(__dirname, '../dist') + sep).href
+const RENDERER_ROOT_URL = rendererRootFileUrl(join(__dirname, '../dist') + sep)
 
 let mainWindow: BrowserWindow | null = null
+let desktopState: 'starting' | 'ready' | 'closing' = 'starting'
+let reopenAfterClose = false
+let openingMainWindow = false
+let mainWindowReadyToShow = false
 let hasUnsavedChanges = false
 let forceClose = false
+let updateRestart: { window: BrowserWindow; cancelClose: (message: string) => void } | null = null
 let localDataRoots = new Set<string>()
 let selectingLocalDataRoot = false
 let pendingLocalDataRoot: string | null = null
@@ -61,12 +70,6 @@ let bundledManifestCache: {
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 const LOCAL_DATA_AUTH_FILE = 'trusted-data-root.json'
-const MAX_LOCAL_JSON_BYTES = 50 * 1024 * 1024
-
-// Vite's optimized dependency responses are intentionally immutable. Electron's persistent
-// HTTP cache can otherwise retain one of those responses after Vite regenerates its shared
-// chunks, leaving lazy routes pointed at an obsolete chunk until the cache is cleared manually.
-if (isDev) app.commandLine.appendSwitch('disable-http-cache')
 
 type TrustedIpcEvent = IpcMainEvent | IpcMainInvokeEvent
 
@@ -89,24 +92,6 @@ function checkLocalRoot(root: unknown): asserts root is string {
   if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
     throw new Error('Select the local data directory first.')
   }
-}
-
-async function readLocalJsonText(filePath: unknown, root: unknown): Promise<string> {
-  if (typeof filePath !== 'string' || !isAbsolute(filePath))
-    throw new Error('Path must be absolute')
-  if (extname(filePath).toLowerCase() !== '.json') throw new Error('Only JSON files may be read')
-  checkLocalRoot(root)
-  if (!isPathWithinRoot(root, normalize(filePath)))
-    throw new Error('Access denied: path is outside the configured data directory.')
-  const canonicalTarget = normalize(await realpath(filePath))
-  if (!isPathWithinRoot(root, canonicalTarget))
-    throw new Error('Access denied: path is outside the configured data directory.')
-
-  const fileStats = await stat(canonicalTarget)
-  if (!fileStats.isFile()) throw new Error('Path does not reference a file')
-  if (fileStats.size > MAX_LOCAL_JSON_BYTES)
-    throw new Error('JSON file exceeds the 50 MB safety limit')
-  return readFile(canonicalTarget, 'utf-8')
 }
 
 function getLocalDataAuthPath(): string {
@@ -181,6 +166,8 @@ function isDevToolsShortcut(input: Electron.Input): boolean {
 async function createWindow(): Promise<void> {
   const windowState = await loadWindowState()
   forceClose = false
+  hasUnsavedChanges = false
+  mainWindowReadyToShow = false
 
   mainWindow = new BrowserWindow({
     width: windowState.width,
@@ -229,6 +216,7 @@ async function createWindow(): Promise<void> {
   attachWindowStatePersistence(mainWindow)
 
   mainWindow.once('ready-to-show', () => {
+    mainWindowReadyToShow = true
     mainWindow?.show()
     if (isDev) {
       mainWindow?.webContents.openDevTools({ mode: 'detach' })
@@ -255,6 +243,11 @@ async function createWindow(): Promise<void> {
   })
 
   mainWindow.on('close', (event) => {
+    if (hasUnsavedChanges && updateRestart && updateRestart.window === mainWindow) {
+      event.preventDefault()
+      updateRestart.cancelClose('Save your character before restarting.')
+      return
+    }
     if (hasUnsavedChanges && !forceClose) {
       event.preventDefault()
       mainWindow?.webContents.send('app:confirmClose')
@@ -262,7 +255,65 @@ async function createWindow(): Promise<void> {
   })
 }
 
-app.on('ready', async () => {
+async function activateMainWindow(): Promise<void> {
+  if (updateRestart) return
+  if (desktopState === 'closing') {
+    reopenAfterClose = true
+    return
+  }
+  if (desktopState !== 'ready' || openingMainWindow) return
+  if (mainWindow) {
+    if (!mainWindowReadyToShow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    return
+  }
+
+  openingMainWindow = true
+  try {
+    await createWindow()
+  } finally {
+    openingMainWindow = false
+  }
+}
+
+async function restartToInstallUpdate(window: BrowserWindow): Promise<void> {
+  assertUpdateCanInstall()
+  if (updateRestart) return
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const contents = window.webContents
+      const cancelClose = (message: string) => {
+        window.removeListener('closed', resolve)
+        contents.removeListener('will-prevent-unload', onPrevented)
+        reject(new Error(message))
+      }
+      const onPrevented = () => cancelClose('The window kept your changes open. Try again.')
+      updateRestart = { window, cancelClose }
+      window.once('closed', resolve)
+      contents.once('will-prevent-unload', onPrevented)
+      try {
+        window.close()
+      } catch (error) {
+        cancelClose(error instanceof Error ? error.message : String(error))
+      }
+    })
+    // Keep the restart pending during Electron's synchronous window-all-closed notification.
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    await flushWindowStateWrites()
+    installUpdate(() => {
+      updateRestart = null
+      void activateMainWindow().catch(console.error)
+    })
+  } catch (error) {
+    updateRestart = null
+    if (window.isDestroyed()) void activateMainWindow().catch(console.error)
+    throw error
+  }
+}
+
+async function initializeDesktop(): Promise<void> {
   if (!isDev) {
     Menu.setApplicationMenu(null)
   }
@@ -323,9 +374,10 @@ app.on('ready', async () => {
     assertTrustedIpcSender(event)
     const ownerWindow = mainWindow
     if (!ownerWindow || event.sender !== ownerWindow.webContents) return false
+    const libraryBackup = typeof filename === 'string' && filename.endsWith('.tbclib')
     if (
       typeof filename !== 'string' ||
-      !filename.endsWith('.tbc') ||
+      (!filename.endsWith('.tbc') && !libraryBackup) ||
       /[<>:"/\\|?*]/.test(filename) ||
       Array.from(filename).some((char) => char.charCodeAt(0) < 32) ||
       typeof text !== 'string'
@@ -334,7 +386,11 @@ app.on('ready', async () => {
     }
     const { canceled, filePath } = await dialog.showSaveDialog(ownerWindow, {
       defaultPath: join(app.getPath('downloads'), filename),
-      filters: [{ name: 'Tavern Born Character', extensions: ['tbc'] }],
+      filters: [
+        libraryBackup
+          ? { name: 'Tavern Born Library Backup', extensions: ['tbclib'] }
+          : { name: 'Tavern Born Character', extensions: ['tbc'] },
+      ],
     })
     if (canceled || !filePath) return false
 
@@ -384,9 +440,16 @@ app.on('ready', async () => {
           owner,
           join(__dirname, 'catalogWorker.js'),
           async (request) => {
-            if (request.kind === 'local') return readLocalJsonText(request.path, request.root)
+            if (request.kind === 'local') {
+              checkLocalRoot(request.root)
+              return readLocalCatalogResource(
+                request.path,
+                request.root,
+                request.observation?.probe,
+              )
+            }
             const { rootPath } = await getAllowedBundledManifest()
-            return readBundledJsonText(join(rootPath, 'data'), request.path)
+            return { text: await readBundledJsonText(join(rootPath, 'data'), request.path) }
           },
           (root) => {
             checkLocalRoot(root)
@@ -423,8 +486,8 @@ app.on('ready', async () => {
     owner.once('destroyed', close)
   })
   ipcMain.on('state:setUnsavedChanges', (event, value: unknown) => {
-    if (!isTrustedIpcSender(event)) return
-    hasUnsavedChanges = !!value
+    if (!isTrustedIpcSender(event) || event.sender !== mainWindow?.webContents) return
+    if (typeof value === 'boolean') hasUnsavedChanges = value
   })
 
   ipcMain.on('app:forceClose', (event) => {
@@ -473,10 +536,10 @@ app.on('ready', async () => {
     }
   })
 
-  ipcMain.handle('update:open-portable-page', async (event) => {
+  ipcMain.handle('update:open-download-page', async (event) => {
     assertTrustedIpcSender(event)
     try {
-      await openPortableUpdatePage()
+      await openUpdateDownloadPage()
       return { success: true, data: null, error: null }
     } catch (err) {
       return { success: false, data: null, error: (err as Error).message }
@@ -491,7 +554,10 @@ app.on('ready', async () => {
 
   ipcMain.handle('update:install', (event) => {
     assertTrustedIpcSender(event)
-    installUpdate()
+    const window = mainWindow
+    if (!window || event.sender !== window.webContents) throw new Error('Update request rejected.')
+    if (hasUnsavedChanges) throw new Error('Save your character before restarting.')
+    return restartToInstallUpdate(window)
   })
 
   ipcMain.handle('update:status', (event) => {
@@ -518,22 +584,11 @@ app.on('ready', async () => {
     return { version, changelog }
   })
 
-  await createWindow()
-})
+  desktopState = 'ready'
+  await activateMainWindow()
+}
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    void createWindow()
-  }
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    void flushWindowStateWrites().finally(() => app.quit())
-  }
-})
-
-app.on('web-contents-created', (_event, contents) => {
+function configureWebContents(contents: Electron.WebContents): void {
   if (!isDev) {
     contents.on('before-input-event', (event, input) => {
       if (isDevToolsShortcut(input)) {
@@ -555,4 +610,38 @@ app.on('web-contents-created', (_event, contents) => {
   })
 
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
-})
+}
+
+if (app.requestSingleInstanceLock()) {
+  // Vite's immutable optimized chunks can outlive their renderer imports in Electron's disk cache.
+  if (isDev) app.commandLine.appendSwitch('disable-http-cache')
+
+  app.on('ready', initializeDesktop)
+  app.on('second-instance', () => {
+    void activateMainWindow()
+  })
+  app.on('activate', () => {
+    void activateMainWindow()
+  })
+  nativeAutoUpdater.on('before-quit-for-update', () => {
+    if (!acknowledgeInstallerHandoff()) return
+    // The pinned updater emits this immediately before its own app.quit().
+    app.once('before-quit', (event) => event.preventDefault())
+  })
+  app.on('window-all-closed', async () => {
+    if (process.platform === 'darwin' || updateRestart) return
+
+    desktopState = 'closing'
+    await flushWindowStateWrites()
+    if (reopenAfterClose) {
+      reopenAfterClose = false
+      desktopState = 'ready'
+      await activateMainWindow()
+    } else {
+      app.quit()
+    }
+  })
+  app.on('web-contents-created', (_event, contents) => configureWebContents(contents))
+} else {
+  app.exit(0)
+}

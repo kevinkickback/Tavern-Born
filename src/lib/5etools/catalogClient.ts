@@ -1,13 +1,20 @@
-import type { BundledDataSourceConfig, GameData, GameDataSourceStack } from '@/types/5etools'
+import type {
+  BundledDataSourceConfig,
+  CatalogResourceProof,
+  GameData,
+  GameDataSourceStack,
+} from '@/types/5etools'
 import type { PreparedCatalog } from './catalogCandidate'
 import { type CatalogComparisonBasis, compareCatalog } from './catalogComparison'
 import type {
   CatalogCandidate,
   CatalogCommand,
+  CatalogReply,
   CatalogSummary,
   CatalogWorkerMessage,
 } from './catalogProtocol'
 import type { DataLoaderOptions } from './dataLoader'
+import { fetchObservedResource } from './resourceReader'
 
 type Progress = DataLoaderOptions['onProgress']
 interface PendingRequest {
@@ -48,10 +55,20 @@ async function handleMessage(message: CatalogWorkerMessage) {
       request.reads.set(message.readId, controller)
       try {
         // Chromium still owns CORS, CSP, redirects and session policy. Parse only in the worker.
-        const response = await fetch(message.request.url, { signal: controller.signal })
-        const reply = response.ok
-          ? { bytes: await response.arrayBuffer() }
-          : { error: `HTTP ${response.status}`, status: response.status }
+        const { url, observation } = message.request
+        const result = observation
+          ? await fetchObservedResource(url, observation, controller.signal)
+          : { response: await fetch(url, { signal: controller.signal }), stamp: undefined }
+        let reply: CatalogReply
+        if ('unchanged' in result) reply = { unchanged: true }
+        else {
+          const { response, stamp } = result
+          if (response.ok) reply = { bytes: await response.arrayBuffer(), stamp }
+          else {
+            void response.body?.cancel().catch(() => {})
+            reply = { error: `HTTP ${response.status}`, status: response.status }
+          }
+        }
         if (!controller.signal.aborted)
           window.electronAPI.sendCatalogMessage({
             kind: 'read-result',
@@ -115,25 +132,43 @@ async function run<T>(
   }
 }
 
+export function prepareCatalogCandidate(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  progress?: Progress,
+): Promise<CatalogCandidate>
+export function prepareCatalogCandidate(
+  config: PreparedCatalog['config'],
+  base: GameDataSourceStack['base'] | undefined,
+  signal: AbortSignal,
+  progress: Progress | undefined,
+  verifiedRevision: string | CatalogResourceProof | undefined,
+): Promise<CatalogCandidate | null>
 export async function prepareCatalogCandidate(
   config: PreparedCatalog['config'],
   base: GameDataSourceStack['base'] | undefined,
   signal: AbortSignal,
   progress?: Progress,
-): Promise<CatalogCandidate> {
+  verifiedRevision?: string | CatalogResourceProof,
+): Promise<CatalogCandidate | null> {
   if (!hasCatalogWorker()) {
     if (import.meta.env.DESKTOP_CATALOG_WORKER) throw new Error('Catalog utility is unavailable.')
-    const { prepareCatalog } = await import('./catalogCandidate')
-    return prepareCatalog(config, base, signal, progress)
+    const catalog = await import('./catalogCandidate')
+    return verifiedRevision
+      ? catalog.checkCatalogRevision(config, base, verifiedRevision, signal, progress)
+      : catalog.prepareCatalog(config, base, signal, progress)
   }
   const workerId = crypto.randomUUID()
-  const summary = await run<CatalogSummary>(
-    { kind: 'prepare', config, base },
+  const summary = await run<CatalogSummary | null>(
+    { kind: 'prepare', config, base, verifiedRevision },
     signal,
     progress,
     workerId,
   )
-  return { ...summary, workerId }
+  if (summary) return { ...summary, workerId }
+  window.electronAPI.sendCatalogMessage({ kind: 'drop', id: workerId })
+  return null
 }
 
 export function compareCatalogCandidate(

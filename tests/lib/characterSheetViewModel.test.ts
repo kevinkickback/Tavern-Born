@@ -266,15 +266,15 @@ describe('createCharacterSheetViewModel', () => {
     const map2014 = mapCharacterSheet2014(viewModel)
     const map2024 = mapCharacterSheet2024(viewModel)
 
-    expect(viewModel.movementSummary).toBe('walk 25 ft., swim 30 ft., fly 40 ft. (hover)')
+    expect(viewModel.movementSummary).toBe('Walk 25 ft., Swim 30 ft., Fly 40 ft. (hover)')
     expect(map2014.textFields.Speed).toBe('25 ft')
     expect(map2014.textFields['Speed encumbered']).toBe('15 ft')
     expect(map2014.textFields['Racial Traits']).toContain(
-      'Additional movement: swim 30 ft., fly 40 ft. (hover)',
+      'Additional movement: Swim 30 ft., Fly 40 ft. (hover)',
     )
     expect(map2024.textFields.Text_17).toBe('25 ft')
     expect(map2024.textFields.Text_59).toContain(
-      'Additional movement: swim 30 ft., fly 40 ft. (hover)',
+      'Additional movement: Swim 30 ft., Fly 40 ft. (hover)',
     )
   })
 

@@ -27,9 +27,141 @@ const CHARACTER_ROUTES = [
   '/character-sheet/2024/custom',
 ] as const
 
+const accentSwatches = [
+  ['Infernal', 'rose', '#b83f4b'],
+  ['Radiant', 'radiant', '#dbb65c'],
+  ['Grove', 'green', '#4f9269'],
+  ['Arcane', 'blue', '#617cc5'],
+  ['Eldritch', 'violet', '#9564b8'],
+  ['Chroma', 'chroma', '#d8e8e5'],
+] as const
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-route-guard-seed')
+})
+
+test('Appearance aligns theme and accent controls when the workspace has room', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/#/settings?section=appearance')
+  const panel = page.getByRole('region', { name: 'Appearance', exact: true })
+  const theme = panel.getByText('Theme Mode', { exact: true })
+  const accent = panel.getByText('Accent Color', { exact: true })
+  await expect(accent).toBeVisible()
+  expect((await accent.boundingBox())!.y).toBeCloseTo((await theme.boundingBox())!.y)
+  const first = panel.getByText('Infernal', { exact: true })
+  const last = panel.getByText('Chroma', { exact: true })
+  expect((await last.boundingBox())!.y).toBeCloseTo((await first.boundingBox())!.y)
+
+  await page.setViewportSize({ width: 720, height: 720 })
+  expect((await accent.boundingBox())!.y).toBeGreaterThan((await theme.boundingBox())!.y)
+  expect((await last.boundingBox())!.y).toBeGreaterThan((await first.boundingBox())!.y)
+})
+
+test('each appearance accent uses its exact swatch and readable light and dark shades', async ({
+  page,
+}) => {
+  await page.evaluate(async () => {
+    const path = '/src/store/appPreferencesStore.ts'
+    const { useAppPreferencesStore } = await import(path)
+    const storage = useAppPreferencesStore.persist.getOptions().storage
+    const existing = await storage.getItem('app-preferences-storage')
+    await storage.setItem('app-preferences-storage', {
+      state: { ...existing?.state, themeAccent: 'rose' },
+      version: 0,
+    })
+    localStorage.setItem('tb.theme.accent', 'rose')
+  })
+  await page.goto('/#/settings?section=appearance')
+  await page.reload()
+  const panel = page.getByRole('region', { name: 'Appearance', exact: true })
+  const root = page.locator('#root')
+  await expect(panel.getByRole('radio', { name: 'Infernal', exact: true })).toBeChecked()
+
+  for (const mode of ['Light', 'Dark'] as const) {
+    await panel.getByText(mode, { exact: true }).click()
+    await expect(root).toHaveAttribute('data-appearance', mode.toLowerCase())
+    for (const [label, id, darkHex] of accentSwatches) {
+      const hex = id === 'chroma' && mode === 'Light' ? '#292d2d' : darkHex
+      const radio = panel.getByRole('radio', { name: label, exact: true })
+      const swatch = panel.locator(`label [data-accent="${id}"]`)
+      const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16))
+      await expect(swatch).toHaveCSS('background-color', `rgb(${channels.join(', ')})`)
+      await panel.getByText(label, { exact: true }).click()
+      await expect(radio).toBeChecked()
+      await expect(root).toHaveAttribute('data-accent', id)
+
+      const colors = await page.evaluate(() => {
+        const style = getComputedStyle(document.documentElement)
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1
+        const context = canvas.getContext('2d')!
+        const readColor = (value: string, background?: string) => {
+          if (!CSS.supports('color', value)) throw new Error(`Invalid color ${value}`)
+          context.clearRect(0, 0, 1, 1)
+          if (background) {
+            context.fillStyle = background
+            context.fillRect(0, 0, 1, 1)
+          }
+          context.fillStyle = value
+          context.fillRect(0, 0, 1, 1)
+          return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3)
+        }
+        const read = (name: string) => readColor(style.getPropertyValue(name).trim())
+        const preview = document.createElement('span')
+        preview.dataset.rulesPreviewActive = 'true'
+        document.body.append(preview)
+        const previewStyle = getComputedStyle(preview)
+        const result = {
+          base: read('--color-accent-9'),
+          primary: read('--primary'),
+          onPrimary: read('--primary-foreground'),
+          sidebar: read('--app-shell'),
+          surface: read('--surface-raised'),
+          ring: read('--ring'),
+          previewText: readColor(previewStyle.color),
+          previewSurface: readColor(
+            previewStyle.backgroundColor,
+            style.getPropertyValue('--surface-raised'),
+          ),
+        }
+        preview.remove()
+        return result
+      })
+      const luminance = ([r, g, b]: number[]) => {
+        const linear = (channel: number) => {
+          const s = channel / 255
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+      }
+      const contrast = (a: number[], b: number[]) => {
+        const [first, second] = [luminance(a), luminance(b)]
+        return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
+      }
+      expect(colors.base).toEqual(channels)
+      expect(contrast(colors.primary, colors.onPrimary)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.primary, colors.sidebar)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.primary, colors.surface)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(colors.ring, colors.sidebar)).toBeGreaterThanOrEqual(3)
+      expect(contrast(colors.previewText, colors.previewSurface)).toBeGreaterThanOrEqual(4.5)
+    }
+  }
+
+  await page.route('**/src/main.tsx', (route) => route.abort())
+  await page.reload()
+  await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS(
+    'background-color',
+    'rgb(216, 232, 229)',
+  )
+  await page.evaluate(() => localStorage.setItem('tb.theme.appearance', 'light'))
+  await page.reload()
+  await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS('background-color', 'rgb(41, 45, 45)')
+  await page.unroute('**/src/main.tsx')
+  await page.reload()
+  await expect(panel.getByRole('radio', { name: 'Chroma', exact: true })).toBeChecked()
 })
 
 test('Compendium source search stays above the app footer with a scrollable list', async ({
@@ -103,16 +235,34 @@ test('public settings and compendium routes remain available without a character
   await test.step('settings', async () => {
     await page.goto('/#/settings')
     await expect(page).toHaveURL(/\/#\/settings$/)
-    await expect(page.getByRole('tablist', { name: 'Settings category' })).toBeVisible()
+    const sidebar = page.getByRole('complementary', { name: 'Settings navigation' })
+    await expect(sidebar.getByRole('link')).toHaveText([
+      'General',
+      'Appearance',
+      'Game Data',
+      'About',
+    ])
+    await expect(sidebar.getByRole('link', { name: 'General' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('tablist', { name: 'Settings category' })).toHaveCount(0)
 
-    await page.getByRole('tab', { name: 'Appearance' }).click()
+    const appearance = sidebar.getByRole('link', { name: 'Appearance' })
+    await appearance.click()
     await expect(page).toHaveURL(/\/#\/settings\?section=appearance$/)
+    await expect(appearance).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('radio', { name: 'Dark' })).toBeAttached()
     await expect(page.getByRole('radio', { name: 'Arcane' })).toBeAttached()
 
     await page.getByText('Light', { exact: true }).click()
     await expect(page.getByRole('radio', { name: 'Light' })).toBeChecked()
     await page.getByText('Eldritch', { exact: true }).click()
+    await expect(page.getByRole('radio', { name: 'Eldritch' })).toBeChecked()
+    await sidebar.getByRole('link', { name: 'Game Data', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Game Data', exact: true })).toBeVisible()
+    await page.goBack()
+    await expect(appearance).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('radio', { name: 'Eldritch' })).toBeChecked()
     expect(pageErrors).toEqual([])
   })
@@ -126,9 +276,40 @@ test('public settings and compendium routes remain available without a character
 
   await test.step('character-sheet attribution', async () => {
     await page.goto('/#/settings?section=about#character-sheet-pdf-2014-custom')
-    await expect(page.getByRole('tab', { name: 'About' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('link', { name: 'About', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     await expect(
       page.getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' }),
     ).toBeVisible()
+  })
+
+  await test.step('settings bookmarks accepted by the router keep their sidebar context', async () => {
+    await page.goto('/#/settings/?section=data#game-data-update')
+    const sidebar = page.getByRole('complementary', { name: 'Settings navigation' })
+    await expect(sidebar.getByRole('link', { name: 'Game Data', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('region', { name: 'Game Data', exact: true })).toBeVisible()
+
+    await page.goto('/#/Settings?section=about#character-sheet-pdf-2014-custom')
+    await expect(sidebar.getByRole('link', { name: 'About', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(
+      page.getByRole('heading', { name: 'Settings', level: 1, exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: 'MorePurpleMoreBetter (Joost Wijnen)' }),
+    ).toBeVisible()
+    await page.goto('/#/sett%69ngs?section=appearance')
+    await expect(sidebar.getByRole('link', { name: 'Appearance' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.getByRole('radio', { name: 'Dark', exact: true })).toBeAttached()
   })
 })
