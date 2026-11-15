@@ -33,7 +33,9 @@ let startupCheckTimeout: ReturnType<typeof setTimeout> | null = null
 let devSimInterval: ReturnType<typeof setInterval> | null = null
 let useReleaseDownloadPage = false
 let downloadedUpdate: { status: 'downloaded'; version: string; error?: string } | null = null
-let onInstallFailure: ((message: string) => void) | null = null
+let installHandoff: { recover: () => void; failed: boolean } | null = null
+let nativeChecks = 0
+let nativeDownloads = 0
 
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
@@ -137,6 +139,16 @@ function markUpdateDownloaded(version: string) {
   sendToRenderer('update-downloaded', { version })
 }
 
+function failInstallerHandoff(error: string) {
+  if (!downloadedUpdate || !installHandoff || installHandoff.failed) return
+  installHandoff.failed = true
+  downloadedUpdate = {
+    ...downloadedUpdate,
+    error: error || 'The updater could not start the installer.',
+  }
+  installHandoff.recover()
+}
+
 function setErrorStatus(message: string): UpdateStatus {
   const status: UpdateStatus = { status: 'error', error: message }
   setStatus(status)
@@ -172,7 +184,7 @@ export async function fetchChangelog(version: string): Promise<string | null> {
 export function initAutoUpdater() {
   useReleaseDownloadPage = process.platform === 'darwin' || !!process.env.PORTABLE_EXECUTABLE_DIR
   downloadedUpdate = null
-  onInstallFailure = null
+  installHandoff = null
   if (useReleaseDownloadPage) return
 
   autoUpdater.autoDownload = false
@@ -209,7 +221,7 @@ export function initAutoUpdater() {
 
   autoUpdater.on('error', (err: Error) => {
     if (downloadedUpdate) {
-      onInstallFailure?.(err.message)
+      failInstallerHandoff(err.message)
       return
     }
     // In unpacked (--dir) builds, app-update.yml is absent — treat as not-available.
@@ -318,6 +330,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     return checkForReleaseDownload()
   }
 
+  nativeChecks += 1
   try {
     setStatus({ status: 'checking' })
     const checkResult = await autoUpdater.checkForUpdates()
@@ -350,6 +363,8 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
       return setOfflineStatus()
     }
     return setErrorStatus((err as Error).message)
+  } finally {
+    nativeChecks -= 1
   }
 }
 
@@ -387,12 +402,14 @@ export async function downloadUpdate(): Promise<void> {
 
   const token = new CancellationToken()
   cancellationToken = token
+  nativeDownloads += 1
   try {
     await autoUpdater.downloadUpdate(token)
   } catch (error) {
     if (!token.cancelled) throw error
   } finally {
     if (cancellationToken === token) cancellationToken = null
+    nativeDownloads -= 1
   }
 }
 
@@ -434,28 +451,25 @@ export function assertUpdateCanInstall() {
   if (downloadedUpdate.error) {
     throw new Error('Close and reopen Tavern Born before trying the update again.')
   }
-  return downloadedUpdate
+  if (nativeChecks > 0 || nativeDownloads > 0) {
+    throw new Error('Wait for the current update request to finish, then try again.')
+  }
 }
 
-export function installUpdate(): void {
-  const ready = assertUpdateCanInstall()
-  let failure: string | undefined
-  // electron-updater reports pre-handoff failures during this synchronous call.
-  onInstallFailure = (message) => {
-    failure = message
-  }
+export function installUpdate(recover: () => void): void {
+  assertUpdateCanInstall()
+  installHandoff = { recover, failed: false }
   try {
     autoUpdater.quitAndInstall(true, true)
   } catch (error) {
-    failure = error instanceof Error ? error.message : String(error)
-  } finally {
-    onInstallFailure = null
+    failInstallerHandoff(error instanceof Error ? error.message : String(error))
   }
-  if (failure !== undefined) {
-    const message = failure || 'The updater could not start the installer.'
-    downloadedUpdate = { ...ready, error: message }
-    throw new Error(message)
-  }
+}
+
+export function acknowledgeInstallerHandoff(): boolean {
+  const failed = installHandoff?.failed ?? false
+  installHandoff = null
+  return failed
 }
 
 export function getUpdateStatus(): UpdateStatus {

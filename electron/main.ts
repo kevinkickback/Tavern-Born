@@ -10,6 +10,7 @@ import {
   type IpcMainInvokeEvent,
   ipcMain,
   Menu,
+  autoUpdater as nativeAutoUpdater,
   session,
   shell,
 } from 'electron'
@@ -25,6 +26,7 @@ import { createCatalogService } from './catalogService'
 import { readLocalCatalogResource } from './localCatalogResource'
 import { isTrustedRendererUrl, rendererRootFileUrl } from './security'
 import {
+  acknowledgeInstallerHandoff,
   assertUpdateCanInstall,
   cancelDownload,
   checkForUpdate,
@@ -300,7 +302,10 @@ async function restartToInstallUpdate(window: BrowserWindow): Promise<void> {
     // Keep the restart pending during Electron's synchronous window-all-closed notification.
     await new Promise<void>((resolve) => setImmediate(resolve))
     await flushWindowStateWrites()
-    installUpdate()
+    installUpdate(() => {
+      updateRestart = null
+      void activateMainWindow().catch(console.error)
+    })
   } catch (error) {
     updateRestart = null
     if (window.isDestroyed()) void activateMainWindow().catch(console.error)
@@ -612,6 +617,11 @@ if (app.requestSingleInstanceLock()) {
   })
   app.on('activate', () => {
     void activateMainWindow()
+  })
+  nativeAutoUpdater.on('before-quit-for-update', () => {
+    if (!acknowledgeInstallerHandoff()) return
+    // The pinned updater emits this immediately before its own app.quit().
+    app.once('before-quit', (event) => event.preventDefault())
   })
   app.on('window-all-closed', async () => {
     if (process.platform === 'darwin' || updateRestart) return

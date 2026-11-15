@@ -263,8 +263,25 @@ async function install(page, version, legacy) {
       window.addEventListener('beforeunload', (event) => event.preventDefault(), { once: true })
     })
     const ready = page.getByRole('dialog', { name: 'Update Ready' })
-    await ready.getByRole('button', { name: 'Save and restart' }).click()
-    await expect(ready.getByRole('alert')).toContainText('The window kept your changes open')
+    let dismissal = Promise.resolve()
+    let dismissalError
+    const onDialog = (dialog) => {
+      dismissal = dialog.dismiss().catch((error) => {
+        // Electron can complete the veto before Playwright answers the CDP dialog event.
+        if (dialog.type() !== 'beforeunload' || !String(error).includes('No dialog is showing')) {
+          dismissalError = error
+        }
+      })
+    }
+    page.on('dialog', onDialog)
+    try {
+      await ready.getByRole('button', { name: 'Save and restart' }).click()
+      await expect(ready.getByRole('alert')).toContainText('The window kept your changes open')
+      await dismissal
+      if (dismissalError) throw dismissalError
+    } finally {
+      page.off('dialog', onDialog)
+    }
     await expect(pending).toHaveText('Character saved')
     await ready.getByRole('button', { name: 'Restart', exact: true }).click()
   }
