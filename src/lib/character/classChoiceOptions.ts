@@ -3,6 +3,13 @@ import {
   getArmorModelConfiguration,
   resolveArmorModelOption,
 } from '@/lib/5etools/artificerArmorModels'
+import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  createArmorPlanClassifier,
+  getArmorReplication,
+  getReservedArtificerPlanKeys,
+  isArtificerReplicatePlanChoice,
+} from '@/lib/5etools/artificerArmorReplication'
 import { readArtificerInfusionPlans } from '@/lib/5etools/artificerInfusionPlans'
 import {
   BLESSED_STRIKES_ID,
@@ -968,6 +975,51 @@ export function resolveClassChoiceOptions(
   character?: Character,
   knownWarlockCantrips?: InvocationCantripsByOwner,
 ): ClassChoiceOptionView[] {
+  if (choice.id === ARMOR_REPLICATION_CHOICE_ID) {
+    const setup = getArmorReplication(
+      choice.owner,
+      { name: choice.owner.subclassName ?? '', source: choice.owner.subclassSource ?? '' },
+      catalogs,
+    )
+    const plan = setup?.plan
+    const current =
+      setup?.available &&
+      plan &&
+      classLevel >= setup.choice.level &&
+      (!character || permitsClassRuleSource(character, setup.choice.owner.source))
+    const armor = current
+      ? createArmorPlanClassifier([...catalogs.items, ...catalogs.itemsBase])
+      : undefined
+    const reserved = getReservedArtificerPlanKeys(character, plan?.id ?? '')
+    const generalCharacter = character && {
+      ...character,
+      classChoiceSelections: character.classChoiceSelections?.filter(
+        (row) => row.choiceId !== ARMOR_REPLICATION_CHOICE_ID,
+      ),
+    }
+    const options =
+      plan && armor && setup
+        ? resolveClassChoiceOptions(
+            plan,
+            catalogs,
+            [],
+            setup.choice.level,
+            generalCharacter,
+          ).filter(
+            ({ reference, availability }) =>
+              availability === 'eligible' &&
+              armor(reference.name, reference.source) &&
+              !reserved.has(getClassChoiceOptionKey(reference)),
+          )
+        : []
+    const eligible = new Set(options.map(({ reference }) => getClassChoiceOptionKey(reference)))
+    return [
+      ...options,
+      ...saved
+        .filter((reference) => !eligible.has(getClassChoiceOptionKey(reference)))
+        .map((reference) => resolveExplicitOption(reference, catalogs, 'retained')),
+    ]
+  }
   const named = getNamedSubclassSpellRule(choice.id)
   if (named) {
     const { owner } = named
@@ -1444,6 +1496,9 @@ export function resolveClassChoiceOptions(
       { level: { level, class: { name: choice.owner.name, source: choice.owner.source } } },
     ],
   })
+  const reservedArtificerPlans = isArtificerReplicatePlanChoice(choice)
+    ? getReservedArtificerPlanKeys(character, ARMOR_REPLICATION_CHOICE_ID)
+    : undefined
   const byKey = new Map(
     resolved
       .map((option) =>
@@ -1470,6 +1525,7 @@ export function resolveClassChoiceOptions(
           : { ...option, availability: 'retained' as const }
       })
       .filter((option) => isCurrentPoolMember(choice, poolSection, option.reference))
+      .filter((option) => !reservedArtificerPlans?.has(getClassChoiceOptionKey(option.reference)))
       .flatMap((option) => {
         if (bladeSource === 'xphb' && isPactBladeOption(option.reference, bladeSource)) {
           return bladePact
@@ -2206,6 +2262,13 @@ export function getClassChoiceCandidates(
       getDivineSoulConfiguration(classData, subclass, catalogs?.classes),
       getScionConfiguration(classData, subclass, catalogs?.classes),
       getArmorModelConfiguration(classData, subclass, catalogs?.classes),
+      classData.name && classData.source && subclass?.name && subclass.source
+        ? getArmorReplication(
+            { name: classData.name, source: classData.source },
+            { name: subclass.name, source: subclass.source },
+            catalogs,
+          )?.choice
+        : undefined,
     ].filter((row) => row !== undefined),
   ].sort((left, right) => left.level - right.level || left.id.localeCompare(right.id))
 }

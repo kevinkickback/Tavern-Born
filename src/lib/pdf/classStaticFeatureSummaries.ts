@@ -1,6 +1,11 @@
 import { CLASSIC_WILD_SHAPE_RESOURCE_ID } from '@/lib/5etools/archdruidSource'
 import { getChosenArmorModel } from '@/lib/5etools/artificerArmorModels'
 import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  getArmorReplication,
+  isArmorReplicationSelection,
+} from '@/lib/5etools/artificerArmorReplication'
+import {
   getArtificerItemCapacity,
   getCurrentArtificerRules,
 } from '@/lib/5etools/artificerJourneyRules'
@@ -64,6 +69,7 @@ import type {
   Feature,
   OptionalClassFeatureOwner,
 } from '@/types/character'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 import {
   getDeclaredSubclassStaticFeatures,
   getInheritedSubclassStaticFeatures,
@@ -517,17 +523,27 @@ function getArtificerPlanNames(
       (choice.kind === 'optional-feature' && choice.optionFilter?.featureTypes?.join() === 'AI'),
   )
   if (choices.length !== 1) return []
-  const [choice] = choices
+  return getSelectedArtificerPlanNames(character, owner, choices[0], catalogs)
+}
+
+function getSelectedArtificerPlanNames(
+  character: Character,
+  owner: CharacterClassEntry,
+  choice: NormalizedCharacterChoice,
+  catalogs: ClassChoiceFeatureCatalogs,
+) {
+  const armor = choice.id === ARMOR_REPLICATION_CHOICE_ID
   const saved = character.classChoiceSelections?.filter(
     (row) =>
-      !row.inactive &&
       row.choiceId === choice.id &&
-      row.className === owner.name &&
-      row.classSource === owner.source &&
-      !row.subclassName &&
-      row.classLevel === choice.level,
+      (armor ||
+        (!row.inactive &&
+          row.className === owner.name &&
+          row.classSource === owner.source &&
+          !row.subclassName &&
+          row.classLevel === choice.level)),
   )
-  if (saved?.length !== 1) return []
+  if (saved?.length !== 1 || (armor && !isArmorReplicationSelection(saved[0]))) return []
   const selected = saved[0].selected.filter(
     (option) => option.slotLevel >= choice.level && option.slotLevel <= owner.levels,
   )
@@ -627,6 +643,20 @@ export function getClassStaticFeatureSummaries(
       const { cls } = current
       const capacity = getArtificerItemCapacity(current)
       const plans = capacity ? getArtificerPlanNames(character, entry, cls, catalogs) : []
+      const replication = getArmorReplication(
+        cls,
+        { name: entry.subclass ?? '', source: entry.subclassSource ?? '' },
+        catalogs,
+      )
+      const extra = !!(
+        capacity &&
+        replication?.available &&
+        replication.choice.level <= entry.levels
+      )
+      const armorPlan =
+        extra && replication
+          ? getSelectedArtificerPlanNames(character, entry, replication.choice, catalogs)[0]
+          : undefined
       const base = (cls.classFeatureRefs ?? []).flatMap((ref) => {
         if (
           !ref.level ||
@@ -645,7 +675,7 @@ export function getClassStaticFeatureSummaries(
               capacity?.target === target
                 ? [
                     ...withoutArtificerPlanTables(feature.entries ?? []),
-                    `Maximum active ${capacity.label.toLowerCase()}: ${capacity.amount}.`,
+                    `Maximum active ${capacity.label.toLowerCase()}: ${capacity.amount + Number(extra)}${extra ? ' (one reserved for Armor)' : ''}.`,
                     ...(plans.length ? [`Known ${capacity.known}: ${plans.join(', ')}.`] : []),
                   ]
                 : feature.entries,
@@ -661,6 +691,11 @@ export function getClassStaticFeatureSummaries(
           ? getChosenArmorModel(cls.source, catalogs.classes, character.classChoiceSelections)
           : undefined
       const specialistRules = specialty.map((feature) => {
+        if (armorPlan && feature.name === 'Improved Armorer' && feature.source === 'EFA')
+          return {
+            ...feature,
+            entries: [...(feature.entries ?? []), `Known Armor plan: ${armorPlan}.`],
+          }
         if (!model || !feature.entries) return feature
         if (feature.name === 'Armor Model') {
           const options = model.name

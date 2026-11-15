@@ -48,7 +48,7 @@ try {
   const runtimeOutput = 'src/lib/5etools/classCastingRuntime.generated.ts'
   const runtimeBytes = format(
     runtimeOutput,
-    emitSharedRegistryModule(registry, 'scripts/generate-class-casting-rules.mjs'),
+    emitSharedRegistryModule(registry, 'scripts/generate-class-casting-rules.mjs', true),
   )
   const visit = (file) => {
     if (file === runtimeOutput) return

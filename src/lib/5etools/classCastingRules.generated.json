@@ -3804,7 +3804,201 @@
           "values": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
         },
         "maximumByLevel": [0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13]
-      }
+      },
+      "declarationAlternatives": [
+        {
+          "owner": ["subclass", "monk", "xphb", "warrior of the mystic arts", "au"],
+          "target": "subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au",
+          "level": 3,
+          "path": [
+            {
+              "kind": "subclassFeature",
+              "target": "subclass-feature|warrior of the mystic arts|monk|xphb|mystic arts|au|3|au",
+              "uid": "Warrior of the Mystic Arts|Monk|XPHB|Mystic Arts|AU|3|AU"
+            },
+            {
+              "kind": "subclassFeature",
+              "target": "subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au",
+              "uid": "Spellcasting|Monk|XPHB|Mystic Arts|AU|3|AU"
+            }
+          ],
+          "certificate": "87b1262e343e19c903f634d0c60cbe6e0e6519d7442ba5779b01db1824e62122",
+          "parentMetadataDigest": "968b19d8092e0009ea5395bcb54dae1c3dd1b6663e4fe502aa7363d393008991",
+          "parentFields": [
+            "additionalSpells",
+            "cantripProgression",
+            "casterProgression",
+            "className",
+            "classSource",
+            "edition",
+            "hasFluff",
+            "hasFluffImages",
+            "name",
+            "page",
+            "preparedSpellsChange",
+            "preparedSpellsProgression",
+            "shortName",
+            "source",
+            "spellcastingAbility",
+            "subclassTableGroups"
+          ],
+          "rootValues": ["Warrior of the Mystic Arts|Monk|XPHB|Mystic Arts|AU|3|AU"],
+          "features": [
+            {
+              "kind": "subclassFeature",
+              "target": "subclass-feature|warrior of the mystic arts|monk|xphb|mystic arts|au|3|au",
+              "body": {
+                "metadataDigest": "a564b6e85e84a05fa22a4465afa8b243d6f7f7aa92957a53a275fb2298278209",
+                "fields": [
+                  "className",
+                  "classSource",
+                  "level",
+                  "name",
+                  "page",
+                  "source",
+                  "subclassShortName",
+                  "subclassSource"
+                ],
+                "entries": {
+                  "kind": "array",
+                  "values": [
+                    {
+                      "digest": "11fec214348c145f88f364d6c22aae92974d222389b11c0dda498a7c837d780d"
+                    },
+                    {
+                      "digest": "41610d912f80356452558aa542d1da6dbb804cc8dbf224106925fc73b7bcdb19"
+                    },
+                    {
+                      "metadataDigest": "dd11cdf405abf807188742d01cfd1240748ff5e6f45d6b3ca11421f617070e4a",
+                      "fields": ["subclassFeature", "type"],
+                      "reference": "subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au",
+                      "entries": {
+                        "kind": "absent"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "subclassFeature",
+              "target": "subclass-feature|spellcasting|monk|xphb|mystic arts|au|3|au",
+              "body": {
+                "metadataDigest": "182bd4db547def304b61a9ed3213423ed6e74162b811470a6a8f8e1198444305",
+                "fields": [
+                  "className",
+                  "classSource",
+                  "header",
+                  "level",
+                  "name",
+                  "page",
+                  "source",
+                  "subclassShortName",
+                  "subclassSource"
+                ],
+                "entries": {
+                  "kind": "array",
+                  "values": [
+                    {
+                      "digest": "f76adab36f2fec3d040ad59861f1d2d081a126ac8b5ece28bc5198b802812580"
+                    },
+                    {
+                      "metadataDigest": "b490bd03acb114b779739e749e9937797a5b90ecd108542e279ff497cd71db13",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "ff2bd9bba56edc17d5160bc5118d04016d7b57192508eb653a9f9ffff8f56c0a"
+                          },
+                          {
+                            "digest": "f6401b7e8de2d3379da36c298ab9162f07d1aef6e36bbe51a209836b7a37cb52"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "8660f537da3af9759031b248d871a01732a80bb8a45b18bc412d0806e7c9cd08",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "aff86eccf1303a66871263fe2ac6f7483a1b1d8652206c3e890f4c0b4bc7afc2"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "d90a03dc42e0be9a5e354d8994f96fbc7c0ab20c6c1a1fb4800ce896ace58f62",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "0c24dfd0dc9bb9a17d56a2f340c58ab6cfbf7fbe24e8ab921a81812f05db4d8a"
+                          },
+                          {
+                            "digest": "85de82ea1ef9c413c83a3cadf94a3ae894d389ea274ac2ee9fcbdd74d25c2936"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "8d67f1d46e4fc518fd492a60959ec7c6da65b6dbd8bc850690c05ccccf59478d",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "0efc19cd0606eb0cb2690fd25635316a3c86a8ea4e022d9046f2f5fb9bd05e62"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "5212ec5f14e595c1677d6a345c2c628ba59e838522e2828d50fb4196501e47de",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "01ed8afe5bf8b774d1a73242807c90a23a0ac6b39a8ffb32ae0e56361ceab6db"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "06a46d596a544e930c7f12eda2dc2e0036ae0be67bbd9b3d64f1c92a43cf41c4",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "a6724c37412e1bfec6c1c25a8cb7a037ee796975e9e41e88543c1bafdd972f1b"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "metadataDigest": "f1a310a29e39d355e4135a19bc503cd73e4bc50c1f4866997a2f6e70a63607d1",
+                      "fields": ["name", "page", "type"],
+                      "entries": {
+                        "kind": "array",
+                        "values": [
+                          {
+                            "digest": "f5385251f42882aa1052f8b19338c50bcc21ac74c71cd3486a90dda303d52690"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "declaration": {

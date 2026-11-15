@@ -154,6 +154,9 @@ multiclass math. There are no top-level class mirrors.
 - Feat selections mirrored into `classFeatChoices` retain subclass ownership so a subclass change
   retracts both the normalized selection and its materialized feat state.
 - Unavailable saved references remain visible for recovery but cannot satisfy a current quota.
+- The EFA Armorer earns a separate Armor Replication plan at level 9. Its Armor plan must be
+  distinct from the Artificer's other plans. The historical editor uses the level-9 plan tier. The
+  sheet lists the plan with the subclass feature and shows the additional active-item slot as Armor only.
 - Optional-feature variant reconciliation scopes persisted choices against the complete loaded class
   catalog, but activates only choices that remain available after character source filtering.
 - Level-down/class removal retracts choices, grants, ASIs and numeric spell choices owned by removed levels.

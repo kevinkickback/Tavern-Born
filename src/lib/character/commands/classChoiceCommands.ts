@@ -1,4 +1,5 @@
 import { ARMOR_MODEL_GROUP } from '@/lib/5etools/artificerArmorModels'
+import { ARMOR_REPLICATION_CHOICE_ID } from '@/lib/5etools/artificerArmorReplication'
 import {
   getBarbarianPathChoice,
   getBarbarianPathChoiceGroup,
@@ -215,6 +216,46 @@ function currentLiteralChoice(
   selected: readonly NormalizedChoiceOptionReference[],
   authority: ClassChoiceAuthority | undefined,
 ): NormalizedCharacterChoice {
+  if (choice.id === ARMOR_REPLICATION_CHOICE_ID && selected.length) {
+    const catalogs = authority?.catalogs
+    const owner = findOwner(character, choice)
+    const cls = authority && findClassReference(choice.owner, authority.classes)
+    const current =
+      cls &&
+      owner &&
+      catalogs &&
+      getCharacterClassChoices(
+        cls,
+        getSelectedSubclassData(cls, owner),
+        createOptionalClassFeatureActivity(character, catalogs),
+        catalogs,
+      ).find((row) => row.id === choice.id)
+    if (!current || !catalogs || !owner)
+      throw new RangeError(
+        'Restore the exact Improved Armorer rules before choosing an Armor plan.',
+      )
+    const eligible = new Set(
+      resolveClassChoiceOptions(
+        current,
+        createClassChoiceCatalogs(catalogs),
+        [],
+        owner.levels,
+        character,
+      )
+        .filter(isClassChoiceOptionEligible)
+        .map(({ reference }) => getClassChoiceOptionKey(reference)),
+    )
+    if (
+      selected.some(
+        (option) =>
+          option.ref !== undefined ||
+          option.invocationCantrip !== undefined ||
+          !eligible.has(getClassChoiceOptionKey(option)),
+      )
+    )
+      throw new RangeError('Choose a distinct Armor plan from the tables earned at level 9.')
+    return current
+  }
   const order = getClassOrderById(choice.id)
   const fury = choice.id === ELEMENTAL_FURY_ID
   if (order?.owner === 'druid' || fury) {
