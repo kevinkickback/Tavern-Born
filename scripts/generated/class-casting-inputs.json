@@ -155,7 +155,7 @@
     },
     {
       "file": "scripts/generate-class-casting-rules.mjs",
-      "sha256": "d4c1bf89283151959f771d9a53d84e754b593bbf63f52b6530acc35f9c0957be"
+      "sha256": "5b619dc292ffc65ce659ea24cff7fa1d46b7d9fdca972eb8f3e996369fbe3eda"
     },
     {
       "file": "scripts/lib/class-casting-semantics.json",
@@ -247,7 +247,7 @@
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "b25391685631d6779ab1e732cfc9748c24c04af4eeb1f7a9b42a9a6f178cbdd7"
+      "sha256": "276fd1f1d988554966ed5e073930f4dadb47bc8b9ab27fe4c96ced71118949f6"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
