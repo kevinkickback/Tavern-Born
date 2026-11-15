@@ -122,19 +122,25 @@ test('gallery keeps edition badges and long multiclass cards clear of the reveal
       const heading = page.getByRole('heading', { name, exact: true })
       const card = page.locator('[data-slot="card"]').filter({ has: heading })
       const version = card.getByText(editions[index], { exact: true })
+      const level = card.getByText('Level 6')
       const classes = card.getByRole('list', { name: 'Class levels' })
       const actions = card.locator('[data-slot="character-card-actions"]')
 
       await expect(version).toBeVisible()
       await expect(card.getByLabel(/Character ready|items? to review/)).toHaveCount(0)
-      await expect(card.getByText('Level 6')).toBeVisible()
-      await expect(classes.getByRole('listitem')).toHaveText(['Fighter3', 'Wizard2', 'Rogue1'])
+      await expect(level).toBeVisible()
+      expect(await classes.getByRole('listitem').allTextContents()).toEqual([
+        'Fighter 3',
+        'Wizard 2',
+        'Rogue 1',
+      ])
       await expect(heading).toHaveAttribute('title', name)
       badgeColors.push(await version.evaluate((badge) => getComputedStyle(badge).backgroundColor))
 
       const cardBox = (await card.boundingBox())!
       const nameBox = (await heading.boundingBox())!
       const badgeBox = (await version.boundingBox())!
+      const levelBox = (await level.boundingBox())!
       const classBox = (await classes.boundingBox())!
       if (viewportWidth === 1280) {
         expect(cardBox.width).toBe(360)
@@ -144,7 +150,10 @@ test('gallery keeps edition badges and long multiclass cards clear of the reveal
         expect(cardBox.width).toBeLessThan(360)
         expect(cardBox.height).toBeCloseTo((cardBox.width * 2) / 3, 0)
       }
-      expect(nameBox.x).toBeGreaterThan(badgeBox.x + badgeBox.width)
+      expect(badgeBox.x).toBeGreaterThanOrEqual(nameBox.x)
+      expect(badgeBox.x + badgeBox.width).toBeLessThan(levelBox.x)
+      expect(badgeBox.y + badgeBox.height / 2).toBeCloseTo(levelBox.y + levelBox.height / 2, 0)
+      expect(nameBox.y + nameBox.height).toBeLessThan(badgeBox.y)
       expect(nameBox.x + nameBox.width).toBeLessThan(cardBox.x + cardBox.width)
       expect(nameBox.y + nameBox.height).toBeLessThan(classBox.y)
       expect(await classes.evaluate((list) => list.scrollHeight)).toBeLessThanOrEqual(

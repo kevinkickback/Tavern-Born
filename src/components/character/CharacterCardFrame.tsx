@@ -39,6 +39,7 @@ export function CharacterCardFrame({
 }: CharacterCardFrameProps) {
   const displayName = name || 'Unnamed Character'
   const detailIconClass = 'size-3.5 shrink-0 text-primary @[300px]:size-4'
+  const showClassLevels = classes.length > 1
 
   return (
     <>
@@ -64,20 +65,6 @@ export function CharacterCardFrame({
 
       <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
         {selectionControl}
-        {originSystem && (
-          <Badge
-            variant="outline"
-            title={getOriginSystemLabel(originSystem)}
-            className={cn(
-              'px-1.5 font-semibold tabular-nums shadow-sm',
-              originSystem === '2014'
-                ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
-                : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
-            )}
-          >
-            {originSystem}
-          </Badge>
-        )}
         {statusBadge}
       </div>
 
@@ -93,6 +80,20 @@ export function CharacterCardFrame({
           <div className="mt-auto flex min-h-0 w-full flex-col items-end gap-1.5">
             <div className="flex min-h-0 w-full flex-col items-end gap-1 text-sm leading-[1.25] text-foreground/90 @[300px]:gap-1.5 @[300px]:text-[0.95rem]">
               <div className="flex shrink-0 items-center gap-2">
+                {originSystem && (
+                  <Badge
+                    variant="outline"
+                    title={getOriginSystemLabel(originSystem)}
+                    className={cn(
+                      'px-1.5 py-0 font-semibold tabular-nums shadow-sm',
+                      originSystem === '2014'
+                        ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
+                        : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
+                    )}
+                  >
+                    {originSystem}
+                  </Badge>
+                )}
                 <span className="font-semibold">Level {level}</span>
                 <Crown
                   data-slot="character-card-detail-icon"
@@ -121,12 +122,14 @@ export function CharacterCardFrame({
                     className="min-w-0 overflow-y-auto overscroll-contain font-medium [scrollbar-width:thin]"
                   >
                     {classes.map(({ name, source, levels }) => (
-                      <li key={JSON.stringify([name, source])} className="flex justify-end gap-2">
-                        <span className="truncate" title={name}>
-                          {name}
-                        </span>
-                        {classes.length > 1 && (
-                          <span className="min-w-[2ch] shrink-0 tabular-nums">{levels}</span>
+                      <li
+                        key={JSON.stringify([name, source])}
+                        className="flex justify-end"
+                        title={showClassLevels ? `${name} ${levels}` : name}
+                      >
+                        <span className="truncate">{name}</span>
+                        {showClassLevels && (
+                          <span className="shrink-0 whitespace-pre tabular-nums">{` ${levels}`}</span>
                         )}
                       </li>
                     ))}
