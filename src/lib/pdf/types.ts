@@ -10,14 +10,17 @@ type OptionalCharacterSheetPageId = 'spells' | 'companion' | 'notes'
 export type CharacterSheetPageOptions = Partial<Record<OptionalCharacterSheetPageId, boolean>>
 
 export type SheetContentChoices = Partial<Record<string, string[]>>
-export interface SheetTextOptions {
+export type SheetImageMode = 'color' | 'grayscale' | 'none'
+export interface SheetPresentationOptions {
   descriptions?: 'full' | 'names'
   overflow?: 'notes' | 'ellipsis'
+  images?: SheetImageMode
 }
-export const DEFAULT_SHEET_TEXT_OPTIONS = {
+export const DEFAULT_SHEET_PRESENTATION_OPTIONS = {
   descriptions: 'full',
   overflow: 'ellipsis',
-} as const satisfies Required<SheetTextOptions>
+  images: 'color',
+} as const satisfies Required<SheetPresentationOptions>
 export interface SheetOverflowSection {
   id: string
   title: string

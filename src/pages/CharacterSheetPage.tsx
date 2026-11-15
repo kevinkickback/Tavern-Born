@@ -63,7 +63,7 @@ import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/export
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import {
   type CharacterSheetPageOptions,
-  DEFAULT_SHEET_TEXT_OPTIONS,
+  DEFAULT_SHEET_PRESENTATION_OPTIONS,
   type SheetContentChoices,
   type SheetExportReport,
 } from '@/lib/pdf/types'
@@ -190,7 +190,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const selectionContext = `${character?.id}:${selectedTemplate.id}`
   const pageChoices = preferences[selectionContext]?.pages ?? EMPTY_PAGE_CHOICES
   const contentChoices = preferences[selectionContext]?.content ?? EMPTY_CONTENT_CHOICES
-  const textOptions = preferences[selectionContext]?.text ?? DEFAULT_SHEET_TEXT_OPTIONS
+  const textOptions = preferences[selectionContext]?.text ?? DEFAULT_SHEET_PRESENTATION_OPTIONS
   const contentPlan = useMemo(
     () => (viewModel ? planSheetContent(viewModel, templateId, contentChoices, pageChoices) : null),
     [viewModel, templateId, contentChoices, pageChoices],
@@ -251,6 +251,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
               pageChoices,
               currentPreview?.report,
             ),
+            textOptions.images,
           )
         : { issues: [], blockingCount: 0, warningCount: 0 },
     [
@@ -262,6 +263,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       viewModel,
       pageChoices,
       currentPreview?.report,
+      textOptions.images,
     ],
   )
 
@@ -538,6 +540,9 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         groups={contentPlan?.groups ?? []}
         choices={contentChoices}
         text={textOptions}
+        supportsImages={
+          !!(selectedTemplate.portraitFieldName || selectedTemplate.organizationImageFieldName)
+        }
         onTextChange={(text) => {
           setPreferences((current) => ({
             ...current,

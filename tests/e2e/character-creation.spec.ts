@@ -669,6 +669,13 @@ test('creates a complete character and persists it across a full reload', async 
 test('revised background bonuses update review, starting HP, and the saved character', async ({
   page,
 }, info) => {
+  const extraBooks = Array.from({ length: 8 }, (_, index) => ({
+    abbreviation: `TBEX${index}`,
+    name: `Supplemental rules and character options volume ${index + 1}`,
+    group: 'supplement' as const,
+    year: 2025,
+    hasCharacterOptions: true,
+  }))
   const gameData: GameData = {
     ...CHARACTER_CREATION_GAME_DATA,
     races: [
@@ -697,11 +704,14 @@ test('revised background bonuses update review, starting HP, and the saved chara
       ],
       feats: [{ 'Magic Initiate; Cleric|XPHB': true }],
     })),
-    sources: CHARACTER_CREATION_GAME_DATA.sources.map((source) => ({
-      ...source,
-      abbreviation: 'XPHB',
-      year: 2024,
-    })),
+    sources: [
+      ...CHARACTER_CREATION_GAME_DATA.sources.map((source) => ({
+        ...source,
+        abbreviation: 'XPHB',
+        year: 2024,
+      })),
+      ...extraBooks,
+    ],
   }
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-character-desk-background', gameData)
@@ -809,6 +819,7 @@ test('revised background bonuses update review, starting HP, and the saved chara
   expect(portraitBounds!.width).toBeLessThanOrEqual(360)
   expect(snapshotBounds!.y).toBeCloseTo(variantBounds!.y)
   expect(scoresBounds!.y).toBeCloseTo(contentBounds!.y)
+  expect(scoresBounds!.height).toBeCloseTo(contentBounds!.height)
   expect(scoresBounds!.y).toBeGreaterThan(portraitBounds!.y)
   expect(scoresBounds!.y + scoresBounds!.height).toBeLessThan(footerBounds!.y)
   expect(contentBounds!.y + contentBounds!.height).toBeLessThan(footerBounds!.y)
@@ -819,6 +830,23 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await content.scrollIntoViewIfNeeded()
   await expect(content.getByRole('heading', { name: 'Additional Content' })).toBeInViewport()
   await page.setViewportSize({ width: 1280, height: 720 })
+  await dialog.getByRole('button', { name: 'Sourcebooks, completed', exact: true }).click()
+  for (const book of extraBooks) {
+    await dialog.getByRole('button', { name: new RegExp(book.name) }).click()
+  }
+  for (let step = 0; step < 5; step++) await next.click()
+  await expect(
+    content.getByText(extraBooks[extraBooks.length - 1].name, { exact: true }),
+  ).toBeVisible()
+
+  const measurePairedRow = async () => {
+    const [abilities, books] = await Promise.all([scores.boundingBox(), content.boundingBox()])
+    return { y: abilities!.y - books!.y, height: abilities!.height - books!.height }
+  }
+  await expect.poll(measurePairedRow).toEqual({ y: 0, height: 0 })
+  expect((await content.boundingBox())!.height).toBeGreaterThan(contentBounds!.height)
+  await page.setViewportSize({ width: 900, height: 720 })
+  await expect.poll(measurePairedRow).toEqual({ y: 0, height: 0 })
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect

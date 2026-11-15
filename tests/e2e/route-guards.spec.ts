@@ -83,7 +83,8 @@ test('each appearance accent uses its exact swatch and readable light and dark s
   for (const mode of ['Light', 'Dark'] as const) {
     await panel.getByText(mode, { exact: true }).click()
     await expect(root).toHaveAttribute('data-appearance', mode.toLowerCase())
-    for (const [label, id, hex] of accentSwatches) {
+    for (const [label, id, darkHex] of accentSwatches) {
+      const hex = id === 'chroma' && mode === 'Light' ? '#4e837d' : darkHex
       const radio = panel.getByRole('radio', { name: label, exact: true })
       const swatch = panel.locator(`label [data-accent="${id}"]`)
       const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16))
@@ -154,6 +155,12 @@ test('each appearance accent uses its exact swatch and readable light and dark s
   await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS(
     'background-color',
     'rgb(216, 232, 229)',
+  )
+  await page.evaluate(() => localStorage.setItem('tb.theme.appearance', 'light'))
+  await page.reload()
+  await expect(page.locator('#tb-pre-loader-bar')).toHaveCSS(
+    'background-color',
+    'rgb(78, 131, 125)',
   )
   await page.unroute('**/src/main.tsx')
   await page.reload()

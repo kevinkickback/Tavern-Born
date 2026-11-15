@@ -27,9 +27,9 @@ import type {
   SheetContentChoices,
   SheetExportReport,
   SheetOverflowSection,
-  SheetTextOptions,
+  SheetPresentationOptions,
 } from '@/lib/pdf/types'
-import { DEFAULT_SHEET_TEXT_OPTIONS } from '@/lib/pdf/types'
+import { DEFAULT_SHEET_PRESENTATION_OPTIONS } from '@/lib/pdf/types'
 import {
   type CharacterSheetSupplementBytes,
   getCharacterSheetAssetPlan,
@@ -81,14 +81,14 @@ export async function generateFilledCharacterSheetPdf(
     pages?: CharacterSheetPageOptions
     supplements?: CharacterSheetSupplementBytes
     content?: SheetContentChoices
-    text?: SheetTextOptions
+    text?: SheetPresentationOptions
     loadNotes?: () => Promise<Uint8Array>
     onReport?: (report: SheetExportReport) => void
   } = {},
 ): Promise<Uint8Array> {
   const template = getCharacterSheetTemplate(templateId)
   const continueInNotes =
-    (options.text?.overflow ?? DEFAULT_SHEET_TEXT_OPTIONS.overflow) === 'notes'
+    (options.text?.overflow ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow) === 'notes'
   const selection = planSheetContent(
     options.text?.descriptions === 'names' ? withoutSheetDescriptions(viewModel) : viewModel,
     templateId,
@@ -293,9 +293,11 @@ export async function generateFilledCharacterSheetPdf(
       templateId: mpmb ? '2014-custom' : part.id === 'spells' ? '2014-official' : template.id,
       cleanupProfile: mpmb ? 'mpmb-2014' : 'standard',
       portrait: part.id === 'main' ? viewModel.character.portrait : undefined,
-      portraitFieldName: template.portraitFieldName,
+      portraitFieldName: part.id === 'main' ? template.portraitFieldName : undefined,
       organizationImage: part.id === 'main' ? viewModel.organizationImage : undefined,
-      organizationImageFieldName: template.organizationImageFieldName,
+      organizationImageFieldName:
+        part.id === 'main' ? template.organizationImageFieldName : undefined,
+      imageMode: options.text?.images,
       additionalSpellPages,
       spellPageIndex: 0,
       paragraphsReservedForOverflow: part.id === 'main' ? paragraphsReservedForOverflow : undefined,

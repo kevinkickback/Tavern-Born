@@ -139,7 +139,7 @@ export function ReviewStep({
           />
         </div>
 
-        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-4">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @2xl:col-span-2 @4xl:col-span-4">
           <div className="flex items-center gap-2">
             <Sparkle className="h-4 w-4 text-primary" weight="fill" />
             <h4 className="text-sm font-semibold">Variant Rules</h4>
@@ -168,7 +168,7 @@ export function ReviewStep({
           </div>
         </div>
 
-        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-7">
+        <div className="min-w-0 space-y-2 self-stretch rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-7">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Sparkle className="h-4 w-4 text-primary" weight="fill" />
@@ -213,7 +213,7 @@ export function ReviewStep({
           </div>
         </div>
 
-        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-5">
+        <div className="min-w-0 space-y-2 self-stretch rounded-lg border border-border bg-muted/20 p-3 @4xl:col-span-5">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-primary" weight="fill" />
             <h4 className="text-sm font-semibold">Additional Content</h4>

@@ -23,10 +23,43 @@ import {
 } from '@/components/ui/select'
 import type { SheetContentGroup } from '@/lib/pdf/sheetContent'
 import {
-  DEFAULT_SHEET_TEXT_OPTIONS,
+  DEFAULT_SHEET_PRESENTATION_OPTIONS,
   type SheetContentChoices,
-  type SheetTextOptions,
+  type SheetPresentationOptions,
 } from '@/lib/pdf/types'
+
+function SheetOption<T extends string>({
+  label,
+  value,
+  choices,
+  onChange,
+}: {
+  label: string
+  value: T
+  choices: readonly (readonly [T, string])[]
+  onChange: (value: T) => void
+}) {
+  const id = useId()
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      <Select value={value} onValueChange={(next) => onChange(next as T)}>
+        <SelectTrigger id={id} className="w-56">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {choices.map(([key, name]) => (
+            <SelectItem key={key} value={key}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
 
 export function SheetContentDialog({
   open,
@@ -37,6 +70,7 @@ export function SheetContentDialog({
   focusGroup,
   text,
   onTextChange,
+  supportsImages,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -44,12 +78,11 @@ export function SheetContentDialog({
   choices: SheetContentChoices
   onChange: (choices: SheetContentChoices) => void
   focusGroup?: string
-  text: SheetTextOptions
-  onTextChange: (text: SheetTextOptions) => void
+  text: SheetPresentationOptions
+  onTextChange: (text: SheetPresentationOptions) => void
+  supportsImages: boolean
 }) {
-  const descriptionsId = useId()
-  const overflowId = useId()
-  const overflow = text.overflow ?? DEFAULT_SHEET_TEXT_OPTIONS.overflow
+  const overflow = text.overflow ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -66,57 +99,49 @@ export function SheetContentDialog({
       >
         <DialogHeader>
           <DialogTitle>Customize PDF</DialogTitle>
-          <DialogDescription>Choose what to print and how to handle longer text.</DialogDescription>
+          <DialogDescription>Choose what to include in the PDF.</DialogDescription>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto pr-2">
           <div className="space-y-4 border-b pb-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor={descriptionsId} className="text-sm font-medium">
-                Rules descriptions
-              </label>
-              <Select
-                value={text.descriptions ?? 'full'}
-                onValueChange={(value: 'full' | 'names') =>
-                  onTextChange({ ...text, descriptions: value })
-                }
-              >
-                <SelectTrigger id={descriptionsId} className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full">Include descriptions</SelectItem>
-                  <SelectItem value="names">Names only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SheetOption
+              label="Rules descriptions"
+              value={text.descriptions ?? 'full'}
+              choices={[
+                ['full', 'Include descriptions'],
+                ['names', 'Names only'],
+              ]}
+              onChange={(descriptions) => onTextChange({ ...text, descriptions })}
+            />
             <p className="text-xs text-muted-foreground">
               For your character’s features, traits, feats, attacks, and magic items. Combat numbers
               stay on the sheet.
             </p>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor={overflowId} className="text-sm font-medium">
-                Long text & extra entries
-              </label>
-              <Select
-                value={overflow}
-                onValueChange={(value: 'notes' | 'ellipsis') =>
-                  onTextChange({ ...text, overflow: value })
-                }
-              >
-                <SelectTrigger id={overflowId} className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ellipsis">Shorten with ellipsis</SelectItem>
-                  <SelectItem value="notes">Continue in notes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SheetOption
+              label="Long text & extra entries"
+              value={overflow}
+              choices={[
+                ['ellipsis', 'Shorten with ellipsis'],
+                ['notes', 'Continue in notes'],
+              ]}
+              onChange={(next) => onTextChange({ ...text, overflow: next })}
+            />
             <p className="text-xs text-muted-foreground">
               {overflow === 'ellipsis'
                 ? 'Long text ends with an ellipsis. Extra entries stay out of the PDF; selected notes pages remain blank.'
                 : 'Keep readable text in each box and preserve the rest in notes, unless Notes is turned off in Optional Pages.'}
             </p>
+            {supportsImages && (
+              <SheetOption
+                label="Images"
+                value={text.images ?? 'color'}
+                choices={[
+                  ['color', 'Color images'],
+                  ['grayscale', 'Greyscale images'],
+                  ['none', 'No images'],
+                ]}
+                onChange={(images) => onTextChange({ ...text, images })}
+              />
+            )}
           </div>
           <Accordion
             key={`${open}:${focusGroup ?? ''}`}
