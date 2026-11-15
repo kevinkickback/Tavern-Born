@@ -87,7 +87,7 @@ test('character library filters, cancels deletion, then persists a confirmed del
   })
 })
 
-test('gallery keeps edition badges and long multiclass cards clear of the revealed actions', async ({
+test('gallery centers multiclass details and reveals the edition, date, and actions together', async ({
   page,
 }) => {
   const names = [
@@ -124,9 +124,10 @@ test('gallery keeps edition badges and long multiclass cards clear of the reveal
       const version = card.getByText(editions[index], { exact: true })
       const level = card.getByText('Level 6')
       const classes = card.getByRole('list', { name: 'Class levels' })
+      const date = card.locator('[data-slot="character-card-date"]')
       const actions = card.locator('[data-slot="character-card-actions"]')
+      const revealedDetails = [version, date, actions]
 
-      await expect(version).toBeVisible()
       await expect(card.getByLabel(/Character ready|items? to review/)).toHaveCount(0)
       await expect(level).toBeVisible()
       expect(await classes.getByRole('listitem').allTextContents()).toEqual([
@@ -142,6 +143,7 @@ test('gallery keeps edition badges and long multiclass cards clear of the reveal
       const badgeBox = (await version.boundingBox())!
       const levelBox = (await level.boundingBox())!
       const classBox = (await classes.boundingBox())!
+      const dateBox = (await date.boundingBox())!
       if (viewportWidth === 1280) {
         expect(cardBox.width).toBe(360)
         expect(cardBox.height).toBe(240)
@@ -150,26 +152,31 @@ test('gallery keeps edition badges and long multiclass cards clear of the reveal
         expect(cardBox.width).toBeLessThan(360)
         expect(cardBox.height).toBeCloseTo((cardBox.width * 2) / 3, 0)
       }
-      expect(badgeBox.x).toBeGreaterThanOrEqual(nameBox.x)
-      expect(badgeBox.x + badgeBox.width).toBeLessThan(levelBox.x)
-      expect(badgeBox.y + badgeBox.height / 2).toBeCloseTo(levelBox.y + levelBox.height / 2, 0)
-      expect(nameBox.y + nameBox.height).toBeLessThan(badgeBox.y)
+      expect(badgeBox.x + badgeBox.width).toBeLessThan(nameBox.x)
+      expect(badgeBox.x - cardBox.x).toBeLessThanOrEqual(16)
+      expect(Math.abs(badgeBox.y - nameBox.y)).toBeLessThan(8)
       expect(nameBox.x + nameBox.width).toBeLessThan(cardBox.x + cardBox.width)
-      expect(nameBox.y + nameBox.height).toBeLessThan(classBox.y)
+      const gapBelowName = levelBox.y - (nameBox.y + nameBox.height)
+      const gapAboveDate = dateBox.y - (classBox.y + classBox.height)
+      expect(gapBelowName).toBeGreaterThan(0)
+      expect(Math.abs(gapBelowName - gapAboveDate)).toBeLessThanOrEqual(1)
       expect(await classes.evaluate((list) => list.scrollHeight)).toBeLessThanOrEqual(
         Math.ceil(classBox.height),
       )
 
       await page.mouse.move(0, 0)
-      await expect(actions).toHaveCSS('opacity', '0')
+      for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
       await card.hover()
-      await expect(actions).toHaveCSS('opacity', '1')
+      for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
+      const hoveredCardBox = (await card.boundingBox())!
+      const hoveredLevelBox = (await level.boundingBox())!
+      expect(hoveredLevelBox.y - hoveredCardBox.y).toBe(levelBox.y - cardBox.y)
       const actionsBox = (await actions.boundingBox())!
-      expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual(classBox.x)
+      expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual((await classes.boundingBox())!.x)
       await page.mouse.move(0, 0)
-      await expect(actions).toHaveCSS('opacity', '0')
+      for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
       await page.getByRole('button', { name: `Duplicate ${name}` }).focus()
-      await expect(actions).toHaveCSS('opacity', '1')
+      for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
       await page.getByRole('searchbox', { name: 'Search characters' }).focus()
     }
     expect(badgeColors[0]).not.toBe(badgeColors[1])

@@ -82,9 +82,11 @@ export function PortraitCardPreview({
         className,
       )}
     >
-      <div
+      <section
         data-slot="portrait-card-preview"
-        className="relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm"
+        aria-label="Portrait card preview"
+        tabIndex={originSystem || lastModified ? 0 : undefined}
+        className="group/card relative aspect-[3/2] w-full shrink-0 overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
         style={previewWidth === null ? undefined : { width: previewWidth }}
       >
         <div
@@ -110,7 +112,7 @@ export function PortraitCardPreview({
             portraitTransition
           />
         </div>
-      </div>
+      </section>
     </div>
   )
 }

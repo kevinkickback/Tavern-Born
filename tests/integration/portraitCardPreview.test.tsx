@@ -34,6 +34,7 @@ describe('PortraitCardPreview', () => {
     expect(screen.getByText('Elf')).toBeTruthy()
     expect(screen.getByText('Wizard')).toBeTruthy()
     expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('2024')
+    expect(screen.getByRole('region', { name: 'Portrait card preview' }).tabIndex).toBe(0)
     expect(screen.getByText(/Last modified:/)).toBeTruthy()
 
     expect(screen.queryByRole('button')).toBeNull()

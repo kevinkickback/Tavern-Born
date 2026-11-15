@@ -6,6 +6,9 @@ import { getPortraitCssTransform, resolvePortraitSrc } from '@/lib/portraitConst
 import { cn } from '@/lib/utils'
 import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
+export const CHARACTER_CARD_REVEAL_CLASS =
+  'motion-safe:transition-opacity [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:pointer-events-none [@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:opacity-0'
+
 interface CharacterCardFrameProps {
   image?: string | null
   imageAlt: string
@@ -65,6 +68,21 @@ export function CharacterCardFrame({
 
       <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
         {selectionControl}
+        {originSystem && (
+          <Badge
+            variant="outline"
+            title={getOriginSystemLabel(originSystem)}
+            className={cn(
+              CHARACTER_CARD_REVEAL_CLASS,
+              'px-1.5 font-semibold tabular-nums shadow-sm',
+              originSystem === '2014'
+                ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
+                : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
+            )}
+          >
+            {originSystem}
+          </Badge>
+        )}
         {statusBadge}
       </div>
 
@@ -77,23 +95,9 @@ export function CharacterCardFrame({
         </h3>
 
         {typeof level === 'number' ? (
-          <div className="mt-auto flex min-h-0 w-full flex-col items-end gap-1.5">
-            <div className="flex min-h-0 w-full flex-col items-end gap-1 text-sm leading-[1.25] text-foreground/90 @[300px]:gap-1.5 @[300px]:text-[0.95rem]">
+          <>
+            <div className="my-auto flex min-h-0 w-full flex-col items-end gap-1 text-sm leading-[1.25] text-foreground/90 @[300px]:gap-1.5 @[300px]:text-[0.95rem]">
               <div className="flex shrink-0 items-center gap-2">
-                {originSystem && (
-                  <Badge
-                    variant="outline"
-                    title={getOriginSystemLabel(originSystem)}
-                    className={cn(
-                      'px-1.5 py-0 font-semibold tabular-nums shadow-sm',
-                      originSystem === '2014'
-                        ? 'border-[var(--amber-8)] bg-[var(--amber-4)] [color:var(--amber-12)]'
-                        : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
-                    )}
-                  >
-                    {originSystem}
-                  </Badge>
-                )}
                 <span className="font-semibold">Level {level}</span>
                 <Crown
                   data-slot="character-card-detail-icon"
@@ -145,14 +149,20 @@ export function CharacterCardFrame({
             </div>
 
             {lastModified && (
-              <span className="flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[10px] leading-none text-muted-foreground italic">
+              <span
+                data-slot="character-card-date"
+                className={cn(
+                  CHARACTER_CARD_REVEAL_CLASS,
+                  'flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap text-[10px] leading-none text-muted-foreground italic',
+                )}
+              >
                 <Clock className="size-3 shrink-0" />
                 <span className="truncate">
                   Last modified: {new Date(lastModified).toLocaleDateString()}
                 </span>
               </span>
             )}
-          </div>
+          </>
         ) : (
           <div className="mt-auto text-xs italic text-muted-foreground">
             {gender || 'Unspecified'}

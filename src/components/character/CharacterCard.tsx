@@ -1,7 +1,10 @@
 import { CopySimple, DownloadSimple, Trash } from '@phosphor-icons/react'
 import { type MouseEvent, memo } from 'react'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
-import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
+import {
+  CHARACTER_CARD_REVEAL_CLASS,
+  CharacterCardFrame,
+} from '@/components/character/CharacterCardFrame'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -101,9 +104,8 @@ export const CharacterCard = memo(function CharacterCard({
           <div
             data-slot="character-card-actions"
             className={cn(
-              'absolute bottom-3 left-3 z-10 grid w-[6.75rem] max-w-[calc(36%-0.75rem)] grid-cols-3 gap-1 motion-safe:transition-opacity',
-              '[@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:pointer-events-none',
-              '[@media(hover:hover)_and_(not_(any-pointer:coarse))]:group-[&:not(:hover):not(:focus-within)]/card:opacity-0',
+              'absolute bottom-3 left-3 z-10 grid w-[6.75rem] max-w-[calc(36%-0.75rem)] grid-cols-3 gap-1',
+              CHARACTER_CARD_REVEAL_CLASS,
             )}
           >
             <Tooltip>
