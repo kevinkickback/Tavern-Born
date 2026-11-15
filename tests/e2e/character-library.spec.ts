@@ -60,14 +60,14 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await page.setViewportSize({ width: 900, height: 700 })
 
   const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
-  const views = sidebar.getByRole('region', { name: 'Views' })
-  const filters = sidebar.getByRole('region', { name: 'Filters' })
+  const views = sidebar.getByRole('region', { name: 'View' })
+  const filters = sidebar.getByRole('region', { name: 'Filter' })
   const gridView = views.getByRole('button', { name: 'Grid view' })
   const listView = views.getByRole('button', { name: 'List view' })
   const toolbar = page.locator('[data-slot="workspace-toolbar"]')
   const search = toolbar.getByRole('searchbox', { name: 'Search characters' })
   const renderedNames = page.locator('main h3')
-  await expect(sidebar.getByRole('heading')).toHaveText(['Views', 'Filters', 'Sort', 'Group'])
+  await expect(sidebar.getByRole('heading')).toHaveText(['View', 'Filter', 'Sort', 'Group'])
   await expect(gridView).toHaveAttribute('aria-pressed', 'true')
   await expect(filters.getByRole('button', { name: 'All 3', exact: true })).toHaveAttribute(
     'aria-pressed',

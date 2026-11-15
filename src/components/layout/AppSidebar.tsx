@@ -38,6 +38,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+import { SidebarSectionHeading } from './SidebarSectionHeading'
 
 const CharacterReadinessBadge = lazy(() =>
   import('@/components/character/CharacterReadinessBadge').then((module) => ({
@@ -356,14 +357,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
           ) : (
             activeWorkspace.groups.map((group, groupIndex) => (
               <div key={group.label ?? 'primary'} className={cn(groupIndex > 0 && 'mt-5')}>
-                {group.label && (
-                  <div className="mb-1 flex items-center gap-2 px-2">
-                    <p className="shrink-0 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.1em] text-muted-foreground/80">
-                      {group.label}
-                    </p>
-                    <span aria-hidden="true" className="h-px min-w-0 flex-1 bg-border" />
-                  </div>
-                )}
+                {group.label && <SidebarSectionHeading as="p">{group.label}</SidebarSectionHeading>}
                 <ul className="space-y-0.5">
                   {group.items.map((item) => {
                     const ItemIcon = item.icon

@@ -661,7 +661,7 @@ describe('home page integration workflows', () => {
     })
 
     const { unmount } = render(<HomeWithSidebar />)
-    const views = within(screen.getByRole('region', { name: 'Views' }))
+    const views = within(screen.getByRole('region', { name: 'View' }))
     await user.click(views.getByRole('button', { name: 'List view' }))
 
     expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')

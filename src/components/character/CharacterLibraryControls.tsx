@@ -1,5 +1,6 @@
 import { BookOpen, ListBullets, SquaresFour, Users, WarningCircle } from '@phosphor-icons/react'
 import { useId } from 'react'
+import { SidebarSectionHeading } from '@/components/layout/SidebarSectionHeading'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -17,8 +18,6 @@ const libraryFilters = [
   { id: '2024', label: '2024', icon: BookOpen },
   { id: 'attention', label: 'Needs Attention', icon: WarningCircle },
 ] as const
-
-const sectionHeading = 'mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground'
 
 export type LibraryFilter = (typeof libraryFilters)[number]['id']
 export type LibrarySort = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
@@ -43,8 +42,8 @@ export function CharacterLibraryControls({
   group,
   onGroupChange,
 }: CharacterLibraryControlsProps) {
-  const viewsId = useId()
-  const filtersId = useId()
+  const viewId = useId()
+  const filterId = useId()
   const sortId = useId()
   const groupId = useId()
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
@@ -52,11 +51,9 @@ export function CharacterLibraryControls({
 
   return (
     <>
-      <section aria-labelledby={viewsId} className="px-2">
-        <h2 id={viewsId} className={sectionHeading}>
-          Views
-        </h2>
-        <div className="grid grid-cols-2 gap-0.5 rounded-md border border-border bg-muted/30 p-0.5">
+      <section aria-labelledby={viewId}>
+        <SidebarSectionHeading id={viewId}>View</SidebarSectionHeading>
+        <div className="mx-2 grid grid-cols-2 gap-0.5 rounded-md border border-border bg-muted/30 p-0.5">
           <Button
             variant={viewMode === 'gallery' ? 'secondary' : 'ghost'}
             size="sm"
@@ -79,10 +76,8 @@ export function CharacterLibraryControls({
           </Button>
         </div>
       </section>
-      <section aria-labelledby={filtersId} className="mt-4">
-        <h2 id={filtersId} className={cn(sectionHeading, 'px-2')}>
-          Filters
-        </h2>
+      <section aria-labelledby={filterId} className="mt-5">
+        <SidebarSectionHeading id={filterId}>Filter</SidebarSectionHeading>
         <ul className="space-y-0.5">
           {libraryFilters.map(({ id, label, icon: Icon }) => {
             const selected = id === filter
@@ -120,46 +115,46 @@ export function CharacterLibraryControls({
           })}
         </ul>
       </section>
-      <section aria-labelledby={sortId} className="mt-4 px-2">
-        <h2 id={sortId} className={sectionHeading}>
-          Sort
-        </h2>
-        <Select value={sort} onValueChange={(value) => onSortChange(value as LibrarySort)}>
-          <SelectTrigger
-            aria-labelledby={sortId}
-            size="sm"
-            className="w-full bg-workspace-pane text-xs shadow-none"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="recent">Recently Modified</SelectItem>
-            <SelectItem value="name-asc">Name (A–Z)</SelectItem>
-            <SelectItem value="name-desc">Name (Z–A)</SelectItem>
-            <SelectItem value="level-desc">Level (High–Low)</SelectItem>
-            <SelectItem value="level-asc">Level (Low–High)</SelectItem>
-          </SelectContent>
-        </Select>
+      <section aria-labelledby={sortId} className="mt-5">
+        <SidebarSectionHeading id={sortId}>Sort</SidebarSectionHeading>
+        <div className="px-2">
+          <Select value={sort} onValueChange={(value) => onSortChange(value as LibrarySort)}>
+            <SelectTrigger
+              aria-labelledby={sortId}
+              size="sm"
+              className="w-full bg-workspace-pane text-xs shadow-none"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Recently Modified</SelectItem>
+              <SelectItem value="name-asc">Name (A–Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z–A)</SelectItem>
+              <SelectItem value="level-desc">Level (High–Low)</SelectItem>
+              <SelectItem value="level-asc">Level (Low–High)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </section>
-      <section aria-labelledby={groupId} className="mt-4 px-2">
-        <h2 id={groupId} className={sectionHeading}>
-          Group
-        </h2>
-        <Select value={group} onValueChange={(value) => onGroupChange(value as LibraryGroup)}>
-          <SelectTrigger
-            aria-labelledby={groupId}
-            size="sm"
-            className="w-full bg-workspace-pane text-xs shadow-none"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="class">Class</SelectItem>
-            <SelectItem value="alignment">Alignment</SelectItem>
-            <SelectItem value="player">Player</SelectItem>
-          </SelectContent>
-        </Select>
+      <section aria-labelledby={groupId} className="mt-5">
+        <SidebarSectionHeading id={groupId}>Group</SidebarSectionHeading>
+        <div className="px-2">
+          <Select value={group} onValueChange={(value) => onGroupChange(value as LibraryGroup)}>
+            <SelectTrigger
+              aria-labelledby={groupId}
+              size="sm"
+              className="w-full bg-workspace-pane text-xs shadow-none"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="class">Class</SelectItem>
+              <SelectItem value="alignment">Alignment</SelectItem>
+              <SelectItem value="player">Player</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </section>
     </>
   )
