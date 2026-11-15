@@ -1,9 +1,5 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import {
-  isAdditiveCatalogRestore,
-  matchesAcceptedSource,
-} from '@/lib/5etools/additiveCatalogRestore'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
 import {
   compareCatalogCandidate,
@@ -20,10 +16,12 @@ import {
   isCatalogCheckDue,
   refreshCheckForSource,
 } from '@/lib/5etools/catalogRefreshPolicy'
+import { compareAcceptedSource } from '@/lib/5etools/catalogResourceProof'
 import { hasCatalogRecords } from '@/lib/5etools/contentLayers'
 import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { settleOnAbort } from '@/lib/abortable'
+import { savedCharactersSurviveRebuild } from '@/lib/character/catalogRebuildCompatibility'
 import {
   CatalogRestoreLibraryChanged,
   cacheMetadata,
@@ -781,6 +779,10 @@ export const useGameDataStore = create<GameDataState>()(
             ((prior.externalKeys !== undefined && !sameExternalKeys) ||
               (!!cached && (!sameLayers || !isCacheForSource(cached, cacheIdentity))))
           const recovering = !!prior.sessionBundledSource || !!request?.recovery
+          const sameInputs =
+            recovering && candidate && hadExternal
+              ? compareAcceptedSource(priorSource, candidate.config, candidate.revision)
+              : undefined
           const verifiedRestore = Boolean(
             candidate &&
               recovering &&
@@ -788,6 +790,7 @@ export const useGameDataStore = create<GameDataState>()(
               /^[a-f\d]{64}$/i.test(candidateFingerprint ?? '') &&
               candidateFingerprint === prior.savedContentFingerprint &&
               candidateFingerprint === cached?.contentFingerprint &&
+              sameInputs !== false &&
               priorSource?.availableResources &&
               candidate.config.availableResources &&
               !candidate.warnings.length &&
@@ -814,6 +817,8 @@ export const useGameDataStore = create<GameDataState>()(
             priorSource &&
             priorSource.type !== 'bundled' &&
             cached?.generation &&
+            typeof cached.cacheSchemaVersion === 'number' &&
+            cached.cacheSchemaVersion < GAME_DATA_CACHE_SCHEMA_VERSION &&
             cached.contentFingerprint &&
             cached.contentFingerprint === prior.savedContentFingerprint &&
             candidateFingerprint &&
@@ -824,7 +829,7 @@ export const useGameDataStore = create<GameDataState>()(
             priorSource.availableResources &&
             candidate.config.availableResources &&
             isCacheForSource(cached, cacheIdentity) &&
-            matchesAcceptedSource(priorSource, candidate.config, candidate.revision)
+            sameInputs === true
           ) {
             const accepted = await settleOnAbort(
               readAcceptedCatalogForComparison(cached).catch(() => undefined),
@@ -834,12 +839,8 @@ export const useGameDataStore = create<GameDataState>()(
               prepared = await materializeCatalogCandidate(candidate, signal)
               try {
                 if (
-                  isAdditiveCatalogRestore(
-                    accepted.data,
-                    prepared.data,
-                    cached.contentFingerprint,
-                    accepted.characters,
-                  )
+                  computeGameDataFingerprint(accepted.data) === cached.contentFingerprint &&
+                  savedCharactersSurviveRebuild(accepted.data, prepared.data, accepted.characters)
                 )
                   verifiedLibrary = accepted.characterLibrary
               } catch {
@@ -847,7 +848,7 @@ export const useGameDataStore = create<GameDataState>()(
               }
             }
           }
-          const additiveRestore = verifiedLibrary !== undefined
+          const compatibleRebuild = verifiedLibrary !== undefined
           const restoring = verifiedRestore || (request?.confirmed && pending?.restoreWhenIdle)
           const stageCatalog = async (review: NonNullable<GameDataState['pendingCatalog']>) => {
             const recorded = rememberCheck(true, true, expectedCache)
@@ -868,7 +869,7 @@ export const useGameDataStore = create<GameDataState>()(
             candidate &&
             !request?.confirmed &&
             !verifiedRestore &&
-            !additiveRestore &&
+            !compatibleRebuild &&
             (recovering ||
               removals.length ||
               incompleteRemovalPreview ||
@@ -965,7 +966,7 @@ export const useGameDataStore = create<GameDataState>()(
             ? prior.savedContentFingerprint
             : get().lastContentFingerprint
           const hadGameData = get().gameData !== null
-          const stageAdditiveRestore = (candidate: CatalogCandidate) =>
+          const stageRebuild = (candidate: CatalogCandidate) =>
             stageCatalog({
               candidate,
               expectedCache,
@@ -979,7 +980,7 @@ export const useGameDataStore = create<GameDataState>()(
             if (requestId !== activeLoadRequestId) return { kind: 'superseded' } as const
             signal.throwIfAborted()
             if (catalogIsProtected()) {
-              if (additiveRestore && candidate) return stageAdditiveRestore(candidate)
+              if (compatibleRebuild && candidate) return stageRebuild(candidate)
               if (verifiedRestore && candidate)
                 return stageCatalog({
                   candidate,
@@ -1057,7 +1058,7 @@ export const useGameDataStore = create<GameDataState>()(
               return { kind: 'applied', changed: contentChanged } as const
             } catch (error) {
               if (error instanceof CatalogRestoreLibraryChanged && candidate)
-                return stageAdditiveRestore(candidate)
+                return stageRebuild(candidate)
               throw error
             } finally {
               if (!applying) set({ isCatalogActivating: false })

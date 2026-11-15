@@ -104,6 +104,14 @@ function downloadPreparedFile(file: PreparedCharacterDownload | PreparedLibraryR
   }
 }
 
+function savePreparedCharacterFile(file: PreparedCharacterDownload): Promise<boolean> {
+  if (window.electronAPI?.saveCharacterFile) {
+    return window.electronAPI.saveCharacterFile(file.filename, file.text)
+  }
+  downloadPreparedFile(file)
+  return Promise.resolve(false)
+}
+
 interface CharacterImportReport {
   imported: Array<{
     label: string
@@ -424,12 +432,7 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
     (character: Character) =>
       runCharacterExport(
         async () => {
-          const file = prepareCharacterDownload(character)
-          if (!window.electronAPI?.saveCharacterFile) {
-            downloadPreparedFile(file)
-            return
-          }
-          if (await window.electronAPI.saveCharacterFile(file.filename, file.text)) {
+          if (await savePreparedCharacterFile(prepareCharacterDownload(character))) {
             toast.success('Character exported successfully')
           }
         },
@@ -464,14 +467,17 @@ export function HomePage({ readinessFocus, showCompatibilityDialog = true }: Hom
     }
   }, [unsupportedCharacters])
 
-  const exportLibrary = (selected: readonly Character[]) => {
-    try {
-      downloadPreparedFile(prepareLibraryDownload(selected))
-      toast.success(`${selected.length} character${selected.length === 1 ? '' : 's'} exported`)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not export the library backup.')
-    }
-  }
+  const exportLibrary = (selected: readonly Character[]) =>
+    runCharacterExport(
+      async () => {
+        if (await savePreparedCharacterFile(prepareLibraryDownload(selected))) {
+          toast.success(`${selected.length} character${selected.length === 1 ? '' : 's'} exported`)
+        }
+      },
+      (error) => {
+        toast.error(error instanceof Error ? error.message : 'Could not export the library backup.')
+      },
+    )
 
   const handleExportSelected = () => {
     const selected = characters.filter((character) => selectedCharacterIds.includes(character.id))

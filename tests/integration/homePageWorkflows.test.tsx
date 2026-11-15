@@ -680,7 +680,7 @@ describe('home page integration workflows', () => {
     })
   })
 
-  test('exports the saved library or only selected characters as one backup', async () => {
+  test('downloads the saved library or selected characters in the browser without a completion toast', async () => {
     const user = userEvent.setup()
     const first = makeCharacterFixture({ id: 'first', name: 'Alpha' })
     const second = makeCharacterFixture({ id: 'second', name: 'Bravo' })
@@ -709,7 +709,52 @@ describe('home page integration workflows', () => {
     expect(downloads).toHaveLength(2)
     expect(downloads.every((link) => link.download.endsWith('.tbclib'))).toBe(true)
     expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  test('confirms full and selected library exports only after desktop save', async () => {
+    const user = userEvent.setup()
+    const first = makeCharacterFixture({ id: 'first', name: 'Alpha' })
+    const second = makeCharacterFixture({ id: 'second', name: 'Bravo' })
+    useCharacterStore.setState({ characters: [first, second] })
+    let completeSave!: (saved: boolean) => void
+    const pendingSave = new Promise<boolean>((resolve) => {
+      completeSave = resolve
+    })
+    const saveCharacterFile = vi
+      .fn<(filename: string, text: string) => Promise<boolean>>()
+      .mockReturnValueOnce(pendingSave)
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('Disk unavailable'))
+      .mockResolvedValueOnce(true)
+    vi.stubGlobal('electronAPI', { saveCharacterFile })
+
+    render(<HomePage />)
+    const exportLibrary = screen.getByRole('button', { name: 'Export Library' })
+    await user.click(exportLibrary)
+    await user.click(exportLibrary)
+    expect(saveCharacterFile).toHaveBeenCalledTimes(1)
+    const [[filename, text]] = saveCharacterFile.mock.calls
+    expect(filename).toMatch(/^tavern-born-library-\d{4}-\d{2}-\d{2}\.tbclib$/)
+    expect(JSON.parse(text)).toMatchObject({ version: 1, characters: [first, second] })
+    expect(toast.success).not.toHaveBeenCalled()
+    await act(async () => completeSave(true))
     expect(toast.success).toHaveBeenCalledWith('2 characters exported')
+
+    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
+    await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
+    await user.click(screen.getByRole('button', { name: 'select-first' }))
+    const exportSelected = screen.getByRole('button', { name: 'Export Selected' })
+    await user.click(exportSelected)
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    expect(toast.error).not.toHaveBeenCalled()
+    await user.click(exportSelected)
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    expect(toast.error).toHaveBeenCalledWith('Disk unavailable')
+    await user.click(exportSelected)
+    expect(JSON.parse(saveCharacterFile.mock.calls[3][1])).toMatchObject({
+      characters: [first],
+    })
     expect(toast.success).toHaveBeenCalledWith('1 character exported')
   })
 

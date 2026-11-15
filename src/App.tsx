@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
@@ -172,6 +172,9 @@ function App() {
   const [changelogOpen, setChangelogOpen] = useState(false)
   const [hasAppUpdate, setHasAppUpdate] = useState(false)
   const [progressVersion, setProgressVersion] = useState<string | null>(null)
+  const [downloadedVersion, setDownloadedVersion] = useState<string | null>(null)
+  const progressOpen = progressVersion !== null || (changelogOpen && downloadedVersion !== null)
+  const updateReturnFocus = useRef<HTMLElement | null>(null)
   const [initialRouteReady, setInitialRouteReady] = useState(false)
   const [startupComplete, setStartupComplete] = useState(false)
   const workspaceRoute = (
@@ -181,7 +184,11 @@ function App() {
   )
   const canOpenStartupDialogs = initialRouteReady && startupComplete
   const finishStartup = useCallback(() => setStartupComplete(true), [])
-  const openAppUpdate = useCallback(() => setChangelogOpen(true), [])
+  const openAppUpdate = useCallback(() => {
+    const active = document.activeElement
+    updateReturnFocus.current = active instanceof HTMLElement ? active : null
+    setChangelogOpen(true)
+  }, [])
 
   useLayoutEffect(() => {
     setAccentTheme(themeAccent)
@@ -214,6 +221,9 @@ function App() {
       if (updateToast !== undefined) toast.dismiss(updateToast)
       updateToast = undefined
     })
+    const unsubscribeDownloaded = api.onUpdateDownloaded?.(({ version }) => {
+      setDownloadedVersion(version)
+    })
     void api
       .getUpdateStatus?.()
       .then((status) => {
@@ -225,14 +235,14 @@ function App() {
           return
         }
         const { version } = status
-        setUpdateData((data) => data ?? { version, changelog: null, useReleaseDownloadPage: false })
-        setHasAppUpdate(true)
+        setDownloadedVersion((downloaded) => downloaded ?? version)
       })
       .catch(() => undefined)
     return () => {
       subscribed = false
       unsubscribeAvailable()
       unsubscribeUnavailable?.()
+      unsubscribeDownloaded?.()
     }
   }, [openAppUpdate])
 
@@ -240,7 +250,9 @@ function App() {
     <TooltipProvider delayDuration={300}>
       <RulesPreviewManager>
         <HashRouter>
-          <AppLayout onOpenAppUpdate={hasAppUpdate ? openAppUpdate : undefined}>
+          <AppLayout
+            onOpenAppUpdate={hasAppUpdate || downloadedVersion ? openAppUpdate : undefined}
+          >
             <Routes>
               <Route element={<RequireActiveCharacter />}>
                 <Route path="/build" element={<Navigate to="/build/race" replace />} />
@@ -287,12 +299,12 @@ function App() {
           {canOpenStartupDialogs && updateData && (
             <Suspense fallback={null}>
               <ChangelogModal
-                open={changelogOpen}
+                open={changelogOpen && !downloadedVersion}
                 onOpenChange={setChangelogOpen}
                 version={updateData.version}
                 changelog={updateData.changelog}
                 updateAvailable
-                onInstall={
+                onDownload={
                   updateData.useReleaseDownloadPage
                     ? undefined
                     : () => {
@@ -324,10 +336,15 @@ function App() {
             </Suspense>
           )}
           <UpdateProgressModal
-            open={progressVersion !== null}
-            version={progressVersion ?? ''}
+            open={progressOpen && canOpenStartupDialogs}
+            version={downloadedVersion ?? progressVersion ?? ''}
+            downloaded={downloadedVersion !== null}
+            onCloseAutoFocus={() => updateReturnFocus.current?.focus()}
             onOpenChange={(open) => {
-              if (!open) setProgressVersion(null)
+              if (!open) {
+                setChangelogOpen(false)
+                setProgressVersion(null)
+              }
             }}
           />
         </HashRouter>

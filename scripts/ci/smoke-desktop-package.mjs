@@ -157,7 +157,7 @@ try {
       await expect(page.getByRole('button', { name: 'Open Download Page' })).toBeVisible({
         timeout,
       })
-      await expect(page.getByRole('button', { name: 'Install Now' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Download', exact: true })).toHaveCount(0)
       console.log(`Packaged app offered the release-page update to v${result.data.version}.`)
     }
   })

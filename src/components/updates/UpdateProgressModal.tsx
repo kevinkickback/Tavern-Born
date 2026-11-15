@@ -13,7 +13,9 @@ import { useCharacterStore } from '@/store/characterStore'
 interface UpdateProgressModalProps {
   open: boolean
   version: string
+  downloaded?: boolean
   onOpenChange: (open: boolean) => void
+  onCloseAutoFocus?: () => void
 }
 
 function formatBytes(bytes: number): string {
@@ -24,10 +26,17 @@ function formatBytes(bytes: number): string {
   return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`
 }
 
-type UpdatePhase = 'downloading' | 'downloaded' | 'error' | 'cancelled'
+type DownloadPhase = 'downloading' | 'error' | 'cancelled'
 
-export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgressModalProps) {
-  const [phase, setPhase] = useState<UpdatePhase>('downloading')
+export function UpdateProgressModal({
+  open,
+  version,
+  downloaded = false,
+  onOpenChange,
+  onCloseAutoFocus,
+}: UpdateProgressModalProps) {
+  const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('downloading')
+  const phase = downloaded ? 'downloaded' : downloadPhase
   const [percentage, setPercentage] = useState(0)
   const [bytesPerSecond, setBytesPerSecond] = useState(0)
   const [total, setTotal] = useState(0)
@@ -41,13 +50,13 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   const beginDownload = useCallback(async () => {
     const api = window.electronAPI
     if (!api) {
-      setPhase('error')
+      setDownloadPhase('error')
       setError('Updates are only available in the desktop app.')
       return
     }
 
     cancelledRef.current = false
-    setPhase('downloading')
+    setDownloadPhase('downloading')
     setPercentage(0)
     setBytesPerSecond(0)
     setTotal(0)
@@ -57,12 +66,12 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
     try {
       const result = await api.downloadUpdate()
       if (!result.success && !cancelledRef.current) {
-        setPhase('error')
+        setDownloadPhase('error')
         setError(result.error ?? 'The update download could not be started.')
       }
     } catch (downloadError) {
       if (cancelledRef.current) return
-      setPhase('error')
+      setDownloadPhase('error')
       setError(
         downloadError instanceof Error
           ? downloadError.message
@@ -74,7 +83,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   useEffect(() => {
     if (!open) {
       cancelledRef.current = false
-      setPhase('downloading')
+      setDownloadPhase('downloading')
       setPercentage(0)
       setBytesPerSecond(0)
       setTotal(0)
@@ -91,7 +100,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       unsubs.push(
         window.electronAPI.onDownloadProgress((data) => {
           if (cancelledRef.current) return
-          setPhase('downloading')
+          setDownloadPhase('downloading')
           setPercentage(data.percentage)
           setBytesPerSecond(data.bytesPerSecond)
           setTotal(data.total)
@@ -100,16 +109,9 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       )
 
       unsubs.push(
-        window.electronAPI.onUpdateDownloaded(() => {
-          if (cancelledRef.current) return
-          setPhase('downloaded')
-        }),
-      )
-
-      unsubs.push(
         window.electronAPI.onUpdateError((data) => {
           if (cancelledRef.current) return
-          setPhase('error')
+          setDownloadPhase('error')
           setError(data.message)
         }),
       )
@@ -117,21 +119,21 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       unsubs.push(
         window.electronAPI.onUpdateCancelled(() => {
           cancelledRef.current = true
-          setPhase('cancelled')
+          setDownloadPhase('cancelled')
         }),
       )
     }
 
     // Subscribe before starting the download so immediate progress/error events
     // cannot be lost between opening the dialog and mounting this effect.
-    void beginDownload()
+    if (!downloaded) void beginDownload()
 
     return () => {
       unsubs.forEach((unsub) => {
         unsub()
       })
     }
-  }, [beginDownload, open])
+  }, [beginDownload, downloaded, open])
 
   const handleRestart = useCallback(async () => {
     const api = window.electronAPI
@@ -185,8 +187,13 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       <DialogContent
         className="w-full max-w-xs sm:max-w-sm p-3 sm:p-6"
         closeDisabled={restarting}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        onCloseAutoFocus={onCloseAutoFocus}
+        onPointerDownOutside={(event) => {
+          if (!downloaded || restartRequested.current) event.preventDefault()
+        }}
+        onEscapeKeyDown={(event) => {
+          if (!downloaded || restartRequested.current) event.preventDefault()
+        }}
       >
         <DialogHeader>
           <DialogTitle>
