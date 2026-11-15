@@ -162,7 +162,7 @@ test('class and racial casting badges display the shared ability casing', async 
       allowedSources: ['PHB'],
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     }),
-    { parentRace: race, subraceIsNested: false },
+    { parentRace: race, subraceData: undefined, subraceIsNested: false },
   )
   const catalog = { ...gameData, races: [race], lookups: undefined }
   await page.goto('/')
