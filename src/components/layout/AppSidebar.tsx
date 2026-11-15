@@ -27,7 +27,6 @@ import {
   PawPrint,
   PersonSimple,
   PuzzlePiece,
-  Sidebar,
   SlidersHorizontal,
   Sparkle,
   Sword,
@@ -37,6 +36,8 @@ import {
   Warning,
   Wrench,
 } from '@phosphor-icons/react'
+import PanelLeftClose from 'lucide-react/dist/esm/icons/panel-left-close'
+import PanelLeftOpen from 'lucide-react/dist/esm/icons/panel-left-open'
 import { lazy, type Ref, Suspense } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -320,6 +321,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
   const sidebarActionLabel = secondarySidebarOpen
     ? 'Collapse secondary sidebar'
     : 'Expand secondary sidebar'
+  const SidebarIcon = secondarySidebarOpen ? PanelLeftClose : PanelLeftOpen
   const activeWorkspace =
     workspaces.find((workspace) => workspace.matches(location.pathname)) ?? workspaces[0]
   const isLibrary = location.pathname === '/'
@@ -381,7 +383,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                       onClick={toggleSecondarySidebar}
                       className="flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
                     >
-                      <Sidebar weight={secondarySidebarOpen ? 'fill' : 'regular'} />
+                      <SidebarIcon className="size-[1.625rem]" aria-hidden="true" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8}>
@@ -400,11 +402,9 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
       <aside
         id={SECONDARY_SIDEBAR_ID}
         aria-label={`${activeWorkspace.label} navigation`}
-        className={cn(
-          'col-start-2 row-start-2 w-56 min-w-0 flex-col overflow-hidden bg-transparent',
-          secondarySidebarOpen ? 'flex' : 'hidden',
-        )}
-        hidden={!secondarySidebarOpen}
+        aria-hidden={secondarySidebarOpen ? undefined : true}
+        inert={!secondarySidebarOpen}
+        className="col-start-2 row-start-2 flex min-w-0 flex-col overflow-hidden bg-transparent"
       >
         <nav className="min-w-56 flex-1 overflow-y-auto px-2 py-2" aria-label="Workspace pages">
           {isLibrary ? (

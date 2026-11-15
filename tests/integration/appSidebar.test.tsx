@@ -97,11 +97,13 @@ describe('desktop workspace navigation', () => {
     await user.keyboard('{Enter}')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(screen.getByRole('button', { name: 'Expand secondary sidebar' })).toBe(toggle)
+    expect(sidebar.hasAttribute('inert')).toBe(true)
     expect(screen.queryByRole('link', { name: 'Class' })).toBeNull()
     expect(document.activeElement).toBe(toggle)
 
     await user.keyboard(' ')
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(sidebar.hasAttribute('inert')).toBe(false)
     expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBe(sidebar)
   })
 

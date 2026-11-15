@@ -134,10 +134,13 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
 })
 
 test('secondary sidebar stays collapsed across workspaces and reloads', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const rail = page.getByRole('navigation', { name: 'Primary workspaces' })
   const toggle = rail.getByRole('button', { name: /^(Collapse|Expand) secondary sidebar$/ })
+  const shell = page.locator('#app-interactive-content')
   const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(toggle.locator('.lucide-panel-left-close')).toBeVisible()
   const filter = sidebar.getByRole('button', { name: '2024 0' })
   await filter.click()
   const content = page.locator('main')
@@ -145,19 +148,44 @@ test('secondary sidebar stays collapsed across workspaces and reloads', async ({
   const sidebarWidth = (await sidebar.boundingBox())!.width
   const openContent = (await content.boundingBox())!
   const openStatus = (await status.boundingBox())!
+  await shell.evaluate((element) => {
+    element.addEventListener('transitionrun', (event) => {
+      if (
+        !(event instanceof TransitionEvent) ||
+        event.target !== element ||
+        event.propertyName !== 'grid-template-columns'
+      )
+        return
+      element.dataset.sidebarTransitions = String(
+        Number(element.dataset.sidebarTransitions ?? 0) + 1,
+      )
+    })
+  })
 
   await toggle.focus()
   await toggle.press('Enter')
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(toggle.locator('.lucide-panel-left-open')).toBeVisible()
   await expect(sidebar).toHaveCount(0)
   await expect(filter).toHaveCount(0)
   await expect(toggle).toBeFocused()
-  expect((await content.boundingBox())!.width - openContent.width).toBeCloseTo(sidebarWidth)
-  expect((await status.boundingBox())!.width - openStatus.width).toBeCloseTo(sidebarWidth)
+  await expect(shell).toHaveAttribute('data-sidebar-transitions', '1')
+  await expect
+    .poll(async () => (await content.boundingBox())!.width - openContent.width)
+    .toBeCloseTo(sidebarWidth)
+  await expect
+    .poll(async () => (await status.boundingBox())!.width - openStatus.width)
+    .toBeCloseTo(sidebarWidth)
 
   await toggle.press('Space')
   await expect(filter).toHaveAttribute('aria-pressed', 'true')
+  await expect(shell).toHaveAttribute('data-sidebar-transitions', '2')
+  await expect.poll(async () => (await content.boundingBox())!.width).toBeCloseTo(openContent.width)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(shell).toHaveCSS('transition-property', 'none')
   await toggle.click()
+  expect((await content.boundingBox())!.width - openContent.width).toBeCloseTo(sidebarWidth)
   await rail.getByRole('button', { name: 'Settings', exact: true }).click()
   const settingsSidebar = page.getByRole('complementary', { name: 'Settings navigation' })
   await expect(page.getByRole('region', { name: 'General', exact: true })).toBeVisible()
