@@ -18,8 +18,8 @@ export const OptionalClassBookDataSchema = z.union([
 
 const PsionicCostSchema = z
   .object({
-    min: z.number().finite().int().nonnegative(),
-    max: z.number().finite().int().nonnegative(),
+    min: z.number().nonnegative().refine(Number.isInteger, 'Expected an integer'),
+    max: z.number().nonnegative().refine(Number.isInteger, 'Expected an integer'),
   })
   .strict()
   .refine((row) => row.min <= row.max)
@@ -82,7 +82,7 @@ export const RaceDataSchema = z
   })
   .passthrough()
 
-export const IndexSchema = z.record(z.string())
+export const IndexSchema = z.record(z.string(), z.string())
 
 const BackgroundSchema = z
   .object({

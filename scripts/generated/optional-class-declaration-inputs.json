@@ -70,15 +70,19 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "2ce7f831616c04aae3d4df491246505342eb73a9a22c1ae84e279ae2f85d3399"
+      "sha256": "390c82d1834091415cf01066b4094cf3dfe0306c3cfd27357e273439def18818"
     },
     {
       "file": "scripts/generate-optional-class-declaration-rules.mjs",
-      "sha256": "263ff51ab401852036a1abccbe8066fd334c860b7d494dd31e05a583bfaf06ed"
+      "sha256": "b66d4e5965df26434ac50b1277ecdbc3b07c205e828abc90846cfa9b512c2af0"
     },
     {
       "file": "scripts/lib/optional-class-declaration-semantics.json",
       "sha256": "5a5dc44d02b66d895809ad25d451db18b9b9e991289c9738a1277dbbc501b9e3"
+    },
+    {
+      "file": "scripts/lib/shared-registry-source.mjs",
+      "sha256": "bf6809b28310684c62108b2193fae948f3d8e7346fcaed69e6d83c816096bbbe"
     },
     {
       "file": "src/lib/5etools/additionalSpellIdentity.ts",

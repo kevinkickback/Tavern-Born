@@ -645,7 +645,11 @@ export function hasInvalidStartingEquipmentPackage(
   return choices.some((choice, index) => {
     if (!choice) return false
     const block = normalizeChoiceBlock(blocks[index])
-    return !block || !getBlockChoiceKeys(block).includes(choice.toLowerCase())
+    if (!block) return true
+    const keys = getBlockChoiceKeys(block)
+    // Existing format-15 saves use `_` to address the fixed branch.
+    if (keys.length) return !keys.includes(choice.toLowerCase())
+    return choice !== '_' || !Object.getOwnPropertyDescriptor(block, '_') || !Array.isArray(block._)
   })
 }
 

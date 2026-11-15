@@ -1,6 +1,6 @@
 import type { OptionalClassFeatureSourceProof } from '@/types/5etools'
 import { createDeclarationSourceAccess } from './declarationSourceAccess'
-import generated from './optionalClassDeclarationRules.generated.json' with { type: 'json' }
+import generated from './optionalClassDeclarationRules.generated'
 import type { OptionalDeclarationRule } from './optionalClassDeclarationStructure'
 
 export const OPTIONAL_CLASS_DECLARATIONS =

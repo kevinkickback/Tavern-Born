@@ -107,6 +107,35 @@ describe('background commands', () => {
     ).toThrow(/current Background starting equipment package/)
   })
 
+  test('reapplies a saved fixed package without substituting a selectable or missing branch', () => {
+    const background = {
+      name: 'Acolyte',
+      source: 'PHB',
+      startingEquipment: [{ _: [{ value: 500 }] }],
+    } as Background5e
+    const actor = makeCharacterFixture({
+      background: 'Acolyte',
+      backgroundSource: 'PHB',
+      backgroundEquipmentChoices: ['_'],
+    })
+    const apply = (startingEquipment: Background5e['startingEquipment']) =>
+      applyBackgroundSelectionCommand(
+        actor,
+        actor.provenance,
+        { ...background, startingEquipment },
+        actor.backgroundEquipmentChoices!,
+        buildItemLookup([]),
+      )
+
+    expect(apply(background.startingEquipment).characterPatch).toMatchObject({
+      backgroundEquipmentChoices: ['_'],
+      currency: { gp: 5 },
+    })
+    expect(() => apply([{ a: [{ value: 500 }] }])).toThrow(/current Background starting equipment/)
+    expect(() => apply([{}])).toThrow(/current Background starting equipment/)
+    expect(() => apply([])).toThrow(/current Background starting equipment/)
+  })
+
   test('applies identity, proficiencies, equipment, and currency in one result', () => {
     const pouch = { name: 'Pouch', source: 'PHB', type: 'G' } as Item5e
     const background = {
