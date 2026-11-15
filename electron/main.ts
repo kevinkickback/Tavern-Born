@@ -374,9 +374,10 @@ async function initializeDesktop(): Promise<void> {
     assertTrustedIpcSender(event)
     const ownerWindow = mainWindow
     if (!ownerWindow || event.sender !== ownerWindow.webContents) return false
+    const libraryBackup = typeof filename === 'string' && filename.endsWith('.tbclib')
     if (
       typeof filename !== 'string' ||
-      !filename.endsWith('.tbc') ||
+      (!filename.endsWith('.tbc') && !libraryBackup) ||
       /[<>:"/\\|?*]/.test(filename) ||
       Array.from(filename).some((char) => char.charCodeAt(0) < 32) ||
       typeof text !== 'string'
@@ -385,7 +386,11 @@ async function initializeDesktop(): Promise<void> {
     }
     const { canceled, filePath } = await dialog.showSaveDialog(ownerWindow, {
       defaultPath: join(app.getPath('downloads'), filename),
-      filters: [{ name: 'Tavern Born Character', extensions: ['tbc'] }],
+      filters: [
+        libraryBackup
+          ? { name: 'Tavern Born Library Backup', extensions: ['tbclib'] }
+          : { name: 'Tavern Born Character', extensions: ['tbc'] },
+      ],
     })
     if (canceled || !filePath) return false
 

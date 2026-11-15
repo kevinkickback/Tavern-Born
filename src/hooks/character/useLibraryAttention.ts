@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useItemPropertyLookup } from '@/hooks/data/useGameData'
-import { getFilteredGameData } from '@/lib/5etools/filteredGameData'
+import { filterGameData } from '@/lib/5etools/filterGameData'
 import { getCatalogCharacterReadiness } from '@/lib/readiness/catalogCharacterReadiness'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import type { GameData } from '@/types/5etools'
@@ -27,7 +27,7 @@ function characterNeedsAttention(
   if (cached !== undefined) return cached
 
   const { originSystem, allowedSources, variantRules } = character
-  const filtered = getFilteredGameData(catalog, {
+  const filtered = filterGameData(catalog, {
     allowedSources: allowedSources ? getEffectiveSources(allowedSources, originSystem) : undefined,
     originSystem,
     preferNewerPrintings: variantRules?.preferNewerPrintings,

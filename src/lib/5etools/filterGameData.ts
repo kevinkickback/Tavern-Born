@@ -40,7 +40,7 @@ function cacheFilteredData(
   return result
 }
 
-export function getFilteredGameData(
+export function filterGameData(
   gameData: GameData | null,
   { allowedSources, preferNewerPrintings = false, originSystem }: FilterParams,
 ): FilteredGameData {

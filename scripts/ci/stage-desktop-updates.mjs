@@ -238,7 +238,7 @@ async function install(page, version, legacy) {
   await page
     .getByRole('button', { name: legacy ? 'View' : 'App update available', exact: true })
     .click()
-  await page.getByRole('button', { name: 'Install Now' }).click()
+  await page.getByRole('button', { name: legacy ? 'Install Now' : 'Download', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Update Ready' })).toBeVisible({ timeout })
   if (!legacy) {
     const pending = page.getByTestId('character-save-status')
@@ -258,11 +258,11 @@ async function install(page, version, legacy) {
     const status = await page.evaluate(() => window.electronAPI.checkForUpdate())
     assert.equal(status.data?.status, 'downloaded')
     await page.getByRole('button', { name: 'App update available', exact: true }).click()
-    await page.getByRole('button', { name: 'Install Now' }).click()
+    const ready = page.getByRole('dialog', { name: 'Update Ready' })
+    await expect(ready).toBeVisible()
     await page.evaluate(() => {
       window.addEventListener('beforeunload', (event) => event.preventDefault(), { once: true })
     })
-    const ready = page.getByRole('dialog', { name: 'Update Ready' })
     let dismissal = Promise.resolve()
     let dismissalError
     const onDialog = (dialog) => {

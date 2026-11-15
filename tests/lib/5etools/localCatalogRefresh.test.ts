@@ -2,9 +2,9 @@ import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, test } from 'vitest'
-import { matchesAcceptedSource } from '@/lib/5etools/additiveCatalogRestore'
 import { checkCatalogRevision, prepareCatalog } from '@/lib/5etools/catalogCandidate'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
+import { compareAcceptedSource } from '@/lib/5etools/catalogResourceProof'
 import type { ReadSourceJson } from '@/lib/5etools/resourceReader'
 import { readLocalCatalogResource } from '../../../electron/localCatalogResource'
 
@@ -41,7 +41,7 @@ test('unchanged local source opens metadata only and detects a same-size replace
   const prior = await prepare()
   const proof = prior.config.resourceProof!
   expect(proof).toMatchObject({ kind: 'local' })
-  expect(matchesAcceptedSource(prior.config, prior.config)).toBe(true)
+  expect(compareAcceptedSource(prior.config, prior.config)).toBe(true)
   const metadataOnly = {
     ...prior.config,
     resourceProof: {
@@ -52,7 +52,7 @@ test('unchanged local source opens metadata only and detects a same-size replace
       ]),
     },
   }
-  expect(matchesAcceptedSource(metadataOnly, prior.config)).toBe(false)
+  expect(compareAcceptedSource(metadataOnly, prior.config)).toBeUndefined()
   const fullBytes = counters.bytes
   expect(fullBytes).toBeGreaterThan(0)
   const check = () =>
@@ -65,12 +65,12 @@ test('unchanged local source opens metadata only and detects a same-size replace
   await writeFile(replacement, feat('Replaced Feat'))
   await rename(replacement, join(root, 'feats.json'))
   const replaced = await check()
-  expect(matchesAcceptedSource(prior.config, replaced!.config)).toBe(false)
+  expect(compareAcceptedSource(prior.config, replaced!.config)).toBe(false)
   expect(replaced?.data.feats[0].name).toBe('Replaced Feat')
 
   await writeFile(join(root, 'feats.json'), feat('Original Feat'))
   const restored = await prepare()
-  expect(matchesAcceptedSource(prior.config, restored.config)).toBe(true)
+  expect(compareAcceptedSource(prior.config, restored.config)).toBe(true)
   await mkdir(join(root, 'spells'))
   await writeFile(join(root, 'spells/index.json'), JSON.stringify({ PHB: 'spells-phb.json' }))
   await writeFile(

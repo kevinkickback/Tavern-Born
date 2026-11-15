@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
 import { mapWithConcurrency } from '@/lib/async'
 import type { CatalogResourceProof, DataSourceConfig } from '@/types/5etools'
 import {
@@ -10,12 +12,24 @@ import {
 
 type External = Exclude<DataSourceConfig, { type: 'bundled' }>
 const MAX_RESOURCES = 4096
+const BODY_HASH = /#([a-f\d]{64})$/
+
+function bodyHash(stamp: unknown) {
+  return typeof stamp === 'string' ? stamp.match(BODY_HASH)?.[1] : undefined
+}
+
+function hasBodyHashes({ entries }: CatalogResourceProof) {
+  return entries.every(([, stamp]) => stamp === null || bodyHash(stamp))
+}
 
 function isObservation(value: unknown): value is ResourceObservation {
   return !!value && typeof value === 'object' && 'observed' in value && value.observed === true
 }
 
-function usableProof(proof: CatalogResourceProof | undefined, type: External['type']) {
+function usableProof(
+  proof: CatalogResourceProof | undefined,
+  type: External['type'],
+): proof is CatalogResourceProof {
   if (proof?.kind !== type || !Array.isArray(proof.entries)) return false
   const { entries } = proof
   if (!entries.length || entries.length > MAX_RESOURCES) return false
@@ -26,12 +40,40 @@ function usableProof(proof: CatalogResourceProof | undefined, type: External['ty
     const [path, stamp] = entry
     if (typeof path !== 'string' || path.length > 1024 || paths.has(path)) return false
     if (stamp !== null) {
-      if (typeof stamp !== 'string' || !stamp.length || stamp.length > 1025) return false
+      if (typeof stamp !== 'string' || !stamp.length || stamp.length > 1090) return false
       present = true
     }
     paths.add(path)
   }
   return present
+}
+
+/** Undefined means older settings lack enough evidence to compare the source inputs. */
+export function compareAcceptedSource(before: External, after: External, revision?: string) {
+  if (before.type !== after.type || before.path !== after.path) return false
+  if (revision || before.acceptedRevision) {
+    if (before.acceptedRevision && revision && /^[a-f\d]{40}$/i.test(revision))
+      return revision === before.acceptedRevision
+    return undefined
+  }
+  const prior = before.resourceProof
+  const candidate = after.resourceProof
+  if (
+    !usableProof(prior, before.type) ||
+    !usableProof(candidate, after.type) ||
+    !hasBodyHashes(prior) ||
+    !hasBodyHashes(candidate)
+  )
+    return undefined
+  const hashes = new Map(
+    prior.entries.map(([path, stamp]) => [path, stamp === null ? null : bodyHash(stamp)]),
+  )
+  return (
+    hashes.size === candidate.entries.length &&
+    candidate.entries.every(
+      ([path, stamp]) => hashes.get(path) === (stamp === null ? null : bodyHash(stamp)),
+    )
+  )
 }
 
 /** Observe precisely the resources the catalog inventory and parser read. */
@@ -49,10 +91,12 @@ export function observeCatalogResources(
   return {
     async matches(proof?: CatalogResourceProof): Promise<boolean> {
       if (!proof || !usableProof(proof, config.type)) return false
+      // Read legacy HTTPS inputs once to record evidence for future parser upgrades.
+      if (config.type === 'remote' && !hasBodyHashes(proof)) return false
       const stamps = new Map(proof.entries)
       const probe = createJsonResourceReader(config, read, (path) => ({
         probe: true,
-        stamp: stamps.get(path) ?? undefined,
+        stamp: stamps.get(path)?.replace(BODY_HASH, '') || undefined,
       }))
       let changed = false
       await mapWithConcurrency(proof.entries, 6, async ([path, stamp]) => {
@@ -90,7 +134,10 @@ export function observeCatalogResources(
           if (prior && 'error' in prior) throw prior.error
           const value = prior ? prior.value : await source.readJson(path, readSignal)
           if (isObservation(value) && 'data' in value) {
-            if (value.stamp) observed.set(path, value.stamp)
+            if (config.type === 'remote') {
+              const hash = bytesToHex(sha256(utf8ToBytes(JSON.stringify(value.data))))
+              observed.set(path, `${value.stamp ?? ''}#${hash}`)
+            } else if (value.stamp) observed.set(path, value.stamp)
             else complete = false
             return value.data
           }

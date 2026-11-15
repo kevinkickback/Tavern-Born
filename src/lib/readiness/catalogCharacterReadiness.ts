@@ -1,4 +1,4 @@
-import type { FilteredGameData } from '@/lib/5etools/filteredGameData'
+import type { FilteredGameData } from '@/lib/5etools/filterGameData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getCachedCharacterCalculationContext } from '@/lib/calculations/cachedCharacterCalculationContext'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type FilterParams, getFilteredGameData } from '@/lib/5etools/filteredGameData'
+import { type FilterParams, filterGameData } from '@/lib/5etools/filterGameData'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -12,7 +12,7 @@ export function useFilteredGameDataParams({
 }: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
   return useMemo(
-    () => getFilteredGameData(gameData, { allowedSources, preferNewerPrintings, originSystem }),
+    () => filterGameData(gameData, { allowedSources, preferNewerPrintings, originSystem }),
     [gameData, allowedSources, preferNewerPrintings, originSystem],
   )
 }
