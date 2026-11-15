@@ -567,7 +567,7 @@ describe('home page integration workflows', () => {
     expect(screen.getByTestId('card-c2')).toBeTruthy()
   })
 
-  test('Needs Attention and readiness badges reflect saved filters and current catalog content', async () => {
+  test('Pending Choices and readiness badges reflect saved filters and current catalog content', async () => {
     const user = userEvent.setup()
     const base = makeCharacterFixture({
       id: 'ready',
@@ -605,7 +605,7 @@ describe('home page integration workflows', () => {
     useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
     render(<HomeWithSidebar />)
 
-    await user.click(await screen.findByRole('button', { name: 'Needs Attention 2' }))
+    await user.click(await screen.findByRole('button', { name: 'Pending Choices 2' }))
     expect(screen.queryByTestId('card-ready')).toBeNull()
     expect(screen.getByTestId('card-missing')).toBeTruthy()
     expect(screen.getByTestId('card-incomplete')).toBeTruthy()
@@ -623,7 +623,7 @@ describe('home page integration workflows', () => {
       screen.getByRole('heading', { name: 'Checking which characters need attention…' }),
     ).toBeTruthy()
     expect(
-      (await screen.findByRole('button', { name: 'Needs Attention 1' })).getAttribute(
+      (await screen.findByRole('button', { name: 'Pending Choices 1' })).getAttribute(
         'aria-pressed',
       ),
     ).toBe('true')
@@ -640,7 +640,7 @@ describe('home page integration workflows', () => {
     })
     await user.click(screen.getByRole('button', { name: 'List view' }))
     expect(screen.getByLabelText('Character ready')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Needs Attention 1' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Pending Choices 1' })).toBeTruthy()
   })
 
   test('switches to the dense list view and remembers the choice', async () => {

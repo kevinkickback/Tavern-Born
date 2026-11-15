@@ -40,7 +40,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('sidebar views, filters, sort and group compose with toolbar search', async ({ page }) => {
-  await page.getByRole('button', { name: '2024 0' }).click()
+  await page.getByRole('button', { name: '5.5e (2024) 0' }).click()
   await expect(
     page.getByRole('heading', { name: 'No characters match this filter.' }),
   ).toBeVisible()
@@ -62,6 +62,7 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
   const views = sidebar.getByRole('region', { name: 'View' })
   const filters = sidebar.getByRole('region', { name: 'Filter' })
+  const group = sidebar.getByRole('region', { name: 'Group' })
   const gridView = views.getByRole('button', { name: 'Grid view' })
   const listView = views.getByRole('button', { name: 'List view' })
   const toolbar = page.locator('[data-slot="workspace-toolbar"]')
@@ -73,14 +74,14 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
     'aria-pressed',
     'true',
   )
-  await expect(filters.getByRole('button', { name: 'Needs Attention 3' })).toBeVisible()
+  await expect(filters.getByRole('button', { name: 'Pending Choices 3' })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: 'Import', exact: true })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: 'Export Library' })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: /^(grid|gallery|list) view$/i })).toHaveCount(0)
   await expect(toolbar.getByRole('button', { name: 'Select Multiple' })).toHaveCount(0)
   await expect(toolbar.getByRole('combobox')).toHaveCount(0)
 
-  await filters.getByRole('button', { name: '2024 1' }).click()
+  await filters.getByRole('button', { name: '5.5e (2024) 1' }).click()
   await expect(renderedNames).toHaveText(['Charlie Revised'])
   await search.fill('Alpha')
   await expect(renderedNames).toHaveCount(0)
@@ -88,11 +89,11 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(page.getByRole('button', { name: 'New Character', exact: true })).toBeVisible()
   await search.clear()
 
-  await sidebar.getByRole('button', { name: 'Select Multiple' }).click()
+  await group.getByRole('button', { name: 'Select Multiple' }).click()
   await page.getByRole('button', { name: 'Select visible', exact: true }).click()
-  await filters.getByRole('button', { name: '2014 2' }).click()
+  await filters.getByRole('button', { name: '5e (2014) 2' }).click()
   await expect(page.getByText('1 selected (1 hidden)')).toBeVisible()
-  await sidebar.getByRole('button', { name: 'Cancel Selection' }).click()
+  await group.getByRole('button', { name: 'Cancel Selection' }).click()
 
   await sidebar.getByRole('combobox', { name: 'Sort', exact: true }).click()
   await page.getByRole('option', { name: 'Name (A–Z)' }).click()
@@ -142,7 +143,7 @@ test('secondary sidebar stays collapsed across workspaces and reloads', async ({
   const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')
   await expect(toggle.locator('.lucide-panel-left-close')).toBeVisible()
-  const filter = sidebar.getByRole('button', { name: '2024 0' })
+  const filter = sidebar.getByRole('button', { name: '5.5e (2024) 0' })
   await filter.click()
   const content = page.locator('main').locator('..')
   const status = page.getByRole('status', { name: 'Application status' })
@@ -360,6 +361,18 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '0')
       await card.hover()
       for (const detail of revealedDetails) await expect(detail).toHaveCSS('opacity', '1')
+      if (viewportWidth === 1280) {
+        const backgrounds = await actions.getByRole('button').evaluateAll((buttons) => {
+          const sample = document.createElement('canvas').getContext('2d')!
+          return buttons.map((button) => {
+            sample.clearRect(0, 0, 1, 1)
+            sample.fillStyle = getComputedStyle(button).backgroundColor
+            sample.fillRect(0, 0, 1, 1)
+            return sample.getImageData(0, 0, 1, 1).data[3]
+          })
+        })
+        expect(backgrounds).toEqual([191, 191, 204])
+      }
       await expect(card).toHaveCSS('translate', 'none')
       const hoveredCardBox = (await card.boundingBox())!
       expect(hoveredCardBox.y).toBe(cardBox.y)

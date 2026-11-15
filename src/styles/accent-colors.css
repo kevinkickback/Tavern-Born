@@ -20,7 +20,7 @@
 }
 
 [data-accent="chroma"] {
-  --tb-accent-base: #4e837d;
+  --tb-accent-base: #292d2d;
 }
 
 [data-accent="chroma"]:is([data-appearance="dark"], [data-appearance="dark"] *) {

@@ -44,7 +44,7 @@ export function CharacterCardActions({ name, actions, pending }: CharacterCardAc
               disabled={pending && action !== 'export'}
               className={cn(
                 'size-auto aspect-square w-full p-0',
-                !destructive && 'bg-background/55 backdrop-blur-sm',
+                destructive ? 'dark:bg-destructive/80' : 'bg-background/75 backdrop-blur-sm',
               )}
               onClick={actions?.[action]}
             >

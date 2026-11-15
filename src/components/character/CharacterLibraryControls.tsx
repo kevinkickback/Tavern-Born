@@ -23,9 +23,9 @@ import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 const libraryFilters = [
   { id: 'all', label: 'All', icon: Users },
-  { id: '2014', label: '2014', icon: BookOpen },
-  { id: '2024', label: '2024', icon: BookOpen },
-  { id: 'attention', label: 'Needs Attention', icon: WarningCircle },
+  { id: '2014', label: '5e (2014)', icon: BookOpen },
+  { id: '2024', label: '5.5e (2024)', icon: BookOpen },
+  { id: 'attention', label: 'Pending Choices', icon: WarningCircle },
 ] as const
 
 export type LibraryFilter = (typeof libraryFilters)[number]['id']
@@ -180,23 +180,21 @@ export function CharacterLibraryControls({
             <SelectItem value="player">Player</SelectItem>
           </SelectContent>
         </Select>
-      </section>
-      {counts.all !== 0 && (
-        <div className="mt-5 border-t border-border pt-2">
+        {counts.all !== 0 && (
           <button
             type="button"
             disabled={selectionDisabled}
             onClick={onToggleSelection}
             className={cn(
               getSidebarRowClassName(selectionMode),
-              'w-full text-left focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50',
+              'mt-1 w-full text-left focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50',
             )}
           >
             <CheckSquare className="size-4 shrink-0" aria-hidden="true" />
             {selectionMode ? 'Cancel Selection' : 'Select Multiple'}
           </button>
-        </div>
-      )}
+        )}
+      </section>
     </>
   )
 }
