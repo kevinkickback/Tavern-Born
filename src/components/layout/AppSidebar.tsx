@@ -10,6 +10,7 @@ import {
   Certificate,
   ClipboardText,
   Crown,
+  Database,
   Eye,
   FilePdf,
   Gear,
@@ -19,8 +20,10 @@ import {
   Heartbeat,
   IdentificationCard,
   Image,
+  Info,
   MagicWand,
   Medal,
+  Palette,
   PawPrint,
   PersonSimple,
   PuzzlePiece,
@@ -33,32 +36,28 @@ import {
   Warning,
   Wrench,
 } from '@phosphor-icons/react'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import PanelLeftClose from 'lucide-react/dist/esm/icons/panel-left-close'
+import PanelLeftOpen from 'lucide-react/dist/esm/icons/panel-left-open'
+import { lazy, type Ref, Suspense } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CharacterContentOpeningDialog } from '@/components/character/CharacterContentOpeningDialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCharacterContentOpening } from '@/hooks/character/useCharacterContentOpening'
-import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
-import { getTotalCharacterLevel } from '@/lib/characterUtils'
-import { resolvePortraitSrc } from '@/lib/portraitConstants'
+import {
+  getSettingsSection,
+  isSettingsPath,
+  SETTINGS_SECTIONS,
+} from '@/lib/navigation/settingsNavigation'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
+import { SidebarSectionHeading } from './SidebarSectionHeading'
+import { getSidebarRowClassName } from './sidebarRowStyles'
 
 const CharacterReadinessBadge = lazy(() =>
   import('@/components/character/CharacterReadinessBadge').then((module) => ({
     default: module.CharacterReadinessBadge,
   })),
 )
+const SECONDARY_SIDEBAR_ID = 'secondary-workspace-sidebar'
 
 interface ContextItem {
   label: string
@@ -74,7 +73,7 @@ interface ContextGroup {
 }
 
 interface Workspace {
-  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium'
+  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium' | 'settings'
   label: string
   path: string
   icon: Icon
@@ -83,13 +82,15 @@ interface Workspace {
   requiresCharacter?: boolean
 }
 
+const settingsIcons = { general: Gear, appearance: Palette, data: Database, about: Info }
+
 const workspaces: Workspace[] = [
   {
     id: 'start',
     label: 'Characters',
     path: '/',
     icon: Users,
-    matches: (pathname) => pathname === '/' || pathname.startsWith('/settings'),
+    matches: (pathname) => pathname === '/',
     groups: [
       {
         label: 'Character Library',
@@ -275,10 +276,33 @@ const workspaces: Workspace[] = [
       },
     ],
   },
+  {
+    id: 'settings',
+    label: 'Settings',
+    path: '/settings',
+    icon: Gear,
+    matches: isSettingsPath,
+    groups: [
+      {
+        label: 'Settings',
+        items: SETTINGS_SECTIONS.map(({ id, label, search }) => ({
+          label,
+          path: '/settings',
+          search,
+          icon: settingsIcons[id],
+        })),
+      },
+    ],
+  },
 ]
 
 function isContextItemActive(pathname: string, locationSearch: string, item: ContextItem) {
   const { path, search } = item
+  if (path === '/settings')
+    return (
+      isSettingsPath(pathname) &&
+      getSettingsSection(locationSearch).id === getSettingsSection(search ?? '').id
+    )
   if (search !== undefined) {
     const currentTypes = new URLSearchParams(locationSearch).getAll('type').sort()
     const itemTypes = new URLSearchParams(search).getAll('type').sort()
@@ -288,49 +312,19 @@ function isContextItemActive(pathname: string, locationSearch: string, item: Con
   return pathname === path || pathname.startsWith(`${path}/`)
 }
 
-export function AppSidebar() {
+export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HTMLDivElement> }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const characters = useCharacterStore((state) => state.characters)
-  const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
-  const opening = useCharacterContentOpening(() => navigate('/'))
-  const { requestOpen, rememberTrigger } = opening
-  const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
-  const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
-
-  const recentCharacters = useMemo(
-    () =>
-      [...characters]
-        .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
-        .slice(0, 5),
-    [characters],
-  )
-
+  const secondarySidebarOpen = useAppPreferencesStore((state) => state.secondarySidebarOpen)
+  const toggleSecondarySidebar = useAppPreferencesStore((state) => state.toggleSecondarySidebar)
+  const sidebarActionLabel = secondarySidebarOpen
+    ? 'Collapse secondary sidebar'
+    : 'Expand secondary sidebar'
+  const SidebarIcon = secondarySidebarOpen ? PanelLeftClose : PanelLeftOpen
   const activeWorkspace =
     workspaces.find((workspace) => workspace.matches(location.pathname)) ?? workspaces[0]
-
-  const openCharacter = (id: string) => {
-    if (id === activeCharacterId) {
-      navigate('/')
-      return
-    }
-    rememberTrigger()
-    if (hasUnsavedChanges) {
-      setPendingCharacterId(id)
-      setConfirmSwitchOpen(true)
-      return
-    }
-    requestOpen(id)
-  }
-
-  const confirmCharacterSwitch = () => {
-    if (!pendingCharacterId) return
-    setPendingCharacterId(null)
-    setConfirmSwitchOpen(false)
-    requestOpen(pendingCharacterId)
-  }
+  const isLibrary = location.pathname === '/'
 
   return (
     <div className="contents" data-testid="workspace-navigation">
@@ -344,7 +338,7 @@ export function AppSidebar() {
             const active = workspace.id === activeWorkspace.id
             const unavailable = Boolean(workspace.requiresCharacter && !activeCharacter)
 
-            return (
+            const button = (
               <Tooltip key={workspace.id}>
                 <TooltipTrigger asChild>
                   <button
@@ -377,170 +371,91 @@ export function AppSidebar() {
                 </TooltipContent>
               </Tooltip>
             )
+            return workspace.id === 'settings' ? (
+              <div key={workspace.id} className="mt-auto flex flex-col gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={sidebarActionLabel}
+                      aria-expanded={secondarySidebarOpen}
+                      aria-controls={SECONDARY_SIDEBAR_ID}
+                      onClick={toggleSecondarySidebar}
+                      className="flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
+                    >
+                      <SidebarIcon className="size-[1.625rem]" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    {sidebarActionLabel}
+                  </TooltipContent>
+                </Tooltip>
+                {button}
+              </div>
+            ) : (
+              button
+            )
           })}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label="Settings"
-                onClick={() => navigate('/settings')}
-                className="relative mt-auto flex size-12 items-center justify-center rounded-md border border-muted-foreground/45 bg-background/10 text-[1.625rem] text-[color:var(--navigation-foreground)] transition-colors hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground"
-              >
-                <Gear />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
-              Settings
-            </TooltipContent>
-          </Tooltip>
         </nav>
       </aside>
 
       <aside
+        id={SECONDARY_SIDEBAR_ID}
         aria-label={`${activeWorkspace.label} navigation`}
-        className="col-start-2 row-start-2 flex w-56 min-w-0 flex-col overflow-hidden bg-transparent"
+        aria-hidden={secondarySidebarOpen ? undefined : true}
+        inert={!secondarySidebarOpen}
+        className={cn(
+          'col-start-2 row-start-2 flex min-w-0 flex-col overflow-hidden bg-transparent transition-opacity duration-200 ease-out motion-reduce:transition-none',
+          !secondarySidebarOpen && 'opacity-0',
+        )}
       >
         <nav className="min-w-56 flex-1 overflow-y-auto px-2 py-2" aria-label="Workspace pages">
-          {activeWorkspace.groups.map((group, groupIndex) => (
-            <div key={group.label ?? 'primary'} className={cn(groupIndex > 0 && 'mt-5')}>
-              {group.label && (
-                <div className="mb-1 flex items-center gap-2 px-2">
-                  <p className="shrink-0 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.1em] text-muted-foreground/80">
-                    {group.label}
-                  </p>
-                  <span aria-hidden="true" className="h-px min-w-0 flex-1 bg-border" />
-                </div>
-              )}
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const ItemIcon = item.icon
-                  const active = isContextItemActive(location.pathname, location.search, item)
-
-                  return (
-                    <li key={`${item.path}${item.search ?? ''}`}>
-                      <Link
-                        to={`${item.path}${item.search ?? ''}`}
-                        aria-label={item.ariaLabel}
-                        aria-current={active ? 'page' : undefined}
-                        className={cn(
-                          'relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',
-                          active
-                            ? 'bg-secondary text-primary font-medium'
-                            : 'text-[color:var(--navigation-foreground)] hover:bg-secondary/70 hover:text-foreground',
-                        )}
-                      >
-                        {active && (
-                          <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-primary" />
-                        )}
-                        <ItemIcon
-                          className="size-4 shrink-0"
-                          weight={active ? 'fill' : 'regular'}
-                        />
-                        <span className="truncate">{item.label}</span>
-                        {item.path === '/build/review' && activeCharacter && (
-                          <Suspense fallback={null}>
-                            <CharacterReadinessBadge
-                              character={activeCharacter}
-                              compact
-                              className="ml-auto px-1.5 py-0 text-[10px]"
-                            />
-                          </Suspense>
-                        )}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
-
-          {activeWorkspace.id === 'start' && (
-            <div className="mt-5">
-              <p className="mb-1 px-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.1em] text-muted-foreground/80">
-                Recent Characters
-              </p>
-              {recentCharacters.length > 0 ? (
+          {isLibrary ? (
+            <div ref={libraryControlsRef} />
+          ) : (
+            activeWorkspace.groups.map((group, groupIndex) => (
+              <div key={group.label ?? 'primary'} className={cn(groupIndex > 0 && 'mt-5')}>
+                {group.label && <SidebarSectionHeading as="p">{group.label}</SidebarSectionHeading>}
                 <ul className="space-y-0.5">
-                  {recentCharacters.map((character) => {
-                    const active = character.id === activeCharacterId
-                    const name = character.name || 'Unnamed Character'
+                  {group.items.map((item) => {
+                    const ItemIcon = item.icon
+                    const active = isContextItemActive(location.pathname, location.search, item)
+
                     return (
-                      <li key={character.id}>
-                        <button
-                          type="button"
-                          aria-label={`Open ${name}`}
-                          aria-pressed={active}
-                          onClick={() => openCharacter(character.id)}
-                          className={cn(
-                            'relative flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors',
-                            active
-                              ? 'bg-secondary text-foreground'
-                              : 'text-[color:var(--navigation-foreground)] hover:bg-secondary/70 hover:text-foreground',
-                          )}
+                      <li key={`${item.path}${item.search ?? ''}`}>
+                        <Link
+                          to={`${item.path}${item.search ?? ''}`}
+                          aria-label={item.ariaLabel}
+                          aria-current={active ? 'page' : undefined}
+                          className={getSidebarRowClassName(active)}
                         >
                           {active && (
                             <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-primary" />
                           )}
-                          <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-                            {character.portrait ? (
-                              <img
-                                src={resolvePortraitSrc(character.portrait)}
-                                alt=""
-                                className="size-full object-cover"
+                          <ItemIcon
+                            className="size-4 shrink-0"
+                            weight={active ? 'fill' : 'regular'}
+                          />
+                          <span className="truncate">{item.label}</span>
+                          {item.path === '/build/review' && activeCharacter && (
+                            <Suspense fallback={null}>
+                              <CharacterReadinessBadge
+                                character={activeCharacter}
+                                compact
+                                className="ml-auto px-1.5 py-0 text-[10px]"
                               />
-                            ) : (
-                              <Users className="size-3.5" />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">{name}</span>
-                            <span className="block truncate text-[11px] text-muted-foreground">
-                              {[
-                                getRaceDisplayName(character.race, character.subrace),
-                                `Level ${getTotalCharacterLevel(character)}`,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </span>
-                          </span>
-                        </button>
+                            </Suspense>
+                          )}
+                        </Link>
                       </li>
                     )
                   })}
                 </ul>
-              ) : (
-                <p className="px-2 py-1 text-xs leading-relaxed text-muted-foreground">
-                  Created and imported characters will appear here for quick access.
-                </p>
-              )}
-            </div>
+              </div>
+            ))
           )}
         </nav>
       </aside>
-
-      <CharacterContentOpeningDialog opening={opening} />
-      <AlertDialog
-        open={confirmSwitchOpen}
-        onOpenChange={(open) => {
-          setConfirmSwitchOpen(open)
-          if (!open) setPendingCharacterId(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes on the current character. Switching characters will discard
-              them.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCharacterSwitch}>Discard & Switch</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -1,26 +1,20 @@
 import { useMemo } from 'react'
-import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { type FilterParams, filterGameData } from '@/lib/5etools/filterGameData'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
-/**
- * Core game data filtering hook. Accepts explicit filter parameters so callers
- * without an active character (settings pages, compendium) can pass their own
- * source lists without coupling to `characterStore`.
- */
-export function useFilteredGameDataParams(params: FilterParams) {
+/** Filter by explicit source parameters without depending on the active character. */
+export function useFilteredGameDataParams({
+  allowedSources,
+  preferNewerPrintings,
+  originSystem,
+}: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
-  const { allowedSources, preferNewerPrintings = false, originSystem } = params
-
-  const filteredData = useMemo(() => {
-    if (!gameData) return createEmptyGameData()
-
-    return filterGameData(gameData, { allowedSources, preferNewerPrintings, originSystem })
-  }, [gameData, allowedSources, preferNewerPrintings, originSystem])
-
-  return filteredData
+  return useMemo(
+    () => filterGameData(gameData, { allowedSources, preferNewerPrintings, originSystem }),
+    [gameData, allowedSources, preferNewerPrintings, originSystem],
+  )
 }
 
 /** Explicit character filters include the implicit core source. */

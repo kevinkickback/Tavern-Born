@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { PDFDocument } from '@cantoo/pdf-lib'
+import { PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
 import { expect, type Page, test } from '@playwright/test'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -81,6 +81,9 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
   await expect(page.getByRole('dialog', { name: 'Customize PDF' })).toHaveCSS('opacity', '1')
   await expect(page.getByRole('combobox', { name: 'Long text & extra entries' })).toHaveText(
     'Shorten with ellipsis',
+  )
+  await expect(page.getByRole('combobox', { name: 'Images' })).toHaveCount(
+    template.id.startsWith('2014') ? 1 : 0,
   )
   if (template.id === '2024-official') {
     await page.screenshot({
@@ -192,6 +195,120 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
   if (originalViewport) await page.setViewportSize(originalViewport)
   return generatedPageCount
 }
+
+test('MPMB preview and download honor the three image modes', async ({ page }, info) => {
+  await page.goto('/')
+  const [portrait, emblem] = await page.evaluate(() => {
+    const makeImage = (width: number, fill: string) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = 29
+      const painter = canvas.getContext('2d')!
+      painter.fillStyle = fill
+      painter.fillRect(0, 0, width, canvas.height)
+      return canvas.toDataURL('image/png')
+    }
+    return [makeImage(31, '#d02040'), makeImage(37, '#28a8d0')]
+  })
+  const fixture = JSON.parse(fs.readFileSync('tests/fixtures/equipment-e2e.tbc', 'utf8'))
+  const character = characterPersistenceSchema.parse({
+    ...fixture,
+    portrait,
+    details: {
+      ...fixture.details,
+      organizationSelectionKey: '__custom__',
+      organizationCustomImage: emblem,
+    },
+  })
+  await seedAppState(page, {
+    sourcePath: 'e2e-pdf-images',
+    characters: [character],
+    activeCharacterId: character.id,
+  })
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-pdf-images')
+  await selectCharacterFromHome(page, character.name)
+  await page.goto('/#/character-sheet/2014/custom')
+
+  const template = await PDFDocument.load(fs.readFileSync('public/pdf/2014/mpmb-main.pdf'))
+  const bounds = template.getPage(3).getSize()
+  const centers = ['Portrait', 'Symbol'].map((name) => {
+    const { x, y, width, height } = template
+      .getForm()
+      .getButton(name)
+      .acroField.getWidgets()[0]
+      .getRectangle()
+    return { x: (x + width / 2) / bounds.width, y: 1 - (y + height / 2) / bounds.height }
+  })
+  for (const [label, filename] of [
+    ['Color images', 'color'],
+    ['Greyscale images', 'grayscale'],
+    ['No images', 'none'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Customize PDF' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Customize PDF' })
+    const images = dialog.getByRole('combobox', { name: 'Images' })
+    if (filename === 'color') {
+      await expect(images).toHaveText(label)
+    } else {
+      await images.click()
+      await page.getByRole('option', { name: label }).click()
+    }
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await expect(page.getByRole('button', { name: 'Download PDF' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Generate Preview' }).click()
+    const detailsPage = page.locator('canvas').nth(3)
+    await expect(detailsPage).toBeAttached({ timeout: 30_000 })
+    const pixels = await detailsPage.evaluate((node: HTMLCanvasElement, points) => {
+      const painter = node.getContext('2d')!
+      return points.map(({ x, y }) =>
+        Array.from(painter.getImageData(node.width * x, node.height * y, 1, 1).data).slice(0, 3),
+      )
+    }, centers)
+    for (const rgb of pixels) {
+      const spread = Math.max(...rgb) - Math.min(...rgb)
+      if (filename === 'color') expect(spread).toBeGreaterThan(100)
+      else if (filename === 'grayscale') {
+        expect(spread).toBeLessThanOrEqual(1)
+        expect(rgb[0]).toBeLessThan(200)
+      } else expect(rgb).toEqual([255, 255, 255])
+    }
+
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const preflight = page.getByRole('alertdialog', { name: 'Before you download' })
+    if (await preflight.isVisible()) {
+      await preflight.getByRole('button', { name: 'Download PDF' }).click()
+    }
+    const outputPath = info.outputPath(`mpmb-${filename}.pdf`)
+    await (await download).saveAs(outputPath)
+    const output = await PDFDocument.load(fs.readFileSync(outputPath))
+    const form = output.getForm()
+    for (const name of ['Portrait', 'Symbol']) {
+      const widget = form.getButton(name).acroField.getWidgets()[0]
+      expect(widget.getRectangle().width).toBe(0)
+      expect(widget.dict.has(PDFName.of('AP'))).toBe(false)
+    }
+    const addedImages = output.context.enumerateIndirectObjects().flatMap(([, object]) => {
+      if (
+        !(object instanceof PDFRawStream) ||
+        object.dict.get(PDFName.of('Subtype'))?.toString() !== '/Image'
+      )
+        return []
+      if (object.dict.get(PDFName.of('Height'))?.toString() !== '29') return []
+      return [object.dict.get(PDFName.of('Width'))?.toString()]
+    })
+    expect(addedImages.sort()).toEqual(filename === 'none' ? [] : ['31', '37'])
+    expect(form.getTextField('PC Name').getText()).toBe(character.name)
+    expect(form.getTextField('PC Name').isReadOnly()).toBe(false)
+  }
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-pdf-images')
+  await selectCharacterFromHome(page, character.name)
+  await page.goto('/#/character-sheet/2014/custom')
+  await page.getByRole('button', { name: 'Customize PDF' }).click()
+  await expect(page.getByRole('combobox', { name: 'Images' })).toHaveText('No images')
+})
 
 test('@focused exports every official and custom character-sheet template', async ({
   page,

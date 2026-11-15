@@ -168,7 +168,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await expect(page.getByRole('heading', { level: 3, name: characterName })).toBeVisible()
 
     await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('tab', { name: 'Game Data', exact: true }).click()
+    await page.getByRole('link', { name: 'Game Data', exact: true }).click()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await page.getByLabel('Web Address').fill(source)
     await expect(page.getByText('Compatible game data found')).toBeVisible()
@@ -244,7 +244,9 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await expect(update).toBeHidden()
 
     // Isolate cache repair on the final reload from another background update check.
-    const startupCheck = page.getByRole('tabpanel', { name: 'Game Data' }).getByRole('switch')
+    const startupCheck = page
+      .getByRole('region', { name: 'Game Data', exact: true })
+      .getByRole('switch')
     await expect(startupCheck).toBeChecked()
     await startupCheck.click()
     await expect(startupCheck).not.toBeChecked()

@@ -392,7 +392,7 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
                   name="optFeature"
                   checked={isSelected}
                   onChange={() => onChange(f.name)}
-                  className="size-4 shrink-0 accent-[var(--color-accent-9)]"
+                  className="size-4 shrink-0 accent-primary"
                 />
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-medium">{f.name}</span>

@@ -1,76 +1,21 @@
 import { useMemo } from 'react'
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
-import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import type { ClassChoiceCatalogs } from '@/lib/character/classChoiceOptions'
-import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
+import { useCharacterGameDataParams } from '@/hooks/data/useFilteredGameData'
+import { useItemPropertyLookup } from '@/hooks/data/useGameData'
+import { getCatalogCharacterReadiness } from '@/lib/readiness/catalogCharacterReadiness'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Creature5e, OptionalFeatureLike } from '@/types/5etools'
 import type { Character } from '@/types/character'
-import { useCharacterCalculationContext } from './useCharacterCalculationContext'
-import { useClassChoiceFeatureCatalogs } from './useClassChoiceFeatureCatalogs'
-
-const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
 export function useCharacterReadiness(character: Character | null | undefined) {
-  const calculation = useCharacterCalculationContext(character)
-  const featureCatalogs = useClassChoiceFeatureCatalogs()
-  const {
-    creatures,
-    feats: filteredFeats,
-    itemMasteries,
-    items,
-    itemsBase,
-    optionalfeatures,
-  } = useFilteredGameData()
-  const itemTypeByAbbr = useItemTypeLookup()
-  const itemPropertyByAbbr = useItemPropertyLookup()
-  const feats = useGameDataStore((state) => state.gameData?.feats)
-  const spellsByKey = useGameDataStore((state) => state.gameData?.lookups?.spellsByKey)
-  const featsByKey = useMemo(
-    () =>
-      Object.fromEntries(
-        (feats ?? []).map((feat) => [getEntityLookupKey(feat.name, feat.source), feat]),
-      ),
-    [feats],
-  )
-  const classChoiceCatalogs = useMemo<ClassChoiceCatalogs>(
-    () => ({
-      ...featureCatalogs,
-      creatures: creatures as Creature5e[],
-      feats: filteredFeats,
-      items,
-      itemsBase,
-      itemMasteries,
-      optionalFeatures: optionalfeatures as OptionalFeatureLike[],
-      itemPropertyByAbbr,
-      itemTypeByAbbr,
-      weaponProficiencies: character?.proficiencies.weapons ?? EMPTY_WEAPON_PROFICIENCIES,
-    }),
-    [
-      character?.proficiencies.weapons,
-      featureCatalogs,
-      creatures,
-      filteredFeats,
-      itemMasteries,
-      itemPropertyByAbbr,
-      itemTypeByAbbr,
-      items,
-      itemsBase,
-      optionalfeatures,
-    ],
-  )
-
+  const filtered = useCharacterGameDataParams({
+    allowedSources: character?.allowedSources,
+    originSystem: character?.originSystem,
+    preferNewerPrintings: character?.variantRules?.preferNewerPrintings,
+  })
+  const raw = useGameDataStore((state) => state.gameData)
+  const itemProperties = useItemPropertyLookup()
   return useMemo(
     () =>
-      character
-        ? getCharacterReadiness(character, {
-            calculation,
-            classChoiceCatalogs,
-            featsByKey,
-            spellsByKey,
-          })
-        : null,
-    [calculation, character, classChoiceCatalogs, featsByKey, spellsByKey],
+      character ? getCatalogCharacterReadiness(character, filtered, raw, itemProperties) : null,
+    [character, filtered, raw, itemProperties],
   )
 }

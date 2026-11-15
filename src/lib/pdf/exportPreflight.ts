@@ -22,6 +22,7 @@ import type {
   CharacterSheetPageOptions,
   CharacterSheetTemplateId,
   SheetExportReport,
+  SheetImageMode,
 } from './types'
 
 type ExportPreflightCategory = 'readiness' | 'dependency' | 'unsupported' | 'truncation'
@@ -42,8 +43,14 @@ export interface ExportPreflightResult {
 }
 
 /** Content fitting is handled by Customize PDF, not the download confirmation. */
-export function getPdfDownloadPreflight(result: ExportPreflightResult): ExportPreflightResult {
-  const issues = result.issues.filter((issue) => issue.category !== 'truncation')
+export function getPdfDownloadPreflight(
+  result: ExportPreflightResult,
+  images?: SheetImageMode,
+): ExportPreflightResult {
+  const issues = result.issues.filter(
+    (issue) =>
+      issue.category !== 'truncation' && !(images === 'none' && issue.id === 'organization-image'),
+  )
   return {
     issues,
     blockingCount: issues.filter((issue) => issue.severity === 'blocking').length,

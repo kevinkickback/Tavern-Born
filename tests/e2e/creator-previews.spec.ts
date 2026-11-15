@@ -95,13 +95,14 @@ const GAME_DATA: GameData = {
       hd: { faces: 10, number: 1 },
       proficiency: ['str', 'con'],
       startingProficiencies: {
-        armor: ['light'],
+        armor: ['light', 'medium', 'shield'],
         weapons: [
           'simple weapons',
           '{@item Mace|PHB}',
           '{@item sling|PHB}',
           'Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property',
         ],
+        tools: ["{@item thieves' tools|PHB}", "{@item tinker's tools|PHB}"],
         skills: [],
       },
       classFeatures: [
@@ -190,6 +191,12 @@ async function openRace(page: Page) {
   await wizard.getByText('5e Legacy (2014)', { exact: true }).click()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   await wizard.getByRole('button', { name: 'None', exact: true }).click()
+  const supplementHeading = wizard.getByRole('heading', { name: 'Supplements', exact: true })
+  expect(
+    await supplementHeading.evaluate((heading) =>
+      Number.parseFloat(getComputedStyle(heading, '::after').width),
+    ),
+  ).toBeGreaterThan(16)
   await wizard.getByRole('button', { name: /Tasha's Cauldron/ }).click()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(wizard.getByPlaceholder('Search races...')).toBeVisible()
@@ -438,6 +445,19 @@ test('draft books supply race, class and background details while linked items r
   await page.mouse.move(5, 5)
   await expect(lens).toBeHidden()
   await wizard.getByRole('button', { name: 'Next', exact: true }).click()
+  const training = wizard.getByRole('heading', { name: 'Training', exact: true }).locator('..')
+  const armorRow = training.getByRole('heading', { name: 'Armor Proficiencies' }).locator('..')
+  const [light, medium, shield] = await Promise.all(
+    ['Light', 'Medium', 'Shield'].map((name) =>
+      armorRow.getByRole('button', { name, exact: true }).boundingBox(),
+    ),
+  )
+  expect(light!.y).toBe(medium!.y)
+  expect(medium!.y).toBe(shield!.y)
+  await expect(armorRow).toContainText('Light, Medium, Shield')
+  await expect(
+    training.getByRole('heading', { name: 'Tool Proficiencies' }).locator('..'),
+  ).toContainText("Thieves' tools, Tinker's tools")
   await wizard.getByRole('button', { name: 'Combat Reading', exact: true }).hover()
   await page
     .getByRole('dialog', { name: 'Combat Reading preview', exact: true })

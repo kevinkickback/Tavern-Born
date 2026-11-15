@@ -41,10 +41,11 @@ describe('PortraitPage upload guards', () => {
     vi.restoreAllMocks()
   })
 
-  test('shows contextual lineage in the actual portrait preview without changing saved fields', () => {
+  test('shows the base race in the portrait card without changing saved lineage', () => {
     const character = useCharacterStore.getState().activeCharacter
-    const { getByText } = render(<PortraitPage />)
-    expect(getByText('Dragonborn (Draconblood: Brass)')).toBeTruthy()
+    const { getByText, queryByText } = render(<PortraitPage />)
+    expect(getByText('Dragonborn')).toBeTruthy()
+    expect(queryByText('Dragonborn (Draconblood: Brass)')).toBeNull()
     expect(useCharacterStore.getState().activeCharacter).toBe(character)
     expect(character?.subrace).toBe('Dragonborn (Draconblood; Brass)')
     expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)

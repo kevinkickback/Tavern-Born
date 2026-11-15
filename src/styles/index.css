@@ -246,7 +246,7 @@
 }
 
 [data-rules-preview-active="true"] {
-  color: var(--accent-foreground);
+  color: var(--foreground);
   background-color: color-mix(in oklab, var(--accent) 28%, transparent);
   border-radius: var(--radius-sm);
   outline: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);

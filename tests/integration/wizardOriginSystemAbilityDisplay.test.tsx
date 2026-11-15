@@ -149,6 +149,7 @@ describe('wizard 2024 origin-system ability display', () => {
           originSystem: '2024',
           race: 'Elf',
           raceSource: 'PHB',
+          subrace: 'Wood Elf',
           class: 'Wizard',
           background: 'Sage',
           abilityScores: {
@@ -171,5 +172,7 @@ describe('wizard 2024 origin-system ability display', () => {
     )
 
     expect(screen.queryByText('10+2')).toBeNull()
+    expect(screen.getByText('Elf (Wood Elf) · PHB')).toBeTruthy()
+    expect(screen.getByText('Elf')).toBeTruthy()
   })
 })

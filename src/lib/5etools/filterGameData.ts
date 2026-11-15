@@ -1,3 +1,4 @@
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildLegacySubclassChoiceCatalogs } from '@/lib/5etools/legacySubclassChoices'
 import { filterCharacterItems } from '@/lib/5etools/playerItemAvailability'
@@ -16,7 +17,7 @@ export interface FilterParams {
   originSystem?: '2014' | '2024'
 }
 
-interface FilteredGameData extends GameData {
+export interface FilteredGameData extends GameData {
   itemMasteries: ItemMastery5e[]
   creatures: Creature5e[]
 }
@@ -40,9 +41,11 @@ function cacheFilteredData(
 }
 
 export function filterGameData(
-  gameData: GameData,
+  gameData: GameData | null,
   { allowedSources, preferNewerPrintings = false, originSystem }: FilterParams,
 ): FilteredGameData {
+  if (!gameData) return createEmptyGameData()
+
   const cacheKey = JSON.stringify([
     originSystem ?? '',
     preferNewerPrintings,
