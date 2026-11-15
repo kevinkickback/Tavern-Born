@@ -39,6 +39,60 @@ test.beforeEach(async ({ page }) => {
   await ensureStartupPromptResolved(page, 'e2e-library-seed')
 })
 
+test('library views compose with search and sort or group the visible cards in the sidebar', async ({
+  page,
+}) => {
+  const [classic, second] = loadLibraryCharacters()
+  const revised = {
+    ...second,
+    id: 'library-revised',
+    name: 'Charlie Revised',
+    originSystem: '2024',
+  }
+  await seedAppState(page, {
+    sourcePath: 'e2e-library-seed',
+    characters: [classic, second, revised],
+  })
+  await page.reload()
+  await page.setViewportSize({ width: 900, height: 700 })
+
+  const sidebar = page.getByRole('complementary', { name: 'Characters navigation' })
+  const views = sidebar.getByRole('region', { name: 'Library Views' })
+  const toolbar = page.locator('[data-slot="workspace-toolbar"]')
+  const search = toolbar.getByRole('searchbox', { name: 'Search characters' })
+  const renderedNames = page.locator('main h3')
+  await expect(views.getByRole('button', { name: 'All 3', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(views.getByRole('button', { name: 'Needs Attention 3' })).toBeVisible()
+  await expect(toolbar.getByRole('button', { name: 'Import', exact: true })).toBeVisible()
+  await expect(toolbar.getByRole('button', { name: 'Export Library' })).toBeVisible()
+  await expect(toolbar.getByText('Sort & Group')).toHaveCount(0)
+
+  await views.getByRole('button', { name: '2024 1' }).click()
+  await expect(renderedNames).toHaveText(['Charlie Revised'])
+  await search.fill('Alpha')
+  await expect(renderedNames).toHaveCount(0)
+  await expect(toolbar.getByRole('button', { name: 'Import', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New Character', exact: true })).toBeVisible()
+  await search.clear()
+
+  await toolbar.getByRole('button', { name: 'Select Multiple' }).click()
+  await page.getByRole('button', { name: 'Select visible', exact: true }).click()
+  await views.getByRole('button', { name: '2014 2' }).click()
+  await expect(page.getByText('1 selected (1 hidden)')).toBeVisible()
+  await toolbar.getByRole('button', { name: 'Cancel Selection' }).click()
+
+  await sidebar.getByRole('combobox', { name: 'Sort by' }).click()
+  await page.getByRole('option', { name: 'Name (A–Z)' }).click()
+  await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
+  await sidebar.getByRole('combobox', { name: 'Group by' }).click()
+  await page.getByRole('option', { name: 'Class', exact: true }).click()
+  await expect(page.locator('main section').filter({ hasText: /^Fighter 1/ })).toHaveCount(1)
+  await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
+})
+
 test('character library filters, cancels deletion, then persists a confirmed deletion', async ({
   page,
 }) => {
