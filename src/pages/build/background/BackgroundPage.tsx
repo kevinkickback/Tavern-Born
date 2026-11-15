@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  AnchoredHint,
   WorkspaceBody,
   WorkspacePage,
   WorkspacePaneHeader,
@@ -21,6 +22,7 @@ import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useBackgroundLookup, useFeatLookup, useItemLookup } from '@/hooks/data/useGameData'
 import { useStartingEquipmentPolicy } from '@/hooks/data/useStartingEquipment'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
@@ -42,6 +44,7 @@ import {
 } from '@/lib/character/startingEquipmentGrants'
 import { resolveFixedFeatGrant } from '@/lib/featGrants'
 import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -79,6 +82,7 @@ const BACKGROUND_BONUSES_LINK = {
   pathname: '/build/ability-scores',
   search: createSearchParams({ focus: 'background-bonuses' }).toString(),
 }
+const EQUIPMENT_HINT_ID = 'background-starting-equipment'
 
 export function BuildBackgroundPage() {
   const [searchParams] = useSearchParams()
@@ -102,8 +106,18 @@ export function BuildBackgroundPage() {
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const [equipmentDraft, setEquipmentDraft] = useState<EquipmentDraft>()
+  const [showEquipmentHint, setShowEquipmentHint] = useState(
+    () => !isHintDismissed(EQUIPMENT_HINT_ID),
+  )
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
+
+  useEffect(() => subscribeToHintReset(() => setShowEquipmentHint(true)), [])
+
+  const dismissEquipmentHint = () => {
+    setHintDismissed(EQUIPMENT_HINT_ID, true)
+    setShowEquipmentHint(false)
+  }
 
   const filteredBackgrounds = useMemo(() => {
     const q = bgSearch.trim().toLowerCase()
@@ -162,6 +176,15 @@ export function BuildBackgroundPage() {
     [selectedBg?.startingEquipment, itemLookup, packageItems, equipmentPolicy],
   )
   const configurableEquipmentBlocks = equipmentBlocks
+  const canShowEquipmentHint =
+    showEquipmentHint &&
+    character?.originSystem === '2024' &&
+    !!equipmentPolicy?.ownerAvailable &&
+    equipmentBlocks.some((block) => !block.isFixed && block.choiceKeys.length > 1)
+  const equipmentHintPosition = useAnchoredHintPosition({
+    enabled: canShowEquipmentHint,
+    selector: '[data-background-equipment-hint]',
+  })
   const needsPackageApplication =
     !!character &&
     !!equipmentPolicy?.ownerAvailable &&
@@ -590,7 +613,10 @@ export function BuildBackgroundPage() {
                           equipmentChoiceHighlighted && 'animate-route-focus',
                         )}
                       >
-                        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <div
+                          data-background-equipment-hint
+                          className="mb-2 w-fit text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                        >
                           Starting Equipment
                         </div>
                         <StartingEquipmentBlocks
@@ -630,6 +656,16 @@ export function BuildBackgroundPage() {
           }
         />
       </WorkspaceBody>
+
+      <AnchoredHint
+        position={canShowEquipmentHint ? equipmentHintPosition : null}
+        width={288}
+        onDismiss={dismissEquipmentHint}
+        dismissLabel="Dismiss background starting equipment hint"
+      >
+        Use the package tabs to choose the items and coin your background grants. Class starting
+        equipment is handled separately.
+      </AnchoredHint>
 
       <FeatSelectionModal
         open={featModalOpen}
