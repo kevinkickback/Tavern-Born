@@ -6,6 +6,7 @@ import { del, get, set } from 'idb-keyval'
 import { afterEach, expect, test, vi } from 'vitest'
 import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
 import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import * as calculations from '@/lib/calculations/characterCalculationContext'
 import { savedCharactersSurviveRebuild } from '@/lib/character/catalogRebuildCompatibility'
 import {
   buildClassChoiceFeatureCatalogs,
@@ -201,6 +202,31 @@ const item = {
   quantity: 1,
   equipped: true,
 }
+
+test('quiet rebuild rejects replacement of an explicitly undefined projection field', () => {
+  const character = createEmptyCharacter({ name: 'Saved character' })
+  const data = createEmptyGameData()
+  const { createCharacterCalculationContext: calculate } = calculations
+  const project =
+    (key: 'portrait' | 'portraitTransform') =>
+    (...args: Parameters<typeof calculate>) => {
+      const context = calculate(...args)
+      const { portrait: _portrait, portraitTransform: _transform, ...common } = context.character
+      return { ...context, character: { ...common, [key]: undefined } }
+    }
+  const calculation = vi.spyOn(calculations, 'createCharacterCalculationContext')
+  try {
+    calculation
+      .mockImplementationOnce(project('portrait'))
+      .mockImplementationOnce(project('portrait'))
+      .mockImplementationOnce(project('portrait'))
+      .mockImplementationOnce(project('portraitTransform'))
+    expect(savedCharactersSurviveRebuild(data, data, [character])).toBe(true)
+    expect(savedCharactersSurviveRebuild(data, data, [character])).toBe(false)
+  } finally {
+    calculation.mockRestore()
+  }
+})
 
 test('same printing does not establish that a saved class or spell still works', () => {
   const character = createEmptyCharacter({

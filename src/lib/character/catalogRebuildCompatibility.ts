@@ -212,12 +212,14 @@ export function savedCharactersSurviveRebuild(prior: GameData, rebuilt: GameData
     if (!parsed.success || characterUsesContentOutsideCatalog(parsed.data, available)) return false
     const before = assessPrior(parsed.data)
     const after = assessRebuilt(parsed.data)
+    const currentKeys = new Set(Object.keys(after.projected))
     return (
+      Object.keys(before.projected).length === currentKeys.size &&
       Object.entries(before.projected).every(([key, value]) => {
+        if (!currentKeys.has(key)) return false
         const current = after.projected[key as keyof Character]
         return value === current || JSON.stringify(value) === JSON.stringify(current)
       }) &&
-      Object.keys(before.projected).length === Object.keys(after.projected).length &&
       JSON.stringify(before.mechanics) === JSON.stringify(after.mechanics) &&
       after.issues.every((issue) => before.issues.includes(issue))
     )
