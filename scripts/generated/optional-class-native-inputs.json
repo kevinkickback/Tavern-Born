@@ -74,7 +74,7 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "2ce7f831616c04aae3d4df491246505342eb73a9a22c1ae84e279ae2f85d3399"
+      "sha256": "390c82d1834091415cf01066b4094cf3dfe0306c3cfd27357e273439def18818"
     },
     {
       "file": "scripts/generate-optional-class-native-rules.mjs",
@@ -461,12 +461,12 @@
       "sha256": "7b48c8ad5f1cd083c2a4e0ddfaf54642d3753ff6b1a2cdcbf4b29e3e25bcd28a"
     },
     {
-      "file": "src/lib/5etools/optionalClassDeclarationRules.generated.json",
-      "sha256": "790930d6b752a037ee2c0996d0e341febd98258abd4b53734bf3860e76386cf2"
+      "file": "src/lib/5etools/optionalClassDeclarationRules.generated.ts",
+      "sha256": "dde42d73b080e01644720ae9308dc3fc2e53a545ee21a62f02952761fc5f0268"
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationSource.ts",
-      "sha256": "e0bb9362bc08cf99c3c0a3d322f32693fe8385323ce23bfc1b58a8fb5a6d88e1"
+      "sha256": "4363b70e16ec9330299af04c3c9db12f330ceafd10dd8352b9a62f6b8fb54a1c"
     },
     {
       "file": "src/lib/5etools/optionalClassDeclarationStructure.ts",
@@ -606,7 +606,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "a0e5b7567b5256c21755e69a04aedd4420013c7e5f9b3658083f56bfc0810c51"
+      "sha256": "932411eb1aae471a65b248ac3d13f23af0e9db3041bb75f7829ab3a67069d7bb"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",

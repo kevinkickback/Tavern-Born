@@ -1,4 +1,4 @@
-import type { ZodTypeAny } from 'zod'
+import type { ZodType } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import { isMissingCatalogResource, type JsonResourceReader } from './resourceReader'
@@ -21,7 +21,7 @@ import {
 
 interface FileValidationConfig {
   name: string
-  schema: ZodTypeAny
+  schema: ZodType
   optionalSupport?: boolean
   collections?: string[]
 }

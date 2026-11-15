@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
 import { createServer } from 'vite'
+import { emitSharedRegistryModule } from './lib/shared-registry-source.mjs'
 
 // Read-only semantic authority: ordinary generation checks meaning, never recaptures it.
 const root = process.argv.find((arg) => arg.startsWith('--data='))?.slice(7) ?? 'data'
@@ -51,6 +52,7 @@ try {
     )
   const helperFiles = new Set([
     'scripts/generate-optional-class-declaration-rules.mjs',
+    'scripts/lib/shared-registry-source.mjs',
     'scripts/lib/optional-class-declaration-semantics.json',
     'src/lib/5etools/optionalClassDeclarationStructure.ts',
     'src/lib/5etools/classFeatureIdentity.ts',
@@ -91,18 +93,22 @@ try {
   }).trim()
   for (const [file, value] of [
     [
-      'src/lib/5etools/optionalClassDeclarationRules.generated.json',
-      { version: 1, relations: relations.map(api.summarizeOptionalDeclarationCertificate) },
+      'src/lib/5etools/optionalClassDeclarationRules.generated.ts',
+      emitSharedRegistryModule(
+        { version: 1, relations: relations.map(api.summarizeOptionalDeclarationCertificate) },
+        'scripts/generate-optional-class-declaration-rules.mjs',
+        true,
+      ),
     ],
     [
       'scripts/generated/optional-class-declaration-inputs.json',
-      { version: 1, upstream, inputs, helpers },
+      JSON.stringify({ version: 1, upstream, inputs, helpers }, null, 2) + '\n',
     ],
   ]) {
     const bytes = execFileSync(
       process.execPath,
       ['node_modules/@biomejs/biome/bin/biome', 'format', '--stdin-file-path', file],
-      { input: JSON.stringify(value, null, 2) + '\n', encoding: 'utf8', windowsHide: true },
+      { input: value, encoding: 'utf8', windowsHide: true },
     )
     if (checking) {
       if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== bytes)

@@ -225,7 +225,7 @@ function parseCharacterData(character: unknown): {
   if (!result.success) {
     return {
       data: null,
-      error: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+      error: result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
     }
   }
 

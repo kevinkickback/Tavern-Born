@@ -71,5 +71,5 @@ export function validateStep(
   const result = schema.safeParse(characterData)
   if (result.success) return { valid: true }
 
-  return { valid: false, error: result.error.errors[0]?.message ?? 'Validation failed' }
+  return { valid: false, error: result.error.issues[0]?.message ?? 'Validation failed' }
 }
