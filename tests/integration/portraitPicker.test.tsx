@@ -195,6 +195,35 @@ describe('PortraitPicker transform controls', () => {
     expect(await listSavedPortraits()).toEqual([])
   })
 
+  test('rejects a PNG header above 16 megapixels before browser decode', async () => {
+    const report = vi.spyOn(toast, 'error')
+    const bytes = new Uint8Array(
+      Buffer.from('89504e470d0a1a0a0000000d4948445200000fa100000fa0', 'hex'),
+    )
+    render(<PortraitPicker onPortraitChange={vi.fn()} onTransformChange={vi.fn()} />)
+    fireEvent.change(document.querySelector('input[type="file"]')!, {
+      target: { files: [new File([bytes], 'test.png', { type: 'image/png' })] },
+    })
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith('Choose an image no larger than 16 megapixels.'),
+    )
+    expect(decode).not.toHaveBeenCalled()
+  })
+
+  test('reports a file read failure without attempting to decode an image', async () => {
+    const report = vi.spyOn(toast, 'error')
+    const file = new File([new Uint8Array(24)], 'test.png', { type: 'image/png' })
+    const unreadable = new Blob()
+    vi.spyOn(unreadable, 'arrayBuffer').mockRejectedValueOnce(new Error('Platform read failure'))
+    vi.spyOn(file, 'slice').mockReturnValueOnce(unreadable)
+
+    render(<PortraitPicker onPortraitChange={vi.fn()} onTransformChange={vi.fn()} />)
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } })
+
+    await waitFor(() => expect(report).toHaveBeenCalledWith('The image file could not be read.'))
+    expect(decode).not.toHaveBeenCalled()
+  })
+
   test('an upload from an unmounted picker cannot change another character', async () => {
     const firstOnChange = vi.fn()
     const secondOnChange = vi.fn()
