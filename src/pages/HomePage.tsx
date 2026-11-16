@@ -209,8 +209,8 @@ function CharacterListRow({
         <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
           Level {getTotalCharacterLevel(character)}
         </span>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {character.originSystem}
+        <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+          {character.originSystem === '2024' ? '5.5e (2024)' : '5e (2014)'}
         </span>
         <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground lg:block">
           {new Date(character.lastModified).toLocaleDateString()}

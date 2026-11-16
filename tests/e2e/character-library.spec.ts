@@ -115,8 +115,12 @@ test('sidebar views, filters, sort and group compose with toolbar search', async
   await expect(page.getByRole('button', { name: 'Actions for Alpha Hero' })).toBeVisible()
   const alphaRow = page.getByRole('button', { name: /^Alpha Hero/ })
   await expect(alphaRow.getByText('Level 1', { exact: true })).toBeVisible()
-  await expect(alphaRow.getByText('2014', { exact: true })).toBeVisible()
+  await expect(alphaRow.getByText('5e (2014)', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Actions for Charlie Revised' })).toHaveCount(0)
+  await filters.getByRole('button', { name: '5.5e (2024) 1' }).click()
+  const revisedRow = page.getByRole('button', { name: /^Charlie Revised/ })
+  await expect(revisedRow.getByText('5.5e (2024)', { exact: true })).toBeVisible()
+  await filters.getByRole('button', { name: '5e (2014) 2' }).click()
   await gridView.click()
   await expect(renderedNames).toHaveText(['Alpha Hero', 'Bravo Mage'])
 

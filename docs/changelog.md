@@ -3,18 +3,27 @@
 
 ## ✨ Changes
 
-* Expanded level 1–20 progression for 2014 and 2024 characters. More choices for spells, class feats, proficiencies, and companions
-* PDFs show more earned rules and selections, including resource totals, recovery rules, and correctly scaled companion stats
-* Updated the Skills page so you can see where proficiency and Expertise choices come from and edit them separately
-* Choose optional class features individually, including replacements and expanded spell lists
-* Improved race, subrace, and feat selections so granted spells, ability bonuses, and other benefits follow your choices
-* Redesigned character creation with easier-to-find options, clearer rule previews, and improved ability score summaries. Clicks outside the creator no longer discard your work
-* Search and filter sourcebooks in Rules → Additional Content, just like in the character creator
-* Improved starting equipment with clearer Class and Background packages, more accurate gold and item grants, and searchable item choices that support picking multiples
-* Improved spell and tool pickers with clearer choices, more relevant filters, and better guidance when a saved option is unavailable
-* Improved equipment rules and descriptions, including magic weapon bonuses and more +1, +2, and +3 shield options
-* Added missing hazards and statuses and a Disease category to the Compendium, and fixed previews of related rules
-* Faster startup and better handling of game data files so upstream changes are less likely to disrupt the app
+- Significantly expanded level 1–20 progression for 5e and 5.5e, with support for more class features and character choices
+- Expanded equipment support with magic weapon bonuses, new shield variants, and clearer rules
+- Improved Skills management with clearer proficiency and Expertise sources
+- Improved character sheet PDFs with more rules, resource details, and accurate companion stats
+- Improved race, subrace, and feat benefits, including granted spells and ability bonuses
+- Improved starting equipment selection with clearer packages, search, and multiple-item support
+- Improved spell and tool pickers with better filters, clearer choices, and unavailable-option guidance
+- Added color, greyscale, and image-free options for character sheet PDFs
+- Added the ability to collapse the secondary sidebar for more workspace
+- Added two new accent colors & refreshed the the existing ones
+- Added individual selection of optional class features, replacements, and expanded spell lists
+- Added sourcebook searching and filtering to Rules → Additional Content
+- Added missing hazards, statuses, Disease category to the Compendium, with improved rule previews
+- Reorganized Characters and Settings navigation using the secondary sidebar
+- Redesigned character creation with clearer choices, better previews, and protection against accidental closure
+- Many bug fixes...
+
+## ⚠️ Important
+
+* MacOS in-app downloads currently not working. Please download new versions manually for now.
+* Characters created before v0.7.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export them before removal in case you would like to use them in an older compatible version.
 
 </details>
 
