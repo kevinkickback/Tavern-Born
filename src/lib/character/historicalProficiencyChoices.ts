@@ -25,9 +25,7 @@ export function getHistoricalProficiencyRule(choiceId: string) {
 }
 export function getAutomaticToolFallback(choiceId: string) {
   const relation = decodeClassProficiencyChoiceId(choiceId)
-  return relation?.domain === 'tools' && relation.trigger
-    ? { ...relation, trigger: relation.trigger }
-    : undefined
+  return relation?.domain === 'tools' && relation.trigger ? relation : undefined
 }
 
 /** Read from the current proficiency projection, leaving out this feature's own fixed grant. */
@@ -36,7 +34,7 @@ export function getProficiencyAtGain(character: Character, choiceId: string) {
     (row) => row.choiceId === choiceId,
   )?.proficiencyAtGain
   const relation = getAutomaticToolFallback(choiceId)
-  if (saved || !relation) return saved
+  if (saved || !relation?.trigger) return saved
   const name = relation.trigger
   const ownGrant = getFixedProficiencyId(relation)
   const tags = character.provenance.proficiencies.tools[name] ?? []

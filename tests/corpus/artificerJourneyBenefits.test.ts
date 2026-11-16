@@ -36,6 +36,7 @@ import { getEpicBoonSlots } from '@/lib/character/epicBoonSlots'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getClassStaticFeatureSummaries } from '@/lib/pdf/classStaticFeatureSummaries'
+import { addGrant, makeSourceTag, removeGrantsBySource } from '@/lib/provenance'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import type { Class5e, ClassFeature, Item5e, OptionalFeatureLike } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -392,6 +393,45 @@ test.skipIf(!existsSync(file)).each(['TCE', 'EFA'])(
       }),
     )
     expect(cleared.proficiencies.tools).toEqual([smiths])
+
+    const background = makeSourceTag('background', 'Independent Training', 'fixed', 'PHB')
+    const tagged = {
+      ...character,
+      provenance: addGrant(character.provenance, 'tools', smiths, background),
+    }
+    const project = (current: typeof character, available = catalogs) =>
+      characterPersistenceSchema.parse(
+        refreshClassProficiencyState(current, available.classes, available),
+      )
+    const restored = project(tagged)
+    const specialty = expect.objectContaining({
+      sourceType: 'subclass',
+      sourceRef: source,
+      grantType: 'fixed',
+      grantVariant: expect.any(String),
+    })
+    expect(restored.proficiencies.tools).toEqual([smiths])
+    expect(restored.provenance.proficiencies.tools[smiths]).toEqual([background, specialty])
+    expect(workflow(restored).choice?.maximumSelections).toBe(1)
+    const alternateConfirmed = project(applyCharacterCommandResult(restored, confirm(restored)))
+    expect(alternateConfirmed.provenance.proficiencies.tools[smiths]).toEqual([background])
+    expect(alternateConfirmed.proficiencies.tools).toEqual([smiths, "woodcarver's tools"])
+
+    const noBackground = project({
+      ...restored,
+      provenance: removeGrantsBySource(restored.provenance, 'background', 'Independent Training'),
+    })
+    expect(noBackground.proficiencies.tools).toEqual([smiths])
+    expect(noBackground.provenance.proficiencies.tools[smiths]).toEqual([specialty])
+    expect(workflow(noBackground).choice?.maximumSelections).toBe(0)
+
+    const noSpecialty = project(restored, { ...catalogs, classes: [] })
+    expect(noSpecialty.proficiencies.tools).toEqual([smiths])
+    expect(noSpecialty.provenance.proficiencies.tools[smiths]).toEqual([background])
+    expect(project(noSpecialty).provenance.proficiencies.tools[smiths]).toEqual([
+      background,
+      specialty,
+    ])
   },
 )
 

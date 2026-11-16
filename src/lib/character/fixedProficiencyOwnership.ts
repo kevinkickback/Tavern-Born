@@ -169,7 +169,8 @@ export function grantFixedProficiencies(
             )?.proficiencyAtGain
             if (
               setup?.alreadyProficient ??
-              proficiencies.tools.some((tool) => canonicalProficiencyName(tool) === name)
+              (!ledger.proficiencies.tools[name]?.length &&
+                proficiencies.tools.some((tool) => canonicalProficiencyName(tool) === name))
             )
               continue
           }
