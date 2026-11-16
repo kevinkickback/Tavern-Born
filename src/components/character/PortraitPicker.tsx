@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { SplitPane } from '@/components/ui/SplitPane'
 import { Slider } from '@/components/ui/slider'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
+import { readCharacterImage } from '@/lib/characterImageUpload'
 import {
   DEFAULT_PORTRAIT_TRANSFORM,
   PLACEHOLDER_PORTRAITS,
@@ -92,36 +92,22 @@ export function PortraitPicker({
   }
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.currentTarget.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
-      return
-    }
-    if (file.size > MAX_PORTRAIT_SIZE) {
-      toast.error('File size must be less than 5MB')
-      return
-    }
+    e.currentTarget.value = ''
     const selectionVersion = ++selectionVersionRef.current
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      const image = reader.result
-      if (mountedRef.current && selectionVersion === selectionVersionRef.current) {
-        onPortraitChange(image)
-        resetTransform()
-      }
-      void savePortrait(image)
-        .then((saved) => {
-          if (mountedRef.current) setSavedPortraits(saved)
-        })
-        .catch((error: unknown) =>
-          toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
-        )
-    }
-    reader.onerror = () => toast.error('Portrait could not be read.')
-    reader.readAsDataURL(file)
-    e.target.value = ''
+    void readCharacterImage(file, 'portrait')
+      .then(async (image) => {
+        if (mountedRef.current && selectionVersion === selectionVersionRef.current) {
+          onPortraitChange(image)
+          resetTransform()
+        }
+        const saved = await savePortrait(image)
+        if (mountedRef.current) setSavedPortraits(saved)
+      })
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
+      )
   }
 
   const handleDeleteSaved = (id: string) => {

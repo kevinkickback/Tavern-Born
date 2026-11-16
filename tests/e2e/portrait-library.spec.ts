@@ -32,6 +32,16 @@ test('uploaded portraits survive reload, can be reused, and remain assigned afte
   await expect(savedTile).toBeVisible()
   const imageSrc = await page.getByRole('img', { name: 'Uploaded portrait 1' }).getAttribute('src')
   expect(imageSrc).toMatch(/^data:image\/png;base64,/)
+  await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
+    name: 'invalid.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('This is not a PNG.'),
+  })
+  await expect(page.getByText('Choose an image this app can open.')).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Character portrait card preview' })).toHaveAttribute(
+    'src',
+    imageSrc!,
+  )
   await page.getByRole('button', { name: 'Save character' }).click()
 
   await page.reload()

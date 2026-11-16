@@ -26,12 +26,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
-import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import {
   CUSTOM_ORGANIZATION_KEY,
   getOrganizationKey,
   resolveOrganizationImageSrc,
 } from '@/lib/character/organizationConstants'
+import { readCharacterImage } from '@/lib/characterImageUpload'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from '../_shared'
@@ -89,6 +89,8 @@ export function CharacteristicsPage() {
   } = draft
   const [failedOrganizationPreviewImagePath, setFailedOrganizationPreviewImagePath] = useState('')
   const customImageInputRef = useRef<HTMLInputElement>(null)
+  const emblemRequest = useRef(0)
+  const characterId = activeCharacter?.id
 
   const setDraftField = (field: keyof CharacteristicsDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value }))
@@ -150,7 +152,15 @@ export function CharacteristicsPage() {
     setDraft(createCharacteristicsDraft(activeCharacter))
   }, [activeCharacter])
 
+  useEffect(() => {
+    if (!characterId) return
+    return () => {
+      emblemRequest.current += 1
+    }
+  }, [characterId])
+
   const handleOrganizationSelect = (value: string) => {
+    emblemRequest.current += 1
     setDraftField('organizationSelectionKey', value)
 
     if (value === CUSTOM_ORGANIZATION_KEY) {
@@ -178,32 +188,32 @@ export function CharacteristicsPage() {
   }
 
   const handleOrganizationImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.currentTarget.files?.[0]
     if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
-      return
+    event.currentTarget.value = ''
+    const request = ++emblemRequest.current
+    const isCurrent = () => {
+      const current = useCharacterStore.getState().activeCharacter
+      return (
+        request === emblemRequest.current &&
+        current?.id === characterId &&
+        current?.details.organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+      )
     }
-
-    if (file.size > MAX_PORTRAIT_SIZE) {
-      toast.error('Image size must be less than 5MB')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      setDraftField('organizationCustomImage', result)
-      updateActiveCharacterDetails({ organizationCustomImage: result })
-      if (customImageInputRef.current) {
-        customImageInputRef.current.value = ''
-      }
-    }
-    reader.readAsDataURL(file)
+    void readCharacterImage(file, 'emblem')
+      .then((image) => {
+        if (!isCurrent()) return
+        setDraftField('organizationCustomImage', image)
+        updateActiveCharacterDetails({ organizationCustomImage: image })
+      })
+      .catch((error: unknown) => {
+        if (isCurrent())
+          toast.error(error instanceof Error ? error.message : 'The emblem could not be read.')
+      })
   }
 
   const handleClearCustomImage = () => {
+    emblemRequest.current += 1
     setDraftField('organizationCustomImage', '')
     updateActiveCharacterDetails({ organizationCustomImage: '' })
     if (customImageInputRef.current) {

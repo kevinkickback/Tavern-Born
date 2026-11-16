@@ -2,9 +2,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import { readCharacterImage } from '@/lib/characterImageUpload'
 import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+vi.mock('@/lib/characterImageUpload', () => ({ readCharacterImage: vi.fn() }))
 
 vi.mock('@/components/ui/select', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
@@ -145,5 +148,41 @@ describe('CharacteristicsPage', () => {
         organizationCustomGradient: 'indigo',
       })
     })
+  })
+
+  test('a pending emblem upload cannot replace the image on another character', async () => {
+    setActiveCharacter(
+      makeCharacterFixture({
+        id: 'first',
+        details: { organizationSelectionKey: CUSTOM_ORGANIZATION_KEY },
+      }),
+    )
+    let finishUpload!: (image: string) => void
+    vi.mocked(readCharacterImage).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishUpload = resolve
+      }),
+    )
+    const { container } = render(<CharacteristicsPage />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Connections' }))
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['art'], 'emblem.png', { type: 'image/png' })] },
+    })
+    const savedImage = 'data:image/png;base64,existing'
+    act(() => {
+      setActiveCharacter(
+        makeCharacterFixture({
+          id: 'second',
+          details: {
+            organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
+            organizationCustomImage: savedImage,
+          },
+        }),
+      )
+    })
+    await act(async () => finishUpload('data:image/png;base64,replacement'))
+    expect(useCharacterStore.getState().activeCharacter?.details.organizationCustomImage).toBe(
+      savedImage,
+    )
   })
 })
