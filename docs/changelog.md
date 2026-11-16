@@ -15,6 +15,7 @@
 - Added two new accent colors & refreshed the the existing ones
 - Added individual selection of optional class features, replacements, and expanded spell lists
 - Added sourcebook searching and filtering to Rules → Additional Content
+- Restored additional content automatically at startup when a rebuilt cache preserves saved characters’ rules, including older local and HTTPS caches without file hashes
 - Added missing hazards, statuses, Disease category to the Compendium, with improved rule previews
 - Reorganized Characters and Settings navigation using the secondary sidebar
 - Redesigned character creation with clearer choices, better previews, and protection against accidental closure

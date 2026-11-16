@@ -16,7 +16,10 @@ import {
   isCatalogCheckDue,
   refreshCheckForSource,
 } from '@/lib/5etools/catalogRefreshPolicy'
-import { compareAcceptedSource } from '@/lib/5etools/catalogResourceProof'
+import {
+  canCompareHashlessRebuild,
+  compareAcceptedSource,
+} from '@/lib/5etools/catalogResourceProof'
 import { hasCatalogRecords } from '@/lib/5etools/contentLayers'
 import type { DataLoaderOptions } from '@/lib/5etools/dataLoader'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -817,7 +820,12 @@ export const useGameDataStore = create<GameDataState>()(
             priorSource.availableResources &&
             candidate.config.availableResources &&
             isCacheForSource(cached, cacheIdentity) &&
-            sameInputs === true
+            (sameInputs === true ||
+              (sameInputs === undefined &&
+                sameSource &&
+                prior.externalKeys &&
+                !candidate.revision &&
+                canCompareHashlessRebuild(priorSource, candidate.config)))
           ) {
             const accepted = await settleOnAbort(
               readAcceptedCatalogForComparison(cached).catch(() => undefined),

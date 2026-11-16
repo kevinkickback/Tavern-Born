@@ -160,9 +160,10 @@ edits to clear. Changed results and results without enough evidence to prove a m
 manual approval in Settings. When a new parser rebuilds an older cache at startup, it can activate
 the result automatically if the accepted source inputs match, no records were withdrawn, and
 saved characters retain their choices and calculated rules. Newly available choices may appear.
-GitHub needs the same accepted commit. Local folders and other HTTPS sources need complete
-matching hashes from the previous accepted catalog. Older settings without hashes can still
-restore an exact parsed match. A full HTTPS check records hashes for future rebuilds.
+GitHub needs the same accepted commit. If an older local or HTTPS catalog has no recorded file
+hashes, startup can still activate a rebuild when the previous cache is intact, its source, layers
+and resource inventory match, no records were withdrawn, and all saved characters pass the rules
+comparison. Known input changes require review. A full HTTPS check records hashes for future rebuilds.
 On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.

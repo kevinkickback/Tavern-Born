@@ -4,13 +4,40 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 import { checkCatalogRevision, prepareCatalog } from '@/lib/5etools/catalogCandidate'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
-import { compareAcceptedSource } from '@/lib/5etools/catalogResourceProof'
+import {
+  canCompareHashlessRebuild,
+  compareAcceptedSource,
+} from '@/lib/5etools/catalogResourceProof'
 import type { ReadSourceJson } from '@/lib/5etools/resourceReader'
+import type { CatalogResourceProof } from '@/types/5etools'
 import { readLocalCatalogResource } from '../../../electron/localCatalogResource'
 
 let root: string
 const feat = (name: string) => JSON.stringify({ feat: [{ name, source: 'PHB' }] })
 const signal = () => new AbortController().signal
+
+test('a legacy rebuild must preserve prior resource observations and have current hashes', () => {
+  const input = { type: 'remote', path: 'https://rules.example/data', isValid: true } as const
+  const prior: typeof input & { resourceProof: CatalogResourceProof } = {
+    ...input,
+    resourceProof: { kind: 'remote', entries: [['class/fluff-class-fighter.json', '"v1"']] },
+  }
+  const candidate = (stamp: string | null) => ({
+    ...input,
+    resourceProof: {
+      kind: 'remote' as const,
+      entries: [
+        ['class/index.json', `#${'b'.repeat(64)}`],
+        ['class/fluff-class-fighter.json', stamp],
+      ] satisfies CatalogResourceProof['entries'],
+    },
+  })
+  expect(canCompareHashlessRebuild(prior, candidate(`"v1"#${'a'.repeat(64)}`))).toBe(true)
+  expect(canCompareHashlessRebuild(prior, candidate(`"v2"#${'c'.repeat(64)}`))).toBe(false)
+  expect(canCompareHashlessRebuild(prior, candidate(null))).toBe(false)
+  expect(canCompareHashlessRebuild(input, candidate('"v1"'))).toBe(false)
+  expect(canCompareHashlessRebuild(input, input)).toBe(false)
+})
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'tavern-refresh-'))
