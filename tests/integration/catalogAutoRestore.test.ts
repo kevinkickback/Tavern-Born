@@ -403,12 +403,13 @@ test.each([
 
 test('restores a verified matching obsolete catalog and preserves its last change date', async () => {
   const { accepted } = await setUpObsoleteCache()
+  await set('tb:game-data-previous-cache', accepted)
   const { backgroundRefresh } = await start()
   expect(useGameDataStore.getState().sessionBundledSource).not.toBeNull()
   expect(useGameDataStore.getState().isStartupRecovering).toBe(true)
   await expect(backgroundRefresh).resolves.toBe(false)
   const state = useGameDataStore.getState()
-  const { cache, previous, refreshCheck } = await readGameDataCachePair()
+  const { cache, refreshCheck } = await readGameDataCachePair()
   expect(state.sessionBundledSource).toBeNull()
   expect(state.isStartupRecovering).toBe(false)
   expect(state.pendingCatalog).toBeNull()
@@ -416,7 +417,7 @@ test('restores a verified matching obsolete catalog and preserves its last chang
   expect(cache?.contentFingerprint).toBe(accepted.contentFingerprint)
   expect(cache?.lastDataChangedAt).toBe(originalDate)
   expect(cache?.generation).not.toBe(accepted.generation)
-  expect(previous).toBeUndefined()
+  expect(await get('tb:game-data-previous-cache')).toBeUndefined()
   expect(refreshCheck?.needsReview).toBeFalsy()
 })
 

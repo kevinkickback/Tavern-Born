@@ -33,11 +33,13 @@ function SheetOption<T extends string>({
   value,
   choices,
   onChange,
+  description,
 }: {
   label: string
   value: T
   choices: readonly (readonly [T, string])[]
   onChange: (value: T) => void
+  description?: string
 }) {
   const id = useId()
   return (
@@ -46,7 +48,11 @@ function SheetOption<T extends string>({
         {label}
       </label>
       <Select value={value} onValueChange={(next) => onChange(next as T)}>
-        <SelectTrigger id={id} className="w-56">
+        <SelectTrigger
+          id={id}
+          aria-describedby={description ? `${id}-description` : undefined}
+          className="w-56"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -57,6 +63,11 @@ function SheetOption<T extends string>({
           ))}
         </SelectContent>
       </Select>
+      {description && (
+        <p id={`${id}-description`} className="w-full text-xs text-muted-foreground">
+          {description}
+        </p>
+      )}
     </div>
   )
 }
@@ -133,6 +144,7 @@ export function SheetContentDialog({
             {supportsImages && (
               <SheetOption
                 label="Images"
+                description="Show the character portrait and organization emblem in color or greyscale, or omit both."
                 value={text.images ?? 'color'}
                 choices={[
                   ['color', 'Color images'],

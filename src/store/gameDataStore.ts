@@ -31,14 +31,11 @@ import {
   GAME_DATA_STORE_VERSION,
   type GameDataCacheMetadata,
   isCacheForSource,
-  isPreviousCatalogCompatible,
   markCatalogChecked,
-  type PreviousCatalog,
   persistCatalogRepair,
   readAcceptedCatalogForComparison,
   readCatalogExpectation,
   readGameDataCachePair,
-  restorePreviousCatalog,
   writeCatalogRefreshCheck,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
@@ -175,10 +172,8 @@ interface GameDataState {
   isStartupRecovering: boolean
   isCatalogActivating: boolean
   catalogDraftDirty: boolean
-  previousCatalog: PreviousCatalog | undefined
   cacheExpectation: GameDataCacheMetadata | null | undefined
   protectCatalog: () => () => void
-  rollbackCatalog: () => Promise<boolean>
   loadProgress: LoadProgress | null
   error: string | null
   lastDataChangedAt: string | null
@@ -237,7 +232,6 @@ export const useGameDataStore = create<GameDataState>()(
       isStartupRecovering: false,
       isCatalogActivating: false,
       catalogDraftDirty: false,
-      previousCatalog: undefined,
       cacheExpectation: undefined,
       protectCatalog: () => {
         const token = Symbol()
@@ -322,13 +316,7 @@ export const useGameDataStore = create<GameDataState>()(
         remoteStartupPreparation = null
         const availableCache = pair?.cache
         if (pair) {
-          set({
-            cacheExpectation: pair.expectedCache,
-            previousCatalog:
-              pair.previous && isPreviousCatalogCompatible(pair.previous, installed)
-                ? pair.previous
-                : undefined,
-          })
+          set({ cacheExpectation: pair.expectedCache })
         }
         if (pair) set({ catalogRefreshCheck: pair.refreshCheck })
         if (pair?.settings) {
@@ -1002,7 +990,6 @@ export const useGameDataStore = create<GameDataState>()(
                   signal,
                 )
               writeStarted = true
-              let previousCatalog = get().previousCatalog
               const cacheEntry = await writeGameDataCache(acceptedData, cacheIdentity, {
                 fingerprint: prevFingerprint,
                 lastDataChangedAt: prevChangedAt,
@@ -1012,15 +999,11 @@ export const useGameDataStore = create<GameDataState>()(
                 externalKeys: prepared?.keys,
                 expectedCache,
                 characterLibrary: verifiedLibrary,
-                onPrevious: (previous) => {
-                  previousCatalog = previous
-                },
                 ...(expectedCache !== undefined
                   ? {
                       contentFingerprint: restoring
                         ? (prevFingerprint ?? undefined)
                         : contentFingerprint,
-                      previous: expectedCache,
                     }
                   : {}),
               })
@@ -1051,7 +1034,6 @@ export const useGameDataStore = create<GameDataState>()(
                 bundledUnavailable: config.type !== 'bundled' && get().bundledUnavailable,
                 sessionBundledSource: null,
                 savedContentFingerprint: cacheEntry.contentFingerprint ?? null,
-                previousCatalog,
                 cacheExpectation:
                   expectedCache === undefined ? undefined : cacheMetadata(cacheEntry),
               })
@@ -1116,88 +1098,6 @@ export const useGameDataStore = create<GameDataState>()(
             if (get().pendingCatalog?.restoreWhenIdle && !catalogIsProtected())
               resumeCatalogRestore()
           }
-        }
-      },
-
-      rollbackCatalog: async () => {
-        const {
-          previousCatalog: previous,
-          isLoading,
-          isBackgroundRefreshing,
-          isCatalogActivating,
-        } = get()
-        if (!previous || isLoading || isBackgroundRefreshing || isCatalogActivating) return false
-        if (catalogIsProtected()) {
-          set({ error: WORKFLOW_MESSAGE })
-          return false
-        }
-        const controller = new AbortController()
-        const { signal } = controller
-        const timer = setTimeout(
-          () => controller.abort(catalogTimeout(INTERACTIVE_CATALOG_TIMEOUT_MS)),
-          INTERACTIVE_CATALOG_TIMEOUT_MS,
-        )
-        // Invalidate a completed check that is still finishing its async cleanup.
-        ++activeLoadRequestId
-        activeLoadController?.abort()
-        activeLoadController = null
-        set({ isCatalogActivating: true, error: null })
-        try {
-          return await enqueueCacheMutation(async () => {
-            const installed = await settleOnAbort(resolveDefaultBundledSource(), signal)
-            const { config } = previous
-            if (!isPreviousCatalogCompatible(previous, installed))
-              throw new Error(
-                'The previous game data is incompatible with this copy of Tavern Born.',
-              )
-            const entry = await restorePreviousCatalog(
-              previous,
-              get().cacheExpectation ?? null,
-              signal,
-            )
-            const cacheExpectation = cacheMetadata(entry)
-            const fingerprint =
-              entry.contentFingerprint?.length === 64
-                ? entry.contentFingerprint
-                : computeGameDataFingerprint(entry.data)
-            const pending = get().pendingCatalog
-            releaseCatalogCandidate(pending?.candidate)
-            releaseFolderGrant(pending?.folderGrant)
-            set({
-              gameData: entry.data.lookups
-                ? entry.data
-                : { ...entry.data, lookups: buildGameDataLookups(entry.data) },
-              dataSourceConfig: config,
-              previousCatalog: undefined,
-              savedContentFingerprint: fingerprint,
-              lastContentFingerprint: fingerprint,
-              lastDataChangedAt: entry.lastDataChangedAt ?? entry.cachedAt,
-              lastUpdateCheckAt: previous.lastCheckedAt ?? entry.cachedAt,
-              externalKeys: entry.externalKeys,
-              catalogRefreshCheck: undefined,
-              pendingCatalog: null,
-              catalogWarnings: [],
-              isBackgroundRefreshing: false,
-              loadProgress: null,
-              sessionBundledSource: null,
-              bundledUnavailable:
-                config.type !== 'bundled' &&
-                window.electronAPI?.getBundledManifest !== undefined &&
-                !installed,
-              remoteStartup: null,
-              cacheStatus: 'cached',
-              cacheExpectation,
-            })
-            return true
-          })
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Could not restore previous game data.',
-          })
-          return false
-        } finally {
-          clearTimeout(timer)
-          set({ isCatalogActivating: false })
         }
       },
 

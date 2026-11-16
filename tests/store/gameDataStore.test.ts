@@ -167,7 +167,6 @@ describe('gameDataStore', () => {
       lastContentFingerprint: null,
       savedContentFingerprint: null,
       cacheExpectation: undefined,
-      previousCatalog: undefined,
       isCatalogActivating: false,
       catalogDraftDirty: false,
       lastUpdateCheckAt: null,

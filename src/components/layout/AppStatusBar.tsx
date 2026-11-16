@@ -156,7 +156,14 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
           >
             <DataStatusIcon
               aria-hidden="true"
-              className={cn('size-3.5 shrink-0', dataStatus.spinning && 'animate-spin')}
+              className={cn(
+                'size-3.5 shrink-0',
+                DataStatusIcon === CheckCircle &&
+                  !isBundledCatalog &&
+                  catalogLabel &&
+                  'text-accent',
+                dataStatus.spinning && 'animate-spin',
+              )}
             />
             <span
               className={cn(

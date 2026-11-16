@@ -8,8 +8,7 @@ import type { DataSourceConfig, GameData, GameDataSourceStack } from '@/types/5e
 const CACHE_KEY = 'tb:game-data-cache'
 const CACHE_GENERATION_KEY = 'tb:game-data-cache-generation'
 const REFRESH_CHECK_KEY = 'tb:game-data-refresh-check'
-const PREVIOUS_CACHE_KEY = 'tb:game-data-previous-cache'
-const PREVIOUS_INFO_KEY = 'tb:game-data-previous-info'
+const RETIRED_RESTORE_KEYS = ['tb:game-data-previous-cache', 'tb:game-data-previous-info']
 const CHARACTER_LIBRARY_KEY = 'character-storage'
 export const GAME_DATA_SETTINGS_KEY = 'game-data-storage'
 export const GAME_DATA_STORE_VERSION = 1
@@ -28,26 +27,6 @@ export interface GameDataCacheEntry {
 }
 
 export type GameDataCacheMetadata = Omit<GameDataCacheEntry, 'data'>
-export interface PreviousCatalog {
-  cache: GameDataCacheMetadata
-  config: DataSourceConfig
-  lastCheckedAt?: string
-}
-
-export function isPreviousCatalogCompatible(
-  previous: PreviousCatalog,
-  installed: Extract<DataSourceConfig, { type: 'bundled' }> | null,
-): boolean {
-  const { cache, config } = previous
-  if (
-    cache?.cacheSchemaVersion !== GAME_DATA_CACHE_SCHEMA_VERSION ||
-    !cache.sourceSnapshot ||
-    !config
-  )
-    return false
-  if (config.type === 'bundled') return !!installed && isCacheForSource(cache, installed)
-  return isCacheForSource(cache, installed ? { base: installed, additional: config } : config)
-}
 type LegacyCacheIdentity = Pick<
   GameDataCacheMetadata,
   'cachedAt' | 'contentFingerprint' | 'sourceSnapshot'
@@ -221,12 +200,11 @@ function catalogExpectation(value?: GameDataCacheEntry, stamp?: string | LegacyC
 }
 
 export async function readGameDataCachePair() {
-  const [value, persisted, stamp, refreshCheck, previous] = await getMany([
+  const [value, persisted, stamp, refreshCheck] = await getMany([
     CACHE_KEY,
     GAME_DATA_SETTINGS_KEY,
     CACHE_GENERATION_KEY,
     REFRESH_CHECK_KEY,
-    PREVIOUS_INFO_KEY,
   ])
   const cache = usableCache(value)
   const expectedCache = catalogExpectation(value, stamp)
@@ -243,7 +221,6 @@ export async function readGameDataCachePair() {
     settings,
     refreshCheck: refreshCheck as CatalogRefreshCheck | undefined,
     expectedCache,
-    ...(previous ? { previous: previous as PreviousCatalog } : {}),
   }
 }
 
@@ -365,7 +342,7 @@ function ifCurrentCache(
 function withExpectedCatalog(
   store: IDBObjectStore,
   expected: GameDataCacheMetadata | null,
-  read: (entry: GameDataCacheEntry | undefined) => void,
+  apply: () => void,
 ) {
   const inspect = () => {
     const current = store.get(CACHE_KEY)
@@ -379,57 +356,11 @@ function withExpectedCatalog(
               ? entry.generation === expected.generation
               : sameLegacyCache(entry, expected))
       )
-        read(entry)
+        apply()
     }
   }
   if (expected) ifCurrentCache(store, expected, inspect)
   else inspect()
-}
-
-function putAcceptedCatalog(
-  store: IDBObjectStore,
-  entry: GameDataCacheEntry,
-  config: DataSourceConfig,
-  lastCheckedAt?: string,
-) {
-  store.put(entry, CACHE_KEY)
-  store.put(entry.generation, CACHE_GENERATION_KEY)
-  store.delete(REFRESH_CHECK_KEY)
-  putSettings(store, config, entry, lastCheckedAt)
-}
-
-export async function restorePreviousCatalog(
-  previous: PreviousCatalog,
-  expected: GameDataCacheMetadata | null,
-  signal: AbortSignal,
-) {
-  let restored: GameDataCacheEntry | undefined
-  const written = await writeBeforeAbort(signal, (store, done) => {
-    withExpectedCatalog(store, expected, () => {
-      const infoRead = store.get(PREVIOUS_INFO_KEY)
-      infoRead.onsuccess = () => {
-        const info = infoRead.result as PreviousCatalog | undefined
-        if (!info?.cache?.generation || info.cache.generation !== previous.cache.generation) return
-        if (!sameLegacyCache(info.cache, previous.cache)) return
-        if (JSON.stringify(info.config) !== JSON.stringify(previous.config)) return
-        if (info.lastCheckedAt !== previous.lastCheckedAt) return
-        const read = store.get(PREVIOUS_CACHE_KEY)
-        read.onsuccess = () => {
-          const old = usableCache(read.result)
-          if (!old || old.generation !== info.cache.generation || !sameLegacyCache(old, info.cache))
-            return
-          restored = { ...old, generation: crypto.randomUUID() }
-          store.delete(PREVIOUS_CACHE_KEY)
-          store.delete(PREVIOUS_INFO_KEY)
-          putAcceptedCatalog(store, restored, info.config, info.lastCheckedAt)
-          done(true)
-        }
-      }
-    })
-  })
-  if (!written || !restored)
-    throw new Error('The saved game data changed. Restart to load the current catalog.')
-  return restored
 }
 
 export async function markCatalogChecked(
@@ -483,17 +414,17 @@ export async function writeGameDataCache(
     config?: DataSourceConfig
     externalKeys?: string[]
     contentFingerprint?: string
-    previous?: GameDataCacheMetadata | null
     expectedCache?: GameDataCacheMetadata | null
     characterLibrary?: string
-    onPrevious?: (previous: PreviousCatalog | undefined) => void
   },
 ): Promise<GameDataCacheEntry> {
   options?.signal?.throwIfAborted()
   const now = new Date().toISOString()
   const contentFingerprint = options?.contentFingerprint ?? computeGameDataFingerprint(data)
   const existing =
-    options?.previous === undefined ? readGameDataCache() : Promise.resolve(options.previous)
+    options?.expectedCache === undefined
+      ? readGameDataCache()
+      : Promise.resolve(options.expectedCache)
   const stored = await (options?.signal ? settleOnAbort(existing, options.signal) : existing)
   const previous =
     stored?.cacheSchemaVersion === GAME_DATA_CACHE_SCHEMA_VERSION && stored.sourceSnapshot
@@ -535,73 +466,41 @@ export async function writeGameDataCache(
 
   // A timed-out or superseded startup must fail before starting the atomic write.
   options?.signal?.throwIfAborted()
-  let backup: PreviousCatalog | undefined
   let libraryChanged = false
   const written = await writeBeforeAbort(
     options?.signal ?? new AbortController().signal,
     (store, done) => {
       const config = options?.config
+      const activate = () => {
+        store.put(entry, CACHE_KEY)
+        store.put(entry.generation, CACHE_GENERATION_KEY)
+        if (config) {
+          store.delete(REFRESH_CHECK_KEY)
+          for (const key of RETIRED_RESTORE_KEYS) store.delete(key)
+          putSettings(store, config, entry)
+        }
+        done(true)
+      }
       if (config && options.expectedCache !== undefined) {
-        withExpectedCatalog(store, options.expectedCache, (current) => {
-          const activate = (priorConfig: DataSourceConfig | undefined, lastCheckedAt?: string) => {
-            if (usableCache(current) && current && priorConfig) {
-              const installed = isSourceStack(identity)
-                ? identity.base
-                : identity.type === 'bundled'
-                  ? identity
-                  : null
-              if (
-                isPreviousCatalogCompatible({ cache: current, config: priorConfig }, installed) &&
-                (current.contentFingerprint !== entry.contentFingerprint ||
-                  JSON.stringify(current.sourceSnapshot) !== JSON.stringify(entry.sourceSnapshot) ||
-                  JSON.stringify(current.externalKeys) !== JSON.stringify(entry.externalKeys))
-              ) {
-                const old = { ...current, generation: crypto.randomUUID() }
-                backup = {
-                  cache: cacheMetadata(old),
-                  config: priorConfig,
-                  lastCheckedAt,
-                }
-                store.put(old, PREVIOUS_CACHE_KEY)
-                store.put(backup, PREVIOUS_INFO_KEY)
-              }
-            }
-            putAcceptedCatalog(store, entry, config)
-            done(true)
-          }
-          const readSettings = () => {
-            const settings = store.get(GAME_DATA_SETTINGS_KEY)
-            settings.onsuccess = () =>
-              activate(
-                settings.result?.state?.dataSourceConfig,
-                settings.result?.state?.lastUpdateCheckAt,
-              )
-          }
+        withExpectedCatalog(store, options.expectedCache, () => {
           if (options.characterLibrary === undefined) {
-            readSettings()
+            activate()
           } else {
             const library = store.get(CHARACTER_LIBRARY_KEY)
             library.onsuccess = () => {
               libraryChanged = JSON.stringify(library.result ?? null) !== options.characterLibrary
               if (libraryChanged) done(false)
-              else readSettings()
+              else activate()
             }
           }
         })
         return
       }
-      store.put(entry, CACHE_KEY)
-      store.put(entry.generation, CACHE_GENERATION_KEY)
-      if (options?.config) {
-        store.delete(REFRESH_CHECK_KEY)
-        putSettings(store, options.config, entry)
-      }
-      done(true)
+      activate()
     },
   )
   if (libraryChanged) throw new CatalogRestoreLibraryChanged()
   if (!written) throw new Error('The saved game data changed. Restart to load the current catalog.')
-  if (backup) options?.onPrevious?.(backup)
   return entry
 }
 
@@ -609,8 +508,7 @@ export async function clearGameDataCache(clearSettings = false): Promise<void> {
   await delMany([
     CACHE_KEY,
     CACHE_GENERATION_KEY,
-    PREVIOUS_CACHE_KEY,
-    PREVIOUS_INFO_KEY,
+    ...RETIRED_RESTORE_KEYS,
     ...(clearSettings ? [GAME_DATA_SETTINGS_KEY, REFRESH_CHECK_KEY] : []),
   ])
 }

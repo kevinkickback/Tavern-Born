@@ -44,7 +44,10 @@ describe('application status bar', () => {
 
     render(<AppStatusBar />)
 
-    expect(screen.getByTestId('game-data-status').textContent).toBe('Additional Content Loaded')
+    const status = screen.getByTestId('game-data-status')
+    expect(status.textContent).toBe('Additional Content Loaded')
+    expect(status.querySelector('svg')?.classList.contains('text-accent')).toBe(true)
+    expect(status.classList.contains('text-accent')).toBe(false)
   })
 
   test('uses the catalog slot for update checks and restores it after success or failure', async () => {
@@ -71,6 +74,7 @@ describe('application status bar', () => {
     )
     expect(status.textContent).toBe('Additional Content Loaded')
     expect(status.getAttribute('title')).toBe('Source is offline')
+    expect(status.querySelector('svg')?.classList.contains('text-accent')).toBe(false)
     expect(status.querySelector('svg')?.classList.contains('animate-spin')).toBe(false)
   })
 

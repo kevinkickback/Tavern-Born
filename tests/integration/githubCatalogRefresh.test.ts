@@ -98,7 +98,6 @@ test('skips GitHub resource reads for the same verified SHA and stages a changed
   ])
   expect(useGameDataStore.getState().gameData).toBe(active)
   expect((await readGameDataCachePair()).cache).toEqual(pair.cache)
-  expect((await readGameDataCachePair()).previous).toBeUndefined()
 
   github.setRevision(changed)
   github.fetch.mockClear()
@@ -118,14 +117,16 @@ test('skips GitHub resource reads for the same verified SHA and stages a changed
     acceptedRevision: changed,
     verifiedRevision: changed,
   })
-  expect(await useGameDataStore.getState().rollbackCatalog()).toBe(true)
+  await loadFromCache()
   github.fetch.mockClear()
   expect(await loadCatalog(useGameDataStore.getState().dataSourceConfig!, true)).toEqual({
-    kind: 'staged',
+    kind: 'applied',
+    changed: false,
   })
-  expect(github.fetch.mock.calls.some(([url]) => url.includes(`/${changed}/data/feats.json`))).toBe(
-    true,
-  )
+  expect(github.fetch.mock.calls.map(([url]) => url)).toEqual([
+    'https://api.github.com/repos/example/rules',
+    'https://api.github.com/repos/example/rules/commits/main',
+  ])
 })
 
 test.each([

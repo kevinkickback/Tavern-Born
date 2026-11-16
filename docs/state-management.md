@@ -245,7 +245,7 @@ That promise is a release requirement; the current strict-version gate does not 
 
 The character format version is independent of the 2014 or 2024 game ruleset. Creator selects the
 ruleset before saving a character. A saved character can change its enabled sources within that
-edition. Catalog refresh and rollback preserve exact saved background and equipment references.
+edition. Catalog refresh preserves exact saved background and equipment references.
 Select the same exact background again to apply refreshed fixed proficiencies and origin feats
 while keeping its package selections and independent grants. Current background ability rules
 determine which saved selections contribute bonuses.
