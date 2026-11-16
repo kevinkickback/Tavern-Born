@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { MINIMAL_GAME_DATA, seedAppState, selectCharacterFromHome } from './helpers/startup'
@@ -60,5 +61,26 @@ test('uploaded portraits survive reload, can be reused, and remain assigned afte
   await expect(page.getByRole('img', { name: 'Character portrait card preview' })).toHaveAttribute(
     'src',
     imageSrc!,
+  )
+})
+
+test('a JPEG upload preserves the original image bytes', async ({ page }) => {
+  const character = makeCharacterFixture({ id: 'jpeg-portrait', name: 'JPEG Portrait' })
+  const imagePath = 'public/assets/images/characters/placeholder_char_card.jpg'
+  const expected = `data:image/jpeg;base64,${readFileSync(imagePath).toString('base64')}`
+
+  await page.goto('/')
+  await seedAppState(page, {
+    sourcePath: 'e2e-jpeg-portrait',
+    gameData: MINIMAL_GAME_DATA,
+    characters: [character],
+  })
+  await page.reload()
+  await selectCharacterFromHome(page, character.name)
+  await page.goto('/#/details/portrait')
+  await page.locator('input[type="file"][accept="image/*"]').setInputFiles(imagePath)
+  await expect(page.getByRole('img', { name: 'Character portrait card preview' })).toHaveAttribute(
+    'src',
+    expected,
   )
 })

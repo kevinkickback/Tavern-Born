@@ -21,6 +21,12 @@ import {
 import { cn } from '@/lib/utils'
 import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
 
+const portraitSliders = [
+  { field: 'zoom', label: 'Zoom', min: 50, max: 400, unit: '%' },
+  { field: 'panX', label: 'Pan X', min: -240, max: 240, unit: 'px' },
+  { field: 'panY', label: 'Pan Y', min: -240, max: 240, unit: 'px' },
+] as const
+
 interface PortraitPickerProps {
   portrait?: string | null
   transform?: PortraitTransform
@@ -190,57 +196,26 @@ export function PortraitPicker({
         </span>
       </div>
       <div className="space-y-2.5">
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
-          <Slider
-            thumbLabel="Zoom"
-            value={[t.zoom]}
-            onValueChange={(value) => handleTransformPreview({ zoom: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ zoom: value[0] })}
-            min={50}
-            max={400}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.zoom}%
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
-          <Slider
-            thumbLabel="Pan X"
-            value={[t.panX]}
-            onValueChange={(value) => handleTransformPreview({ panX: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ panX: value[0] })}
-            min={-240}
-            max={240}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.panX}px
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
-          <Slider
-            thumbLabel="Pan Y"
-            value={[t.panY]}
-            onValueChange={(value) => handleTransformPreview({ panY: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ panY: value[0] })}
-            min={-240}
-            max={240}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.panY}px
-          </span>
-        </div>
+        {portraitSliders.map(({ field, label, min, max, unit }) => (
+          <div key={field} className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground w-10 shrink-0">{label}</span>
+            <Slider
+              thumbLabel={label}
+              value={[t[field]]}
+              onValueChange={(value) => handleTransformPreview({ [field]: value[0] })}
+              onValueCommit={(value) => handleTransformCommit({ [field]: value[0] })}
+              min={min}
+              max={max}
+              step={5}
+              disabled={!portrait}
+              className="flex-1"
+            />
+            <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+              {t[field]}
+              {unit}
+            </span>
+          </div>
+        ))}
       </div>
       {isCreator ? (
         <div className="flex flex-wrap gap-2">
