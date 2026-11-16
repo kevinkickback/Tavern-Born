@@ -1,7 +1,7 @@
 const ACCENT_STORAGE_KEY = 'tb.theme.accent'
 const APPEARANCE_STORAGE_KEY = 'tb.theme.appearance'
 
-export const ACCENT_THEMES = ['rose', 'radiant', 'green', 'blue', 'violet', 'chroma'] as const
+export const ACCENT_THEMES = ['blue', 'chroma', 'violet', 'green', 'rose', 'radiant'] as const
 export type AccentTheme = (typeof ACCENT_THEMES)[number]
 
 export const APPEARANCE_THEMES = ['light', 'dark'] as const

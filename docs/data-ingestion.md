@@ -160,9 +160,10 @@ edits to clear. Changed results and results without enough evidence to prove a m
 manual approval in Settings. When a new parser rebuilds an older cache at startup, it can activate
 the result automatically if the accepted source inputs match, no records were withdrawn, and
 saved characters retain their choices and calculated rules. Newly available choices may appear.
-GitHub needs the same accepted commit. Local folders and other HTTPS sources need complete
-matching hashes from the previous accepted catalog. Older settings without hashes can still
-restore an exact parsed match. A full HTTPS check records hashes for future rebuilds.
+GitHub needs the same accepted commit. If an older local or HTTPS catalog has no recorded file
+hashes, startup can still activate a rebuild when the previous cache is intact, its source, layers
+and resource inventory match, no records were withdrawn, and all saved characters pass the rules
+comparison. Known input changes require review. A full HTTPS check records hashes for future rebuilds.
 On relaunch an unapplied preview can be
 checked again before the daily interval, subject to backoff. The previous catalog remains active
 during checks and review. The cache and accepted configuration are committed together after validation.
@@ -185,13 +186,10 @@ reload that changes the accepted catalog also requires Apply, including changes 
 that do not have separate record identities in the removal preview.
 
 An open Wizard or Builder keeps its current catalog. A dirty Builder draft also blocks manual
-catalog changes after leaving Builder. Applying or restoring a catalog briefly defers workflow
-entry. Activation checks the accepted generation before writing; when a compatible catalog is
-replaced, its data and settings are saved together as one restore point. Use **Restore previous
-game data** in Settings to restore it without contacting its source. Restoration consumes that
-restore point. Rollback restores game data and source settings. Character reconciliation still
-follows the active rules, and rollback cannot restore character choices already changed under a
-different catalog. Snapshots from incompatible rules packs or cache schemas are ineligible.
+catalog changes after leaving Builder. Activating a catalog briefly defers workflow
+entry. Activation checks the accepted generation before writing and saves the active catalog and
+its source settings together. Character reconciliation follows the active rules. Older restore
+points are discarded when the app saves an accepted catalog or clears game data.
 The utility computes missing lookup indexes or a missing digest on cache open. A repair writes
 only if the original cache generation is still current.
 

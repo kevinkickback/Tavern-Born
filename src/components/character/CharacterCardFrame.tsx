@@ -69,7 +69,12 @@ export function CharacterCardFrame({
       <div className="absolute inset-x-0 top-0 h-[20%] bg-gradient-to-b from-background/60 via-background/15 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-background/70 via-background/25 to-transparent" />
 
-      <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
+      <div
+        className={cn(
+          'absolute top-3 left-3 z-10 flex gap-1.5',
+          selectionControl ? 'flex-col items-start' : 'items-center',
+        )}
+      >
         {selectionControl}
         {originSystem && (
           <Badge

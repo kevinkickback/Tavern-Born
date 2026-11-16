@@ -250,6 +250,7 @@ test('MPMB preview and download honor the three image modes', async ({ page }, i
     const images = dialog.getByRole('combobox', { name: 'Images' })
     if (filename === 'color') {
       await expect(images).toHaveText(label)
+      await expect(images).toHaveAccessibleDescription(/character portrait and organization emblem/)
     } else {
       await images.click()
       await page.getByRole('option', { name: label }).click()

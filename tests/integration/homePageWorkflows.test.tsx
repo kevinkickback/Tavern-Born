@@ -639,7 +639,7 @@ describe('home page integration workflows', () => {
       })
     })
     await user.click(screen.getByRole('button', { name: 'List view' }))
-    expect(screen.getByLabelText('Character ready')).toBeTruthy()
+    expect(screen.queryByLabelText('Character ready')).toBeNull()
     expect(screen.getByRole('button', { name: 'Pending Choices 1' })).toBeTruthy()
   })
 

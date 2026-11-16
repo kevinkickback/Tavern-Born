@@ -456,6 +456,7 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    releaseFetchMock.mockReset()
     appState.isPackaged = true
     netState.online = true
     vi.stubEnv(
@@ -518,6 +519,60 @@ describe.each(['macOS', 'Windows Portable'])('%s release download', (build) => {
     await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')
     expect(shellOpenExternalMock).not.toHaveBeenCalled()
   })
+
+  test.each([403, 429])('handles an HTTP %i from the release API', async (status) => {
+    releaseFetchMock.mockResolvedValueOnce(new Response(null, { status }))
+    if (build === 'macOS') {
+      const latest = 'https://github.com/kevinkickback/Tavern-Born/releases'
+      nodeFetchMock.mockResolvedValueOnce(Response.redirect(`${latest}/tag/v2.0.0`))
+      await expect(checkForUpdate()).resolves.toEqual({
+        status: 'available',
+        version: '2.0.0',
+        changelog: undefined,
+      })
+      expect(nodeFetchMock).toHaveBeenNthCalledWith(2, `${latest}/latest`, {
+        redirect: 'manual',
+        signal: nodeFetchMock.mock.calls[0]?.[1]?.signal,
+      })
+      await openUpdateDownloadPage()
+      expect(shellOpenExternalMock).toHaveBeenCalledWith(`${latest}/tag/v2.0.0`)
+    } else {
+      await expect(checkForUpdate()).resolves.toEqual({
+        status: 'error',
+        error: `The update server returned HTTP ${status}.`,
+      })
+      expect(netFetchMock).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  if (build === 'macOS') {
+    test.each([
+      'https://example.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0',
+      'https://github.com/another-owner/Tavern-Born/releases/tag/v2.0.0',
+      'https://github.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0-beta.1',
+      'https://github.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0?other=1',
+    ])('refuses an unexpected tag redirect from the release page (%s)', async (location) => {
+      nodeFetchMock
+        .mockResolvedValueOnce(new Response(null, { status: 403 }))
+        .mockResolvedValueOnce(Response.redirect(location))
+      await expect(checkForUpdate()).resolves.toEqual({
+        status: 'error',
+        error: 'The update server returned HTTP 403.',
+      })
+      await expect(openUpdateDownloadPage()).rejects.toThrow('No update is currently available')
+      expect(nodeFetchMock).toHaveBeenCalledTimes(2)
+      expect(shellOpenExternalMock).not.toHaveBeenCalled()
+    })
+
+    test('does not offer a downgrade when recovering a release tag from the latest page', async () => {
+      nodeFetchMock
+        .mockResolvedValueOnce(new Response(null, { status: 403 }))
+        .mockResolvedValueOnce(
+          Response.redirect('https://github.com/kevinkickback/Tavern-Born/releases/tag/v0.6.0'),
+        )
+      await expect(checkForUpdate()).resolves.toEqual({ status: 'not-available' })
+    })
+  }
 
   test('reports network failures without falling through to the native updater', async () => {
     releaseFetchMock.mockRejectedValueOnce(

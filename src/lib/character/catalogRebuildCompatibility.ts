@@ -123,7 +123,11 @@ function assessCatalog(data: GameData) {
     const classes = character.classProgression.map((owner) => {
       const cls = findClassReference(owner, calculation.classes)
       const { subclasses: _subclasses, ...base } = cls ?? {}
-      return [base, getSelectedSubclassData(cls, owner)]
+      const subclass = getSelectedSubclassData(cls, owner)
+      // Layer composition already used the scope marker to link the feature rules below.
+      const { scopedSubclassFeatureDependencies: _dependencyScope, ...subclassRules } =
+        subclass ?? {}
+      return [base, subclass && subclassRules]
     })
     const classSelections = (character.classChoiceSelections ?? []).flatMap(
       ({ selected }) => selected,

@@ -1,4 +1,34 @@
 <details>
+<summary><strong>v0.7.0</strong></summary>
+
+## ✨ Changes
+
+- Significantly expanded level 1–20 progression for 5e and 5.5e, with support for more class features and character choices
+- Expanded equipment support with magic weapon bonuses, new shield variants, and clearer rules
+- Improved Skills management with clearer proficiency and Expertise sources
+- Improved character sheet PDFs with more rules, resource details, and accurate companion stats
+- Improved race, subrace, and feat benefits, including granted spells and ability bonuses
+- Improved starting equipment selection with clearer packages, search, and multiple-item support
+- Improved spell and tool pickers with better filters, clearer choices, and unavailable-option guidance
+- Added color, greyscale, and image-free options for character sheet PDFs
+- Added the ability to collapse the secondary sidebar for more workspace
+- Added two new accent colors & refreshed the existing ones
+- Added individual selection of optional class features, replacements, and expanded spell lists
+- Added sourcebook searching and filtering to Rules → Additional Content
+- Restored additional content automatically at startup when a rebuilt cache preserves saved characters’ rules, including older local and HTTPS caches without file hashes
+- Added missing hazards, statuses, Disease category to the Compendium, with improved rule previews
+- Reorganized Characters and Settings navigation using the secondary sidebar
+- Redesigned character creation with clearer choices, better previews, and protection against accidental closure
+- Many bug fixes...
+
+## ⚠️ Important
+
+* macOS in-app downloads currently not working. Please download new versions manually for now.
+* Characters created before v0.7.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export them before removal in case you would like to use them in an older compatible version.
+
+</details>
+
+<details>
 <summary><strong>v0.6.0</strong></summary>
 
 ## ✨ Changes

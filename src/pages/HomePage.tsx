@@ -24,7 +24,6 @@ import {
   type LibraryGroup,
   type LibrarySort,
 } from '@/components/character/CharacterLibraryControls'
-import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import { CharacterLibrarySidebarContext } from '@/components/layout/characterLibrarySidebar'
@@ -203,13 +202,15 @@ function CharacterListRow({
                 Active
               </span>
             )}
-            {isActive && <CharacterReadinessBadge character={character} />}
             {usesAdditionalContent && <AdditionalContentBadge />}
           </div>
           <p className="truncate text-xs text-muted-foreground">{summary}</p>
         </div>
         <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
           Level {getTotalCharacterLevel(character)}
+        </span>
+        <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+          {character.originSystem === '2024' ? '5.5e (2024)' : '5e (2014)'}
         </span>
         <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground lg:block">
           {new Date(character.lastModified).toLocaleDateString()}

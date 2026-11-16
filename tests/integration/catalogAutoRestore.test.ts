@@ -261,6 +261,65 @@ test('same printing does not establish that a saved class or spell still works',
   ).toBe(false)
 })
 
+test('compares linked subclass rules independently of parser provenance', () => {
+  const character = createEmptyCharacter({
+    name: 'Saved character',
+    originSystem: '2014',
+    allowedSources: ['PHB', 'XGE'],
+    classProgression: [
+      {
+        name: 'Sorcerer',
+        source: 'PHB',
+        levels: 1,
+        subclass: 'Divine Soul',
+        subclassSource: 'XGE',
+      },
+    ],
+  })
+  const feature = {
+    name: 'Favored by the Gods',
+    source: 'XGE',
+    entries: ['Add 2d4 to the roll.'],
+  }
+  const reference = {
+    ref: 'Favored by the Gods|Sorcerer|PHB|Divine Soul|XGE|1',
+    name: feature.name,
+    source: feature.source,
+    className: 'Sorcerer',
+    classSource: 'PHB',
+    subclassShortName: 'Divine Soul',
+    subclassSource: 'XGE',
+    level: 1,
+    feature,
+  }
+  const subclass = {
+    name: 'Divine Soul',
+    shortName: 'Divine Soul',
+    source: 'XGE',
+    className: 'Sorcerer',
+    classSource: 'PHB',
+    subclassFeatureRefs: [reference],
+  }
+  const sorcerer = { name: 'Sorcerer', source: 'PHB', subclasses: [subclass] }
+  const old = { ...createEmptyGameData(), classes: [sorcerer] }
+  const rebuilt = { ...subclass, scopedSubclassFeatureDependencies: true as const }
+  const withSubclass = (parsed: typeof rebuilt) => ({
+    ...old,
+    classes: [{ ...sorcerer, subclasses: [parsed] }],
+  })
+  expect(savedCharactersSurviveRebuild(old, withSubclass(rebuilt), [character])).toBe(true)
+  expect(
+    savedCharactersSurviveRebuild(
+      old,
+      withSubclass({
+        ...rebuilt,
+        subclassFeatureRefs: [{ ...reference, feature: { ...feature, entries: ['Add 2d6.'] } }],
+      }),
+      [character],
+    ),
+  ).toBe(false)
+})
+
 test.skipIf(!existsSync('data/psionics.json') || !existsSync('data/class/class-mystic.json'))(
   'checks a saved psionic printing even when the source is filtered',
   () => {
@@ -310,13 +369,33 @@ test.each([
   { condition: 'different GitHub commit', kind: 'github', restores: false },
   { condition: 'changed HTTPS input', kind: 'https', restores: false },
   { condition: 'changed local bytes', kind: 'local', restores: false },
-  { condition: 'missing prior HTTPS hashes', kind: 'https', restores: false },
+  { condition: 'missing prior HTTPS hashes', kind: 'https', withoutHashes: true, restores: true },
+  { condition: 'missing prior folder hashes', kind: 'local', withoutHashes: true, restores: true },
+  { condition: 'missing GitHub revision', kind: 'github', withoutHashes: true, restores: false },
+  {
+    condition: 'missing choice without prior hashes',
+    kind: 'https',
+    withoutHashes: true,
+    restores: false,
+  },
+  {
+    condition: 'changed saved item without prior hashes',
+    kind: 'https',
+    withoutHashes: true,
+    restores: false,
+  },
   { condition: 'missing saved choice', kind: 'github', restores: false },
   { condition: 'changed saved item benefit', kind: 'github', restores: false },
   { condition: 'unsupported saved character', kind: 'github', restores: false },
   { condition: 'manual check', kind: 'github', restores: false },
   { condition: 'library race', kind: 'local', restores: false },
-])('handles startup reparse with $condition', async ({ condition, kind, restores }) => {
+  { condition: 'hashless library race', kind: 'local', withoutHashes: true, restores: false },
+])('handles startup reparse with $condition', async ({
+  condition,
+  kind,
+  restores,
+  withoutHashes,
+}) => {
   const folder = kind === 'local' ? await mkdtemp(join(tmpdir(), 'tavern-restore-')) : undefined
   const origin = folder
     ? { type: 'local' as const, path: folder, isValid: true }
@@ -327,7 +406,7 @@ test.each([
   try {
     const { accepted, changeRevision, changeUpstreamMetadata, beforeActivation } =
       await setUpObsoleteCache(origin)
-    if (condition === 'library race') beforeActivation(changedLibrary)
+    if (condition.endsWith('library race')) beforeActivation(changedLibrary)
     const { settings } = await readGameDataCachePair()
     // Same source can yield different parsed rows after a parser upgrade.
     const oldData = {
@@ -339,7 +418,7 @@ test.each([
       items: accepted.data.items
         .filter((row) => !row.magicVariantGenerated)
         .map((row) =>
-          condition === 'changed saved item benefit' && row.name === item.name
+          condition.startsWith('changed saved item') && row.name === item.name
             ? { ...row, bonusAc: '+1' }
             : row,
         ),
@@ -357,14 +436,22 @@ test.each([
       state: {
         ...settings,
         lastContentFingerprint: fingerprint,
-        ...(condition === 'missing prior HTTPS hashes' && {
-          dataSourceConfig: { ...settings?.dataSourceConfig, resourceProof: undefined },
+        ...(withoutHashes && {
+          dataSourceConfig: {
+            ...settings?.dataSourceConfig,
+            acceptedRevision: undefined,
+            resourceProof: undefined,
+          },
         }),
       },
     })
     const character = createEmptyCharacter({
       name: 'Saved character',
-      equipment: [condition === 'missing saved choice' ? { ...item, name: 'Missing item' } : item],
+      equipment: [
+        condition === 'missing saved choice' || condition === 'missing choice without prior hashes'
+          ? { ...item, name: 'Missing item' }
+          : item,
+      ],
       ...(condition === 'unsupported saved character' && { schemaVersion: 0 }),
     })
     const savedLibrary = { state: { characters: [character] } }
@@ -383,14 +470,20 @@ test.each([
     }
     const state = useGameDataStore.getState()
     const { cache, expectedCache } = await readGameDataCachePair()
-    if (condition === 'library race') expect(changedLibrary).toHaveBeenCalledOnce()
+    if (condition.endsWith('library race')) expect(changedLibrary).toHaveBeenCalledOnce()
     if (restores) {
-      expect(state.pendingCatalog).toBeNull()
+      expect(state.pendingCatalog === null).toBe(true)
       expect(state.sessionBundledSource).toBeNull()
       expect(state.cacheStatus).toBe('fetched')
       expect(cache?.contentFingerprint).toBe(accepted.contentFingerprint)
       expect(cache?.generation).not.toBe(accepted.generation)
       expect(await get('character-storage')).toEqual(savedLibrary)
+      if (withoutHashes) {
+        useGameDataStore.setState(initial)
+        await useGameDataStore.getState().loadFromCache({ checkForUpdates: false })
+        expect(useGameDataStore.getState().cacheStatus).toBe('cached')
+        expect(useGameDataStore.getState().sessionBundledSource).toBeNull()
+      }
     } else {
       expect(state.pendingCatalog).not.toBeNull()
       expect(state.sessionBundledSource).not.toBeNull()
@@ -403,12 +496,13 @@ test.each([
 
 test('restores a verified matching obsolete catalog and preserves its last change date', async () => {
   const { accepted } = await setUpObsoleteCache()
+  await set('tb:game-data-previous-cache', accepted)
   const { backgroundRefresh } = await start()
   expect(useGameDataStore.getState().sessionBundledSource).not.toBeNull()
   expect(useGameDataStore.getState().isStartupRecovering).toBe(true)
   await expect(backgroundRefresh).resolves.toBe(false)
   const state = useGameDataStore.getState()
-  const { cache, previous, refreshCheck } = await readGameDataCachePair()
+  const { cache, refreshCheck } = await readGameDataCachePair()
   expect(state.sessionBundledSource).toBeNull()
   expect(state.isStartupRecovering).toBe(false)
   expect(state.pendingCatalog).toBeNull()
@@ -416,7 +510,7 @@ test('restores a verified matching obsolete catalog and preserves its last chang
   expect(cache?.contentFingerprint).toBe(accepted.contentFingerprint)
   expect(cache?.lastDataChangedAt).toBe(originalDate)
   expect(cache?.generation).not.toBe(accepted.generation)
-  expect(previous).toBeUndefined()
+  expect(await get('tb:game-data-previous-cache')).toBeUndefined()
   expect(refreshCheck?.needsReview).toBeFalsy()
 })
 

@@ -48,6 +48,22 @@ function usableProof(
   return present
 }
 
+export function canCompareHashlessRebuild(before: External, after: External) {
+  const prior = before.resourceProof
+  const candidate = after.resourceProof
+  if (before.acceptedRevision || !usableProof(candidate, after.type) || !hasBodyHashes(candidate))
+    return false
+  if (prior === undefined) return true
+  if (!usableProof(prior, before.type)) return false
+  const current = new Map(candidate.entries)
+  return prior.entries.every(([path, stamp]) => {
+    const observed = current.get(path)
+    return stamp === null
+      ? observed === null
+      : !bodyHash(stamp) && observed?.replace(BODY_HASH, '') === stamp
+  })
+}
+
 /** Undefined means older settings lack enough evidence to compare the source inputs. */
 export function compareAcceptedSource(before: External, after: External, revision?: string) {
   if (before.type !== after.type || before.path !== after.path) return false

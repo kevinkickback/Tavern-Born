@@ -91,6 +91,8 @@ checks the lock. Verify the setting against the installed builder when upgrading
 checks run after saved preferences load and at the configured interval when enabled. Changing the
 setting starts or stops future scheduled checks. Manual checks are available either way.
 On macOS and Windows Portable, the update dialog links to the official release download page.
+When the GitHub release API denies or rate-limits a macOS check, the app can read the stable
+version from the official latest-release redirect. Release notes remain available on GitHub.
 Install the new Mac app from its DMG or replace the portable executable with the new download.
 Upgrading from macOS v0.6.0 or earlier starts on the
 [GitHub releases page](https://github.com/kevinkickback/Tavern-Born/releases).

@@ -27,7 +27,6 @@ import {
   persistCatalogRepair,
   readGameDataCache,
   readGameDataCachePair,
-  restorePreviousCatalog,
   writeCatalogRefreshCheck,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
@@ -125,67 +124,41 @@ describe('writeGameDataCache', () => {
     }
   })
 
-  test('rejects stale activation and restores the previous catalog and settings exactly once', async () => {
+  test('keeps the active catalog on a stale write and discards retired restore records on Apply', async () => {
     await clearGameDataCache(true)
+    const idb = await vi.importActual<typeof import('idb-keyval')>('idb-keyval')
+    const retiredKeys = ['tb:game-data-previous-cache', 'tb:game-data-previous-info']
     try {
-      const signal = new AbortController().signal
       const first = await writeGameDataCache(makeGameData('first'), config, {
         config,
         expectedCache: null,
       })
-      const checkedAt = '2026-11-13T00:00:00.000Z'
-      await markCatalogChecked(cacheMetadata(first), config, checkedAt, signal)
+      await idb.setMany(retiredKeys.map((key) => [key, { old: true }]))
+      await expect(
+        writeGameDataCache(makeGameData('stale'), config, { config, expectedCache: null }),
+      ).rejects.toThrow('saved game data changed')
+      expect(await readGameDataCachePair()).toMatchObject({
+        cache: first,
+        settings: { dataSourceConfig: config },
+      })
+      expect(await idb.getMany(retiredKeys)).toEqual([{ old: true }, { old: true }])
+
       const next = { ...config, path: 'https://replacement.example.com' }
       const second = await writeGameDataCache(makeGameData('second'), next, {
         config: next,
         expectedCache: cacheMetadata(first),
       })
-      await expect(
-        writeGameDataCache(makeGameData('stale'), config, {
-          config,
-          expectedCache: cacheMetadata(first),
-        }),
-      ).rejects.toThrow('saved game data changed')
-      const pair = await readGameDataCachePair()
-      expect(pair.cache).toEqual(second)
-      expect(pair.previous?.config).toEqual(config)
-      await expect(
-        restorePreviousCatalog(pair.previous!, cacheMetadata(first), signal),
-      ).rejects.toThrow('saved game data changed')
-
-      const abort = new AbortController()
-      const original = IDBObjectStore.prototype.put
-      const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
-        this: IDBObjectStore,
-        value,
-        key,
-      ) {
-        const result = original.call(this, value, key)
-        if (key === 'game-data-storage') abort.abort(new Error('Interrupted'))
-        return result
-      })
-      try {
-        await expect(
-          restorePreviousCatalog(pair.previous!, pair.expectedCache, abort.signal),
-        ).rejects.toThrow('Interrupted')
-      } finally {
-        put.mockRestore()
-      }
-      expect(await readGameDataCachePair()).toEqual(pair)
-      const restored = await restorePreviousCatalog(pair.previous!, pair.expectedCache, signal)
-      expect(restored.data).toEqual(first.data)
-      expect(restored.generation).not.toBe(first.generation)
       expect(await readGameDataCachePair()).toMatchObject({
-        cache: restored,
-        settings: { dataSourceConfig: config, lastUpdateCheckAt: checkedAt },
+        cache: second,
+        settings: { dataSourceConfig: next },
       })
-      expect((await readGameDataCachePair()).previous).toBeUndefined()
+      expect(await idb.getMany(retiredKeys)).toEqual([undefined, undefined])
     } finally {
       await clearGameDataCache(true)
     }
   })
 
-  test('retains the restore point across an identical rewrite and rejects stale review metadata', async () => {
+  test('rejects stale review metadata after an identical rewrite', async () => {
     await clearGameDataCache(true)
     try {
       const first = await writeGameDataCache(makeGameData('first'), config, {
@@ -197,41 +170,12 @@ describe('writeGameDataCache', () => {
         config,
         expectedCache: cacheMetadata(first),
       })
-      const { previous } = await readGameDataCachePair()
       await writeGameDataCache(nextData, config, { config, expectedCache: cacheMetadata(second) })
       await writeCatalogRefreshCheck(
         { source: config, lastAttemptAt: Date.now(), lastSuccessAt: null, consecutiveFailures: 1 },
         cacheMetadata(second),
       )
-      expect(await readGameDataCachePair()).toMatchObject({ previous, refreshCheck: undefined })
-    } finally {
-      await clearGameDataCache(true)
-    }
-  })
-
-  test('does not advertise a rollback to an older Included SRD pack', async () => {
-    const old = {
-      type: 'bundled' as const,
-      path: 'srd/core',
-      packId: 'core',
-      packVersion: '1',
-      isValid: true,
-    }
-    const installed = { ...old, packVersion: '2' }
-    await clearGameDataCache(true)
-    try {
-      const first = await writeGameDataCache(makeGameData('first'), old, {
-        config: old,
-        expectedCache: null,
-      })
-      const onPrevious = vi.fn()
-      await writeGameDataCache(makeGameData('second'), installed, {
-        config: installed,
-        expectedCache: cacheMetadata(first),
-        onPrevious,
-      })
-      expect(onPrevious).not.toHaveBeenCalled()
-      expect((await readGameDataCachePair()).previous).toBeUndefined()
+      expect(await readGameDataCachePair()).toMatchObject({ refreshCheck: undefined })
     } finally {
       await clearGameDataCache(true)
     }
@@ -248,7 +192,6 @@ describe('writeGameDataCache', () => {
       const entry = await writeGameDataCache(makeGameData(), config, {
         config,
         expectedCache,
-        previous: expectedCache,
       })
       expect((await readGameDataCachePair()).cache).toEqual(entry)
     } finally {
