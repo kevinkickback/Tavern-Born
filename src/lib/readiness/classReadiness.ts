@@ -46,6 +46,7 @@ import {
 } from '@/lib/character/featureOptionSelections'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import {
+  getAutomaticToolFallback,
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
@@ -324,6 +325,7 @@ export function validateClassChoices(
       if (
         choice.level <= entry.levels &&
         getHistoricalProficiencyRule(choice.id) &&
+        !getAutomaticToolFallback(choice.id) &&
         !selections.get(choice.id)?.proficiencyAtGain
       ) {
         issues.push(

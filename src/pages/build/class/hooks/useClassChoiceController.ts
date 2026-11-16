@@ -61,6 +61,7 @@ import {
   hasRevisedHunterRecovery,
 } from '@/lib/character/featureOptionSelections'
 import {
+  getAutomaticToolFallback,
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
@@ -185,6 +186,9 @@ export function useClassChoiceController({
             .filter((choice) => choice.level <= viewingClassLevel)
             .map((choice) =>
               character ? resolveHistoricalProficiencyChoice(character, choice) : choice,
+            )
+            .filter(
+              (choice) => !getAutomaticToolFallback(choice.id) || choice.maximumSelections > 0,
             )
         : [],
     [
@@ -906,6 +910,7 @@ export function useClassChoiceController({
     historicalSetup:
       activeDisplayChoice?.id &&
       !activeRemovalOnly &&
+      !getAutomaticToolFallback(activeDisplayChoice.id) &&
       getHistoricalProficiencyRule(activeDisplayChoice.id)
         ? {
             name: getHistoricalProficiencyRule(activeDisplayChoice.id)!.proficiencyAtGain!,

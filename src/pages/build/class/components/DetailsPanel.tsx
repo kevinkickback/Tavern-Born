@@ -37,6 +37,21 @@ export interface BuildClassDetailsPanelProps {
   onClearSelection: () => void
 }
 
+const featureEntryStyle =
+  'text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2'
+const classEntryStyle =
+  'text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold'
+
+function renderEntries(entries: readonly unknown[] | undefined, className: string) {
+  return entries?.map((entry, index) => (
+    <GameContent
+      key={typeof entry === 'string' ? `${index}:${entry}` : index}
+      entry={entry}
+      className={className}
+    />
+  ))
+}
+
 export function BuildClassDetailsPanel({
   selectedFeature,
   viewingClassData,
@@ -114,26 +129,14 @@ export function BuildClassDetailsPanel({
                           }
                         >
                           <div className="text-sm font-semibold mb-1">{feature.name}</div>
-                          {feature.entries?.map((entry, idx) => (
-                            <GameContent
-                              key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                              entry={entry}
-                              className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                            />
-                          ))}
+                          {renderEntries(feature.entries, featureEntryStyle)}
                         </div>
                       ))}
                     </div>
                   </div>
                 ))
             ) : selectedFeature.entries.length > 0 ? (
-              selectedFeature.entries.map((entry, idx) => (
-                <GameContent
-                  key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                  entry={entry}
-                  className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                />
-              ))
+              renderEntries(selectedFeature.entries, featureEntryStyle)
             ) : (
               <p className="text-sm text-muted-foreground italic">No description available.</p>
             )}
@@ -215,13 +218,7 @@ export function BuildClassDetailsPanel({
                   Description
                 </h4>
                 <div className="space-y-2">
-                  {viewingClassEntries.map((entry, idx) => (
-                    <GameContent
-                      key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                      entry={entry}
-                      className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
-                    />
-                  ))}
+                  {renderEntries(viewingClassEntries, classEntryStyle)}
                 </div>
               </div>
             )}
@@ -237,13 +234,7 @@ export function BuildClassDetailsPanel({
                     <div key={`${section.name ?? ''}|${sectionIdx}`}>
                       <h5 className="text-sm font-semibold mb-2">{section.name}</h5>
                       <div className="space-y-2">
-                        {section.entries.map((entry, idx) => (
-                          <GameContent
-                            key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
-                            entry={entry}
-                            className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
-                          />
-                        ))}
+                        {renderEntries(section.entries, classEntryStyle)}
                       </div>
                     </div>
                   ))}

@@ -658,14 +658,13 @@ export function BuildClassLevelsPanel({
                       .map((choice) => choice.id),
                   ),
                 )
+                const diagnosticKey = (row: ClassChoiceDiagnostic) =>
+                  `${row.featureName}|${row.level ?? ''}|${row.code}|${row.message}`
                 const matchedDiagnosticKeys = new Set(
                   ordinaryFeatures.flatMap((feature) =>
                     levelDiagnostics
                       .filter((diagnostic) => featureOwnsDiagnostic(feature, diagnostic))
-                      .map(
-                        (diagnostic) =>
-                          `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
-                      ),
+                      .map(diagnosticKey),
                   ),
                 )
                 const unmatchedChoices = levelClassChoices.filter(
@@ -677,9 +676,28 @@ export function BuildClassLevelsPanel({
                 const unmatchedDiagnostics = levelDiagnostics.filter(
                   (diagnostic) =>
                     !optionalClassFeaturesOwnDiagnostic(diagnostic, optionalRows) &&
-                    !matchedDiagnosticKeys.has(
-                      `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
-                    ),
+                    !matchedDiagnosticKeys.has(diagnosticKey(diagnostic)),
+                )
+
+                const renderChoices = (
+                  choices: NormalizedCharacterChoice[],
+                  diagnostics: ClassChoiceDiagnostic[],
+                  feature?: ClassFeatureDisplay,
+                ) => (
+                  <BuildClassChoicesSection
+                    choices={choices}
+                    diagnostics={diagnostics}
+                    classLevel={viewingClassLevel}
+                    progressionGainLevel={lv}
+                    selectedViewsByChoiceId={levelSelectedViewsById}
+                    detailCollapsed={detailCollapsed}
+                    onChoose={openLevelChoice}
+                    onSelectFeature={onSelectFeature}
+                    onExpandDetails={onExpandDetails}
+                    feature={feature}
+                    focusedChoiceId={focusedLevelChoiceId}
+                    isDiagnosticFocused={diagnostics.some(isDiagnosticFocused)}
+                  />
                 )
 
                 const renderPassiveFeatures = (
@@ -688,70 +706,37 @@ export function BuildClassLevelsPanel({
                   diagnostics = levelDiagnostics.filter(
                     (diagnostic) => !optionalClassFeaturesOwnDiagnostic(diagnostic, optionalRows),
                   ),
-                ) => (
-                  <BuildClassPassiveFeatureList
-                    passiveFeatures={features}
-                    selectedFeature={selectedFeature}
-                    viewingSubclassData={viewingSubclassData}
-                    detailCollapsed={detailCollapsed}
-                    onSelectFeature={onSelectFeature}
-                    onExpandDetails={onExpandDetails}
-                    renderFeature={(feature) => {
-                      const featureChoices = choices.filter(
-                        (choice) =>
-                          featureOwnsLevelChoice(feature, choice, features) &&
-                          (!configurationIds.has(choice.id) || groupedChoiceIds.has(choice.id)),
-                      )
-                      if (featureChoices.length === 0) return undefined
-                      const featureDiagnostics = diagnostics.filter((diagnostic) =>
-                        featureOwnsDiagnostic(feature, diagnostic),
-                      )
-                      return (
-                        <BuildClassChoicesSection
-                          choices={featureChoices}
-                          diagnostics={featureDiagnostics}
-                          classLevel={viewingClassLevel}
-                          progressionGainLevel={lv}
-                          selectedViewsByChoiceId={levelSelectedViewsById}
-                          detailCollapsed={detailCollapsed}
-                          onChoose={openLevelChoice}
-                          onSelectFeature={onSelectFeature}
-                          onExpandDetails={onExpandDetails}
-                          feature={feature}
-                          focusedChoiceId={focusedLevelChoiceId}
-                          isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
-                        />
-                      )
-                    }}
-                    renderAfterFeature={(feature) => {
-                      const featureChoices = choices.filter(
-                        (choice) =>
-                          featureOwnsLevelChoice(feature, choice, features) &&
-                          (!configurationIds.has(choice.id) || groupedChoiceIds.has(choice.id)),
-                      )
-                      if (featureChoices.length > 0) return null
-                      const featureDiagnostics = diagnostics.filter((diagnostic) =>
-                        featureOwnsDiagnostic(feature, diagnostic),
-                      )
-                      if (featureDiagnostics.length === 0) return null
-                      return (
-                        <BuildClassChoicesSection
-                          choices={[]}
-                          diagnostics={featureDiagnostics}
-                          classLevel={viewingClassLevel}
-                          progressionGainLevel={lv}
-                          selectedViewsByChoiceId={levelSelectedViewsById}
-                          detailCollapsed={detailCollapsed}
-                          onChoose={openLevelChoice}
-                          onSelectFeature={onSelectFeature}
-                          onExpandDetails={onExpandDetails}
-                          feature={feature}
-                          isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
-                        />
-                      )
-                    }}
-                  />
-                )
+                ) => {
+                  const choicesFor = (feature: ClassFeatureDisplay) =>
+                    choices.filter(
+                      (choice) =>
+                        featureOwnsLevelChoice(feature, choice, features) &&
+                        (!configurationIds.has(choice.id) || groupedChoiceIds.has(choice.id)),
+                    )
+                  const diagnosticsFor = (feature: ClassFeatureDisplay) =>
+                    diagnostics.filter((diagnostic) => featureOwnsDiagnostic(feature, diagnostic))
+                  return (
+                    <BuildClassPassiveFeatureList
+                      passiveFeatures={features}
+                      selectedFeature={selectedFeature}
+                      viewingSubclassData={viewingSubclassData}
+                      detailCollapsed={detailCollapsed}
+                      onSelectFeature={onSelectFeature}
+                      onExpandDetails={onExpandDetails}
+                      renderFeature={(feature) => {
+                        const featureChoices = choicesFor(feature)
+                        if (featureChoices.length === 0) return undefined
+                        return renderChoices(featureChoices, diagnosticsFor(feature), feature)
+                      }}
+                      renderAfterFeature={(feature) => {
+                        if (choicesFor(feature).length > 0) return null
+                        const featureDiagnostics = diagnosticsFor(feature)
+                        if (featureDiagnostics.length === 0) return null
+                        return renderChoices([], featureDiagnostics, feature)
+                      }}
+                    />
+                  )
+                }
                 return (
                   <AccordionItem
                     key={lv}
@@ -847,23 +832,8 @@ export function BuildClassLevelsPanel({
                               return (
                                 <>
                                   {renderPassiveFeatures(features, choices, diagnostics)}
-                                  {(unmatched.length > 0 || unmatchedDiagnostics.length > 0) && (
-                                    <BuildClassChoicesSection
-                                      choices={unmatched}
-                                      diagnostics={unmatchedDiagnostics}
-                                      classLevel={viewingClassLevel}
-                                      progressionGainLevel={lv}
-                                      selectedViewsByChoiceId={levelSelectedViewsById}
-                                      detailCollapsed={detailCollapsed}
-                                      onChoose={openLevelChoice}
-                                      onSelectFeature={onSelectFeature}
-                                      onExpandDetails={onExpandDetails}
-                                      focusedChoiceId={focusedLevelChoiceId}
-                                      isDiagnosticFocused={unmatchedDiagnostics.some(
-                                        isDiagnosticFocused,
-                                      )}
-                                    />
-                                  )}
+                                  {(unmatched.length > 0 || unmatchedDiagnostics.length > 0) &&
+                                    renderChoices(unmatched, unmatchedDiagnostics)}
                                 </>
                               )
                             }}
@@ -954,21 +924,8 @@ export function BuildClassLevelsPanel({
 
                         {renderPassiveFeatures(ordinaryFeatures)}
 
-                        {(unmatchedChoices.length > 0 || unmatchedDiagnostics.length > 0) && (
-                          <BuildClassChoicesSection
-                            choices={unmatchedChoices}
-                            diagnostics={unmatchedDiagnostics}
-                            classLevel={viewingClassLevel}
-                            progressionGainLevel={lv}
-                            selectedViewsByChoiceId={levelSelectedViewsById}
-                            detailCollapsed={detailCollapsed}
-                            onChoose={openLevelChoice}
-                            onSelectFeature={onSelectFeature}
-                            onExpandDetails={onExpandDetails}
-                            focusedChoiceId={focusedLevelChoiceId}
-                            isDiagnosticFocused={unmatchedDiagnostics.some(isDiagnosticFocused)}
-                          />
-                        )}
+                        {(unmatchedChoices.length > 0 || unmatchedDiagnostics.length > 0) &&
+                          renderChoices(unmatchedChoices, unmatchedDiagnostics)}
                       </div>
                     </AccordionContent>
                   </AccordionItem>

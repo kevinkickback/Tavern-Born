@@ -10,7 +10,12 @@ import {
   getReservedArtificerPlanKeys,
   isArtificerReplicatePlanChoice,
 } from '@/lib/5etools/artificerArmorReplication'
-import { readArtificerInfusionPlans } from '@/lib/5etools/artificerInfusionPlans'
+import {
+  createArtificerPlanFacets,
+  getInfusionItemFacets,
+  isArtificerInfusionChoice,
+  readArtificerInfusionPlans,
+} from '@/lib/5etools/artificerInfusionPlans'
 import {
   BLESSED_STRIKES_ID,
   getCurrentBlessedStrikes,
@@ -267,6 +272,7 @@ export interface ClassChoiceOptionView {
   masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
   weaponCategory?: string
   weaponRange?: 'Melee' | 'Ranged'
+  itemFacets?: { types: string[]; attunement: string[] }
   prerequisite?: Raw5ePrereq[]
   presentation?: ClassChoiceOptionPresentation
   searchText?: string
@@ -1288,10 +1294,7 @@ export function resolveClassChoiceOptions(
     choice.kind === 'item' &&
     choice.source.kind === 'class-table' &&
     !choice.optionFilter?.requiresMastery
-  const infusions =
-    choice.source.kind === 'optional-feature-progression' &&
-    filter?.featureTypes?.length === 1 &&
-    filter.featureTypes[0] === 'AI'
+  const infusions = isArtificerInfusionChoice(choice)
   if (
     choice.options.length > 0 &&
     !filter?.requiresMastery &&
@@ -1387,7 +1390,11 @@ export function resolveClassChoiceOptions(
         resolved.push(
           withEarnedChoiceLevel(
             choice,
-            { ...view, prerequisite: undefined },
+            {
+              ...view,
+              itemFacets: getInfusionItemFacets(view.prerequisite),
+              prerequisite: undefined,
+            },
             getInfusionLearningLevel(choice, view),
             saved,
             classLevel,
@@ -1863,7 +1870,20 @@ export function resolveClassChoiceOptions(
       }
     }
   }
-  return [...byKey.values()].sort(
+  let views = [...byKey.values()]
+  if (
+    (infusions || reservedArtificerPlans) &&
+    views.some(({ reference }) => reference.entityType === 'item')
+  ) {
+    const facets = createArtificerPlanFacets(
+      [...catalogs.items, ...catalogs.itemsBase],
+      catalogs.itemTypeByAbbr,
+    )
+    views = views.map((view) =>
+      view.reference.entityType === 'item' ? { ...view, itemFacets: facets(view.reference) } : view,
+    )
+  }
+  return views.sort(
     (left, right) =>
       left.reference.name.localeCompare(right.reference.name) ||
       normalized(left.reference.source).localeCompare(normalized(right.reference.source)),

@@ -6,7 +6,10 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import { optionalClassProficiencyRule } from '@/lib/5etools/ownedClassProficiencyRules'
-import { getHistoricalProficiencyRule } from '@/lib/character/historicalProficiencyChoices'
+import {
+  getAutomaticToolFallback,
+  getHistoricalProficiencyRule,
+} from '@/lib/character/historicalProficiencyChoices'
 import { addReadinessFocus, classChoiceReadinessId } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -61,7 +64,7 @@ export function BuildClassProgressionChoiceCard({
     proficiencyChoice?.domain === 'skills' &&
     !!optionalClassProficiencyRule(proficiencyChoice.target)
   const saved = useCharacterStore((state) => state.activeCharacter)
-  const historical = !!getHistoricalProficiencyRule(id)
+  const historical = !getAutomaticToolFallback(id) && !!getHistoricalProficiencyRule(id)
   const setup = historical
     ? saved?.classChoiceSelections?.find((row) => row.choiceId === id)?.proficiencyAtGain
     : undefined
@@ -208,27 +211,20 @@ export function BuildClassChosenItemBadge({
   onSelectFeature: ProgressionChoiceCardProps['onSelectFeature']
   onExpandDetails: () => void
 }) {
+  const showDetails = () => {
+    onSelectFeature({
+      origin: item.origin,
+      name: item.name,
+      source: item.source,
+      entries: item.entries ?? [],
+    })
+    if (detailCollapsed) onExpandDetails()
+  }
   return (
     <button
       type="button"
-      onMouseEnter={() => {
-        onSelectFeature({
-          origin: item.origin,
-          name: item.name,
-          source: item.source,
-          entries: item.entries ?? [],
-        })
-        if (detailCollapsed) onExpandDetails()
-      }}
-      onClick={() => {
-        onSelectFeature({
-          origin: item.origin,
-          name: item.name,
-          source: item.source,
-          entries: item.entries ?? [],
-        })
-        if (detailCollapsed) onExpandDetails()
-      }}
+      onMouseEnter={showDetails}
+      onClick={showDetails}
       className={cn(
         'inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-foreground transition-colors',
         item.unavailable

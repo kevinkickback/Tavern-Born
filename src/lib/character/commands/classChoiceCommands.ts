@@ -127,6 +127,7 @@ import { isEpicBoonAdvancementChoice } from '@/lib/character/epicBoonSlots'
 import { getFighterStylePair } from '@/lib/character/fighterStyleChoices'
 import { stripFixedProficiencyGrants } from '@/lib/character/fixedProficiencyOwnership'
 import {
+  getAutomaticToolFallback,
   getHistoricalProficiencyRule,
   resolveHistoricalProficiencyChoice,
 } from '@/lib/character/historicalProficiencyChoices'
@@ -423,6 +424,7 @@ function currentLiteralChoice(
       throw new RangeError('Current source rules cannot verify this proficiency choice.')
     if (
       getHistoricalProficiencyRule(choice.id) &&
+      !getAutomaticToolFallback(choice.id) &&
       !character.classChoiceSelections?.find((row) => row.choiceId === choice.id)?.proficiencyAtGain
     )
       throw new RangeError('Confirm the proficiency setup before choosing a fallback proficiency.')
@@ -446,7 +448,7 @@ function currentLiteralChoice(
       throw new RangeError(
         'Proficiency eligibility changed. Review the available choices before confirming.',
       )
-    return resolveHistoricalProficiencyChoice(character, current)
+    return resolveHistoricalProficiencyChoice(eligibilityCharacter, current)
   }
   if (!isFeatureLiteralChoiceId(choice.id)) {
     const fighterStyle = getFighterStylePair(choice.id)
@@ -1526,6 +1528,11 @@ export function applyClassChoiceSelectionCommand(
           ?.slotLevel ?? levels.get(getClassChoiceOptionKey(row))!,
     )
   }
+  const toolTrigger = getAutomaticToolFallback(choice.id)?.trigger
+  const proficiencyAtGain =
+    existingSelection?.proficiencyAtGain ??
+    // The current catalog and independently owned trigger were verified above.
+    (toolTrigger && selected.length ? { name: toolTrigger, alreadyProficient: true } : undefined)
   const selection: CharacterClassChoiceSelection = {
     choiceId: choice.id,
     label: choice.label,
@@ -1536,9 +1543,7 @@ export function applyClassChoiceSelectionCommand(
     ...(choice.owner.subclassSource ? { subclassSource: choice.owner.subclassSource } : {}),
     classLevel: choice.level,
     ...(favoredEnemy ? { favoredEnemy } : {}),
-    ...(existingSelection?.proficiencyAtGain
-      ? { proficiencyAtGain: existingSelection.proficiencyAtGain }
-      : {}),
+    ...(proficiencyAtGain ? { proficiencyAtGain } : {}),
     selected:
       gain?.options ??
       selected.map<CharacterClassChoiceOption>((option, index) => ({
