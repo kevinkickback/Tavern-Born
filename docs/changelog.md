@@ -23,7 +23,7 @@
 
 ## ⚠️ Important
 
-* MacOS in-app downloads currently not working. Please download new versions manually for now.
+* macOS in-app downloads currently not working. Please download new versions manually for now.
 * Characters created before v0.7.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export them before removal in case you would like to use them in an older compatible version.
 
 </details>

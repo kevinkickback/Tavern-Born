@@ -253,6 +253,18 @@ export function initAutoUpdater() {
   })
 }
 
+async function readLatestReleaseTag(signal: AbortSignal): Promise<string | undefined> {
+  const response = await globalThis.fetch(`${GITHUB_RELEASES_BASE}/latest`, {
+    redirect: 'manual',
+    signal,
+  })
+  const location = response.headers.get('location')
+  const tagPrefix = `${GITHUB_RELEASES_BASE}/tag/`
+  if (response.status !== 302 || !location?.startsWith(tagPrefix)) return
+  const tag = location.slice(tagPrefix.length)
+  if (/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)) return tag
+}
+
 async function checkForReleaseDownload(): Promise<UpdateStatus> {
   const currentVersion = app.getVersion()
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
@@ -263,32 +275,39 @@ async function checkForReleaseDownload(): Promise<UpdateStatus> {
 
     // Isolate the macOS release check from Chromium's persistent session.
     const macOS = process.platform === 'darwin'
+    const signal = macOS ? AbortSignal.timeout(RELEASE_CHECK_TIMEOUT) : undefined
     const request = macOS ? globalThis.fetch : net.fetch
     const response = await request(url, {
-      ...(macOS && { signal: AbortSignal.timeout(RELEASE_CHECK_TIMEOUT) }),
+      ...(signal && { signal }),
       headers: {
         Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'tavern-born-updater',
       },
     })
 
-    if (!response.ok) {
-      return setErrorStatus(`The update server returned HTTP ${response.status}.`)
+    let release: { tag_name?: string; body?: string }
+    if (response.ok) {
+      release = (await response.json()) as typeof release
+    } else {
+      const tag =
+        signal && (response.status === 403 || response.status === 429)
+          ? await readLatestReleaseTag(signal)
+          : undefined
+      if (!tag) return setErrorStatus(`The update server returned HTTP ${response.status}.`)
+      release = { tag_name: tag }
     }
-
-    const data = (await response.json()) as { tag_name?: string; body?: string }
-    const latestVersion = (data.tag_name ?? '').replace(/^v/, '')
+    const latestVersion = (release.tag_name ?? '').replace(/^v/, '')
 
     if (latestVersion && compareSemver(latestVersion, currentVersion) > 0) {
       const status: UpdateStatus = {
         status: 'available',
         version: latestVersion,
-        changelog: data.body ?? undefined,
+        changelog: release.body ?? undefined,
       }
       setStatus(status)
       sendToRenderer('update-available', {
         version: latestVersion,
-        changelog: data.body ?? null,
+        changelog: release.body ?? null,
         useReleaseDownloadPage: true,
       })
       return status
