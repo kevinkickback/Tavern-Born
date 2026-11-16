@@ -42,8 +42,10 @@ managed data below `resources/srd/data` during development and
 fixed `tavern-born-srd-core` pack identity; packaged builds additionally require
 `approved-for-distribution`, while unpackaged development can exercise a review-status snapshot.
 Absolute paths, backslashes, empty/dot/parent segments, non-JSON files, symlink escapes, non-files,
-and JSON larger than 50 MB are rejected.
+and JSON larger than 50 MiB are rejected.
 Bundled, local, and remote resources all pass through the same loader and parser pipeline.
+Remote JSON is capped at 50 MiB per response, measured as bytes from the decoded HTTP body.
+An over-limit response is cancelled before JSON parsing or delivery to the catalog worker.
 Source validation uses the same resource readers, so path construction, remote normalization,
 timeouts, and Electron capability checks cannot drift between validation and ingestion.
 

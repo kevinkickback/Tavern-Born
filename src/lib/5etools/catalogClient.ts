@@ -14,7 +14,7 @@ import type {
   CatalogWorkerMessage,
 } from './catalogProtocol'
 import type { DataLoaderOptions } from './dataLoader'
-import { fetchObservedResource } from './resourceReader'
+import { fetchObservedResource, readRemoteResourceBytes } from './resourceReader'
 
 type Progress = DataLoaderOptions['onProgress']
 interface PendingRequest {
@@ -63,7 +63,7 @@ async function handleMessage(message: CatalogWorkerMessage) {
         if ('unchanged' in result) reply = { unchanged: true }
         else {
           const { response, stamp } = result
-          if (response.ok) reply = { bytes: await response.arrayBuffer(), stamp }
+          if (response.ok) reply = { bytes: await readRemoteResourceBytes(response), stamp }
           else {
             void response.body?.cancel().catch(() => {})
             reply = { error: `HTTP ${response.status}`, status: response.status }

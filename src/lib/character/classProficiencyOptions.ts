@@ -22,6 +22,7 @@ import {
   getProficiencyOptionEntries,
   hasProficiencyCatalogTarget,
 } from './classProficiencyVocabulary'
+import { getProficiencyAtGain } from './historicalProficiencyChoices'
 
 export { hasProficiencyCatalogTarget } from './classProficiencyVocabulary'
 
@@ -38,6 +39,8 @@ export function resolveClassProficiencyOptions(
   const domain = getClassProficiencyRuleDomain(rule, relation)
   const state = projection ?? (character && projectOwnedProficiencies(character, catalogs))
   const base = state?.effective
+  const toolSetup =
+    base && relation?.domain === 'tools' ? getProficiencyAtGain(base, choice.id) : undefined
   const current = base?.classProgression
     .flatMap((owner) => getEffectiveOwnerProficiencyChoices(base, owner, catalogs))
     .find((row) => row.id === choice.id)
@@ -201,9 +204,7 @@ export function resolveClassProficiencyOptions(
         ((!domain?.toolCategory && !domain?.toolPool) ||
           (domain.toolPool && !domain.toolPool.includes(name)) ||
           (domain.excludeExisting && tools.has(name) && !alreadySelected) ||
-          (domain.trigger &&
-            !character?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
-              ?.proficiencyAtGain?.alreadyProficient) ||
+          (domain.trigger && (!toolSetup?.alreadyProficient || name === domain.trigger)) ||
           !hasProficiencyCatalogTarget(reference, catalogs, undefined, domain.toolCategory))
       )
         continue

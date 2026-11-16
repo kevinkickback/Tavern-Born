@@ -1,8 +1,88 @@
+import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { normalizeOwnerIdentity as norm } from '@/lib/provenance/normalization'
-import type { OptionalFeatureLike } from '@/types/5etools'
-import type { NormalizedChoiceOptionReference } from '@/types/classRules'
+import type { Item5e, OptionalFeatureLike, Raw5ePrereq } from '@/types/5etools'
+import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
+import { createExactPlanItemLookup } from './artificerArmorReplication'
 import { parseFilterTags } from './choiceFilterTags'
 import { optionalDeclarationObject as record } from './optionalClassDeclarationStructure'
+
+export function isArtificerInfusionChoice(choice: Partial<NormalizedCharacterChoice>) {
+  const types = choice.optionFilter?.featureTypes
+  return (
+    choice.source?.kind === 'optional-feature-progression' &&
+    types?.length === 1 &&
+    types[0] === 'AI'
+  )
+}
+
+/** The optional feature's item clause describes its target, not a character prerequisite. */
+export function getInfusionItemFacets(prerequisites?: Raw5ePrereq[]) {
+  const clauses = prerequisites?.flatMap((row) => (Array.isArray(row.item) ? row.item : [])) ?? []
+  if (!clauses.length || clauses.some((clause) => typeof clause !== 'string' || !clause.trim()))
+    return undefined
+  const types = new Set<string>()
+  const attunement = new Set<string>()
+  // 5etools declares standard infusion targets in prose, including alternatives and a suffix.
+  for (const clause of clauses as string[]) {
+    const target = clause.toLowerCase().trim()
+    attunement.add(target.endsWith(' (requires attunement)') ? 'required' : 'none')
+    for (const type of target.match(/\b(weapon|armor|shield|ring|robes)\b/g) ?? ['robes'])
+      types.add(type === 'robes' ? 'other' : type)
+  }
+  return { types: [...types], attunement: [...attunement] }
+}
+
+export function createArtificerPlanFacets(
+  items: readonly Item5e[],
+  itemTypes: Readonly<Record<string, string>>,
+) {
+  const resolve = createExactPlanItemLookup(items)
+  const classify = (input: Parameters<typeof getNormalizedItemTraits>[0]) => {
+    const traits = getNormalizedItemTraits(input, itemTypes)
+    return [
+      ...(traits.isWeapon ? ['weapon'] : []),
+      ...(traits.armorCategory === 'shield' ? ['shield'] : traits.isArmor ? ['armor'] : []),
+      ...(traits.typeCodes.includes('RG') ? ['ring'] : []),
+    ]
+  }
+  const typesFor = (item: Item5e, depth = 0): string[] => {
+    const direct = classify(item)
+    if (direct.length || depth >= 8) return direct
+    if (item.magicVariantReference && Array.isArray(item.requires)) {
+      return item.requires.flatMap((value) => {
+        const rule = record(value)
+        const base =
+          typeof rule.name === 'string' && typeof rule.source === 'string'
+            ? resolve(rule.name, rule.source)
+            : undefined
+        return classify(
+          base ?? {
+            type: typeof rule.type === 'string' ? rule.type : undefined,
+            weaponCategory:
+              typeof rule.weaponCategory === 'string' ? rule.weaponCategory : undefined,
+            weapon: rule.weapon === true,
+            armor: rule.armor === true,
+          },
+        )
+      })
+    }
+    return (Array.isArray(item.items) ? item.items : []).flatMap((value) => {
+      const [name, source, ...extra] = typeof value === 'string' ? value.split('|') : []
+      const child = name && source && !extra.length ? resolve(name, source) : undefined
+      return child ? typesFor(child, depth + 1) : []
+    })
+  }
+  return ({ name, source }: NormalizedChoiceOptionReference) => {
+    const item = source && resolve(name, source)
+    if (!item) return undefined
+    const types = [...new Set(typesFor(item))]
+    return {
+      types: types.length ? types : ['other'],
+      // As in 5etools Renderer.item, optional attunement is distinct from a requirement.
+      attunement: [item.reqAttune && item.reqAttune !== 'optional' ? 'required' : 'none'],
+    }
+  }
+}
 
 export function readArtificerInfusionPlans(feature: OptionalFeatureLike, gain: number) {
   if (

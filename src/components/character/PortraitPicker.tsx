@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { SplitPane } from '@/components/ui/SplitPane'
 import { Slider } from '@/components/ui/slider'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
+import { readCharacterImage } from '@/lib/characterImageUpload'
 import {
   DEFAULT_PORTRAIT_TRANSFORM,
   PLACEHOLDER_PORTRAITS,
@@ -20,6 +20,12 @@ import {
 } from '@/lib/portraitLibrary'
 import { cn } from '@/lib/utils'
 import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
+
+const portraitSliders = [
+  { field: 'zoom', label: 'Zoom', min: 50, max: 400, unit: '%' },
+  { field: 'panX', label: 'Pan X', min: -240, max: 240, unit: 'px' },
+  { field: 'panY', label: 'Pan Y', min: -240, max: 240, unit: 'px' },
+] as const
 
 interface PortraitPickerProps {
   portrait?: string | null
@@ -92,36 +98,22 @@ export function PortraitPicker({
   }
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.currentTarget.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
-      return
-    }
-    if (file.size > MAX_PORTRAIT_SIZE) {
-      toast.error('File size must be less than 5MB')
-      return
-    }
+    e.currentTarget.value = ''
     const selectionVersion = ++selectionVersionRef.current
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') return
-      const image = reader.result
-      if (mountedRef.current && selectionVersion === selectionVersionRef.current) {
-        onPortraitChange(image)
-        resetTransform()
-      }
-      void savePortrait(image)
-        .then((saved) => {
-          if (mountedRef.current) setSavedPortraits(saved)
-        })
-        .catch((error: unknown) =>
-          toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
-        )
-    }
-    reader.onerror = () => toast.error('Portrait could not be read.')
-    reader.readAsDataURL(file)
-    e.target.value = ''
+    void readCharacterImage(file, 'portrait')
+      .then(async (image) => {
+        if (mountedRef.current && selectionVersion === selectionVersionRef.current) {
+          onPortraitChange(image)
+          resetTransform()
+        }
+        const saved = await savePortrait(image)
+        if (mountedRef.current) setSavedPortraits(saved)
+      })
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : 'Portrait could not be saved.'),
+      )
   }
 
   const handleDeleteSaved = (id: string) => {
@@ -204,57 +196,26 @@ export function PortraitPicker({
         </span>
       </div>
       <div className="space-y-2.5">
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
-          <Slider
-            thumbLabel="Zoom"
-            value={[t.zoom]}
-            onValueChange={(value) => handleTransformPreview({ zoom: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ zoom: value[0] })}
-            min={50}
-            max={400}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.zoom}%
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
-          <Slider
-            thumbLabel="Pan X"
-            value={[t.panX]}
-            onValueChange={(value) => handleTransformPreview({ panX: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ panX: value[0] })}
-            min={-240}
-            max={240}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.panX}px
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
-          <Slider
-            thumbLabel="Pan Y"
-            value={[t.panY]}
-            onValueChange={(value) => handleTransformPreview({ panY: value[0] })}
-            onValueCommit={(value) => handleTransformCommit({ panY: value[0] })}
-            min={-240}
-            max={240}
-            step={5}
-            disabled={!portrait}
-            className="flex-1"
-          />
-          <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-            {t.panY}px
-          </span>
-        </div>
+        {portraitSliders.map(({ field, label, min, max, unit }) => (
+          <div key={field} className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground w-10 shrink-0">{label}</span>
+            <Slider
+              thumbLabel={label}
+              value={[t[field]]}
+              onValueChange={(value) => handleTransformPreview({ [field]: value[0] })}
+              onValueCommit={(value) => handleTransformCommit({ [field]: value[0] })}
+              min={min}
+              max={max}
+              step={5}
+              disabled={!portrait}
+              className="flex-1"
+            />
+            <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+              {t[field]}
+              {unit}
+            </span>
+          </div>
+        ))}
       </div>
       {isCreator ? (
         <div className="flex flex-wrap gap-2">

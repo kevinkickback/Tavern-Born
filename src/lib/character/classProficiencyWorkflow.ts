@@ -4,6 +4,7 @@ import type { Character, CharacterClassChoiceSelection } from '@/types/character
 import type { ClassProficiencyChoiceDomain, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassChoiceFeatureCatalogs, ClassChoiceOptionView } from './classChoiceOptions'
 import { getEffectiveOwnerProficiencyChoices } from './classProficiencyAuthority'
+import { projectOwnedProficiencies } from './classProficiencyFoundation'
 import { resolveClassProficiencyOptions } from './classProficiencyOptions'
 import { getClassProficiencySelectionStates } from './classProficiencySelections'
 import { resolveHistoricalProficiencyChoice } from './historicalProficiencyChoices'
@@ -29,13 +30,14 @@ export function getClassProficiencyWorkflow(
   catalogs?: ClassChoiceFeatureCatalogs,
 ): ClassProficiencyWorkflow[] {
   if (!character || !catalogs) return []
-  const states = getClassProficiencySelectionStates(character, classes, catalogs)
+  const projection = projectOwnedProficiencies(character, catalogs)
+  const states = getClassProficiencySelectionStates(character, classes, catalogs, projection)
   const rows = new Map<string, ClassProficiencyWorkflow>()
   for (const owner of character.classProgression ?? []) {
     const cls = findClassReference(owner, classes)
     if (!cls) continue
     for (const original of getEffectiveOwnerProficiencyChoices(character, owner, catalogs)) {
-      const choice = resolveHistoricalProficiencyChoice(character, original)
+      const choice = resolveHistoricalProficiencyChoice(projection.effective, original)
       if (choice.level > owner.levels) continue
       const selection = states.find((row) => row.selection.choiceId === choice.id)?.selection
       rows.set(choice.id, {
@@ -54,6 +56,7 @@ export function getClassProficiencyWorkflow(
           catalogs,
           selection?.selected ?? [],
           character,
+          projection,
         ),
       })
     }

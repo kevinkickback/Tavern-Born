@@ -20,6 +20,11 @@ Uploaded portraits also have a separate IndexedDB gallery (`portraitLibrary.ts`)
 and 40 MB of encoded data. Repeated uploads of the same image reuse its gallery entry. A character
 stores its selected image data directly, so `.tbc` and `.tbclib` transfers remain self-contained and
 deleting a gallery image does not change existing characters.
+Portrait and custom emblem uploads have a 5 MiB file limit. Portraits also have a 5 MiB limit on
+the encoded value. The browser must successfully decode the image and report no more than
+16 megapixels before the upload can replace existing art.
+For PNG and JPEG files with readable header dimensions, the app also checks the pixel limit
+before decoding.
 
 ## Character write APIs
 

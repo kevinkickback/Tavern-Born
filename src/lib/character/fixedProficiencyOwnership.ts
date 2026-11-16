@@ -164,13 +164,13 @@ export function grantFixedProficiencies(
               owner.level,
               name,
             )
+            const setup = character.classChoiceSelections?.find(
+              (row) => row.choiceId === id && row.proficiencyAtGain?.name === name,
+            )?.proficiencyAtGain
             if (
-              character.classChoiceSelections?.some(
-                (row) =>
-                  row.choiceId === id &&
-                  row.proficiencyAtGain?.name === name &&
-                  row.proficiencyAtGain.alreadyProficient,
-              )
+              setup?.alreadyProficient ??
+              (!ledger.proficiencies.tools[name]?.length &&
+                proficiencies.tools.some((tool) => canonicalProficiencyName(tool) === name))
             )
               continue
           }

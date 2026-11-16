@@ -36,11 +36,11 @@ const planTarget = getClassFeatureIdentity({
 const featureRef = `${owner.featureName}|${owner.name}|${owner.source}|${owner.subclassName}|${owner.subclassSource}|${gain}|${owner.featureSource}`
 export const ARMOR_REPLICATION_CHOICE_ID = getNormalizedClassChoiceId(owner, label, gain)
 
-export function isArtificerReplicatePlanChoice(choice: NormalizedCharacterChoice) {
+export function isArtificerReplicatePlanChoice(choice: Partial<NormalizedCharacterChoice>) {
   return (
     choice.kind === 'item' &&
-    choice.source.kind === 'class-table' &&
-    choice.owner.type === 'class' &&
+    choice.source?.kind === 'class-table' &&
+    choice.owner?.type === 'class' &&
     choice.owner.name === owner.name &&
     choice.owner.source === owner.source &&
     choice.owner.featureName === planName &&
@@ -188,13 +188,17 @@ export function getReservedArtificerPlanKeys(character: Character | undefined, c
   )
 }
 
-export function createArmorPlanClassifier(items: readonly Item5e[]) {
+export function createExactPlanItemLookup(items: readonly Item5e[]) {
   const exact = new Map<string, Item5e | undefined>()
   for (const item of items) {
     const key = getItemEntryIdentity(item.name, item.source)
     exact.set(key, exact.has(key) || item.sourceIdentityConflict ? undefined : item)
   }
-  const resolve = (name: string, source: string) => exact.get(getItemEntryIdentity(name, source))
+  return (name: string, source: string) => exact.get(getItemEntryIdentity(name, source))
+}
+
+export function createArmorPlanClassifier(items: readonly Item5e[]) {
+  const resolve = createExactPlanItemLookup(items)
   const isArmor = (item: Item5e, parents: ReadonlySet<Item5e>): boolean => {
     if (parents.has(item) || parents.size >= 8) return false
     if (getNormalizedItemTraits(item).isArmor) return true
