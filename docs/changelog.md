@@ -12,7 +12,7 @@
 - Improved spell and tool pickers with better filters, clearer choices, and unavailable-option guidance
 - Added color, greyscale, and image-free options for character sheet PDFs
 - Added the ability to collapse the secondary sidebar for more workspace
-- Added two new accent colors & refreshed the the existing ones
+- Added two new accent colors & refreshed the existing ones
 - Added individual selection of optional class features, replacements, and expanded spell lists
 - Added sourcebook searching and filtering to Rules → Additional Content
 - Restored additional content automatically at startup when a rebuilt cache preserves saved characters’ rules, including older local and HTTPS caches without file hashes
