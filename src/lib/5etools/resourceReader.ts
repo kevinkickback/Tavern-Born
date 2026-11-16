@@ -95,34 +95,39 @@ export function buildRemoteResourceUrl(baseUrl: string, relativePath: string): s
   return `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}data/${normalizedPath.split('/').map(encodeURIComponent).join('/')}`
 }
 
-export async function readRemoteResourceBytes(response: Response): Promise<ArrayBuffer> {
+async function consumeRemoteBody(
+  response: Response,
+  consume: (chunk: Uint8Array, offset: number) => void,
+): Promise<void> {
   const reader = response.body?.getReader()
-  if (!reader) return new ArrayBuffer(0)
+  if (!reader) return
 
-  const chunks: Uint8Array[] = []
-  let size = 0
+  let offset = 0
   try {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      size += value.byteLength
-      if (size > MAX_REMOTE_JSON_BYTES) {
-        void reader.cancel().catch(() => {})
+      if (offset + value.byteLength > MAX_REMOTE_JSON_BYTES)
         throw new Error('Remote JSON resource exceeds the 50 MiB size limit')
-      }
-      chunks.push(value)
+      consume(value, offset)
+      offset += value.byteLength
     }
+  } catch (error) {
+    void reader.cancel().catch(() => {})
+    throw error
   } finally {
     reader.releaseLock()
   }
+}
 
-  const bytes = new Uint8Array(size)
-  let offset = 0
-  for (const chunk of chunks) {
+export async function readRemoteResourceBytes(response: Response): Promise<ArrayBuffer> {
+  const buffer = new ArrayBuffer(0, { maxByteLength: MAX_REMOTE_JSON_BYTES })
+  const bytes = new Uint8Array(buffer)
+  await consumeRemoteBody(response, (chunk, offset) => {
+    buffer.resize(offset + chunk.byteLength)
     bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return bytes.buffer
+  })
+  return buffer
 }
 
 async function parseRemoteResponse(response: Response, url: string): Promise<unknown> {
@@ -130,7 +135,12 @@ async function parseRemoteResponse(response: Response, url: string): Promise<unk
     void response.body?.cancel().catch(() => {})
     throw new ResourceHttpError(response.status, url)
   }
-  return JSON.parse(new TextDecoder().decode(await readRemoteResourceBytes(response)))
+  const decoder = new TextDecoder()
+  let text = ''
+  await consumeRemoteBody(response, (chunk) => {
+    text += decoder.decode(chunk, { stream: true })
+  })
+  return JSON.parse(text + decoder.decode())
 }
 
 export async function readRemoteJson(url: string, signal?: AbortSignal): Promise<unknown> {

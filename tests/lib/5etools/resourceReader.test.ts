@@ -59,6 +59,27 @@ describe('5etools resource readers', () => {
     expect(bytes[bytes.length - 1]).toBe(23)
   })
 
+  test('decodes multibyte JSON split across chunks', async () => {
+    const bytes = new TextEncoder().encode('{"name":"É"}')
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(bytes.subarray(0, 10))
+          controller.enqueue(bytes.subarray(10))
+          controller.close()
+        },
+      }),
+    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    const reader = createJsonResourceReader({
+      type: 'remote',
+      path: 'https://example.com/5etools',
+      isValid: true,
+    })
+
+    await expect(reader.readJson('items.json')).resolves.toEqual({ name: 'É' })
+  })
+
   test.each([
     undefined,
     'e"current"',
