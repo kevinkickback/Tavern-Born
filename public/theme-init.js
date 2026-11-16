@@ -14,3 +14,16 @@ try {
 } catch {
   /* localStorage unavailable */
 }
+
+// Wait for the deferred app entry before requesting the optional web fonts.
+document.addEventListener(
+  'DOMContentLoaded',
+  () => {
+    const fontStylesheet = document.createElement('link')
+    fontStylesheet.rel = 'stylesheet'
+    fontStylesheet.href =
+      'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap'
+    document.head.append(fontStylesheet)
+  },
+  { once: true },
+)
