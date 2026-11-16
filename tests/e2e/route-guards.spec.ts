@@ -51,8 +51,16 @@ test('Appearance aligns theme and accent controls when the workspace has room', 
   const accent = panel.getByText('Accent Color', { exact: true })
   await expect(accent).toBeVisible()
   expect((await accent.boundingBox())!.y).toBeCloseTo((await theme.boundingBox())!.y)
-  const first = panel.getByText('Infernal', { exact: true })
-  const last = panel.getByText('Chroma', { exact: true })
+  await expect(panel.locator('label:has([data-accent])')).toHaveText([
+    'Arcane',
+    'Chroma',
+    'Eldritch',
+    'Grove',
+    'Infernal',
+    'Radiant',
+  ])
+  const first = panel.getByText('Arcane', { exact: true })
+  const last = panel.getByText('Radiant', { exact: true })
   expect((await last.boundingBox())!.y).toBeCloseTo((await first.boundingBox())!.y)
 
   await page.setViewportSize({ width: 720, height: 720 })

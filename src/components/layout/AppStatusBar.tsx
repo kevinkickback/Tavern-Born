@@ -93,9 +93,7 @@ export function AppStatusBar({ onOpenAppUpdate }: { onOpenAppUpdate?: () => void
   const isBundledCatalog = dataSourceConfig?.type === 'bundled'
   const catalogLabel = dataSourceConfig
     ? isBundledCatalog
-      ? cacheStatus === 'session-srd'
-        ? 'Built-in rules only'
-        : 'SRD Content Only'
+      ? 'SRD Content Only'
       : 'Additional Content Loaded'
     : null
   const catalogDetail = isBundledCatalog

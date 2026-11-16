@@ -310,6 +310,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       const card = page.locator('[data-slot="card"]').filter({ has: heading })
       await card.scrollIntoViewIfNeeded()
       const version = card.getByText(editions[index], { exact: true })
+      const contentWarning = card.getByLabel(/^Additional content\./)
       const level = card.getByText('Level 6')
       const classes = card.getByRole('list', { name: 'Class levels' })
       const date = card.locator('[data-slot="character-card-date"]')
@@ -332,6 +333,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       const cardBox = (await card.boundingBox())!
       const nameBox = (await heading.boundingBox())!
       const badgeBox = (await version.boundingBox())!
+      const warningBox = (await contentWarning.boundingBox())!
       const levelBox = (await level.boundingBox())!
       const classBox = (await classes.boundingBox())!
       const dateBox = (await date.boundingBox())!
@@ -346,6 +348,8 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
         expect(cardBox.height).toBeCloseTo((cardBox.width * 2) / 3, 0)
       }
       expect(badgeBox.x + badgeBox.width).toBeLessThan(nameBox.x)
+      expect(warningBox.x).toBeGreaterThan(badgeBox.x + badgeBox.width)
+      expect(warningBox.y + warningBox.height / 2).toBeCloseTo(badgeBox.y + badgeBox.height / 2, 0)
       expect(badgeBox.x - cardBox.x).toBeLessThanOrEqual(16)
       expect(Math.abs(badgeBox.y - nameBox.y)).toBeLessThan(8)
       expect(nameBox.x + nameBox.width).toBeLessThan(cardBox.x + cardBox.width)

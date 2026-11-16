@@ -21,12 +21,12 @@ const SCALE_LABELS: Record<UiScale, string> = {
 }
 
 const ACCENT_LABELS: Record<AccentTheme, string> = {
+  blue: 'Arcane',
+  chroma: 'Chroma',
+  violet: 'Eldritch',
+  green: 'Grove',
   rose: 'Infernal',
   radiant: 'Radiant',
-  green: 'Grove',
-  blue: 'Arcane',
-  violet: 'Eldritch',
-  chroma: 'Chroma',
 }
 
 export function AppearancePanel() {

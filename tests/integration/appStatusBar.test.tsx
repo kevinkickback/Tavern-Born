@@ -91,7 +91,7 @@ describe('application status bar', () => {
     render(<AppStatusBar />)
 
     const status = screen.getByTestId('game-data-status')
-    const label = fallback ? 'Built-in rules only' : 'SRD Content Only'
+    const label = 'SRD Content Only'
     expect(status.textContent).toBe(label)
     expect(screen.getByText(label).classList.contains('text-muted-foreground')).toBe(true)
     expect(status.getAttribute('title')).toBe(
@@ -227,7 +227,10 @@ describe('application status bar', () => {
     expect(screen.queryByRole('region', { name: 'Using built-in rules' })).toBeNull()
   })
 
-  test('keeps the built-in rules banner off the Character Library', () => {
+  test.each([
+    '/',
+    '/settings?section=appearance',
+  ])('keeps the built-in rules banner off %s', (path) => {
     useGameDataStore.setState({
       sessionBundledSource: {
         type: 'bundled',
@@ -240,16 +243,16 @@ describe('application status bar', () => {
     })
     render(
       <TooltipProvider>
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={[path]}>
           <AppLayout>
-            <h2>Character cards</h2>
+            <h2>Workspace content</h2>
           </AppLayout>
         </MemoryRouter>
       </TooltipProvider>,
     )
-    expect(screen.getByRole('heading', { name: 'Character cards' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Workspace content' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Open Game Data' })).toBeNull()
-    expect(screen.getByTestId('game-data-status').textContent).toBe('Built-in rules only')
+    expect(screen.getByTestId('game-data-status').textContent).toBe('SRD Content Only')
   })
 
   test('a verified rebuild waiting for an edit to finish has no manual restore button', async () => {
