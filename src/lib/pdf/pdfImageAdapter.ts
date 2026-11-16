@@ -1,4 +1,5 @@
 import { PDFButton, type PDFDocument, type PDFField } from '@cantoo/pdf-lib'
+import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { findAttachedWidgetLocation, hideFieldWidgets } from '@/lib/pdf/pdfFieldInternals'
 import type { SheetImageMode } from '@/lib/pdf/types'
 
@@ -7,9 +8,14 @@ async function loadImage(
   resolve: (source: string) => string,
 ): Promise<Blob | null> {
   if (source.startsWith('data:')) {
-    const [header, base64] = source.split(',', 2)
-    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
-    return new Blob([bytes], { type: header.slice(5, header.indexOf(';')) })
+    const header = /^data:(image\/[\w.+-]+)(?:;[^,]*)?;base64,/.exec(source)
+    if (!header) return null
+    const encodedLength = source.length - header[0].length
+    const padding = source.endsWith('==') ? 2 : source.endsWith('=') ? 1 : 0
+    if (Math.floor((encodedLength * 3) / 4) - padding > MAX_PORTRAIT_SIZE) return null
+    const binary = atob(source.slice(header[0].length))
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
+    return new Blob([bytes], { type: header[1] })
   }
   if (!/^(?:\/|\.\.?\/|assets\/)/.test(source)) return null
   const response = await fetch(resolve(source))

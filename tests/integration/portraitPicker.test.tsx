@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { del } from 'idb-keyval'
 import { useState } from 'react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { toast } from 'sonner'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
 import { listSavedPortraits, PORTRAIT_LIBRARY_STORAGE_KEY } from '@/lib/portraitLibrary'
@@ -25,8 +26,35 @@ vi.mock('@/components/ui/SplitPane', () => ({
 }))
 
 describe('PortraitPicker transform controls', () => {
+  const decode = vi.fn<() => Promise<void>>()
+  let naturalWidth = 1
+
+  beforeEach(() => {
+    decode.mockReset().mockResolvedValue(undefined)
+    naturalWidth = 1
+    // The real encoding method is exercised in Chromium by portrait-library.spec.ts.
+    vi.stubGlobal(
+      'Uint8Array',
+      class extends Uint8Array {
+        toBase64() {
+          return Buffer.from(this).toString('base64')
+        }
+      },
+    )
+    vi.stubGlobal(
+      'Image',
+      class {
+        decode = decode
+        naturalWidth = naturalWidth
+        naturalHeight = 1
+      },
+    )
+  })
+
   afterEach(async () => {
     cleanup()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     sliderProps.length = 0
     await del(PORTRAIT_LIBRARY_STORAGE_KEY)
   })
@@ -42,6 +70,11 @@ describe('PortraitPicker transform controls', () => {
       />,
     )
 
+    expect(sliderProps).toMatchObject([
+      { thumbLabel: 'Zoom', min: 50, max: 400, step: 5, value: [150] },
+      { thumbLabel: 'Pan X', min: -240, max: 240, step: 5, value: [20] },
+      { thumbLabel: 'Pan Y', min: -240, max: 240, step: 5, value: [-10] },
+    ])
     const panXSlider = sliderProps[1]
     const onValueChange = panXSlider.onValueChange as (value: number[]) => void
     const onValueCommit = panXSlider.onValueCommit as (value: number[]) => void
@@ -134,6 +167,74 @@ describe('PortraitPicker transform controls', () => {
 
     expect(onPortraitChange).toHaveBeenCalledTimes(1)
     expect(onPortraitChange).toHaveBeenLastCalledWith(PLACEHOLDER_PORTRAITS[0])
+  })
+
+  test('invalid and over-limit images leave the current portrait and gallery intact', async () => {
+    const onPortraitChange = vi.fn()
+    const onTransformChange = vi.fn()
+    const report = vi.spyOn(toast, 'error')
+    render(
+      <PortraitPicker
+        portrait={PLACEHOLDER_PORTRAITS[0]}
+        onPortraitChange={onPortraitChange}
+        onTransformChange={onTransformChange}
+      />,
+    )
+    const input = document.querySelector('input[type="file"]')!
+    const file = new File(['image'], 'portrait.png', { type: 'image/png' })
+    decode.mockRejectedValueOnce(new Error('Invalid image'))
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => expect(report).toHaveBeenCalledWith('Choose an image this app can open.'))
+
+    naturalWidth = 16_000_001
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith('Choose an image no larger than 16 megapixels.'),
+    )
+
+    decode.mockClear()
+    fireEvent.change(input, {
+      target: {
+        files: [new File([new Uint8Array(4 * 1024 * 1024)], 'large.png', { type: 'image/png' })],
+      },
+    })
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith(
+        'Choose a portrait that fits within 5 MiB after encoding.',
+      ),
+    )
+    expect(decode).not.toHaveBeenCalled()
+    expect(onPortraitChange).not.toHaveBeenCalled()
+    expect(onTransformChange).not.toHaveBeenCalled()
+    expect(await listSavedPortraits()).toEqual([])
+  })
+
+  test.each([
+    ['png', '89504e470d0a1a0a0000000d4948445200000fa100000fa0'],
+    ['jpeg', 'ffd8ffe100040000fffe000003ffff00ffffc2000b080fa00fa101011100'],
+  ])('rejects a %s header above 16 megapixels before browser decode', async (type, header) => {
+    const report = vi.spyOn(toast, 'error')
+    const bytes = new Uint8Array(Buffer.from(header, 'hex'))
+    render(<PortraitPicker onPortraitChange={vi.fn()} onTransformChange={vi.fn()} />)
+    fireEvent.change(document.querySelector('input[type="file"]')!, {
+      target: { files: [new File([bytes], `test.${type}`, { type: `image/${type}` })] },
+    })
+    await waitFor(() =>
+      expect(report).toHaveBeenCalledWith('Choose an image no larger than 16 megapixels.'),
+    )
+    expect(decode).not.toHaveBeenCalled()
+  })
+
+  test('reports a file read failure without attempting to decode an image', async () => {
+    const report = vi.spyOn(toast, 'error')
+    const file = new File([new Uint8Array(24)], 'test.png', { type: 'image/png' })
+    vi.spyOn(file, 'arrayBuffer').mockRejectedValueOnce(new Error('Platform read failure'))
+
+    render(<PortraitPicker onPortraitChange={vi.fn()} onTransformChange={vi.fn()} />)
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } })
+
+    await waitFor(() => expect(report).toHaveBeenCalledWith('The image file could not be read.'))
+    expect(decode).not.toHaveBeenCalled()
   })
 
   test('an upload from an unmounted picker cannot change another character', async () => {
