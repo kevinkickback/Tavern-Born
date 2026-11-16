@@ -203,6 +203,8 @@ owns those choices. Dialog title/actions stay visible on short viewports.
   character portrait and source-qualified organization or custom emblem. It leaves template
   artwork intact. The 2024 forms have no portrait or emblem fields. Faction text alone cannot
   identify artwork. When an MPMB emblem is absent or omitted, its image slot is blank.
+  Embedded image data from a saved character is limited to 5 MiB of image bytes.
+  A PDF can still export when an optional portrait or emblem cannot be used.
 - Organization and ally prose resolves 5etools tags to plain text for PDF output while leaving
   saved character text and source-qualified selections unchanged.
 - Action columns exclude inactive entries, weapon attacks already printed in the attack table,

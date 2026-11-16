@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PDFDict, PDFDocument, PDFName, TextAlignment } from '@cantoo/pdf-lib'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import {
   buildBackgroundLookup,
   buildClassLookup,
@@ -1387,6 +1387,39 @@ describe('characterSheetPdf', () => {
     const outputSymbol = asFieldWithInternals(outputDoc.getForm().getButton('Symbol'))
 
     expect(outputSymbol?.acroField.getWidgets()[0]?.getRectangle().width).toBe(0)
+  })
+
+  test('skips over-limit saved images before decoding and still fills the PDF', async () => {
+    const template = await PDFDocument.create()
+    const page = template.addPage([600, 800])
+    const form = template.getForm()
+    form.createButton('Portrait').addToPage('Portrait', page)
+    form.createButton('Symbol').addToPage('Symbol', page)
+    form.createTextField('Character Name').addToPage(page)
+    const templateBytes = await template.save()
+    // This length can encode a valid 5 MiB image with one padding character.
+    // Without the padding it represents one extra byte.
+    const source = `data:image/png;base64,${'A'.repeat(4 * Math.ceil((5 * 1024 * 1024) / 3))}`
+    const decode = vi.spyOn(globalThis, 'atob')
+    try {
+      const filled = await fillCharacterSheetPdf(
+        templateBytes,
+        { textFields: { 'Character Name': 'Test character' }, checkboxFields: {} },
+        {
+          portrait: source,
+          portraitFieldName: 'Portrait',
+          organizationImage: source,
+          organizationImageFieldName: 'Symbol',
+        },
+      )
+      expect(decode).not.toHaveBeenCalled()
+      const result = await PDFDocument.load(filled)
+      expect(result.getForm().getTextField('Character Name').getText()).toBe('Test character')
+      const images = result.getPage(0).node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)
+      expect(images?.keys() ?? []).toEqual([])
+    } finally {
+      decode.mockRestore()
+    }
   })
 
   test('2014 equipment populates Adventuring Gear row fields', () => {
