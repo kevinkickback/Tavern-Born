@@ -1,5 +1,5 @@
 import { Warning } from '@phosphor-icons/react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, type ReactNode, useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import {
@@ -18,6 +18,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  ARMOR_REPLICATION_CHOICE_ID,
+  isArtificerReplicatePlanChoice,
+} from '@/lib/5etools/artificerArmorReplication'
+import { isArtificerInfusionChoice } from '@/lib/5etools/artificerInfusionPlans'
 import { decodeClassProficiencyChoiceId } from '@/lib/5etools/classProficiencyIdentity'
 import { classProficiencyRule, isOwnedExpertiseTarget } from '@/lib/5etools/classProficiencyRules'
 import type { CreatureChoiceSummary } from '@/lib/5etools/creatureStatBlock'
@@ -34,6 +39,7 @@ import {
   retainsInvocationWithoutPrerequisite,
 } from '@/lib/character/classChoiceOptions'
 import { getInvocationRepeatKey } from '@/lib/character/warlockInvocationChoices'
+import { withStableContentKeys } from '@/lib/renderer/stableContentKeys'
 import { cn } from '@/lib/utils'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { FavoredEnemySetup, type FavoredEnemySetupProps } from './FavoredEnemySetup'
@@ -49,6 +55,37 @@ const ENTITY_LABELS = {
   featureOption: 'Feature option',
   proficiency: 'Proficiency',
 } as const
+
+function checkboxFilter(
+  key: string,
+  label: string,
+  values: string[],
+  labelFor = (value: string) => value,
+  valueFor = (value: string) => value,
+): FilterSection {
+  return {
+    key,
+    label,
+    type: 'checkboxes',
+    columns: 1,
+    options: values.map((value) => ({ value: valueFor(value), label: labelFor(value) })),
+  }
+}
+
+const lower = (value: string) => value.toLowerCase()
+const compare = (a: string, b: string) => a.localeCompare(b)
+const artificerItemFilters = [
+  checkboxFilter(
+    'itemType',
+    'Item type',
+    ['Weapon', 'Armor', 'Shield', 'Ring', 'Other'],
+    undefined,
+    lower,
+  ),
+  checkboxFilter('attunement', 'Attunement', ['required', 'none'], (value) =>
+    value === 'required' ? 'Requires attunement' : 'No attunement required',
+  ),
+]
 
 function masteryKey(mastery: { name: string; source?: string }): string {
   return `${mastery.name.trim().toLowerCase()}|${mastery.source?.trim().toLowerCase() ?? ''}`
@@ -69,29 +106,39 @@ function getOptionLabel(option: ClassChoiceOptionView): string {
     : option.reference.name
 }
 
-function hasSelectedValue(selected: Set<string> | undefined, actual: readonly string[]): boolean {
+function hasSelectedValue(
+  selected: Set<string> | undefined,
+  actual?: string | readonly string[],
+): boolean {
   if (!selected?.size) return true
-  return actual.some((value) => selected.has(value))
+  return typeof actual === 'string'
+    ? selected.has(actual)
+    : !!actual?.some((value) => selected.has(value))
 }
 
-function getEntryKey(entry: unknown): string {
-  if (typeof entry === 'string') return entry
-  if (entry && typeof entry === 'object') {
-    const named = entry as { name?: unknown }
-    if (typeof named.name === 'string') return named.name
-    return JSON.stringify(entry)
-  }
-  return String(entry)
+function OptionBadge({
+  children,
+  variant = 'outline',
+  className,
+}: {
+  children: ReactNode
+  variant?: 'outline' | 'secondary' | 'default'
+  className?: string
+}) {
+  return (
+    <Badge variant={variant} className={cn('h-5 px-1.5 py-0 text-xs', className)}>
+      {children}
+    </Badge>
+  )
 }
 
-function withEntryKeys(entries: unknown[], prefix: string) {
-  const occurrences = new Map<string, number>()
-  return entries.map((entry) => {
-    const contentKey = getEntryKey(entry)
-    const occurrence = occurrences.get(contentKey) ?? 0
-    occurrences.set(contentKey, occurrence + 1)
-    return { entry, key: `${prefix}:${contentKey}:${occurrence}` }
-  })
+function OptionWarning({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
+      <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
+      <div className="text-xs leading-snug text-warning-foreground">{children}</div>
+    </div>
+  )
 }
 
 function CreatureOptionSummary({ summary }: { summary: CreatureChoiceSummary }) {
@@ -107,11 +154,7 @@ function CreatureOptionSummary({ summary }: { summary: CreatureChoiceSummary }) 
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {summary.subtitle && <span className="italic">{summary.subtitle}</span>}
-        {summary.challenge && (
-          <Badge variant="secondary" className="h-5 px-1.5 py-0 text-xs">
-            CR {summary.challenge}
-          </Badge>
-        )}
+        {summary.challenge && <OptionBadge variant="secondary">CR {summary.challenge}</OptionBadge>}
       </div>
       {stats.length > 0 && (
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-border bg-border text-xs">
@@ -128,14 +171,12 @@ function CreatureOptionSummary({ summary }: { summary: CreatureChoiceSummary }) 
       {traits.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {traits.map((trait) => (
-            <Badge key={trait.name} variant="outline" className="h-5 px-1.5 py-0 text-xs">
-              {trait.name}
-            </Badge>
+            <OptionBadge key={trait.name}>{trait.name}</OptionBadge>
           ))}
           {summary.traits.length > traits.length && (
-            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
+            <OptionBadge className="text-muted-foreground">
               +{summary.traits.length - traits.length} traits
-            </Badge>
+            </OptionBadge>
           )}
         </div>
       )}
@@ -162,16 +203,16 @@ function OptionMetadata({ option }: { option: ClassChoiceOptionView }) {
   } else if (presentation.kind === 'feat') {
     if (presentation.categoryLabel) labels.push(presentation.categoryLabel)
   } else {
-    labels.push(
-      ...presentation.typeLabels.slice(0, 2),
-      ...(presentation.rarity ? [titleCase(presentation.rarity)] : []),
-      ...(presentation.damage ? [`Damage ${presentation.damage}`] : []),
-      ...(presentation.armorClass ? [presentation.armorClass] : []),
-      ...(presentation.range ? [`Range ${presentation.range}`] : []),
-      ...(presentation.attunement ? ['Attunement'] : []),
-      ...presentation.propertyLabels.slice(0, 4),
-      ...(presentation.weight !== undefined ? [`${presentation.weight} lb.`] : []),
-    )
+    const { typeLabels, rarity, damage, armorClass, range, attunement, propertyLabels, weight } =
+      presentation
+    labels.push(...typeLabels.slice(0, 2))
+    if (rarity) labels.push(titleCase(rarity))
+    if (damage) labels.push(`Damage ${damage}`)
+    if (armorClass) labels.push(armorClass)
+    if (range) labels.push(`Range ${range}`)
+    if (attunement) labels.push('Attunement')
+    labels.push(...propertyLabels.slice(0, 4))
+    if (weight !== undefined) labels.push(`${weight} lb.`)
   }
   if (!labels.length) return null
   const uniqueLabels = [...new Set(labels)]
@@ -179,9 +220,7 @@ function OptionMetadata({ option }: { option: ClassChoiceOptionView }) {
   return (
     <div className="mb-1.5 flex flex-wrap gap-1">
       {uniqueLabels.map((label) => (
-        <Badge key={label} variant="outline" className="h-5 px-1.5 py-0 text-xs">
-          {label}
-        </Badge>
+        <OptionBadge key={label}>{label}</OptionBadge>
       ))}
     </div>
   )
@@ -189,11 +228,12 @@ function OptionMetadata({ option }: { option: ClassChoiceOptionView }) {
 
 function OptionEntries({ option }: { option: ClassChoiceOptionView }) {
   if (!option.entries.length) return null
-  const visibleEntries = withEntryKeys(
+  const visibleEntries = withStableContentKeys(
     option.entries.slice(0, 2),
     `${option.reference.entityType}:${option.reference.name}`,
   )
   const multiple = visibleEntries.length > 1
+  const remaining = option.entries.length - visibleEntries.length
 
   return (
     <div className="space-y-1.5">
@@ -207,10 +247,9 @@ function OptionEntries({ option }: { option: ClassChoiceOptionView }) {
           )}
         />
       ))}
-      {option.entries.length > visibleEntries.length && (
+      {remaining > 0 && (
         <p className="text-xs text-muted-foreground">
-          +{option.entries.length - visibleEntries.length} more rules section
-          {option.entries.length - visibleEntries.length === 1 ? '' : 's'}
+          +{remaining} more rules section{remaining === 1 ? '' : 's'}
         </p>
       )}
     </div>
@@ -248,41 +287,33 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
         </Title>
         <div className="flex shrink-0 gap-1">
           {option.reference.source && (
-            <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
-              {option.reference.source}
-            </Badge>
+            <OptionBadge className="text-muted-foreground">{option.reference.source}</OptionBadge>
           )}
           {!isClassChoiceOptionEligible(option) && (
-            <Badge variant="outline" className="h-5 border-warning/40 px-1.5 py-0 text-xs">
-              Unavailable
-            </Badge>
+            <OptionBadge className="border-warning/40">Unavailable</OptionBadge>
           )}
-          <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
+          <OptionBadge className="text-muted-foreground">
             {option.reference.entityType === 'item' && (option.masteries?.length ?? 0) > 0
               ? 'Weapon'
               : ENTITY_LABELS[option.reference.entityType]}
-          </Badge>
-          {selected && <Badge className="h-5 bg-accent px-1.5 py-0 text-xs">Selected</Badge>}
+          </OptionBadge>
+          {selected && (
+            <OptionBadge variant="default" className="bg-accent">
+              Selected
+            </OptionBadge>
+          )}
         </div>
       </div>
       {!isClassChoiceOptionEligible(option) && (
-        <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
-          <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
-          <div className="text-xs leading-snug text-warning-foreground">
-            {option.unavailableReason ??
-              (removalOnly
-                ? 'Source rules are unavailable. Keep or remove this saved choice, or restore its source.'
-                : 'This saved option is no longer eligible. Choose an available replacement to continue.')}
-          </div>
-        </div>
+        <OptionWarning>
+          {option.unavailableReason ??
+            (removalOnly
+              ? 'Source rules are unavailable. Keep or remove this saved choice, or restore its source.'
+              : 'This saved option is no longer eligible. Choose an available replacement to continue.')}
+        </OptionWarning>
       )}
       {!prerequisite.met && prerequisite.reasons.length > 0 && (
-        <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
-          <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
-          <div className="text-xs leading-snug text-warning-foreground">
-            {prerequisite.reasons.join(' · ')}
-          </div>
-        </div>
+        <OptionWarning>{prerequisite.reasons.join(' · ')}</OptionWarning>
       )}
       <OptionMetadata option={option} />
       {(option.masteries?.length ?? 0) > 0 && (
@@ -292,9 +323,7 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
               key={`${mastery.name}|${mastery.source ?? ''}`}
               className="rounded border border-border-subtle bg-surface-raised/60 px-2 py-1.5"
             >
-              <Badge variant="secondary" className="h-5 px-1.5 py-0 text-xs">
-                Mastery: {mastery.name}
-              </Badge>
+              <OptionBadge variant="secondary">Mastery: {mastery.name}</OptionBadge>
               {mastery.entries.length > 0 && (
                 <GameContent
                   entry={mastery.entries}
@@ -353,6 +382,11 @@ export function ClassChoiceSelectionModal({
 }: ClassChoiceSelectionModalProps) {
   const [editingHistory, setEditingHistory] = useState(false)
   const invocationCantrips = isRevisedInvocationPoolId(choice.id)
+  const infusions = !removalOnly && isArtificerInfusionChoice(choice)
+  const artificerItems =
+    infusions ||
+    (!removalOnly &&
+      (isArtificerReplicatePlanChoice(choice) || choice.id === ARMOR_REPLICATION_CHOICE_ID))
   const limits = useMemo<CategoryLimit<ClassChoiceOptionView>[]>(
     () =>
       removalOnly
@@ -382,115 +416,89 @@ export function ClassChoiceSelectionModal({
   }, [characterSnapshot, className, classSource, options])
   const filterSections = useMemo<FilterSection[]>(() => {
     const sections: FilterSection[] = []
+    if (infusions)
+      sections.push(
+        checkboxFilter('infusionType', 'Infusion type', ['standard', 'replicate'], (value) =>
+          value === 'standard' ? 'Standard' : 'Replicate Magic Item',
+        ),
+      )
+    if (artificerItems) sections.push(...artificerItemFilters)
     const masteries = new Map<string, string>()
     for (const option of options) {
-      for (const mastery of option.masteries ?? []) {
-        masteries.set(masteryKey(mastery), mastery.name)
-      }
+      for (const mastery of option.masteries ?? []) masteries.set(masteryKey(mastery), mastery.name)
     }
-    if (masteries.size > 0) {
-      sections.push({
-        key: 'mastery',
-        label: 'Mastery',
-        type: 'checkboxes',
-        columns: 1,
-        options: [...masteries]
-          .sort((left, right) => left[1].localeCompare(right[1]))
-          .map(([value, label]) => ({ value, label })),
-      })
+    if (masteries.size)
+      sections.push(
+        checkboxFilter(
+          'mastery',
+          'Mastery',
+          [...masteries.keys()].sort((a, b) =>
+            compare(masteries.get(a) ?? '', masteries.get(b) ?? ''),
+          ),
+          (value) => masteries.get(value) ?? value,
+        ),
+      )
+    const unique = (values: string[]) => [...new Set(values)]
+    const add = (
+      key: string,
+      label: string,
+      values: string[],
+      labelFor?: (value: string) => string,
+      valueFor?: (value: string) => string,
+      minimum = 2,
+    ) => {
+      if (values.length >= minimum)
+        sections.push(checkboxFilter(key, label, values, labelFor, valueFor))
     }
-    const weaponCategories = [
-      ...new Set(options.flatMap((option) => option.weaponCategory ?? [])),
-    ].sort((left, right) => left.localeCompare(right))
-    if (weaponCategories.length > 1) {
-      sections.push({
-        key: 'weaponCategory',
-        label: 'Weapon category',
-        type: 'checkboxes',
-        columns: 1,
-        options: weaponCategories.map((category) => ({
-          value: category,
-          label: category.charAt(0).toUpperCase() + category.slice(1),
-        })),
-      })
-    }
-    const weaponRanges = [...new Set(options.flatMap((option) => option.weaponRange ?? []))]
-    if (weaponRanges.length > 1) {
-      sections.push({
-        key: 'weaponRange',
-        label: 'Attack type',
-        type: 'checkboxes',
-        columns: 1,
-        options: weaponRanges.map((range) => ({ value: range, label: range })),
-      })
-    }
-    const creatureSummaries = options.flatMap((option) =>
+    if (!artificerItems)
+      add(
+        'weaponCategory',
+        'Weapon category',
+        unique(options.flatMap((option) => option.weaponCategory ?? [])).sort(compare),
+        (value) => value.charAt(0).toUpperCase() + value.slice(1),
+      )
+    add('weaponRange', 'Attack type', unique(options.flatMap((option) => option.weaponRange ?? [])))
+    const summaries = options.flatMap((option) =>
       option.presentation?.kind === 'creature' ? [option.presentation.summary] : [],
     )
-    const creatureSizes = [...new Set(creatureSummaries.flatMap((summary) => summary.sizes))].sort(
-      (left, right) => left.localeCompare(right),
+    add(
+      'creatureSize',
+      'Size',
+      unique(summaries.flatMap((row) => row.sizes)).sort(compare),
+      undefined,
+      lower,
     )
-    if (creatureSizes.length > 1) {
-      sections.push({
-        key: 'creatureSize',
-        label: 'Size',
-        type: 'checkboxes',
-        columns: 1,
-        options: creatureSizes.map((size) => ({ value: size.toLowerCase(), label: size })),
-      })
+    const ratings = new Map<string, number>()
+    for (const row of summaries) {
+      if (row.challenge) ratings.set(row.challenge, row.challengeValue ?? Infinity)
     }
-    const challengeRatings = new Map<string, number>()
-    for (const summary of creatureSummaries) {
-      if (summary.challenge) {
-        challengeRatings.set(summary.challenge, summary.challengeValue ?? Number.POSITIVE_INFINITY)
-      }
-    }
-    if (challengeRatings.size > 1) {
-      sections.push({
-        key: 'creatureChallenge',
-        label: 'Challenge rating',
-        type: 'checkboxes',
-        columns: 1,
-        options: [...challengeRatings]
-          .sort(
-            ([leftLabel, leftValue], [rightLabel, rightValue]) =>
-              leftValue - rightValue || leftLabel.localeCompare(rightLabel),
-          )
-          .map(([value]) => ({ value, label: `CR ${value}` })),
-      })
-    }
-    const movementModes = [
-      ...new Set(
-        creatureSummaries.flatMap((summary) =>
-          summary.speedModes.filter((mode) => mode !== 'walk'),
-        ),
+    add(
+      'creatureChallenge',
+      'Challenge rating',
+      [...ratings.keys()].sort(
+        (a, b) => (ratings.get(a) ?? Infinity) - (ratings.get(b) ?? Infinity) || compare(a, b),
       ),
-    ].sort((left, right) => left.localeCompare(right))
-    if (movementModes.length > 0) {
-      sections.push({
-        key: 'creatureMovement',
-        label: 'Special movement',
-        type: 'checkboxes',
-        columns: 1,
-        options: movementModes.map((mode) => ({ value: mode, label: titleCase(mode) })),
-      })
-    }
-    const featureTypes = [
-      ...new Set(
+      (value) => `CR ${value}`,
+    )
+    add(
+      'creatureMovement',
+      'Special movement',
+      unique(summaries.flatMap((row) => row.speedModes.filter((mode) => mode !== 'walk'))).sort(
+        compare,
+      ),
+      titleCase,
+      undefined,
+      1,
+    )
+    add(
+      'featureType',
+      'Feature type',
+      unique(
         options.flatMap((option) =>
           option.presentation?.kind === 'feature' ? option.presentation.featureTypeLabels : [],
         ),
-      ),
-    ].sort((left, right) => left.localeCompare(right))
-    if (featureTypes.length > 1) {
-      sections.push({
-        key: 'featureType',
-        label: 'Feature type',
-        type: 'checkboxes',
-        columns: 1,
-        options: featureTypes.map((type) => ({ value: type, label: type })),
-      })
-    }
+      ).sort(compare),
+    )
     if (hasUnmetPrerequisites) {
       sections.push({
         key: 'prerequisite',
@@ -505,7 +513,7 @@ export function ClassChoiceSelectionModal({
       })
     }
     return sections
-  }, [hasUnmetPrerequisites, options])
+  }, [artificerItems, hasUnmetPrerequisites, infusions, options])
   const matchInvocationDraftItem = useCallback(
     (option: ClassChoiceOptionView, ids: ReadonlySet<string>, filters: ActiveFilters) =>
       (!option.invocationPrerequisite && !option.unavailableReason) ||
@@ -519,59 +527,33 @@ export function ClassChoiceSelectionModal({
     (option: ClassChoiceOptionView, search: string, activeFilters: ActiveFilters) => {
       const searchTarget = option.searchText ?? option.reference.name
       if (!searchTarget.toLowerCase().includes(search.trim().toLowerCase())) return false
-      const masteryFilters = activeFilters.mastery
-      if (
-        masteryFilters?.size &&
-        !(option.masteries ?? []).some((mastery) => masteryFilters.has(masteryKey(mastery)))
-      ) {
-        return false
-      }
-      if (
-        activeFilters.weaponCategory?.size &&
-        (!option.weaponCategory || !activeFilters.weaponCategory.has(option.weaponCategory))
-      ) {
-        return false
-      }
-      if (
-        activeFilters.weaponRange?.size &&
-        (!option.weaponRange || !activeFilters.weaponRange.has(option.weaponRange))
-      ) {
-        return false
-      }
-      const creatureSummary =
+      const creature =
         option.presentation?.kind === 'creature' ? option.presentation.summary : undefined
       if (
         !hasSelectedValue(
-          activeFilters.creatureSize,
-          creatureSummary?.sizes.map((size) => size.toLowerCase()) ?? [],
-        )
-      ) {
-        return false
-      }
-      if (
-        !hasSelectedValue(
-          activeFilters.creatureChallenge,
-          creatureSummary?.challenge ? [creatureSummary.challenge] : [],
-        )
-      ) {
-        return false
-      }
-      if (
+          activeFilters.infusionType,
+          option.reference.entityType === 'item' ? 'replicate' : 'standard',
+        ) ||
+        !hasSelectedValue(activeFilters.itemType, option.itemFacets?.types) ||
+        !hasSelectedValue(activeFilters.attunement, option.itemFacets?.attunement) ||
+        !hasSelectedValue(activeFilters.weaponCategory, option.weaponCategory) ||
+        !hasSelectedValue(activeFilters.weaponRange, option.weaponRange) ||
+        !hasSelectedValue(activeFilters.creatureSize, creature?.sizes.map(lower)) ||
+        !hasSelectedValue(activeFilters.creatureChallenge, creature?.challenge) ||
         !hasSelectedValue(
           activeFilters.creatureMovement,
-          creatureSummary?.speedModes.filter((mode) => mode !== 'walk') ?? [],
-        )
-      ) {
-        return false
-      }
-      if (
+          creature?.speedModes.filter((mode) => mode !== 'walk'),
+        ) ||
         !hasSelectedValue(
           activeFilters.featureType,
-          option.presentation?.kind === 'feature' ? option.presentation.featureTypeLabels : [],
-        )
-      ) {
+          option.presentation?.kind === 'feature'
+            ? option.presentation.featureTypeLabels
+            : undefined,
+        ) ||
+        (activeFilters.mastery?.size &&
+          !option.masteries?.some((mastery) => activeFilters.mastery.has(masteryKey(mastery))))
+      )
         return false
-      }
       if (initialSelectedIds.includes(getOptionSelectionKey(option))) return true
       if (activeFilters.prerequisite?.has('showUnmet')) return true
       return prerequisiteByOptionKey.get(getOptionSelectionKey(option))?.met ?? true
@@ -660,18 +642,16 @@ export function ClassChoiceSelectionModal({
   )
 
   if (enemySetup) return <FavoredEnemySetup {...enemySetup} onClose={onClose} />
+  const onOpenChange = (open: boolean) => {
+    if (!open) onClose()
+  }
   if (
     historicalSetup &&
     !removalOnly &&
     (historicalSetup.alreadyProficient === undefined || editingHistory)
   )
     return (
-      <Dialog
-        open
-        onOpenChange={(open) => {
-          if (!open) onClose()
-        }}
-      >
+      <Dialog open onOpenChange={onOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -689,27 +669,24 @@ export function ClassChoiceSelectionModal({
               : "This answer determines whether you can choose a separate fallback skill. The feature's fixed proficiency and Expertise apply either way."}
           </p>
           <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                historicalSetup.onConfirm(true)
-                setEditingHistory(false)
-              }}
-            >
-              Already proficient in {titleCase(historicalSetup.name)}
-              {choice.proficiencyDomain === 'savingThrows' ? ' saving throws' : ''}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                historicalSetup.onConfirm(false)
-                setEditingHistory(false)
-              }}
-            >
-              Gained {titleCase(historicalSetup.name)}
-              {choice.proficiencyDomain === 'savingThrows' ? ' saving throw proficiency' : ''} from
-              this feature
-            </Button>
+            {[true, false].map((already) => (
+              <Button
+                key={String(already)}
+                variant="outline"
+                onClick={() => {
+                  historicalSetup.onConfirm(already)
+                  setEditingHistory(false)
+                }}
+              >
+                {already ? 'Already proficient in' : 'Gained'} {titleCase(historicalSetup.name)}
+                {choice.proficiencyDomain === 'savingThrows'
+                  ? already
+                    ? ' saving throws'
+                    : ' saving throw proficiency'
+                  : ''}
+                {!already && ' from this feature'}
+              </Button>
+            ))}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={onClose}>
@@ -723,9 +700,7 @@ export function ClassChoiceSelectionModal({
     <SelectionModal
       closeOnConfirm={false}
       open
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
+      onOpenChange={onOpenChange}
       title={
         removalOnly
           ? `Review saved ${choice.label}`

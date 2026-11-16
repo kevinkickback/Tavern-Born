@@ -24,13 +24,13 @@ import {
   getClassChoiceCandidates,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { refreshClassProficiencyState } from '@/lib/character/classProficiencySelections'
 import { getClassProficiencyWorkflow } from '@/lib/character/classProficiencyWorkflow'
 import {
   applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelections,
 } from '@/lib/character/commands/classChoiceCommands'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
-import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/historicalProficiencyCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { getEpicBoonSlots } from '@/lib/character/epicBoonSlots'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
@@ -317,6 +317,11 @@ test.skipIf(!existsSync(file))(
     expect(earlier.map((row) => row.reference.name)).toEqual(
       expect.arrayContaining(['Bag of Holding', 'Sending Stones']),
     )
+    const facets = (name: string) => rows.find((row) => row.reference.name === name)?.itemFacets
+    expect(facets('Enhanced Defense')).toEqual({ types: ['armor', 'shield'], attunement: ['none'] })
+    expect(facets('Mind Sharpener')).toEqual({ types: ['armor', 'other'], attunement: ['none'] })
+    expect(facets('Repeating Shot')).toEqual({ types: ['weapon'], attunement: ['required'] })
+    expect(facets('Bag of Holding')).toMatchObject({ attunement: ['none'] })
     const late = rows.find((row) => row.reference.name === 'Boots of Elvenkind')!
     expect(late.minimumClassLevel).toBe(6)
     expect(() =>
@@ -335,8 +340,63 @@ test.skipIf(!existsSync(file))(
   },
 )
 
+test.skipIf(!existsSync(file)).each(['TCE', 'EFA'])(
+  '%s Battle Smith sees an alternate-tool choice only with independent training',
+  (source) => {
+    const items = ['data/items.json', 'data/items-base.json'].flatMap(
+      (path) => parseItems(read(path)) as Item5e[],
+    )
+    const { classes, catalogs } = load(undefined, prepareToolProficiencySources(items, items))
+    const character = actor(source, 3)
+    Object.assign(character.classProgression[0], {
+      subclass: 'Battle Smith',
+      subclassSource: source,
+    })
+    const smiths = "smith's tools"
+    const workflow = (current: typeof character) =>
+      getClassProficiencyWorkflow(current, classes, catalogs).find(
+        (row) => row.subclassName === 'Battle Smith' && row.domain === 'tools',
+      )!
+    const proficiency = refreshClassProficiencyState(character, classes, catalogs)
+    expect(proficiency.proficiencies.tools).toContain(smiths)
+    expect(workflow(proficiency).choice?.maximumSelections).toBe(0)
+    expect(workflow(proficiency).options).toEqual([])
+
+    character.proficiencies.tools = [smiths]
+    const ready = workflow(character)
+    expect(ready.choice?.maximumSelections).toBe(1)
+    const alternate = ready.options.find((row) => row.reference.name === "Woodcarver's Tools")!
+    expect(ready.options.some((row) => row.reference.name.toLowerCase() === smiths)).toBe(false)
+    const confirm = (current: typeof character) =>
+      applyClassChoiceSelectionWithGrantsCommand(
+        current,
+        current.provenance,
+        ready.choice!,
+        [alternate.reference],
+        { classes, catalogs },
+      )
+    expect(() => confirm(proficiency)).toThrow(/eligibility changed/)
+    const reopened = characterPersistenceSchema.parse(
+      applyCharacterCommandResult(character, confirm(character)),
+    )
+    expect(reopened.classChoiceSelections?.[0]?.proficiencyAtGain).toEqual({
+      name: smiths,
+      alreadyProficient: true,
+    })
+    expect(reopened.proficiencies.tools).toEqual([smiths, "woodcarver's tools"])
+    const cleared = applyCharacterCommandResult(
+      reopened,
+      applyClassChoiceSelectionWithGrantsCommand(reopened, reopened.provenance, ready.choice!, [], {
+        classes,
+        catalogs,
+      }),
+    )
+    expect(cleared.proficiencies.tools).toEqual([smiths])
+  },
+)
+
 test.skipIf(!existsSync(file))(
-  'revised Alchemist has separate historical tool fallbacks at the same gain',
+  'revised Alchemist automatically opens separate tool fallbacks at the same gain',
   () => {
     const items = ['data/items.json', 'data/items-base.json'].flatMap(
       (path) => parseItems(read(path)) as Item5e[],
@@ -355,19 +415,6 @@ test.skipIf(!existsSync(file))(
       )
     expect(workflow().map((row) => row.level)).toEqual([3, 3])
     for (const initial of workflow()) {
-      const current = workflow().find((row) => row.id === initial.id)!
-      const historical = setHistoricalProficiencySetupCommand(
-        character,
-        character.provenance,
-        current.choice!,
-        true,
-        catalogs,
-      )
-      character = characterPersistenceSchema.parse({
-        ...character,
-        ...historical.characterPatch,
-        provenance: historical.provenanceUpdate,
-      })
       const ready = workflow().find((row) => row.id === initial.id)!
       const selected = ready.options.find((row) => row.availability === 'eligible')!
       expect(selected.reference.name.toLowerCase()).not.toBe("alchemist's supplies")
@@ -578,6 +625,14 @@ test.skipIf(!existsSync(file))(
     let character = actor('EFA', 9)
     const owner = character.classProgression[0]
     Object.assign(owner, { subclass: 'Armorer', subclassSource: 'EFA' })
+    const revisedPlans = resolveClassChoiceOptions(plan, catalogs, [], 9, character)
+    const facets = (name: string) =>
+      revisedPlans.find((row) => row.reference.name === name)?.itemFacets
+    expect(facets('+1 Armor')).toEqual({ types: ['armor'], attunement: ['none'] })
+    expect(facets('+1 Shield')).toEqual({ types: ['shield'], attunement: ['none'] })
+    expect(facets('+1 Weapon')).toEqual({ types: ['weapon'], attunement: ['none'] })
+    expect(facets('Repeating Shot')).toEqual({ types: ['weapon'], attunement: ['required'] })
+    expect(facets('Returning Weapon')).toEqual({ types: ['weapon'], attunement: ['none'] })
     character = applyCharacterCommandResult(
       character,
       applyClassChoiceSelectionWithGrantsCommand(

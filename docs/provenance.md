@@ -143,6 +143,11 @@ pending sequence. Source loss suspends only affected benefits and retains recove
 intent. Clear, owner replacement and level rollback remove only their grants. A retained
 description cannot prove eligibility. [Class choice tests](../tests/unit/classChoiceCommands.test.ts)
 
+When a specialty offers alternate tool training, setup checks the character's current proficiency
+without counting that specialty's own fixed grant. If no other source supplies the named tool,
+the fixed grant needs no setup. Saving an alternate records the acquisition fact alongside the
+choice; an already recorded acquisition fact remains in effect on reopen.
+
 The supported Rogue subclass passives use each selected class printing's exact earned
 declarations. Identical active numeric contributions from the same printed rule count once
 per target. Each owner retains its own effect ID for suppression and its own limited-use counters.

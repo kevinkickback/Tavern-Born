@@ -37,6 +37,91 @@ const choice: NormalizedCharacterChoice = {
 }
 
 describe('ClassChoiceSelectionModal', () => {
+  test.each([
+    'classic',
+    'revised',
+  ])('filters %s Artificer choices without weapon category', (edition) => {
+    const classic = edition === 'classic'
+    const options: ClassChoiceOptionView[] = [
+      {
+        reference: { name: 'Enhanced Defense', entityType: 'optionalFeature', source: 'TCE' },
+        availability: 'eligible',
+        entries: [],
+        itemFacets: { types: ['armor', 'shield'], attunement: ['none'] },
+      },
+      {
+        reference: { name: 'Sentinel Shield', entityType: 'item', source: 'DMG' },
+        availability: 'eligible',
+        entries: [],
+        itemFacets: { types: ['shield'], attunement: ['none'] },
+      },
+      {
+        reference: { name: 'Ring of Protection', entityType: 'item', source: 'DMG' },
+        availability: 'eligible',
+        entries: [],
+        itemFacets: { types: ['ring'], attunement: ['required'] },
+      },
+      ...['simple', 'martial'].map(
+        (weaponCategory): ClassChoiceOptionView => ({
+          reference: { name: weaponCategory, entityType: 'item', source: 'DMG' },
+          availability: 'eligible',
+          entries: [],
+          itemFacets: { types: ['weapon'], attunement: ['required'] },
+          weaponCategory,
+        }),
+      ),
+    ]
+    render(
+      <ClassChoiceSelectionModal
+        choice={
+          classic
+            ? { ...choice, optionFilter: { entityType: 'optionalFeature', featureTypes: ['AI'] } }
+            : {
+                ...choice,
+                kind: 'item',
+                owner: {
+                  type: 'class',
+                  name: 'Artificer',
+                  source: 'EFA',
+                  featureName: 'Replicate Magic Item',
+                  featureSource: 'EFA',
+                },
+                source: { kind: 'class-table', field: 'fixture' },
+              }
+        }
+        options={classic ? options : options.slice(1)}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+    const props = selectionModalCapture.props as {
+      filterSections: { label: string }[]
+      matchItem: (
+        row: ClassChoiceOptionView,
+        search: string,
+        filters: Record<string, Set<string>>,
+      ) => boolean
+    }
+    expect(props.filterSections.map(({ label }) => label)).toEqual(
+      classic ? ['Infusion type', 'Item type', 'Attunement'] : ['Item type', 'Attunement'],
+    )
+    const shield = { itemType: new Set(['shield']), attunement: new Set(['none']) }
+    expect(props.matchItem(options[1], 'sentinel', shield)).toBe(true)
+    expect(props.matchItem(options[2], '', shield)).toBe(false)
+    if (classic) {
+      expect(props.matchItem(options[0], '', shield)).toBe(true)
+      expect(
+        props.matchItem(options[0], '', { ...shield, infusionType: new Set(['replicate']) }),
+      ).toBe(false)
+      expect(
+        props.matchItem(options[1], '', { ...shield, infusionType: new Set(['standard']) }),
+      ).toBe(false)
+    }
+  })
+
   test('checks a choice against the selected class printing', () => {
     const option: ClassChoiceOptionView = {
       availability: 'eligible',

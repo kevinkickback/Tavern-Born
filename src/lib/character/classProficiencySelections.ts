@@ -57,8 +57,8 @@ export function getClassProficiencySelectionStates(
   character: Character,
   classes: readonly Class5e[],
   catalogs?: ClassChoiceFeatureCatalogs,
+  projection = projectOwnedProficiencies(character, catalogs),
 ): FeatureOptionSelectionState[] {
-  const projection = projectOwnedProficiencies(character, catalogs)
   const activity = createOptionalClassFeatureActivity(character, catalogs)
   const invalid = getInvalidClassProficiencySelectionIds(character.classChoiceSelections ?? [])
   return (character.classChoiceSelections ?? [])
@@ -96,7 +96,8 @@ export function getClassProficiencySelectionStates(
                   candidate.id === selection.choiceId && candidate.level <= owner.levels,
               )
           : undefined
-      const choice = currentChoice && resolveHistoricalProficiencyChoice(character, currentChoice)
+      const choice =
+        currentChoice && resolveHistoricalProficiencyChoice(projection.effective, currentChoice)
       const options =
         choice && catalogs
           ? resolveClassProficiencyOptions(
