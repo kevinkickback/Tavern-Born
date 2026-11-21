@@ -15,7 +15,11 @@ import {
   startingFilterRule,
   startingGroupRule,
 } from './startingEquipmentClauses'
-import { startingItemKey, startingItemUid } from './startingEquipmentIdentity'
+import {
+  itemGroupMemberReference,
+  startingItemKey,
+  startingItemUid,
+} from './startingEquipmentIdentity'
 
 export { startingItemKey, startingItemUid } from './startingEquipmentIdentity'
 
@@ -218,13 +222,6 @@ const focusEntry = 3
 const restoreFocus = 'Restore the exact Wooden Staff starting focus rules.'
 const entryReference = (value: unknown) => itemReference(entryRecord(value)?.item ?? value)
 
-function groupMemberReference(value: unknown): StartingItemReference | undefined {
-  if (typeof value === 'string') return startingItemUid(value)
-  const row = entryRecord(value)
-  if (typeof row?.name !== 'string' || typeof row.source !== 'string' || !row.source.trim())
-    return undefined
-  return startingItemUid(`${row.name}|${row.source}`)
-}
 const memberEntry = (value: unknown) =>
   sameStartingReference(entryReference(value), quarterstaffFocus.member)
 
@@ -394,7 +391,7 @@ export function resolveFixedStartingEquipmentMember(
   )
     return unavailable
 
-  const members = group.items.map(groupMemberReference)
+  const members = group.items.map((member) => itemGroupMemberReference(member, 'PHB'))
   if (
     members.some((member) => !member) ||
     members.filter((member) => sameStartingReference(member, reference)).length !== 1

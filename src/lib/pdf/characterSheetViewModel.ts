@@ -79,6 +79,7 @@ import {
   getEffectiveMaxHP,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
+import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { renderEntriesToText } from '@/lib/entryText'
 import type {
   Background5e,
@@ -134,7 +135,7 @@ interface CharacterSheetSpellcastingSource extends SpellcastingNumbers {
   classDetail?: SpellcastingClassDetail
 }
 
-interface CharacterSheetSpellRow {
+export interface CharacterSheetSpellRow {
   id?: string
   name: string
   prepared: boolean
@@ -173,6 +174,7 @@ interface CharacterSheetHitDieRow {
 export interface CharacterSheetViewModel {
   /** Export-only selection; never written back to the character. */
   spellRowsForSheet?: CharacterSheetSpellRow[]
+  markUnpreparedSpells?: boolean
   equipmentForSheet?: Equipment[]
   character: Character
   feats: Feat[]
@@ -235,6 +237,7 @@ export interface CharacterSheetViewModel {
   proficienciesSummary: string
   toolProficiencies: string[]
   toolExpertiseSummary: string
+  languageLabels: string[]
   languagesSummary: string
   featsSummary: string
   customOrganizationSummary: string
@@ -459,7 +462,7 @@ export function withoutSheetDescriptions(vm: CharacterSheetViewModel): Character
   }
 }
 
-function buildProficienciesSummary(character: Character): string {
+function buildProficienciesSummary(character: Character, languagesSummary: string): string {
   const rows: string[] = []
   if (character.proficiencies.armor.length)
     rows.push(`Armor: ${character.proficiencies.armor.join(', ')}`)
@@ -467,8 +470,7 @@ function buildProficienciesSummary(character: Character): string {
     rows.push(`Weapons: ${character.proficiencies.weapons.join(', ')}`)
   if (character.proficiencies.tools.length)
     rows.push(`Tools: ${toolProficiencyLabels(character).join(', ')}`)
-  if (character.proficiencies.languages.length)
-    rows.push(`Languages: ${character.proficiencies.languages.join(', ')}`)
+  if (languagesSummary) rows.push(`Languages: ${languagesSummary}`)
   return rows.join('\n')
 }
 
@@ -1063,6 +1065,8 @@ export function createCharacterSheetViewModel(
     proficiencyCheckNotes,
   }
   const backstorySummary = buildBackstorySummary(character)
+  const languageLabels = character.proficiencies.languages.map(formatProficiencyLabel)
+  const languagesSummary = languageLabels.join(', ')
   const personalitySummary = buildLabeledSummary([
     ['Personality', character.details.personalityTraits || character.details.personality],
     ['Ideals', character.details.ideals],
@@ -1182,7 +1186,7 @@ export function createCharacterSheetViewModel(
     equipmentSummary: character.equipment
       .map((item) => `${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`)
       .join('\n'),
-    proficienciesSummary: buildProficienciesSummary(character),
+    proficienciesSummary: buildProficienciesSummary(character, languagesSummary),
     toolProficiencies: toolProficiencyLabels(character),
     toolExpertiseSummary: (() => {
       const expertise = new Set(character.proficiencies.expertise.map((name) => name.toLowerCase()))
@@ -1193,7 +1197,8 @@ export function createCharacterSheetViewModel(
         ? `Tool Expertise: ${tools.join(', ')}. Double your proficiency bonus for ability checks using ${tools.length === 1 ? 'this proficient tool' : 'these proficient tools'}.`
         : ''
     })(),
-    languagesSummary: character.proficiencies.languages.join(', '),
+    languageLabels,
+    languagesSummary,
     featsSummary: feats
       .map((feat) => {
         const body = feat.description?.trim()

@@ -95,6 +95,18 @@ Description and overflow controls are independent:
 Only overrides persist in `sheetExportPreferences.ts`, keyed by character/template; automatic
 choices are recomputed. Preferences never enter character files.
 
+**Combined spell page** (2014) or **Combined spell list** (2024) in Customize PDF uses the
+highest-level spellcasting class for the printed ability, save DC, and attack bonus.
+Equal class levels follow the character's class
+order. Characters with only racial casting use the first racial casting source. Where the
+casting ability is unknown, its numbers stay blank. The single spell section includes spells
+from every source, labeling same-name printings by source and combining readiness for shared
+spells. The 2014 forms use one shared spell module. The 2024 forms use their existing core
+spell section, prioritize ready spells, and label unprepared spells. Selections that exceed
+the form's capacity and the slot pool that has no printed fields go to Notes when enabled.
+**Individual spell pages** keeps 2014 spell pages separate by caster. **Standard spell list**
+keeps the usual 2024 spell selection and casting summary.
+
 ## Fitting and overflow
 
 Row limits live in `characterSheetCapacities.ts`; WotC 2014 per-level spell limits derive from its

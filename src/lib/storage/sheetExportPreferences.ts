@@ -40,6 +40,7 @@ export function readSheetExportPreferences(): Record<string, SheetExportPreferen
             value.text?.images === 'grayscale' || value.text?.images === 'none'
               ? value.text.images
               : 'color',
+          spellLayout: value.text?.spellLayout === 'combined' ? 'combined' : 'standard',
         }
         return [[context, { pages, content, text }]]
       }),

@@ -2,6 +2,7 @@ import { getItemRulesEntries, type ItemTextContext } from '@/lib/5etools/itemTyp
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
 import { getPsionicEntries } from '@/lib/5etools/psionicEntries'
 import { resolvePsionic } from '@/lib/5etools/psionics'
+import { itemGroupMemberReference } from '@/lib/5etools/startingEquipmentIdentity'
 import {
   buildWeaponPreviewPropertyLookup,
   matchesWeaponPreviewProperties,
@@ -14,7 +15,7 @@ import {
 } from '@/lib/calculations/itemClassification'
 import { toTitleCase } from '@/lib/calculations/raceUtils'
 import { buildCatalogItemDetailFields } from '@/lib/itemDetailFields'
-import { renderEntry } from '@/lib/renderer'
+import { ITEM_TAG_DEFAULT_SOURCE, renderEntry } from '@/lib/renderer'
 import type { Creature5e, Item5e, ItemProperty5e, Psionic5e, Spell5e } from '@/types/5etools'
 
 interface TooltipEntityLike {
@@ -392,6 +393,10 @@ function getCreaturePreviewEntries(creature: Creature5e): unknown[] {
 const proficiencyPreviews = new WeakMap<RecursiveLookup, Map<string, RecursiveTooltipData>>()
 let proficiencySnapshot = 0
 
+function qualifiedItemLink({ name, source }: Item5e): string {
+  return `{@item ${name}|${source}|${name} (${source})}`.replace(/&/g, '&amp;')
+}
+
 function getProficiencyPreview(
   lookup: RecursiveLookup,
   { name, source }: RecursiveReference,
@@ -445,9 +450,7 @@ function getProficiencyPreview(
         matchesWeaponPreviewProperties(item, properties, lookup.weaponPreviewPropertyLookup ?? {})
       )
     })
-    .map(({ name, source }) =>
-      `{@item ${name}|${source}|${name} (${source})}`.replace(/&/g, '&amp;'),
-    )
+    .map(qualifiedItemLink)
   const preview = {
     title,
     key: `proficiency|${key}|${++proficiencySnapshot}`,
@@ -604,6 +607,9 @@ export function getRecursiveTooltipData(
 
 function getItemPreviewEntries(item: Item5e, lookup: RecursiveLookup): unknown[] {
   const fields = buildCatalogItemDetailFields(item, lookup.itemPropertyByAbbr ?? {})
+  const entries = getItemRulesEntries(item, lookup.itemTextContext)
+  const group = getItemGroupPreviewEntry(item, lookup)
+  if (group) entries.push(group)
   return [
     ...(fields.length
       ? [
@@ -614,8 +620,40 @@ function getItemPreviewEntries(item: Item5e, lookup: RecursiveLookup): unknown[]
           },
         ]
       : []),
-    ...getItemRulesEntries(item, lookup.itemTextContext),
+    ...entries,
   ]
+}
+
+export function getItemGroupPreviewEntry(item: Item5e | undefined, lookup: RecursiveLookup) {
+  if (
+    !item ||
+    item.sourceIdentityConflict ||
+    item.itemsHidden ||
+    !Array.isArray(item.items) ||
+    !item.items.length
+  )
+    return undefined
+
+  // Adapt 5etools' item-group list through the same exact item links as other previews.
+  const members = new Set<string>()
+  for (const value of item.items) {
+    const reference = itemGroupMemberReference(value, ITEM_TAG_DEFAULT_SOURCE)
+    if (!reference) continue
+    const member = resolveRecursiveEntity(lookup.items, reference.name, reference.source) as
+      | Item5e
+      | undefined
+    if (!member || member.sourceIdentityConflict || /[|{}<>]/.test(member.name + member.source))
+      continue
+    members.add(qualifiedItemLink(member))
+  }
+
+  return members.size
+    ? {
+        type: 'entries',
+        name: 'Items in this group',
+        entries: [{ type: 'list', items: [...members] }],
+      }
+    : 'No items from this group are available in the selected books.'
 }
 
 export function markRecursiveTooltipReferences(html: string): string {

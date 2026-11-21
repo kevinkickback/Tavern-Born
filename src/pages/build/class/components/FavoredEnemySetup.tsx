@@ -24,6 +24,7 @@ import {
   getSpokenLanguageSuggestions,
   type SpokenLanguageSuggestions,
 } from '@/lib/5etools/spokenLanguageSuggestions'
+import { isCommonLanguage } from '@/lib/calculations/languageOrigin'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import type { CharacterClassChoiceSelection, FavoredEnemySetup as Setup } from '@/types/character'
 import type { NormalizedChoiceOptionReference } from '@/types/classRules'
@@ -59,7 +60,8 @@ export function FavoredEnemySetup({
   const savedLanguage = previousLanguage?.kind === 'spoken' ? previousLanguage.name : undefined
   const known = new Set(knownLanguages.map(canonicalProficiencyName))
   const availableLanguages = languages.filter(
-    (option) => !known.has(option.name) || option.name === savedLanguage,
+    (option) =>
+      option.name === savedLanguage || (!isCommonLanguage(option.name) && !known.has(option.name)),
   )
   const availableNames = new Set(availableLanguages.map((option) => option.name))
   const [language, setLanguage] = useState(

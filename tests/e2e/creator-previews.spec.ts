@@ -7,9 +7,16 @@ import type { Character } from '@/types/character'
 import { MINIMAL_GAME_DATA, openCharacterFromHome, seedAppState } from './helpers/startup'
 
 const longText = Array.from({ length: 24 }, (_, index) => `Reading guidance ${index + 1}.`)
+const instrumentGroup = (
+  JSON.parse(readFileSync('resources/srd/data/items.json', 'utf8')) as { itemGroup: Item5e[] }
+).itemGroup.find((item) => item.name === 'Musical Instrument' && item.source === 'PHB')!
+const drum = (
+  JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8')) as { baseitem: Item5e[] }
+).baseitem.find((item) => item.name === 'Drum' && item.source === 'PHB')!
 const items = associateItemTypeEntries(
   parseItems({
     baseitem: [
+      drum,
       {
         name: 'Mace',
         source: 'PHB',
@@ -102,7 +109,11 @@ const GAME_DATA: GameData = {
           '{@item sling|PHB}',
           'Martial weapons that have the {@filter Finesse or Light|items|type=martial weapon|property=finesse;light} property',
         ],
-        tools: ["{@item thieves' tools|PHB}", "{@item tinker's tools|PHB}"],
+        tools: [
+          "{@item thieves' tools|PHB}",
+          "{@item tinker's tools|PHB}",
+          '{@item Musical Instrument|PHB|Musical instruments}',
+        ],
         skills: [],
       },
       classFeatures: [
@@ -140,6 +151,7 @@ const GAME_DATA: GameData = {
     },
     { name: 'Restrained', source: 'PHB', entries: ['A restrained creature has limited movement.'] },
   ],
+  items: parseItems({ itemGroup: [instrumentGroup] }) as Item5e[],
   itemsBase: items,
   itemProperties: [
     { abbreviation: 'F', source: 'PHB', name: 'Finesse' },
@@ -458,6 +470,14 @@ test('draft books supply race, class and background details while linked items r
   await expect(
     training.getByRole('heading', { name: 'Tool Proficiencies' }).locator('..'),
   ).toContainText("Thieves' tools, Tinker's tools")
+  await training.getByRole('button', { name: 'Musical instruments', exact: true }).hover()
+  const instruments = page.getByRole('dialog', { name: 'Musical Instrument preview', exact: true })
+  await instruments.getByRole('button', { name: 'Drum (PHB)', exact: true }).hover()
+  const drumDetails = page.getByRole('dialog', { name: 'Drum preview', exact: true })
+  await expect(drumDetails).toContainText('6 gp')
+  await expect(drumDetails).toContainText('3 lb')
+  await page.mouse.move(5, 5)
+  await expect(instruments).toBeHidden()
   await wizard.getByRole('button', { name: 'Combat Reading', exact: true }).hover()
   await page
     .getByRole('dialog', { name: 'Combat Reading preview', exact: true })

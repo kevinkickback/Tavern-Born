@@ -47,7 +47,7 @@ test('portrait preview enlarges the complete card when its pane expands', async 
   const preview = page.locator('[data-slot="portrait-card-preview"]')
   await expect(preview).toBeVisible()
   await expect(preview.getByText(/Last modified: \d/)).toHaveCSS('opacity', '1')
-  await expect(preview.getByText(/^(2014|2024)$/)).toHaveCSS('opacity', '1')
+  await expect(preview.getByText('5e (2014)', { exact: true })).toHaveCSS('opacity', '1')
   const actions = preview.locator('[data-slot="character-card-actions"]')
   await expect(actions).toHaveCSS('opacity', '1')
   await expect(actions.locator('button')).toHaveCount(3)

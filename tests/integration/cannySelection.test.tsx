@@ -264,6 +264,10 @@ test('language replacement and Clear preserve sibling expertise and use the same
   const f = makeCannyFixture()
   mount(f, configured(f))
   await open('Canny languages')
+  fireEvent.change(modal().getByPlaceholderText('Search available options'), {
+    target: { value: 'Common' },
+  })
+  expect(modal().queryByRole('button', { name: /^Common\b/ })).toBeNull()
   fireEvent.click(await option('Elvish'))
   fireEvent.click(await option('Giant'))
   await confirm()

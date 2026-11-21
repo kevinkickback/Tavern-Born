@@ -72,16 +72,16 @@ test('Review routes to shared compound setup; save partial, confirm pair/languag
   await open()
   fireEvent.change(dialog().getByLabelText('Humanoid race 1'), { target: { value: 'Gnoll' } })
   fireEvent.change(dialog().getByLabelText('Humanoid race 2'), { target: { value: 'Orc' } })
-  await select('Associated language', 'Common')
+  await select('Associated language', 'Orc')
   expect(dialog().queryByRole('checkbox')).toBeNull()
   await confirm()
   const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(active())))
   expect(saved.classChoiceSelections![0].favoredEnemy).toEqual({
     mode: 'humanoid-races',
     humanoidsConfirmed: true,
-    language: { kind: 'spoken', name: 'common' },
+    language: { kind: 'spoken', name: 'orc' },
   })
-  expect(saved.proficiencies.languages).toContain('common')
+  expect(saved.proficiencies.languages).toContain('orc')
   expect(screen.getByRole('group', { name: 'Favored Enemy' }).textContent).toContain('1 / 1 chosen')
   await open()
   fireEvent.mouseDown(dialog().getByRole('tab', { name: 'One creature type' }), {
@@ -91,7 +91,7 @@ test('Review routes to shared compound setup; save partial, confirm pair/languag
   fireEvent.change(dialog().getByLabelText('Creature type'), { target: { value: 'Beast' } })
   await confirm()
   expect(active().classChoiceSelections![0].favoredEnemy).toEqual({ mode: 'type' })
-  expect(active().proficiencies.languages).not.toContain('common')
+  expect(active().proficiencies.languages).not.toContain('orc')
   expect(screen.getByRole('group', { name: 'Favored Enemy' }).textContent).toContain('0 / 1 chosen')
   await open()
   fireEvent.click(dialog().getByRole('button', { name: 'Clear' }))
@@ -182,13 +182,13 @@ test('autocomplete, single suggestion, Show all and saved-language preservation 
     target: { value: 'Campaign people' },
   })
   expect(dialog().getByRole('combobox', { name: 'Associated language' }).textContent).toContain(
-    'Decide later',
+    'Elvish',
   )
   fireEvent.click(dialog().getByRole('combobox', { name: 'Associated language' }))
-  expect(screen.getByRole('option', { name: 'Common' })).toBeTruthy()
+  expect(screen.queryByRole('option', { name: 'Common' })).toBeNull()
   expect(screen.getByRole('option', { name: 'Elvish' })).toBeTruthy()
   expect(screen.queryByRole('option', { name: 'Draconic' })).toBeNull()
-  fireEvent.click(screen.getByRole('option', { name: 'Common' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Elvish' }))
   fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
   expect(JSON.stringify(active())).toBe(saved)
 })

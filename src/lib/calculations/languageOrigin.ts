@@ -1,5 +1,6 @@
 import { LANGUAGE_GRANT_FALLBACKS } from '@/lib/5etools/rulesetMetadata'
 import { addChoicePlaceholder, addGrant } from '@/lib/provenance/ledger'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { OriginSystem } from '@/types/character'
@@ -14,6 +15,10 @@ const ORIGIN_2024_LANGUAGE_SOURCE = LANGUAGE_GRANT_FALLBACKS.origin2024.source
  * If the base language ever changes in a future printing, update here.
  */
 export const ORIGIN_2024_BASE_LANGUAGE = LANGUAGE_GRANT_FALLBACKS.origin2024.baseLanguage
+
+export function isCommonLanguage(name: string): boolean {
+  return normalizeKey(name) === normalizeKey(ORIGIN_2024_BASE_LANGUAGE)
+}
 const ORIGIN_2024_LANGUAGE_CHOICE_ID = 'origin:2024:languages'
 /**
  * FALLBACK: The number of additional language choices granted by the 2024 origin

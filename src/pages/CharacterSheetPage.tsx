@@ -60,7 +60,7 @@ import {
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
 import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
-import { planSheetContent } from '@/lib/pdf/sheetContent'
+import { isCombinedSpellOverflow, planSheetContent } from '@/lib/pdf/sheetContent'
 import {
   type CharacterSheetPageOptions,
   DEFAULT_SHEET_PRESENTATION_OPTIONS,
@@ -192,8 +192,17 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const contentChoices = preferences[selectionContext]?.content ?? EMPTY_CONTENT_CHOICES
   const textOptions = preferences[selectionContext]?.text ?? DEFAULT_SHEET_PRESENTATION_OPTIONS
   const contentPlan = useMemo(
-    () => (viewModel ? planSheetContent(viewModel, templateId, contentChoices, pageChoices) : null),
-    [viewModel, templateId, contentChoices, pageChoices],
+    () =>
+      viewModel
+        ? planSheetContent(
+            viewModel,
+            templateId,
+            contentChoices,
+            pageChoices,
+            textOptions.spellLayout,
+          )
+        : null,
+    [viewModel, templateId, contentChoices, pageChoices, textOptions.spellLayout],
   )
   const baseOptionalPages = viewModel
     ? getOptionalCharacterSheetPages(viewModel, templateId, pageChoices)
@@ -222,6 +231,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           included:
             page.included ||
             (currentPreview?.report?.notesPageCount ?? 0) > 0 ||
+            (textOptions.spellLayout === 'combined' &&
+              !!contentPlan?.overflow.some((section) => isCombinedSpellOverflow(section.id))) ||
             (textOptions.overflow === 'notes' && (contentPlan?.overflow.length ?? 0) > 0),
         }
       : page,
@@ -250,6 +261,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
               truncatedFields,
               pageChoices,
               currentPreview?.report,
+              textOptions.spellLayout === 'combined' ? contentPlan?.viewModel : undefined,
             ),
             textOptions.images,
           )
@@ -263,7 +275,9 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       viewModel,
       pageChoices,
       currentPreview?.report,
+      contentPlan,
       textOptions.images,
+      textOptions.spellLayout,
     ],
   )
 
@@ -542,6 +556,11 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         text={textOptions}
         supportsImages={
           !!(selectedTemplate.portraitFieldName || selectedTemplate.organizationImageFieldName)
+        }
+        spellLayoutEdition={
+          viewModel && (viewModel.spellcastingSources.length > 0 || viewModel.spellRows.length > 0)
+            ? selectedTemplate.edition
+            : undefined
         }
         onTextChange={(text) => {
           setPreferences((current) => ({

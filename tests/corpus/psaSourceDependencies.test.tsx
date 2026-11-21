@@ -228,7 +228,7 @@ describe.runIf(existsSync('data/class/class-cleric.json'))(
           'Channel Divinity: Read Thoughts',
         )
       }
-      expect(vm.languagesSummary).toContain('elvish')
+      expect(vm.languagesSummary).toContain('Elvish')
       const pdf = await PDFDocument.load(await generateTestCharacterSheet(vm, '2024-official'))
       expect(pdf.getForm().getTextField('Text_32').getText()).toBe(
         `+${vm.skillByName.get('arcana')!.modifier}`,

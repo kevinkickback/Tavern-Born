@@ -1,7 +1,7 @@
 import { Clock, Crown, Sword, User } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { getOriginSystemLabel } from '@/lib/calculations/originSystem'
+import { getOriginEditionLabel, getOriginSystemLabel } from '@/lib/calculations/originSystem'
 import { getPortraitCssTransform, resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { CharacterClassEntry, OriginSystem, PortraitTransform } from '@/types/character'
@@ -88,7 +88,7 @@ export function CharacterCardFrame({
                 : 'border-[var(--blue-8)] bg-[var(--blue-4)] [color:var(--blue-12)]',
             )}
           >
-            {originSystem}
+            {getOriginEditionLabel(originSystem)}
           </Badge>
         )}
         {statusBadge}

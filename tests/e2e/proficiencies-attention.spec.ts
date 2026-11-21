@@ -102,7 +102,8 @@ test('a proficiency attention link selects its tab once without overriding later
   const languagesTab = categoryTabs.getByRole('tab', { name: /Languages/ })
   const skillsTab = categoryTabs.getByRole('tab', { name: /Skills/ })
   await expect(languagesTab).toHaveAttribute('aria-selected', 'true')
-  await page.getByTitle('Choose Common').click()
+  await expect(page.getByTitle('Choose Common')).toHaveCount(0)
+  await page.getByTitle('Choose Elvish').click()
 
   await skillsTab.click()
   await expect(skillsTab).toHaveAttribute('aria-selected', 'true')

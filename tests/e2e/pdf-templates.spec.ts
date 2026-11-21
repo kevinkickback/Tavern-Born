@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { PDFDocument, PDFName, PDFRawStream } from '@cantoo/pdf-lib'
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
@@ -50,6 +50,18 @@ const TEMPLATE_CASES: Record<'2014' | '2024', readonly TemplateCase[]> = {
   ],
 }
 
+async function expectOneLineOfHelp(control: Locator) {
+  const help = await control.evaluate(async (trigger) => {
+    await document.fonts.ready
+    const description = document.getElementById(trigger.getAttribute('aria-describedby') ?? '')
+    if (!description?.textContent?.trim()) return { text: 'Missing description', lines: 0 }
+    const range = document.createRange()
+    range.selectNodeContents(description)
+    return { text: description.textContent, lines: range.getClientRects().length }
+  })
+  expect(help.lines, help.text).toBe(1)
+}
+
 async function exportTemplate(page: Page, template: TemplateCase, outputDirectory: string) {
   await page.getByRole('button', { name: 'Character Sheet' }).click()
   await page.getByRole('link', { name: template.accessibleName }).click()
@@ -85,6 +97,9 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
   await expect(page.getByRole('combobox', { name: 'Images' })).toHaveCount(
     template.id.startsWith('2014') ? 1 : 0,
   )
+  for (const name of ['Rules descriptions', 'Long text & extra entries', 'Spell layout']) {
+    await expectOneLineOfHelp(page.getByRole('combobox', { name }))
+  }
   if (template.id === '2024-official') {
     await page.screenshot({
       path: path.join(outputDirectory, 'sheet-content.png'),
@@ -113,6 +128,7 @@ async function exportTemplate(page: Page, template: TemplateCase, outputDirector
     await page.getByRole('option', { name: 'Include descriptions', exact: true }).click()
     await dialog.getByRole('combobox', { name: 'Long text & extra entries' }).click()
     await page.getByRole('option', { name: 'Continue in notes', exact: true }).click()
+    await expectOneLineOfHelp(dialog.getByRole('combobox', { name: 'Long text & extra entries' }))
     if (viewport) await page.setViewportSize(viewport)
   }
   await page.getByRole('button', { name: 'Done', exact: true }).click()
@@ -250,7 +266,7 @@ test('MPMB preview and download honor the three image modes', async ({ page }, i
     const images = dialog.getByRole('combobox', { name: 'Images' })
     if (filename === 'color') {
       await expect(images).toHaveText(label)
-      await expect(images).toHaveAccessibleDescription(/character portrait and organization emblem/)
+      await expect(images).toHaveAccessibleDescription('Portrait and organization emblem.')
     } else {
       await images.click()
       await page.getByRole('option', { name: label }).click()

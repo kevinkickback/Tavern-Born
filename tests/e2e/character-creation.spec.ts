@@ -298,7 +298,7 @@ test('Source guidance stays visible while the full-width book list scrolls', asy
   await expect(dialog.getByText('Adjust portrait', { exact: true })).toBeVisible()
   const preview = dialog.getByRole('region', { name: 'Portrait card preview' })
   await expect(preview).toContainText('Level 1')
-  await expect(preview.getByText('2014', { exact: true })).toHaveCSS('opacity', '1')
+  await expect(preview.getByText('5e (2014)', { exact: true })).toHaveCSS('opacity', '1')
   await expect(preview.getByText('Last modified: Unsaved')).toBeVisible()
   const previewActions = preview.locator('[data-slot="character-card-actions"]')
   await expect(previewActions).toHaveCSS('opacity', '1')
@@ -798,7 +798,7 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await expect(
     reviewPortrait.getByRole('img', { name: 'Character portrait card preview' }),
   ).toBeVisible()
-  await expect(reviewPortrait.getByText('2024', { exact: true })).toHaveCSS('opacity', '1')
+  await expect(reviewPortrait.getByText('5.5e (2024)', { exact: true })).toHaveCSS('opacity', '1')
   await expect(reviewPortrait.getByText('Last modified: Unsaved')).toBeVisible()
   const reviewActions = reviewPortrait.locator('[data-slot="character-card-actions"]')
   await expect(reviewActions).toHaveCSS('opacity', '1')

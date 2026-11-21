@@ -61,6 +61,7 @@ import { useLibraryAttention } from '@/hooks/character/useLibraryAttention'
 import { useAsyncAction } from '@/hooks/ui/useAsyncAction'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import { getOriginEditionLabel } from '@/lib/calculations/originSystem'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
   characterUsesContentOutsideCatalog,
@@ -210,7 +211,7 @@ function CharacterListRow({
           Level {getTotalCharacterLevel(character)}
         </span>
         <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
-          {character.originSystem === '2024' ? '5.5e (2024)' : '5e (2014)'}
+          {getOriginEditionLabel(character.originSystem)}
         </span>
         <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground lg:block">
           {new Date(character.lastModified).toLocaleDateString()}

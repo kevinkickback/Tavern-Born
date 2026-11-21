@@ -316,7 +316,7 @@ test('gallery centers multiclass details and reveals the edition, date, and acti
       const heading = page.getByRole('heading', { name, exact: true })
       const card = page.locator('[data-slot="card"]').filter({ has: heading })
       await card.scrollIntoViewIfNeeded()
-      const version = card.getByText(editions[index], { exact: true })
+      const version = card.getByText(['5e (2014)', '5.5e (2024)'][index], { exact: true })
       const contentWarning = card.getByLabel(/^Additional content\./)
       const level = card.getByText('Level 6')
       const classes = card.getByRole('list', { name: 'Class levels' })

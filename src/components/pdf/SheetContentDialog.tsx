@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import type { SheetContentGroup } from '@/lib/pdf/sheetContent'
 import {
+  type CharacterSheetEdition,
   DEFAULT_SHEET_PRESENTATION_OPTIONS,
   type SheetContentChoices,
   type SheetPresentationOptions,
@@ -82,6 +83,7 @@ export function SheetContentDialog({
   text,
   onTextChange,
   supportsImages,
+  spellLayoutEdition,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -92,8 +94,10 @@ export function SheetContentDialog({
   text: SheetPresentationOptions
   onTextChange: (text: SheetPresentationOptions) => void
   supportsImages: boolean
+  spellLayoutEdition?: CharacterSheetEdition
 }) {
   const overflow = text.overflow ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow
+  const separateSpellPages = spellLayoutEdition === '2014'
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -110,12 +114,13 @@ export function SheetContentDialog({
       >
         <DialogHeader>
           <DialogTitle>Customize PDF</DialogTitle>
-          <DialogDescription>Choose what to include in the PDF.</DialogDescription>
+          <DialogDescription>Choose sheet content and layout.</DialogDescription>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto pr-2">
           <div className="space-y-4 border-b pb-4">
             <SheetOption
               label="Rules descriptions"
+              description="Show rules for features, feats, and items, or keep names and combat numbers."
               value={text.descriptions ?? 'full'}
               choices={[
                 ['full', 'Include descriptions'],
@@ -123,12 +128,13 @@ export function SheetContentDialog({
               ]}
               onChange={(descriptions) => onTextChange({ ...text, descriptions })}
             />
-            <p className="text-xs text-muted-foreground">
-              For your character’s features, traits, feats, attacks, and magic items. Combat numbers
-              stay on the sheet.
-            </p>
             <SheetOption
               label="Long text & extra entries"
+              description={
+                overflow === 'notes'
+                  ? 'Keep overflow in Notes when that page is enabled.'
+                  : 'Shorten text to fit and leave most overflow out.'
+              }
               value={overflow}
               choices={[
                 ['ellipsis', 'Shorten with ellipsis'],
@@ -136,15 +142,10 @@ export function SheetContentDialog({
               ]}
               onChange={(next) => onTextChange({ ...text, overflow: next })}
             />
-            <p className="text-xs text-muted-foreground">
-              {overflow === 'ellipsis'
-                ? 'Long text ends with an ellipsis. Extra entries stay out of the PDF; selected notes pages remain blank.'
-                : 'Keep readable text in each box and preserve the rest in notes, unless Notes is turned off in Optional Pages.'}
-            </p>
             {supportsImages && (
               <SheetOption
                 label="Images"
-                description="Show the character portrait and organization emblem in color or greyscale, or omit both."
+                description="Portrait and organization emblem."
                 value={text.images ?? 'color'}
                 choices={[
                   ['color', 'Color images'],
@@ -152,6 +153,25 @@ export function SheetContentDialog({
                   ['none', 'No images'],
                 ]}
                 onChange={(images) => onTextChange({ ...text, images })}
+              />
+            )}
+            {spellLayoutEdition && (
+              <SheetOption
+                label="Spell layout"
+                description={
+                  separateSpellPages
+                    ? 'Combined uses the highest-level caster’s save DC and attack bonus.'
+                    : 'Combined adds unprepared spells. Highest-level caster sets DC and attack.'
+                }
+                value={text.spellLayout ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.spellLayout}
+                choices={[
+                  [
+                    'standard',
+                    separateSpellPages ? 'Individual spell pages' : 'Standard spell list',
+                  ],
+                  ['combined', separateSpellPages ? 'Combined spell page' : 'Combined spell list'],
+                ]}
+                onChange={(spellLayout) => onTextChange({ ...text, spellLayout })}
               />
             )}
           </div>

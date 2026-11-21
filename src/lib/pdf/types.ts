@@ -15,11 +15,13 @@ export interface SheetPresentationOptions {
   descriptions?: 'full' | 'names'
   overflow?: 'notes' | 'ellipsis'
   images?: SheetImageMode
+  spellLayout?: 'standard' | 'combined'
 }
 export const DEFAULT_SHEET_PRESENTATION_OPTIONS = {
   descriptions: 'full',
   overflow: 'ellipsis',
   images: 'color',
+  spellLayout: 'standard',
 } as const satisfies Required<SheetPresentationOptions>
 export interface SheetOverflowSection {
   id: string

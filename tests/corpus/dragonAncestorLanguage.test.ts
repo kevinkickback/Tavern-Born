@@ -177,13 +177,13 @@ test.each(stacks)(
       ...buildGameDataLookups(current),
       classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(current),
     })
-    expect(sheet.languagesSummary).toBe('draconic')
+    expect(sheet.languagesSummary).toBe('Draconic')
     for (const [template, field] of [
       ['2014-official', 'ProficienciesLang'],
       ['2014-custom', 'Language 1'],
     ] as const) {
       const pdf = await PDFDocument.load(await generateTestCharacterSheet(sheet, template))
-      expect(pdf.getForm().getTextField(field).getText()).toMatch(/\bdraconic\b/i)
+      expect(pdf.getForm().getTextField(field).getText()).toMatch(/\bDraconic\b/)
     }
   },
   30_000,

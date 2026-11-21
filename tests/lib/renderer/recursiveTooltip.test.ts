@@ -15,6 +15,108 @@ import {
 import type { Creature5e, Item5e, Spell5e } from '@/types/5etools'
 
 describe('class proficiency previews', () => {
+  test.each([
+    ['bard', 'Musical Instrument', 'Drum'],
+    ['monk', "Artisan's Tools", "Alchemist's Supplies"],
+  ])('opens exact Included %s tool group members on both editions', (className, group, member) => {
+    const root = 'resources/srd/data'
+    const doc = JSON.parse(readFileSync(`${root}/class/class-${className}.json`, 'utf8'))
+    const parsedItems = parseItems(
+      JSON.parse(readFileSync(`${root}/items.json`, 'utf8')),
+    ) as Item5e[]
+    const bases = JSON.parse(readFileSync(`${root}/items-base.json`, 'utf8'))
+    const { items, itemsBase } = composeGameDataLayers([
+      {
+        ...createEmptyGameData(),
+        items: parsedItems,
+        itemsBase: parseItems(bases) as Item5e[],
+        itemTypes: parseItemTypes(bases),
+      },
+    ])
+    for (const source of ['PHB', 'XPHB']) {
+      const row = doc.class.find((row: { source: string }) => row.source === source)
+      const formatted = formatProficiencyList(row.startingProficiencies.tools)
+      const elements = new DOMParser().parseFromString(formatted ?? '', 'text/html')
+      const target = [...elements.querySelectorAll<HTMLElement>('[data-hover-type="item"]')].find(
+        (element) => element.dataset.hoverName?.toLowerCase() === group.toLowerCase(),
+      )
+      expect(target?.dataset.hoverSource).toBe(source)
+      const getGroupPreview = (visibleBase: Item5e[]) =>
+        getRecursiveTooltipData(
+          { kind: 'item', name: target?.dataset.hoverName ?? '', source },
+          buildRecursiveLookup({ items, itemsBase: visibleBase }),
+          group,
+        )
+      const preview = getGroupPreview(itemsBase)
+      const previewLinks = new DOMParser()
+        .parseFromString(preview.html ?? '', 'text/html')
+        .querySelectorAll<HTMLElement>('[data-hover-type="item"]')
+      expect([...previewLinks].map((link) => link.dataset.hoverSource)).not.toHaveLength(0)
+      expect([...previewLinks].every((link) => link.dataset.hoverSource === source)).toBe(true)
+      expect([...previewLinks].some((link) => link.dataset.hoverName === member)).toBe(true)
+      expect(
+        getGroupPreview(itemsBase.filter((item) => item.source !== source)).html,
+      ).not.toContain('data-hover-type="item"')
+    }
+  })
+
+  test('keeps hidden groups hidden and skips missing, conflicting, or malformed members', () => {
+    const first = { name: 'A&B Drum', source: 'PHB', type: 'INS' }
+    const group = {
+      name: 'Group',
+      source: 'PHB',
+      type: 'INS',
+      items: [
+        { name: first.name, source: first.source },
+        `${first.name}|PHB`,
+        `${first.name}|XPHB`,
+        'Conflicting Drum|PHB',
+        'Broken|PHB|wrong',
+      ],
+      entries: ['Authored group rules.'],
+    }
+    const getPreview = (item: Item5e) =>
+      getRecursiveTooltipData(
+        { kind: 'item', name: group.name, source: group.source },
+        buildRecursiveLookup({
+          items: [
+            item,
+            first,
+            { name: 'Conflicting Drum', source: 'PHB', type: 'INS', sourceIdentityConflict: true },
+          ],
+        }),
+        group.name,
+      ).html ?? ''
+    const document = new DOMParser().parseFromString(getPreview(group), 'text/html')
+    const links = document.querySelectorAll<HTMLElement>('[data-hover-type="item"]')
+    expect([...links].map((link) => [link.dataset.hoverName, link.dataset.hoverSource])).toEqual([
+      [first.name, first.source],
+    ])
+    const hidden = getPreview({ ...group, itemsHidden: true })
+    expect(hidden).toContain('Authored group rules.')
+    expect(hidden).not.toContain('data-hover-type="item"')
+  })
+
+  test('uses the item-tag default source for authored bare group members', () => {
+    const items = parseItems(
+      JSON.parse(readFileSync('resources/srd/data/items.json', 'utf8')),
+    ) as Item5e[]
+    const sameName = { name: 'Black Dragon Scale Mail', source: 'PHB', type: 'MA' }
+    function printedSources(available: Item5e[]) {
+      const preview = getRecursiveTooltipData(
+        { kind: 'item', name: 'Dragon Scale Mail', source: 'DMG' },
+        buildRecursiveLookup({ items: [...available, sameName] }),
+        'Dragon Scale Mail',
+      )
+      const links = new DOMParser()
+        .parseFromString(preview.html ?? '', 'text/html')
+        .querySelectorAll<HTMLElement>('[data-hover-name="Black Dragon Scale Mail"]')
+      return [...links].map((link) => link.dataset.hoverSource)
+    }
+    expect(printedSources(items)).toEqual(['DMG'])
+    expect(printedSources(items.filter((item) => item.name !== sameName.name))).toEqual([])
+  })
+
   test('uses the source categories and exact base equipment from Included data', () => {
     const itemsBase = parseItems(
       JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8')),

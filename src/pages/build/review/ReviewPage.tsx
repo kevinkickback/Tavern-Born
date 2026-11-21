@@ -1,8 +1,15 @@
-import { ArrowRight, CheckCircle, ClipboardText, WarningCircle } from '@phosphor-icons/react'
+import {
+  ArrowRight,
+  CheckCircle,
+  ClipboardText,
+  FilePdf,
+  WarningCircle,
+} from '@phosphor-icons/react'
 import { useId, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { handleTabListKeyDown } from '@/components/ui/tabKeyboardNavigation'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
@@ -59,6 +66,7 @@ export function BuildReviewPage() {
 
   const section: ReviewSection =
     searchParams.get('section') === 'overview' ? 'overview' : 'attention'
+  const ready = readiness.status === 'ready'
   const selectSection = (nextSection: string) => {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('section', nextSection)
@@ -144,27 +152,31 @@ export function BuildReviewPage() {
             <Card className="gap-4 p-4" data-testid="readiness-summary">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  {readiness.status === 'ready' ? (
+                  {ready ? (
                     <CheckCircle className="mt-0.5 size-6 text-success" weight="fill" />
                   ) : (
                     <WarningCircle className="mt-0.5 size-6 text-warning" weight="fill" />
                   )}
                   <div>
                     <h2 className="font-semibold">
-                      {readiness.status === 'ready'
-                        ? 'Character is ready'
-                        : 'Character needs attention'}
+                      {ready ? 'Character is ready' : 'Character needs attention'}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {readiness.status === 'ready'
-                        ? 'You can print this character sheet. Review any suggestions below if you like.'
+                      {ready
+                        ? 'Preview your character sheet, then download a PDF to save or print.'
                         : `${readiness.issues.length} ${readiness.issues.length === 1 ? 'item' : 'items'} to review. You can still save and print this character sheet.`}
                     </p>
                   </div>
                 </div>
-                <Badge variant={readiness.status === 'ready' ? 'default' : 'outline'}>
-                  {readiness.status === 'ready' ? 'Complete' : 'Needs attention'}
-                </Badge>
+                {ready ? (
+                  <Button asChild size="sm">
+                    <Link to={`/character-sheet/${character.originSystem}`}>
+                      <FilePdf /> Open character sheet
+                    </Link>
+                  </Button>
+                ) : (
+                  <Badge variant="outline">Needs attention</Badge>
+                )}
               </div>
 
               {readiness.issues.length > 0 && (
@@ -208,7 +220,7 @@ export function BuildReviewPage() {
               effectiveMaxHP={effectiveMaxHP}
               hitDicePools={hitDicePools}
               sourceNames={sourceNames}
-              ready={readiness.status === 'ready'}
+              ready={ready}
             />
           </TabsContent>
         </Tabs>

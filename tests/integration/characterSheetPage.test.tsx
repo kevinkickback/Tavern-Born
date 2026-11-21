@@ -12,6 +12,7 @@ import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOpti
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import {
+  type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
   generateFilledCharacterSheetPdf,
 } from '@/lib/pdf/characterSheetPdf'
@@ -22,6 +23,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
@@ -50,10 +52,10 @@ vi.mock('@/lib/pdf/exportPreflight', async (importOriginal) => {
 })
 
 describe('CharacterSheetPage', () => {
-  function renderPage() {
+  function renderPage(templateId: CharacterSheetTemplateId = '2014-custom') {
     return render(
       <MemoryRouter>
-        <CharacterSheetPage templateId="2014-custom" />
+        <CharacterSheetPage templateId={templateId} />
       </MemoryRouter>,
     )
   }
@@ -888,10 +890,16 @@ describe('CharacterSheetPage', () => {
     ).toBe('true')
   }, 15_000)
 
-  test('remembers description settings and invalidates the preview without changing the character', async () => {
+  test.each([
+    ['2014-custom', 'Individual spell pages', 'Combined spell page'],
+    ['2024-official', 'Standard spell list', 'Combined spell list'],
+  ] as const)('%s remembers presentation settings and invalidates the preview', async (templateId, standardLabel, combinedLabel) => {
     const user = userEvent.setup()
-    const before = useCharacterStore.getState().activeCharacter
-    const first = renderPage()
+    const initial = makeCharacterFixture()
+    const spell = selectBonusSpellFixture(initial, 'Bless|PHB', 'spell')
+    const before = { ...initial, ...spell.characterPatch, provenance: spell.provenanceUpdate }
+    useCharacterStore.setState({ activeCharacter: before })
+    const first = renderPage(templateId)
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
     await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
@@ -902,10 +910,14 @@ describe('CharacterSheetPage', () => {
     )
     screen.getByRole('combobox', { name: 'Long text & extra entries' }).focus()
     await user.keyboard('{Enter}{End}{Enter}')
+    const spellLayout = screen.getByRole('combobox', { name: 'Spell layout' })
+    expect(spellLayout.textContent).toBe(standardLabel)
+    spellLayout.focus()
+    await user.keyboard('{Enter}{End}{Enter}')
     await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByText('PDF preview')).toBeNull()
     first.unmount()
-    renderPage()
+    renderPage(templateId)
     await user.click(screen.getByRole('button', { name: 'Customize PDF' }))
     expect(screen.getByRole('combobox', { name: 'Rules descriptions' }).textContent).toBe(
       'Names only',
@@ -913,6 +925,7 @@ describe('CharacterSheetPage', () => {
     expect(screen.getByRole('combobox', { name: 'Long text & extra entries' }).textContent).toBe(
       'Continue in notes',
     )
+    expect(screen.getByRole('combobox', { name: 'Spell layout' }).textContent).toBe(combinedLabel)
     await user.click(screen.getByRole('button', { name: 'Done' }))
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
@@ -920,6 +933,7 @@ describe('CharacterSheetPage', () => {
       descriptions: 'names',
       overflow: 'notes',
       images: 'color',
+      spellLayout: 'combined',
     })
     expect(useCharacterStore.getState().activeCharacter).toBe(before)
   })

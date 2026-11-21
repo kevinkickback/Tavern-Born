@@ -241,7 +241,7 @@ test.each(variants)(
       ])
       expect(getFixedLanguageDetails(data.languages, 'druidic', tags)?.source).toBe(source)
       const sheet = createCharacterSheetViewModel(actor, current, current)
-      expect(sheet.languagesSummary).toContain('druidic')
+      expect(sheet.languagesSummary).toContain('Druidic')
       expect(sheet.spellRows.filter((row) => row.name === 'Speak with Animals')).toEqual(
         isRevised ? [expect.objectContaining({ level: '1', prepared: true })] : [],
       )

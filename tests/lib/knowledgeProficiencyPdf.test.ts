@@ -57,7 +57,7 @@ test.each(
   )!
   const vm = createCurrentCharacterSheetViewModel(saved, input)
   expect(vm.skillByName.get('arcana')!.modifier).toBe(baseline.modifier + 4)
-  if (source === 'PHB') expect(vm.proficienciesSummary).toContain('Languages: elvish, dwarvish')
+  if (source === 'PHB') expect(vm.proficienciesSummary).toContain('Languages: Elvish, Dwarvish')
   else expect(vm.toolProficiencies).toEqual([f.data.items[0].name.toLowerCase()])
   const view = descriptions ? vm : withoutSheetDescriptions(vm)
   const form = (await PDFDocument.load(await generateTestCharacterSheet(view, template))).getForm()
