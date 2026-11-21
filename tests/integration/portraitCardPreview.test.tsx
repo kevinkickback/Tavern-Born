@@ -33,7 +33,7 @@ describe('PortraitCardPreview', () => {
     expect(screen.getByText('Level 3')).toBeTruthy()
     expect(screen.getByText('Elf')).toBeTruthy()
     expect(screen.getByText('Wizard')).toBeTruthy()
-    expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('2024')
+    expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('5.5e (2024)')
     expect(screen.getByText(/Last modified:/)).toBeTruthy()
 
     const actions = container.querySelector('[data-slot="character-card-actions"]')

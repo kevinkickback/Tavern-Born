@@ -150,7 +150,9 @@ for (const [label, file] of [
     ).toBeVisible()
     await draft.getByLabel('Humanoid race 1', { exact: true }).fill('Gnoll')
     await draft.getByLabel('Humanoid race 2', { exact: true }).fill('Orc')
-    await select(page, 'Associated language', 'Common')
+    await draft.getByRole('combobox', { name: 'Associated language' }).click()
+    await expect(page.getByRole('option', { name: 'Common', exact: true })).toHaveCount(0)
+    await page.getByRole('option', { name: 'Elvish', exact: true }).click()
     await expect(draft.getByRole('checkbox')).toHaveCount(0)
     await draft.getByRole('button', { name: 'Confirm', exact: true }).click()
     await expect(draft).toHaveCount(0)
@@ -171,10 +173,10 @@ for (const [label, file] of [
       .toEqual({
         mode: 'humanoid-races',
         humanoidsConfirmed: true,
-        language: { kind: 'spoken', name: 'common' },
+        language: { kind: 'spoken', name: 'elvish' },
       })
     const before = await saved()
-    expect(before.proficiencies.languages).toContain('common')
+    expect(before.proficiencies.languages).toContain('elvish')
     await page.reload()
     await selectCharacterFromHome(page, character.name)
     draft = await open(page)
@@ -194,6 +196,6 @@ for (const [label, file] of [
         (await saved()).classChoiceSelections?.filter((s) => s.label === 'Favored Enemy'),
       )
       .toEqual([])
-    expect((await saved()).proficiencies.languages).not.toContain('common')
+    expect((await saved()).proficiencies.languages).not.toContain('elvish')
   })
 }
