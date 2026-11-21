@@ -557,9 +557,10 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         supportsImages={
           !!(selectedTemplate.portraitFieldName || selectedTemplate.organizationImageFieldName)
         }
-        showSpellLayout={
-          !!viewModel &&
-          (viewModel.spellcastingSources.length > 0 || viewModel.spellRows.length > 0)
+        spellLayoutEdition={
+          viewModel && (viewModel.spellcastingSources.length > 0 || viewModel.spellRows.length > 0)
+            ? selectedTemplate.edition
+            : undefined
         }
         onTextChange={(text) => {
           setPreferences((current) => ({

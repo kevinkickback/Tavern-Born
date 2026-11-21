@@ -238,6 +238,8 @@ describe('BuildReviewPage', () => {
     ])
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Character needs attention')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Character overview' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Open character sheet' })).toBeNull()
     const issueCount = within(screen.getByTestId('readiness-summary')).getAllByRole('button').length
     expect(screen.getByText(new RegExp(`^${issueCount} items? to review`))).toBeTruthy()
     expect(screen.getByText(/You can still save and print this character sheet/)).toBeTruthy()
@@ -268,6 +270,52 @@ describe('BuildReviewPage', () => {
     expect(screen.getByTestId('destination-search').textContent).toBe(
       '?attention=choice%3Atest-language-choice',
     )
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('a ready %s character can open the overview and their PDF page', async (originSystem) => {
+    const user = userEvent.setup()
+    const character = useCharacterStore.getState().activeCharacter!
+    const gameData = useGameDataStore.getState().gameData!
+    const data = {
+      ...gameData,
+      races: gameData.races.map((race) => ({ ...race, ability: [{ str: 2, dex: 1 }] })),
+    }
+    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
+    useCharacterStore.setState({
+      activeCharacter: {
+        ...character,
+        originSystem,
+        ...(originSystem === '2024' && { backgroundAsiChoices: ['strength', 'dexterity'] }),
+        provenance: { ...character.provenance!, choices: [] },
+      },
+    })
+    render(
+      <MemoryRouter initialEntries={['/build/review']}>
+        <Routes>
+          <Route path="/build/review" element={<BuildReviewPage />} />
+          <Route path={`/character-sheet/${originSystem}`} element={<p>PDF destination</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    const summary = within(screen.getByTestId('readiness-summary'))
+    expect(summary.getByRole('heading', { name: 'Character is ready' })).toBeTruthy()
+    expect(summary.queryByText('Complete')).toBeNull()
+    expect(summary.getByRole('button', { name: /Add a portrait/ })).toBeTruthy()
+    const overview = screen.getByRole('tab', { name: 'Character overview' })
+    await user.click(summary.getByRole('button', { name: 'Character overview' }))
+    expect(overview.getAttribute('aria-selected')).toBe('true')
+    expect(document.activeElement).toBe(overview)
+    expect(screen.getByText('Proficiencies & skills')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
+    await user.click(
+      within(screen.getByTestId('readiness-summary')).getByRole('link', {
+        name: 'Open character sheet',
+      }),
+    )
+    expect(screen.getByText('PDF destination')).toBeTruthy()
   })
 
   test('moves keyboard focus between review tabs and labels the selected panel', async () => {
