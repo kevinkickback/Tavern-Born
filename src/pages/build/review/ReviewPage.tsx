@@ -5,7 +5,7 @@ import {
   FilePdf,
   WarningCircle,
 } from '@phosphor-icons/react'
-import { useId, useMemo, useRef } from 'react'
+import { useId, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AdditionalContentBadge } from '@/components/character/AdditionalContentBadge'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +35,6 @@ export function BuildReviewPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabIdPrefix = useId()
-  const overviewTab = useRef<HTMLButtonElement>(null)
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculation = useCharacterCalculationContext(character)
   const readiness = useCharacterReadiness(character)
@@ -101,7 +100,6 @@ export function BuildReviewPage() {
               return (
                 <button
                   key={value}
-                  ref={value === 'overview' ? overviewTab : undefined}
                   id={`${tabIdPrefix}-tab-${value}`}
                   type="button"
                   role="tab"
@@ -163,33 +161,19 @@ export function BuildReviewPage() {
                     <h2 className="font-semibold">
                       {ready ? 'Character is ready' : 'Character needs attention'}
                     </h2>
-                    {!ready && (
-                      <p className="text-sm text-muted-foreground">
-                        {readiness.issues.length} {readiness.issues.length === 1 ? 'item' : 'items'}{' '}
-                        to review. You can still save and print this character sheet.
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {ready
+                        ? 'Preview your character sheet, then download a PDF to save or print.'
+                        : `${readiness.issues.length} ${readiness.issues.length === 1 ? 'item' : 'items'} to review. You can still save and print this character sheet.`}
+                    </p>
                   </div>
                 </div>
                 {ready ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        selectSection('overview')
-                        overviewTab.current?.focus()
-                      }}
-                    >
-                      <ClipboardText /> Character overview
-                    </Button>
-                    <Button asChild size="sm">
-                      <Link to={`/character-sheet/${character.originSystem}`}>
-                        <FilePdf /> Open character sheet
-                      </Link>
-                    </Button>
-                  </div>
+                  <Button asChild size="sm">
+                    <Link to={`/character-sheet/${character.originSystem}`}>
+                      <FilePdf /> Open character sheet
+                    </Link>
+                  </Button>
                 ) : (
                   <Badge variant="outline">Needs attention</Badge>
                 )}

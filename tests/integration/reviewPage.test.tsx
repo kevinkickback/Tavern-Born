@@ -275,7 +275,7 @@ describe('BuildReviewPage', () => {
   test.each([
     '2014',
     '2024',
-  ] as const)('a ready %s character can open the overview and their PDF page', async (originSystem) => {
+  ] as const)('a ready %s character can open the PDF page from Review', async (originSystem) => {
     const user = userEvent.setup()
     const character = useCharacterStore.getState().activeCharacter!
     const gameData = useGameDataStore.getState().gameData!
@@ -303,11 +303,11 @@ describe('BuildReviewPage', () => {
     const summary = within(screen.getByTestId('readiness-summary'))
     expect(summary.getByRole('heading', { name: 'Character is ready' })).toBeTruthy()
     expect(summary.queryByText('Complete')).toBeNull()
+    expect(summary.queryByRole('button', { name: 'Character overview' })).toBeNull()
     expect(summary.getByRole('button', { name: /Add a portrait/ })).toBeTruthy()
     const overview = screen.getByRole('tab', { name: 'Character overview' })
-    await user.click(summary.getByRole('button', { name: 'Character overview' }))
+    await user.click(overview)
     expect(overview.getAttribute('aria-selected')).toBe('true')
-    expect(document.activeElement).toBe(overview)
     expect(screen.getByText('Proficiencies & skills')).toBeTruthy()
     await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
     await user.click(

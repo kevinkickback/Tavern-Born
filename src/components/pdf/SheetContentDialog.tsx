@@ -120,7 +120,7 @@ export function SheetContentDialog({
           <div className="space-y-4 border-b pb-4">
             <SheetOption
               label="Rules descriptions"
-              description="Names only keeps combat numbers."
+              description="Show rules for features, feats, and items, or keep names and combat numbers."
               value={text.descriptions ?? 'full'}
               choices={[
                 ['full', 'Include descriptions'],
@@ -130,7 +130,11 @@ export function SheetContentDialog({
             />
             <SheetOption
               label="Long text & extra entries"
-              description={overflow === 'notes' ? 'Enable Notes in Optional Pages.' : undefined}
+              description={
+                overflow === 'notes'
+                  ? 'Keep overflow in Notes when that page is enabled.'
+                  : 'Shorten text to fit and leave most overflow out.'
+              }
               value={overflow}
               choices={[
                 ['ellipsis', 'Shorten with ellipsis'],
@@ -157,7 +161,7 @@ export function SheetContentDialog({
                 description={
                   separateSpellPages
                     ? 'Combined uses the highest-level caster’s save DC and attack bonus.'
-                    : 'Combined includes unprepared spells and uses the highest-level caster’s save DC and attack bonus.'
+                    : 'Combined adds unprepared spells. Highest-level caster sets DC and attack.'
                 }
                 value={text.spellLayout ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.spellLayout}
                 choices={[
