@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
+import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { parseItemProperties, parseItems, parseItemTypes } from '@/lib/5etools/parsers/basic'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -169,6 +174,68 @@ describe('EquipmentPage item details', () => {
     const statistics = screen.getByRole('region', { name: 'Item statistics' })
     expect(within(statistics).getByText('Light')).toBeTruthy()
     expect(within(statistics).queryByText('L')).toBeNull()
+  })
+
+  test('shows authored group members and keeps ordinary item facts without inventing prose', () => {
+    const bases = JSON.parse(readFileSync('resources/srd/data/items-base.json', 'utf8'))
+    const catalog = composeGameDataLayers([
+      {
+        ...createEmptyGameData(),
+        items: parseItems(
+          JSON.parse(readFileSync('resources/srd/data/items.json', 'utf8')),
+        ) as Item5e[],
+        itemsBase: parseItems(bases) as Item5e[],
+        itemTypes: parseItemTypes(bases),
+        itemProperties: parseItemProperties(bases),
+      },
+    ])
+    useGameDataStore.setState({ gameData: { ...catalog, lookups: buildGameDataLookups(catalog) } })
+    const character = makeCharacterFixture({
+      allowedSources: ['PHB', 'DMG'],
+      equipment: [
+        {
+          id: 'group',
+          name: 'Musical Instrument',
+          source: 'PHB',
+          type: 'INS',
+          quantity: 1,
+          equipped: false,
+        },
+        { id: 'hammer', name: 'Warhammer', source: 'PHB', type: 'M', quantity: 1, equipped: false },
+        { id: 'sling', name: 'Sling', source: 'PHB', type: 'R', quantity: 1, equipped: false },
+        {
+          id: 'saved-group',
+          name: 'Dragon Scale Mail',
+          source: 'DMG',
+          type: 'MA',
+          quantity: 1,
+          equipped: false,
+          description: 'Player-authored notes for the saved group.',
+        },
+      ],
+    })
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+    renderPage()
+
+    const drum = screen.getByRole('button', { name: 'Drum (PHB)' })
+    expect(screen.queryByRole('button', { name: 'Drum (XPHB)' })).toBeNull()
+    fireEvent.mouseMove(drum)
+    const preview = screen.getByRole('dialog', { name: 'Drum preview' })
+    expect(preview.textContent).toContain('6 gp')
+    expect(preview.textContent).toContain('3 lb')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Warhammer' }))
+    const facts = () => within(screen.getByRole('region', { name: 'Item statistics' }))
+    expect(facts().getByText('15 gp')).toBeTruthy()
+    expect(facts().getByText('1d8 Bludgeoning (1d10 versatile)')).toBeTruthy()
+    expect(facts().getByText('Versatile')).toBeTruthy()
+    expect(screen.getByText('No description is available for this item.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Sling' }))
+    expect(facts().getByText('30/120')).toBeTruthy()
+    expect(screen.getByText(/The range lists two numbers/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Dragon Scale Mail' }))
+    expect(screen.getByText('Player-authored notes for the saved group.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Black Dragon Scale Mail (DMG)' })).toBeTruthy()
   })
 
   test.each([

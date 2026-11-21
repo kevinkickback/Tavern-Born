@@ -55,6 +55,7 @@ import {
   itemMatchesFilter,
 } from '@/lib/itemDetailFields'
 import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getItemGroupPreviewEntry } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -188,6 +189,9 @@ export function EquipmentPage() {
   )
   const itemTextContext = useItemTextContext()
   const selectedItemEntries = getItemRulesEntries(selectedItemData, itemTextContext)
+  const savedItemDescription = selectedItemEntries.length ? undefined : selectedItem?.description
+  const groupEntry = getItemGroupPreviewEntry(selectedItemData, recursiveLookup)
+  if (groupEntry) selectedItemEntries.push(groupEntry)
   const selectedItemDetailFields = selectedItem
     ? buildItemDetailFields(selectedItem, selectedItemData, itemPropertyByAbbr)
     : []
@@ -697,26 +701,24 @@ export function EquipmentPage() {
                         ))}
                       </section>
 
-                      {selectedItemEntries.length > 0 ? (
+                      {selectedItemEntries.length > 0 || savedItemDescription ? (
                         <section className="border-t border-border pt-4">
                           <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                             Description
                           </h3>
-                          <div className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert">
-                            <GameContent
-                              entry={selectedItemEntries}
-                              recursiveLookup={recursiveLookup}
-                            />
-                          </div>
-                        </section>
-                      ) : selectedItem.description ? (
-                        <section className="border-t border-border pt-4">
-                          <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                            Description
-                          </h3>
-                          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
-                            {selectedItem.description}
-                          </p>
+                          {savedItemDescription && (
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
+                              {savedItemDescription}
+                            </p>
+                          )}
+                          {selectedItemEntries.length > 0 && (
+                            <div className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert">
+                              <GameContent
+                                entry={selectedItemEntries}
+                                recursiveLookup={recursiveLookup}
+                              />
+                            </div>
+                          )}
                         </section>
                       ) : (
                         <p className="border-t border-border pt-4 text-sm italic text-muted-foreground">

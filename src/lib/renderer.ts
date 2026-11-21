@@ -1,5 +1,7 @@
 import DOMPurify from 'dompurify'
 
+export const ITEM_TAG_DEFAULT_SOURCE = 'DMG'
+
 // Keep renderer styling classes flexible, while rejecting unrelated class names
 // from external content.
 const ALLOWED_RENDERER_CLASS_PATTERNS = [
@@ -258,7 +260,13 @@ function renderTags(text: string): string {
       'spell',
       'Spell',
     ),
-    renderEntityTag('item', 'DMG', 'text-accent font-medium italic cursor-help', 'item', 'Item'),
+    renderEntityTag(
+      'item',
+      ITEM_TAG_DEFAULT_SOURCE,
+      'text-accent font-medium italic cursor-help',
+      'item',
+      'Item',
+    ),
     renderEntityTag('proficiency', '', 'cursor-help', 'proficiency', 'Proficiency'),
     renderEntityTag(
       'condition',

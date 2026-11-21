@@ -74,6 +74,13 @@ and a positive property list. Property names separated by semicolons are alterna
 preview uses available base equipment and each item's exact property definition. A bare
 property reference defaults to PHB. Other filter shapes display the source label as text.
 
+An item-group reference shows its authored rules and links to members available in the current
+catalog selection. Each member keeps its declared printing and opens its own facts and rules.
+The Equipment pane uses the same group list. Groups with hidden members keep those members
+hidden. A member without a source uses the standard item-tag default, DMG.
+[Pinned 5etools item-group rendering](https://github.com/5etools-mirror-3/5etools-src/blob/b9061583536101068b3a59d27e886d1fa664e366/js/render.js#L12516-L12527) ·
+[Item tag default](https://github.com/5etools-mirror-3/5etools-src/blob/b9061583536101068b3a59d27e886d1fa664e366/js/render.js#L5649-L5653).
+
 Canonical +1, +2 and +3 DMG or XDMG shields, weapons, body armor and ammunition use an
 eligible direct PHB or XPHB public base of the corresponding edition. Explicit concrete
 printings win. Ambiguous or unsupported inputs produce no substitute. Generated equipment
