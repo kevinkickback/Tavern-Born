@@ -481,12 +481,12 @@ test('full/compact PDF and actual binary use current language and conditional co
   const vm = createCurrentCharacterSheetViewModel(c, input),
     baseline = createCurrentCharacterSheetViewModel(f.character, input)
   expect(vm.featuresSummary).toContain('Favored Enemy: beast (level 1)')
-  expect(vm.featuresSummary).toContain('Language: common (campaign-confirmed)')
+  expect(vm.featuresSummary).toContain('Language: Common (campaign-confirmed)')
   expect(vm.featuresSummary).toMatch(/advantage on Wisdom \(\s*Survival\s*\) checks to track/)
   expect(withoutSheetDescriptions(vm).featuresSummary).toContain(
-    'Language: common (campaign-confirmed)',
+    'Language: Common (campaign-confirmed)',
   )
-  expect(vm.proficienciesSummary).toContain('Languages: common')
+  expect(vm.proficienciesSummary).toContain('Languages: Common')
   expect(vm.skillByName.get('survival')!.modifier).toBe(
     baseline.skillByName.get('survival')!.modifier,
   )
@@ -494,7 +494,7 @@ test('full/compact PDF and actual binary use current language and conditional co
   const form = (
     await PDFDocument.load(await generateTestCharacterSheet(vm, '2014-custom'))
   ).getForm()
-  expect(form.getTextField('Language 1').getText()).toBe('common')
+  expect(form.getTextField('Language 1').getText()).toBe('Common')
   const absent = createCurrentCharacterSheetViewModel(c, {
     ...input,
     classChoiceFeatureCatalogs: {
@@ -503,7 +503,7 @@ test('full/compact PDF and actual binary use current language and conditional co
       classFeatureCandidates: new Map(),
     },
   })
-  expect(absent.proficienciesSummary).not.toContain('Languages: common')
+  expect(absent.proficienciesSummary).not.toContain('Languages: Common')
   expect(absent.featuresSummary).toContain('rules unavailable')
   expect(JSON.stringify(c)).toBe(before)
 })
@@ -654,7 +654,7 @@ test.runIf(existsSync('data/class/class-ranger.json'))(
       )
     adoption(foe, true)
     expect(details('Favored Enemy')).toContain('Favored Foe replaces Favored Enemy')
-    expect(details('Favored Enemy')).toContain('Language: common (campaign-confirmed)')
+    expect(details('Favored Enemy')).toContain('Language: Common (campaign-confirmed)')
     expect(details('Favored Enemy')).not.toContain('Deft Explorer')
     expect(details('Natural Explorer')).not.toContain('Saved favored-terrain intent is inactive')
     adoption(deft, true)
@@ -686,7 +686,7 @@ test.runIf(existsSync('data/class/class-ranger.json'))(
     expect(details('Favored Enemy')).toContain('Favored Foe replaces Favored Enemy')
     adoption(foe, false)
     expect(details('Favored Enemy')).not.toContain('intent is inactive')
-    expect(details('Favored Enemy')).toContain('Language: common (campaign-confirmed)')
+    expect(details('Favored Enemy')).toContain('Language: Common (campaign-confirmed)')
     expect(details('Natural Explorer')).toContain('Deft Explorer replaces Natural Explorer')
     adoption(deft, false)
     expect(details('Natural Explorer')).not.toContain('intent is inactive')

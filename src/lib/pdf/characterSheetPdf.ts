@@ -41,7 +41,7 @@ import { createCompanionSheetDocument } from './companionSheetPdf'
 import { getOfficial2014SectionText } from './official2014Text'
 import { get2024FieldLabel } from './official2024Text'
 import { appendPdfForm } from './pdfAssembly'
-import { compactSheetText, planSheetContent } from './sheetContent'
+import { compactSheetText, isCombinedSpellOverflow, planSheetContent } from './sheetContent'
 import { addNotesReferences, appendSheetNotes } from './sheetNotes'
 
 export {
@@ -94,6 +94,7 @@ export async function generateFilledCharacterSheetPdf(
     templateId,
     options.content,
     options.pages,
+    options.text?.spellLayout,
   )
   const original = viewModel
   const paragraphsReservedForOverflow =
@@ -281,11 +282,9 @@ export async function generateFilledCharacterSheetPdf(
     let fields = selectMap(fullMap, (name) => kind(name) === part.id)
     let additionalSpellPages: CharacterSheetFieldMap[] | undefined
     if (part.id === 'spells') {
-      const spellMaps = paginateOfficial2014SpellPages(viewModel).map((page) =>
-        mapOfficial2014SpellPage(viewModel, page),
-      )
-      fields = spellMaps[0]
-      additionalSpellPages = spellMaps.slice(1)
+      const [first, ...remaining] = paginateOfficial2014SpellPages(viewModel)
+      fields = mapOfficial2014SpellPage(viewModel, first)
+      additionalSpellPages = remaining.map((page) => mapOfficial2014SpellPage(viewModel, page))
     }
     const mpmb = template.id === '2014-custom' && part.id !== 'spells'
     const prefix = part.id === 'spells' && template.id === '2014-custom' ? 'WotC__' : ''
@@ -384,6 +383,7 @@ export async function generateFilledCharacterSheetPdf(
   const requiredNotes = uniqueOverflow.filter(
     (section) =>
       section.id.startsWith('unknown-spell-levels:') ||
+      (options.text?.spellLayout === 'combined' && isCombinedSpellOverflow(section.id)) ||
       section.id === 'capacity:spellcasting-profiles' ||
       section.id === 'resource-counter-details' ||
       resourceLabelNotes.has(section.id) ||

@@ -82,6 +82,7 @@ export function SheetContentDialog({
   text,
   onTextChange,
   supportsImages,
+  showSpellLayout,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -92,6 +93,7 @@ export function SheetContentDialog({
   text: SheetPresentationOptions
   onTextChange: (text: SheetPresentationOptions) => void
   supportsImages: boolean
+  showSpellLayout: boolean
 }) {
   const overflow = text.overflow ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow
   return (
@@ -152,6 +154,18 @@ export function SheetContentDialog({
                   ['none', 'No images'],
                 ]}
                 onChange={(images) => onTextChange({ ...text, images })}
+              />
+            )}
+            {showSpellLayout && (
+              <SheetOption
+                label="Spell layout"
+                description="Use one spell page with the highest-level caster’s save DC and attack bonus. Extra spells go to Notes when enabled."
+                value={text.spellLayout ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.spellLayout}
+                choices={[
+                  ['standard', 'Template default'],
+                  ['combined', 'Combined spell page'],
+                ]}
+                onChange={(spellLayout) => onTextChange({ ...text, spellLayout })}
               />
             )}
           </div>

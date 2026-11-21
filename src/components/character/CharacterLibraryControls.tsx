@@ -18,13 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { getOriginEditionLabel } from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 const libraryFilters = [
   { id: 'all', label: 'All', icon: Users },
-  { id: '2014', label: '5e (2014)', icon: BookOpen },
-  { id: '2024', label: '5.5e (2024)', icon: BookOpen },
+  { id: '2014', label: getOriginEditionLabel('2014'), icon: BookOpen },
+  { id: '2024', label: getOriginEditionLabel('2024'), icon: BookOpen },
   { id: 'attention', label: 'Pending Choices', icon: WarningCircle },
 ] as const
 

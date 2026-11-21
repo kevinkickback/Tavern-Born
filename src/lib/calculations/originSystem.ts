@@ -18,6 +18,10 @@ export function getOriginSystemLabel(originSystem: OriginSystem): string {
   return originSystem === '2024' ? '5.5e Revised (2024)' : '5e Legacy (2014)'
 }
 
+export function getOriginEditionLabel(originSystem: OriginSystem): string {
+  return originSystem === '2024' ? '5.5e (2024)' : '5e (2014)'
+}
+
 export function usesRaceOriginBenefits(originSystem: OriginSystem): boolean {
   return originSystem === '2014'
 }

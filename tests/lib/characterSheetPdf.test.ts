@@ -19,7 +19,9 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
+import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
+import { OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL } from '@/lib/pdf/characterSheetMapping2014Official'
 import {
   type CharacterSheetTemplateId,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
@@ -33,6 +35,7 @@ import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import {
   authorManagedClassSpellFixture,
@@ -85,6 +88,168 @@ function buildCharacterSheetFieldMap(
 }
 
 describe('characterSheetPdf', () => {
+  test.each([
+    ['2014-official', ''],
+    ['2014-custom', 'WotC__'],
+    ['2024-official', ''],
+    ['2024-custom', ''],
+  ] as const)(
+    '%s combines all casting sources with the highest-level caster’s numbers',
+    async (id, prefix) => {
+      const revised = id.startsWith('2024')
+      const source = revised ? 'XPHB' : 'PHB'
+      const wizard = { name: 'Wizard', source, levels: 3 }
+      const sorcerer = { name: 'Sorcerer', source, levels: 6 }
+      const fixture = makeManagedClassSpellFixtures()
+      const selected = authorManagedClassSpellFixture(
+        createEmptyCharacter({
+          name: 'Multiclass PDF Test',
+          originSystem: revised ? '2024' : '2014',
+          initialClass: { name: 'Wizard', source },
+          classProgression: [wizard, sorcerer],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 14,
+            wisdom: 10,
+            charisma: 18,
+          },
+        }),
+        fixture,
+        [
+          {
+            owner: wizard,
+            domain: 'class-spellbook',
+            gain: 1,
+            targets: [
+              { name: 'Magic Missile', source },
+              { name: 'Shield', source },
+              { name: 'Identify', source },
+            ],
+          },
+          {
+            owner: sorcerer,
+            domain: 'class-known',
+            gain: 1,
+            targets: [{ name: 'Magic Missile', source }],
+          },
+        ],
+      )
+      const bonus = selectBonusSpellFixture(
+        selected,
+        `Bless|${source}`,
+        'spell',
+        fixture.lookups.spellsByKey,
+      )
+      const character = { ...selected, ...bonus.characterPatch, provenance: bonus.provenanceUpdate }
+      const before = JSON.stringify(character)
+      const vm = createCurrentCharacterSheetViewModel(character, fixture.lookups)
+      const pages = { companion: false, notes: false }
+      const standard = await PDFDocument.load(await generateTestCharacterSheet(vm, id, { pages }))
+      const combined = await PDFDocument.load(
+        await generateTestCharacterSheet(vm, id, { pages, text: { spellLayout: 'combined' } }),
+      )
+      const fieldNames = revised
+        ? ['Text_230', 'Text_86', 'Text_87']
+        : ['SpellcastingAbility 2', 'SpellSaveDC  2', 'SpellAtkBonus 2']
+      const readNumbers = (pdf: PDFDocument) =>
+        fieldNames.map((field) =>
+          pdf
+            .getForm()
+            .getTextField(prefix + field)
+            .getText(),
+        )
+      expect(readNumbers(standard)).toEqual(['Intelligence', '14', '+6'])
+      expect(readNumbers(combined)).toEqual(['Charisma', '16', '+8'])
+      if (!revised) {
+        expect(combined.getPageCount()).toBe(standard.getPageCount() - 1)
+        const form = combined.getForm()
+        expect(form.getTextField(prefix + 'Spellcasting Class 2').getText()).toBe('Sorcerer')
+        const names = OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1].map((name) =>
+          form.getTextField(prefix + name).getText(),
+        )
+        expect(names.filter(Boolean).sort()).toEqual([
+          'Bless',
+          'Identify',
+          'Magic Missile',
+          'Shield',
+        ])
+        expect(form.getCheckBox(prefix + 'Check Box 251').isChecked()).toBe(true)
+      } else {
+        const form = combined.getForm()
+        const entries = Array.from({ length: 30 }, (_, index) =>
+          form.getTextField(`Text_${122 + index}`).getText(),
+        )
+        for (const name of ['Bless', 'Identify', 'Magic Missile', 'Shield'])
+          expect(entries.filter((value) => value === name)).toHaveLength(1)
+        expect(form.getTextField(`Text_${182 + entries.indexOf('Shield')}`).getText()).toContain(
+          'Unprepared',
+        )
+        expect(form.getTextField(`Text_${182 + entries.indexOf('Identify')}`).getText()).toMatch(
+          /^Unprepared\b/,
+        )
+        expect(combined.getPageCount()).toBe(standard.getPageCount())
+      }
+      expect(JSON.stringify(character)).toBe(before)
+    },
+    30_000,
+  )
+
+  test.each([
+    ['2014-official', 3, 12],
+    ['2024-official', 2, 30],
+  ] as const)(
+    '%s keeps one combined spell section and reports extra spells',
+    async (template, pages, capacity) => {
+      const model = prepareViewModel(createEmptyCharacter())
+      model.spellRows = Array.from({ length: capacity + 1 }, (_, index) => ({
+        id: index < 2 ? `alarm|${index === 0 ? 'phb' : 'xphb'}` : `spell ${index}|phb`,
+        name: index < 2 ? 'Alarm' : `Spell ${index}`,
+        level: '1',
+        prepared: true,
+        castingTime: '',
+        castingTimeAndDuration: '',
+        duration: '',
+        range: '',
+        components: '',
+        notes: '',
+        concentration: false,
+        ritual: false,
+        material: false,
+      }))
+      const overflow = `Spell ${capacity}; Level 1; Ready`
+      for (const notes of [true, false]) {
+        const matchingReport: string[] = []
+        const pdf = await PDFDocument.load(
+          await generateTestCharacterSheet(model, template, {
+            pages: { companion: false, notes },
+            text: { spellLayout: 'combined' },
+            onReport: (report) => {
+              matchingReport.push(
+                ...(notes ? report.preserved : report.omitted).map((section) => section.text),
+              )
+            },
+          }),
+        )
+        expect(pdf.getPageCount()).toBe(pages + Number(notes))
+        expect(matchingReport).toContain(overflow)
+        const spellFields =
+          template === '2014-official'
+            ? OFFICIAL_2014_SPELL_FIELDS_BY_LEVEL[1]
+            : ['Text_122', 'Text_123']
+        const form = pdf.getForm()
+        expect(spellFields.slice(0, 2).map((field) => form.getTextField(field).getText())).toEqual([
+          'Alarm (PHB)',
+          'Alarm (XPHB)',
+        ])
+        if (notes)
+          expect(pdf.getForm().getTextField('P5.ASnotes.Notes.Left').getText()).toContain(overflow)
+      }
+    },
+    30_000,
+  )
+
   test('preserves only the clipped inherited counter in required Notes for a shared label', async () => {
     const viewModel = prepareViewModel(makeCharacterFixture())
     const label = 'A very long feature name for the resource counter '.repeat(4).trim()

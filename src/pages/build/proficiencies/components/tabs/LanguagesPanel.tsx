@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { isCommonLanguage } from '@/lib/calculations/languageOrigin'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import { hasProfInArray } from '@/pages/build/proficiencies/model/data'
@@ -97,6 +98,7 @@ export function LanguagesPanel({
                 )
                 const canSelect =
                   !isSelected &&
+                  !isCommonLanguage(normLang) &&
                   ledger.choices.some(
                     (choice) =>
                       choice.domain === 'languages' &&

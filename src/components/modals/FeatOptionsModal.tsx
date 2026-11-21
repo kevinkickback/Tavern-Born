@@ -32,6 +32,7 @@ import {
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
 import { formatAbilityChoice } from '@/lib/calculations/abilityScoreDisplay'
+import { isCommonLanguage } from '@/lib/calculations/languageOrigin'
 import { getSpellReferenceKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import type { FeatOptionTarget } from '@/lib/character/commands/featCommandIdentity'
@@ -236,13 +237,19 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
   eligibleSkills?: ReadonlySet<string>
 }) {
   const pool = useMemo(() => {
+    if (step.domain === 'languages') {
+      const options = step.optionPool?.length
+        ? step.optionPool
+        : [...new Set(languages.map((language) => language.name))].sort()
+      return [
+        ...options.filter((name) => !isCommonLanguage(name)),
+        ...selected.filter(isCommonLanguage),
+      ]
+    }
     if (step.optionPool && step.optionPool.length > 0) return step.optionPool
     if (step.domain === 'skills') return [...skillNames]
-    if (step.domain === 'languages') {
-      return [...new Set(languages.map((l) => l.name))].sort()
-    }
     return []
-  }, [step.domain, step.optionPool, languages, skillNames])
+  }, [step.domain, step.optionPool, languages, selected, skillNames])
 
   return (
     <div className="space-y-3">

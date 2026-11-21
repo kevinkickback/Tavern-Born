@@ -6,6 +6,7 @@ import {
   decodeFavoredEnemyChoiceId,
   getFavoredEnemyChoiceId,
 } from '@/lib/5etools/favoredEnemyIdentity'
+import { formatProficiencyLabel } from '@/lib/displayLabels'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassChoiceSelection } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
@@ -46,12 +47,15 @@ export function scopeFavoredEnemyOptions(
       : o,
   )
 }
-export function describeFavoredEnemyLanguage(selection: CharacterClassChoiceSelection) {
+export function describeFavoredEnemyLanguage(
+  selection: CharacterClassChoiceSelection,
+  available = true,
+) {
   const l = selection.favoredEnemy?.language
   return l?.kind === 'none'
     ? 'No spoken language (campaign-confirmed)'
     : l?.kind === 'spoken'
-      ? 'Language: ' + l.name + ' (campaign-confirmed)'
+      ? `Language: ${formatProficiencyLabel(l.name)} (campaign-confirmed${available ? '' : '; unavailable'})`
       : 'Language: pending campaign confirmation'
 }
 export function getFavoredEnemySelectionStates(
@@ -86,13 +90,7 @@ export function getFavoredEnemySelectionStates(
             availability: 'retained' as const,
             entries: [],
           }))
-      const language = selection.favoredEnemy?.language
-      const suffix =
-        language?.kind === 'none'
-          ? 'No spoken language (campaign-confirmed)'
-          : language?.kind === 'spoken'
-            ? `Language: ${language.name} (campaign-confirmed${languageAvailable ? '' : '; unavailable'})`
-            : 'Language: pending campaign confirmation'
+      const suffix = describeFavoredEnemyLanguage(selection, languageAvailable)
       const details = selection.selected.map((s) => ({
         name: s.name,
         available: complete,

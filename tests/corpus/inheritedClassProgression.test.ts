@@ -428,6 +428,38 @@ describe.runIf(available)('configured inherited class progression', () => {
     return createCharacterSheetViewModel(character, primary, primary)
   }
 
+  test('WoW Hunter offers additional languages and capitalizes saved picks on the PDF', async () => {
+    const hunter = reachLevel(start('Hunter'), 2)
+    const choice = classChoices(hunter).find((row) => row.proficiencyDomain === 'languages')!
+    expect(choice.owner).toMatchObject({ name: 'Hunter', source: 'WoW', featureSource: 'XPHB' })
+    const options = resolveClassChoiceOptions(
+      choice,
+      createClassChoiceCatalogs(catalogs),
+      [],
+      2,
+      hunter,
+    )
+    expect(options.map((row) => row.reference.name)).toEqual(
+      expect.arrayContaining(['Elvish', 'Dwarvish']),
+    )
+    expect(options.some((row) => row.reference.name === 'Common')).toBe(false)
+    const saved = selectOptions(
+      hunter,
+      choice.label,
+      getProficiencyOption('languages', 'Elvish'),
+      getProficiencyOption('languages', 'Dwarvish'),
+    )
+    expect(saved.proficiencies.languages).toEqual(expect.arrayContaining(['elvish', 'dwarvish']))
+    const before = JSON.stringify(saved)
+    const pdf = await PDFDocument.load(
+      await generateTestCharacterSheet(followupSheet(saved), '2024-official'),
+    )
+    const printed = pdf.getForm().getTextField('Text_91').getText()
+    expect(printed).toContain('Elvish')
+    expect(printed).toContain('Dwarvish')
+    expect(JSON.stringify(saved)).toBe(before)
+  }, 30_000)
+
   test('WoW Rogue learns Cant and can save a separate language under its copied owner', () => {
     const rogue = start('Rogue')
     const native = start('Rogue', 'XPHB')

@@ -22,6 +22,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, ClassFeature, Creature5e, Feat5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { selectBonusSpellFixture } from '../fixtures/bonusSpellSelection'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
@@ -888,9 +889,12 @@ describe('CharacterSheetPage', () => {
     ).toBe('true')
   }, 15_000)
 
-  test('remembers description settings and invalidates the preview without changing the character', async () => {
+  test('remembers presentation settings and invalidates the preview without changing the character', async () => {
     const user = userEvent.setup()
-    const before = useCharacterStore.getState().activeCharacter
+    const initial = makeCharacterFixture()
+    const spell = selectBonusSpellFixture(initial, 'Bless|PHB', 'spell')
+    const before = { ...initial, ...spell.characterPatch, provenance: spell.provenanceUpdate }
+    useCharacterStore.setState({ activeCharacter: before })
     const first = renderPage()
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
@@ -901,6 +905,8 @@ describe('CharacterSheetPage', () => {
       'Shorten with ellipsis',
     )
     screen.getByRole('combobox', { name: 'Long text & extra entries' }).focus()
+    await user.keyboard('{Enter}{End}{Enter}')
+    screen.getByRole('combobox', { name: 'Spell layout' }).focus()
     await user.keyboard('{Enter}{End}{Enter}')
     await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByText('PDF preview')).toBeNull()
@@ -913,6 +919,9 @@ describe('CharacterSheetPage', () => {
     expect(screen.getByRole('combobox', { name: 'Long text & extra entries' }).textContent).toBe(
       'Continue in notes',
     )
+    expect(screen.getByRole('combobox', { name: 'Spell layout' }).textContent).toBe(
+      'Combined spell page',
+    )
     await user.click(screen.getByRole('button', { name: 'Done' }))
     await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
     await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
@@ -920,6 +929,7 @@ describe('CharacterSheetPage', () => {
       descriptions: 'names',
       overflow: 'notes',
       images: 'color',
+      spellLayout: 'combined',
     })
     expect(useCharacterStore.getState().activeCharacter).toBe(before)
   })

@@ -307,6 +307,7 @@ export function getPdfExportPreflight(
   truncatedFields: readonly string[] = [],
   pageChoices: CharacterSheetPageOptions = {},
   report?: SheetExportReport,
+  plannedSpellContent = viewModel,
 ): ExportPreflightResult {
   const spellsOmitted = getOptionalCharacterSheetPages(viewModel, templateId, pageChoices).some(
     (page) => page.id === 'spells' && !page.included,
@@ -336,7 +337,7 @@ export function getPdfExportPreflight(
   const issues = [
     ...readinessIssues,
     ...unsupportedIssues,
-    ...getCapacityIssues(templateId, viewModel, pageChoices).filter((issue) => {
+    ...getCapacityIssues(templateId, plannedSpellContent, pageChoices).filter((issue) => {
       if (!report) return true
       if (issue.id === 'capacity:companions') return false
       if (issue.id.startsWith('text-limit:') || issue.id.startsWith('capacity:spells-level-'))
@@ -362,7 +363,7 @@ export function getPdfExportPreflight(
   )
   const hasPactPage =
     getCharacterSheetTemplate(templateId).edition === '2014' &&
-    getOfficial2014SpellPages(viewModel).some(
+    getOfficial2014SpellPages(plannedSpellContent).some(
       (page) => page.detail?.classDetail?.casterProgression === 'pact',
     )
   if (

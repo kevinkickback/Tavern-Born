@@ -1,14 +1,17 @@
+import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import type { CharacterAction } from '@/types/actions'
 import { CHARACTER_SHEET_CAPACITIES } from './characterSheetCapacities'
+import { paginateOfficial2014SpellPages } from './characterSheetMapping2014Official'
 import { getOptionalCharacterSheetPages } from './characterSheetPages'
 import { getCharacterSheetTemplate } from './characterSheetTemplates'
-import type { CharacterSheetViewModel } from './characterSheetViewModel'
+import type { CharacterSheetSpellRow, CharacterSheetViewModel } from './characterSheetViewModel'
 import { formatSheetResource } from './classResourceSheetRules'
 import type {
   CharacterSheetPageOptions,
   CharacterSheetTemplateId,
   SheetContentChoices,
   SheetOverflowSection,
+  SheetPresentationOptions,
 } from './types'
 
 export interface SheetContentGroup {
@@ -51,13 +54,44 @@ const actionText = (action: CharacterAction) =>
     .filter(Boolean)
     .join('; ')
 
+const spellLevel = (row: CharacterSheetSpellRow) =>
+  row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`
+
+const spellStatus = (row: CharacterSheetSpellRow) =>
+  row.prepared ? 'Ready' : row.castOnly ? 'Feature cast' : 'Unprepared'
+
+function formatSheetSpellOverflow(row: CharacterSheetSpellRow) {
+  return [
+    row.name,
+    spellLevel(row),
+    spellStatus(row),
+    row.castingTimeAndDuration,
+    row.notes,
+    row.concentration ? 'Concentration' : '',
+    row.ritual ? 'Ritual' : '',
+  ]
+    .filter(Boolean)
+    .join('; ')
+}
+
+export function isCombinedSpellOverflow(id: string) {
+  return id.startsWith('combined-spells:') || id === 'unsupported:pact-slots'
+}
+
 export function planSheetContent(
   vm: CharacterSheetViewModel,
   templateId: CharacterSheetTemplateId,
   choices: SheetContentChoices = {},
   pages: CharacterSheetPageOptions = {},
+  spellLayout?: SheetPresentationOptions['spellLayout'],
 ) {
   const template = getCharacterSheetTemplate(templateId)
+  const combined = spellLayout === 'combined'
+  const spellcastingSources = combined
+    ? [...vm.spellcastingSources].sort(
+        (a, b) => (b.classDetail?.classLevel ?? 0) - (a.classDetail?.classLevel ?? 0),
+      )
+    : vm.spellcastingSources
   const mpmb = template.id === '2014-custom'
   const capacity =
     CHARACTER_SHEET_CAPACITIES[
@@ -124,6 +158,21 @@ export function planSheetContent(
   const spellRows = [...vm.spellRows].sort(
     (a, b) => Number(b.prepared || b.castOnly) - Number(a.prepared || a.castOnly),
   )
+  if (combined) {
+    const names = new Set<string>()
+    const duplicateNames = new Set<string>()
+    for (const row of spellRows) {
+      const name = getSpellNameKey(row.name)
+      if (names.has(name)) duplicateNames.add(name)
+      names.add(name)
+    }
+    for (const [index, row] of spellRows.entries()) {
+      const source = row.id && parseSpellReference(row.id).source
+      if (source && duplicateNames.has(getSpellNameKey(row.name))) {
+        spellRows[index] = { ...row, name: `${row.name} (${source.toUpperCase()})` }
+      }
+    }
+  }
   const selectedSpells = select(
     'spells',
     'Spells',
@@ -132,20 +181,11 @@ export function planSheetContent(
     (row, index) => ({
       id: row.id ?? `${row.name}:${index}`,
       name: row.name,
-      detail: `${row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`} · ${row.prepared ? 'Ready' : row.castOnly ? 'Feature cast' : 'Unprepared'}${row.ritual ? ' · Ritual' : ''}`,
-      text: [
-        row.name,
-        row.level === 'C' ? 'Cantrip' : `Level ${row.level || '?'}`,
-        row.prepared ? 'Ready' : row.castOnly ? 'Feature cast' : 'Unprepared',
-        row.castingTimeAndDuration,
-        row.notes,
-        row.concentration ? 'Concentration' : '',
-        row.ritual ? 'Ritual' : '',
-      ]
-        .filter(Boolean)
-        .join('; '),
+      detail: `${spellLevel(row)} · ${spellStatus(row)}${row.ritual ? ' · Ritual' : ''}`,
+      text: formatSheetSpellOverflow(row),
     }),
     (row) =>
+      combined ||
       template.edition === '2014' ||
       row.prepared ||
       row.castOnly ||
@@ -217,9 +257,12 @@ export function planSheetContent(
     )
   }
   const automaticSpells = groups.find((group) => group.id === 'spells')?.automatic
-  const spellPages = vm.spellcastingPages.length
-    ? vm.spellcastingPages
-    : [{ detail: undefined, spellRows: vm.spellRows }]
+  const spellOverflow = overflow.find((section) => section.id === 'content:spells')
+  if (combined && automaticSpells && spellOverflow) spellOverflow.id = 'combined-spells:capacity'
+  const spellPages =
+    !combined && vm.spellcastingPages.length
+      ? vm.spellcastingPages
+      : [{ detail: undefined, spellRows: combined ? spellRows : vm.spellRows }]
   for (const page of spellPages) {
     const unknown = page.spellRows.filter(
       (row) =>
@@ -241,11 +284,11 @@ export function planSheetContent(
       })
   }
   const castingLimit = template.edition === '2024' ? 1 : mpmb ? 2 : Infinity
-  if (vm.spellcastingSources.length > castingLimit)
+  if (spellcastingSources.length > castingLimit)
     overflow.push({
       id: 'capacity:spellcasting-profiles',
       title: 'Additional spellcasting abilities',
-      text: vm.spellcastingSources
+      text: spellcastingSources
         .slice(castingLimit)
         .map(
           (detail) =>
@@ -264,12 +307,20 @@ export function planSheetContent(
           .map((item) => item.name)
           .join('\n'),
       })
-    const pact = Object.entries(vm.spellSlots.mergedPactWithUsage).filter(([, slot]) => slot?.max)
-    if (pact.length)
+  }
+  if (combined || template.edition === '2024') {
+    const printsPact =
+      template.edition === '2014' &&
+      spellcastingSources[0]?.classDetail?.casterProgression === 'pact'
+    const hiddenSlots = Object.entries(
+      printsPact ? vm.spellSlots.mergedSharedWithUsage : vm.spellSlots.mergedPactWithUsage,
+    ).filter(([, slot]) => slot?.max)
+    if (hiddenSlots.length)
       overflow.push({
-        id: 'unsupported:pact-slots',
-        title: 'Pact Magic slots',
-        text: pact
+        id: printsPact ? 'combined-spells:slots' : 'unsupported:pact-slots',
+        ...(combined && { groupId: 'spells' }),
+        title: printsPact ? 'Spellcasting slots' : 'Pact Magic slots',
+        text: hiddenSlots
           .map(([level, slot]) => `Level ${level}: ${slot?.max} total; ${slot?.used} expended`)
           .join('\n'),
       })
@@ -298,6 +349,25 @@ export function planSheetContent(
   const spellsOmitted = getOptionalCharacterSheetPages(vm, templateId, pages).some(
     (page) => page.id === 'spells' && !page.included,
   )
+  let printableSpells = selectedSpells
+  if (combined && template.edition === '2014' && !spellsOmitted) {
+    const [first, ...remaining] = paginateOfficial2014SpellPages({
+      ...vm,
+      spellcastingSources,
+      spellcastingPages: [],
+      spellRows: selectedSpells,
+    })
+    printableSpells = first.spellRows
+    if (remaining.length)
+      overflow.push({
+        id: 'combined-spells:capacity',
+        groupId: 'spells',
+        title: 'Additional spells',
+        text: remaining
+          .flatMap((page) => page.spellRows.map(formatSheetSpellOverflow))
+          .join('\n\n'),
+      })
+  }
   return {
     groups: groups.filter((group) => group.entries.length > 0),
     overflow: spellsOmitted
@@ -313,9 +383,11 @@ export function planSheetContent(
       feats,
       magicItems,
       equipmentForSheet: equipment,
-      spellRows: selectedSpells,
-      spellRowsForSheet: selectedSpells,
-      spellcastingPages: vm.spellcastingPages.map((page) => ({
+      spellRows: printableSpells,
+      spellRowsForSheet: printableSpells,
+      markUnpreparedSpells: combined,
+      spellcastingSources,
+      spellcastingPages: (combined ? [] : vm.spellcastingPages).map((page) => ({
         ...page,
         spellRows: page.spellRows
           .filter((row) => selectedSpellIds.has(row.id ?? row.name))

@@ -274,6 +274,9 @@ export function mapCharacterSheet2024(
     textFields[`Text_${182 + index}`] = row
       ? compactSpellText(
           [
+            viewModel.markUnpreparedSpells && row.level !== 'C' && !row.prepared && !row.castOnly
+              ? 'Unprepared'
+              : '',
             variant === 'official'
               ? [row.duration, row.components].filter(Boolean).join('; ')
               : [row.range, row.components].filter(Boolean).join('; '),

@@ -12,6 +12,7 @@ import {
 } from '@/lib/5etools/ownedClassProficiencyRules'
 import { ABILITY_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
+import { isCommonLanguage } from '@/lib/calculations/languageOrigin'
 import type { Character, CharacterClassChoiceOption } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { getClassChoiceOptionKey } from './classChoiceIdentity'
@@ -192,7 +193,12 @@ export function resolveClassProficiencyOptions(
         !domain.languagePool.includes(name)
       )
         continue
-      if (optionDomain === 'languages' && known.has(name) && !alreadySelected) continue
+      if (
+        optionDomain === 'languages' &&
+        !alreadySelected &&
+        (known.has(name) || isCommonLanguage(name))
+      )
+        continue
       if (
         optionDomain === 'languages' &&
         domain?.languageSources &&

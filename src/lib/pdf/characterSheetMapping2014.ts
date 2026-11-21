@@ -183,7 +183,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     viewModel.additionalMovementSummary === '—'
       ? ''
       : `Additional movement: ${viewModel.additionalMovementSummary}`
-  const languages = character.proficiencies.languages
+  const languages = viewModel.languageLabels
   const tools = character.proficiencies.tools
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
   const weaponsLower = character.proficiencies.weapons.map((weapon) => weapon.toLowerCase())

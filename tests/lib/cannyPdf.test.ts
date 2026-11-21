@@ -124,7 +124,7 @@ test.each(
     modifier >= 0 ? `+${modifier}` : String(modifier),
   )
   const printed = form.getTextField(languageField).getText() ?? ''
-  if (available) expect(printed.toLowerCase()).toContain('elvish')
-  else expect(printed.toLowerCase()).not.toContain('elvish')
+  if (available) expect(printed).toContain('Elvish')
+  else expect(printed).not.toMatch(/elvish/i)
   expect(JSON.stringify(saved)).toBe(before)
 })

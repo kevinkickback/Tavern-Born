@@ -25,6 +25,7 @@ import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
+import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import {
@@ -358,7 +359,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
     expect(character).toEqual(before)
   })
 
-  test('fresh characters derive slots and mixed casters keep Pact Magic separate', () => {
+  test('fresh characters derive slots and mixed casters keep Pact Magic separate', async () => {
     const character = createEmptyCharacter({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
     })
@@ -382,6 +383,23 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         detail: expect.stringContaining('2 total, 1 expended'),
       }),
     )
+    for (const template of ['2014-official', '2024-official'] as const) {
+      const planned = planSheetContent(vm, template, {}, {}, 'combined').viewModel
+      await generateTestCharacterSheet(vm, template, {
+        text: { spellLayout: 'combined' },
+        onReport: (report) => {
+          expect(report.preserved).toContainEqual(
+            expect.objectContaining({
+              id: 'unsupported:pact-slots',
+              text: 'Level 2: 2 total; 1 expended',
+            }),
+          )
+          expect(
+            getPdfExportPreflight(template, vm, null, [], {}, [], {}, report, planned).issues,
+          ).not.toContainEqual(expect.objectContaining({ id: 'unsupported:pact-slots' }))
+        },
+      })
+    }
   })
 
   test('maps distinct printing rows and preparation flags and warns per level', () => {
