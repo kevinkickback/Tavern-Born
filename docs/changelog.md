@@ -1,4 +1,18 @@
 <details>
+<summary><strong>v0.7.1</strong></summary>
+
+## ✨ Changes
+
+- Customize PDF can combine spells from all sources into one 5e spell page or one 5.5e spell list. Your highest-level spellcasting class sets the save DC and attack bonus. Extra spells go to Notes when enabled.
+- Clarified the options for rules text, long text, and images in Customize PDF.
+- Character cards now show both the D&D edition and year, such as 5e (2014) or 5.5e (2024).
+- Added an Open character sheet button to Review when your character is ready.
+- Removed Common from new bonus language choices and fixed inconsistent capitalization of language names in PDFs and Favored Enemy summaries.
+- Item groups now link to individual items and their rules during character creation and on the Equipment page.
+
+</details>
+
+<details>
 <summary><strong>v0.7.0</strong></summary>
 
 ## ✨ Changes
