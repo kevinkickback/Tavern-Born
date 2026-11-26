@@ -15,6 +15,8 @@ import {
   shell,
 } from 'electron'
 import type { CatalogRequestMessage } from '@/lib/5etools/catalogProtocol'
+import { getReleaseHistory } from '@/lib/changelog'
+import changelogMarkdown from '../docs/changelog.md?raw'
 import {
   assertBundledManifestAllowed,
   type BundledSrdManifestSummary,
@@ -31,7 +33,6 @@ import {
   cancelDownload,
   checkForUpdate,
   downloadUpdate,
-  fetchChangelog,
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
@@ -577,11 +578,9 @@ async function initializeDesktop(): Promise<void> {
     return app.getVersion()
   })
 
-  ipcMain.handle('update:get-current-changelog', async (event) => {
+  ipcMain.handle('update:get-release-history', (event) => {
     assertTrustedIpcSender(event)
-    const version = app.getVersion()
-    const changelog = await fetchChangelog(version)
-    return { version, changelog }
+    return getReleaseHistory(changelogMarkdown, app.getVersion())
   })
 
   desktopState = 'ready'

@@ -105,6 +105,10 @@ updater hands off the quit. Packaged update tests verify the platform installer 
 Scheduled failures stay quiet; manual checks report connection errors. Release creation follows the
 separately authorized [release workflow](../.github/workflows/release.yml).
 
+The desktop bundle includes the [changelog](changelog.md). Settings reads the installed version
+and older notes over local IPC. Release validation uses the same section parser. Update offers
+look up the incoming release's notes on GitHub.
+
 ## Dependency guardrails
 
 The dependency-cruiser configuration enforces broad layer boundaries; `knip` catches unused public

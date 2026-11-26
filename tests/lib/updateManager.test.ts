@@ -348,6 +348,10 @@ describe('update event lifecycle', () => {
 
     await updaterHandler('update-available')({ version: '2.1.0' } as never)
 
+    expect(netFetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/kevinkickback/Tavern-Born/releases/tags/v2.1.0',
+      expect.anything(),
+    )
     expect(getUpdateStatus()).toEqual({
       status: 'available',
       version: '2.1.0',

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { Section } from '@/components/workspace'
+import type { ChangelogEntry } from '@/lib/changelog'
 import { resetAllHints } from '@/lib/storage/hints'
 import { useAppPreferencesHydrated, useAppPreferencesStore } from '@/store/appPreferencesStore'
 
@@ -32,12 +33,20 @@ export function GeneralPanel() {
   const [checking, setChecking] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [currentChangelogOpen, setCurrentChangelogOpen] = useState(false)
-  const [currentChangelog, setCurrentChangelog] = useState<string | null>(null)
-  const [currentChangelogLoading, setCurrentChangelogLoading] = useState(false)
+  const [releaseHistory, setReleaseHistory] = useState<ChangelogEntry[]>()
 
   useEffect(() => {
     void window.electronAPI?.getAppVersion().then(setAppVersion)
   }, [])
+
+  async function openReleaseHistory() {
+    setCurrentChangelogOpen(true)
+    try {
+      setReleaseHistory(await window.electronAPI.getReleaseHistory())
+    } catch {
+      setReleaseHistory([])
+    }
+  }
 
   function handleResetHints() {
     resetAllHints()
@@ -112,15 +121,6 @@ export function GeneralPanel() {
     }
   }, [])
 
-  const handleViewChangelog = useCallback(async () => {
-    if (!window.electronAPI) return
-    setCurrentChangelogLoading(true)
-    setCurrentChangelogOpen(true)
-    const result = await window.electronAPI.getCurrentChangelog()
-    setCurrentChangelog(result.changelog)
-    setCurrentChangelogLoading(false)
-  }, [])
-
   return (
     <div>
       <Section
@@ -183,15 +183,10 @@ export function GeneralPanel() {
               <div>
                 <p className="text-sm font-medium">What's New?</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Browse release notes for the current version.
+                  Browse release notes for this version and earlier versions.
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleViewChangelog}
-                className="shrink-0"
-              >
+              <Button variant="outline" size="sm" onClick={openReleaseHistory} className="shrink-0">
                 <Newspaper weight="duotone" />
                 {`Changelog (v${appVersion})`}
               </Button>
@@ -222,8 +217,7 @@ export function GeneralPanel() {
         open={currentChangelogOpen}
         onOpenChange={setCurrentChangelogOpen}
         version={appVersion}
-        changelog={currentChangelog}
-        loading={currentChangelogLoading}
+        releases={releaseHistory}
       />
     </div>
   )

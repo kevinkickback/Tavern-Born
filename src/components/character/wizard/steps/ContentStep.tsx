@@ -134,18 +134,17 @@ export function ContentStep({
   return (
     <section className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-2 max-lg:gap-1.5">
       {renderIntro ? renderIntro(count, presets) : presets}
-      {isBundledSrd ? (
-        <div className="px-5 py-6 text-center">
-          <p className="text-sm font-semibold">Using the included SRD</p>
-          <p className="mx-auto mt-1 max-w-lg text-sm text-muted-foreground">
-            The included SRD does not provide additional sourcebooks to enable. To add more options,
-            open Settings → Game Data and add compatible 5etools data.
-          </p>
+      {isBundledSrd || displaySources.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4 text-center">
+          <div className="my-auto">
+            {isBundledSrd && <p className="mb-1 text-sm font-semibold">Using the included SRD</p>}
+            <p className="mx-auto max-w-lg text-sm text-muted-foreground">
+              {isBundledSrd
+                ? 'The included SRD does not provide additional sourcebooks to enable. To add more options, open Settings → Game Data and add compatible 5etools data.'
+                : 'No additional content is available. To add sourcebooks, open Settings → Game Data.'}
+            </p>
+          </div>
         </div>
-      ) : displaySources.length === 0 ? (
-        <p className="py-4 text-sm text-muted-foreground">
-          No additional content is available. To add sourcebooks, open Settings → Game Data.
-        </p>
       ) : (
         <>
           <SourcebookBrowser

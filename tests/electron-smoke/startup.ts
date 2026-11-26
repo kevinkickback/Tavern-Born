@@ -37,6 +37,16 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     expect(runtime.rendererProcessType).toBe('undefined')
     expect(runtime.rendererRequireType).toBe('undefined')
 
+    await page.context().setOffline(true)
+    try {
+      const releases = await page.evaluate(() => window.electronAPI.getReleaseHistory())
+      expect(releases[0]).toMatchObject({ version: runtime.version })
+      expect(releases[0].notes).toContain('##')
+      expect(releases.length).toBeGreaterThan(1)
+    } finally {
+      await page.context().setOffline(false)
+    }
+
     await page.evaluate(() => sessionStorage.setItem('electron-smoke-reload', 'preserved'))
     const trustedReload = page.waitForEvent('framenavigated', {
       predicate: (frame) => frame === page.mainFrame(),

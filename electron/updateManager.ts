@@ -160,7 +160,7 @@ function setOfflineStatus(): UpdateStatus {
   return setErrorStatus('No internet connection. Check your connection and try again.')
 }
 
-export async function fetchChangelog(version: string): Promise<string | null> {
+async function fetchChangelog(version: string): Promise<string | null> {
   const tag = `v${version}`
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/${tag}`
 
