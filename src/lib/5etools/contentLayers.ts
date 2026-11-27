@@ -746,12 +746,7 @@ export async function loadGameDataSourceStack(
 
 function describeDependencyOwner(owner: string): string {
   const separator = owner.indexOf('/', owner.indexOf('|') + 1)
-  const parent = separator < 0 ? owner : owner.slice(0, separator)
-  const [name, source] = parent.split('|')
-  const classLabel =
-    source === 'PHB' || source === 'XPHB'
-      ? `${name} (${source === 'PHB' ? '2014' : '2024'})`
-      : describeCatalogReference(parent)
+  const classLabel = describeCatalogReference(separator < 0 ? owner : owner.slice(0, separator))
   return separator < 0
     ? classLabel
     : `${describeCatalogReference(owner.slice(separator + 1))} for ${classLabel}`

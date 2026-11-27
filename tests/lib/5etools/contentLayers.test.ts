@@ -784,7 +784,7 @@ describe('game-data content layers', () => {
   })
 
   test('groups missing choices by subclass printing and shows each reference once per owner', () => {
-    const classes = ['PHB', 'XPHB'].map((source) =>
+    const classes = ['PHB', 'XPHB', 'FutureRules'].map((source) =>
       makeClassFixture({
         name: 'Fighter',
         source,
@@ -838,12 +838,13 @@ describe('game-data content layers', () => {
       expect.objectContaining({
         message: 'Some class rules are missing required content. Include it and check again.',
         details: [
-          'Rune Knight (TCE) for Fighter (2014) needs Cloud Rune (TCE), Fire Rune (TCE)',
-          'Rune Knight (TCE) for Fighter (2024) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (PHB) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (XPHB) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (FutureRules) needs Cloud Rune (TCE), Fire Rune (TCE)',
         ],
       }),
     )
-    expect(onFailure).toHaveBeenCalledTimes(6)
+    expect(onFailure).toHaveBeenCalledTimes(9)
   })
 
   test('resolves nested subclass-choice features in dependency audits', () => {
