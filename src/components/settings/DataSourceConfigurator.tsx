@@ -59,14 +59,12 @@ function discardFolder(root: string | null) {
 function CheckDetails({
   lines,
   title = 'Show details',
-  expanded,
 }: {
   lines?: readonly string[]
   title?: string
-  expanded?: boolean
 }) {
   return lines?.length ? (
-    <details className="text-sm" open={expanded}>
+    <details className="text-sm">
       <summary className="cursor-pointer">{title}</summary>
       <ul className="mt-1 max-h-48 list-disc overflow-auto break-words pl-5">
         {[...new Set(lines)].map((line) => (
@@ -201,11 +199,11 @@ export function DataSourceConfigurator({
     const requestId = ++validationRequestRef.current
     releaseCatalogCandidate(validationCandidate.current)
     validationCandidate.current = undefined
+    setValidationResult(null)
 
     if (!path) {
       setValidationStatus('idle')
       setIsValidating(false)
-      setValidationResult(null)
       return
     }
 
@@ -592,7 +590,7 @@ export function DataSourceConfigurator({
               <div aria-live="polite">
                 {validationStatus === 'validating' && <p>Checking compatibility...</p>}
                 {partial ? (
-                  <p>Will import {partial.included.join(', ')}.</p>
+                  <p className="text-success">Will import {partial.included.join(', ')}.</p>
                 ) : (
                   validationStatus === 'valid' && (
                     <p className="text-success">
@@ -611,6 +609,9 @@ export function DataSourceConfigurator({
                       'Some optional content is unavailable. You can still add this source.'}
                   </p>
                 )}
+                {partial && (
+                  <p className="text-sm text-destructive">Some content has been skipped.</p>
+                )}
               </div>
               <CheckDetails
                 lines={
@@ -618,7 +619,7 @@ export function DataSourceConfigurator({
                   (dependencyWarning ? checkWarnings.slice(1) : checkWarnings)
                 }
               />
-              <CheckDetails lines={partial?.skipped} title="Skipped content" expanded />
+              <CheckDetails lines={partial?.skipped} title="Skipped content" />
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />

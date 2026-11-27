@@ -106,8 +106,16 @@ describe('data source switching', () => {
       'https://example.test/rules',
     )
     const action = await screen.findByRole('button', { name: 'Import working content' })
-    expect(screen.getByText('Will import 1 class, 2 spells.')).toBeTruthy()
-    expect(screen.getByText(skipped).closest('details')?.open).toBe(true)
+    expect(
+      screen.getByText('Will import 1 class, 2 spells.').classList.contains('text-success'),
+    ).toBe(true)
+    expect(
+      screen.getByText('Some content has been skipped.').classList.contains('text-destructive'),
+    ).toBe(true)
+    const skippedSummary = screen.getByText('Skipped content', { selector: 'summary' })
+    expect(screen.getByText(skipped).closest('details')?.open).toBe(false)
+    await user.click(skippedSummary)
+    expect(skippedSummary.closest('details')?.open).toBe(true)
     expect(apply).not.toHaveBeenCalled()
     await user.click(action)
     expect(apply).toHaveBeenCalledWith(
@@ -118,6 +126,37 @@ describe('data source switching', () => {
         prepared: expect.objectContaining({ partialImport: expect.anything() }),
       }),
     )
+  })
+
+  test('clears an incompatible folder result while checking another folder', async () => {
+    const user = userEvent.setup()
+    const previousError = 'No compatible game data files were found at this location.'
+    let finishCheck!: () => void
+    const inProgress = new Promise<void>((resolve) => {
+      finishCheck = resolve
+    })
+    prepareCatalogMock
+      .mockRejectedValueOnce(new Error(previousError))
+      .mockImplementationOnce(async () => {
+        await inProgress
+        throw new Error('The second folder check finished.')
+      })
+    const selectFolder = vi
+      .fn()
+      .mockResolvedValueOnce('/incompatible')
+      .mockResolvedValueOnce('/next')
+    vi.stubGlobal('electronAPI', { selectFolder })
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.click(screen.getByRole('tab', { name: 'This Computer' }))
+    const select = screen.getByRole('button', { name: 'Select Folder' })
+    await user.click(select)
+    expect(await screen.findByText(previousError)).toBeTruthy()
+    await user.click(select)
+    expect(await screen.findByText('Checking compatibility...')).toBeTruthy()
+    expect(screen.queryByText(previousError)).toBeNull()
+    await act(async () => finishCheck())
+    expect(await screen.findByText('The second folder check finished.')).toBeTruthy()
+    expect(screen.queryByText('Checking compatibility...')).toBeNull()
   })
 
   test('ignores and releases a folder selected after switching away from the local tab', async () => {
