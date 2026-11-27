@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdir, rename, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
 
 const source = 'https://catalog-refresh.example.test/rules'
@@ -70,6 +71,45 @@ function launchCatalogApp(userDataDirectory: string) {
     env: environment,
   })
 }
+
+test('reports a moved local folder and keeps the accepted catalog', async ({
+  browserName: _browserName,
+}, testInfo) => {
+  test.setTimeout(60_000)
+  const root = testInfo.outputPath('rules')
+  await mkdir(root, { recursive: true })
+  await writeFile(
+    join(root, 'feats.json'),
+    JSON.stringify({ feat: [{ name: 'Local Feat', source: 'TEST' }] }),
+  )
+  const app = await launchCatalogApp(testInfo.outputPath('user-data'))
+  try {
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
+    }, root)
+    const page = await app.firstWindow()
+    await page.getByRole('button', { name: 'Get Started' }).click({ timeout: 30_000 })
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('link', { name: 'Game Data', exact: true }).click()
+    await page.getByRole('button', { name: 'Add Additional Content' }).click()
+    await page.getByRole('tab', { name: 'This Computer' }).click()
+    await page.getByRole('button', { name: 'Select Folder' }).click()
+    await expect(page.getByText('Found 1 feat.')).toBeVisible()
+    await page.getByRole('button', { name: 'Add Additional Content' }).click()
+    await expect(page.getByTestId('game-data-status')).toHaveText('Additional Content Loaded')
+    const accepted = await catalogStamp(page)
+
+    await rename(root, testInfo.outputPath('moved-rules'))
+    await page.getByRole('button', { name: 'Check for Updates' }).click()
+    await expect(
+      page.getByText('The selected data folder is unavailable.', { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Apply game data update' })).toHaveCount(0)
+    expect(await catalogStamp(page)).toEqual(accepted)
+  } finally {
+    await app.close()
+  }
+})
 
 test('imports verified working content and keeps it when a strict refresh fails', async ({
   browserName: _browserName,

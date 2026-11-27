@@ -1,6 +1,6 @@
 import type { ZodType } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
-import { CatalogCheckError } from './catalogCheckError'
+import { CatalogCheckError, LOCAL_DATA_FOLDER_UNAVAILABLE } from './catalogCheckError'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import { isMissingCatalogResource, type JsonResourceReader } from './resourceReader'
 import {
@@ -126,6 +126,7 @@ export async function inspectCatalogResources(
       if (isMissingCatalogResource(reader.type, error)) return { file, admitted: false }
       const optional =
         (presentation || file.optionalSupport) && !previouslyAvailable && !unknownPriorInventory
+      const folderUnavailable = reader.type === 'local' && detail === LOCAL_DATA_FOLDER_UNAVAILABLE
       return {
         file,
         admitted: false,
@@ -135,13 +136,16 @@ export async function inspectCatalogResources(
             detail,
           ),
         unavailable: true,
-        blocking: !optional,
+        folderUnavailable,
+        blocking: folderUnavailable || !optional,
       }
     }
   })
   const blocked = rows.filter((row) => row.blocking)
   if (blocked.length) {
     const details = rows.flatMap((row) => (row.warning ? [row.warning] : []))
+    if (blocked.some((row) => row.folderUnavailable))
+      throw new CatalogCheckError(LOCAL_DATA_FOLDER_UNAVAILABLE, details)
     const repeatedFetchFailure =
       reader.type === 'remote' && blocked.length > 1 && blocked.every((row) => row.fetchFailed)
     const message = repeatedFetchFailure

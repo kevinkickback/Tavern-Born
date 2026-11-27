@@ -1,5 +1,7 @@
 import type { Class5e, Subclass5e } from '@/types/5etools'
 
+export const LOCAL_DATA_FOLDER_UNAVAILABLE = 'The selected data folder is unavailable.'
+
 export class CatalogCheckError extends Error {
   constructor(
     message: string,

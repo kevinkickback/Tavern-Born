@@ -17,6 +17,7 @@ import {
   CatalogDependencyError,
   type CatalogDependencyFailure,
   describeCatalogReference,
+  LOCAL_DATA_FOLDER_UNAVAILABLE,
 } from './catalogCheckError'
 import { describeCatalogContents, listCatalogContents } from './catalogContents'
 import { createPartialCatalogReader } from './catalogPartialImport'
@@ -206,10 +207,12 @@ async function prepareCatalogSnapshot(
   const { config } = source
   const issues: string[] = []
   const copyFailures: CatalogDependencyFailure[] = []
+  let folderUnavailable = false
   let allRequiredFailuresIdentified = true
   const warnings = [...scan.warnings]
   const unavailable = [...scan.unavailable]
   const assertRequiredResources = () => {
+    if (folderUnavailable) throw new CatalogCheckError(LOCAL_DATA_FOLDER_UNAVAILABLE, issues)
     if (!issues.length) return
     const message = `Could not load required game data. ${issues[0]}`
     if (allRequiredFailuresIdentified && copyFailures.length)
@@ -225,6 +228,22 @@ async function prepareCatalogSnapshot(
   }
   let additional: GameData | undefined
   const layerMetadata: GameDataLayerCacheMetadataByRole = {}
+  const sourceReader = partial?.reader ?? scan.reader
+  const additionalReader: JsonResourceReader =
+    config.type === 'local'
+      ? {
+          type: 'local',
+          async readJson(path, readSignal) {
+            try {
+              return await sourceReader.readJson(path, readSignal)
+            } catch (error) {
+              if (error instanceof Error && error.message === LOCAL_DATA_FOLDER_UNAVAILABLE)
+                folderUnavailable = true
+              throw error
+            }
+          },
+        }
+      : sourceReader
   const options = {
     signal,
     strictCandidate: true,
@@ -270,7 +289,7 @@ async function prepareCatalogSnapshot(
           ...options,
           onOptionalDependency,
           baseReader,
-          additionalReader: partial?.reader ?? scan.reader,
+          additionalReader,
           onLayerLoaded: (role, data) => {
             assertRequiredResources()
             if (role === 'base' && !hasCatalogRecords(data))
@@ -283,7 +302,7 @@ async function prepareCatalogSnapshot(
           },
         },
       )
-    : loadDataFromSource(admitted, options, partial?.reader ?? scan.reader)
+    : loadDataFromSource(admitted, options, additionalReader)
   const loaded = await settleOnAbort(load, signal)
   assertRequiredResources()
   // Exact feature targets can live in a different indexed document in the same source.

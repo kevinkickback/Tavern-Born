@@ -149,3 +149,37 @@ test('a local unavailable folder or unreadable resource does not become a remova
   await rm(root, { recursive: true })
   await expect(check()).rejects.toThrow('The selected data folder is unavailable.')
 })
+
+test('reports the selected folder when it moves after the top-level inventory is read', async () => {
+  const { read } = localFixture()
+  const moved = `${root}-moved`
+  await mkdir(join(root, 'spells'))
+  await writeFile(join(root, 'spells/index.json'), JSON.stringify({ PHB: 'spells-phb.json' }))
+  await writeFile(
+    join(root, 'spells/spells-phb.json'),
+    JSON.stringify({
+      spell: [{ name: 'Test Spell', source: 'PHB', level: 1 }],
+    }),
+  )
+  let folderMoved = false
+  const readAfterMove: ReadSourceJson = async (request, signal) => {
+    if (request.kind === 'local' && request.path === join(root, 'spells/spells-phb.json')) {
+      await rename(root, moved)
+      folderMoved = true
+    }
+    return read(request, signal)
+  }
+  try {
+    await expect(
+      prepareCatalog(
+        { type: 'local', path: root, isValid: true },
+        undefined,
+        signal(),
+        undefined,
+        readAfterMove,
+      ),
+    ).rejects.toMatchObject({ message: 'The selected data folder is unavailable.' })
+  } finally {
+    if (folderMoved) await rename(moved, root)
+  }
+})
