@@ -26,6 +26,7 @@
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
 import { getSkillAbility } from '@/lib/calculations/skillNames'
+import { CatalogCheckError } from './catalogCheckError'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
 type CopyKind =
@@ -44,7 +45,7 @@ export interface CopyResolutionDiagnostic {
   reason: string
 }
 
-export class CopyResolutionError extends Error {
+export class CopyResolutionError extends CatalogCheckError {
   constructor(
     readonly diagnostics: CopyResolutionDiagnostic[],
     context: string,
@@ -52,6 +53,7 @@ export class CopyResolutionError extends Error {
     const first = diagnostics[0]
     super(
       `Unable to resolve ${diagnostics.length} copied ${diagnostics.length === 1 ? 'record' : 'records'} ${context}. ${first.entity}: ${first.reason}`,
+      diagnostics.map(({ entity, reason }) => `${entity}: ${reason}`),
     )
     this.name = 'CopyResolutionError'
   }

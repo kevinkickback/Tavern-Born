@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { _electron as electron, expect, type Page, test } from '@playwright/test'
 
 const source = 'https://catalog-refresh.example.test/rules'
+const unreachable = 'https://catalog-offline.example.test/rules'
 const characterName = 'Saved Catalog Worker Hero'
 
 interface RefreshFixture {
@@ -83,7 +84,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     const page = await app.firstWindow()
     page.setDefaultTimeout(10_000)
     await app.evaluate(
-      ({ session }, { fixtureKey, source, original, updated }) => {
+      ({ session }, { fixtureKey, source, unreachable, original, updated }) => {
         let changed = false
         let release: () => void = () => {}
         let acknowledge: () => void = () => {}
@@ -102,6 +103,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
         }
         Object.assign(globalThis, { [fixtureKey]: fixture })
         session.defaultSession.protocol.handle('https', async (request) => {
+          if (request.url.startsWith(`${unreachable}/`)) return Response.error()
           const base = `${source}/data/`
           if (!request.url.startsWith(base)) return new Response(null, { status: 404 })
           const path = request.url.slice(base.length)
@@ -121,7 +123,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
           return new Response(null, { headers, status: 404 })
         })
       },
-      { fixtureKey, source, original, updated },
+      { fixtureKey, source, unreachable, original, updated },
     )
 
     await page.getByRole('button', { name: 'Get Started' }).click({ timeout: 30_000 })
@@ -170,8 +172,18 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await page.getByRole('button', { name: 'Settings' }).click()
     await page.getByRole('link', { name: 'Game Data', exact: true }).click()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
-    await page.getByLabel('Web Address').fill(source)
-    await expect(page.getByText('Compatible game data found')).toBeVisible()
+    const address = page.getByLabel('Web Address')
+    await address.fill(unreachable)
+    await expect(page.getByText(/Couldn’t check game data at this address/)).toBeVisible()
+    const failedFile = page.getByText('Could not read class/index.json — Failed to fetch')
+    await expect(failedFile).toBeHidden()
+    await page.getByText('Show details', { exact: true }).click()
+    await expect(failedFile).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add Additional Content' })).toBeDisabled()
+    await expect(status).toHaveText('SRD Content Only')
+    await address.fill(source)
+    await expect(page.getByText('Found 1 spell.')).toBeVisible()
+    await expect(page.getByText('Show details', { exact: true })).toBeHidden()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await expect(status).toHaveText('Additional Content Loaded', { timeout: 30_000 })
 

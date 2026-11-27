@@ -1,5 +1,6 @@
 import type { ZodType } from 'zod'
 import { mapWithConcurrency } from '@/lib/async'
+import { CatalogCheckError } from './catalogCheckError'
 import { COMPANION_FAMILY_BOOK, parseCompanionFamilySources } from './companionFamilySource'
 import { isMissingCatalogResource, type JsonResourceReader } from './resourceReader'
 import {
@@ -129,13 +130,28 @@ export async function inspectCatalogResources(
         file,
         admitted: false,
         warning: `Could not read ${file.name} — ${detail}`,
+        fetchFailed:
+          /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/i.test(
+            detail,
+          ),
         unavailable: true,
         blocking: !optional,
       }
     }
   })
-  const errors = rows.flatMap((row) => (row.blocking && row.warning ? [row.warning] : []))
-  if (errors.length) throw new Error(errors.join('; '))
+  const blocked = rows.filter((row) => row.blocking)
+  if (blocked.length) {
+    const details = rows.flatMap((row) => (row.warning ? [row.warning] : []))
+    const repeatedFetchFailure =
+      reader.type === 'remote' && blocked.length > 1 && blocked.every((row) => row.fetchFailed)
+    const message = repeatedFetchFailure
+      ? 'Couldn’t check game data at this address. Check the URL, your connection, and whether the server allows requests from Tavern Born.'
+      : blocked.length === 1 && blocked[0].warning
+        ? blocked[0].warning
+        : 'Some game data could not be checked.'
+    if (details.length === 1 && details[0] === message) throw new Error(message)
+    throw new CatalogCheckError(message, details)
+  }
   const resources = rows.filter((row) => row.admitted).map((row) => row.file.name)
   if (!resources.length)
     throw new Error('No compatible game data files were found at this location.')

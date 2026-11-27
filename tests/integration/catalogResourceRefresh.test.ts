@@ -226,6 +226,46 @@ test('records missing HTTPS hashes during an unchanged check without replacing t
   ])
 })
 
+test('unchanged conditional checks retain warnings for the accepted catalog', async () => {
+  const { documents, getBytes } = installSource()
+  documents.set('class/index.json', {
+    body: { Patroller: 'class-patroller.json' },
+    etag: '"classes"',
+  })
+  documents.set('class/class-patroller.json', {
+    body: {
+      class: [
+        {
+          name: 'Patroller',
+          source: 'TEST',
+          classFeatures: ['Tools|Patroller|TEST|1|TEST'],
+          classTableGroups: [{ colLabels: ['Tools'], rows: [[1]] }],
+        },
+      ],
+      classFeature: [
+        {
+          name: 'Tools',
+          className: 'Patroller',
+          classSource: 'TEST',
+          source: 'TEST',
+          level: 1,
+          entries: [
+            { type: 'table', rows: [['{@filter tools|items|type=tool}', '{@item Hammer|PHB}']] },
+          ],
+        },
+      ],
+    },
+    etag: '"patroller"',
+  })
+  expect(await useGameDataStore.getState().loadCatalog(source)).toMatchObject({ kind: 'applied' })
+  const warning = 'Patroller (TEST) can’t offer Hammer (PHB) because it’s unavailable.'
+  expect(useGameDataStore.getState().catalogWarnings).toEqual([warning])
+  const bytes = getBytes()
+  expect(await check()).toEqual({ kind: 'applied', changed: false })
+  expect(getBytes()).toBe(bytes)
+  expect(useGameDataStore.getState().catalogWarnings).toEqual([warning])
+})
+
 test.each([
   'network',
   'not-found',

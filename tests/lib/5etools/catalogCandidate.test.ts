@@ -22,6 +22,8 @@ test('prepares a personal HTTPS source using one read per file and no provider A
   vi.stubGlobal('fetch', fetch)
   const candidate = await prepareCatalog(online, undefined, signal())
   expect(candidate.data.spells.map(({ name }) => name)).toEqual(['Magic Missile', 'Cure Wounds'])
+  expect(candidate.contents).toBe('2 spells')
+  expect(candidate.warnings).toEqual([])
   const urls = fetch.mock.calls.map(([url]) => url)
   expect(new Set(urls).size).toBe(urls.length)
   expect(urls.every((url) => url.startsWith(`${online.path}/data/`))).toBe(true)
@@ -61,7 +63,9 @@ test.each([
     await expect(preparation).rejects.toThrow(target)
     return
   }
-  const { data } = await preparation
+  const { data, contents, warnings } = await preparation
+  expect(contents).toBe('2 classes')
+  expect(warnings).toEqual([])
   expect(data.classes.find(({ name }) => name === 'Scout')?.classFeatureRefs).toMatchObject([
     { ref: target, feature: { ...feature, level: 2, entries: ['Exact training.'] } },
   ])
@@ -177,6 +181,48 @@ test('rejects a failed mechanical read while omitting absent families', async ()
   await expect(prepareCatalog(online, undefined, signal())).rejects.toThrow(/feats.json.*503/)
 })
 
+test('counts supplied variants without counting their generated item references', async () => {
+  const magicvariant = [
+    { name: 'Copper Gizmo', source: 'TEST', type: 'GV', inherits: { source: 'TEST' } },
+  ]
+  vi.stubGlobal('fetch', (url: string) =>
+    Promise.resolve(
+      url.endsWith('/data/magicvariants.json') ? json({ magicvariant }) : json(null, 404),
+    ),
+  )
+  const candidate = await prepareCatalog(online, undefined, signal())
+  expect(candidate.keys).toContain('items: entity:copper gizmo|test|')
+  expect(candidate.contents).toBe('1 magic item variant')
+})
+
+test('reports an indexed read failure before dependencies from that file are audited', async () => {
+  const base = {
+    type: 'bundled' as const,
+    path: 'srd/core',
+    packId: 'core',
+    packVersion: '1',
+    isValid: true,
+  }
+  const additional: Record<string, unknown> = {
+    'class/index.json': { Guardian: 'class-guardian.json', Scout: 'class-scout.json' },
+    'class/class-scout.json': {
+      class: [{ name: 'Scout', source: 'XPHB', classFeatures: ['Training|Guardian|XPHB|2|XPHB'] }],
+    },
+  }
+  const failed = 'class/class-guardian.json'
+  const read: ReadSourceJson = (request) => {
+    if (request.kind === 'bundled') return Promise.resolve(files[request.path] ?? {})
+    const path = request.kind === 'remote' ? request.url.slice(online.path.length + 6) : ''
+    if (path === failed) return Promise.reject(new ResourceHttpError(503, path))
+    if (!(path in additional)) return Promise.reject(new ResourceHttpError(404, path))
+    return Promise.resolve(additional[path])
+  }
+  await expect(prepareCatalog(online, base, signal(), undefined, read)).rejects.toMatchObject({
+    message: expect.stringMatching(/Could not load required game data.*class-guardian\.json.*503/),
+    details: [expect.stringContaining(failed)],
+  })
+})
+
 test('a never-admitted optional file stays a warning on refresh', async () => {
   const optional = 'fluff-backgrounds.json'
   vi.stubGlobal('fetch', (url: string) => {
@@ -246,6 +292,73 @@ test('warns about absent optional bundled descriptions without admitting a read 
   expect(candidate.unavailableResources).toBeUndefined()
 })
 
+test('a classes-only source can use a spell already available in the Included SRD', async () => {
+  const base = {
+    type: 'bundled' as const,
+    path: 'srd/core',
+    packId: 'core',
+    packVersion: '1',
+    isValid: true,
+  }
+  const additional: Record<string, unknown> = {
+    'class/index.json': { TEST: 'class-test.json' },
+    'class/class-test.json': {
+      class: [{ name: 'Wizard', source: 'TEST' }],
+      subclass: [
+        {
+          name: 'Example',
+          shortName: 'Example',
+          source: 'TEST',
+          className: 'Wizard',
+          classSource: 'TEST',
+          additionalSpells: [{ prepared: { 3: ['Cure Wounds|XPHB'] } }],
+        },
+      ],
+    },
+  }
+  const read: ReadSourceJson = (request) => {
+    if (request.kind === 'bundled') return Promise.resolve(files[request.path] ?? {})
+    const path = request.kind === 'remote' ? request.url.slice(online.path.length + 6) : ''
+    if (!(path in additional)) return Promise.reject(new ResourceHttpError(404, path))
+    return Promise.resolve(additional[path])
+  }
+  const candidate = await prepareCatalog(online, base, signal(), undefined, read)
+  expect(candidate.contents).toBe('1 class and 1 subclass')
+  expect(candidate.warnings).toEqual([])
+  expect(candidate.dependencyWarnings).toBeUndefined()
+})
+
+test('counts a supplied subrace that attaches to an Included SRD species', async () => {
+  const base = {
+    type: 'bundled' as const,
+    path: 'srd/core',
+    packId: 'core',
+    packVersion: '1',
+    isValid: true,
+  }
+  const additional: Record<string, unknown> = {
+    'feats.json': { feat: [{ name: 'Wanderer', source: 'TEST' }] },
+    'races.json': {
+      race: [],
+      subrace: [
+        { name: 'Tides', source: 'TEST', raceName: 'Elf', raceSource: 'PHB', entries: ['Tides.'] },
+      ],
+    },
+  }
+  const read: ReadSourceJson = (request) => {
+    if (request.kind === 'bundled')
+      return Promise.resolve(
+        request.path === 'races.json' ? { race: [{ name: 'Elf', source: 'PHB' }] } : {},
+      )
+    const path = request.kind === 'remote' ? request.url.slice(online.path.length + 6) : ''
+    if (!(path in additional)) return Promise.reject(new ResourceHttpError(404, path))
+    return Promise.resolve(additional[path])
+  }
+  const candidate = await prepareCatalog(online, base, signal(), undefined, read)
+  expect(candidate.data.races[0].subraces?.map(({ name }) => name)).toEqual(['Tides'])
+  expect(candidate.contents).toBe('1 subrace and 1 feat')
+})
+
 test('a malformed spell source package reports a missing subclass spell', async () => {
   const payloads: Record<string, unknown> = {
     ...files,
@@ -271,9 +384,11 @@ test('a malformed spell source package reports a missing subclass spell', async 
     const key = url.replace(`${online.path}/data/`, '')
     return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
   })
-  await expect(prepareCatalog(online, undefined, signal())).rejects.toThrow(
-    'Example|TEST needs Cure Wounds|XPHB',
-  )
+  await expect(prepareCatalog(online, undefined, signal())).rejects.toMatchObject({
+    message:
+      'Example (TEST) needs the spell Cure Wounds (XPHB). Include that spell and check again.',
+    details: ['Example|TEST needs Cure Wounds|XPHB'],
+  })
 })
 
 test.each([
@@ -309,7 +424,7 @@ test.each([
         },
       ],
     },
-    'Magic Missile|XPHB',
+    'Example (TEST) needs the spell Magic Missile (XPHB).',
   ],
   [
     'class/class-test.json',
@@ -328,7 +443,7 @@ test.each([
         },
       ],
     },
-    'Magic Missile|XPHB',
+    'Spell choice (TEST) needs the spell Magic Missile (XPHB).',
   ],
   [
     'magicvariants.json',
@@ -378,7 +493,10 @@ test('rejects a spell grant when its exact printing is ambiguous', async () => {
     const key = url.replace(`${online.path}/data/`, '')
     return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
   })
-  await expect(prepareCatalog(online, undefined, signal())).rejects.toThrow('Cure Wounds|XPHB')
+  await expect(prepareCatalog(online, undefined, signal())).rejects.toMatchObject({
+    message: expect.stringContaining('Spell grant (TEST) needs the spell Cure Wounds (XPHB).'),
+    details: ['Spell grant|TEST needs Cure Wounds|XPHB'],
+  })
 })
 
 test('a GitHub branch resolves once and all candidate reads use the pinned commit', async () => {

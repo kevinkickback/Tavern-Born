@@ -19,6 +19,7 @@ import type {
   SubclassFeature,
 } from '@/types/5etools'
 import { composeBackgroundSources } from './backgroundSources'
+import { CatalogCheckError, describeCatalogReference } from './catalogCheckError'
 import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -334,6 +335,7 @@ export interface DataSourceStackLoaderOptions extends DataLoaderOptions {
   baseReader?: import('./resourceReader').JsonResourceReader
   additionalReader?: import('./resourceReader').JsonResourceReader
   onLayerLoaded?: (role: 'base' | 'additional', data: GameData) => void
+  onOptionalDependency?: (issue: ContentLayerDependencyIssue) => void
 }
 
 function entityKey(name: unknown, source: unknown): string {
@@ -733,7 +735,12 @@ export async function loadGameDataSourceStack(
     }
     throw error
   }
-  assertLayerDependencies(composed, additional, options?.onResourceFailure)
+  assertLayerDependencies(
+    composed,
+    additional,
+    options?.onResourceFailure,
+    options?.onOptionalDependency,
+  )
   return composed
 }
 
@@ -741,19 +748,26 @@ export function assertLayerDependencies(
   composed: GameData,
   additional: GameData,
   onFailure?: DataLoaderOptions['onResourceFailure'],
+  onOptionalDependency?: DataSourceStackLoaderOptions['onOptionalDependency'],
 ) {
   // Optional item-choice metadata stays diagnostic; reporting a transport failure would
   // incorrectly hold every background refresh on the previous cache.
-  const dependencyIssues = findLayerDependencyIssues(composed, additional).filter(
-    (issue) => issue.required !== false,
-  )
+  const issues = findLayerDependencyIssues(composed, additional)
+  const dependencyIssues = issues.filter((issue) => issue.required !== false)
   if (dependencyIssues.length > 0) {
     for (const issue of dependencyIssues)
       onFailure?.(`Additional content: ${issue.reference}`, { required: true })
     const firstIssue = dependencyIssues[0]
-    throw new Error(
-      `Additional content has ${dependencyIssues.length} unresolved required ${dependencyIssues.length === 1 ? 'reference' : 'references'}. ${firstIssue.owner} needs ${firstIssue.reference}.`,
+    const owner = firstIssue.owner.split('/').map(describeCatalogReference).join(' / ')
+    throw new CatalogCheckError(
+      `${owner} needs ${describeCatalogReference(firstIssue.reference)}. Include the required content and check again.`,
+      dependencyIssues.map(({ owner, path, reference }) => `${owner} needs ${reference} (${path})`),
     )
+  }
+  if (onOptionalDependency) {
+    for (const issue of issues) {
+      if (issue.required === false) onOptionalDependency(issue)
+    }
   }
 }
 

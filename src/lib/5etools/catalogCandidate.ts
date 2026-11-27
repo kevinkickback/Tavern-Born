@@ -12,16 +12,20 @@ import type {
 } from '@/types/5etools'
 import type { AdditionalSpellBlock } from '@/types/additionalSpells'
 import { parseAdditionalSpellBlocks } from './additionalSpells'
+import { CatalogCheckError, describeCatalogReference } from './catalogCheckError'
+import { describeCatalogContents } from './catalogContents'
 import { observeCatalogResources } from './catalogResourceProof'
 import {
   assertLayerDependencies,
+  type ContentLayerDependencyIssue,
   composeGameDataLayers,
   externalCatalogKeys,
   hasCatalogRecords,
   loadGameDataSourceStack,
 } from './contentLayers'
 import type { DataLoaderOptions } from './dataLoader'
-import { loadDataFromSource } from './dataLoader'
+import { getLoadedRaceData, loadDataFromSource } from './dataLoader'
+import { getRawItems } from './itemEntries'
 import {
   createJsonResourceReader,
   isMissingCatalogResource,
@@ -37,6 +41,8 @@ export interface PreparedCatalog {
   data: GameData
   keys: string[]
   warnings: string[]
+  contents?: string
+  dependencyWarnings?: string[]
   unavailableResources?: string[]
   revision?: string
   layerMetadata?: GameDataLayerCacheMetadataByRole
@@ -61,7 +67,7 @@ function getMissingSubclassSpell(data: GameData, additional: GameData) {
           const missing = references.find(
             (reference) => !available.has(getSpellReferenceKey(reference)),
           )
-          if (missing) return `${subclass.name}|${subclass.source} needs ${missing}`
+          if (missing) return { owner: `${subclass.name}|${subclass.source}`, spell: missing }
         } catch {
           // Domain adapters own spell schedules outside the supported native format.
         }
@@ -144,6 +150,17 @@ async function prepareResolvedCatalog(
   const admitted = { ...source.config, isValid: true, availableResources: scan.resources }
   const identity = base ? { base, additional: admitted } : admitted
   const issues: string[] = []
+  const assertRequiredResources = () => {
+    if (issues.length)
+      throw new CatalogCheckError(`Could not load required game data. ${issues[0]}`, issues)
+  }
+  const dependencyWarnings = new Set<string>()
+  const onOptionalDependency = ({ owner, reference }: ContentLayerDependencyIssue) => {
+    const label = owner.split('/').map(describeCatalogReference).join(' / ')
+    dependencyWarnings.add(
+      `${label} can’t offer ${describeCatalogReference(reference)} because it’s unavailable.`,
+    )
+  }
   let additional: GameData | undefined
   const layerMetadata: GameDataLayerCacheMetadataByRole = {}
   const options = {
@@ -176,9 +193,11 @@ async function prepareResolvedCatalog(
         { base, additional: admitted },
         {
           ...options,
+          onOptionalDependency,
           baseReader: read ? createJsonResourceReader(base, read) : undefined,
           additionalReader: scan.reader,
           onLayerLoaded: (role, data) => {
+            assertRequiredResources()
             if (role === 'base' && !hasCatalogRecords(data))
               throw new Error('The Included SRD could not be loaded.')
             if (role === 'additional') additional = data
@@ -191,18 +210,31 @@ async function prepareResolvedCatalog(
       )
     : loadDataFromSource(admitted, options, scan.reader)
   const loaded = await settleOnAbort(load, signal)
-  if (issues.length) throw new Error(`Could not load required game data. ${issues.join('; ')}`)
+  assertRequiredResources()
   // Exact feature targets can live in a different indexed document in the same source.
   const data = base ? loaded : composeGameDataLayers([loaded])
-  if (!base) assertLayerDependencies(data, loaded)
+  if (!base) assertLayerDependencies(data, loaded, undefined, onOptionalDependency)
   const magicIssue = data.magicVariantDiagnostics?.find(
     ({ message }) => !message.startsWith('Reference collides'),
   )
   if (magicIssue) throw new Error(`${magicIssue.path}: ${magicIssue.message}`)
   const missingSpell = getMissingSubclassSpell(data, additional ?? loaded)
-  if (missingSpell) throw new Error(missingSpell)
-  const keys = externalCatalogKeys(additional ?? loaded)
+  if (missingSpell)
+    throw new CatalogCheckError(
+      `${describeCatalogReference(missingSpell.owner)} needs the spell ${describeCatalogReference(missingSpell.spell)}. Include that spell and check again.`,
+      [`${missingSpell.owner} needs ${missingSpell.spell}`],
+    )
+  const supplied = additional ?? loaded
+  const keys = externalCatalogKeys(supplied)
   if (!keys.length) throw new Error('The additional source has no usable game data.')
+  const suppliedItems = getRawItems(supplied)
+  const contents = describeCatalogContents(
+    suppliedItems.items.length === supplied.items.length &&
+      suppliedItems.itemsBase.length === supplied.itemsBase.length
+      ? keys
+      : externalCatalogKeys({ ...supplied, ...suppliedItems }),
+    getLoadedRaceData(supplied),
+  )
   admitted.resourceProof =
     scan.warnings.length || scan.unavailable.length ? undefined : observation?.proof()
   return {
@@ -211,6 +243,8 @@ async function prepareResolvedCatalog(
     data,
     keys,
     warnings: scan.warnings,
+    contents,
+    ...(dependencyWarnings.size ? { dependencyWarnings: [...dependencyWarnings] } : {}),
     ...(scan.unavailable.length ? { unavailableResources: scan.unavailable } : {}),
     revision: source.revision,
     layerMetadata,

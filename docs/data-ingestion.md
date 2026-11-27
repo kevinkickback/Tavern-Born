@@ -86,6 +86,11 @@ valid and can produce a withdrawal preview. Class documents must include the exa
 subclass they supply so the parser can attach it. Transport, permission and
 schema errors fail the candidate rather than silently narrowing the catalog.
 
+Source checks summarize the records supplied by the additional layer. Confirmed omissions do not
+produce warnings. Source-wide request failures show one message with file-level details on demand.
+Required dependency failures name the affected record and keep the current catalog. Optional
+missing item-choice references are shown as warnings without changing refresh or admission policy.
+
 Exact source and owner identities govern class and subclass ancestry, mechanically used choices
 and item or creature copy targets. The base can satisfy an exact dependency. Incomplete required
 dependencies keep the active catalog and cache intact. Item choice metadata can remain unavailable

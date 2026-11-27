@@ -41,5 +41,5 @@ export type CatalogWorkerMessage =
   | { kind: 'read'; id: string; readId: number; request: JsonSourceRead }
   | { kind: 'cancel-read'; id: string; readId: number }
   | { kind: 'result'; id: string; result: unknown }
-  | { kind: 'error'; id: string; error: string }
+  | { kind: 'error'; id: string; error: string; details?: string[] }
   | { kind: 'closed' }

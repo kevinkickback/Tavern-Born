@@ -3,6 +3,7 @@ import {
   type PreparedCatalog,
   prepareCatalog,
 } from '@/lib/5etools/catalogCandidate'
+import { CatalogCheckError } from '@/lib/5etools/catalogCheckError'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
 import type {
   CatalogCommand,
@@ -151,6 +152,7 @@ port.on('message', ({ data: message }: { data: CatalogRequestMessage }) => {
             kind: 'error',
             id: message.id,
             error: error instanceof Error ? error.message : String(error),
+            ...(error instanceof CatalogCheckError ? { details: error.details } : {}),
           })
       },
     )

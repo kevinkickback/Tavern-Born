@@ -31,6 +31,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+import { CatalogCheckError, catalogWarningsForDisplay } from '@/lib/5etools/catalogCheckError'
 import { prepareCatalogCandidate, releaseCatalogCandidate } from '@/lib/5etools/catalogClient'
 import type { CatalogCandidate } from '@/lib/5etools/catalogProtocol'
 import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
@@ -54,6 +55,25 @@ type DataSourceConfiguratorProps = {
 function discardFolder(root: string | null) {
   if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
+
+function CheckDetails({
+  lines,
+  title = 'Show details',
+}: {
+  lines?: readonly string[]
+  title?: string
+}) {
+  return lines?.length ? (
+    <details className="text-sm">
+      <summary className="cursor-pointer">{title}</summary>
+      <ul className="mt-1 max-h-48 list-disc overflow-auto break-words pl-5">
+        {[...new Set(lines)].map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </details>
+  ) : null
+}
 export function DataSourceConfigurator({
   selectorOnly = false,
   showAdditionalContentGuidance = false,
@@ -65,6 +85,7 @@ export function DataSourceConfigurator({
   const isLoading = useGameDataStore((state) => state.isLoading)
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const error = useGameDataStore((state) => state.error)
+  const errorDetails = useGameDataStore((state) => state.errorDetails)
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
@@ -92,6 +113,7 @@ export function DataSourceConfigurator({
   const updateTitleId = useId()
   const [validationResult, setValidationResult] = useState<{
     error?: string
+    details?: string[]
     candidate?: CatalogCandidate
     basis?: typeof dataSourceConfig
   } | null>(null)
@@ -223,9 +245,9 @@ export function DataSourceConfigurator({
       setValidationResult({
         error:
           error instanceof DOMException || error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof CatalogCheckError ? error.details : undefined,
       })
       setValidationStatus('invalid')
-      toast.error('Game data check failed')
     } finally {
       if (requestId === validationRequestRef.current) {
         setIsValidating(false)
@@ -346,9 +368,7 @@ export function DataSourceConfigurator({
     } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing || isCatalogActivating) return
     const result = await loadCatalog(dataSourceConfig, true)
-    if (result.kind === 'rejected') {
-      toast.error('Couldn’t check your additional content', { description: result.message })
-    } else if (result.kind === 'staged') {
+    if (result.kind === 'staged') {
       const reason = useGameDataStore.getState().pendingCatalog?.reason
       toast.info(
         reason === 'reload'
@@ -396,6 +416,9 @@ export function DataSourceConfigurator({
   }
 
   const isValidSource = validationStatus === 'valid'
+  const checkedCandidate = validationResult?.candidate
+  const checkWarnings = catalogWarningsForDisplay(checkedCandidate)
+  const dependencyWarning = checkedCandidate?.dependencyWarnings?.[0]
 
   const formatDateTime = (iso: string | null) => {
     if (!iso) return 'Not yet'
@@ -562,17 +585,28 @@ export function DataSourceConfigurator({
               <div aria-live="polite">
                 {validationStatus === 'validating' && <p>Checking compatibility...</p>}
                 {validationStatus === 'valid' && (
-                  <p className="text-success">Compatible game data found</p>
+                  <p className="text-success">
+                    {checkedCandidate?.contents
+                      ? `Found ${checkedCandidate.contents}.`
+                      : 'Compatible game data found'}
+                  </p>
                 )}
                 {validationResult?.error && (
                   <p className="text-destructive">{validationResult.error}</p>
                 )}
+                {!!checkWarnings.length && (
+                  <p className="text-sm text-warning">
+                    {dependencyWarning ??
+                      'Some optional content is unavailable. You can still add this source.'}
+                  </p>
+                )}
               </div>
-              {validationStatus === 'valid' && !!validationResult?.candidate?.warnings.length && (
-                <p className="text-sm text-warning">
-                  Some optional content is unavailable. {validationResult?.candidate?.warnings[0]}
-                </p>
-              )}
+              <CheckDetails
+                lines={
+                  validationResult?.details ??
+                  (dependencyWarning ? checkWarnings.slice(1) : checkWarnings)
+                }
+              />
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
@@ -733,16 +767,10 @@ export function DataSourceConfigurator({
                   </ul>
                 </details>
               )}
-              {!!catalogWarnings.length && (
-                <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Content warnings</summary>
-                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
-                    {catalogWarnings.map((warning) => (
-                      <li key={warning}>{warning}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
+              <CheckDetails
+                lines={catalogWarningsForDisplay(pending.candidate)}
+                title="Content warnings"
+              />
               <div className="flex flex-wrap items-start gap-2">
                 {pending.restoreWhenIdle ? (
                   <p role="status" className="text-sm text-muted-foreground">
@@ -790,15 +818,8 @@ export function DataSourceConfigurator({
         </Section>
       )}
 
-      {!pending && !!catalogWarnings.length && (
-        <details className="text-sm">
-          <summary>Some extra content couldn’t be loaded</summary>
-          <ul>
-            {catalogWarnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </details>
+      {!pending && (
+        <CheckDetails lines={catalogWarnings} title="Some extra content couldn’t be loaded" />
       )}
       {error && (
         <Alert variant="destructive">
@@ -806,7 +827,10 @@ export function DataSourceConfigurator({
           <AlertTitle>
             {hasActiveDataSource ? 'Source check failed' : 'Game data unavailable'}
           </AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <p>{error}</p>
+            <CheckDetails lines={errorDetails} />
+          </AlertDescription>
         </Alert>
       )}
 

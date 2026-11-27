@@ -213,6 +213,9 @@ describe('raw template cache and concrete character persistence', () => {
     const { loadCatalog } = useGameDataStore.getState()
     expect(await loadCatalog(additional, true)).toEqual({ kind: 'staged' })
     const { candidate } = useGameDataStore.getState().pendingCatalog!
+    expect(candidate.dependencyWarnings).toEqual([
+      'Maker (TST) can’t offer +1 Shield (XDMG) because it’s unavailable.',
+    ])
     expect(await loadCatalog(additional, false, { prepared: candidate, confirmed: true })).toEqual({
       kind: 'applied',
       changed: true,
@@ -255,7 +258,7 @@ describe('raw template cache and concrete character persistence', () => {
     featurePayload.class[0].classFeatures.push('Missing|Maker|TST|2')
     await expect(
       loadGameDataSourceStack({ base, additional }, { onResourceFailure: failures }),
-    ).rejects.toThrow('unresolved required')
+    ).rejects.toThrow('Maker (TST) needs Missing|Maker|TST|2.')
     expect(failures).toHaveBeenCalledWith('Additional content: Missing|Maker|TST|2', {
       required: true,
     })

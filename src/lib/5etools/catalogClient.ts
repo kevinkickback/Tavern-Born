@@ -5,6 +5,7 @@ import type {
   GameDataSourceStack,
 } from '@/types/5etools'
 import type { PreparedCatalog } from './catalogCandidate'
+import { CatalogCheckError } from './catalogCheckError'
 import { type CatalogComparisonBasis, compareCatalog } from './catalogComparison'
 import type {
   CatalogCandidate,
@@ -41,7 +42,11 @@ async function handleMessage(message: CatalogWorkerMessage) {
       request.progress?.(message.current, message.total, message.resource)
       break
     case 'error':
-      request.reject(new Error(message.error))
+      request.reject(
+        message.details
+          ? new CatalogCheckError(message.error, message.details)
+          : new Error(message.error),
+      )
       break
     case 'result':
       request.resolve(message.result)

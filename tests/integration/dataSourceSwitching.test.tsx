@@ -59,6 +59,32 @@ describe('data source switching', () => {
     vi.unstubAllGlobals()
   })
 
+  test('shows supplied content and keeps Apply available when only an optional reference is missing', async () => {
+    const user = userEvent.setup()
+    const warning = 'Inventor (TEST) can’t offer Brass Gizmo (TEST) because it’s unavailable.'
+    prepareCatalogMock.mockImplementationOnce((config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        contents: '1 class',
+        warnings: [],
+        dependencyWarnings: [warning],
+      }),
+    )
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.type(
+      screen.getByRole('textbox', { name: 'Web Address' }),
+      'https://example.test/rules',
+    )
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+    expect(screen.getByText(warning)).toBeTruthy()
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
+    ).toBe(false)
+  })
+
   test('ignores and releases a folder selected after switching away from the local tab', async () => {
     const user = userEvent.setup()
     let choose!: (value: string) => void
