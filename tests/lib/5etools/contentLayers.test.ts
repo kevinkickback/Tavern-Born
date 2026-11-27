@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
-import { composeGameDataLayers, findLayerDependencyIssues } from '@/lib/5etools/contentLayers'
+import {
+  assertLayerDependencies,
+  composeGameDataLayers,
+  findLayerDependencyIssues,
+} from '@/lib/5etools/contentLayers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { parseItemProperties } from '@/lib/5etools/parsers/basic'
 import { createIndexedClassDocumentParser, parseClasses } from '@/lib/5etools/parsers/classes'
@@ -670,6 +674,49 @@ describe('game-data content layers', () => {
     ])
   })
 
+  test('surfaces an unavailable optional item choice without blocking the layer', () => {
+    const additional = makeGameDataFixture({
+      classes: [
+        makeClassFixture({
+          name: 'Inventor',
+          source: 'TEST',
+          classFeatureRefs: [],
+          normalizedRules: {
+            resources: [],
+            asiLevels: [],
+            ritualCasting: false,
+            choiceDiagnostics: [],
+            choices: [
+              {
+                id: 'inventor-item',
+                label: 'Inventor Item',
+                kind: 'feat',
+                owner: { type: 'class', name: 'Inventor', source: 'TEST' },
+                level: 1,
+                minimumSelections: 1,
+                maximumSelections: 1,
+                selectionCountByLevel: [1],
+                options: [{ entityType: 'item', name: 'Brass Gizmo', source: 'TEST' }],
+                repeatable: false,
+                replacement: { cadence: 'never' },
+                source: { kind: 'class-feature-options', field: 'test.options' },
+              },
+            ],
+          },
+        }),
+      ],
+    })
+    const onOptional = vi.fn()
+    assertLayerDependencies(additional, additional, undefined, onOptional)
+    expect(onOptional).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        owner: 'Inventor|TEST',
+        reference: 'Brass Gizmo|TEST',
+        required: false,
+      }),
+    )
+  })
+
   test('reports unresolved subclass features and explicit class-choice options', () => {
     const additionalClass = makeClassFixture({
       name: 'Inventor',
@@ -734,6 +781,70 @@ describe('game-data content layers', () => {
         reference: 'Missing Specialty|TEST',
       },
     ])
+  })
+
+  test('groups missing choices by subclass printing and shows each reference once per owner', () => {
+    const classes = ['PHB', 'XPHB', 'FutureRules'].map((source) =>
+      makeClassFixture({
+        name: 'Fighter',
+        source,
+        classFeatureRefs: [],
+        subclasses: [
+          {
+            name: 'Rune Knight',
+            shortName: 'Rune Knight',
+            source: 'TCE',
+            className: 'Fighter',
+            classSource: source,
+            normalizedRules: {
+              resources: [],
+              asiLevels: [],
+              ritualCasting: false,
+              choiceDiagnostics: [],
+              choices: [
+                {
+                  id: 'runes',
+                  label: 'Runes',
+                  kind: 'optional-feature',
+                  owner: {
+                    type: 'subclass',
+                    name: 'Fighter',
+                    source,
+                    subclassName: 'Rune Knight',
+                    subclassSource: 'TCE',
+                  },
+                  level: 3,
+                  minimumSelections: 1,
+                  maximumSelections: 1,
+                  selectionCountByLevel: [0, 0, 1],
+                  options: ['Cloud Rune', 'Fire Rune', 'Cloud Rune'].map((name) => ({
+                    entityType: 'optionalFeature',
+                    name,
+                    source: 'TCE',
+                  })),
+                  repeatable: false,
+                  replacement: { cadence: 'never' },
+                  source: { kind: 'optional-feature-progression', field: 'test.options' },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    )
+    const additional = makeGameDataFixture({ classes })
+    const onFailure = vi.fn()
+    expect(() => assertLayerDependencies(additional, additional, onFailure)).toThrow(
+      expect.objectContaining({
+        message: 'Some class rules are missing required content. Include it and check again.',
+        details: [
+          'Rune Knight (TCE) for Fighter (PHB) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (XPHB) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (FutureRules) needs Cloud Rune (TCE), Fire Rune (TCE)',
+        ],
+      }),
+    )
+    expect(onFailure).toHaveBeenCalledTimes(9)
   })
 
   test('resolves nested subclass-choice features in dependency audits', () => {

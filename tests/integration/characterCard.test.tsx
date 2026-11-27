@@ -35,7 +35,10 @@ describe('CharacterCard', () => {
     expect(screen.getByText('Level 1').textContent).toBe('Level 1')
     expect(screen.getByText('Elf')).toBeTruthy()
     expect(screen.queryByText(/High Elf/)).toBeNull()
-    expect(screen.getByTitle('5e Legacy (2014)').textContent).toBe('5e (2014)')
+    const edition = screen.getByTitle('5e Legacy (2014)')
+    expect(edition.textContent).toBe('5e (2014)')
+    expect(edition.parentElement?.firstElementChild).toBe(edition)
+    expect(screen.queryByLabelText(/Additional content/)).toBeNull()
     const detailIcons = container.querySelectorAll('[data-slot="character-card-detail-icon"]')
     expect(detailIcons).toHaveLength(3)
     for (const icon of detailIcons) {
@@ -115,7 +118,9 @@ describe('CharacterCard', () => {
     )
 
     const indicator = screen.getByLabelText(/Additional content/)
-    expect(screen.getByTitle('5.5e Revised (2024)').textContent).toBe('5.5e (2024)')
+    const edition = screen.getByTitle('5.5e Revised (2024)')
+    expect(edition.textContent).toBe('5.5e (2024)')
+    expect(indicator.nextElementSibling).toBe(edition)
     expect(indicator.className).toContain('rounded-md')
     expect(indicator.className).toContain('bg-primary/85')
     expect(indicator.textContent).toBe('Additional content')

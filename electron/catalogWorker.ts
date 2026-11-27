@@ -3,6 +3,7 @@ import {
   type PreparedCatalog,
   prepareCatalog,
 } from '@/lib/5etools/catalogCandidate'
+import { CatalogCheckError } from '@/lib/5etools/catalogCheckError'
 import { compareCatalog } from '@/lib/5etools/catalogComparison'
 import type {
   CatalogCommand,
@@ -79,7 +80,14 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
             onProgress,
             read,
           )
-        : await prepareCatalog(command.config, command.base, signal, onProgress, read)
+        : await prepareCatalog(
+            command.config,
+            command.base,
+            signal,
+            onProgress,
+            read,
+            command.allowPartial,
+          )
       signal.throwIfAborted()
       if (!candidate) return null
       const { data, keys: _keys, ...metadata } = candidate
@@ -151,6 +159,7 @@ port.on('message', ({ data: message }: { data: CatalogRequestMessage }) => {
             kind: 'error',
             id: message.id,
             error: error instanceof Error ? error.message : String(error),
+            ...(error instanceof CatalogCheckError ? { details: error.details } : {}),
           })
       },
     )

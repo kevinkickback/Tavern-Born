@@ -100,6 +100,24 @@ test('rejects an empty inventory and does not treat access errors as missing fil
   )
 })
 
+test('groups repeated connection failures without admitting them as omitted content', async () => {
+  const reader: JsonResourceReader = {
+    type: 'remote',
+    readJson: vi.fn((path) =>
+      path === 'feats.json'
+        ? Promise.resolve(feats)
+        : Promise.reject(new TypeError('Failed to fetch')),
+    ),
+  }
+  await expect(inspectCatalogResources(reader, [], signal())).rejects.toMatchObject({
+    message: expect.stringMatching(/^Couldn’t check game data at this address\./),
+    details: expect.arrayContaining([
+      'Could not read class/index.json — Failed to fetch',
+      'Could not read spells/index.json — Failed to fetch',
+    ]),
+  })
+})
+
 test('recognizes a partial psionic family and rejects malformed mode costs', async () => {
   const valid = makeReader({
     'psionics.json': {

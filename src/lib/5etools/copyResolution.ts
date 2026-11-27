@@ -26,6 +26,7 @@
 import { getSubclassFeatureIdentity } from '@/lib/5etools/classFeatureIdentity'
 import { toAbilityAbbrev } from '@/lib/calculations/abilityNames'
 import { getSkillAbility } from '@/lib/calculations/skillNames'
+import { CatalogCheckError, type CatalogDependencyFailure } from './catalogCheckError'
 
 type Record5e = Record<string, unknown> & { name: string; source: string }
 type CopyKind =
@@ -42,9 +43,10 @@ type CopyKind =
 export interface CopyResolutionDiagnostic {
   entity: string
   reason: string
+  affectedClass?: CatalogDependencyFailure
 }
 
-export class CopyResolutionError extends Error {
+export class CopyResolutionError extends CatalogCheckError {
   constructor(
     readonly diagnostics: CopyResolutionDiagnostic[],
     context: string,
@@ -52,6 +54,7 @@ export class CopyResolutionError extends Error {
     const first = diagnostics[0]
     super(
       `Unable to resolve ${diagnostics.length} copied ${diagnostics.length === 1 ? 'record' : 'records'} ${context}. ${first.entity}: ${first.reason}`,
+      diagnostics.map(({ entity, reason }) => `${entity}: ${reason}`),
     )
     this.name = 'CopyResolutionError'
   }
@@ -779,6 +782,15 @@ export function resolveCopiedRecords<T extends { name: string; source: string }>
               ? identity || `${record.name}|${record.source}`
               : `${record.name}|${record.source}`,
           reason: String(error),
+          ...(kind === 'class' && identity && key(object(ownValue(record, '_copy')), 'class')
+            ? {
+                affectedClass: {
+                  parent: { name: record.name, source: record.source },
+                  reference: '',
+                  explanation: `The class copy could not be resolved (${error instanceof Error ? error.message : String(error)}).`,
+                },
+              }
+            : {}),
         })
       resolved.set(memoKey, record)
       return record

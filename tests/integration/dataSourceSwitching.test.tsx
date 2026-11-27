@@ -59,6 +59,167 @@ describe('data source switching', () => {
     vi.unstubAllGlobals()
   })
 
+  test('shows supplied content and keeps Apply available when only an optional reference is missing', async () => {
+    const user = userEvent.setup()
+    const warning = 'Inventor (TEST) can’t offer Brass Gizmo (TEST) because it’s unavailable.'
+    prepareCatalogMock.mockImplementationOnce((config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        contents: '1 class',
+        contentsDetails: ['1 class'],
+        warnings: [],
+        dependencyWarnings: [warning],
+      }),
+    )
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.type(
+      screen.getByRole('textbox', { name: 'Web Address' }),
+      'https://example.test/rules',
+    )
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+    expect(screen.getByText(warning).querySelector('svg[aria-hidden="true"]')).toBeTruthy()
+    const details = screen.getByText('Show details', { selector: 'summary' })
+    expect(screen.getByText('1 class', { exact: true }).closest('details')?.open).toBe(false)
+    await user.click(details)
+    expect(details.closest('details')?.open).toBe(true)
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
+    ).toBe(false)
+  })
+
+  test('previews included and skipped content before the explicit import action', async () => {
+    const user = userEvent.setup()
+    const apply = vi.fn(async () => ({ kind: 'applied' as const, changed: true }))
+    useGameDataStore.setState({ loadCatalog: apply })
+    const skipped = 'Broken School (TEST) for Wizard (TEST). Requires Missing Spell (PHB).'
+    prepareCatalogMock.mockImplementationOnce((config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        warnings: [],
+        contents: '1 class, 2 spells, 1 feat, 1 creature stat block, and more',
+        contentsDetails: ['1 class', '2 spells', '1 feat', '1 creature stat block', '1 language'],
+        partialImport: { skipped: [skipped] },
+      }),
+    )
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.type(
+      screen.getByRole('textbox', { name: 'Web Address' }),
+      'https://example.test/rules',
+    )
+    const action = await screen.findByRole('button', { name: 'Import working content' })
+    const found = screen.getByText(
+      'Found 1 class, 2 spells, 1 feat, 1 creature stat block, and more.',
+    )
+    expect(found.classList.contains('text-success')).toBe(true)
+    expect(found.querySelector('svg[aria-hidden="true"]')).toBeTruthy()
+    expect(
+      screen.getByText('Some content has been skipped.').classList.contains('text-destructive'),
+    ).toBe(true)
+    expect(
+      screen.getByText('Some content has been skipped.').querySelector('svg[aria-hidden="true"]'),
+    ).toBeTruthy()
+    const skippedSummary = screen.getByText('Skipped content', { selector: 'summary' })
+    const contentSummary = screen.getByText('Show details', { selector: 'summary' })
+    expect(screen.getByText('1 language').closest('details')).toBe(contentSummary.parentElement)
+    expect(contentSummary.closest('details')?.open).toBe(false)
+    await user.click(contentSummary)
+    expect(contentSummary.closest('details')?.open).toBe(true)
+    expect(screen.getByText(skipped).closest('details')?.open).toBe(false)
+    await user.click(skippedSummary)
+    expect(skippedSummary.closest('details')?.open).toBe(true)
+    expect(apply).not.toHaveBeenCalled()
+    await user.click(action)
+    expect(apply).toHaveBeenCalledWith(
+      expect.anything(),
+      false,
+      expect.objectContaining({
+        importWorkingContent: true,
+        prepared: expect.objectContaining({ partialImport: expect.anything() }),
+      }),
+    )
+  })
+
+  test('clears an incompatible folder result while checking another folder', async () => {
+    const user = userEvent.setup()
+    const previousError = 'No compatible game data files were found at this location.'
+    let finishCheck!: () => void
+    const inProgress = new Promise<void>((resolve) => {
+      finishCheck = resolve
+    })
+    prepareCatalogMock
+      .mockRejectedValueOnce(new Error(previousError))
+      .mockImplementationOnce(async () => {
+        await inProgress
+        throw new Error('The second folder check finished.')
+      })
+    const selectFolder = vi
+      .fn()
+      .mockResolvedValueOnce('/incompatible')
+      .mockResolvedValueOnce('/next')
+    vi.stubGlobal('electronAPI', { selectFolder })
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.click(screen.getByRole('tab', { name: 'This Computer' }))
+    const select = screen.getByRole('button', { name: 'Select Folder' })
+    await user.click(select)
+    expect(
+      (await screen.findByText(previousError)).querySelector('svg[aria-hidden="true"]'),
+    ).toBeTruthy()
+    await user.click(select)
+    expect(await screen.findByText('Checking compatibility...')).toBeTruthy()
+    const folder = screen.getByRole('textbox', { name: 'Folder' })
+    expect(folder.parentElement?.querySelector('.animate-spin[aria-hidden="true"]')).toBeTruthy()
+    expect(screen.queryByText(previousError)).toBeNull()
+    await act(async () => finishCheck())
+    expect(await screen.findByText('The second folder check finished.')).toBeTruthy()
+    expect(screen.queryByText('Checking compatibility...')).toBeNull()
+    expect(folder.parentElement?.querySelector('.animate-spin')).toBeNull()
+  })
+
+  test('rechecks a finished preview after the active source changes', async () => {
+    const user = userEvent.setup()
+    const current = {
+      type: 'remote',
+      path: 'https://current.example.test/rules',
+      isValid: true,
+    } as const
+    const apply = vi.fn(async () => ({ kind: 'applied' as const, changed: true }))
+    useGameDataStore.setState({ dataSourceConfig: current, loadCatalog: apply })
+    const preview = (config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        contents: '1 class',
+        contentsDetails: ['1 class'],
+        warnings: [],
+      })
+    prepareCatalogMock.mockImplementationOnce(preview).mockImplementationOnce(preview)
+    render(<DataSourceConfigurator selectorOnly />)
+    const address = screen.getByRole('textbox', { name: 'Web Address' })
+    await user.type(address, 'https://next.example.test/rules')
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+
+    await act(() => {
+      useGameDataStore.setState({ dataSourceConfig: { ...current } })
+    })
+    expect(screen.queryByText('Show details')).toBeNull()
+    expect(address.classList.contains('border-success')).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Check again' }))
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+    expect(prepareCatalogMock).toHaveBeenCalledTimes(2)
+    expect(apply).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
+    expect(apply).toHaveBeenCalledOnce()
+  })
+
   test('ignores and releases a folder selected after switching away from the local tab', async () => {
     const user = userEvent.setup()
     let choose!: (value: string) => void

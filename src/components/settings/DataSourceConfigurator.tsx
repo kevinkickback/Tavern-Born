@@ -31,6 +31,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+import { CatalogCheckError, catalogWarningsForDisplay } from '@/lib/5etools/catalogCheckError'
 import { prepareCatalogCandidate, releaseCatalogCandidate } from '@/lib/5etools/catalogClient'
 import type { CatalogCandidate } from '@/lib/5etools/catalogProtocol'
 import { parseRemoteDataSourceUrl } from '@/lib/5etools/urlUtils'
@@ -54,6 +55,25 @@ type DataSourceConfiguratorProps = {
 function discardFolder(root: string | null) {
   if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
+
+function CheckDetails({
+  lines,
+  title = 'Show details',
+}: {
+  lines?: readonly string[]
+  title?: string
+}) {
+  return lines?.length ? (
+    <details className="text-sm">
+      <summary className="cursor-pointer">{title}</summary>
+      <ul className="mt-1 max-h-48 list-disc overflow-auto break-words pl-5">
+        {[...new Set(lines)].map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </details>
+  ) : null
+}
 export function DataSourceConfigurator({
   selectorOnly = false,
   showAdditionalContentGuidance = false,
@@ -65,6 +85,7 @@ export function DataSourceConfigurator({
   const isLoading = useGameDataStore((state) => state.isLoading)
   const isBackgroundRefreshing = useGameDataStore((state) => state.isBackgroundRefreshing)
   const error = useGameDataStore((state) => state.error)
+  const errorDetails = useGameDataStore((state) => state.errorDetails)
   const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
   const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
   const usingSessionSrd = useGameDataStore((state) => state.sessionBundledSource !== null)
@@ -92,6 +113,7 @@ export function DataSourceConfigurator({
   const updateTitleId = useId()
   const [validationResult, setValidationResult] = useState<{
     error?: string
+    details?: string[]
     candidate?: CatalogCandidate
     basis?: typeof dataSourceConfig
   } | null>(null)
@@ -177,11 +199,11 @@ export function DataSourceConfigurator({
     const requestId = ++validationRequestRef.current
     releaseCatalogCandidate(validationCandidate.current)
     validationCandidate.current = undefined
+    setValidationResult(null)
 
     if (!path) {
       setValidationStatus('idle')
       setIsValidating(false)
-      setValidationResult(null)
       return
     }
 
@@ -209,6 +231,9 @@ export function DataSourceConfigurator({
         },
         base ?? undefined,
         signal,
+        undefined,
+        undefined,
+        !basis || basis.type === 'bundled',
       )
       if (requestId !== validationRequestRef.current || controller.signal.aborted) {
         releaseCatalogCandidate(candidate)
@@ -223,9 +248,9 @@ export function DataSourceConfigurator({
       setValidationResult({
         error:
           error instanceof DOMException || error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof CatalogCheckError ? error.details : undefined,
       })
       setValidationStatus('invalid')
-      toast.error('Game data check failed')
     } finally {
       if (requestId === validationRequestRef.current) {
         setIsValidating(false)
@@ -310,6 +335,7 @@ export function DataSourceConfigurator({
     const result = await loadCatalog(candidate.config, false, {
       prepared: candidate,
       confirmed,
+      ...(candidate.partialImport ? { importWorkingContent: true } : {}),
       ...(folderGrant ? { folderGrant } : {}),
     })
     if (result.kind === 'applied' || result.kind === 'staged') {
@@ -346,9 +372,7 @@ export function DataSourceConfigurator({
     } = useGameDataStore.getState()
     if (!dataSourceConfig || isLoading || isBackgroundRefreshing || isCatalogActivating) return
     const result = await loadCatalog(dataSourceConfig, true)
-    if (result.kind === 'rejected') {
-      toast.error('Couldn’t check your additional content', { description: result.message })
-    } else if (result.kind === 'staged') {
+    if (result.kind === 'staged') {
       const reason = useGameDataStore.getState().pendingCatalog?.reason
       toast.info(
         reason === 'reload'
@@ -395,7 +419,23 @@ export function DataSourceConfigurator({
     }
   }
 
-  const isValidSource = validationStatus === 'valid'
+  const previewReady = validationStatus === 'valid'
+  const isValidSource = previewReady && validationResult?.basis === dataSourceConfig
+  const checkedCandidate = isValidSource ? validationResult?.candidate : undefined
+  const partial = checkedCandidate?.partialImport
+  const checkWarnings = catalogWarningsForDisplay(checkedCandidate)
+  const dependencyWarning = checkedCandidate?.dependencyWarnings?.[0]
+  const checking = validationStatus === 'validating'
+  const checkIndicatorPosition = 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2'
+  const spinner = checking && (
+    <span
+      className={cn(
+        checkIndicatorPosition,
+        'size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent',
+      )}
+      aria-hidden
+    />
+  )
 
   const formatDateTime = (iso: string | null) => {
     if (!iso) return 'Not yet'
@@ -403,8 +443,8 @@ export function DataSourceConfigurator({
   }
 
   const getValidationBorderClass = () => {
-    if (validationStatus === 'validating') return 'border-muted-foreground/50'
-    if (validationStatus === 'valid') return 'border-success'
+    if (checking) return 'border-muted-foreground/50'
+    if (isValidSource) return 'border-success'
     if (validationStatus === 'invalid') return 'border-destructive'
     return ''
   }
@@ -516,20 +556,15 @@ export function DataSourceConfigurator({
                         disabled={isLoading}
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
-                      {validationStatus === 'validating' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full" />
-                        </div>
-                      )}
-                      {validationStatus === 'valid' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <CheckCircle className="size-[1.125rem] text-success" />
-                        </div>
-                      )}
-                      {validationStatus === 'invalid' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <XCircle className="size-[1.125rem] text-destructive" />
-                        </div>
+                      {spinner}
+                      {(isValidSource || validationStatus === 'invalid') && (
+                        <span className={checkIndicatorPosition} aria-hidden>
+                          {isValidSource ? (
+                            <CheckCircle className="size-[1.125rem] text-success" />
+                          ) : (
+                            <XCircle className="size-[1.125rem] text-destructive" />
+                          )}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -538,14 +573,17 @@ export function DataSourceConfigurator({
                   <div className="space-y-2">
                     <Label htmlFor={localPathId}>Folder</Label>
                     <div className="flex gap-2">
-                      <Input
-                        id={localPathId}
-                        value={sourcePath}
-                        placeholder="Choose a folder containing 5etools data"
-                        readOnly
-                        disabled={isLoading}
-                        className={`flex-1 ${getValidationBorderClass()}`}
-                      />
+                      <div className="relative min-w-0 flex-1">
+                        <Input
+                          id={localPathId}
+                          value={sourcePath}
+                          placeholder="Use Select Folder to browse"
+                          readOnly
+                          disabled={isLoading}
+                          className={cn(getValidationBorderClass(), checking && 'pr-10')}
+                        />
+                        {spinner}
+                      </div>
                       <Button
                         onClick={handleSelectFolder}
                         disabled={isValidating || isLoading}
@@ -560,19 +598,40 @@ export function DataSourceConfigurator({
                 </TabsContent>
               </Tabs>
               <div aria-live="polite">
-                {validationStatus === 'validating' && <p>Checking compatibility...</p>}
-                {validationStatus === 'valid' && (
-                  <p className="text-success">Compatible game data found</p>
+                {checking && <p>Checking compatibility...</p>}
+                {isValidSource && (
+                  <p className="flex items-start gap-2 text-success">
+                    <CheckCircle className="mt-1 size-4 shrink-0" aria-hidden />
+                    {checkedCandidate?.contents
+                      ? `Found ${checkedCandidate.contents}.`
+                      : 'Compatible game data found'}
+                  </p>
                 )}
-                {validationResult?.error && (
-                  <p className="text-destructive">{validationResult.error}</p>
+                {!!checkWarnings.length && (
+                  <p className="flex items-start gap-2 text-sm text-warning">
+                    <Warning className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    {dependencyWarning ??
+                      'Some optional content is unavailable. You can still add this source.'}
+                  </p>
+                )}
+                {(validationResult?.error || partial) && (
+                  <p
+                    className={cn('flex items-start gap-2 text-destructive', partial && 'text-sm')}
+                  >
+                    <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    {validationResult?.error ?? 'Some content has been skipped.'}
+                  </p>
                 )}
               </div>
-              {validationStatus === 'valid' && !!validationResult?.candidate?.warnings.length && (
-                <p className="text-sm text-warning">
-                  Some optional content is unavailable. {validationResult?.candidate?.warnings[0]}
-                </p>
-              )}
+              <CheckDetails
+                lines={
+                  validationResult?.details ?? [
+                    ...(checkedCandidate?.contentsDetails ?? []),
+                    ...checkWarnings.slice(dependencyWarning ? 1 : 0),
+                  ]
+                }
+              />
+              <CheckDetails lines={partial?.skipped} title="Skipped content" />
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
@@ -665,12 +724,18 @@ export function DataSourceConfigurator({
               {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
                 <Button
                   onClick={handleSaveConfig}
-                  disabled={isLoading || !sourcePath || !isValidSource}
+                  disabled={isLoading || !sourcePath || !previewReady}
                   variant="outline"
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
                   <Database className="size-4" />
-                  {isLoading ? 'Loading...' : 'Add Additional Content'}
+                  {isLoading
+                    ? 'Loading...'
+                    : previewReady && !isValidSource
+                      ? 'Check again'
+                      : partial
+                        ? 'Import working content'
+                        : 'Add Additional Content'}
                 </Button>
               )}
             </div>
@@ -733,16 +798,10 @@ export function DataSourceConfigurator({
                   </ul>
                 </details>
               )}
-              {!!catalogWarnings.length && (
-                <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">Content warnings</summary>
-                  <ul className="mt-2 max-h-48 list-disc overflow-y-auto pl-5">
-                    {catalogWarnings.map((warning) => (
-                      <li key={warning}>{warning}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
+              <CheckDetails
+                lines={catalogWarningsForDisplay(pending.candidate)}
+                title="Content warnings"
+              />
               <div className="flex flex-wrap items-start gap-2">
                 {pending.restoreWhenIdle ? (
                   <p role="status" className="text-sm text-muted-foreground">
@@ -790,15 +849,8 @@ export function DataSourceConfigurator({
         </Section>
       )}
 
-      {!pending && !!catalogWarnings.length && (
-        <details className="text-sm">
-          <summary>Some extra content couldn’t be loaded</summary>
-          <ul>
-            {catalogWarnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </details>
+      {!pending && (
+        <CheckDetails lines={catalogWarnings} title="Some extra content couldn’t be loaded" />
       )}
       {error && (
         <Alert variant="destructive">
@@ -806,7 +858,10 @@ export function DataSourceConfigurator({
           <AlertTitle>
             {hasActiveDataSource ? 'Source check failed' : 'Game data unavailable'}
           </AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            <p>{error}</p>
+            <CheckDetails lines={errorDetails} />
+          </AlertDescription>
         </Alert>
       )}
 

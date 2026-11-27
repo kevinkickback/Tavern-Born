@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
+import { getReleaseHistory } from '@/lib/changelog'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { MINIMAL_GAME_DATA, seedAppState } from './helpers/startup'
 
@@ -125,12 +127,16 @@ test('opens an update requested from the toast after the startup overlay clears'
         onUpdateAvailable: (
           callback: (update: {
             version: string
-            changelog: null
+            changelog: string
             useReleaseDownloadPage: boolean
           }) => void,
         ) => {
           queueMicrotask(() =>
-            callback({ version: '1.2.3', changelog: null, useReleaseDownloadPage: false }),
+            callback({
+              version: '1.2.3',
+              changelog: 'Notes for the incoming release',
+              useReleaseDownloadPage: false,
+            }),
           )
           return () => {}
         },
@@ -152,9 +158,76 @@ test('opens an update requested from the toast after the startup overlay clears'
     home.release()
     await expect(overlay).toBeHidden()
     await expect(update).toBeVisible()
+    await expect(update.getByRole('region', { name: 'Release notes' })).toHaveText(
+      'Notes for the incoming release',
+    )
+    await expect(update.getByRole('button', { name: 'Download', exact: true })).toBeVisible()
   } finally {
     home.release()
   }
+})
+
+test('browses bundled changelog history offline and fits the viewport', async ({ page }) => {
+  await page.goto('/')
+  await seedBundledCache(page)
+  await page.evaluate(() => localStorage.setItem('tb:bundled-srd-intro:v1', '1'))
+  const history = getReleaseHistory(readFileSync('docs/changelog.md', 'utf8'), '0.7.0')
+  await page.addInitScript((releases) => {
+    Object.defineProperty(window, 'electronAPI', {
+      value: {
+        getAppVersion: async () => '0.7.0',
+        getReleaseHistory: async () => releases,
+        onConfirmClose: () => () => {},
+      },
+    })
+  }, history)
+  await page.evaluate(() => window.history.replaceState(null, '', '#/settings'))
+  await page.reload()
+  const openChangelog = page.getByRole('button', { name: 'Changelog (v0.7.0)' })
+  await expect(openChangelog).toBeVisible()
+  await page.context().setOffline(true)
+
+  await page.setViewportSize({ width: 500, height: 420 })
+  await openChangelog.click()
+  const dialog = page.getByRole('dialog')
+  const notes = dialog.getByRole('region', { name: 'Release notes' })
+  const selector = dialog.getByRole('combobox', { name: 'Release version' })
+  await expect(dialog).toHaveAccessibleName('Changelog — v0.7.0')
+  await expect(notes).toContainText('Significantly expanded level 1–20 progression')
+  await expect(notes.getByRole('heading', { name: /Changes/ })).toHaveCSS('font-weight', '600')
+  await expect(notes.getByRole('list').first()).toHaveCSS('list-style-type', 'disc')
+  await expect(dialog.getByRole('button', { name: 'Close', exact: true }).first()).toBeInViewport()
+  await expect.poll(() => notes.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+  const compactBounds = (await dialog.boundingBox())!
+  const titleBounds = (await dialog
+    .getByRole('heading', { name: 'Changelog — v0.7.0' })
+    .boundingBox())!
+  const selectorBounds = (await selector.boundingBox())!
+  const closeBounds = (await dialog
+    .getByRole('button', { name: 'Close', exact: true })
+    .last()
+    .boundingBox())!
+  expect(compactBounds.y).toBeGreaterThanOrEqual(31)
+  expect(420 - compactBounds.y - compactBounds.height).toBeGreaterThanOrEqual(31)
+  expect(selectorBounds.x).toBeGreaterThan(titleBounds.x)
+  expect(selectorBounds.y + selectorBounds.height / 2).toBeCloseTo(
+    titleBounds.y + titleBounds.height / 2,
+    0,
+  )
+  expect(selectorBounds.x + selectorBounds.width).toBeLessThan(closeBounds.x)
+
+  await selector.click()
+  await expect(page.getByRole('option', { name: 'v0.7.1' })).toHaveCount(0)
+  await page.getByRole('option', { name: 'v0.6.0' }).click()
+  await expect(dialog).toHaveAccessibleName('Changelog — v0.6.0')
+  await expect(notes).toContainText('Added bulk character backup and import')
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  expect((await dialog.boundingBox())?.width).toBeGreaterThan(compactBounds.width)
+  await page.keyboard.press('Escape')
+  await expect(openChangelog).toBeFocused()
+  await openChangelog.click()
+  await expect(dialog).toHaveAccessibleName('Changelog — v0.7.0')
 })
 
 test('startup data source modal supports remote/local setup flow', async ({ page }) => {

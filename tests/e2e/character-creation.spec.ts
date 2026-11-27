@@ -59,6 +59,46 @@ const CHARACTER_CREATION_GAME_DATA: GameData = {
 
 test.use({ viewport: { width: 1280, height: 720 } })
 
+test('centers the Included SRD message in the Sourcebooks body', async ({ page }) => {
+  await page.goto('/')
+  await seedAppState(page, {
+    sourcePath: 'srd/core',
+    gameData: CHARACTER_CREATION_GAME_DATA,
+    dataSourceConfig: {
+      type: 'bundled',
+      path: 'srd/core',
+      packId: 'tavern-born-srd-core',
+      packVersion: '1.0.0',
+      isValid: true,
+    },
+  })
+  await page.evaluate(() => localStorage.setItem('tb:bundled-srd-intro:v1', '1'))
+  await page.reload()
+  await page.getByRole('button', { name: 'New Character' }).first().click()
+  const wizard = page.getByRole('dialog', { name: 'Create New Character' })
+  await wizard.getByLabel('Character Name').fill('SRD Explorer')
+  await wizard.getByRole('button', { name: 'Next' }).click()
+  await wizard.getByRole('button', { name: /5e Legacy/ }).click()
+  await wizard.getByRole('button', { name: 'Next' }).click()
+
+  const message = wizard.getByText('Using the included SRD', { exact: true })
+  await expect(message).toBeVisible()
+  for (const height of [720, 440]) {
+    await page.setViewportSize({ width: 1280, height })
+    const { offset, space } = await message.evaluate((element) => {
+      const content = element.parentElement!.getBoundingClientRect()
+      const body = element.parentElement!.parentElement!.getBoundingClientRect()
+      return {
+        offset: Math.abs(content.top + content.height / 2 - body.top - body.height / 2),
+        space: body.height - content.height,
+      }
+    })
+    expect(space).toBeGreaterThan(20)
+    expect(offset).toBeLessThan(2)
+    await expect(wizard.getByRole('button', { name: 'Next' })).toBeInViewport()
+  }
+})
+
 test('outside clicks retain wizard input and portalled choices remain usable', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-wizard-dismissal', CHARACTER_CREATION_GAME_DATA)

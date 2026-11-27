@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { resolveDefaultBundledSource } from '@/lib/5etools/bundledSource'
+import { CatalogCheckError, catalogWarningsForDisplay } from '@/lib/5etools/catalogCheckError'
 import {
   compareCatalogCandidate,
   hasCatalogWorker,
@@ -104,6 +105,7 @@ interface CatalogRequest {
   recovery?: boolean
   startupRecoverySource?: Exclude<DataSourceConfig, { type: 'bundled' }>
   folderGrant?: string
+  importWorkingContent?: true
 }
 
 function releaseFolderGrant(root: string | undefined) {
@@ -179,6 +181,7 @@ interface GameDataState {
   protectCatalog: () => () => void
   loadProgress: LoadProgress | null
   error: string | null
+  errorDetails?: string[]
   lastDataChangedAt: string | null
   /** Digest of the last accepted catalog. */
   lastContentFingerprint: string | null
@@ -404,6 +407,7 @@ export const useGameDataStore = create<GameDataState>()(
             cacheStatus: 'cached',
             remoteStartup: null,
             error: null,
+            errorDetails: undefined,
           })
           return true
         }
@@ -479,7 +483,7 @@ export const useGameDataStore = create<GameDataState>()(
         const pending = get().pendingCatalog
         if (pending?.folderGrant) {
           releaseCatalogCandidate(pending.candidate)
-          set({ pendingCatalog: null, catalogWarnings: [] })
+          set({ pendingCatalog: null })
         }
       },
 
@@ -487,11 +491,24 @@ export const useGameDataStore = create<GameDataState>()(
         const pending = get().pendingCatalog
         if (request?.confirmed && request.prepared !== pending?.candidate)
           return { kind: 'superseded' }
-        const blocked = get().isCatalogActivating
-          ? 'Game data is already being applied.'
-          : !background && (catalogWorkflows.size || get().catalogDraftDirty)
-            ? WORKFLOW_MESSAGE
-            : undefined
+        const configuredSource = get().dataSourceConfig
+        const partial = Boolean(request?.prepared?.partialImport)
+        const partialBlocked =
+          partial &&
+          (!request?.importWorkingContent ||
+            background ||
+            request.confirmed ||
+            request.startup ||
+            request.session ||
+            request.recovery ||
+            (configuredSource && configuredSource.type !== 'bundled'))
+        const blocked = partialBlocked
+          ? 'Import working content is only available when adding Additional Content for the first time.'
+          : get().isCatalogActivating
+            ? 'Game data is already being applied.'
+            : !background && (catalogWorkflows.size || get().catalogDraftDirty)
+              ? WORKFLOW_MESSAGE
+              : undefined
         if (blocked) {
           if (
             request?.prepared !== pending?.candidate &&
@@ -561,6 +578,7 @@ export const useGameDataStore = create<GameDataState>()(
             background && request?.startup && get().sessionBundledSource,
           ),
           error: null,
+          errorDetails: undefined,
           loadProgress: null,
         })
 
@@ -571,10 +589,14 @@ export const useGameDataStore = create<GameDataState>()(
             expectation === undefined && !request?.session
               ? await settleOnAbort(readCatalogExpectation(), signal)
               : expectation
+          if (partial && expectedCache && expectedCache.sourceSnapshot.type !== 'bundled')
+            throw new Error(
+              'An Additional Content source is already active. Check the source again.',
+            )
           const finishUnchangedCheck = async (
             cached: GameDataCacheMetadata,
             checkedConfig: DataSourceConfig,
-            warnings: string[],
+            warnings = get().catalogWarnings,
           ) => {
             const now = new Date().toISOString()
             const result = await enqueueCacheMutation(async () => {
@@ -650,7 +672,7 @@ export const useGameDataStore = create<GameDataState>()(
               signal,
             )
             if (prepared === null && expectedCache)
-              return await finishUnchangedCheck(expectedCache, config, [])
+              return await finishUnchangedCheck(expectedCache, config)
             candidate = prepared ?? undefined
           }
           let failureCount = 0
@@ -856,7 +878,6 @@ export const useGameDataStore = create<GameDataState>()(
               isStartupRecovering: false,
               loadProgress: null,
               lastUpdateCheckAt: new Date().toISOString(),
-              catalogWarnings: review.candidate.warnings,
             })
             await recorded
             return { kind: 'staged' } as const
@@ -912,7 +933,11 @@ export const useGameDataStore = create<GameDataState>()(
               verifiedRevision: candidate.warnings.length ? undefined : candidate.revision,
               lastLoaded: priorSource?.lastLoaded,
             }
-            return await finishUnchangedCheck(cached, checkedConfig, candidate.warnings)
+            return await finishUnchangedCheck(
+              cached,
+              checkedConfig,
+              catalogWarningsForDisplay(candidate),
+            )
           }
           if (candidate && !prepared)
             prepared = await materializeCatalogCandidate(candidate, signal)
@@ -948,7 +973,10 @@ export const useGameDataStore = create<GameDataState>()(
             ? {
                 ...candidate.config,
                 acceptedRevision: candidate.revision,
-                verifiedRevision: candidate.warnings.length ? undefined : candidate.revision,
+                verifiedRevision:
+                  candidate.partialImport || candidate.warnings.length
+                    ? undefined
+                    : candidate.revision,
                 lastLoaded: now,
               }
             : { ...config, isValid: true, lastLoaded: now }
@@ -986,8 +1014,7 @@ export const useGameDataStore = create<GameDataState>()(
                   removals: [],
                   restoreWhenIdle: true,
                 })
-              if (pending?.candidate === candidate && pending)
-                set({ pendingCatalog: pending, catalogWarnings: pending.candidate.warnings })
+              if (pending?.candidate === candidate && pending) set({ pendingCatalog: pending })
               throw new Error(WORKFLOW_MESSAGE)
             }
             if (!applying) set({ isCatalogActivating: true })
@@ -1024,7 +1051,7 @@ export const useGameDataStore = create<GameDataState>()(
                 gameData: shouldHydrateMemory ? acceptedData : get().gameData,
                 dataSourceConfig: acceptedConfig,
                 externalKeys: prepared?.keys,
-                catalogWarnings: candidate?.warnings ?? [],
+                catalogWarnings: catalogWarningsForDisplay(candidate),
                 ...(requestId === activeLoadRequestId
                   ? {
                       isLoading: false,
@@ -1078,6 +1105,7 @@ export const useGameDataStore = create<GameDataState>()(
           const recorded = rememberCheck(false)
           set({
             error: message,
+            errorDetails: error instanceof CatalogCheckError ? error.details : undefined,
             ...(background && get().gameData && !get().sessionBundledSource
               ? { cacheStatus: 'remote-cache' as const }
               : {}),
@@ -1118,6 +1146,7 @@ export const useGameDataStore = create<GameDataState>()(
           set({
             error:
               'The Included SRD is unavailable in this copy of Tavern Born. Reinstall the app or add compatible 5etools data in Settings.',
+            errorDetails: undefined,
           })
           return false
         }

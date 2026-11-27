@@ -1,5 +1,6 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
 import type { CatalogRequestMessage, CatalogWorkerMessage } from '@/lib/5etools/catalogProtocol'
+import type { ChangelogEntry } from '@/lib/changelog'
 import type { BundledSrdManifestSummary } from './bundledResources'
 import type { UpdateEventPayloads, UpdateSignal } from './updateEvents'
 import type { UpdateStatus } from './updateManager'
@@ -63,8 +64,8 @@ const electronAPI = {
   setAutoCheck: (enabled: boolean): Promise<void> =>
     ipcRenderer.invoke('update:set-auto-check', enabled),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('update:get-version'),
-  getCurrentChangelog: (): Promise<{ version: string; changelog: string | null }> =>
-    ipcRenderer.invoke('update:get-current-changelog'),
+  getReleaseHistory: (): Promise<ChangelogEntry[]> =>
+    ipcRenderer.invoke('update:get-release-history'),
 
   onUpdateChecking: (callback: () => void) => onIpcEvent('update-checking', callback),
   onUpdateAvailable: subscribeToUpdate('update-available'),

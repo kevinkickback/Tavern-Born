@@ -1,6 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import {
+  compareStableVersions,
+  parseChangelog,
+  stableVersionPattern,
+} from '../src/lib/changelog.ts'
 
 let notesFile
 let publishedTagsFile
@@ -35,16 +40,6 @@ const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), 
 const packageJson = await readJson('package.json')
 const packageLock = await readJson('package-lock.json')
 const version = packageJson.version
-const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
-const compareVersions = (left, right) => {
-  const leftParts = left.split('.').map(BigInt)
-  const rightParts = right.split('.').map(BigInt)
-  for (let index = 0; index < 3; index += 1) {
-    if (leftParts[index] > rightParts[index]) return 1
-    if (leftParts[index] < rightParts[index]) return -1
-  }
-  return 0
-}
 
 if (typeof version !== 'string' || !stableVersionPattern.test(version)) {
   throw new Error(
@@ -66,7 +61,7 @@ if (previousVersion !== undefined) {
   if (!stableVersionPattern.test(previousVersion)) {
     throw new Error(`Previous package version is not stable X.Y.Z: ${previousVersion}`)
   }
-  if (compareVersions(version, previousVersion) <= 0) {
+  if (compareStableVersions(version, previousVersion) <= 0) {
     throw new Error(`Release version must increase (${previousVersion} -> ${version}).`)
   }
 }
@@ -78,10 +73,10 @@ if (publishedTagsFile !== undefined) {
     .filter((tag) => stableVersionPattern.test(tag))
   const latestPublished = publishedVersions.reduce(
     (latest, candidate) =>
-      latest === undefined || compareVersions(candidate, latest) > 0 ? candidate : latest,
+      latest === undefined || compareStableVersions(candidate, latest) > 0 ? candidate : latest,
     undefined,
   )
-  if (latestPublished !== undefined && compareVersions(version, latestPublished) <= 0) {
+  if (latestPublished !== undefined && compareStableVersions(version, latestPublished) <= 0) {
     throw new Error(
       `Release version ${version} must be greater than the latest published version ${latestPublished}.`,
     )
@@ -89,28 +84,17 @@ if (publishedTagsFile !== undefined) {
 }
 
 const changelog = await readFile(new URL('docs/changelog.md', root), 'utf8')
-const lines = changelog.split(/\r?\n/)
-const heading = `<summary><strong>v${version}</strong></summary>`
-const starts = lines.flatMap((line, index) => (line.trim() === heading ? [index] : []))
-if (starts.length !== 1) {
-  throw new Error(`Expected exactly one "${heading}" entry in docs/changelog.md.`)
+const releases = parseChangelog(changelog).filter((release) => release.version === version)
+if (releases.length !== 1) {
+  throw new Error(
+    `Expected exactly one "<summary><strong>v${version}</strong></summary>" entry in docs/changelog.md.`,
+  )
 }
 
-const start = starts[0]
-const end = lines.findIndex((line, index) => index > start && line.trim() === '</details>')
-if (
-  start === 0 ||
-  lines[start - 1].trim() !== '<details>' ||
-  end === -1 ||
-  lines.slice(start + 1, end).some((line) => line.trim().startsWith('<details'))
-) {
+const { notes } = releases[0]
+if (notes === null) {
   throw new Error(`No complete changelog section found for v${version} in docs/changelog.md.`)
 }
-
-const notes = lines
-  .slice(start + 1, end)
-  .join('\n')
-  .trim()
 if (!notes) throw new Error(`Release notes for v${version} are empty.`)
 
 if (notesFile !== undefined) await writeFile(notesFile, `${notes}\n`)

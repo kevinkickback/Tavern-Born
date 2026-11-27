@@ -76,6 +76,7 @@ export function CharacterCardFrame({
         )}
       >
         {selectionControl}
+        {statusBadge}
         {originSystem && (
           <Badge
             variant="outline"
@@ -91,13 +92,15 @@ export function CharacterCardFrame({
             {getOriginEditionLabel(originSystem)}
           </Badge>
         )}
-        {statusBadge}
       </div>
 
       <div className="absolute inset-y-0 right-0 left-[36%] z-[1] flex min-w-0 flex-col items-end gap-1 py-2 pr-2.5 text-right @[300px]:gap-2 @[300px]:py-3.5 @[300px]:pr-3.5">
         <h3
           title={displayName}
-          className="line-clamp-1 w-full shrink-0 wrap-anywhere font-display text-[clamp(1.0625rem,7.2cqw,1.8rem)] leading-[1.1] font-bold text-foreground @[250px]:line-clamp-2"
+          className={cn(
+            'line-clamp-1 w-full shrink-0 wrap-anywhere font-display text-[clamp(1.0625rem,7.2cqw,1.8rem)] leading-[1.1] font-bold text-foreground @[250px]:line-clamp-2',
+            statusBadge && 'max-w-[calc(100cqw-8.75rem)]',
+          )}
         >
           {displayName}
         </h3>

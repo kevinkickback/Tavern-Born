@@ -18,6 +18,7 @@ export type CatalogCommand =
       config: PreparedCatalog['config']
       base?: GameDataSourceStack['base']
       verifiedRevision?: string | CatalogResourceProof
+      allowPartial?: boolean
     }
   | { kind: 'bundled'; config: BundledDataSourceConfig }
   | { kind: 'repair'; data: GameData; contentFingerprint?: string }
@@ -41,5 +42,5 @@ export type CatalogWorkerMessage =
   | { kind: 'read'; id: string; readId: number; request: JsonSourceRead }
   | { kind: 'cancel-read'; id: string; readId: number }
   | { kind: 'result'; id: string; result: unknown }
-  | { kind: 'error'; id: string; error: string }
+  | { kind: 'error'; id: string; error: string; details?: string[] }
   | { kind: 'closed' }

@@ -77,6 +77,8 @@ describe('game data source persistence migration', () => {
         bundledSource,
         expect.any(AbortSignal),
         expect.any(Function),
+        undefined,
+        false,
       )
       expect(store.getState().gameData?.spells.map(({ name }) => name)).toEqual(['Light'])
       expect(store.getState().dataSourceConfig).toEqual(config)

@@ -19,6 +19,12 @@ import type {
   SubclassFeature,
 } from '@/types/5etools'
 import { composeBackgroundSources } from './backgroundSources'
+import {
+  CatalogDependencyError,
+  type CatalogDependencyFailure,
+  type CatalogDependencyOwner,
+  describeCatalogReference,
+} from './catalogCheckError'
 import { mergeClassCastingSources } from './classCastingSource'
 import { normalizeSubclassRules } from './classChoiceNormalization'
 import { getClassFeatureIdentity, getSubclassFeatureIdentity } from './classFeatureIdentity'
@@ -334,6 +340,7 @@ export interface DataSourceStackLoaderOptions extends DataLoaderOptions {
   baseReader?: import('./resourceReader').JsonResourceReader
   additionalReader?: import('./resourceReader').JsonResourceReader
   onLayerLoaded?: (role: 'base' | 'additional', data: GameData) => void
+  onOptionalDependency?: (issue: ContentLayerDependencyIssue) => void
 }
 
 function entityKey(name: unknown, source: unknown): string {
@@ -344,9 +351,14 @@ function entityKey(name: unknown, source: unknown): string {
 export function findLayerDependencyIssues(
   gameData: GameData,
   layer: GameData,
+  onIssue?: (issue: ContentLayerDependencyIssue, owner: CatalogDependencyOwner) => void,
 ): ContentLayerDependencyIssue[] {
   const layerClasses = new Set(layer.classes.map((value) => entityKey(value.name, value.source)))
   const issues: ContentLayerDependencyIssue[] = []
+  const report = (issue: ContentLayerDependencyIssue, owner: CatalogDependencyOwner) => {
+    issues.push(issue)
+    onIssue?.(issue, owner)
+  }
   const featureCatalogs = buildClassChoiceFeatureCatalogs(gameData)
   const optionCatalogs = {
     classFeature: new Set(gameData.classFeatures.map(getClassFeatureIdentity)),
@@ -377,36 +389,42 @@ export function findLayerDependencyIssues(
     const owner = `${classData.name}|${classData.source}`
     for (const [index, reference] of (classData.classFeatureRefs ?? []).entries()) {
       if (reference.feature) continue
-      issues.push({
-        owner,
-        path: `classFeatureRefs[${index}]`,
-        reference: reference.ref || `${reference.name}|${reference.source ?? ''}`,
-      })
+      report(
+        {
+          owner,
+          path: `classFeatureRefs[${index}]`,
+          reference: reference.ref || `${reference.name}|${reference.source ?? ''}`,
+        },
+        { parent: classData },
+      )
     }
     for (const [subclassIndex, subclass] of (classData.subclasses ?? []).entries()) {
       for (const [referenceIndex, reference] of (subclass.subclassFeatureRefs ?? []).entries()) {
         if (reference.feature) continue
-        issues.push({
-          owner: `${owner}/${subclass.name}|${subclass.source}`,
-          path: `subclasses[${subclassIndex}].subclassFeatureRefs[${referenceIndex}]`,
-          reference: reference.ref || `${reference.name}|${reference.source ?? ''}`,
-        })
+        report(
+          {
+            owner: `${owner}/${subclass.name}|${subclass.source}`,
+            path: `subclasses[${subclassIndex}].subclassFeatureRefs[${referenceIndex}]`,
+            reference: reference.ref || `${reference.name}|${reference.source ?? ''}`,
+          },
+          { parent: classData, subclass },
+        )
       }
     }
-    const auditChoices = (
-      entry: Pick<Class5e, 'normalizedRules'>,
-      entryOwner: string,
-      prefix = '',
-    ) => {
+    const auditChoices = (entryOwner: string, subclass?: Subclass5e, prefix = '') => {
+      const entry = subclass ?? classData
       for (const [choiceIndex, choice] of (entry.normalizedRules?.choices ?? []).entries()) {
         for (const [optionIndex, option] of choice.options.entries()) {
           if (option.entityType === 'proficiency') {
             if (!hasProficiencyCatalogTarget(option, featureCatalogs))
-              issues.push({
-                owner: entryOwner,
-                path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
-                reference: option.ref ?? option.name,
-              })
+              report(
+                {
+                  owner: entryOwner,
+                  path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+                  reference: option.ref ?? option.name,
+                },
+                { parent: classData, subclass },
+              )
             continue
           }
           const reference = option.ref ?? `${option.name}|${option.source ?? ''}`
@@ -437,20 +455,23 @@ export function findLayerDependencyIssues(
           ) {
             continue
           }
-          issues.push({
-            owner: entryOwner,
-            path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
-            reference,
-            ...(option.entityType === 'item' ? { required: false } : {}),
-          })
+          report(
+            {
+              owner: entryOwner,
+              path: `${prefix}normalizedRules.choices[${choiceIndex}].options[${optionIndex}]`,
+              reference,
+              ...(option.entityType === 'item' ? { required: false } : {}),
+            },
+            { parent: classData, subclass },
+          )
         }
       }
     }
-    auditChoices(classData, owner)
+    auditChoices(owner)
     for (const [index, subclass] of (classData.subclasses ?? []).entries()) {
       auditChoices(
-        subclass,
         `${owner}/${subclass.name}|${subclass.source}`,
+        subclass,
         `subclasses[${index}].`,
       )
     }
@@ -733,27 +754,60 @@ export async function loadGameDataSourceStack(
     }
     throw error
   }
-  assertLayerDependencies(composed, additional, options?.onResourceFailure)
+  assertLayerDependencies(
+    composed,
+    additional,
+    options?.onResourceFailure,
+    options?.onOptionalDependency,
+  )
   return composed
+}
+
+function describeDependencyOwner(owner: string): string {
+  const separator = owner.indexOf('/', owner.indexOf('|') + 1)
+  const classLabel = describeCatalogReference(separator < 0 ? owner : owner.slice(0, separator))
+  return separator < 0
+    ? classLabel
+    : `${describeCatalogReference(owner.slice(separator + 1))} for ${classLabel}`
 }
 
 export function assertLayerDependencies(
   composed: GameData,
   additional: GameData,
   onFailure?: DataLoaderOptions['onResourceFailure'],
+  onOptionalDependency?: DataSourceStackLoaderOptions['onOptionalDependency'],
 ) {
   // Optional item-choice metadata stays diagnostic; reporting a transport failure would
   // incorrectly hold every background refresh on the previous cache.
-  const dependencyIssues = findLayerDependencyIssues(composed, additional).filter(
-    (issue) => issue.required !== false,
-  )
+  const failures: CatalogDependencyFailure[] = []
+  const issues = findLayerDependencyIssues(composed, additional, (issue, owner) => {
+    if (issue.required !== false) failures.push({ ...owner, reference: issue.reference })
+  })
+  const dependencyIssues = issues.filter((issue) => issue.required !== false)
   if (dependencyIssues.length > 0) {
-    for (const issue of dependencyIssues)
-      onFailure?.(`Additional content: ${issue.reference}`, { required: true })
-    const firstIssue = dependencyIssues[0]
-    throw new Error(
-      `Additional content has ${dependencyIssues.length} unresolved required ${dependencyIssues.length === 1 ? 'reference' : 'references'}. ${firstIssue.owner} needs ${firstIssue.reference}.`,
+    const byOwner = new Map<string, Set<string>>()
+    for (const { owner, reference } of dependencyIssues) {
+      onFailure?.(`Additional content: ${reference}`, { required: true })
+      const references = byOwner.get(owner) ?? new Set<string>()
+      references.add(reference)
+      byOwner.set(owner, references)
+    }
+    const details = [...byOwner].map(([owner, references]) => {
+      const names = [...references].map(describeCatalogReference).join(', ')
+      return `${describeDependencyOwner(owner)} needs ${names}`
+    })
+    throw new CatalogDependencyError(
+      dependencyIssues.length === 1
+        ? `${details[0]}. Include the required content and check again.`
+        : 'Some class rules are missing required content. Include it and check again.',
+      details,
+      failures,
     )
+  }
+  if (onOptionalDependency) {
+    for (const issue of issues) {
+      if (issue.required === false) onOptionalDependency(issue)
+    }
   }
 }
 

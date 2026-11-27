@@ -22,7 +22,6 @@ function installElectronApi(checkForUpdate: ReturnType<typeof vi.fn>) {
       getAppVersion: vi.fn(async () => '0.4.0'),
       checkForUpdate,
       setAutoCheck,
-      getCurrentChangelog: vi.fn(async () => ({ version: '0.4.0', changelog: null })),
       onUpdateAvailable: vi.fn(() => unsubscribe),
       onUpdateNotAvailable: vi.fn(() => unsubscribe),
       onUpdateError: vi.fn(() => unsubscribe),
