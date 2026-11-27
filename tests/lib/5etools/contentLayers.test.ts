@@ -783,6 +783,69 @@ describe('game-data content layers', () => {
     ])
   })
 
+  test('groups missing choices by subclass printing and shows each reference once per owner', () => {
+    const classes = ['PHB', 'XPHB'].map((source) =>
+      makeClassFixture({
+        name: 'Fighter',
+        source,
+        classFeatureRefs: [],
+        subclasses: [
+          {
+            name: 'Rune Knight',
+            shortName: 'Rune Knight',
+            source: 'TCE',
+            className: 'Fighter',
+            classSource: source,
+            normalizedRules: {
+              resources: [],
+              asiLevels: [],
+              ritualCasting: false,
+              choiceDiagnostics: [],
+              choices: [
+                {
+                  id: 'runes',
+                  label: 'Runes',
+                  kind: 'optional-feature',
+                  owner: {
+                    type: 'subclass',
+                    name: 'Fighter',
+                    source,
+                    subclassName: 'Rune Knight',
+                    subclassSource: 'TCE',
+                  },
+                  level: 3,
+                  minimumSelections: 1,
+                  maximumSelections: 1,
+                  selectionCountByLevel: [0, 0, 1],
+                  options: ['Cloud Rune', 'Fire Rune', 'Cloud Rune'].map((name) => ({
+                    entityType: 'optionalFeature',
+                    name,
+                    source: 'TCE',
+                  })),
+                  repeatable: false,
+                  replacement: { cadence: 'never' },
+                  source: { kind: 'optional-feature-progression', field: 'test.options' },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    )
+    const additional = makeGameDataFixture({ classes })
+    const onFailure = vi.fn()
+    expect(() => assertLayerDependencies(additional, additional, onFailure)).toThrow(
+      expect.objectContaining({
+        message: 'Some class rules are missing required content. Include it and check again.',
+        details: [
+          'Rune Knight (TCE) for Fighter (2014) needs Cloud Rune (TCE), Fire Rune (TCE)',
+          'Rune Knight (TCE) for Fighter (2024) needs Cloud Rune (TCE), Fire Rune (TCE)',
+        ],
+      }),
+    )
+    expect(onFailure).toHaveBeenCalledTimes(6)
+  })
+
   test('resolves nested subclass-choice features in dependency audits', () => {
     const bear = {
       name: 'Bear',

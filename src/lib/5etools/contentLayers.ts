@@ -744,6 +744,19 @@ export async function loadGameDataSourceStack(
   return composed
 }
 
+function describeDependencyOwner(owner: string): string {
+  const separator = owner.indexOf('/', owner.indexOf('|') + 1)
+  const parent = separator < 0 ? owner : owner.slice(0, separator)
+  const [name, source] = parent.split('|')
+  const classLabel =
+    source === 'PHB' || source === 'XPHB'
+      ? `${name} (${source === 'PHB' ? '2014' : '2024'})`
+      : describeCatalogReference(parent)
+  return separator < 0
+    ? classLabel
+    : `${describeCatalogReference(owner.slice(separator + 1))} for ${classLabel}`
+}
+
 export function assertLayerDependencies(
   composed: GameData,
   additional: GameData,
@@ -755,13 +768,22 @@ export function assertLayerDependencies(
   const issues = findLayerDependencyIssues(composed, additional)
   const dependencyIssues = issues.filter((issue) => issue.required !== false)
   if (dependencyIssues.length > 0) {
-    for (const issue of dependencyIssues)
-      onFailure?.(`Additional content: ${issue.reference}`, { required: true })
-    const firstIssue = dependencyIssues[0]
-    const owner = firstIssue.owner.split('/').map(describeCatalogReference).join(' / ')
+    const byOwner = new Map<string, Set<string>>()
+    for (const { owner, reference } of dependencyIssues) {
+      onFailure?.(`Additional content: ${reference}`, { required: true })
+      const references = byOwner.get(owner) ?? new Set<string>()
+      references.add(reference)
+      byOwner.set(owner, references)
+    }
+    const details = [...byOwner].map(([owner, references]) => {
+      const names = [...references].map(describeCatalogReference).join(', ')
+      return `${describeDependencyOwner(owner)} needs ${names}`
+    })
     throw new CatalogCheckError(
-      `${owner} needs ${describeCatalogReference(firstIssue.reference)}. Include the required content and check again.`,
-      dependencyIssues.map(({ owner, path, reference }) => `${owner} needs ${reference} (${path})`),
+      dependencyIssues.length === 1
+        ? `${details[0]}. Include the required content and check again.`
+        : 'Some class rules are missing required content. Include it and check again.',
+      details,
     )
   }
   if (onOptionalDependency) {
