@@ -1,7 +1,6 @@
 import { join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { describe, expect, test } from 'vitest'
-import { parsePastedCatalogPath } from '../../electron/localCatalogResource'
 import {
   isPathWithinRoot,
   isTrustedRendererUrl,
@@ -9,32 +8,6 @@ import {
 } from '../../electron/security'
 
 describe('Electron security boundaries', () => {
-  test('accepts full clipboard paths and preserves path components for native confirmation', () => {
-    expect(parsePastedCatalogPath('"C:\\My Rules\\data"', 'win32')).toBe('C:\\My Rules\\data')
-    expect(parsePastedCatalogPath('C:/My Rules/data', 'win32')).toBe('C:/My Rules/data')
-    expect(parsePastedCatalogPath('\\\\host\\share\\data', 'win32')).toBe('\\\\host\\share\\data')
-    expect(parsePastedCatalogPath('"/home/Rules Data/../Other rules "', 'linux')).toBe(
-      '/home/Rules Data/../Other rules ',
-    )
-    expect(parsePastedCatalogPath('/home/Rules Data ', 'linux')).toBe('/home/Rules Data ')
-  })
-
-  test.each([
-    'relative\\data',
-    'C:relative',
-    '\\drive-relative',
-    '\\\\host',
-    '\\\\.\\pipe\\test',
-    '\\\\?\\C:\\Data',
-    'C:\\Data\\CON',
-    'C:\\Data\\spells.json:stream',
-    'C:\\Data\\ambiguous.',
-    'C:\\Data\\hidden\u202e',
-    'C:\\Data\\control\nname',
-  ])('refuses ambiguous or unsafe Windows folder spelling %j', (path) => {
-    expect(() => parsePastedCatalogPath(path, 'win32')).toThrow('Enter a full folder path.')
-  })
-
   test('allows the selected root and descendants only', () => {
     const root = resolve('fixtures', 'data')
 

@@ -18,9 +18,8 @@ The loader and unloaded hook views share `createEmptyGameData`; each call owns f
 | Filtering/resolution | `filters.ts`, `entityResolvers.ts` | Filter catalogs while preserving exact saved-reference fallback. |
 | Cache | `dataCache.ts` | Persist serializable parsed output plus freshness/schema metadata. |
 
-Local reads are capability-scoped to roots explicitly granted in a native dialog. Select a folder
-in the picker or paste a full path and choose **Check Folder** to confirm it. Confirmation gives
-the canonical folder a temporary grant. A staged replacement retains its grant while
+Local reads are capability-scoped to roots explicitly granted through the native picker. Browsing
+for a replacement gives that folder a temporary grant. A staged replacement retains its grant while
 awaiting review, including when leaving Settings. A new folder selection replaces the temporary
 grant. Applying a validated source saves the grant.
 Reads are canonicalized against symlinks and kept inside the exact selected root, limited

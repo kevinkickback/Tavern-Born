@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, open, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -26,7 +26,7 @@ import {
   resolveBundledPackRoot,
 } from './bundledResources'
 import { createCatalogService } from './catalogService'
-import { parsePastedCatalogPath, readLocalCatalogResource } from './localCatalogResource'
+import { readLocalCatalogResource } from './localCatalogResource'
 import { isTrustedRendererUrl, rendererRootFileUrl } from './security'
 import {
   acknowledgeInstallerHandoff,
@@ -62,8 +62,8 @@ let hasUnsavedChanges = false
 let forceClose = false
 let updateRestart: { window: BrowserWindow; cancelClose: (message: string) => void } | null = null
 let localDataRoots = new Set<string>()
-let localDataGrantBusy = false
-let pendingLocalDataGrant: { root: string; owner: Electron.WebContents } | null = null
+let selectingLocalDataRoot = false
+let pendingLocalDataRoot: string | null = null
 let localGrantGeneration = 0
 let bundledManifestCache: {
   rootPath: string
@@ -91,17 +91,9 @@ function assertTrustedIpcSender(event: TrustedIpcEvent): void {
 }
 
 function checkLocalRoot(root: unknown): asserts root is string {
-  if (
-    typeof root !== 'string' ||
-    (!localDataRoots.has(root) && root !== pendingLocalDataGrant?.root)
-  ) {
+  if (typeof root !== 'string' || (!localDataRoots.has(root) && root !== pendingLocalDataRoot)) {
     throw new Error('Select the local data directory first.')
   }
-}
-
-function clearPendingLocalDataGrant() {
-  pendingLocalDataGrant = null
-  localGrantGeneration += 1
 }
 
 function getLocalDataAuthPath(): string {
@@ -122,27 +114,17 @@ async function loadAuthorizedLocalDataRoots(): Promise<Set<string>> {
   }
 }
 
-async function approveLocalDataRoot(root: unknown, owner: Electron.WebContents): Promise<void> {
+async function approveLocalDataRoot(root: unknown): Promise<void> {
   if (typeof root !== 'string') throw new Error('Invalid data directory')
   if (localDataRoots.has(root)) return
-  const grant = pendingLocalDataGrant
-  if (localDataGrantBusy || root !== grant?.root || owner !== grant.owner) {
-    throw new Error('Select the data directory again.')
-  }
-  localDataGrantBusy = true
+  if (root !== pendingLocalDataRoot) throw new Error('Select the data directory again.')
   const roots = new Set([...localDataRoots, root])
   const path = getLocalDataAuthPath()
+  await mkdir(app.getPath('userData'), { recursive: true })
   const pendingPath = `${path}.tmp`
-  try {
-    await mkdir(app.getPath('userData'), { recursive: true })
-    await writeFile(pendingPath, JSON.stringify({ rootPaths: [...roots] }), 'utf-8')
-    if (pendingLocalDataGrant !== grant) throw new Error('Select the data directory again.')
-    await rename(pendingPath, path)
-    localDataRoots = roots
-  } finally {
-    await rm(pendingPath, { force: true }).catch(() => undefined)
-    localDataGrantBusy = false
-  }
+  await writeFile(pendingPath, JSON.stringify({ rootPaths: [...roots] }), 'utf-8')
+  await rename(pendingPath, path)
+  localDataRoots = roots
 }
 
 function getBundledPackRoot(): string {
@@ -388,62 +370,24 @@ async function initializeDesktop(): Promise<void> {
   localDataRoots = await loadAuthorizedLocalDataRoots()
   initAutoUpdater()
 
-  ipcMain.handle('dialog:selectFolder', async (event, pastedPath?: unknown) => {
+  ipcMain.handle('dialog:selectFolder', async (event) => {
     assertTrustedIpcSender(event)
-    const ownerWindow = mainWindow
-    const owner = event.sender
-    if (!ownerWindow || owner !== ownerWindow.webContents || localDataGrantBusy) return null
-
-    localDataGrantBusy = true
-    let invalidated = false
-    const invalidate = () => {
-      invalidated = true
-    }
-    const onNavigation = (
-      navigation: Electron.Event<Electron.WebContentsDidStartNavigationEventParams>,
-    ) => {
-      if (navigation.isMainFrame && !navigation.isSameDocument) invalidate()
-    }
-    const stillCurrent = () => !invalidated && !owner.isDestroyed() && mainWindow === ownerWindow
-    owner.on('did-start-navigation', onNavigation)
-    owner.on('render-process-gone', invalidate)
+    if (selectingLocalDataRoot) return null
+    selectingLocalDataRoot = true
     try {
-      let selectedPath: string
-      if (pastedPath === undefined) {
-        const result = await dialog.showOpenDialog(ownerWindow, { properties: ['openDirectory'] })
-        if (result.canceled || result.filePaths.length === 0) return null
-        selectedPath = result.filePaths[0]
-      } else {
-        selectedPath = parsePastedCatalogPath(pastedPath)
-        const { response } = await dialog.showMessageBox(ownerWindow, {
-          type: 'question',
-          title: 'Allow folder access?',
-          message:
-            process.platform === 'win32' && /^[\\/]{2}/.test(selectedPath)
-              ? 'Check this network folder for 5etools data?'
-              : 'Check this folder for 5etools data?',
-          detail: selectedPath,
-          buttons: ['Cancel', 'Check Folder'],
-          defaultId: 0,
-          cancelId: 0,
-          noLink: true,
-        })
-        if (response !== 1) return null
-      }
-
-      if (!stillCurrent()) return null
-      const root = await realpath(selectedPath).catch(() => {
-        throw new Error('Folder could not be found or opened. Check the path and try again.')
-      })
-      if (!(await stat(root)).isDirectory()) throw new Error('Choose a folder, not a file.')
-      if (!stillCurrent()) return null
-      pendingLocalDataGrant = { root: normalize(root), owner }
+      const result = mainWindow
+        ? await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory'],
+          })
+        : await dialog.showOpenDialog({
+            properties: ['openDirectory'],
+          })
+      if (result.canceled || result.filePaths.length === 0) return null
+      pendingLocalDataRoot = normalize(await realpath(result.filePaths[0]))
       localGrantGeneration += 1
-      return pendingLocalDataGrant.root
+      return pendingLocalDataRoot
     } finally {
-      owner.off('did-start-navigation', onNavigation)
-      owner.off('render-process-gone', invalidate)
-      localDataGrantBusy = false
+      selectingLocalDataRoot = false
     }
   })
 
@@ -488,18 +432,14 @@ async function initializeDesktop(): Promise<void> {
   })
 
   ipcMain.on('fs:discardDataRoot', (event, root: unknown) => {
-    if (
-      isTrustedIpcSender(event) &&
-      pendingLocalDataGrant?.owner === event.sender &&
-      root === pendingLocalDataGrant.root
-    ) {
-      clearPendingLocalDataGrant()
+    if (isTrustedIpcSender(event) && root === pendingLocalDataRoot) {
+      pendingLocalDataRoot = null
+      localGrantGeneration += 1
     }
   })
   ipcMain.handle('fs:approveDataRoot', (event, root: unknown) => {
     assertTrustedIpcSender(event)
-    if (event.sender !== mainWindow?.webContents) throw new Error('Invalid data directory owner')
-    return approveLocalDataRoot(root, event.sender)
+    return approveLocalDataRoot(root)
   })
   ipcMain.handle('resources:getBundledManifest', async (event) => {
     assertTrustedIpcSender(event)
@@ -538,7 +478,7 @@ async function initializeDesktop(): Promise<void> {
             return () => {
               if (
                 !localDataRoots.has(root) &&
-                (root !== pendingLocalDataGrant?.root || generation !== localGrantGeneration)
+                (root !== pendingLocalDataRoot || generation !== localGrantGeneration)
               )
                 throw new Error('Select the data directory again.')
             }
@@ -557,7 +497,6 @@ async function initializeDesktop(): Promise<void> {
   })
   app.on('web-contents-created', (_event, owner) => {
     const close = () => {
-      if (pendingLocalDataGrant?.owner === owner) clearPendingLocalDataGrant()
       catalogServices.get(owner)?.close()
       catalogServices.delete(owner)
     }

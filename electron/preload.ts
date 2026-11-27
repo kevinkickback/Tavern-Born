@@ -33,8 +33,7 @@ const electronAPI = {
     chrome: process.versions.chrome,
     node: process.versions.node,
   },
-  selectFolder: (path?: string): Promise<string | null> =>
-    ipcRenderer.invoke('dialog:selectFolder', path),
+  selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
   saveCharacterFile: (filename: string, text: string): Promise<boolean> =>
     ipcRenderer.invoke('character:save-file', filename, text),
   discardLocalDataRoot: (root: string): void => ipcRenderer.send('fs:discardDataRoot', root),

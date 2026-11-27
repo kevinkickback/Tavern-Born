@@ -1,41 +1,10 @@
 import { createHash } from 'node:crypto'
 import type { BigIntStats } from 'node:fs'
 import { open, realpath, stat } from 'node:fs/promises'
-import { extname, isAbsolute, normalize, posix, relative, win32 } from 'node:path'
+import { extname, isAbsolute, normalize, relative } from 'node:path'
 import { isPathWithinRoot } from './security'
 
 const MAX_LOCAL_JSON_BYTES = 50 * 1024 * 1024
-
-export function parsePastedCatalogPath(value: unknown, platform = process.platform): string {
-  const invalid = () => new Error('Enter a full folder path.')
-  if (typeof value !== 'string') throw invalid()
-  const quoted = value.trim()
-  const path = quoted.startsWith('"') && quoted.endsWith('"') ? quoted.slice(1, -1) : value
-  if (/[\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u.test(path)) throw invalid()
-
-  const paths = platform === 'win32' ? win32 : posix
-  if (!paths.isAbsolute(path)) throw invalid()
-  if (platform === 'win32') {
-    const windowsPath = path.replace(/\//g, '\\')
-    const drive = /^[a-z]:\\/i.test(windowsPath)
-    const parts = windowsPath.slice(drive ? 3 : 2).split('\\')
-    const unc = windowsPath.startsWith('\\\\') && Boolean(parts[0] && parts[1])
-    const device = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³]|conin\$|conout\$)(?:\.|$)/i
-    if (
-      (!drive && !unc) ||
-      parts.some(
-        (part) =>
-          /[<>:"|?*]/.test(part) ||
-          (part !== '.' && part !== '..' && /[ .]$/.test(part)) ||
-          device.test(part),
-      ) ||
-      (unc && parts.slice(0, 2).some((part) => part === '.' || part === '..'))
-    )
-      throw invalid()
-  }
-  // Keep dot segments intact so the native confirmation and filesystem resolve the same path.
-  return path
-}
 
 function stampFor({ dev, ino, size, mtimeNs, ctimeNs }: BigIntStats) {
   return `${dev}:${ino}:${size}:${mtimeNs}:${ctimeNs}`
