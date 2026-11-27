@@ -40,7 +40,7 @@ test('previews a verified subset from the same reads, preserving healthy sibling
   vi.stubGlobal('fetch', fetch)
   const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
   expect(candidate.partialImport).toEqual({
-    included: ['1 class', '1 subclass', '2 spells'],
+    included: ['1 class', '1 subclass entry', '2 spells'],
     skipped: ['Broken (TEST) for Guardian (TEST). Requires Magic Missile (XPHB).'],
   })
   expect(candidate.data.classes[0].subclasses?.map(({ name }) => name)).toEqual(['Healthy'])
@@ -492,7 +492,7 @@ test('a classes-only source can use a spell already available in the Included SR
     return Promise.resolve(additional[path])
   }
   const candidate = await prepareCatalog(online, base, signal(), undefined, read)
-  expect(candidate.contents).toBe('1 class and 1 subclass')
+  expect(candidate.contents).toBe('1 class and 1 subclass entry')
   expect(candidate.warnings).toEqual([])
   expect(candidate.dependencyWarnings).toBeUndefined()
 })

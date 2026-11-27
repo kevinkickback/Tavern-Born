@@ -79,7 +79,7 @@ describe('data source switching', () => {
       'https://example.test/rules',
     )
     expect(await screen.findByText('Found 1 class.')).toBeTruthy()
-    expect(screen.getByText(warning)).toBeTruthy()
+    expect(screen.getByText(warning).querySelector('svg[aria-hidden="true"]')).toBeTruthy()
     expect(
       screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
     ).toBe(false)
@@ -110,8 +110,14 @@ describe('data source switching', () => {
       screen.getByText('Will import 1 class, 2 spells.').classList.contains('text-success'),
     ).toBe(true)
     expect(
+      screen.getByText('Will import 1 class, 2 spells.').querySelector('svg[aria-hidden="true"]'),
+    ).toBeTruthy()
+    expect(
       screen.getByText('Some content has been skipped.').classList.contains('text-destructive'),
     ).toBe(true)
+    expect(
+      screen.getByText('Some content has been skipped.').querySelector('svg[aria-hidden="true"]'),
+    ).toBeTruthy()
     const skippedSummary = screen.getByText('Skipped content', { selector: 'summary' })
     expect(screen.getByText(skipped).closest('details')?.open).toBe(false)
     await user.click(skippedSummary)
@@ -150,7 +156,9 @@ describe('data source switching', () => {
     await user.click(screen.getByRole('tab', { name: 'This Computer' }))
     const select = screen.getByRole('button', { name: 'Select Folder' })
     await user.click(select)
-    expect(await screen.findByText(previousError)).toBeTruthy()
+    expect(
+      (await screen.findByText(previousError)).querySelector('svg[aria-hidden="true"]'),
+    ).toBeTruthy()
     await user.click(select)
     expect(await screen.findByText('Checking compatibility...')).toBeTruthy()
     expect(screen.queryByText(previousError)).toBeNull()

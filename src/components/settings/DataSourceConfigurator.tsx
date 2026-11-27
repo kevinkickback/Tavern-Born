@@ -589,28 +589,30 @@ export function DataSourceConfigurator({
               </Tabs>
               <div aria-live="polite">
                 {validationStatus === 'validating' && <p>Checking compatibility...</p>}
-                {partial ? (
-                  <p className="text-success">Will import {partial.included.join(', ')}.</p>
-                ) : (
-                  validationStatus === 'valid' && (
-                    <p className="text-success">
-                      {checkedCandidate?.contents
+                {validationStatus === 'valid' && (
+                  <p className="flex items-start gap-2 text-success">
+                    <CheckCircle className="mt-1 size-4 shrink-0" aria-hidden />
+                    {partial
+                      ? `Will import ${partial.included.join(', ')}.`
+                      : checkedCandidate?.contents
                         ? `Found ${checkedCandidate.contents}.`
                         : 'Compatible game data found'}
-                    </p>
-                  )
-                )}
-                {validationResult?.error && (
-                  <p className="text-destructive">{validationResult.error}</p>
+                  </p>
                 )}
                 {!!checkWarnings.length && (
-                  <p className="text-sm text-warning">
+                  <p className="flex items-start gap-2 text-sm text-warning">
+                    <Warning className="mt-0.5 size-4 shrink-0" aria-hidden />
                     {dependencyWarning ??
                       'Some optional content is unavailable. You can still add this source.'}
                   </p>
                 )}
-                {partial && (
-                  <p className="text-sm text-destructive">Some content has been skipped.</p>
+                {(validationResult?.error || partial) && (
+                  <p
+                    className={cn('flex items-start gap-2 text-destructive', partial && 'text-sm')}
+                  >
+                    <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    {validationResult?.error ?? 'Some content has been skipped.'}
+                  </p>
                 )}
               </div>
               <CheckDetails

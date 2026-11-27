@@ -1,6 +1,6 @@
 const playerContent = {
   classes: ['class', 'classes'],
-  subclass: ['subclass', 'subclasses'],
+  subclass: ['subclass entry', 'subclass entries'],
   spells: ['spell', 'spells'],
   races: ['species', 'species'],
   subrace: ['subrace', 'subraces'],
@@ -8,7 +8,7 @@ const playerContent = {
   feats: ['feat', 'feats'],
   items: ['item', 'items'],
   itemsBase: ['base item', 'base items'],
-  creatures: ['creature', 'creatures'],
+  creatures: ['creature stat block', 'creature stat blocks'],
   actions: ['action', 'actions'],
   conditions: ['condition or disease', 'conditions and diseases'],
   deities: ['deity', 'deities'],

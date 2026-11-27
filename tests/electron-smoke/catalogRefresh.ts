@@ -111,7 +111,7 @@ test('imports verified working content and keeps it when a strict refresh fails'
     await page.getByRole('link', { name: 'Game Data', exact: true }).click()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await page.getByLabel('Web Address').fill(source)
-    await expect(page.getByText('Will import 1 class, 1 feat.')).toHaveClass('text-success')
+    await expect(page.getByText('Will import 1 class, 1 feat.')).toHaveClass(/text-success/)
     await expect(page.getByText('Some content has been skipped.')).toHaveClass(/text-destructive/)
     const reason = page.getByText(
       'Broken Order (TEST) for Guardian (TEST). Requires Absent Spell (TEST).',
