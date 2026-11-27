@@ -69,6 +69,7 @@ describe('data source switching', () => {
         data: makeGameDataFixture(),
         keys: [],
         contents: '1 class',
+        contentsDetails: ['1 class'],
         warnings: [],
         dependencyWarnings: [warning],
       }),
@@ -80,6 +81,10 @@ describe('data source switching', () => {
     )
     expect(await screen.findByText('Found 1 class.')).toBeTruthy()
     expect(screen.getByText(warning).querySelector('svg[aria-hidden="true"]')).toBeTruthy()
+    const details = screen.getByText('Show details', { selector: 'summary' })
+    expect(screen.getByText('1 class', { exact: true }).closest('details')?.open).toBe(false)
+    await user.click(details)
+    expect(details.closest('details')?.open).toBe(true)
     expect(
       screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
     ).toBe(false)
@@ -97,7 +102,9 @@ describe('data source switching', () => {
         data: makeGameDataFixture(),
         keys: [],
         warnings: [],
-        partialImport: { included: ['1 class', '2 spells'], skipped: [skipped] },
+        contents: '1 class, 2 spells, 1 feat, 1 creature stat block, and more',
+        contentsDetails: ['1 class', '2 spells', '1 feat', '1 creature stat block', '1 language'],
+        partialImport: { skipped: [skipped] },
       }),
     )
     render(<DataSourceConfigurator selectorOnly />)
@@ -106,12 +113,11 @@ describe('data source switching', () => {
       'https://example.test/rules',
     )
     const action = await screen.findByRole('button', { name: 'Import working content' })
-    expect(
-      screen.getByText('Will import 1 class, 2 spells.').classList.contains('text-success'),
-    ).toBe(true)
-    expect(
-      screen.getByText('Will import 1 class, 2 spells.').querySelector('svg[aria-hidden="true"]'),
-    ).toBeTruthy()
+    const found = screen.getByText(
+      'Found 1 class, 2 spells, 1 feat, 1 creature stat block, and more.',
+    )
+    expect(found.classList.contains('text-success')).toBe(true)
+    expect(found.querySelector('svg[aria-hidden="true"]')).toBeTruthy()
     expect(
       screen.getByText('Some content has been skipped.').classList.contains('text-destructive'),
     ).toBe(true)
@@ -119,6 +125,11 @@ describe('data source switching', () => {
       screen.getByText('Some content has been skipped.').querySelector('svg[aria-hidden="true"]'),
     ).toBeTruthy()
     const skippedSummary = screen.getByText('Skipped content', { selector: 'summary' })
+    const contentSummary = screen.getByText('Show details', { selector: 'summary' })
+    expect(screen.getByText('1 language').closest('details')).toBe(contentSummary.parentElement)
+    expect(contentSummary.closest('details')?.open).toBe(false)
+    await user.click(contentSummary)
+    expect(contentSummary.closest('details')?.open).toBe(true)
     expect(screen.getByText(skipped).closest('details')?.open).toBe(false)
     await user.click(skippedSummary)
     expect(skippedSummary.closest('details')?.open).toBe(true)
@@ -161,10 +172,13 @@ describe('data source switching', () => {
     ).toBeTruthy()
     await user.click(select)
     expect(await screen.findByText('Checking compatibility...')).toBeTruthy()
+    const folder = screen.getByRole('textbox', { name: 'Folder' })
+    expect(folder.parentElement?.querySelector('.animate-spin[aria-hidden="true"]')).toBeTruthy()
     expect(screen.queryByText(previousError)).toBeNull()
     await act(async () => finishCheck())
     expect(await screen.findByText('The second folder check finished.')).toBeTruthy()
     expect(screen.queryByText('Checking compatibility...')).toBeNull()
+    expect(folder.parentElement?.querySelector('.animate-spin')).toBeNull()
   })
 
   test('ignores and releases a folder selected after switching away from the local tab', async () => {

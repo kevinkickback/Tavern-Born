@@ -50,8 +50,9 @@ export interface PreparedCatalog {
   keys: string[]
   warnings: string[]
   contents?: string
+  contentsDetails?: string[]
   dependencyWarnings?: string[]
-  partialImport?: { included: string[]; skipped: string[] }
+  partialImport?: { skipped: string[] }
   unavailableResources?: string[]
   revision?: string
   layerMetadata?: GameDataLayerCacheMetadataByRole
@@ -325,8 +326,9 @@ async function prepareCatalogSnapshot(
     data,
     keys,
     warnings,
-    contents: describeCatalogContents(primary.length ? primary : supporting),
-    ...(skipped.length ? { partialImport: { included, skipped } } : {}),
+    contents: describeCatalogContents(included),
+    contentsDetails: included,
+    ...(skipped.length ? { partialImport: { skipped } } : {}),
     ...(dependencyWarnings.size ? { dependencyWarnings: [...dependencyWarnings] } : {}),
     ...(unavailable.length ? { unavailableResources: unavailable } : {}),
     revision: source.revision,

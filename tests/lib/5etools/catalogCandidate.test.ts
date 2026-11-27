@@ -24,6 +24,10 @@ const subclassWithGrant = (name: string, spell: string) => ({
 test('previews a verified subset from the same reads, preserving healthy sibling rules', async () => {
   const payloads: Record<string, unknown> = {
     ...files,
+    'feats.json': { feat: [{ name: 'Guardian Training', source: 'TEST' }] },
+    'languages.json': {
+      language: [{ name: 'Guardian Language', source: 'TEST', type: 'standard' }],
+    },
     'class/index.json': { test: 'class-test.json' },
     'class/class-test.json': {
       class: [{ name: 'Guardian', source: 'TEST' }],
@@ -39,8 +43,15 @@ test('previews a verified subset from the same reads, preserving healthy sibling
   })
   vi.stubGlobal('fetch', fetch)
   const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
+  expect(candidate.contents).toBe('1 class, 1 subclass entry, 2 spells, 1 feat, and more')
+  expect(candidate.contentsDetails).toEqual([
+    '1 class',
+    '1 subclass entry',
+    '2 spells',
+    '1 feat',
+    '1 language',
+  ])
   expect(candidate.partialImport).toEqual({
-    included: ['1 class', '1 subclass entry', '2 spells'],
     skipped: ['Broken (TEST) for Guardian (TEST). Requires Magic Missile (XPHB).'],
   })
   expect(candidate.data.classes[0].subclasses?.map(({ name }) => name)).toEqual(['Healthy'])
@@ -73,8 +84,8 @@ test('rechecks dependents after removing a broken feature owner', async () => {
     ['Guardian', 'OTHER'],
   ])
   expect(candidate.data.classFeatures).toEqual([])
+  expect(candidate.contentsDetails).toEqual(['1 class'])
   expect(candidate.partialImport).toEqual({
-    included: ['1 class'],
     skipped: [
       'Guardian (PHB). Requires Absent|Guardian|PHB|1|TEST.',
       'Follower (TEST). Requires Training|Guardian|PHB|2|TEST.',
@@ -98,7 +109,7 @@ test('keeps supported standalone rules metadata after excluding a class', async 
   })
   const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
   expect(candidate.contents).toBe('1 item property')
-  expect(candidate.partialImport?.included).toEqual(['1 item property'])
+  expect(candidate.contentsDetails).toEqual(['1 item property'])
   expect(candidate.data.itemProperties).toMatchObject([{ name: 'A Test Property', source: 'TEST' }])
 })
 
@@ -233,7 +244,7 @@ test.each([
     return
   }
   const { data, contents, warnings } = await preparation
-  expect(contents).toBe('2 classes')
+  expect(contents).toBe('2 classes and 3 class features')
   expect(warnings).toEqual([])
   expect(data.classes.find(({ name }) => name === 'Scout')?.classFeatureRefs).toMatchObject([
     { ref: target, feature: { ...feature, level: 2, entries: ['Exact training.'] } },

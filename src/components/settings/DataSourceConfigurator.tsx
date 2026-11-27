@@ -420,10 +420,21 @@ export function DataSourceConfigurator({
   }
 
   const isValidSource = validationStatus === 'valid' && validationResult?.basis === dataSourceConfig
-  const checkedCandidate = validationResult?.candidate
-  const partial = isValidSource ? checkedCandidate?.partialImport : undefined
+  const checkedCandidate = isValidSource ? validationResult?.candidate : undefined
+  const partial = checkedCandidate?.partialImport
   const checkWarnings = catalogWarningsForDisplay(checkedCandidate)
   const dependencyWarning = checkedCandidate?.dependencyWarnings?.[0]
+  const checking = validationStatus === 'validating'
+  const checkIndicatorPosition = 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2'
+  const spinner = checking && (
+    <span
+      className={cn(
+        checkIndicatorPosition,
+        'size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent',
+      )}
+      aria-hidden
+    />
+  )
 
   const formatDateTime = (iso: string | null) => {
     if (!iso) return 'Not yet'
@@ -431,7 +442,7 @@ export function DataSourceConfigurator({
   }
 
   const getValidationBorderClass = () => {
-    if (validationStatus === 'validating') return 'border-muted-foreground/50'
+    if (checking) return 'border-muted-foreground/50'
     if (validationStatus === 'valid') return 'border-success'
     if (validationStatus === 'invalid') return 'border-destructive'
     return ''
@@ -544,20 +555,15 @@ export function DataSourceConfigurator({
                         disabled={isLoading}
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
-                      {validationStatus === 'validating' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full" />
-                        </div>
-                      )}
-                      {validationStatus === 'valid' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <CheckCircle className="size-[1.125rem] text-success" />
-                        </div>
-                      )}
-                      {validationStatus === 'invalid' && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <XCircle className="size-[1.125rem] text-destructive" />
-                        </div>
+                      {spinner}
+                      {!checking && validationStatus !== 'idle' && (
+                        <span className={checkIndicatorPosition} aria-hidden>
+                          {validationStatus === 'valid' ? (
+                            <CheckCircle className="size-[1.125rem] text-success" />
+                          ) : (
+                            <XCircle className="size-[1.125rem] text-destructive" />
+                          )}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -566,14 +572,17 @@ export function DataSourceConfigurator({
                   <div className="space-y-2">
                     <Label htmlFor={localPathId}>Folder</Label>
                     <div className="flex gap-2">
-                      <Input
-                        id={localPathId}
-                        value={sourcePath}
-                        placeholder="Use Select Folder to browse"
-                        readOnly
-                        disabled={isLoading}
-                        className={`flex-1 ${getValidationBorderClass()}`}
-                      />
+                      <div className="relative min-w-0 flex-1">
+                        <Input
+                          id={localPathId}
+                          value={sourcePath}
+                          placeholder="Use Select Folder to browse"
+                          readOnly
+                          disabled={isLoading}
+                          className={cn(getValidationBorderClass(), checking && 'pr-10')}
+                        />
+                        {spinner}
+                      </div>
                       <Button
                         onClick={handleSelectFolder}
                         disabled={isValidating || isLoading}
@@ -588,15 +597,13 @@ export function DataSourceConfigurator({
                 </TabsContent>
               </Tabs>
               <div aria-live="polite">
-                {validationStatus === 'validating' && <p>Checking compatibility...</p>}
-                {validationStatus === 'valid' && (
+                {checking && <p>Checking compatibility...</p>}
+                {isValidSource && (
                   <p className="flex items-start gap-2 text-success">
                     <CheckCircle className="mt-1 size-4 shrink-0" aria-hidden />
-                    {partial
-                      ? `Will import ${partial.included.join(', ')}.`
-                      : checkedCandidate?.contents
-                        ? `Found ${checkedCandidate.contents}.`
-                        : 'Compatible game data found'}
+                    {checkedCandidate?.contents
+                      ? `Found ${checkedCandidate.contents}.`
+                      : 'Compatible game data found'}
                   </p>
                 )}
                 {!!checkWarnings.length && (
@@ -617,8 +624,10 @@ export function DataSourceConfigurator({
               </div>
               <CheckDetails
                 lines={
-                  validationResult?.details ??
-                  (dependencyWarning ? checkWarnings.slice(1) : checkWarnings)
+                  validationResult?.details ?? [
+                    ...(checkedCandidate?.contentsDetails ?? []),
+                    ...checkWarnings.slice(dependencyWarning ? 1 : 0),
+                  ]
                 }
               />
               <CheckDetails lines={partial?.skipped} title="Skipped content" />

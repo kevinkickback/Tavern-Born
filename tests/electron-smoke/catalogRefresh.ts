@@ -111,7 +111,11 @@ test('imports verified working content and keeps it when a strict refresh fails'
     await page.getByRole('link', { name: 'Game Data', exact: true }).click()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await page.getByLabel('Web Address').fill(source)
-    await expect(page.getByText('Will import 1 class, 1 feat.')).toHaveClass(/text-success/)
+    await expect(page.getByText('Found 1 class and 1 feat.')).toHaveClass(/text-success/)
+    const includedFeat = page.getByText('1 feat', { exact: true })
+    await expect(includedFeat).toBeHidden()
+    await page.getByText('Show details', { exact: true }).click()
+    await expect(includedFeat).toBeVisible()
     await expect(page.getByText('Some content has been skipped.')).toHaveClass(/text-destructive/)
     const reason = page.getByText(
       'Broken Order (TEST) for Guardian (TEST). Requires Absent Spell (TEST).',
@@ -250,7 +254,9 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await expect(status).toHaveText('SRD Content Only')
     await address.fill(source)
     await expect(page.getByText('Found 1 spell.')).toBeVisible()
-    await expect(page.getByText('Show details', { exact: true })).toBeHidden()
+    await expect(page.getByText('1 spell', { exact: true })).toBeHidden()
+    await page.getByText('Show details', { exact: true }).click()
+    await expect(page.getByText('1 spell', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     await expect(status).toHaveText('Additional Content Loaded', { timeout: 30_000 })
 
