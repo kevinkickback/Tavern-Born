@@ -59,7 +59,10 @@ describe('data source switching', () => {
     vi.unstubAllGlobals()
   })
 
-  test('ignores and releases a folder selected after switching away from the local tab', async () => {
+  test.each([
+    'picker',
+    'pasted path',
+  ] as const)('releases a %s grant that returns after leaving the local tab', async (method) => {
     const user = userEvent.setup()
     let choose!: (value: string) => void
     const selectFolder = vi.fn(
@@ -72,7 +75,12 @@ describe('data source switching', () => {
     vi.stubGlobal('electronAPI', { selectFolder, discardLocalDataRoot })
     render(<DataSourceConfigurator selectorOnly />)
     await user.click(screen.getByRole('tab', { name: 'This Computer' }))
-    await user.click(screen.getByRole('button', { name: 'Select Folder' }))
+    if (method === 'picker') {
+      await user.click(screen.getByRole('button', { name: 'Select Folder' }))
+    } else {
+      await user.type(screen.getByRole('textbox', { name: 'Folder' }), '/unused')
+      await user.click(screen.getByRole('button', { name: 'Check Folder' }))
+    }
     await user.click(screen.getByRole('tab', { name: 'Online' }))
     await act(async () => choose('/unused'))
     expect((screen.getByRole('textbox', { name: 'Web Address' }) as HTMLInputElement).value).toBe(
@@ -80,6 +88,68 @@ describe('data source switching', () => {
     )
     expect(prepareCatalogMock).not.toHaveBeenCalled()
     expect(discardLocalDataRoot).toHaveBeenCalledWith('/unused')
+  })
+
+  test.each([
+    'edited',
+    'failed a recheck',
+  ])('waits for native confirmation and clears a checked folder when %s', async (outcome) => {
+    const user = userEvent.setup()
+    const path = 'C:\\My Rules\\data'
+    const pasted = `"${path}"`
+    const selectFolder = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(path)
+    const discardLocalDataRoot = vi.fn()
+    vi.stubGlobal('electronAPI', { selectFolder, discardLocalDataRoot })
+    prepareCatalogMock.mockImplementation((config: DataSourceConfig) =>
+      Promise.resolve({
+        config: { ...config, isValid: true },
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        warnings: [],
+      }),
+    )
+    render(<DataSourceConfigurator selectorOnly />)
+
+    await user.click(screen.getByRole('tab', { name: 'This Computer' }))
+    const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Folder' })
+    await user.click(input)
+    await user.paste(pasted)
+    expect(input.value).toBe(pasted)
+    expect(selectFolder).not.toHaveBeenCalled()
+    expect(prepareCatalogMock).not.toHaveBeenCalled()
+
+    await user.keyboard('{Enter}')
+    expect(selectFolder).toHaveBeenCalledWith(pasted)
+    expect(prepareCatalogMock).not.toHaveBeenCalled()
+    expect(input.value).toBe(pasted)
+
+    await user.click(screen.getByRole('button', { name: 'Check Folder' }))
+    await screen.findByText('Compatible game data found')
+    expect(input.value).toBe(path)
+    expect(prepareCatalogMock.mock.calls[0]?.[0]).toMatchObject({ type: 'local', path })
+    if (outcome === 'edited') {
+      await user.clear(input)
+    } else {
+      let rejectConfirmation!: (error: Error) => void
+      selectFolder.mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectConfirmation = reject
+          }),
+      )
+      await user.click(screen.getByRole('button', { name: 'Check Folder' }))
+      expect(
+        screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
+      ).toBe(true)
+      await act(async () => rejectConfirmation(new Error('Folder could not be found')))
+      expect(input.value).toBe(path)
+    }
+    expect(discardLocalDataRoot).toHaveBeenCalledWith(path)
+    expect(screen.queryByText('Compatible game data found')).toBeNull()
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Add Additional Content' }).disabled,
+    ).toBe(true)
   })
 
   test.each([
@@ -129,6 +199,7 @@ describe('data source switching', () => {
   test.each([
     'apply',
     'replace',
+    'apply after cancelling a new folder check',
   ] as const)('keeps a staged native folder authorized across navigation until %s', async (outcome) => {
     const user = userEvent.setup()
     const active = {
@@ -146,7 +217,7 @@ describe('data source switching', () => {
     const anotherFolder = 'C:/Rules/Another'
     let grant: string | null = null
     let nextFolder = replacement.path
-    const selectFolder = vi.fn(() => {
+    const selectFolder = vi.fn((): Promise<string | null> => {
       grant = nextFolder
       return Promise.resolve(nextFolder)
     })
@@ -184,10 +255,30 @@ describe('data source switching', () => {
     expect(approveLocalDataRoot).not.toHaveBeenCalled()
     expect(useGameDataStore.getState().dataSourceConfig).toBe(active)
 
+    let cancelCheck: (() => void) | undefined
+    if (outcome === 'apply after cancelling a new folder check') {
+      selectFolder.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            cancelCheck = () => resolve(null)
+          }),
+      )
+      await user.click(screen.getByRole('button', { name: 'Change Additional Content' }))
+      await user.click(screen.getByRole('button', { name: 'Check Folder' }))
+    }
     settings.unmount()
     expect(grant).toBe(replacement.path)
     render(<DataSourceConfigurator />)
-    if (outcome === 'apply') {
+    if (outcome === 'apply after cancelling a new folder check') {
+      expect(cancelCheck).toBeTypeOf('function')
+      const apply = screen.getByRole<HTMLButtonElement>('button', {
+        name: 'Apply game data update',
+      })
+      expect(apply.disabled).toBe(true)
+      await act(async () => cancelCheck?.())
+      expect(apply.disabled).toBe(false)
+    }
+    if (outcome !== 'replace') {
       await user.click(screen.getByRole('button', { name: 'Apply game data update' }))
       await waitFor(() =>
         expect(useGameDataStore.getState().dataSourceConfig?.path).toBe(replacement.path),

@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { create } from 'zustand'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -54,6 +55,10 @@ type DataSourceConfiguratorProps = {
 function discardFolder(root: string | null) {
   if (root) window.electronAPI?.discardLocalDataRoot?.(root)
 }
+
+// A native dialog can outlive the Settings panel that opened it.
+const useFolderRequest = create(() => ({ pending: false }))
+
 export function DataSourceConfigurator({
   selectorOnly = false,
   showAdditionalContentGuidance = false,
@@ -83,6 +88,7 @@ export function DataSourceConfigurator({
   )
   const [sourcePath, setSourcePath] = useState('')
   const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
+  const isSelectingFolder = useFolderRequest((state) => state.pending)
   const [isValidating, setIsValidating] = useState(false)
   const [confirmRevertOpen, setConfirmRevertOpen] = useState(false)
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
@@ -233,11 +239,15 @@ export function DataSourceConfigurator({
     }
   }
 
-  const handleUrlChange = (value: string) => {
+  const handlePathChange = (value: string) => {
     releaseCatalogCandidate(validationCandidate.current)
     validationCandidate.current = undefined
     validationRequestRef.current += 1
     validationController.current?.abort()
+    if (sourceType === 'local') {
+      discardFolder(previewFolder.current)
+      previewFolder.current = null
+    }
     setSourcePath(value)
     setValidationStatus('idle')
     setIsValidating(false)
@@ -261,7 +271,10 @@ export function DataSourceConfigurator({
     }
   }
 
-  const handleSelectFolder = async () => {
+  const handleSelectFolder = async (path?: string) => {
+    if (useFolderRequest.getState().pending || isValidating || isLoading || isCatalogActivating)
+      return
+    useFolderRequest.setState({ pending: true })
     const requestId = validationRequestRef.current
     try {
       const selectFolder = window.electronAPI?.selectFolder
@@ -270,7 +283,7 @@ export function DataSourceConfigurator({
         return
       }
 
-      const folderPath = await selectFolder()
+      const folderPath = await selectFolder(path)
       if (!folderPath) return
       useGameDataStore.getState().invalidatePendingFolderSelection()
       if (requestId !== validationRequestRef.current) {
@@ -282,13 +295,17 @@ export function DataSourceConfigurator({
       performValidation(folderPath, 'local')
     } catch (error) {
       if (requestId !== validationRequestRef.current) return
+      if (path !== undefined) handlePathChange(path)
       toast.error('Failed to select folder', {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
+    } finally {
+      useFolderRequest.setState({ pending: false })
     }
   }
 
   const applyCandidate = async (candidate: CatalogCandidate, confirmed = false) => {
+    if (useFolderRequest.getState().pending) return
     if (useCharacterStore.getState().hasUnsavedChanges()) {
       toast.info('Save or discard your character changes before switching game data.')
       return
@@ -396,6 +413,8 @@ export function DataSourceConfigurator({
   }
 
   const isValidSource = validationStatus === 'valid'
+  const folderActionsDisabled =
+    isSelectingFolder || isValidating || isLoading || isCatalogActivating
 
   const formatDateTime = (iso: string | null) => {
     if (!iso) return 'Not yet'
@@ -504,7 +523,7 @@ export function DataSourceConfigurator({
                       <Input
                         id={remotePathId}
                         value={sourcePath}
-                        onChange={(e) => handleUrlChange(e.target.value)}
+                        onChange={(e) => handlePathChange(e.target.value)}
                         placeholder="https://example.com/game-data"
                         onBlur={() => {
                           const result = parseRemoteDataSourceUrl(sourcePath)
@@ -537,25 +556,38 @@ export function DataSourceConfigurator({
                 <TabsContent value="local" className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor={localPathId}>Folder</Label>
-                    <div className="flex gap-2">
+                    <form
+                      className="flex flex-wrap gap-2"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        if (sourcePath.trim()) void handleSelectFolder(sourcePath)
+                      }}
+                    >
                       <Input
                         id={localPathId}
                         value={sourcePath}
-                        placeholder="Choose a folder containing 5etools data"
-                        readOnly
-                        disabled={isLoading}
-                        className={`flex-1 ${getValidationBorderClass()}`}
+                        onChange={(event) => handlePathChange(event.target.value)}
+                        placeholder="Paste a folder path"
+                        disabled={isLoading || isCatalogActivating}
+                        className={`min-w-40 flex-1 ${getValidationBorderClass()}`}
                       />
                       <Button
-                        onClick={handleSelectFolder}
-                        disabled={isValidating || isLoading}
+                        type="button"
+                        onClick={() => handleSelectFolder()}
+                        disabled={folderActionsDisabled}
                         variant="outline"
-                        className="gap-2 shrink-0"
                       >
                         <FolderOpen className="size-4" />
-                        {isValidating ? 'Selecting...' : 'Select Folder'}
+                        Select Folder
                       </Button>
-                    </div>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={!sourcePath.trim() || folderActionsDisabled}
+                      >
+                        Check Folder
+                      </Button>
+                    </form>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -665,7 +697,7 @@ export function DataSourceConfigurator({
               {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
                 <Button
                   onClick={handleSaveConfig}
-                  disabled={isLoading || !sourcePath || !isValidSource}
+                  disabled={isLoading || isSelectingFolder || !sourcePath || !isValidSource}
                   variant="outline"
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
@@ -750,7 +782,9 @@ export function DataSourceConfigurator({
                   </p>
                 ) : (
                   <Button
-                    disabled={hasUnsavedChanges || isLoading || isCatalogActivating}
+                    disabled={
+                      hasUnsavedChanges || isLoading || isSelectingFolder || isCatalogActivating
+                    }
                     onClick={() => void applyCandidate(pending.candidate, true)}
                   >
                     {pending.reason === 'reload'
