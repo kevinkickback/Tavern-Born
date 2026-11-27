@@ -85,6 +85,15 @@ The pinned Windows portable builder uses `portable.unpackDirName: true` for a di
 each launch. This keeps the launcher from replacing a running instance's files before Electron
 checks the lock. Verify the setting against the installed builder when upgrading it.
 
+### React Developer Tools
+
+Install the [official React Developer Tools extension](https://chromewebstore.google.com/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi)
+in Chrome and copy its unpacked version directory into `.tmp/react-devtools/`, so `manifest.json`
+is directly inside that directory. Electron documents how to find the version directory in the
+[DevTools extension guide](https://www.electronjs.org/docs/latest/tutorial/devtools-extension#manually-loading-a-devtools-extension).
+Run `npm run dev` and choose **Components** or **Profiler** in the detached Developer Tools window.
+The ignored directory is loaded only by the Electron development app.
+
 ## Auto-update
 
 [updateManager](../electron/updateManager.ts) owns check/download/cancel/install IPC. Automatic

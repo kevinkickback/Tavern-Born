@@ -198,7 +198,23 @@ test('browses bundled changelog history offline and fits the viewport', async ({
   await expect(notes.getByRole('list').first()).toHaveCSS('list-style-type', 'disc')
   await expect(dialog.getByRole('button', { name: 'Close', exact: true }).first()).toBeInViewport()
   await expect.poll(() => notes.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
-  const compactWidth = (await dialog.boundingBox())?.width ?? 0
+  const compactBounds = (await dialog.boundingBox())!
+  const titleBounds = (await dialog
+    .getByRole('heading', { name: 'Changelog — v0.7.0' })
+    .boundingBox())!
+  const selectorBounds = (await selector.boundingBox())!
+  const closeBounds = (await dialog
+    .getByRole('button', { name: 'Close', exact: true })
+    .last()
+    .boundingBox())!
+  expect(compactBounds.y).toBeGreaterThanOrEqual(31)
+  expect(420 - compactBounds.y - compactBounds.height).toBeGreaterThanOrEqual(31)
+  expect(selectorBounds.x).toBeGreaterThan(titleBounds.x)
+  expect(selectorBounds.y + selectorBounds.height / 2).toBeCloseTo(
+    titleBounds.y + titleBounds.height / 2,
+    0,
+  )
+  expect(selectorBounds.x + selectorBounds.width).toBeLessThan(closeBounds.x)
 
   await selector.click()
   await expect(page.getByRole('option', { name: 'v0.7.1' })).toHaveCount(0)
@@ -207,7 +223,7 @@ test('browses bundled changelog history offline and fits the viewport', async ({
   await expect(notes).toContainText('Added bulk character backup and import')
 
   await page.setViewportSize({ width: 1440, height: 900 })
-  expect((await dialog.boundingBox())?.width).toBeGreaterThan(compactWidth)
+  expect((await dialog.boundingBox())?.width).toBeGreaterThan(compactBounds.width)
   await page.keyboard.press('Escape')
   await expect(openChangelog).toBeFocused()
   await openChangelog.click()

@@ -61,7 +61,7 @@ export function ChangelogModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[calc(100dvh-2rem)] flex-col gap-3 p-3 sm:p-6 lg:max-w-2xl"
+        className="flex max-h-[calc(100dvh-4rem)] flex-col gap-3 p-3 sm:p-6 lg:max-w-2xl"
         onOpenAutoFocus={() => {
           setSelectedVersion(undefined)
           const active = document.activeElement
@@ -69,11 +69,25 @@ export function ChangelogModal({
         }}
         onCloseAutoFocus={() => returnFocus.current?.focus()}
       >
-        <DialogHeader className="shrink-0 pr-6">
+        <DialogHeader className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center pr-8 text-left">
           <DialogTitle>
             {updateAvailable ? `Update Available — v${version}` : `Changelog — v${viewedVersion}`}
           </DialogTitle>
-          <DialogDescription>
+          {releases && releases.length > 1 && (
+            <Select value={viewedVersion} onValueChange={setSelectedVersion}>
+              <SelectTrigger aria-label="Release version" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {releases.map((release) => (
+                  <SelectItem key={release.version} value={release.version}>
+                    {`v${release.version}${release.version === version ? ' (Current)' : ''}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <DialogDescription className="col-span-2">
             {updateAvailable
               ? onDownload
                 ? 'A new version is ready to download. Review the changes below.'
@@ -81,21 +95,6 @@ export function ChangelogModal({
               : 'Browse release notes by version.'}
           </DialogDescription>
         </DialogHeader>
-
-        {releases && releases.length > 1 && (
-          <Select value={viewedVersion} onValueChange={setSelectedVersion}>
-            <SelectTrigger aria-label="Release version" className="shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {releases.map((release) => (
-                <SelectItem key={release.version} value={release.version}>
-                  {`v${release.version}${release.version === version ? ' (Current)' : ''}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
 
         <section
           key={viewedVersion}

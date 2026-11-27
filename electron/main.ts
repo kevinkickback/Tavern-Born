@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { mkdir, open, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -319,7 +320,26 @@ async function initializeDesktop(): Promise<void> {
     Menu.setApplicationMenu(null)
   }
 
+  let reactDevToolsUrl: string | undefined
+  if (isDev && !app.isPackaged) {
+    const reactDevToolsPath = join(app.getAppPath(), '.tmp', 'react-devtools')
+    if (existsSync(join(reactDevToolsPath, 'manifest.json'))) {
+      try {
+        const extension = await session.defaultSession.extensions.loadExtension(reactDevToolsPath)
+        reactDevToolsUrl = `chrome-extension://${extension.id}/`
+        console.info(`Loaded ${extension.name} ${extension.version}`)
+      } catch (error) {
+        console.warn('Could not load React Developer Tools', error)
+      }
+    }
+  }
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // The DevTools frontend embeds the extension's pages, which have their own CSP.
+    if (reactDevToolsUrl && details.url.startsWith(reactDevToolsUrl)) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
