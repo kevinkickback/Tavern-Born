@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
+import { LOCAL_DATA_FOLDER_UNAVAILABLE } from '@/lib/5etools/catalogCheckError'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData } from '@/types/5etools'
 
@@ -19,10 +20,10 @@ vi.mock('sonner', () => ({
 describe('data source refresh feedback', () => {
   beforeEach(() => {
     const loadCatalog = vi.fn(() => {
-      useGameDataStore.setState({ error: 'Local directory is unavailable' })
+      useGameDataStore.setState({ error: LOCAL_DATA_FOLDER_UNAVAILABLE })
       return Promise.resolve({
         kind: 'rejected' as const,
-        message: 'Local directory is unavailable',
+        message: LOCAL_DATA_FOLDER_UNAVAILABLE,
       })
     })
 
@@ -59,11 +60,9 @@ describe('data source refresh feedback', () => {
 
     await user.click(screen.getByRole('button', { name: 'Check for Updates' }))
 
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
-        description: 'Local directory is unavailable',
-      }),
-    )
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText('Source check failed')).toBeTruthy()
+    expect(within(alert).getByText('The selected data folder is unavailable.')).toBeTruthy()
     expect(toast.info).not.toHaveBeenCalledWith('Game data is up to date')
   })
 
@@ -90,15 +89,15 @@ describe('data source refresh feedback', () => {
     const result = new Promise<void>((resolve) => {
       finish = resolve
     })
+    const checkError = 'Could not read the additional content.'
     const loadCatalog = vi.fn(async () => {
       useGameDataStore.setState({ isBackgroundRefreshing: true })
       await result
       useGameDataStore.setState({
         isBackgroundRefreshing: false,
-        error: outcome === 'failed' ? 'Local directory is unavailable' : null,
+        error: outcome === 'failed' ? checkError : null,
       })
-      if (outcome === 'failed')
-        return { kind: 'rejected' as const, message: 'Local directory is unavailable' }
+      if (outcome === 'failed') return { kind: 'rejected' as const, message: checkError }
       return outcome === 'updated'
         ? { kind: 'staged' as const }
         : { kind: 'applied' as const, changed: false }
@@ -122,10 +121,11 @@ describe('data source refresh feedback', () => {
     )
     if (outcome === 'updated') expect(toast.info).toHaveBeenCalledWith('Game data ready for review')
     if (outcome === 'unchanged') expect(toast.info).toHaveBeenCalledWith('Game data is up to date')
-    if (outcome === 'failed')
-      expect(toast.error).toHaveBeenCalledWith('Couldn’t check your additional content', {
-        description: 'Local directory is unavailable',
-      })
+    if (outcome === 'failed') {
+      const alert = screen.getByRole('alert')
+      expect(within(alert).getByText(checkError)).toBeTruthy()
+      expect(within(alert).queryByText(LOCAL_DATA_FOLDER_UNAVAILABLE)).toBeNull()
+    }
   })
 
   test('shows external source details without exposing the internal base layer', () => {

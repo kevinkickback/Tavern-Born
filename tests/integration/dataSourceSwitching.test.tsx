@@ -181,6 +181,45 @@ describe('data source switching', () => {
     expect(folder.parentElement?.querySelector('.animate-spin')).toBeNull()
   })
 
+  test('rechecks a finished preview after the active source changes', async () => {
+    const user = userEvent.setup()
+    const current = {
+      type: 'remote',
+      path: 'https://current.example.test/rules',
+      isValid: true,
+    } as const
+    const apply = vi.fn(async () => ({ kind: 'applied' as const, changed: true }))
+    useGameDataStore.setState({ dataSourceConfig: current, loadCatalog: apply })
+    const preview = (config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        contents: '1 class',
+        contentsDetails: ['1 class'],
+        warnings: [],
+      })
+    prepareCatalogMock.mockImplementationOnce(preview).mockImplementationOnce(preview)
+    render(<DataSourceConfigurator selectorOnly />)
+    const address = screen.getByRole('textbox', { name: 'Web Address' })
+    await user.type(address, 'https://next.example.test/rules')
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+
+    await act(() => {
+      useGameDataStore.setState({ dataSourceConfig: { ...current } })
+    })
+    expect(screen.queryByText('Show details')).toBeNull()
+    expect(address.classList.contains('border-success')).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Check again' }))
+    expect(await screen.findByText('Found 1 class.')).toBeTruthy()
+    expect(prepareCatalogMock).toHaveBeenCalledTimes(2)
+    expect(apply).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Add Additional Content' }))
+    expect(apply).toHaveBeenCalledOnce()
+  })
+
   test('ignores and releases a folder selected after switching away from the local tab', async () => {
     const user = userEvent.setup()
     let choose!: (value: string) => void

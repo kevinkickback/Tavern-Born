@@ -419,7 +419,8 @@ export function DataSourceConfigurator({
     }
   }
 
-  const isValidSource = validationStatus === 'valid' && validationResult?.basis === dataSourceConfig
+  const previewReady = validationStatus === 'valid'
+  const isValidSource = previewReady && validationResult?.basis === dataSourceConfig
   const checkedCandidate = isValidSource ? validationResult?.candidate : undefined
   const partial = checkedCandidate?.partialImport
   const checkWarnings = catalogWarningsForDisplay(checkedCandidate)
@@ -443,7 +444,7 @@ export function DataSourceConfigurator({
 
   const getValidationBorderClass = () => {
     if (checking) return 'border-muted-foreground/50'
-    if (validationStatus === 'valid') return 'border-success'
+    if (isValidSource) return 'border-success'
     if (validationStatus === 'invalid') return 'border-destructive'
     return ''
   }
@@ -556,9 +557,9 @@ export function DataSourceConfigurator({
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
                       {spinner}
-                      {!checking && validationStatus !== 'idle' && (
+                      {(isValidSource || validationStatus === 'invalid') && (
                         <span className={checkIndicatorPosition} aria-hidden>
-                          {validationStatus === 'valid' ? (
+                          {isValidSource ? (
                             <CheckCircle className="size-[1.125rem] text-success" />
                           ) : (
                             <XCircle className="size-[1.125rem] text-destructive" />
@@ -723,16 +724,18 @@ export function DataSourceConfigurator({
               {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
                 <Button
                   onClick={handleSaveConfig}
-                  disabled={isLoading || !sourcePath || !isValidSource}
+                  disabled={isLoading || !sourcePath || !previewReady}
                   variant="outline"
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
                   <Database className="size-4" />
                   {isLoading
                     ? 'Loading...'
-                    : partial
-                      ? 'Import working content'
-                      : 'Add Additional Content'}
+                    : previewReady && !isValidSource
+                      ? 'Check again'
+                      : partial
+                        ? 'Import working content'
+                        : 'Add Additional Content'}
                 </Button>
               )}
             </div>
