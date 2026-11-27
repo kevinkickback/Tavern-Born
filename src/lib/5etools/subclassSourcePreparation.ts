@@ -1,4 +1,5 @@
 import { getUnnamedRankedExpansion } from './additionalSpells'
+import { describeCatalogReference } from './catalogCheckError'
 import { getSubclassOwnerIdentity } from './classFeatureIdentity'
 import { CopyResolutionError, resolveCopiedRecords } from './copyResolution'
 import { getFeatureSourceDigest } from './featureSourceAudit'
@@ -41,16 +42,32 @@ export function materializeSubclassCopies(
     const { retainedExpandedSpellSourceDigest: _, ...record } = object(value)
     const key = getKey(object(record._copy))
     const matches = key ? byIdentity.get(key) : undefined
-    if (scope && hasCopy(record) && (matches?.length !== 1 || hasCopy(matches[0])))
+    if (scope && hasCopy(record) && (matches?.length !== 1 || hasCopy(matches[0]))) {
+      const owner = getSubclassCopyIdentity(record)
+      const copy = getSubclassCopyIdentity(object(record._copy))
       throw new CopyResolutionError(
         [
           {
             entity: String(record.name),
             reason: `Missing, ambiguous, or copied subclass parent ${key ?? ''}`,
+            ...(owner &&
+            copy &&
+            owner.every((part) => part.trim()) &&
+            copy.every((part) => part.trim())
+              ? {
+                  affectedClass: {
+                    parent: { name: owner[3], source: owner[4] },
+                    subclass: { name: owner[0], source: owner[1], shortName: owner[2] },
+                    reference: '',
+                    explanation: `Could not use the original ${describeCatalogReference(`${copy[0]}|${copy[1]}`)} subclass for ${describeCatalogReference(`${copy[3]}|${copy[4]}`)}.`,
+                  },
+                }
+              : {}),
           },
         ],
         'in subclasses',
       )
+    }
     if (matches && matches.length > 1) return { ...record, sourceIdentityConflict: true }
     const base = matches?.[0]
     if (!base) return record

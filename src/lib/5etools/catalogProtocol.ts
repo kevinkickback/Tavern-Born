@@ -18,6 +18,7 @@ export type CatalogCommand =
       config: PreparedCatalog['config']
       base?: GameDataSourceStack['base']
       verifiedRevision?: string | CatalogResourceProof
+      allowPartial?: boolean
     }
   | { kind: 'bundled'; config: BundledDataSourceConfig }
   | { kind: 'repair'; data: GameData; contentFingerprint?: string }

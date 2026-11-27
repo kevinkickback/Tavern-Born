@@ -142,6 +142,8 @@ export function prepareCatalogCandidate(
   base: GameDataSourceStack['base'] | undefined,
   signal: AbortSignal,
   progress?: Progress,
+  verifiedRevision?: undefined,
+  allowPartial?: boolean,
 ): Promise<CatalogCandidate>
 export function prepareCatalogCandidate(
   config: PreparedCatalog['config'],
@@ -156,17 +158,18 @@ export async function prepareCatalogCandidate(
   signal: AbortSignal,
   progress?: Progress,
   verifiedRevision?: string | CatalogResourceProof,
+  allowPartial = false,
 ): Promise<CatalogCandidate | null> {
   if (!hasCatalogWorker()) {
     if (import.meta.env.DESKTOP_CATALOG_WORKER) throw new Error('Catalog utility is unavailable.')
     const catalog = await import('./catalogCandidate')
     return verifiedRevision
       ? catalog.checkCatalogRevision(config, base, verifiedRevision, signal, progress)
-      : catalog.prepareCatalog(config, base, signal, progress)
+      : catalog.prepareCatalog(config, base, signal, progress, undefined, allowPartial)
   }
   const workerId = crypto.randomUUID()
   const summary = await run<CatalogSummary | null>(
-    { kind: 'prepare', config, base, verifiedRevision },
+    { kind: 'prepare', config, base, verifiedRevision, allowPartial },
     signal,
     progress,
     workerId,

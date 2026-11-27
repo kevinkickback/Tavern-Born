@@ -57,21 +57,84 @@ function catalogStamp(page: Page, damage = false) {
 
 test.skip(!existsSync(resolve('resources/srd/manifest.json')), 'requires the Included SRD')
 
-test('opens the wizard and a saved Builder character during catalog refresh', async ({
-  browserName: _browserName,
-}, testInfo) => {
-  test.setTimeout(90_000)
+function launchCatalogApp(userDataDirectory: string) {
   const environment = Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] =>
         entry[0] !== 'ELECTRON_RUN_AS_NODE' && entry[1] !== undefined,
     ),
   )
-  const app = await electron.launch({
+  return electron.launch({
     chromiumSandbox: process.platform === 'win32',
-    args: ['.', `--user-data-dir=${testInfo.outputPath('user-data')}`],
+    args: ['.', `--user-data-dir=${userDataDirectory}`],
     env: environment,
   })
+}
+
+test('imports verified working content and keeps it when a strict refresh fails', async ({
+  browserName: _browserName,
+}, testInfo) => {
+  test.setTimeout(60_000)
+  const app = await launchCatalogApp(testInfo.outputPath('user-data'))
+  try {
+    await app.evaluate(({ session }, address) => {
+      session.defaultSession.protocol.handle('https', (request) => {
+        const root = `${address}/data/`
+        if (!request.url.startsWith(root)) return new Response(null, { status: 404 })
+        const resources: Record<string, unknown> = {
+          'feats.json': { feat: [{ name: 'Working Feat', source: 'TEST' }] },
+          'class/index.json': { Guardian: 'class-guardian.json' },
+          'class/class-guardian.json': {
+            class: [{ name: 'Guardian', source: 'TEST' }],
+            subclass: [
+              {
+                name: 'Broken Order',
+                shortName: 'Broken Order',
+                source: 'TEST',
+                className: 'Guardian',
+                classSource: 'TEST',
+                additionalSpells: [{ prepared: { 3: ['Absent Spell|TEST'] } }],
+              },
+            ],
+          },
+        }
+        const headers = { 'access-control-allow-origin': '*' }
+        const path = request.url.slice(root.length)
+        return path in resources
+          ? Response.json(resources[path], { headers })
+          : new Response(null, { headers, status: 404 })
+      })
+    }, source)
+    const page = await app.firstWindow()
+    await page.getByRole('button', { name: 'Get Started' }).click({ timeout: 30_000 })
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('link', { name: 'Game Data', exact: true }).click()
+    await page.getByRole('button', { name: 'Add Additional Content' }).click()
+    await page.getByLabel('Web Address').fill(source)
+    await expect(page.getByText('Will import 1 class, 1 feat.')).toBeVisible()
+    await expect(
+      page.getByText('Broken Order (TEST) for Guardian (TEST). Requires Absent Spell (TEST).'),
+    ).toBeVisible()
+    const status = page.getByTestId('game-data-status')
+    await expect(status).toHaveText('SRD Content Only')
+    await page.getByRole('button', { name: 'Import working content' }).click()
+    await expect(status).toHaveText('Additional Content Loaded')
+    const accepted = await catalogStamp(page)
+    await page.getByRole('button', { name: 'Check for Updates' }).click()
+    await expect(page.getByText('Source check failed', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Broken Order \(TEST\) needs the spell Absent Spell/)).toBeVisible()
+    expect(await catalogStamp(page)).toEqual(accepted)
+    await expect(page.getByRole('button', { name: 'Import working content' })).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('opens the wizard and a saved Builder character during catalog refresh', async ({
+  browserName: _browserName,
+}, testInfo) => {
+  test.setTimeout(90_000)
+  const app = await launchCatalogApp(testInfo.outputPath('user-data'))
   const original = { name: 'Catalog Worker Test Spell', source: 'PHB', level: 1 }
   const updated = Array.from({ length: 6000 }, (_, index) => ({
     name: `Catalog Worker Spell ${index}`,
@@ -174,7 +237,7 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await page.getByRole('button', { name: 'Add Additional Content' }).click()
     const address = page.getByLabel('Web Address')
     await address.fill(unreachable)
-    await expect(page.getByText(/Couldn’t check game data at this address/)).toBeVisible()
+    await expect(page.getByText(/Couldn’t (check|find) game data at this address/)).toBeVisible()
     const failedFile = page.getByText('Could not read class/index.json — Failed to fetch')
     await expect(failedFile).toBeHidden()
     await page.getByText('Show details', { exact: true }).click()

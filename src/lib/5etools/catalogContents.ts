@@ -63,7 +63,7 @@ function suppliedSubraceCount({ race, subrace }: RawRaceData) {
 }
 
 /** Describe the unique records in the additional layer, excluding the Included SRD. */
-export function describeCatalogContents(keys: readonly string[], suppliedRaces: RawRaceData) {
+export function listCatalogContents(keys: readonly string[], suppliedRaces: RawRaceData) {
   const counts = new Map<string, number>()
   for (const key of keys) {
     const family = key.slice(0, key.indexOf(': '))
@@ -76,8 +76,10 @@ export function describeCatalogContents(keys: readonly string[], suppliedRaces: 
       const count = counts.get(family)
       return count ? [`${count} ${count === 1 ? singular : plural}`] : []
     })
-  const primary = describe(playerContent)
-  const contents = primary.length ? primary : describe(supportingContent)
+  return { primary: describe(playerContent), supporting: describe(supportingContent) }
+}
+
+export function describeCatalogContents(contents: readonly string[]) {
   if (contents.length > 4) return `${contents.slice(0, 4).join(', ')}, and more`
   if (contents.length < 2) return contents[0]
   return `${contents.slice(0, -1).join(', ')} and ${contents[contents.length - 1]}`

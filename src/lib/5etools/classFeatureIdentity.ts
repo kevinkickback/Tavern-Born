@@ -28,7 +28,7 @@ export function getSubclassOwnerIdentity(
     : undefined
 }
 
-function sourceKey(value: unknown, fallback: string): string | undefined {
+export function normalizeFeatureSource(value: unknown, fallback: string): string | undefined {
   if (value === undefined) return fallback
   return typeof value === 'string' ? value.trim().toLowerCase() || fallback : undefined
 }
@@ -54,8 +54,8 @@ function normalizeClassFeatureIdentity(feature: ClassFeatureIdentityInput) {
   const name = typeof feature.name === 'string' ? feature.name.trim().toLowerCase() : ''
   const className =
     typeof feature.className === 'string' ? feature.className.trim().toLowerCase() : ''
-  const classSource = sourceKey(feature.classSource, 'phb')
-  const source = classSource ? sourceKey(feature.source, classSource) : undefined
+  const classSource = normalizeFeatureSource(feature.classSource, 'phb')
+  const source = classSource ? normalizeFeatureSource(feature.source, classSource) : undefined
   if (
     !name ||
     !className ||
@@ -128,8 +128,8 @@ export function getSubclassFeatureIdentity(
     typeof feature.subclassShortName === 'string'
       ? feature.subclassShortName.trim().toLowerCase()
       : ''
-  const subclassSource = sourceKey(feature.subclassSource, 'phb')
-  const source = sourceKey(feature.source, subclassSource ?? 'phb')
+  const subclassSource = normalizeFeatureSource(feature.subclassSource, 'phb')
+  const source = normalizeFeatureSource(feature.source, subclassSource ?? 'phb')
   if (!subclassSource || !source) return undefined
   const identity = normalizeClassFeatureIdentity({
     ...feature,

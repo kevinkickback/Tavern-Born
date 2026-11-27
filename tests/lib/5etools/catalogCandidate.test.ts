@@ -12,6 +12,175 @@ const files: Record<string, unknown> = {
   'spells/spells-xphb.json': { spell: [{ name: 'Cure Wounds', source: 'XPHB', level: 1 }] },
 }
 
+const subclassWithGrant = (name: string, spell: string) => ({
+  name,
+  shortName: name,
+  source: 'TEST',
+  className: 'Guardian',
+  classSource: 'TEST',
+  additionalSpells: [{ prepared: { 3: [spell] } }],
+})
+
+test('previews a verified subset from the same reads, preserving healthy sibling rules', async () => {
+  const payloads: Record<string, unknown> = {
+    ...files,
+    'class/index.json': { test: 'class-test.json' },
+    'class/class-test.json': {
+      class: [{ name: 'Guardian', source: 'TEST' }],
+      subclass: [
+        subclassWithGrant('Healthy', 'Cure Wounds|XPHB'),
+        subclassWithGrant('Broken', 'Magic Missile|XPHB'),
+      ],
+    },
+  }
+  const fetch = vi.fn((url: string) => {
+    const key = url.slice(online.path.length + 6)
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  vi.stubGlobal('fetch', fetch)
+  const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
+  expect(candidate.partialImport).toEqual({
+    included: ['1 class', '1 subclass', '2 spells'],
+    skipped: ['Broken (TEST) for Guardian (TEST). Requires Magic Missile (XPHB).'],
+  })
+  expect(candidate.data.classes[0].subclasses?.map(({ name }) => name)).toEqual(['Healthy'])
+  expect(candidate.keys.every((key) => !key.includes('broken'))).toBe(true)
+  expect(candidate.config.resourceProof).toBeUndefined()
+  const requests = fetch.mock.calls.map(([url]) => url)
+  expect(new Set(requests).size).toBe(requests.length)
+})
+
+test('rechecks dependents after removing a broken feature owner', async () => {
+  const payloads: Record<string, unknown> = {
+    'class/index.json': { test: 'class-test.json' },
+    'class/class-test.json': {
+      class: [
+        { name: 'Guardian', source: 'PHB', classFeatures: ['Absent|Guardian|PHB|1|TEST'] },
+        { name: 'Follower', source: 'TEST', classFeatures: ['Training|Guardian|PHB|2|TEST'] },
+        { name: 'Guardian', source: 'OTHER' },
+      ],
+      classFeature: [
+        { name: 'Training', className: 'Guardian', classSource: ' ', source: 'TEST', level: 2 },
+      ],
+    },
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.slice(online.path.length + 6)
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
+  expect(candidate.data.classes.map(({ name, source }) => [name, source])).toEqual([
+    ['Guardian', 'OTHER'],
+  ])
+  expect(candidate.data.classFeatures).toEqual([])
+  expect(candidate.partialImport).toEqual({
+    included: ['1 class'],
+    skipped: [
+      'Guardian (PHB). Requires Absent|Guardian|PHB|1|TEST.',
+      'Follower (TEST). Requires Training|Guardian|PHB|2|TEST.',
+    ],
+  })
+})
+
+test('keeps supported standalone rules metadata after excluding a class', async () => {
+  const payloads: Record<string, unknown> = {
+    'items-base.json': {
+      itemProperty: [{ abbreviation: 'AZ', name: 'A Test Property', source: 'TEST' }],
+    },
+    'class/index.json': { TEST: 'class-test.json' },
+    'class/class-test.json': {
+      class: [{ name: 'Guardian', source: 'TEST', classFeatures: ['Absent|Guardian|TEST|1|TEST'] }],
+    },
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.slice(online.path.length + 6)
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
+  expect(candidate.contents).toBe('1 item property')
+  expect(candidate.partialImport?.included).toEqual(['1 item property'])
+  expect(candidate.data.itemProperties).toMatchObject([{ name: 'A Test Property', source: 'TEST' }])
+})
+
+test('skips an exact subclass copy when its original is removed on the first pass', async () => {
+  const payloads: Record<string, unknown> = {
+    'class/index.json': { TEST: 'class-guardian.json', OTHER: 'class-scout.json' },
+    'class/class-guardian.json': {
+      class: [{ name: 'Guardian', source: 'TEST' }],
+      subclass: [subclassWithGrant('Original', 'Missing Spell|TEST')],
+    },
+    'class/class-scout.json': {
+      _meta: { dependencies: { subclass: ['TEST'] } },
+      class: [{ name: 'Scout', source: 'OTHER' }],
+      subclass: [
+        {
+          name: 'Variant',
+          shortName: 'Variant',
+          source: 'OTHER',
+          className: 'Scout',
+          classSource: 'OTHER',
+          additionalSpells: [],
+          _copy: {
+            name: 'Original',
+            shortName: 'Original',
+            source: 'TEST',
+            className: 'Guardian',
+            classSource: 'TEST',
+          },
+        },
+      ],
+    },
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.slice(online.path.length + 6)
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  const candidate = await prepareCatalog(online, undefined, signal(), undefined, undefined, true)
+  expect(
+    candidate.data.classes.map(({ name, subclasses }) => [name, subclasses?.length ?? 0]),
+  ).toEqual([
+    ['Guardian', 0],
+    ['Scout', 0],
+  ])
+  expect(candidate.partialImport?.skipped).toEqual([
+    'Original (TEST) for Guardian (TEST). Requires Missing Spell (TEST).',
+    'Variant (OTHER) for Scout (OTHER). Could not use the original Original (TEST) subclass for Guardian (TEST).',
+  ])
+})
+
+test.each([
+  'unreadable',
+  'incompatible support file',
+  'unidentified copy parent',
+  'already loaded',
+  'empty subset',
+])('does not offer a partial catalog for %s', async (fault) => {
+  const payloads: Record<string, unknown> = {
+    ...(fault === 'empty subset' ? {} : files),
+    'class/index.json': { test: 'class-test.json' },
+    'class/class-test.json': {
+      class: [
+        fault === 'unidentified copy parent'
+          ? { name: 'Guardian', source: 'TEST', _copy: { name: 'Original' } }
+          : { name: 'Guardian', source: 'TEST', classFeatures: ['Absent|Guardian|TEST|1|TEST'] },
+      ],
+    },
+    ...(fault === 'incompatible support file'
+      ? { 'book/book-tce.json': { unsupported: 'wrong' } }
+      : {}),
+  }
+  vi.stubGlobal('fetch', (url: string) => {
+    const key = url.slice(online.path.length + 6)
+    if (key === 'fluff-backgrounds.json' && fault === 'unreadable')
+      return Promise.resolve(json(null, 503))
+    return Promise.resolve(key in payloads ? json(payloads[key]) : json(null, 404))
+  })
+  const config = fault === 'already loaded' ? { ...online, lastLoaded: '2026-01-01' } : online
+  await expect(
+    prepareCatalog(config, undefined, signal(), undefined, undefined, true),
+  ).rejects.toThrow()
+})
+
 afterEach(() => vi.unstubAllGlobals())
 
 test('prepares a personal HTTPS source using one read per file and no provider API', async () => {

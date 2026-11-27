@@ -91,6 +91,15 @@ produce warnings. Source-wide request failures show one message with file-level 
 Required dependency failures name the affected record and keep the current catalog. Optional
 missing item-choice references are shown as warnings without changing refresh or admission policy.
 
+When adding a first Additional Content source, **Import working content** can be offered for
+missing required dependencies or unresolved copies whose class or subclass owners can be
+identified in the original documents. The preview shows counts for the surviving records and
+explains which owners were skipped. The checker rebuilds the candidate from the same verified reads
+and validates the result again with the Included SRD when available. An unreadable or incompatible
+checked document blocks partial import. The accepted subset is cached without a full-catalog
+verification stamp, so refresh and recovery continue to use strict validation. A failed refresh
+keeps the accepted subset available.
+
 Exact source and owner identities govern class and subclass ancestry, mechanically used choices
 and item or creature copy targets. The base can satisfy an exact dependency. Incomplete required
 dependencies keep the active catalog and cache intact. Item choice metadata can remain unavailable

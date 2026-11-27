@@ -85,6 +85,41 @@ describe('data source switching', () => {
     ).toBe(false)
   })
 
+  test('previews included and skipped content before the explicit import action', async () => {
+    const user = userEvent.setup()
+    const apply = vi.fn(async () => ({ kind: 'applied' as const, changed: true }))
+    useGameDataStore.setState({ loadCatalog: apply })
+    const skipped = 'Broken School (TEST) for Wizard (TEST). Requires Missing Spell (PHB).'
+    prepareCatalogMock.mockImplementationOnce((config: DataSourceConfig) =>
+      Promise.resolve({
+        config,
+        identity: config,
+        data: makeGameDataFixture(),
+        keys: [],
+        warnings: [],
+        partialImport: { included: ['1 class', '2 spells'], skipped: [skipped] },
+      }),
+    )
+    render(<DataSourceConfigurator selectorOnly />)
+    await user.type(
+      screen.getByRole('textbox', { name: 'Web Address' }),
+      'https://example.test/rules',
+    )
+    const action = await screen.findByRole('button', { name: 'Import working content' })
+    expect(screen.getByText('Will import 1 class, 2 spells.')).toBeTruthy()
+    expect(screen.getByText(skipped).closest('details')?.open).toBe(true)
+    expect(apply).not.toHaveBeenCalled()
+    await user.click(action)
+    expect(apply).toHaveBeenCalledWith(
+      expect.anything(),
+      false,
+      expect.objectContaining({
+        importWorkingContent: true,
+        prepared: expect.objectContaining({ partialImport: expect.anything() }),
+      }),
+    )
+  })
+
   test('ignores and releases a folder selected after switching away from the local tab', async () => {
     const user = userEvent.setup()
     let choose!: (value: string) => void

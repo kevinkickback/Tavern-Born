@@ -80,7 +80,14 @@ async function run(id: string, command: CatalogCommand, signal: AbortSignal): Pr
             onProgress,
             read,
           )
-        : await prepareCatalog(command.config, command.base, signal, onProgress, read)
+        : await prepareCatalog(
+            command.config,
+            command.base,
+            signal,
+            onProgress,
+            read,
+            command.allowPartial,
+          )
       signal.throwIfAborted()
       if (!candidate) return null
       const { data, keys: _keys, ...metadata } = candidate

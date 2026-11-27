@@ -59,12 +59,14 @@ function discardFolder(root: string | null) {
 function CheckDetails({
   lines,
   title = 'Show details',
+  expanded,
 }: {
   lines?: readonly string[]
   title?: string
+  expanded?: boolean
 }) {
   return lines?.length ? (
-    <details className="text-sm">
+    <details className="text-sm" open={expanded}>
       <summary className="cursor-pointer">{title}</summary>
       <ul className="mt-1 max-h-48 list-disc overflow-auto break-words pl-5">
         {[...new Set(lines)].map((line) => (
@@ -231,6 +233,9 @@ export function DataSourceConfigurator({
         },
         base ?? undefined,
         signal,
+        undefined,
+        undefined,
+        !basis || basis.type === 'bundled',
       )
       if (requestId !== validationRequestRef.current || controller.signal.aborted) {
         releaseCatalogCandidate(candidate)
@@ -332,6 +337,7 @@ export function DataSourceConfigurator({
     const result = await loadCatalog(candidate.config, false, {
       prepared: candidate,
       confirmed,
+      ...(candidate.partialImport ? { importWorkingContent: true } : {}),
       ...(folderGrant ? { folderGrant } : {}),
     })
     if (result.kind === 'applied' || result.kind === 'staged') {
@@ -415,8 +421,9 @@ export function DataSourceConfigurator({
     }
   }
 
-  const isValidSource = validationStatus === 'valid'
+  const isValidSource = validationStatus === 'valid' && validationResult?.basis === dataSourceConfig
   const checkedCandidate = validationResult?.candidate
+  const partial = isValidSource ? checkedCandidate?.partialImport : undefined
   const checkWarnings = catalogWarningsForDisplay(checkedCandidate)
   const dependencyWarning = checkedCandidate?.dependencyWarnings?.[0]
 
@@ -584,12 +591,16 @@ export function DataSourceConfigurator({
               </Tabs>
               <div aria-live="polite">
                 {validationStatus === 'validating' && <p>Checking compatibility...</p>}
-                {validationStatus === 'valid' && (
-                  <p className="text-success">
-                    {checkedCandidate?.contents
-                      ? `Found ${checkedCandidate.contents}.`
-                      : 'Compatible game data found'}
-                  </p>
+                {partial ? (
+                  <p>Will import {partial.included.join(', ')}.</p>
+                ) : (
+                  validationStatus === 'valid' && (
+                    <p className="text-success">
+                      {checkedCandidate?.contents
+                        ? `Found ${checkedCandidate.contents}.`
+                        : 'Compatible game data found'}
+                    </p>
+                  )
                 )}
                 {validationResult?.error && (
                   <p className="text-destructive">{validationResult.error}</p>
@@ -607,6 +618,7 @@ export function DataSourceConfigurator({
                   (dependencyWarning ? checkWarnings.slice(1) : checkWarnings)
                 }
               />
+              <CheckDetails lines={partial?.skipped} title="Skipped content" expanded />
               {showAdditionalContentGuidance && (
                 <div className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2.5">
                   <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
@@ -704,7 +716,11 @@ export function DataSourceConfigurator({
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
                   <Database className="size-4" />
-                  {isLoading ? 'Loading...' : 'Add Additional Content'}
+                  {isLoading
+                    ? 'Loading...'
+                    : partial
+                      ? 'Import working content'
+                      : 'Add Additional Content'}
                 </Button>
               )}
             </div>

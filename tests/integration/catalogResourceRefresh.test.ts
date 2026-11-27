@@ -62,6 +62,81 @@ const check = () => {
   return state.loadCatalog(state.dataSourceConfig!, true)
 }
 
+test('accepts a subset only by explicit new-source import and keeps it on a failed refresh', async () => {
+  const { documents } = installSource()
+  documents.set('class/index.json', { body: { TEST: 'class-test.json' }, etag: '"classes"' })
+  documents.set('class/class-test.json', {
+    body: {
+      class: [{ name: 'Wizard', source: 'TEST' }],
+      subclass: [
+        {
+          name: 'Broken School',
+          shortName: 'Broken',
+          className: 'Wizard',
+          classSource: 'TEST',
+          source: 'TEST',
+          additionalSpells: [{ prepared: { 3: ['Missing Spell|PHB'] } }],
+        },
+      ],
+    },
+    etag: '"class"',
+  })
+  const { loadCatalog, loadFromCache } = useGameDataStore.getState()
+  const candidate = await prepareCatalogCandidate(
+    source,
+    undefined,
+    new AbortController().signal,
+    undefined,
+    undefined,
+    true,
+  )
+  expect(candidate.partialImport?.skipped).toHaveLength(1)
+  expect(await loadCatalog(candidate.config, true, { prepared: candidate })).toMatchObject({
+    kind: 'rejected',
+  })
+  expect(await loadCatalog(candidate.config, false, { prepared: candidate })).toMatchObject({
+    kind: 'rejected',
+  })
+  expect(
+    await loadCatalog(candidate.config, false, {
+      prepared: candidate,
+      importWorkingContent: true,
+    }),
+  ).toMatchObject({ kind: 'applied' })
+  const pair = await readGameDataCachePair()
+  expect(pair.settings?.dataSourceConfig).toMatchObject({ type: 'remote' })
+  expect(useGameDataStore.getState().gameData?.classes[0].subclasses ?? []).toHaveLength(0)
+  await loadFromCache()
+  const active = useGameDataStore.getState().gameData
+  expect(active?.classes[0].name).toBe('Wizard')
+  expect(await check()).toMatchObject({
+    kind: 'rejected',
+    message: expect.stringContaining('Missing Spell'),
+  })
+  expect(useGameDataStore.getState().gameData).toBe(active)
+  const failed = await readGameDataCachePair()
+  expect(failed.cache).toEqual(pair.cache)
+  expect(failed.settings).toEqual(pair.settings)
+  expect(
+    await loadCatalog(candidate.config, false, {
+      prepared: candidate,
+      importWorkingContent: true,
+    }),
+  ).toMatchObject({ kind: 'rejected' })
+  documents.set('spells/spells-phb.json', {
+    body: {
+      spell: [
+        { name: 'Original Spell', source: 'PHB', level: 1 },
+        { name: 'Missing Spell', source: 'PHB', level: 1 },
+      ],
+    },
+    etag: '"fixed"',
+  })
+  expect(await check()).toEqual({ kind: 'staged' })
+  expect(useGameDataStore.getState().pendingCatalog?.candidate.partialImport).toBeUndefined()
+  expect(useGameDataStore.getState().gameData).toBe(active)
+})
+
 function oversizedResponse(cancel?: () => void) {
   const chunk = new Uint8Array(1024 * 1024)
   let remaining = 54

@@ -105,6 +105,7 @@ interface CatalogRequest {
   recovery?: boolean
   startupRecoverySource?: Exclude<DataSourceConfig, { type: 'bundled' }>
   folderGrant?: string
+  importWorkingContent?: true
 }
 
 function releaseFolderGrant(root: string | undefined) {
@@ -490,11 +491,24 @@ export const useGameDataStore = create<GameDataState>()(
         const pending = get().pendingCatalog
         if (request?.confirmed && request.prepared !== pending?.candidate)
           return { kind: 'superseded' }
-        const blocked = get().isCatalogActivating
-          ? 'Game data is already being applied.'
-          : !background && (catalogWorkflows.size || get().catalogDraftDirty)
-            ? WORKFLOW_MESSAGE
-            : undefined
+        const configuredSource = get().dataSourceConfig
+        const partial = Boolean(request?.prepared?.partialImport)
+        const partialBlocked =
+          partial &&
+          (!request?.importWorkingContent ||
+            background ||
+            request.confirmed ||
+            request.startup ||
+            request.session ||
+            request.recovery ||
+            (configuredSource && configuredSource.type !== 'bundled'))
+        const blocked = partialBlocked
+          ? 'Import working content is only available when adding Additional Content for the first time.'
+          : get().isCatalogActivating
+            ? 'Game data is already being applied.'
+            : !background && (catalogWorkflows.size || get().catalogDraftDirty)
+              ? WORKFLOW_MESSAGE
+              : undefined
         if (blocked) {
           if (
             request?.prepared !== pending?.candidate &&
@@ -575,6 +589,10 @@ export const useGameDataStore = create<GameDataState>()(
             expectation === undefined && !request?.session
               ? await settleOnAbort(readCatalogExpectation(), signal)
               : expectation
+          if (partial && expectedCache && expectedCache.sourceSnapshot.type !== 'bundled')
+            throw new Error(
+              'An Additional Content source is already active. Check the source again.',
+            )
           const finishUnchangedCheck = async (
             cached: GameDataCacheMetadata,
             checkedConfig: DataSourceConfig,
@@ -955,7 +973,10 @@ export const useGameDataStore = create<GameDataState>()(
             ? {
                 ...candidate.config,
                 acceptedRevision: candidate.revision,
-                verifiedRevision: candidate.warnings.length ? undefined : candidate.revision,
+                verifiedRevision:
+                  candidate.partialImport || candidate.warnings.length
+                    ? undefined
+                    : candidate.revision,
                 lastLoaded: now,
               }
             : { ...config, isValid: true, lastLoaded: now }
