@@ -89,6 +89,31 @@ function buildCharacterSheetFieldMap(
 
 describe('characterSheetPdf', () => {
   test.each([
+    '2024-official',
+    '2024-custom',
+  ] as const)('prints scores of 99 and their full modifiers on the %s form', async (template) => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        strength: 99,
+        dexterity: 99,
+        constitution: 99,
+        intelligence: 99,
+        wisdom: 99,
+        charisma: 99,
+      },
+      variantRules: { allowAbilityScoresAbove20: true },
+    })
+    const bytes = await generateTestCharacterSheet(prepareViewModel(character), template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    for (const id of [25, 26, 27, 28, 29, 30]) {
+      expect(form.getTextField(`Text_${id}`).getText()).toBe('99')
+    }
+    for (const id of [15, 20, 21, 22, 23, 24]) {
+      expect(form.getTextField(`Text_${id}`).getText()).toBe('+44')
+    }
+  })
+
+  test.each([
     ['2014-official', ''],
     ['2014-custom', 'WotC__'],
     ['2024-official', ''],

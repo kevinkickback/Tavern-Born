@@ -29,6 +29,7 @@ export function getOfficial2024FontBounds(name: string): Official2024FontBounds 
   if (id === 8) return { min: 10.5, max: 11.5 } // Armor Class shield.
   if (id === 9) return { min: 9.5, max: 10.5 } // Current Hit Points.
   if (id <= 13) return { min: 8.5, max: 9.5 }
+  if (id === 15 || (id >= 20 && id <= 24)) return { min: 8.5, max: 11.5 } // Ability modifiers.
   if (id <= 30) return { min: 9.5, max: 11.5 }
   if (id <= 54) return { min: 7.5, max: 8.5 }
   if (id <= 60) return { min: 7.5, max: 9, multiline: true }

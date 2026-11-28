@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
@@ -74,7 +74,7 @@ describe('wizard 2024 origin-system ability display', () => {
     const initial: CharacterWizardData = {
       ...INITIAL_CHARACTER_DATA,
       abilityScoreMethod: 'custom',
-      abilityScores: { ...INITIAL_CHARACTER_DATA.abilityScores, strength: 24 },
+      abilityScores: { ...INITIAL_CHARACTER_DATA.abilityScores, strength: 42 },
     }
     function WizardOptionsAndScores() {
       const [data, setData] = useState(initial)
@@ -108,10 +108,12 @@ describe('wizard 2024 origin-system ability display', () => {
     await user.click(heavy)
     expect(strength.getAttribute('max')).toBe('20')
     await user.click(scoreCap)
-    expect(strength.getAttribute('max')).toBe('30')
+    expect(strength.getAttribute('max')).toBe('99')
     expect(screen.getByText('Ready')).toBeTruthy()
+    fireEvent.change(strength, { target: { value: '100' } })
+    expect((strength as HTMLInputElement).value).toBe('99')
     await user.click(scoreCap)
-    expect((strength as HTMLInputElement).value).toBe('24')
+    expect((strength as HTMLInputElement).value).toBe('99')
     expect(heavy.getAttribute('aria-checked')).toBe('true')
     expect(screen.getByText('Invalid scores')).toBeTruthy()
   })

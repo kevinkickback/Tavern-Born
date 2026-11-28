@@ -24,9 +24,11 @@ describe('source-derived preparation meaning', () => {
   test('supported formula and changed data derive without an owner-name branch', () => {
     const rule = deriveClassPreparationRule(formula, getDeclaredPreparationMinimum([clause]))!
     expect(rule.mode).toBe('daily')
-    expect(rule.maximumByLevel).toEqual(Array.from({ length: 20 }, (_, index) => index + 11))
+    expect(rule.maximumByLevel).toEqual(Array.from({ length: 20 }, (_, index) => index + 45))
     expect(getClassPreparationLimit(rule, 1, -5)).toBe(1)
     expect(getClassPreparationLimit(rule, 5, 3)).toBe(8)
+    expect(getClassPreparationLimit(rule, 1, 44)).toBe(45)
+    expect(getClassPreparationLimit(rule, 1, 45)).toBeNull()
     expect(
       deriveClassPreparationRule({ ...formula, name: 'Different', source: 'OTHER' }, 1),
     ).toEqual(rule)
@@ -34,7 +36,7 @@ describe('source-derived preparation meaning', () => {
       { ...formula, preparedSpells: '<$level$> / 2 + <$wis_mod$>' },
       1,
     )!
-    expect(changed.maximumByLevel[19]).toBe(20)
+    expect(changed.maximumByLevel[19]).toBe(54)
     expect(getClassPreparationLimit(changed, 3, 0)).toBe(1)
     expect(deriveClassPreparationRule({ ...formula, preparedSpells: undefined }, 1)).toBeUndefined()
     expect(deriveClassPreparationRule(formula, 1)).toEqual(rule)
@@ -134,16 +136,16 @@ describe('source-derived preparation meaning', () => {
       ].sort(),
     )
     for (const [name, source, mode, maximum] of [
-      ['Artificer', 'TCE', 'daily', 20],
+      ['Artificer', 'TCE', 'daily', 54],
       ['Artificer', 'EFA', 'daily', 15],
-      ['Cleric', 'PHB', 'daily', 30],
+      ['Cleric', 'PHB', 'daily', 64],
       ['Cleric', 'XPHB', 'daily', 22],
-      ['Druid', 'PHB', 'daily', 30],
+      ['Druid', 'PHB', 'daily', 64],
       ['Druid', 'XPHB', 'daily', 22],
-      ['Paladin', 'PHB', 'daily', 20],
+      ['Paladin', 'PHB', 'daily', 54],
       ['Paladin', 'XPHB', 'daily', 15],
       ['Ranger', 'XPHB', 'daily', 15],
-      ['Wizard', 'PHB', 'spellbook', 30],
+      ['Wizard', 'PHB', 'spellbook', 64],
       ['Wizard', 'XPHB', 'spellbook', 25],
     ] as const) {
       const policy = getClassSpellProfilePolicy({ name, source, levels: 20 })

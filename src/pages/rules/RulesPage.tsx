@@ -316,7 +316,7 @@ export function RulesPage() {
                   </div>
                   <RuleRow
                     label="Allow Ability Scores Above 20"
-                    description="Raise the normal ability score cap to 30. Turning this off restores the cap without changing your saved scores or choices."
+                    description="Allow scores up to 99 during character creation and advancement."
                     checked={rules.allowAbilityScoresAbove20 ?? false}
                     onCheckedChange={(checked) =>
                       updateBooleanRule('allowAbilityScoresAbove20', checked)

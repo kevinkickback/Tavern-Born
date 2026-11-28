@@ -4,7 +4,7 @@ import { EPIC_BOON_LEVEL, isEpicBoonTarget } from '@/lib/5etools/epicBoonAdvance
 import { isStormAuraChoiceId } from '@/lib/5etools/stormAuraIdentity'
 import { isEarnedWeaponInscription } from '@/lib/5etools/weaponInscriptionIdentity'
 import {
-  ABILITY_SCORE_ABSOLUTE_MAX,
+  ABILITY_SCORE_EXTENDED_MAX,
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
@@ -112,7 +112,7 @@ function finiteInteger() {
   return z.number().refine(Number.isInteger, 'Expected an integer')
 }
 
-const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
+const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_EXTENDED_MAX)
 
 const originSystemSchema = z.enum(['2014', '2024'])
 const abilityScoreMethodSchema = z.enum(['point-buy', 'standard-array', 'custom'])

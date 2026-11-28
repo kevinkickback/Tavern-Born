@@ -75,7 +75,7 @@ describe('effective ability score consumers', () => {
     })
     const actor = characterPersistenceSchema.parse({
       ...base,
-      abilityScores: { ...base.abilityScores, strength: 23, dexterity: 20, constitution: 29 },
+      abilityScores: { ...base.abilityScores, strength: 42, dexterity: 30, constitution: 99 },
       asiChoices: [
         {
           id: 'fighter-4',
@@ -93,6 +93,13 @@ describe('effective ability score consumers', () => {
           operation: { kind: 'add', value: 1 },
           source: { kind: 'manual', name: 'Temporary strength' },
         },
+        {
+          id: 'temporary-wisdom',
+          label: 'Temporary Wisdom',
+          target: { kind: 'ability-score', ability: 'wisdom' },
+          operation: { kind: 'minimum', value: 110 },
+          source: { kind: 'manual', name: 'Temporary Wisdom' },
+        },
       ],
     })
     const disabled = createCurrentCharacterSheetViewModel(actor, {})
@@ -100,6 +107,7 @@ describe('effective ability score consumers', () => {
       strength: 21,
       dexterity: 20,
       constitution: 20,
+      wisdom: 30,
     })
     const enabled = characterPersistenceSchema.parse({
       ...actor,
@@ -107,17 +115,48 @@ describe('effective ability score consumers', () => {
     })
     const sheet = createCurrentCharacterSheetViewModel(enabled, {})
     expect(sheet.effectiveAbilityScores).toMatchObject({
-      strength: 24,
-      dexterity: 21,
-      constitution: 30,
+      strength: 43,
+      dexterity: 31,
+      constitution: 99,
+      wisdom: 99,
     })
     expect(mapCharacterSheet2014(sheet).textFields).toMatchObject({
-      Str: '24',
-      Dex: '21',
-      Con: '30',
+      Str: '43',
+      Dex: '31',
+      Con: '99',
+    })
+    expect(mapCharacterSheet2024(sheet).textFields).toMatchObject({
+      Text_25: '43',
+      Text_26: '31',
+      Text_27: '99',
     })
     expect(enabled.abilityScores).toEqual(actor.abilityScores)
     expect(enabled.asiChoices).toEqual(actor.asiChoices)
+  })
+
+  test.each([
+    ['PHB', 48],
+    ['XPHB', 7],
+  ])('a Wizard using %s keeps the source preparation rule at Intelligence 99', (source, preparedSpellLimit) => {
+    const base = makeCharacterFixture({
+      originSystem: source === 'PHB' ? '2014' : '2024',
+      classProgression: [{ name: 'Wizard', source, levels: 4 }],
+      variantRules: { allowAbilityScoresAbove20: true },
+    })
+    const data = makeClassCastingLayer('class/class-wizard.json')
+    const sheet = createCurrentCharacterSheetViewModel(
+      { ...base, abilityScores: { ...base.abilityScores, intelligence: 99 } },
+      {
+        classesByKey: buildClassLookup(data.classes),
+        classChoiceClasses: data.classes,
+        classChoiceFeatureCatalogs: buildClassChoiceFeatureCatalogs(data),
+      },
+    )
+    expect(sheet.spellcastingDetails[0]).toMatchObject({
+      preparedSpellLimit,
+      spellSaveDC: 54,
+      spellAttackBonus: 46,
+    })
   })
 
   test.skipIf(!existsSync('data/feats.json'))(
@@ -158,6 +197,20 @@ describe('effective ability score consumers', () => {
         featsByKey: buildFeatLookup([feat]),
       })
       expect(result.effectiveAbilityScores.charisma).toBe(21)
+      for (const [baseScore, expected] of [
+        [29, 30],
+        [35, 35],
+      ]) {
+        const extended = createCurrentCharacterSheetViewModel(
+          {
+            ...actor,
+            abilityScores: { ...actor.abilityScores, charisma: baseScore },
+            variantRules: { ...actor.variantRules, allowAbilityScoresAbove20: true },
+          },
+          { featsByKey: buildFeatLookup([feat]) },
+        )
+        expect(extended.effectiveAbilityScores.charisma).toBe(expected)
+      }
     },
   )
 

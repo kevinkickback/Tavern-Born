@@ -20,7 +20,7 @@ const RULE_OPTIONS = [
   {
     key: 'allowAbilityScoresAbove20',
     label: 'Allow Ability Scores Above 20',
-    description: 'Raise the normal ability score cap to 30.',
+    description: 'Allow scores up to 99.',
   },
   {
     key: 'ignoreHeavyWeaponRequirements',

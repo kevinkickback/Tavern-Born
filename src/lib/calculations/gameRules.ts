@@ -19,6 +19,7 @@ export const POINT_BUY_MAX: number = DEFAULT_RULES.pointBuyMax
 export const ABILITY_SCORE_MIN: number = DEFAULT_RULES.abilityScoreMinimum
 export const ABILITY_SCORE_MAX: number = DEFAULT_RULES.abilityScoreCap
 export const ABILITY_SCORE_ABSOLUTE_MAX: number = DEFAULT_RULES.abilityScoreAbsoluteMaximum
+export const ABILITY_SCORE_EXTENDED_MAX = 99
 export const MAX_CHARACTER_LEVEL: number = DEFAULT_RULES.maxCharacterLevel
 export const MAX_ATTUNEMENT_SLOTS: number = DEFAULT_RULES.maxAttunedItems
 const CARRY_CAPACITY_MULTIPLIER = DEFAULT_RULES.carryingCapacityMultiplier
@@ -27,7 +28,7 @@ export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
 
 export function getAbilityScoreCap(allowAbove20?: boolean): number {
-  return allowAbove20 ? ABILITY_SCORE_ABSOLUTE_MAX : ABILITY_SCORE_MAX
+  return allowAbove20 ? ABILITY_SCORE_EXTENDED_MAX : ABILITY_SCORE_MAX
 }
 
 /**
