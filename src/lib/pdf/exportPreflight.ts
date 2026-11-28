@@ -364,7 +364,7 @@ export function getPdfExportPreflight(
   const hasPactPage =
     getCharacterSheetTemplate(templateId).edition === '2014' &&
     getOfficial2014SpellPages(plannedSpellContent).some(
-      (page) => page.detail?.classDetail?.casterProgression === 'pact',
+      (page) => page.slotDetail?.classDetail?.casterProgression === 'pact',
     )
   if (
     pactSlots.length &&
@@ -382,6 +382,17 @@ export function getPdfExportPreflight(
   }
   for (const section of report?.omitted ?? []) {
     if (section.id.startsWith('text-limit:')) continue
+    if (section.id === 'combined-spells:slots') {
+      if (!spellsOmitted)
+        issues.push({
+          id: section.id,
+          category: 'unsupported',
+          severity: 'warning',
+          title: 'Track regular spell slots separately',
+          detail: `The slot grid shows Pact Magic. ${section.text.replace(/\n/g, ' · ')}.`,
+        })
+      continue
+    }
     issues.push({
       id: section.id,
       category: 'truncation',

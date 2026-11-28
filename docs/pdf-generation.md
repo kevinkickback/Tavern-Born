@@ -95,15 +95,19 @@ Description and overflow controls are independent:
 Only overrides persist in `sheetExportPreferences.ts`, keyed by character/template; automatic
 choices are recomputed. Preferences never enter character files.
 
-**Combined spell page** (2014) or **Combined spell list** (2024) in Customize PDF uses the
-highest-level spellcasting class for the printed ability, save DC, and attack bonus.
-Equal class levels follow the character's class
-order. Characters with only racial casting use the first racial casting source. Where the
-casting ability is unknown, its numbers stay blank. The single spell section includes spells
+**Combined spell page** (2014) or **Combined spell list** (2024) in Customize PDF offers a
+**Spellcasting ability** choice when two or more distinct casting abilities are available.
+The choice sets the printed ability, save DC, and attack bonus from the highest-level source
+using that ability. **Automatic** uses the highest-level spellcasting class. Equal class levels
+follow the character's class order. Racial sources follow class sources in their existing order.
+An unavailable choice falls back to Automatic. Where the automatic source's ability is unknown,
+its numbers stay blank. The single spell section includes spells
 from every source, labeling same-name printings by source and combining readiness for shared
 spells. The 2014 forms use one shared spell module. The 2024 forms use their existing core
 spell section, prioritize ready spells, and label unprepared spells. Selections that exceed
 the form's capacity and the slot pool that has no printed fields go to Notes when enabled.
+On the 2014 combined page, the selected class supplies the slot grid. When a racial source
+supplies the casting numbers, the highest-level caster supplies any class slots.
 **Individual spell pages** keeps 2014 spell pages separate by caster. **Standard spell list**
 keeps the usual 2024 spell selection and casting summary.
 

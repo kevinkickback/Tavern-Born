@@ -66,6 +66,7 @@ import {
   DEFAULT_SHEET_PRESENTATION_OPTIONS,
   type SheetContentChoices,
   type SheetExportReport,
+  type SheetPresentationOptions,
 } from '@/lib/pdf/types'
 import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import {
@@ -190,19 +191,18 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const selectionContext = `${character?.id}:${selectedTemplate.id}`
   const pageChoices = preferences[selectionContext]?.pages ?? EMPTY_PAGE_CHOICES
   const contentChoices = preferences[selectionContext]?.content ?? EMPTY_CONTENT_CHOICES
-  const textOptions = preferences[selectionContext]?.text ?? DEFAULT_SHEET_PRESENTATION_OPTIONS
+  const textOptions: SheetPresentationOptions =
+    preferences[selectionContext]?.text ?? DEFAULT_SHEET_PRESENTATION_OPTIONS
+  const { spellLayout, combinedSpellcastingAbility } = textOptions
   const contentPlan = useMemo(
     () =>
       viewModel
-        ? planSheetContent(
-            viewModel,
-            templateId,
-            contentChoices,
-            pageChoices,
-            textOptions.spellLayout,
-          )
+        ? planSheetContent(viewModel, templateId, contentChoices, pageChoices, {
+            spellLayout,
+            combinedSpellcastingAbility,
+          })
         : null,
-    [viewModel, templateId, contentChoices, pageChoices, textOptions.spellLayout],
+    [viewModel, templateId, contentChoices, pageChoices, spellLayout, combinedSpellcastingAbility],
   )
   const baseOptionalPages = viewModel
     ? getOptionalCharacterSheetPages(viewModel, templateId, pageChoices)
@@ -562,6 +562,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             ? selectedTemplate.edition
             : undefined
         }
+        spellcastingAbilities={contentPlan?.spellcastingAbilities ?? []}
         onTextChange={(text) => {
           setPreferences((current) => ({
             ...current,

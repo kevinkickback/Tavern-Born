@@ -175,6 +175,7 @@ export interface CharacterSheetViewModel {
   /** Export-only selection; never written back to the character. */
   spellRowsForSheet?: CharacterSheetSpellRow[]
   markUnpreparedSpells?: boolean
+  combinedSpellSlotSource?: CharacterSheetSpellcastingSource
   equipmentForSheet?: Equipment[]
   character: Character
   feats: Feat[]
