@@ -83,42 +83,6 @@ function getItemCategoryIcon(category: Exclude<ItemCategory, 'All'>) {
   return Package
 }
 
-function RestrictionToggle({
-  label,
-  description,
-  pressed,
-  onClick,
-  icon: Icon,
-}: {
-  label: string
-  description: string
-  pressed: boolean
-  onClick: () => void
-  icon: typeof Sword
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={label}
-          aria-pressed={pressed}
-          onClick={onClick}
-          className={cn(
-            'flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors',
-            pressed
-              ? 'border-warning/50 bg-warning/10 text-warning hover:bg-warning/15'
-              : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground',
-          )}
-        >
-          <Icon className="size-4" weight={pressed ? 'fill' : 'regular'} aria-hidden="true" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{description}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 export function EquipmentPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -144,7 +108,6 @@ export function EquipmentPage() {
     updateItem,
     toggleEquip,
     setRestrictionsIgnored,
-    setHeavyWeaponRequirementsIgnored,
     toggleAttune,
     updateCurrency,
   } = useEquipment()
@@ -168,8 +131,7 @@ export function EquipmentPage() {
   const recursiveLookup = useRecursiveLookup()
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
-  const ignoreHeavyWeaponRequirements =
-    character?.variantRules?.ignoreHeavyWeaponRequirements ?? false
+  const toggleIgnoreRestrictions = () => setRestrictionsIgnored(!ignoreEquipRestrictions)
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const equipmentItems = useMemo(
     () =>
@@ -295,30 +257,33 @@ export function EquipmentPage() {
                   {equipment.length}
                 </Badge>
                 <div className="ml-auto flex items-center gap-2">
-                  <RestrictionToggle
-                    label="Toggle equipment restrictions"
-                    icon={ShieldWarning}
-                    pressed={ignoreEquipRestrictions}
-                    onClick={() => setRestrictionsIgnored(!ignoreEquipRestrictions)}
-                    description={
-                      ignoreEquipRestrictions
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Toggle equipment restrictions"
+                        aria-pressed={ignoreEquipRestrictions}
+                        onClick={toggleIgnoreRestrictions}
+                        className={cn(
+                          'flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors',
+                          ignoreEquipRestrictions
+                            ? 'border-warning/50 bg-warning/10 text-warning hover:bg-warning/15'
+                            : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground',
+                        )}
+                      >
+                        <ShieldWarning
+                          className="size-4"
+                          weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {ignoreEquipRestrictions
                         ? 'Restrictions ignored — click to enforce armor slots and proficiency'
-                        : 'Enforce armor slots and proficiency — click to ignore'
-                    }
-                  />
-                  <RestrictionToggle
-                    label="Ignore Heavy Weapon Requirements"
-                    icon={Sword}
-                    pressed={ignoreHeavyWeaponRequirements}
-                    onClick={() =>
-                      setHeavyWeaponRequirementsIgnored(!ignoreHeavyWeaponRequirements)
-                    }
-                    description={
-                      ignoreHeavyWeaponRequirements
-                        ? 'Restore Heavy weapon requirements'
-                        : 'Ignore Heavy weapon requirements'
-                    }
-                  />
+                        : 'Enforce armor slots and proficiency — click to ignore'}
+                    </TooltipContent>
+                  </Tooltip>
                   <Button onClick={() => setAddItemOpen(true)} size="sm" className="h-8 gap-1.5">
                     <Plus className="size-4" />
                     Add Item

@@ -38,7 +38,6 @@ export interface EquipmentState {
   updateItem: (id: string, patch: Partial<Equipment>) => void
   toggleEquip: (id: string) => void
   setRestrictionsIgnored: (ignored: boolean) => void
-  setHeavyWeaponRequirementsIgnored: (ignored: boolean) => void
   toggleAttune: (id: string) => void
   updateCurrency: (denomination: keyof Currency, amount: number) => void
 }
@@ -179,17 +178,6 @@ export function useEquipment(): EquipmentState {
     [character, updateCharacter, armorTraining, itemLookup],
   )
 
-  const setHeavyWeaponRequirementsIgnored = useCallback(
-    (ignored: boolean) => {
-      const latest = useCharacterStore.getState().activeCharacter
-      if (!latest || latest.id !== character?.id) return
-      updateCharacter(latest.id, {
-        variantRules: { ...latest.variantRules, ignoreHeavyWeaponRequirements: ignored },
-      })
-    },
-    [character?.id, updateCharacter],
-  )
-
   const toggleAttune = useCallback(
     (id: string) => {
       if (!character) return
@@ -233,7 +221,6 @@ export function useEquipment(): EquipmentState {
     updateItem,
     toggleEquip,
     setRestrictionsIgnored,
-    setHeavyWeaponRequirementsIgnored,
     toggleAttune,
     updateCurrency,
   }
