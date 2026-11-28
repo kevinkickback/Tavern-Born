@@ -117,6 +117,10 @@ effects, then supported exact overrides. Each layer produces a fresh value. Read
 allocated scores directly to validate allocation. The Creator also compares allocations when
 synchronizing its private draft. Ordinary display and export use effective scores.
 
+The ordinary ability score cap is 20. The character's above-20 option raises it to 30 and applies
+to Custom allocation and advancement. Switching it off retains saved scores and choices.
+Source-declared higher limits and ability effects still apply at their own calculation stages.
+
 HP and AC management display calculation traces but do not own class or equipment mutations.
 Carrying capacity, prerequisites, Overview, actions, and PDFs consume the same effective values.
 

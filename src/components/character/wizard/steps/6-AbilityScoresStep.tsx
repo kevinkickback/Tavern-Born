@@ -6,6 +6,7 @@ import { Tabs } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import type { AbilityName, BackgroundAbilityData } from '@/lib/calculations/abilityScores'
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import { projectDraftAbilityBonuses } from '../projectDraftAbilityBonuses'
 import type { CharacterWizardData, StepProps } from '../types'
 
@@ -47,6 +48,7 @@ export function AbilityScoresStep({
               method={method}
               scores={data.abilityScores}
               bonuses={abilityBonuses}
+              scoreCap={getAbilityScoreCap(data.variantRules.allowAbilityScoresAbove20)}
               setScore={setScore}
               setAllScores={setAllScores}
             />

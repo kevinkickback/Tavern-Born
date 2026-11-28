@@ -584,7 +584,9 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
           ? (DAMAGE_TYPE_LABELS[damage.damageType.toUpperCase()] ?? damage.damageType)
           : '',
         range: action.range ?? '',
-        notes: [...(action.properties ?? []), ...masteryLabels].join(', '),
+        notes: [action.attackDisadvantage, ...(action.properties ?? []), ...masteryLabels]
+          .filter(Boolean)
+          .join(', '),
         description: action.description,
       }
     })
@@ -899,6 +901,7 @@ export function createCharacterSheetViewModel(
   )
   const derivedActions = deriveCharacterActions(character, {
     abilityModifiers,
+    abilityScores: effectiveAbilityScores,
     proficiencyBonus,
     itemLookup: rawLookups.itemLookup,
     propertyLookup: rawLookups.itemPropertyByAbbr,

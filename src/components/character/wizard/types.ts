@@ -50,6 +50,8 @@ export interface CharacterWizardData {
     averageHitPoints: boolean
     anyRaceSubclasses: boolean
     preferNewerPrintings: boolean
+    ignoreHeavyWeaponRequirements: boolean
+    allowAbilityScoresAbove20: boolean
   }
 }
 

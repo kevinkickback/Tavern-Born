@@ -26,6 +26,10 @@ const CARRY_CAPACITY_MULTIPLIER = DEFAULT_RULES.carryingCapacityMultiplier
 export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
 
+export function getAbilityScoreCap(allowAbove20?: boolean): number {
+  return allowAbove20 ? ABILITY_SCORE_ABSOLUTE_MAX : ABILITY_SCORE_MAX
+}
+
 /**
  * Parse a hit dice string (e.g. "1d8", "d10") into its numeric face value.
  * Returns 8 as a safe default.

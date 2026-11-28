@@ -130,7 +130,12 @@ import {
 import { deriveCurrentClassCasting } from './currentClassCasting'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { deriveFighterPassiveEffects } from './fighterPassiveEffects'
-import { getAbilityModifier, getProficiencyBonus } from './gameRules'
+import {
+  ABILITY_SCORE_ABSOLUTE_MAX,
+  getAbilityModifier,
+  getAbilityScoreCap,
+  getProficiencyBonus,
+} from './gameRules'
 import { deriveInvocationMovementEffects } from './invocationMovementEffects'
 import { getArmorEquipmentSlots, getNormalizedItemTraits } from './itemClassification'
 import { type EffectiveMovement, getEffectiveCharacterMovement, getWalkingSpeed } from './movement'
@@ -149,6 +154,7 @@ type CoreRulesMetadata = (typeof CORE_RULES_METADATA)[keyof typeof CORE_RULES_ME
 
 export interface EffectiveAbilityScoreData {
   base: AbilityScores
+  intrinsic: AbilityScores
   total: AbilityScores
   modifiers: Record<AbilityName, number>
   normalizedRaceSelection: ReturnType<typeof normalizeRaceSelectionForOriginSystem>
@@ -284,7 +290,7 @@ function addBonuses(scores: AbilityScores, bonuses: Partial<Record<AbilityName, 
   }
 }
 
-export function getIntrinsicAbilityScores({
+function getIntrinsicAbilityScores({
   base,
   racialBonuses,
   backgroundBonuses,
@@ -308,10 +314,46 @@ function getProvenanceFeatBonuses(
   const bonuses: Partial<Record<AbilityName, number>> = {}
   for (const record of character?.provenance?.abilityBonuses ?? []) {
     if (record.sourceTag.sourceType !== 'feat') continue
-    const ability = record.ability as AbilityName
-    bonuses[ability] = (bonuses[ability] ?? 0) + record.value
+    const ability = normalizeAbilityName(record.ability)
+    if (ability) bonuses[ability] = (bonuses[ability] ?? 0) + record.value
   }
   return bonuses
+}
+
+function getFeatIncreasesWithHigherCap(
+  character: Character | null | undefined,
+  feats: readonly Feat5e[],
+  cap: number,
+) {
+  const higherCapFeats = new Map(
+    feats
+      .filter((feat) => feat.ability?.some(({ max }) => (max ?? 0) > cap))
+      .map((feat) => [getFeatSelectionKey(feat), feat]),
+  )
+  if (!higherCapFeats.size) return []
+  return (character?.provenance?.abilityBonuses ?? []).flatMap((bonus) => {
+    const { value, sourceTag } = bonus
+    const ability = normalizeAbilityName(bonus.ability)
+    if (!ability) return []
+    if (sourceTag.sourceType !== 'feat' || !sourceTag.sourceRef) return []
+    const feat = higherCapFeats.get(
+      getFeatSelectionKey({ name: sourceTag.sourceName, source: sourceTag.sourceRef }),
+    )
+    const maximum = feat?.ability?.reduce((highest, block) => {
+      if (!(typeof block.max === 'number' && block.max > highest)) return highest
+      const matchesChoice =
+        Array.isArray(block.choose?.from) &&
+        block.choose.from.some((option) => normalizeAbilityName(option) === ability)
+      const matchesFixed = Object.entries(block).some(
+        ([key, amount]) =>
+          normalizeAbilityName(key) === ability && typeof amount === 'number' && amount > 0,
+      )
+      return matchesChoice || matchesFixed
+        ? Math.min(block.max, ABILITY_SCORE_ABSOLUTE_MAX)
+        : highest
+    }, cap)
+    return maximum && maximum > cap ? [{ ability, value, maximum }] : []
+  })
 }
 
 export function deriveEffectiveAbilityScores(
@@ -325,6 +367,7 @@ export function deriveEffectiveAbilityScores(
     amount: number
     maximum: number
   }[] = [],
+  feats: readonly Feat5e[] = [],
 ): EffectiveAbilityScoreData {
   if (character) character = refreshRaceAbilityState(character, race, subrace)
   const base = character ? { ...character.abilityScores } : makeDefaultAbilityScores(8)
@@ -372,6 +415,15 @@ export function deriveEffectiveAbilityScores(
     asiBonuses,
     featBonuses,
   })
+  const cap = getAbilityScoreCap(character?.variantRules?.allowAbilityScoresAbove20)
+  // A feat with its own higher limit applies after the ordinary score cap.
+  const higherCapFeatIncreases = getFeatIncreasesWithHigherCap(character, feats, cap)
+  for (const { ability, value } of higherCapFeatIncreases) total[ability] -= value
+  for (const ability of ABILITY_NAMES) total[ability] = Math.min(total[ability], cap)
+  for (const { ability, value, maximum } of higherCapFeatIncreases) {
+    total[ability] = Math.max(total[ability], Math.min(total[ability] + value, maximum))
+  }
+  const intrinsic = { ...total }
   // Earned capstones change intrinsic scores. Item effects still resolve afterwards.
   for (const increase of intrinsicIncreases) {
     for (const ability of increase.abilities) {
@@ -403,6 +455,7 @@ export function deriveEffectiveAbilityScores(
 
   return {
     base,
+    intrinsic,
     total,
     modifiers: Object.fromEntries(
       Object.entries(total).map(([ability, score]) => [ability, getAbilityModifier(score)]),
@@ -570,16 +623,23 @@ export function createCharacterCalculationContext(
   for (const slot of epicBoonSlots) {
     if (!slot.asi) continue
     const withoutAsi = withoutEpicBoonSelection(character, slot.owner)
-    const before = getIntrinsicAbilityScores(
-      deriveEffectiveAbilityScores(
-        withoutAsi,
-        raceResolution.parentRace,
-        raceResolution.subraceData,
-        background,
-        baseSourceEffects,
-      ),
+    const before = deriveEffectiveAbilityScores(
+      withoutAsi,
+      raceResolution.parentRace,
+      raceResolution.subraceData,
+      background,
+      [],
+      [],
+      resolvedFeats,
+    ).intrinsic
+    if (
+      isEpicBoonIncreaseWithinCap(
+        slot.asi.abilityChanges,
+        before,
+        getAbilityScoreCap(character.variantRules?.allowAbilityScoresAbove20),
+      )
     )
-    if (isEpicBoonIncreaseWithinCap(slot.asi.abilityChanges, before)) continue
+      continue
     character = withoutAsi
     epicBoonSlots = epicBoonSlots.map((row) =>
       row === slot ? { ...row, state: 'unavailable', asi: undefined } : row,
@@ -606,6 +666,7 @@ export function createCharacterCalculationContext(
         : []),
       ...(monkIncrease ? [monkIncrease] : []),
     ],
+    resolvedFeats,
   )
   const managedSpells = projectManagedClassSpellState(
     character,

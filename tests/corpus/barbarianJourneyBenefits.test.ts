@@ -297,6 +297,7 @@ test.each(catalogsToTest)(
         makeCharacterFixture({
           originSystem: source === 'PHB' ? '2014' : '2024',
           allowedSources: [source],
+          variantRules: { allowAbilityScoresAbove20: true },
           classProgression: [{ name: 'Barbarian', source, levels }],
           abilityScores: {
             strength: 22,

@@ -26,6 +26,7 @@ export interface CharacterAction {
   ability?: AbilityName
   proficient?: boolean
   attackBonus?: number
+  attackDisadvantage?: string
   save?: { ability?: AbilityName; dc: number }
   range?: string
   damage?: CharacterActionDamage[]

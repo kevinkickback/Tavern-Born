@@ -332,6 +332,8 @@ export interface VariantRules {
   anyRaceSubclasses?: boolean
   preferNewerPrintings?: boolean
   ignoreEquipRestrictions?: boolean
+  ignoreHeavyWeaponRequirements?: boolean
+  allowAbilityScoresAbove20?: boolean
 }
 
 export type AbilityScores = Record<AbilityName, number>

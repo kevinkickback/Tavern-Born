@@ -10,7 +10,7 @@ import type { Character } from '@/types/character'
 export interface TotalAbilityScoresData
   extends Omit<
     EffectiveAbilityScoreData,
-    'base' | 'modifiers' | 'backgroundAbilityData' | 'normalizedBackground'
+    'base' | 'intrinsic' | 'modifiers' | 'backgroundAbilityData' | 'normalizedBackground'
   > {
   selectedRace: Race5e | undefined
   subraceData: Race5e | undefined

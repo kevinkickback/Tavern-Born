@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
-import type { StepProps } from './types'
+import type { CharacterWizardData, StepProps } from './types'
 
 const NO_CONTENT_SPECIFIC_RULES: VariantRuleContentAvailability = {
   optionalClassFeatures: false,
@@ -16,6 +16,16 @@ const RULE_OPTIONS = [
     key: 'averageHitPoints',
     label: 'Average Hit Points',
     description: 'Use fixed HP at level-up. Turn off to roll or enter HP.',
+  },
+  {
+    key: 'allowAbilityScoresAbove20',
+    label: 'Allow Ability Scores Above 20',
+    description: 'Raise the normal ability score cap to 30.',
+  },
+  {
+    key: 'ignoreHeavyWeaponRequirements',
+    label: 'Ignore Heavy Weapon Requirements',
+    description: 'Remove attack disadvantage caused by the Heavy weapon property.',
   },
   {
     key: 'optionalClassFeatures',
@@ -40,6 +50,8 @@ export function WizardVariantOptions({
   contentAvailability = NO_CONTENT_SPECIFIC_RULES,
 }: StepProps & { contentAvailability?: VariantRuleContentAvailability }) {
   const baseId = useId()
+  const availability: Partial<Record<keyof CharacterWizardData['variantRules'], boolean>> =
+    contentAvailability
 
   return (
     <TooltipProvider>
@@ -49,7 +61,7 @@ export function WizardVariantOptions({
           const detailsId = `${id}-details`
           const lockedByRuleset = key === 'preferNewerPrintings' && data.originSystem === '2024'
           const checked = lockedByRuleset || data.variantRules[key]
-          const available = key === 'averageHitPoints' || contentAvailability[key]
+          const available = availability[key] ?? true
           const unavailable = !lockedByRuleset && !available && !checked
           const lockReason = lockedByRuleset
             ? 'Always on for 2024 characters'

@@ -315,6 +315,14 @@ export function RulesPage() {
                     </div>
                   </div>
                   <RuleRow
+                    label="Allow Ability Scores Above 20"
+                    description="Raise the normal ability score cap to 30. Turning this off restores the cap without changing your saved scores or choices."
+                    checked={rules.allowAbilityScoresAbove20 ?? false}
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('allowAbilityScoresAbove20', checked)
+                    }
+                  />
+                  <RuleRow
                     label="Average Hit Points"
                     description="Use the fixed average automatically when leveling up. When disabled, each level asks you to roll or enter the hit-die result. Existing level-up HP is unchanged."
                     checked={rules.averageHitPoints !== false}
@@ -344,6 +352,14 @@ export function RulesPage() {
                     available={contentAvailability.anyRaceSubclasses}
                     unavailableDescription="No race-restricted subclasses are available from your selected content."
                     onCheckedChange={(checked) => updateBooleanRule('anyRaceSubclasses', checked)}
+                  />
+                  <RuleRow
+                    label="Ignore Heavy Weapon Requirements"
+                    description="Remove attack disadvantage caused by the Heavy weapon property."
+                    checked={rules.ignoreHeavyWeaponRequirements ?? false}
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('ignoreHeavyWeaponRequirements', checked)
+                    }
                   />
                   <RuleRow
                     label="Ignore Equipment Restrictions"

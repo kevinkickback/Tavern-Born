@@ -134,6 +134,8 @@ const variantRulesSchema = z
     anyRaceSubclasses: z.boolean().default(false),
     preferNewerPrintings: z.boolean().optional(),
     ignoreEquipRestrictions: z.boolean().default(false),
+    ignoreHeavyWeaponRequirements: z.boolean().optional(),
+    allowAbilityScoresAbove20: z.boolean().optional(),
   })
   .strict()
 

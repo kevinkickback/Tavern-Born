@@ -34,6 +34,11 @@ in one patch. Missing exact rules suspend live effects while preserving the phys
 An authoritative raw item lookup is required for a missing-data recommendation. An explicit
 empty lookup proves absence, and a loading lookup does not.
 
+Heavy weapon disadvantage is derived from the exact property printing. Revised Heavy uses
+effective Strength for melee weapons and Dexterity for ranged weapons, each with a minimum of 13.
+Legacy Heavy gives disadvantage to Small and Tiny users. The Heavy override waives the disadvantage in action
+summaries and PDF weapon notes. The equipment restriction switch controls equipping armor.
+
 ## Fixed weapon bonuses
 
 Only an existing equipped physical weapon with exact rules can receive its own attack/damage

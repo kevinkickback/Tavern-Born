@@ -8,13 +8,99 @@ import {
   deriveWeaponActions,
   inferRulesTextActionKind,
 } from '@/lib/calculations/actions'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { setProfileSpells } from '@/lib/character/commands/spellCommands'
 import type { ClassFixedSpellStatus } from '@/lib/character/optionalClassFixedSpells'
-import type { Class5e, ClassFeature, Feat5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Feat5e, Item5e, Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 
 describe('character action projection', () => {
+  test('enforces the Heavy requirement from the exact weapon property until waived', () => {
+    const base = makeCharacterFixture()
+    const weapon = {
+      id: 'revised',
+      name: 'Greatsword',
+      type: 'M|XPHB',
+      quantity: 1,
+      equipped: true,
+    }
+    const actor = {
+      ...base,
+      raceSize: 'S' as const,
+      variantRules: { ignoreEquipRestrictions: true },
+      equipment: [
+        { ...weapon, id: 'classic', type: 'M|PHB', properties: ['H'] },
+        { ...weapon, properties: ['H|XPHB'] },
+        { ...weapon, id: 'ranged', type: 'R|XPHB', properties: [{ uid: 'H|XPHB' }] },
+        { ...weapon, id: 'ordinary', properties: ['2H|XPHB'] },
+      ],
+    }
+    const scores = { ...base.abilityScores, strength: 12, dexterity: 13 }
+    const project = (
+      character: typeof base,
+      abilityScores = scores,
+      itemLookup?: ReadonlyMap<string, Item5e>,
+    ) =>
+      Object.fromEntries(
+        deriveWeaponActions(character, {
+          abilityScores,
+          abilityModifiers: {
+            strength: getAbilityModifier(abilityScores.strength),
+            dexterity: getAbilityModifier(abilityScores.dexterity),
+            constitution: 0,
+            intelligence: 0,
+            wisdom: 0,
+            charisma: 0,
+          },
+          proficiencyBonus: 2,
+          itemLookup,
+        }).map((action) => [action.id, action]),
+      )
+    const actions = project(actor)
+    expect(actions['weapon:classic'].attackDisadvantage).toContain('Small creature')
+    expect(project({ ...actor, raceSize: 'T' })['weapon:classic'].attackDisadvantage).toContain(
+      'Tiny creature',
+    )
+    expect(actions['weapon:revised']).toMatchObject({
+      active: true,
+      attackBonus: 1,
+      attackDisadvantage: expect.stringContaining('Strength 13'),
+    })
+    expect(actions['weapon:ranged'].attackDisadvantage).toBeUndefined()
+    expect(actions['weapon:ordinary'].attackDisadvantage).toBeUndefined()
+    const qualified = project(actor, { ...scores, strength: 13, dexterity: 12 })
+    expect(qualified['weapon:revised'].attackDisadvantage).toBeUndefined()
+    expect(qualified['weapon:ranged'].attackDisadvantage).toContain('Dexterity 13')
+    const priorItem = { ...weapon, source: 'XPHB' }
+    const catalog = new Map([
+      ['revised', { name: weapon.name, source: 'XPHB', type: 'M|XPHB', property: ['H|XPHB'] }],
+    ])
+    expect(
+      project({ ...actor, equipment: [priorItem] }, scores, catalog)['weapon:revised']
+        .attackDisadvantage,
+    ).toContain('Strength 13')
+    expect(
+      project({ ...actor, equipment: [{ ...priorItem, source: 'OTHER' }] }, scores, catalog)[
+        'weapon:revised'
+      ].attackDisadvantage,
+    ).toBeUndefined()
+    expect(
+      project({ ...actor, equipment: [{ ...priorItem, properties: [] }] }, scores, catalog)[
+        'weapon:revised'
+      ].attackDisadvantage,
+    ).toBeUndefined()
+    const waived = project({
+      ...actor,
+      variantRules: { ignoreHeavyWeaponRequirements: true },
+    })
+    for (const action of Object.values(waived)) {
+      expect(action.attackDisadvantage).toBeUndefined()
+      expect(action.attackBonus).toBe(actions[action.id].attackBonus)
+      expect(action.active).toBe(true)
+    }
+  })
+
   test('a manual name never acquires catalog actions before or after a printing changes', () => {
     const initial = makeCharacterFixture()
     const selected = setProfileSpells(

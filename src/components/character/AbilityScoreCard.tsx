@@ -1,10 +1,11 @@
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_ABSOLUTE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 
 interface AbilityScoreCardProps {
   ability: AbilityName
   score: number
+  total: number
   bonus?: number
   children?: React.ReactNode
   selected?: boolean
@@ -14,12 +15,12 @@ interface AbilityScoreCardProps {
 export function AbilityScoreCard({
   ability,
   score,
+  total,
   bonus = 0,
   children,
   selected = false,
   onSelect,
 }: AbilityScoreCardProps) {
-  const total = Math.min(score + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
   const mod = getAbilityModifier(total)
 
   const consoleScore = (

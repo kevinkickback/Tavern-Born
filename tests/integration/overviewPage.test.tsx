@@ -533,9 +533,10 @@ describe('BuildOverviewPage', () => {
     expect(screen.queryByText('Temp HP')).toBeNull()
     const summary = within(screen.getByRole('region', { name: 'Character overview' }))
     const passives = within(summary.getByRole('region', { name: 'Passive scores' }))
-    expect(passives.getByText('Passive Perception 12')).toBeTruthy()
-    expect(passives.getByText('Passive Investigation 15')).toBeTruthy()
-    expect(passives.getByText('Passive Insight 10')).toBeTruthy()
+    expect(passives.getByText('Passive:')).toBeTruthy()
+    expect(passives.getByText('Perception 12')).toBeTruthy()
+    expect(passives.getByText('Investigation 15')).toBeTruthy()
+    expect(passives.getByText('Insight 10')).toBeTruthy()
     const armorCard = screen.getByText('Armor Class', { exact: true }).parentElement!
     const hpCard = screen.getByText('Max HP', { exact: true }).parentElement!
     expect(armorCard.nextElementSibling).toBe(hpCard)

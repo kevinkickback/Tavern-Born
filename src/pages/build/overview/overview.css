@@ -34,7 +34,7 @@
   }
 
   .overview-passives {
-    @apply mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-primary tabular-nums @min-[64rem]:mt-0;
+    @apply mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs text-primary tabular-nums @min-[64rem]:mt-0;
   }
 
   .overview-panels {

@@ -507,6 +507,7 @@ export interface ItemTypeText5e {
 }
 
 type AbilityBonus = {
+  max?: number
   choose?: {
     from: string[]
     count: number

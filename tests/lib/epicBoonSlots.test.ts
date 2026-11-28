@@ -291,6 +291,41 @@ describe('revised Epic Boon advancement', () => {
     expect(overCap.asiChoices).toHaveLength(1)
   })
 
+  test('the house rule permits an Epic Boon ASI above 20 and restores it when re-enabled', () => {
+    const base = makeActor()
+    const enabled = {
+      ...base,
+      abilityScores: { ...base.abilityScores, wisdom: 22 },
+      variantRules: { allowAbilityScoresAbove20: true },
+    }
+    const [slot] = getEpicBoonSlots(enabled, catalogs, feats)
+    const saved = characterPersistenceSchema.parse(
+      replaceEpicBoonSelection(
+        enabled,
+        slot,
+        { abilityChanges: { wisdom: 2 }, before: enabled.abilityScores },
+        authority(enabled),
+      ),
+    )
+    expect(calc(saved).abilityScores.total.wisdom).toBe(24)
+    const disabled = {
+      ...saved,
+      variantRules: { ...saved.variantRules, allowAbilityScoresAbove20: false },
+    }
+    expect(calc(disabled).abilityScores.total.wisdom).toBe(20)
+    expect(calc(disabled).classChoices.epicBoonSlots[0].state).toBe('unavailable')
+    expect(disabled.asiChoices).toHaveLength(1)
+    expect(calc({ ...disabled, variantRules: saved.variantRules }).abilityScores.total.wisdom).toBe(
+      24,
+    )
+  })
+
+  test('an earned Epic Boon feat retains its own higher cap on strict reopen', () => {
+    const base = makeActor()
+    const saved = withBoon({ ...base, abilityScores: { ...base.abilityScores, wisdom: 20 } })
+    expect(calc(saved).abilityScores.total.wisdom).toBe(21)
+  })
+
   test.each([
     ['minimum', 19, 20],
     ['add', 1, 21],

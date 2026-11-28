@@ -1,3 +1,4 @@
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import { getAvailableSubraces, requiresDraconicAncestry } from '@/lib/calculations/raceUtils'
 import type { Race5e } from '@/types/5etools'
 import {
@@ -62,6 +63,16 @@ export function validateStep(
     )
     if (!selectedAncestry) {
       return { valid: false, error: 'Choose a draconic ancestry on the Race step.' }
+    }
+  }
+
+  if (step === 'abilities' || step === 'review') {
+    const cap = getAbilityScoreCap(characterData.variantRules.allowAbilityScoresAbove20)
+    if (Object.values(characterData.abilityScores).some((score) => score > cap)) {
+      return {
+        valid: false,
+        error: `Enter base ability scores of ${cap} or less on the Ability Scores step.`,
+      }
     }
   }
 

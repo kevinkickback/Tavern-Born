@@ -1,7 +1,7 @@
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
-import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import type { ManagedClassSpellRequest } from '@/lib/character/commands/managedClassSpellCommands'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
@@ -30,7 +30,8 @@ interface BuildClassModalsProps {
   onSubclassConfirm: (subclass: Subclass5e) => void
   characterSnapshot: PrereqCharacterSnapshot
   asiPickerLevel: number | null
-  epicBoonAsiPicker?: { before: AbilityScores; existing?: Record<string, 1 | 2> }
+  asiBefore?: AbilityScores
+  epicBoonAsiPicker?: { existing?: Record<string, 1 | 2> }
   onAsiPickerLevelChange: (level: number | null) => void
   appliedAsiChoicesForClass: AsiChoice[]
   onAsiApply: (level: number, changes: Record<string, 1 | 2>) => void
@@ -45,7 +46,6 @@ interface BuildClassModalsProps {
 export function BuildClassModals(props: BuildClassModalsProps) {
   const { character } = props
   const calculation = useCharacterCalculationContext(character)
-  const { total: totalAbilityScores } = useTotalAbilityScores(character)
   return (
     <>
       <ClassSelectionDialog
@@ -85,12 +85,13 @@ export function BuildClassModals(props: BuildClassModalsProps) {
           onConfirm={props.onSubclassConfirm}
         />
       )}
-      {props.asiPickerLevel !== null && (
+      {props.asiPickerLevel !== null && props.asiBefore && (
         <AsiPickerDialog
           open
           level={props.asiPickerLevel}
-          abilityScores={totalAbilityScores}
-          abilityScoresBeforeChoice={props.epicBoonAsiPicker?.before}
+          baseScores={props.asiBefore}
+          scoreCap={getAbilityScoreCap(character.variantRules?.allowAbilityScoresAbove20)}
+          requireFullIncrease={!!props.epicBoonAsiPicker}
           existingChanges={
             props.epicBoonAsiPicker
               ? props.epicBoonAsiPicker.existing

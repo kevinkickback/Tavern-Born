@@ -115,6 +115,7 @@ export function formatActionEntry(action: CharacterAction, fullText = false): st
     action.attackBonus != null
       ? `${formatViewModelModifier(action.attackBonus)} to hit`
       : undefined,
+    action.attackDisadvantage,
     action.save
       ? `DC ${action.save.dc}${action.save.ability ? ` ${titleCase(action.save.ability)}` : ''}`
       : undefined,

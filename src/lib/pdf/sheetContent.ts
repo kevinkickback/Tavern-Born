@@ -38,6 +38,7 @@ const actionText = (action: CharacterAction) =>
     action.attackBonus == null
       ? ''
       : `Attack: ${action.attackBonus >= 0 ? '+' : ''}${action.attackBonus}`,
+    action.attackDisadvantage,
     action.save ? `Save: DC ${action.save.dc} ${action.save.ability ?? ''}` : '',
     action.range,
     ...(action.damage ?? []).map(
