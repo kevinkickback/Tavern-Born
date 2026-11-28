@@ -80,19 +80,6 @@
     animation: shake 0.4s ease-in-out;
   }
 
-  @keyframes indeterminate {
-    0% {
-      transform: translateX(-150%);
-    }
-    100% {
-      transform: translateX(400%);
-    }
-  }
-
-  .animate-indeterminate {
-    animation: indeterminate 1.4s ease-in-out infinite;
-  }
-
   @keyframes startup-ready-fade {
     to {
       opacity: 0;

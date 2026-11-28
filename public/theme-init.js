@@ -4,15 +4,14 @@ var _r = document.documentElement
 try {
   _a = localStorage.getItem('tb.theme.appearance')
   _c = localStorage.getItem('tb.theme.accent')
-  if (_a === 'dark' || !_a) {
-    _r.classList.add('dark')
-    _r.setAttribute('data-appearance', 'dark')
-  }
-  if (_c) {
-    _r.setAttribute('data-accent', _c)
-  }
 } catch {
   /* localStorage unavailable */
+}
+_a = _a === 'light' ? 'light' : 'dark'
+_r.classList.toggle('dark', _a === 'dark')
+_r.setAttribute('data-appearance', _a)
+if (_c) {
+  _r.setAttribute('data-accent', _c)
 }
 
 // Wait for the deferred app entry before requesting the optional web fonts.

@@ -140,21 +140,16 @@ export function AppLoadingOverlay({
       onAnimationEnd={(event) => {
         if (isStartupReady && event.target === event.currentTarget) onStartupComplete?.()
       }}
-      className={cn(
-        'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background',
-        isStartupReady && 'startup-ready-exit',
-      )}
+      className={cn('startup-overlay', isStartupReady && 'startup-ready-exit')}
     >
-      <div className="mb-14 text-center select-none">
-        <h1 id={titleId} className="font-display text-5xl font-bold tracking-wide text-foreground">
+      <div className="startup-brand">
+        <h1 id={titleId} className="startup-title">
           Tavern Born
         </h1>
-        <p className="mt-2 text-xs tracking-widest uppercase text-muted-foreground">
-          5e Character Builder
-        </p>
+        <p className="startup-subtitle">5e Character Builder</p>
       </div>
-      <div className="w-96 max-w-[calc(100vw-2rem)] space-y-2.5">
-        <div className="flex h-6 items-center justify-center">
+      <div className="startup-progress">
+        <div className="startup-progress-slot">
           {isStartupReady ? (
             <CheckCircle
               aria-hidden="true"
@@ -162,14 +157,14 @@ export function AppLoadingOverlay({
               className="size-6 text-success motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
             />
           ) : (
-            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="startup-track">
               {hasProgress ? (
                 <div
                   className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
                   style={{ width: `${pct}%` }}
                 />
               ) : (
-                <div className="animate-indeterminate absolute h-full w-2/5 rounded-full bg-primary/70" />
+                <div className="startup-indeterminate" />
               )}
             </div>
           )}
@@ -179,9 +174,9 @@ export function AppLoadingOverlay({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className="flex items-center justify-center text-xs text-muted-foreground"
+          className="startup-status"
         >
-          <span className="min-w-0 truncate text-center leading-4">{statusLine}</span>
+          <span className="min-w-0 truncate">{statusLine}</span>
           {hasProgress && (
             <span className="ml-3 shrink-0 tabular-nums">
               {loadProgress.current}&thinsp;/&thinsp;{loadProgress.total}

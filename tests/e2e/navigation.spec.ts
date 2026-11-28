@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 import { getReleaseHistory } from '@/lib/changelog'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 import { MINIMAL_GAME_DATA, seedAppState } from './helpers/startup'
@@ -30,6 +30,110 @@ async function holdCharacterLibrary(page: Page) {
     await route.continue()
   })
   return { requested: () => requested, release }
+}
+
+const startupThemes = [
+  {
+    appearance: 'light',
+    accent: 'radiant',
+    background: 'rgb(205, 206, 214)',
+    perimeter: 'rgb(219, 182, 92)',
+  },
+  {
+    appearance: 'dark',
+    accent: 'rose',
+    background: 'rgb(17, 17, 19)',
+    perimeter: 'rgb(184, 63, 75)',
+  },
+] as const
+
+for (const { appearance, accent, background, perimeter } of startupThemes) {
+  test(`matches the two startup overlays with web fonts blocked (${appearance})`, async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ appearance, accent }) => {
+        localStorage.setItem('tb.theme.appearance', appearance)
+        localStorage.setItem('tb.theme.accent', accent)
+      },
+      { appearance, accent },
+    )
+    await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+    await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+
+    let releaseRenderer = () => {}
+    const rendererGate = new Promise<void>((resolve) => {
+      releaseRenderer = resolve
+    })
+    await page.route('**/src/main.tsx', async (route) => {
+      await rendererGate
+      await route.continue()
+    })
+    const home = await holdCharacterLibrary(page)
+
+    async function inspect(screen: Locator) {
+      await expect(screen).toBeVisible()
+      return screen.evaluate(async (overlay) => {
+        await document.fonts.ready
+        const heading = overlay.querySelector('h1')!
+        const track = overlay.querySelector('.startup-track')!
+        const bar = track.querySelector('.startup-indeterminate')!
+        const overlayStyle = getComputedStyle(overlay)
+        const headingStyle = getComputedStyle(heading)
+        const pixel = new OffscreenCanvas(1, 1).getContext('2d')!
+        function luminance(element: Element) {
+          pixel.fillStyle = getComputedStyle(element).backgroundColor
+          pixel.fillRect(0, 0, 1, 1)
+          const channels = [...pixel.getImageData(0, 0, 1, 1).data].map((value) => {
+            const srgb = value / 255
+            return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
+          })
+          return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+        }
+        const [dim, bright] = [luminance(track), luminance(bar)].sort((a, b) => a - b)
+        return {
+          background: overlayStyle.backgroundColor,
+          frame: overlayStyle.boxShadow,
+          outline: overlayStyle.outlineStyle,
+          font: headingStyle.fontFamily,
+          fontLoaded: [...document.fonts].some(
+            (font) =>
+              font.family.replace(/^"|"$/g, '') === 'Cinzel Startup' && font.status === 'loaded',
+          ),
+          headingTop: heading.getBoundingClientRect().top,
+          trackTop: track.getBoundingClientRect().top,
+          trackWidth: track.getBoundingClientRect().width,
+          indicatorContrast: (bright + 0.05) / (dim + 0.05),
+        }
+      })
+    }
+
+    try {
+      await page.goto('/', { waitUntil: 'commit' })
+      const first = await inspect(page.locator('#tb-pre-loader'))
+      expect(first).toMatchObject({
+        background,
+        frame: `${perimeter} 0px 0px 0px 1px inset`,
+        outline: 'none',
+        font: '"Cinzel Startup", serif',
+        fontLoaded: true,
+      })
+      expect(first.indicatorContrast).toBeGreaterThanOrEqual(3)
+
+      releaseRenderer()
+      const second = page.getByTestId('app-loading-overlay')
+      await expect(second).toBeFocused()
+      expect(await inspect(second)).toEqual(first)
+      // The saved interface scale is applied after React starts.
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = '120%'
+      })
+      expect(await inspect(second)).toEqual(first)
+    } finally {
+      releaseRenderer()
+      home.release()
+    }
+  })
 }
 
 for (const initialHash of ['', '#/build']) {

@@ -10,19 +10,33 @@
   <script vite-ignore src="./theme-init.js"></script>
   <link rel="stylesheet" href="./src/styles/accent-colors.css">
   <style>
+    @font-face {
+      font-family: "Cinzel Startup";
+      src: url("/fonts/cinzel.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 700;
+      font-display: block;
+    }
+
     :root {
       --tb-loader-bg: #cdced6;
-      --tb-loader-fg: #111827;
-      --tb-loader-muted-fg: rgba(17, 24, 39, 0.65);
-      --tb-loader-track: rgba(17, 24, 39, 0.15);
+      --tb-loader-fg: #1c2024;
+      --tb-loader-muted-fg: #535862;
+      --tb-loader-track: #f0f0f3;
+      --tb-loader-indicator: oklch(from var(--tb-accent-base) min(l, 0.51) c h);
     }
 
     :root[data-appearance="dark"],
     :root.dark {
-      --tb-loader-bg: oklch(0.145 0 0);
-      --tb-loader-fg: #f3f4f6;
-      --tb-loader-muted-fg: rgba(243, 244, 246, 0.58);
-      --tb-loader-track: rgba(243, 244, 246, 0.12);
+      --tb-loader-bg: #111113;
+      --tb-loader-fg: #edeef0;
+      --tb-loader-muted-fg: #b0b4ba;
+      --tb-loader-track: #272a2d;
+      --tb-loader-indicator: oklch(from var(--tb-accent-base) max(l, 0.72) c h);
+    }
+
+    :root[data-accent="chroma"] {
+      --tb-loader-indicator: var(--tb-accent-base);
     }
 
     html,
@@ -36,7 +50,7 @@
       font-family: "Inter", sans-serif;
     }
 
-    #tb-pre-loader {
+    .startup-overlay {
       position: fixed;
       inset: 0;
       z-index: 9999;
@@ -45,71 +59,78 @@
       align-items: center;
       justify-content: center;
       background: var(--tb-loader-bg);
+      color: var(--tb-loader-fg);
+      font-family: system-ui, sans-serif;
+      box-shadow: inset 0 0 0 1px var(--tb-accent-base);
+      outline: none;
     }
 
-    #tb-pre-loader-brand {
-      margin-bottom: 3.5rem;
+    .startup-brand {
+      margin-bottom: 56px;
       text-align: center;
       user-select: none;
     }
 
-    #tb-pre-loader-title {
+    .startup-title {
       margin: 0;
-      font-family: "Cinzel", serif;
-      font-size: 3rem;
+      font-family: "Cinzel Startup", serif;
+      font-size: 48px;
       line-height: 1;
       font-weight: 700;
       letter-spacing: 0.025em;
-      color: var(--tb-loader-fg);
     }
 
-    #tb-pre-loader-subtitle {
-      margin: 0.5rem 0 0;
-      font-size: 0.75rem;
-      line-height: 1rem;
+    .startup-subtitle {
+      margin: 8px 0 0;
+      font-size: 12px;
+      line-height: 16px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--tb-loader-muted-fg);
     }
 
-    #tb-pre-loader-status {
+    .startup-progress {
       display: flex;
-      width: 24rem;
-      max-width: calc(100vw - 2rem);
+      width: 384px;
+      max-width: calc(100vw - 32px);
       flex-direction: column;
-      gap: 0.625rem;
+      gap: 10px;
     }
 
-    #tb-pre-loader-track {
+    .startup-progress-slot {
+      display: flex;
+      height: 24px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .startup-track {
       position: relative;
-      height: 0.375rem;
+      height: 6px;
       width: 100%;
       overflow: hidden;
       border-radius: 9999px;
       background: var(--tb-loader-track);
     }
 
-    #tb-pre-loader-bar {
+    .startup-indeterminate {
       position: absolute;
       top: 0;
       left: 0;
       height: 100%;
       width: 40%;
       border-radius: 9999px;
-      background: var(--tb-accent-base);
+      background: var(--tb-loader-indicator);
       animation: tb-loader-indeterminate 1.4s ease-in-out infinite;
     }
 
-    #tb-pre-loader-text {
+    .startup-status {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
-      line-height: 1rem;
+      font-size: 12px;
+      line-height: 16px;
       color: var(--tb-loader-muted-fg);
-    }
-
-    #tb-pre-loader-text span {
       text-align: center;
     }
 
@@ -130,18 +151,18 @@
 <body>
   <div id="root">
     <!-- Visible on first CSS paint, before React mounts -->
-    <div id="tb-pre-loader">
-      <div id="tb-pre-loader-brand">
-        <h1 id="tb-pre-loader-title">Tavern Born</h1>
-        <p id="tb-pre-loader-subtitle">5e Character Builder</p>
+    <div id="tb-pre-loader" class="startup-overlay">
+      <div class="startup-brand">
+        <h1 id="tb-pre-loader-title" class="startup-title">Tavern Born</h1>
+        <p class="startup-subtitle">5e Character Builder</p>
       </div>
-      <div id="tb-pre-loader-status">
-        <div id="tb-pre-loader-track">
-          <div id="tb-pre-loader-bar"></div>
+      <div class="startup-progress">
+        <div class="startup-progress-slot">
+          <div class="startup-track">
+            <div id="tb-pre-loader-bar" class="startup-indeterminate"></div>
+          </div>
         </div>
-        <div id="tb-pre-loader-text">
-          <span>Warming up the dice...</span>
-        </div>
+        <div class="startup-status">Warming up the dice...</div>
       </div>
     </div>
   </div>
