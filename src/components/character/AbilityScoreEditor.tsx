@@ -19,7 +19,6 @@ import {
   makeDefaultStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import {
-  ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
   calculatePointBuyTotal,
   POINT_BUY_BUDGET,
@@ -69,6 +68,8 @@ interface AbilityScoreEditorProps {
   method: AbilityScoreMethod
   scores: Record<AbilityName, number>
   bonuses: Partial<Record<AbilityName, number>>
+  scoreCap: number
+  effectiveScores?: Record<AbilityName, number>
   setScore: (ability: AbilityName, score: number) => void
   setAllScores: (scores: Record<AbilityName, number>) => void
   selectedAbility?: AbilityName
@@ -79,6 +80,8 @@ export function AbilityScoreEditor({
   method,
   scores,
   bonuses,
+  scoreCap,
+  effectiveScores,
   setScore,
   setAllScores,
   selectedAbility,
@@ -124,6 +127,11 @@ export function AbilityScoreEditor({
       <div className="grid grid-cols-2 justify-items-center gap-3 @min-[26rem]:grid-cols-3 @min-[50rem]:grid-cols-6">
         {ABILITY_NAMES.map((ability) => {
           const score = method === 'standard-array' ? assignments[ability] : scores[ability]
+          const bonus = bonuses[ability] ?? 0
+          const projected =
+            method !== 'standard-array' || assignments === scores
+              ? effectiveScores?.[ability]
+              : undefined
           const canIncrease =
             score < POINT_BUY_MAX &&
             remaining >= (POINT_BUY_COSTS[score + 1] ?? 999) - (POINT_BUY_COSTS[score] ?? 0)
@@ -133,7 +141,8 @@ export function AbilityScoreEditor({
               key={ability}
               ability={ability}
               score={score}
-              bonus={bonuses[ability]}
+              bonus={bonus}
+              total={projected ?? Math.min(score + bonus, scoreCap)}
               selected={selectedAbility === ability}
               onSelect={onSelectAbility && (() => onSelectAbility(ability))}
             >
@@ -186,14 +195,14 @@ export function AbilityScoreEditor({
                   aria-label={`${ability} base score`}
                   type="number"
                   min={ABILITY_SCORE_MIN}
-                  max={ABILITY_SCORE_ABSOLUTE_MAX}
+                  max={scoreCap}
                   value={score}
                   className="h-8 w-20 text-center font-mono text-sm font-bold"
                   onChange={(event) =>
                     setScore(
                       ability,
                       Math.min(
-                        ABILITY_SCORE_ABSOLUTE_MAX,
+                        scoreCap,
                         Math.max(
                           ABILITY_SCORE_MIN,
                           Number(event.target.value) || ABILITY_SCORE_MIN,

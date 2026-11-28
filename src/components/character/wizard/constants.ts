@@ -106,5 +106,7 @@ export const INITIAL_CHARACTER_DATA: CharacterWizardData = {
     averageHitPoints: true,
     anyRaceSubclasses: false,
     preferNewerPrintings: true,
+    ignoreHeavyWeaponRequirements: false,
+    allowAbilityScoresAbove20: false,
   },
 }

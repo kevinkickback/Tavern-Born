@@ -11,6 +11,7 @@ import { withClassResourceText } from '@/lib/pdf/classResourceSheetRules'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
 
 const CAPACITY = CHARACTER_SHEET_CAPACITIES['2024']
+export const WEAPON_NOTES_START_2024 = 79
 
 const SKILL_FIELD_MAP: Record<string, { modifier: string; proficiency: string }> = {
   acrobatics: { modifier: 'Text_48', proficiency: 'Checkbox_11' },
@@ -261,7 +262,7 @@ export function mapCharacterSheet2024(
     textFields[`Text_${73 + index}`] = row
       ? [row.damage, row.damageType].filter(Boolean).join(' ')
       : ''
-    textFields[`Text_${79 + index}`] = row?.notes ?? ''
+    textFields[`Text_${WEAPON_NOTES_START_2024 + index}`] = row?.compactNotes ?? row?.notes ?? ''
   }
 
   for (let index = 0; index < CAPACITY.spells; index += 1) {

@@ -125,6 +125,7 @@ interface CharacterSheetWeaponRow {
   damageType: string
   range: string
   notes: string
+  compactNotes?: string
   description: string
 }
 
@@ -566,6 +567,14 @@ function resolveOrganizationImage(
   )?.imagePath
 }
 
+const COMPACT_WEAPON_PROPERTIES = new Map([
+  ['Heavy', ''],
+  ['H', ''],
+  ['Ammunition', 'A'],
+  ['Loading', 'L'],
+  ['Two-Handed', '2H'],
+])
+
 function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWeaponRow[] {
   return actions
     .filter((action) => action.kind === 'attack')
@@ -575,6 +584,20 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
       const formattedDamageBonus =
         damageBonus > 0 ? ` + ${damageBonus}` : damageBonus < 0 ? ` - ${Math.abs(damageBonus)}` : ''
       const masteryLabels = (action.mastery ?? []).map((mastery) => mastery.name)
+      const properties = action.properties ?? []
+      const compactNotes = action.compactAttackDisadvantage
+        ? [
+            action.compactAttackDisadvantage,
+            [
+              ...properties.map((property) => COMPACT_WEAPON_PROPERTIES.get(property) ?? property),
+              ...masteryLabels,
+            ]
+              .filter(Boolean)
+              .join('/'),
+          ]
+            .filter(Boolean)
+            .join('; ')
+        : undefined
       return {
         id: action.id,
         active: action.active,
@@ -585,7 +608,10 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
           ? (DAMAGE_TYPE_LABELS[damage.damageType.toUpperCase()] ?? damage.damageType)
           : '',
         range: action.range ?? '',
-        notes: [...(action.properties ?? []), ...masteryLabels].join(', '),
+        notes: [action.attackDisadvantage, ...properties, ...masteryLabels]
+          .filter(Boolean)
+          .join(', '),
+        compactNotes,
         description: action.description,
       }
     })
@@ -900,6 +926,7 @@ export function createCharacterSheetViewModel(
   )
   const derivedActions = deriveCharacterActions(character, {
     abilityModifiers,
+    abilityScores: effectiveAbilityScores,
     proficiencyBonus,
     itemLookup: rawLookups.itemLookup,
     propertyLookup: rawLookups.itemPropertyByAbbr,

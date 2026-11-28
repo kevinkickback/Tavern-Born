@@ -133,7 +133,7 @@ export function RulesStep({
 
       <aside className="min-w-0 space-y-3 border-t border-border bg-workspace-canvas p-4 sm:p-6 md:border-t-0 md:border-l">
         <h3 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground after:h-px after:flex-1 after:bg-border">
-          Rule Options
+          Character Options
         </h3>
         <WizardVariantOptions
           data={data}

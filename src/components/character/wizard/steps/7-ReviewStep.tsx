@@ -8,7 +8,7 @@ import {
   type BackgroundAbilityData,
   formatModifier,
 } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_ABSOLUTE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
+import { getAbilityModifier, getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import { getOriginSystemLabel } from '@/lib/calculations/originSystem'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
 import {
@@ -68,6 +68,7 @@ export function ReviewStep({
     sources.map((source) => [source.abbreviation, source.name]),
   )
   const allowedSources = data.allowedSources
+  const scoreCap = getAbilityScoreCap(data.variantRules.allowAbilityScoresAbove20)
   const hasRestrictedSources = allowedSources.length > 0
 
   const hasDarkvision = displayRace?.darkvision !== undefined && displayRace.darkvision > 0
@@ -84,6 +85,16 @@ export function ReviewStep({
           'Not specified'
 
   const variantRuleRows = [
+    {
+      label: 'Allow Ability Scores Above 20',
+      enabled: data.variantRules.allowAbilityScoresAbove20,
+      available: true,
+    },
+    {
+      label: 'Ignore Heavy Weapon Requirements',
+      enabled: data.variantRules.ignoreHeavyWeaponRequirements,
+      available: true,
+    },
     {
       label: 'Allow Optional Class Features',
       enabled: data.variantRules.optionalClassFeatures,
@@ -161,7 +172,7 @@ export function ReviewStep({
               return (
                 <div
                   key={row.label}
-                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0"
+                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0 @4xl:py-1"
                 >
                   <span className="text-xs text-muted-foreground">{row.label}</span>
                   <Badge
@@ -193,7 +204,7 @@ export function ReviewStep({
             {ABILITY_NAMES.map((ability) => {
               const base = data.abilityScores[ability]
               const bonus = abilityBonuses[ability] ?? 0
-              const total = Math.min(base + bonus, ABILITY_SCORE_ABSOLUTE_MAX)
+              const total = Math.min(base + bonus, scoreCap)
               const mod = getAbilityModifier(total)
               return (
                 <div

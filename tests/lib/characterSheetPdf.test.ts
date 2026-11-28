@@ -28,11 +28,13 @@ import {
 } from '@/lib/pdf/characterSheetPdf'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import { buildCompanionSheetData } from '@/lib/pdf/companionSheet'
+import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
+import type { SheetExportReport } from '@/lib/pdf/types'
 import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -89,6 +91,132 @@ function buildCharacterSheetFieldMap(
 }
 
 describe('characterSheetPdf', () => {
+  test.each([
+    '2024-official',
+    '2024-custom',
+  ] as const)('prints Heavy penalties and weapon properties on the %s form', async (template) => {
+    const character = makeCharacterFixture({
+      raceSize: 'S',
+      equipment: [
+        {
+          id: 'glaive',
+          name: 'Glaive',
+          source: 'XPHB',
+          equipped: true,
+          quantity: 1,
+          type: 'M|XPHB',
+          properties: ['H|XPHB', 'R|XPHB', '2H|XPHB'],
+          dmg1: '1d10',
+        },
+        {
+          id: 'heavy-crossbow',
+          name: 'Heavy Crossbow',
+          source: 'XPHB',
+          equipped: true,
+          quantity: 1,
+          type: 'R|XPHB',
+          properties: ['A|XPHB', 'H|XPHB', 'L|XPHB', '2H|XPHB'],
+          dmg1: '1d10',
+        },
+        {
+          id: 'classic-glaive',
+          name: 'Classic Glaive',
+          source: 'PHB',
+          equipped: true,
+          quantity: 1,
+          type: 'M',
+          properties: ['H', 'R', '2H'],
+          dmg1: '1d10',
+        },
+        {
+          id: 'custom-heavy',
+          name: 'Custom Heavy Weapon',
+          source: 'XPHB',
+          equipped: true,
+          quantity: 1,
+          type: 'M|XPHB',
+          properties: ['H|XPHB', '2H|XPHB', { uid: 'R|XPHB', note: '10 extra feet when braced' }],
+          dmg1: '1d10',
+        },
+      ],
+    })
+    const lookup = { H: 'Heavy', R: 'Reach', A: 'Ammunition', L: 'Loading', '2H': 'Two-Handed' }
+    const onReport = vi.fn<(report: SheetExportReport) => void>()
+    const model = prepareViewModel(character, [], [], [], [], lookup)
+    const pdf = await PDFDocument.load(
+      await generateTestCharacterSheet(model, template, { onReport }),
+    )
+    const weaponNotes = (document: PDFDocument) => {
+      const form = document.getForm()
+      return new Map(
+        [0, 1, 2, 3].map((index) => [
+          form.getTextField(`Text_${61 + index}`).getText(),
+          form.getTextField(`Text_${79 + index}`).getText(),
+        ]),
+      )
+    }
+    const notes = weaponNotes(pdf)
+    expect(notes.get('Glaive')).toBe('Heavy disadv. Str<13; Reach/2H')
+    expect(notes.get('Heavy Crossbow')).toBe('Heavy disadv. Dex<13; A/L/2H')
+    expect(notes.get('Classic Glaive')).toBe('Heavy disadv. Small; Reach/2H')
+    expect(notes.get('Custom Heavy Weapon')).toContain('Heavy disadv. Str<13')
+    const overflow = expect.objectContaining({
+      title: 'Custom Heavy Weapon weapon notes',
+      text: expect.stringContaining('Reach (10 extra feet when braced)'),
+    })
+    expect(onReport.mock.calls[0][0].preserved).toContainEqual(overflow)
+    const pages = { notes: false }
+    await generateTestCharacterSheet(model, template, { onReport, pages })
+    const report = onReport.mock.calls[1][0]
+    expect(report.omitted).toContainEqual(overflow)
+    expect(
+      getPdfDownloadPreflight(
+        getPdfExportPreflight(template, model, null, [], {}, [], pages, report),
+      ).issues,
+    ).toContainEqual(
+      expect.objectContaining({
+        title: 'Custom Heavy Weapon weapon notes were shortened',
+        detail: expect.stringContaining('Enable Notes'),
+      }),
+    )
+
+    const waived = prepareViewModel(
+      { ...character, variantRules: { ignoreHeavyWeaponRequirements: true } },
+      [],
+      [],
+      [],
+      [],
+      lookup,
+    )
+    const waivedPdf = await PDFDocument.load(await generateTestCharacterSheet(waived, template))
+    expect(weaponNotes(waivedPdf).get('Glaive')).toBe('Heavy, Reach, Two-Handed')
+  }, 20_000)
+
+  test.each([
+    '2024-official',
+    '2024-custom',
+  ] as const)('prints scores of 99 and their full modifiers on the %s form', async (template) => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        strength: 99,
+        dexterity: 99,
+        constitution: 99,
+        intelligence: 99,
+        wisdom: 99,
+        charisma: 99,
+      },
+      variantRules: { allowAbilityScoresAbove20: true },
+    })
+    const bytes = await generateTestCharacterSheet(prepareViewModel(character), template)
+    const form = (await PDFDocument.load(bytes)).getForm()
+    for (const id of [25, 26, 27, 28, 29, 30]) {
+      expect(form.getTextField(`Text_${id}`).getText()).toBe('99')
+    }
+    for (const id of [15, 20, 21, 22, 23, 24]) {
+      expect(form.getTextField(`Text_${id}`).getText()).toBe('+44')
+    }
+  }, 20_000)
+
   test.each([
     ['2014-official', ''],
     ['2014-custom', 'WotC__'],

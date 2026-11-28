@@ -12,7 +12,7 @@ import {
 } from '@/lib/5etools/epicBoonAdvancement'
 import { deriveFeatOptionSteps } from '@/lib/5etools/parsers/featOptions'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_MAX, getASILevelsFromClass } from '@/lib/calculations/gameRules'
+import { getAbilityScoreCap, getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -179,11 +179,12 @@ function validIncrease(changes: Record<string, 1 | 2>): boolean {
 export function isEpicBoonIncreaseWithinCap(
   changes: Record<string, 1 | 2>,
   before: Readonly<Record<AbilityName, number>>,
+  cap: number,
 ): boolean {
   return (
     validIncrease(changes) &&
     Object.entries(changes).every(
-      ([ability, value]) => before[ability as AbilityName] + value <= ABILITY_SCORE_MAX,
+      ([ability, value]) => before[ability as AbilityName] + value <= cap,
     )
   )
 }
@@ -373,7 +374,11 @@ export function replaceEpicBoonSelection(
   }
   if (
     !hasAsiFeat(authority.feats) ||
-    !isEpicBoonIncreaseWithinCap(replacement.abilityChanges, replacement.before)
+    !isEpicBoonIncreaseWithinCap(
+      replacement.abilityChanges,
+      replacement.before,
+      getAbilityScoreCap(character.variantRules?.allowAbilityScoresAbove20),
+    )
   )
     return character
   const asiChoices = [

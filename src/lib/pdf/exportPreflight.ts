@@ -382,6 +382,17 @@ export function getPdfExportPreflight(
   }
   for (const section of report?.omitted ?? []) {
     if (section.id.startsWith('text-limit:')) continue
+    if (section.id.startsWith('weapon-notes:')) {
+      issues.push({
+        id: section.id,
+        category: 'unsupported',
+        severity: 'warning',
+        title: `${section.title} were shortened`,
+        detail:
+          'Enable Notes in Optional Pages to include the full Heavy penalty and weapon properties.',
+      })
+      continue
+    }
     if (section.id === 'combined-spells:slots') {
       if (!spellsOmitted)
         issues.push({

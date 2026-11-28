@@ -24,6 +24,7 @@ import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
 import { type AbilityName, hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 import {
   findFocusedProvenanceChoice,
@@ -92,11 +93,13 @@ export function BuildAbilityScoresPage() {
   const method = savedMethod ?? 'standard-array'
 
   const {
+    total,
     normalizedRaceSelection,
     raceAsiData,
     racialBonuses,
     backgroundBonuses,
     featBonuses,
+    asiBonuses,
     bgAsiData,
     normalizedBackground,
     selectedRace,
@@ -166,17 +169,6 @@ export function BuildAbilityScoresPage() {
     reconcileBackgroundAbilityChoices,
     savedBackgroundBlock,
   ])
-
-  const asiBonuses = useMemo(() => {
-    const bonuses: Partial<Record<AbilityName, number>> = {}
-    for (const choice of character?.asiChoices ?? []) {
-      for (const [abilityName, amount] of Object.entries(choice.abilityChanges)) {
-        const ability = abilityName as AbilityName
-        bonuses[ability] = (bonuses[ability] ?? 0) + amount
-      }
-    }
-    return bonuses
-  }, [character])
 
   const displayBonuses = useMemo(() => {
     const merged: Partial<Record<AbilityName, number>> = {}
@@ -273,6 +265,10 @@ export function BuildAbilityScoresPage() {
                       method={method}
                       scores={scores}
                       bonuses={displayBonuses}
+                      scoreCap={getAbilityScoreCap(
+                        character.variantRules?.allowAbilityScoresAbove20,
+                      )}
+                      effectiveScores={total}
                       setScore={setScore}
                       setAllScores={setAllScores}
                       selectedAbility={selectedAbility}

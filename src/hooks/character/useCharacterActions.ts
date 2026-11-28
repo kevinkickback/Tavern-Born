@@ -18,6 +18,7 @@ export function useCharacterActions(character: Character | null | undefined) {
     if (!character || !calculation) return []
     return deriveCharacterActions(calculation.character, {
       abilityModifiers: calculation.abilityScores.modifiers,
+      abilityScores: calculation.abilityScores.total,
       proficiencyBonus: getProficiencyBonus(getTotalCharacterLevel(character)),
       itemLookup: lookups?.itemLookup,
       propertyLookup,

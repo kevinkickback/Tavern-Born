@@ -116,6 +116,7 @@ test.each([
       name: 'Base Monk',
       originSystem: source === 'PHB' ? '2014' : '2024',
       allowedSources: [source],
+      variantRules: { allowAbilityScoresAbove20: true },
       classProgression: [{ name: 'Monk', source, levels }],
       abilityScores: {
         strength: 10,

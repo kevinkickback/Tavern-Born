@@ -119,6 +119,33 @@ describe('character transfer', () => {
     ).toEqual([expect.objectContaining({ kind: 'format' })])
   })
 
+  test.each([
+    true,
+    false,
+  ])('round-trips a two-digit Custom score with the override set to %s', (allowAbilityScoresAbove20) => {
+    const base = makeCharacterFixture()
+    const actor = {
+      ...base,
+      abilityScores: { ...base.abilityScores, strength: 99 },
+      variantRules: { abilityScoreMethod: 'custom' as const, allowAbilityScoresAbove20 },
+    }
+    const { text, filename } = prepareCharacterDownload(actor)
+    const reopened = prepareCharacterImport(text, filename, validateCharacterData)
+    expect(reopened.failures).toEqual([])
+    expect(reopened.characters[0].character.abilityScores.strength).toBe(99)
+    expect(reopened.characters[0].character.variantRules?.allowAbilityScoresAbove20).toBe(
+      allowAbilityScoresAbove20,
+    )
+    const invalid = { ...actor, abilityScores: { ...actor.abilityScores, strength: 100 } }
+    const rejected = prepareCharacterImport(
+      JSON.stringify(invalid),
+      filename,
+      validateCharacterData,
+    )
+    expect(rejected.failures).toHaveLength(1)
+    expect(rejected.characters).toEqual([])
+  })
+
   test('prepares collision-free imported names', () => {
     expect(getImportedCharacterName('Hero', ['hero'])).toBe('Hero (Imported)')
     expect(getImportedCharacterName('Hero', ['hero', 'HERO (IMPORTED)'])).toBe('Hero (Imported 2)')

@@ -20,7 +20,7 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { isRevisedInvocationPoolId } from '@/lib/5etools/revisedInvocationPoolIdentity'
-import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
+import { getAbilityScoreCap, getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import {
   type ClassChoiceOptionView,
@@ -559,12 +559,13 @@ export function GuidedLevelChoices({
           enemySetup={choices.enemySetup}
         />
       )}
-      {asi.asiPickerLevel !== null && calculation && (
+      {asi.asiPickerLevel !== null && asi.asiBefore && (
         <AsiPickerDialog
           open
           level={level}
-          abilityScores={calculation.abilityScores.total}
-          abilityScoresBeforeChoice={asi.epicBoonAsiPicker?.before}
+          baseScores={asi.asiBefore}
+          scoreCap={getAbilityScoreCap(character.variantRules?.allowAbilityScoresAbove20)}
+          requireFullIncrease={!!asi.epicBoonAsiPicker}
           existingChanges={abilityChoice?.abilityChanges}
           onApply={(changes) => asi.applyAsi(level, changes)}
           onClose={() => asi.setAsiPickerLevel(null)}

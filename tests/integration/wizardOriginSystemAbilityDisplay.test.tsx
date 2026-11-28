@@ -1,8 +1,13 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { AbilityScoresStep } from '@/components/character/wizard/steps/6-AbilityScoresStep'
 import { ReviewStep } from '@/components/character/wizard/steps/7-ReviewStep'
+import type { CharacterWizardData } from '@/components/character/wizard/types'
+import { validateStep } from '@/components/character/wizard/validation'
+import { WizardVariantOptions } from '@/components/character/wizard/WizardVariantOptions'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 
@@ -62,6 +67,55 @@ describe('wizard 2024 origin-system ability display', () => {
 
   afterEach(() => {
     cleanup()
+  })
+
+  test('Character Options unlocks Custom scores and keeps the Heavy waiver independent', async () => {
+    const user = userEvent.setup()
+    const initial: CharacterWizardData = {
+      ...INITIAL_CHARACTER_DATA,
+      abilityScoreMethod: 'custom',
+      abilityScores: { ...INITIAL_CHARACTER_DATA.abilityScores, strength: 42 },
+    }
+    function WizardOptionsAndScores() {
+      const [data, setData] = useState(initial)
+      const onChange = (changes: Partial<typeof data>) =>
+        setData((previous) => ({ ...previous, ...changes }))
+      return (
+        <>
+          <WizardVariantOptions data={data} onChange={onChange} />
+          <AbilityScoresStep
+            data={data}
+            onChange={onChange}
+            raceResolution={{
+              parentRace: undefined,
+              subraceData: undefined,
+              mergedRace: undefined,
+              subraceIsNested: false,
+            }}
+          />
+          <output>
+            {validateStep('review', data, undefined).valid ? 'Ready' : 'Invalid scores'}
+          </output>
+        </>
+      )
+    }
+    render(<WizardOptionsAndScores />)
+    const strength = screen.getByRole('spinbutton', { name: 'strength base score' })
+    const scoreCap = screen.getByRole('switch', { name: 'Allow Ability Scores Above 20' })
+    const heavy = screen.getByRole('switch', { name: 'Ignore Heavy Weapon Requirements' })
+    expect(strength.getAttribute('max')).toBe('20')
+    expect(screen.getByText('Invalid scores')).toBeTruthy()
+    await user.click(heavy)
+    expect(strength.getAttribute('max')).toBe('20')
+    await user.click(scoreCap)
+    expect(strength.getAttribute('max')).toBe('99')
+    expect(screen.getByText('Ready')).toBeTruthy()
+    fireEvent.change(strength, { target: { value: '100' } })
+    expect((strength as HTMLInputElement).value).toBe('99')
+    await user.click(scoreCap)
+    expect((strength as HTMLInputElement).value).toBe('99')
+    expect(heavy.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText('Invalid scores')).toBeTruthy()
   })
 
   test('ability scores step hides racial bonus UI and totals for 2024 rules', () => {

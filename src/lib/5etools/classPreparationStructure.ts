@@ -1,5 +1,5 @@
 import { toAbilityAbbrev, toAbilityName } from '@/lib/calculations/abilityNames'
-import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { ABILITY_SCORE_EXTENDED_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getPreparedSpellLimit } from '@/lib/calculations/preparedSpellLimits'
 import type { ClassPreparationRule } from '@/types/classCasting'
 import { CORE_RULES_METADATA } from './rulesetMetadata'
@@ -10,9 +10,7 @@ const levels = Math.max(...rules.map((rule) => rule.maxCharacterLevel))
 const minimumModifier = getAbilityModifier(
   Math.min(...rules.map((rule) => rule.abilityScoreMinimum)),
 )
-const maximumModifier = getAbilityModifier(
-  Math.max(...rules.map((rule) => rule.abilityScoreAbsoluteMaximum)),
-)
+const maximumModifier = getAbilityModifier(ABILITY_SCORE_EXTENDED_MAX)
 const schedule = (value: unknown): value is number[] =>
   Array.isArray(value) &&
   value.length === levels &&

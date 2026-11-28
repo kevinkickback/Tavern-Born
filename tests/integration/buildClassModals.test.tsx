@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
+import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -96,4 +98,26 @@ describe('Class modal uses addressed spell choices', () => {
     )
     expect(screen.getByText(/Allowed schools: Enchantment, Illusion/)).toBeTruthy()
   })
+})
+
+test('ordinary advancement can reach 99 and caps a partial increase there', () => {
+  const { abilityScores } = makeCharacterFixture()
+  const onApply = vi.fn()
+  render(
+    <AsiPickerDialog
+      open
+      level={4}
+      baseScores={{ ...abilityScores, strength: 98, dexterity: 99 }}
+      scoreCap={getAbilityScoreCap(true)}
+      onApply={onApply}
+      onClose={vi.fn()}
+    />,
+  )
+
+  const dexterity = screen.getByRole<HTMLButtonElement>('button', { name: /^DEX\b/ })
+  expect(dexterity.disabled).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: /^STR\b/ }))
+  expect(screen.getByText('98 +2 → 99')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  expect(onApply).toHaveBeenCalledWith({ strength: 2 })
 })

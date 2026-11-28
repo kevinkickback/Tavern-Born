@@ -319,6 +319,7 @@ export function BuildClassPage() {
     epicBoonSlot,
     editEpicBoonOptions,
     epicBoonAsiPicker,
+    asiBefore,
     revisedFeatSlot,
     totalAsi: totalASIAcrossClasses,
     usedAsi: usedASI,
@@ -721,6 +722,7 @@ export function BuildClassPage() {
         requireFeatPrerequisites={revisedFeatSlot}
         asiPickerLevel={asiPickerLevel}
         epicBoonAsiPicker={epicBoonAsiPicker}
+        asiBefore={asiBefore}
         onAsiPickerLevelChange={setAsiPickerLevel}
         appliedAsiChoicesForClass={appliedAsiChoicesForClass}
         onAsiApply={handleAsiApply}

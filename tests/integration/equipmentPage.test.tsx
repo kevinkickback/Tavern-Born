@@ -383,7 +383,12 @@ describe('EquipmentPage item details', () => {
     })
 
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle equipment restrictions' }))
+    const armorToggle = screen.getByRole('button', {
+      name: 'Toggle equipment restrictions',
+      pressed: true,
+    })
+    fireEvent.click(armorToggle)
+    expect(armorToggle.getAttribute('aria-pressed')).toBe('false')
 
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.variantRules?.ignoreEquipRestrictions).toBe(false)

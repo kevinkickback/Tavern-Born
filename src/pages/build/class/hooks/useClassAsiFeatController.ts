@@ -6,11 +6,9 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { findClassReference } from '@/lib/5etools/classReference'
 import { deriveFeatOptionSteps, hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
-import {
-  createCharacterCalculationContext,
-  getIntrinsicAbilityScores,
-} from '@/lib/calculations/characterCalculationContext'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildFeatModalFeats } from '@/lib/calculations/featChoices'
+import { getAbilityScoreCap } from '@/lib/calculations/gameRules'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import { getFeatOptionOwnerKey } from '@/lib/character/commands/featCommandIdentity'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
@@ -39,7 +37,7 @@ import { countTotalAsiAcrossClasses } from '@/pages/build/class/model/pageUtils'
 import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
-import type { Character, FeatOptionSelections } from '@/types/character'
+import type { AbilityName, Character, FeatOptionSelections } from '@/types/character'
 
 function epicBoonEditContext(character: Character, slot: EpicBoonSlot) {
   return { character, choiceId: slot.choiceId, data: useGameDataStore.getState().gameData }
@@ -197,13 +195,41 @@ export function useClassAsiFeatController({
         : calculationContext,
     [withoutEpicPick, character, calculationContext],
   )
-  const epicBoonAsiBefore = useMemo(
-    () =>
-      epicAsiPicker && epicReplacementContext
-        ? getIntrinsicAbilityScores(epicReplacementContext.abilityScores)
-        : undefined,
-    [epicAsiPicker, epicReplacementContext],
-  )
+  const epicBoonAsiBefore = epicAsiPicker
+    ? epicReplacementContext?.abilityScores.intrinsic
+    : undefined
+  const asiBefore = useMemo(() => {
+    if (epicAsiPicker) return epicBoonAsiBefore
+    if (
+      asiPickerLevel == null ||
+      !calculationContext ||
+      !character ||
+      !viewingClass ||
+      !viewingClassSource
+    )
+      return undefined
+    const otherChoices = resetClassAsiChoice({
+      currentAsiChoices: character.asiChoices ?? [],
+      className: viewingClass,
+      classSource: viewingClassSource,
+      level: asiPickerLevel,
+    })
+    return otherChoices
+      ? createCharacterCalculationContext(
+          { ...character, asiChoices: otherChoices },
+          calculationContext.lookups.primary,
+          calculationContext.lookups.raw,
+        ).abilityScores.intrinsic
+      : calculationContext.abilityScores.intrinsic
+  }, [
+    asiPickerLevel,
+    calculationContext,
+    character,
+    epicAsiPicker,
+    epicBoonAsiBefore,
+    viewingClass,
+    viewingClassSource,
+  ])
   const slot = useMemo(() => {
     const catalogs = calculationContext?.classChoices.catalogs
     if (epicPicker)
@@ -511,6 +537,13 @@ export function useClassAsiFeatController({
       setAsiPickerLevel(null)
       return
     }
+    const cap = getAbilityScoreCap(character.variantRules?.allowAbilityScoresAbove20)
+    if (
+      asiPickerLevel !== level ||
+      !asiBefore ||
+      !Object.keys(abilityChanges).every((ability) => asiBefore[ability as AbilityName] < cap)
+    )
+      return
     updateCharacter(character.id, {
       asiChoices: applyClassAsiChoice({
         currentAsiChoices: character.asiChoices ?? [],
@@ -550,13 +583,14 @@ export function useClassAsiFeatController({
   }
 
   return {
+    asiBefore,
     characterSnapshot,
     featPickerSnapshot,
     epicBoonSlot,
     editEpicBoonOptions,
     epicBoonAsiPicker:
       epicAsiPicker && epicBoonAsiBefore
-        ? { before: epicBoonAsiBefore, existing: epicAsiPicker.asi?.abilityChanges }
+        ? { existing: epicAsiPicker.asi?.abilityChanges }
         : undefined,
     revisedFeatSlot,
     totalAsi,

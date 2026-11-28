@@ -291,6 +291,79 @@ describe('revised Epic Boon advancement', () => {
     expect(overCap.asiChoices).toHaveLength(1)
   })
 
+  test('the house rule permits an Epic Boon ASI up to 99 and restores it when re-enabled', () => {
+    const base = makeActor()
+    const enabled = {
+      ...base,
+      abilityScores: { ...base.abilityScores, wisdom: 97 },
+      variantRules: { allowAbilityScoresAbove20: true },
+    }
+    const [slot] = getEpicBoonSlots(enabled, catalogs, feats)
+    const tooHigh = { ...enabled, abilityScores: { ...enabled.abilityScores, wisdom: 98 } }
+    expect(
+      replaceEpicBoonSelection(
+        tooHigh,
+        slot,
+        { abilityChanges: { wisdom: 2 }, before: tooHigh.abilityScores },
+        authority(tooHigh),
+      ),
+    ).toBe(tooHigh)
+    const saved = characterPersistenceSchema.parse(
+      replaceEpicBoonSelection(
+        enabled,
+        slot,
+        { abilityChanges: { wisdom: 2 }, before: enabled.abilityScores },
+        authority(enabled),
+      ),
+    )
+    expect(calc(saved).abilityScores.total.wisdom).toBe(99)
+    const disabled = {
+      ...saved,
+      variantRules: { ...saved.variantRules, allowAbilityScoresAbove20: false },
+    }
+    expect(calc(disabled).abilityScores.total.wisdom).toBe(20)
+    expect(calc(disabled).classChoices.epicBoonSlots[0].state).toBe('unavailable')
+    expect(disabled.asiChoices).toHaveLength(1)
+    expect(calc({ ...disabled, variantRules: saved.variantRules }).abilityScores.total.wisdom).toBe(
+      99,
+    )
+  })
+
+  test('an earned Epic Boon feat retains its own higher cap on strict reopen', () => {
+    const base = makeActor()
+    const saved = withBoon({ ...base, abilityScores: { ...base.abilityScores, wisdom: 20 } })
+    expect(calc(saved).abilityScores.total.wisdom).toBe(21)
+  })
+
+  test.each([
+    [boon.name, boon, 35],
+    ['Grappler', feats.find((feat) => feat.name === 'Grappler' && feat.source === 'XPHB')!, 36],
+  ] as const)('restores the exact %s ability limit after source recovery', (_name, feat, expected) => {
+    const base = makeActor()
+    const actor = {
+      ...base,
+      abilityScores: { ...base.abilityScores, strength: 35 },
+      variantRules: { allowAbilityScoresAbove20: true },
+    }
+    const selected = applyCharacterCommandResult(
+      actor,
+      replaceBonusFeatSelectionsCommand(actor, actor.provenance, [feat]),
+    )
+    const configured = applyCharacterCommandResult(
+      selected,
+      commitFeatOptionsCommand(
+        selected,
+        selected.provenance,
+        { name: feat.name, source: feat.source, selectionKind: 'bonus' },
+        { abilityScore: 'strength' },
+      ),
+    )
+    const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(configured)))
+    expect(calc(saved).abilityScores.total.strength).toBe(expected)
+    expect(calc(saved, catalogs, []).abilityScores.total.strength).toBe(35)
+    expect(calc(saved).abilityScores.total.strength).toBe(expected)
+  })
+
   test.each([
     ['minimum', 19, 20],
     ['add', 1, 21],

@@ -174,9 +174,16 @@ test('Overview adapts to zero, one, and many setup choices and class levels', as
   const [scoreBox, modifierBox] = await Promise.all([score.boundingBox(), modifier.boundingBox()])
   expect(modifierBox!.y).toBeGreaterThanOrEqual(scoreBox!.y + scoreBox!.height)
   const passives = abilityScores.getByRole('region', { name: 'Passive scores' })
-  for (const label of ['Passive Perception 10', 'Passive Investigation 10', 'Passive Insight 10']) {
-    await expect(passives.getByText(label, { exact: true })).toBeVisible()
+  const passiveLabels = ['Passive:', 'Perception 10', 'Investigation 10', 'Insight 10']
+  const expectPassiveRow = async () => {
+    const row = await passives.boundingBox()
+    for (const label of passiveLabels) {
+      const passive = passives.getByText(label, { exact: true })
+      await expect(passive).toBeVisible()
+      expect((await passive.boundingBox())!.y).toBe(row!.y)
+    }
   }
+  await expectPassiveRow()
   const movement = summary.getByTestId('overview-movement-walk').locator('..')
   await expect(movement).toHaveCSS('border-top-width', '0px')
   await expect(movement).toHaveCSS('justify-content', 'center')
@@ -197,6 +204,7 @@ test('Overview adapts to zero, one, and many setup choices and class levels', as
     }
   }
   await expectScoreAlignment()
+  await expectPassiveRow()
   const summaryContainer = summary.locator('xpath=ancestor::*[contains(@class, "@container")][1]')
   await summaryContainer.evaluate((node) => {
     node.style.width = '64rem'

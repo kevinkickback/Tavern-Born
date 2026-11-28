@@ -240,6 +240,7 @@ function DetailEntry({
 function actionMechanics(action: CharacterAction): string[] {
   const details: string[] = []
   if (action.attackBonus !== undefined) details.push(`${formatModifier(action.attackBonus)} to hit`)
+  if (action.attackDisadvantage) details.push(action.attackDisadvantage)
   if (action.save?.dc !== undefined)
     details.push(`DC ${action.save.dc}${action.save.ability ? ` ${action.save.ability}` : ''}`)
   if (action.range) details.push(action.range)
@@ -544,9 +545,10 @@ export function CharacterOverview({
             ))}
           </div>
           <section aria-label="Passive scores" className="overview-passives">
-            <span>Passive Perception {passivePerception}</span>
-            <span>Passive Investigation {passiveInvestigation}</span>
-            <span>Passive Insight {passiveInsight}</span>
+            <span>Passive:</span>
+            <span className="whitespace-nowrap">Perception {passivePerception}</span>
+            <span className="whitespace-nowrap">Investigation {passiveInvestigation}</span>
+            <span className="whitespace-nowrap">Insight {passiveInsight}</span>
           </section>
         </div>
       </Card>

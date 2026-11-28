@@ -67,6 +67,7 @@ import type {
   ClassFeatureReference,
   Feat5e,
   Item5e,
+  ItemPropertyReference,
   OptionalFeatureLike,
   Race5e,
   Spell5e,
@@ -74,6 +75,7 @@ import type {
 } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type {
+  AbilityScores,
   Character,
   Equipment,
   Feat,
@@ -90,6 +92,7 @@ import {
   getManagedSpellCastingNotes,
   hasActiveMysticArcanum,
 } from './managedSpellCasting'
+import { getEffectiveRaceSize } from './raceUtils'
 import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
@@ -112,6 +115,9 @@ function parseMasteryReference(reference: string): { name: string; source?: stri
 
 export interface WeaponActionProjectionContext {
   abilityModifiers: Record<AbilityName, number>
+  abilityScores?: AbilityScores
+  race?: Race5e
+  raceResolution?: ResolvedRaceReference
   proficiencyBonus: number
   itemLookup?: ReadonlyMap<string, Item5e>
   propertyLookup?: Readonly<Record<string, string>>
@@ -126,8 +132,6 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   managedClassSpellStatuses?: readonly ManagedClassSpellStatus[]
   fixedClassSpellStatuses?: readonly ClassFixedSpellStatus[]
   spellsByKey?: Readonly<Record<string, Spell5e>>
-  race?: Race5e
-  raceResolution?: ResolvedRaceReference
   classes?: readonly Class5e[]
   availableClasses?: readonly Class5e[]
   /** Explicit available choice targets; raw text lookups never replenish this catalog. */
@@ -666,6 +670,50 @@ export function deriveCharacterActions(
   )
 }
 
+function getHeavyWeaponDisadvantage(
+  character: Character,
+  properties: readonly ItemPropertyReference[],
+  typeCodes: readonly string[],
+  context: WeaponActionProjectionContext,
+): { reason: string; compact: string } | undefined {
+  if (character.variantRules?.ignoreHeavyWeaponRequirements) return
+  const propertyUids = properties.map((property) =>
+    getItemPropertyUid(property)
+      .split('|')
+      .map((part) => part.trim().toUpperCase())
+      .join('|'),
+  )
+  if (propertyUids.includes('H|XPHB')) {
+    const ability = typeCodes.includes('R')
+      ? 'dexterity'
+      : typeCodes.includes('M')
+        ? 'strength'
+        : undefined
+    const score = ability && context.abilityScores?.[ability]
+    if (typeof score === 'number' && score < 13) {
+      return ability === 'dexterity'
+        ? { reason: 'Heavy requires Dexterity 13', compact: 'Heavy disadv. Dex<13' }
+        : { reason: 'Heavy requires Strength 13', compact: 'Heavy disadv. Str<13' }
+    }
+  } else if (propertyUids.includes('H') || propertyUids.includes('H|PHB')) {
+    const resolved = context.raceResolution
+    const size = getEffectiveRaceSize(
+      resolved?.mergedRace ?? context.race,
+      character.raceSize,
+      resolved
+        ? !!resolved.parentRace && (!character.subrace || !!resolved.subraceData)
+        : !!context.race,
+    )
+    if (size === 'S' || size === 'T') {
+      const sizeName = size === 'S' ? 'Small' : 'Tiny'
+      return {
+        reason: `Heavy weapon used by a ${sizeName} creature`,
+        compact: `Heavy disadv. ${sizeName}`,
+      }
+    }
+  }
+}
+
 /** Derives weapon attacks from structured equipment and effect data without UI/PDF assumptions. */
 export function deriveWeaponActions(
   character: Character,
@@ -690,18 +738,20 @@ export function deriveWeaponActions(
   const battleReady = hasTceBattleReady(character, catalogs?.classes)
   const itemSources = resolveItemReferences(weapons, context.itemLookup)
   return weapons.map((item, index) => {
+    const printing = itemSources[index]
+    const itemData = printing?.sourceIdentityConflict ? undefined : printing
     const properties = item.properties ?? []
     const propertyKeys = properties.map((property) =>
       getItemPropertyUid(property).split('|')[0].toUpperCase(),
     )
+    const typeCodes = getItemTypeCodes(item.type)
     const physicalAbility: AbilityName = propertyKeys.includes('F')
       ? context.abilityModifiers.dexterity > context.abilityModifiers.strength
         ? 'dexterity'
         : 'strength'
-      : getItemTypeCodes(item.type).includes('R')
+      : typeCodes.includes('R')
         ? 'dexterity'
         : 'strength'
-    const printing = itemSources[index]
     const magicWeapon =
       battleReady &&
       printing &&
@@ -793,6 +843,12 @@ export function deriveWeaponActions(
       ),
     ]
     if (item.dmg2 && !propertyKeys.includes('V')) propertyLabels.push(`Versatile ${item.dmg2}`)
+    const disadvantage = getHeavyWeaponDisadvantage(
+      character,
+      item.properties ?? itemData?.property ?? [],
+      typeCodes,
+      context,
+    )
 
     return {
       id: `weapon:${item.id}`,
@@ -805,6 +861,10 @@ export function deriveWeaponActions(
       ability,
       proficient,
       attackBonus,
+      ...(disadvantage && {
+        attackDisadvantage: `Disadvantage on attack rolls (${disadvantage.reason})`,
+        compactAttackDisadvantage: disadvantage.compact,
+      }),
       range: item.range,
       damage: [{ dice: item.dmg1, bonus: damageBonus, damageType: item.dmgType }],
       properties: propertyLabels,

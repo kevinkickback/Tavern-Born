@@ -33,6 +33,15 @@ export function getFeatOptionSourceName(feat: FeatOptionTarget): string {
     : feat.name
 }
 
+export function getFeatOptionGrantName(tag: SourceTag): string {
+  const { sourceName, grantType, grantVariant } = tag
+  const fixedOwnerPrefix = 'fixed:'
+  if (grantType !== 'choice' || !grantVariant?.startsWith(fixedOwnerPrefix)) return sourceName
+  const variant = grantVariant.slice(fixedOwnerPrefix.length)
+  const suffix = `; ${variant}`
+  return variant && sourceName.endsWith(suffix) ? sourceName.slice(0, -suffix.length) : sourceName
+}
+
 export function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {
   if (feat.selectionKind) {
     if (feat.selectionKind !== 'ordinary' && feat.selectionKind !== 'bonus') return undefined

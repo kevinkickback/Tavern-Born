@@ -74,7 +74,7 @@
   "helpers": [
     {
       "file": "package-lock.json",
-      "sha256": "390c82d1834091415cf01066b4094cf3dfe0306c3cfd27357e273439def18818"
+      "sha256": "50aa59c691c539cc40c1202e60d5689ea3509c66c29e6352dc6c3eef1c7ce0c7"
     },
     {
       "file": "scripts/generate-optional-class-native-rules.mjs",
@@ -157,6 +157,10 @@
       "sha256": "65018fbf9a249bb8d2fcee0582a7e9a0aab485d9f2181adfe9b92e3ca5843772"
     },
     {
+      "file": "src/lib/5etools/catalogCheckError.ts",
+      "sha256": "97db454bf7eff801313f70709350bec08168dd86821cae46089ceec068e06ae8"
+    },
+    {
       "file": "src/lib/5etools/choiceFilterTags.ts",
       "sha256": "4d11a4cce9e06035c94697e89d8693022add965bf0c3786ca6382abadf8a3118"
     },
@@ -174,7 +178,7 @@
     },
     {
       "file": "src/lib/5etools/classCastingRuntime.generated.ts",
-      "sha256": "276fd1f1d988554966ed5e073930f4dadb47bc8b9ab27fe4c96ced71118949f6"
+      "sha256": "25e83f9dc570c2164369db993b65628b59aa36905512c80f3d1e4b32b9e594a1"
     },
     {
       "file": "src/lib/5etools/classCastingSource.ts",
@@ -198,7 +202,7 @@
     },
     {
       "file": "src/lib/5etools/classFeatureIdentity.ts",
-      "sha256": "03426e9f2eef3f9332278633527f51adb4554ea34731e99292c9ecd3e328e60b"
+      "sha256": "40061fb0ca0577b2adf87cfdfffb796e6208bf79bf084e6750c24b1d0961f4fb"
     },
     {
       "file": "src/lib/5etools/classOrderIdentity.ts",
@@ -282,7 +286,7 @@
     },
     {
       "file": "src/lib/5etools/copyResolution.ts",
-      "sha256": "f548c7fc45a9e61178ad235c1ba4fd6b35f43aa1d82e729f1de0b42cb762f79f"
+      "sha256": "9ee95512f3c2ce634b0aefae29331e035384031581aa4df90557ef18638a628a"
     },
     {
       "file": "src/lib/5etools/declarationSourceAccess.ts",
@@ -606,7 +610,7 @@
     },
     {
       "file": "src/lib/5etools/startingEquipment.ts",
-      "sha256": "840cc3794f5069b3c4cb6a3030fe6c3431bfec70f98aa445410ab738109feb0e"
+      "sha256": "93209e2ae7ef252104ccd50b1ee491f33eae9b597b1c988ac66eb776ebbf7848"
     },
     {
       "file": "src/lib/5etools/startingEquipmentClauses.ts",
@@ -614,11 +618,11 @@
     },
     {
       "file": "src/lib/5etools/startingEquipmentIdentity.ts",
-      "sha256": "58020ec435e17f61fc8b114f4dc57da6f1a9fe97bd998146bad89e41887716f5"
+      "sha256": "9df6c78fdbbd880bb8d534c42bbc7dd31e11c21a873f062e324a5ca9cf0407aa"
     },
     {
       "file": "src/lib/5etools/startingEquipmentPolicy.ts",
-      "sha256": "2da8698dff11dcc3aa1749a27c93db214b632786efabff1ee8b580188fd1642c"
+      "sha256": "8320bdba184c610be2880fe6334aaea73d43bb3b097458b0ad80ed594fda7e94"
     },
     {
       "file": "src/lib/5etools/startingItemCategory.ts",
@@ -678,7 +682,7 @@
     },
     {
       "file": "src/lib/5etools/subclassSourcePreparation.ts",
-      "sha256": "dd7829a55a6070546cc347381d6767cc2e220cdfbd45c39d419792a75e70203e"
+      "sha256": "8d7ad88295ac6c9d3648ebfd53af4a5d5ee496e95864207e1c84a5ab2b93810e"
     },
     {
       "file": "src/lib/5etools/subclassSpells.ts",
@@ -738,7 +742,7 @@
     },
     {
       "file": "src/lib/calculations/gameRules.ts",
-      "sha256": "2d7506e3c025893489eec605fb3922020e7beec0553abd0c6f46d80449e0a3d6"
+      "sha256": "e526e12eb81211eda5f584c3e51a45813a102bc76e3952016d44c93ac2339581"
     },
     {
       "file": "src/lib/calculations/itemClassification.ts",
@@ -814,11 +818,11 @@
     },
     {
       "file": "src/types/5etools.ts",
-      "sha256": "a7f42d96cb2ae54c198e4fe8319ec4dcf8018fc66ce8a97dee865444559fbdf6"
+      "sha256": "7f5ef9594698117b44caaa02b114c70099febb7583a49d44a3f10e5e5c545ea7"
     },
     {
       "file": "src/types/actions.ts",
-      "sha256": "b55dbe923381ce17d8cc88b1dc7c0c89a6a5b491ce9e6b27dde0d4666e20a3aa"
+      "sha256": "3289951f50c45465a0596473a2aefb6d3cb7f452e95e3867c4535a94b1054cd6"
     },
     {
       "file": "src/types/additionalSpells.ts",
@@ -826,7 +830,7 @@
     },
     {
       "file": "src/types/character.ts",
-      "sha256": "887a34fb8bbdc7f827332086368d8668bd98737ce4498f872e7e8a18e658c1d1"
+      "sha256": "5bb93d505347eee9ae75a2498fec76978d6124b29fa8bda8b5c41528ab96b9dc"
     },
     {
       "file": "src/types/classCasting.ts",

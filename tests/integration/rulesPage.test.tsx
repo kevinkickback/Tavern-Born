@@ -139,6 +139,29 @@ describe('RulesPage', () => {
     expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0])
   })
 
+  test('saves and restores the two independent character options', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(screen.getByRole('tab', { name: 'Character Options' }))
+    const heavy = screen.getByRole('switch', { name: 'Ignore Heavy Weapon Requirements' })
+    const scoreCap = screen.getByRole('switch', { name: 'Allow Ability Scores Above 20' })
+    expect(heavy.getAttribute('aria-checked')).toBe('false')
+    expect(scoreCap.getAttribute('aria-checked')).toBe('false')
+    await user.click(heavy)
+    await user.click(scoreCap)
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.variantRules).toMatchObject({
+      ignoreHeavyWeaponRequirements: true,
+      allowAbilityScoresAbove20: true,
+      ignoreEquipRestrictions: false,
+    })
+    await user.click(scoreCap)
+    expect(useCharacterStore.getState().activeCharacter).toMatchObject({
+      abilityScores: saved.abilityScores,
+      variantRules: { allowAbilityScoresAbove20: false, ignoreHeavyWeaponRequirements: true },
+    })
+  })
+
   test('updates rules on the active character without replacing existing choices', async () => {
     const user = userEvent.setup()
     renderPage()

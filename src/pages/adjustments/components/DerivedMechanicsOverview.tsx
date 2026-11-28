@@ -49,6 +49,7 @@ const EFFECT_TARGET_LABELS: Record<CharacterEffect['target']['kind'], string> = 
 function actionDetails(action: CharacterAction): string[] {
   const details: string[] = []
   if (action.attackBonus !== undefined) details.push(`${formatModifier(action.attackBonus)} to hit`)
+  if (action.attackDisadvantage) details.push(action.attackDisadvantage)
   if (action.save) {
     details.push(`DC ${action.save.dc}${action.save.ability ? ` ${action.save.ability}` : ''}`)
   }

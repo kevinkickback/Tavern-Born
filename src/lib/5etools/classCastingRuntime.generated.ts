@@ -1304,7 +1304,7 @@ const registry = {
         ability: s80,
         capacity: { kind: s93, formula: '<$level$> / 2 + <$int_mod$>', minimum: 1 },
         maximumByLevel: [
-          10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20,
+          44, 45, 45, 46, 46, 47, 47, 48, 48, 49, 49, 50, 50, 51, 51, 52, 52, 53, 53, 54,
         ],
       },
     },
@@ -1622,7 +1622,7 @@ const registry = {
         ability: s134,
         capacity: { kind: s93, formula: s135, minimum: 1 },
         maximumByLevel: [
-          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+          45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
         ],
       },
       declarationAlternatives: [
@@ -1852,7 +1852,7 @@ const registry = {
         ability: s134,
         capacity: { kind: s93, formula: s135, minimum: 1 },
         maximumByLevel: [
-          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+          45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
         ],
       },
       declarationAlternatives: [
@@ -2508,7 +2508,7 @@ const registry = {
         ability: s122,
         capacity: { kind: s93, formula: '<$level$> / 2 + <$cha_mod$>', minimum: 1 },
         maximumByLevel: [
-          10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20,
+          44, 45, 45, 46, 46, 47, 47, 48, 48, 49, 49, 50, 50, 51, 51, 52, 52, 53, 53, 54,
         ],
       },
       declarationAlternatives: [
@@ -4289,7 +4289,7 @@ const registry = {
         ability: s80,
         capacity: { kind: s93, formula: '<$level$> + <$int_mod$>', minimum: 1 },
         maximumByLevel: [
-          11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+          45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
         ],
       },
       declarationAlternatives: [

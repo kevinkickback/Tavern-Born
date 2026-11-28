@@ -262,6 +262,7 @@ export function EquipmentPage() {
                       <button
                         type="button"
                         aria-label="Toggle equipment restrictions"
+                        aria-pressed={ignoreEquipRestrictions}
                         onClick={toggleIgnoreRestrictions}
                         className={cn(
                           'flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors',
@@ -273,6 +274,7 @@ export function EquipmentPage() {
                         <ShieldWarning
                           className="size-4"
                           weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
+                          aria-hidden="true"
                         />
                       </button>
                     </TooltipTrigger>

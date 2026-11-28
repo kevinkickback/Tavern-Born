@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,15 +12,16 @@ import {
   ABILITY_NAMES,
   formatModifier,
 } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 import type { AbilityName, AbilityScores } from '@/types/character'
 
 export interface AsiPickerDialogProps {
   open: boolean
   level: number
-  abilityScores: AbilityScores
-  abilityScoresBeforeChoice?: AbilityScores
+  baseScores: AbilityScores
+  scoreCap: number
+  requireFullIncrease?: boolean
   existingChanges?: Record<string, 1 | 2>
   onApply: (changes: Record<string, 1 | 2>) => void
   onClose: () => void
@@ -31,22 +32,13 @@ type Mode = 'single' | 'split'
 export function AsiPickerDialog({
   open,
   level,
-  abilityScores,
-  abilityScoresBeforeChoice,
+  baseScores,
+  scoreCap,
+  requireFullIncrease = false,
   existingChanges,
   onApply,
   onClose,
 }: AsiPickerDialogProps) {
-  // Strip existing changes so baseScores reflect pre-ASI values.
-  const baseScores = useMemo<AbilityScores>(() => {
-    if (abilityScoresBeforeChoice) return abilityScoresBeforeChoice
-    const result = { ...abilityScores }
-    for (const [ability, bonus] of Object.entries(existingChanges ?? {})) {
-      ;(result as Record<string, number>)[ability] -= bonus
-    }
-    return result
-  }, [abilityScores, existingChanges, abilityScoresBeforeChoice])
-
   const [mode, setMode] = useState<Mode>('single')
   const [selected, setSelected] = useState<AbilityName[]>([])
 
@@ -82,10 +74,11 @@ export function AsiPickerDialog({
   }
 
   const increase = mode === 'single' ? 2 : 1
+  const isCapped = (base: number) =>
+    requireFullIncrease ? base + increase > scoreCap : base >= scoreCap
   const canApply =
     selected.length === (mode === 'single' ? 1 : 2) &&
-    (!abilityScoresBeforeChoice ||
-      selected.every((ability) => baseScores[ability] + increase <= ABILITY_SCORE_MAX))
+    selected.every((ability) => !isCapped(baseScores[ability]))
 
   const handleApply = () => {
     if (!canApply) return
@@ -106,8 +99,8 @@ export function AsiPickerDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {abilityScoresBeforeChoice ? 'Ability Score Improvement' : 'Ability Score Increase'} —
-            Level {level}
+            {requireFullIncrease ? 'Ability Score Improvement' : 'Ability Score Increase'} — Level{' '}
+            {level}
           </DialogTitle>
           <DialogDescription>Choose how to spend your ability score increase.</DialogDescription>
         </DialogHeader>
@@ -143,13 +136,11 @@ export function AsiPickerDialog({
             const abbr = ABILITY_ABBREVIATIONS[ability]
             const base = baseScores[ability]
             const bonus = getBonus(ability)
-            const newScore = Math.min(base + bonus, ABILITY_SCORE_MAX)
+            const newScore = Math.max(base, Math.min(base + bonus, scoreCap))
             const isSelected = selected.includes(ability)
-            const isCapped = abilityScoresBeforeChoice
-              ? base + increase > ABILITY_SCORE_MAX
-              : base >= ABILITY_SCORE_MAX
             const isDisabled =
-              (!isSelected && mode === 'split' && selected.length >= 2) || (isCapped && !isSelected)
+              (!isSelected && mode === 'split' && selected.length >= 2) ||
+              (isCapped(base) && !isSelected)
 
             return (
               <button
