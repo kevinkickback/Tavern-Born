@@ -61,8 +61,20 @@
       background: var(--tb-loader-bg);
       color: var(--tb-loader-fg);
       font-family: system-ui, sans-serif;
-      box-shadow: inset 0 0 0 1px var(--tb-accent-base);
       outline: none;
+    }
+
+    .startup-overlay::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--tb-accent-base);
+      pointer-events: none;
+    }
+
+    :root[data-platform="win32"] .startup-overlay::before {
+      /* The native resize frame can cover the first row in a restored window. */
+      top: 1px;
     }
 
     .startup-brand {

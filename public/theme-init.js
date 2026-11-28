@@ -14,6 +14,16 @@ if (_c) {
   _r.setAttribute('data-accent', _c)
 }
 
+if (window.electronAPI?.platform === 'win32') {
+  _r.setAttribute('data-platform', 'win32')
+  const dark = _a === 'dark'
+  window.electronAPI.setTitleBarOverlay(
+    dark ? '#111113' : '#cdced6',
+    dark ? '#fafafa' : '#1c2024',
+    32,
+  )
+}
+
 // Wait for the deferred app entry before requesting the optional web fonts.
 document.addEventListener(
   'DOMContentLoaded',

@@ -79,6 +79,7 @@ for (const { appearance, accent, background, perimeter } of startupThemes) {
         const track = overlay.querySelector('.startup-track')!
         const bar = track.querySelector('.startup-indeterminate')!
         const overlayStyle = getComputedStyle(overlay)
+        const frameStyle = getComputedStyle(overlay, '::before')
         const headingStyle = getComputedStyle(heading)
         const pixel = new OffscreenCanvas(1, 1).getContext('2d')!
         function luminance(element: Element) {
@@ -93,7 +94,8 @@ for (const { appearance, accent, background, perimeter } of startupThemes) {
         const [dim, bright] = [luminance(track), luminance(bar)].sort((a, b) => a - b)
         return {
           background: overlayStyle.backgroundColor,
-          frame: overlayStyle.boxShadow,
+          frame: frameStyle.borderTopColor,
+          frameWidth: frameStyle.borderTopWidth,
           outline: overlayStyle.outlineStyle,
           font: headingStyle.fontFamily,
           fontLoaded: [...document.fonts].some(
@@ -113,7 +115,8 @@ for (const { appearance, accent, background, perimeter } of startupThemes) {
       const first = await inspect(page.locator('#tb-pre-loader'))
       expect(first).toMatchObject({
         background,
-        frame: `${perimeter} 0px 0px 0px 1px inset`,
+        frame: perimeter,
+        frameWidth: '1px',
         outline: 'none',
         font: '"Cinzel Startup", serif',
         fontLoaded: true,
