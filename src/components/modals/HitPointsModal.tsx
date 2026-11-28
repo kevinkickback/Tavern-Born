@@ -1,5 +1,5 @@
-import { Heart, Plus, Trash } from '@phosphor-icons/react'
-import { useEffect, useId, useState } from 'react'
+import { DiceFive, Heart, Plus, Trash } from '@phosphor-icons/react'
+import { type ReactElement, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { NumericEffectBreakdown } from '@/components/effects/NumericEffectBreakdown'
 import { Button } from '@/components/ui/button'
@@ -10,28 +10,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
+import { rollDie } from '@/lib/calculations/gameRules'
 import {
   calculateHitPointAdjustmentTotal,
   getCharacterClassEntries,
+  getHitPointLevelKey,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { HitPointAdjustment } from '@/types/character'
+import type { HitPointAdjustment, HitPointLevelOverride } from '@/types/character'
 
 interface HitPointsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  trigger?: ReactElement
 }
 
 const DESIRED_MAXIMUM_ADJUSTMENT_ID = 'manual-desired-maximum'
 type HitPointAdjustmentDraft = Omit<HitPointAdjustment, 'amount'> & { amount: string }
+type HitPointLevelDraft = Omit<HitPointLevelOverride, 'dieResult'> & { dieResult: string }
+
+const HP_METHOD_LABELS = {
+  average: 'Average',
+  full: 'Full die',
+  rolled: 'Rolled',
+  manual: 'Entered',
+}
 
 function parseInteger(value: string, fallback = 0): number {
   const parsed = Number.parseInt(value, 10)
@@ -42,18 +55,20 @@ function formatSigned(value: number): string {
   return `${value >= 0 ? '+' : ''}${value}`
 }
 
-export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
+export function HitPointsModal({ open, onOpenChange, trigger }: HitPointsModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
   const {
     hitPoints,
     calculatedMaxHP,
     effectiveMaxHP,
+    getLevelLog,
     previewHitPointSettings,
     saveHitPointSettings,
   } = useHitPoints()
   const [current, setCurrent] = useState('0')
   const [temporary, setTemporary] = useState('0')
   const [adjustments, setAdjustments] = useState<HitPointAdjustmentDraft[]>([])
+  const [levelOverrides, setLevelOverrides] = useState<HitPointLevelDraft[]>([])
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [newSource, setNewSource] = useState('')
@@ -85,6 +100,12 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
         amount: String(adjustment.amount),
       })),
     )
+    setLevelOverrides(
+      (character.hitPointLevelOverrides ?? []).map((entry) => ({
+        ...entry,
+        dieResult: String(entry.dieResult),
+      })),
+    )
     setNewLabel('')
     setNewAmount('')
     setNewSource('')
@@ -113,12 +134,33 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     amount: parseInteger(adjustment.amount),
   }))
   const adjustmentTotal = calculateHitPointAdjustmentTotal(resolvedAdjustments, characterLevel)
+  const validLevelOverrides = levelOverrides.flatMap((entry) => {
+    const dieResult = Number(entry.dieResult)
+    return Number.isInteger(dieResult) && dieResult >= 1 && dieResult <= entry.hitDie
+      ? [{ ...entry, dieResult }]
+      : []
+  })
+  const validLevelEdits = validLevelOverrides.length === levelOverrides.length
+  const previewLevelOverrides = levelOverrides.flatMap((entry) => {
+    const key = getHitPointLevelKey(entry)
+    const usable =
+      validLevelOverrides.find((candidate) => getHitPointLevelKey(candidate) === key) ??
+      character.hitPointLevelOverrides?.find((candidate) => getHitPointLevelKey(candidate) === key)
+    return usable ? [usable] : []
+  })
+  const levelLog = getLevelLog(previewLevelOverrides).sort(
+    (left, right) => (left.characterLevel ?? Infinity) - (right.characterLevel ?? Infinity),
+  )
+  const previewBaseHP = levelLog.length
+    ? levelLog.reduce((sum, entry) => sum + entry.hp, 0)
+    : calculatedMaxHP
   const parsedOverride = parseInteger(overrideValue)
   const validOverride = !overrideEnabled || parsedOverride >= 1
   const previewResolution = previewHitPointSettings({
     current: parseInteger(current),
     temporary: parseInteger(temporary),
     adjustments: resolvedAdjustments,
+    levelOverrides: previewLevelOverrides,
     maxOverride: overrideEnabled && validOverride ? parsedOverride : undefined,
   })
   const previewEffectiveMaxHP = Math.max(1, Math.trunc(previewResolution.value))
@@ -126,6 +168,16 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   const displayedCurrent = currentEdited
     ? current
     : String(Math.max(0, parseInteger(current) + maximumChange))
+
+  const setLevelResult = (
+    { className, classSource, classLevel, hitDie, key }: (typeof levelLog)[number],
+    dieResult: string,
+    method: HitPointLevelOverride['method'],
+  ) =>
+    setLevelOverrides((previous) => [
+      ...previous.filter((entry) => getHitPointLevelKey(entry) !== key),
+      { className, classSource, classLevel, hitDie, dieResult, method },
+    ])
 
   const addAdjustment = () => {
     const label = newLabel.trim()
@@ -178,6 +230,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
           current: parseInteger(current),
           temporary: parseInteger(temporary),
           adjustments: otherResolvedAdjustments,
+          levelOverrides: previewLevelOverrides,
         }).value,
       ),
     )
@@ -203,6 +256,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
           current: parseInteger(current),
           temporary: parseInteger(temporary),
           adjustments: candidateAdjustments,
+          levelOverrides: previewLevelOverrides,
         }).value,
       ),
     )
@@ -220,19 +274,29 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
       toast.error('Fixed maximum HP must be at least 1.')
       return
     }
+    if (!validLevelEdits) {
+      toast.error('Enter a valid die result for each edited level.')
+      return
+    }
     const currentValue = Math.max(0, parseInteger(displayedCurrent))
-    saveHitPointSettings({
+    const saved = saveHitPointSettings({
       current: currentValue,
       temporary: Math.max(0, parseInteger(temporary)),
       adjustments: resolvedAdjustments,
       maxOverride: overrideEnabled ? parsedOverride : undefined,
+      levelOverrides: validLevelOverrides,
     })
+    if (!saved) {
+      toast.error('Hit point changes could not be saved. Review the character and try again.')
+      return
+    }
     onOpenChange(false)
     toast.success('Hit points updated.')
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-workspace-detail sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -246,8 +310,9 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="min-h-0">
-          <TabsList className="grid w-full grid-cols-2" aria-label="Hit Point management view">
+          <TabsList className="grid w-full grid-cols-3" aria-label="Hit Point management view">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="levels">Level log</TabsTrigger>
             <TabsTrigger value="manual">Manual changes</TabsTrigger>
           </TabsList>
 
@@ -313,7 +378,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    {calculatedMaxHP} from class, level, and Constitution
+                    {previewBaseHP} from class, level, and Constitution
                     {adjustmentTotal !== 0 &&
                       ` ${formatSigned(adjustmentTotal)} from manual changes`}
                   </p>
@@ -329,7 +394,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
                   id: 'class-levels-and-constitution',
                   label: 'Class levels and Constitution',
                   detail: classSummary || 'No class progression',
-                  value: calculatedMaxHP,
+                  value: previewBaseHP,
                 },
               ]}
             />
@@ -337,6 +402,77 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
               Active item, spell, feat, and other typed effects appear above when their source data
               declares a maximum-HP effect. Rules prose is never guessed.
             </p>
+          </TabsContent>
+
+          <TabsContent value="levels" className="space-y-3">
+            {levelLog.length ? (
+              <ul className="divide-y divide-border rounded-lg border border-border bg-workspace-pane px-3">
+                {levelLog.map((entry) => {
+                  const edited = levelOverrides.find(
+                    (row) => getHitPointLevelKey(row) === entry.key,
+                  )
+                  const label = `${entry.className} level ${entry.classLevel} (${entry.classSource})`
+                  const value = edited?.dieResult ?? String(entry.dieResult)
+                  const invalid =
+                    !!edited &&
+                    !validLevelOverrides.some((row) => getHitPointLevelKey(row) === entry.key)
+                  return (
+                    <li
+                      key={entry.rowKey}
+                      className="flex flex-wrap items-center justify-between gap-2 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold">{label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.characterLevel && `Character level ${entry.characterLevel} · `}
+                          {HP_METHOD_LABELS[edited?.method ?? entry.method]} · d{entry.hitDie} · +
+                          {entry.hp} HP
+                        </p>
+                      </div>
+                      {entry.canEdit ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            aria-label={`Hit die result for ${label}`}
+                            aria-invalid={invalid}
+                            min={1}
+                            max={entry.hitDie}
+                            step={1}
+                            value={value}
+                            className="h-8 w-16"
+                            onChange={(event) =>
+                              setLevelResult(entry, event.target.value, 'manual')
+                            }
+                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="size-8"
+                                aria-label={`Roll d${entry.hitDie} for ${label}`}
+                                onClick={() =>
+                                  setLevelResult(entry, String(rollDie(entry.hitDie)), 'rolled')
+                                }
+                              >
+                                <DiceFive aria-hidden />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Roll a d{entry.hitDie} and replace this level’s hit die result.
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Hit die unavailable</span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No class levels yet.</p>
+            )}
           </TabsContent>
 
           <TabsContent value="manual" className="space-y-5">

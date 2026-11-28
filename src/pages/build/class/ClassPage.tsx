@@ -568,7 +568,8 @@ export function BuildClassPage() {
         dismissLabel="Dismiss class page hint"
         dismissOnReferenceAction
       >
-        Use the Level Up button to add, remove, or change your classes.
+        Use Level Up to follow the guided wizard. Find direct level and multiclass controls on
+        Overview.
       </AnchoredHint>
 
       <WorkspaceBody className="flex overflow-hidden">

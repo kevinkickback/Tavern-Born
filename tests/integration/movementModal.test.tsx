@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MovementModal } from '@/components/modals/MovementModal'
@@ -56,11 +56,25 @@ describe('MovementModal', () => {
 
     expect(screen.getByText('Base source: Dwarf (PHB)')).toBeTruthy()
     await user.type(screen.getByLabelText('What caused it?'), 'Training')
+    const mode = screen.getByRole('combobox', { name: 'Mode' })
+    mode.focus()
+    await user.keyboard('{Enter}')
+    const options = within(screen.getByRole('listbox')).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Walk',
+      'Climb',
+      'Swim',
+      'Fly',
+      'Burrow',
+    ])
+    screen.getByRole('option', { name: 'Swim' }).focus()
+    await user.keyboard('{Enter}')
     await user.clear(screen.getByLabelText('Feet'))
     await user.type(screen.getByLabelText('Feet'), '5')
     await user.click(screen.getByRole('button', { name: 'Add' }))
     await user.click(screen.getByText('Exact movement overrides'))
-    await user.type(screen.getByLabelText(/swim/i), '30')
+    await user.type(screen.getByRole('spinbutton', { name: 'Fly' }), '30')
+    expect(screen.queryByText('Override hover capability')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save movement' }))
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -69,9 +83,9 @@ describe('MovementModal', () => {
       source: { name: 'Dwarf', source: 'PHB' },
     })
     expect(updated?.movementAdjustments).toEqual([
-      expect.objectContaining({ label: 'Training', mode: 'walk', amount: 5 }),
+      expect.objectContaining({ label: 'Training', mode: 'swim', amount: 5 }),
     ])
-    expect(updated?.movementOverrides).toEqual({ swim: 30 })
+    expect(updated?.movementOverrides).toEqual({ fly: 30 })
     expect(updated?.movement.speeds.walk).toBe(25)
   })
 

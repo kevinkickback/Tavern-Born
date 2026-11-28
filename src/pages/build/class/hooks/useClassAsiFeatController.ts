@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useStore } from 'zustand'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
@@ -35,7 +36,7 @@ import {
   resetClassAsiChoice,
 } from '@/pages/build/class/model/asi'
 import { countTotalAsiAcrossClasses } from '@/pages/build/class/model/pageUtils'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
 import type { Character, FeatOptionSelections } from '@/types/character'
@@ -63,8 +64,9 @@ export function useClassAsiFeatController({
   classLookup,
   feats,
 }: ClassAsiFeatControllerParams) {
+  const editingStore = useCharacterEditingStore()
   const calculationContext = useCharacterCalculationContext(character)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const updateCharacter = useStore(editingStore, (state) => state.updateCharacter)
   const { replaceFeatSelections, editFeatWithOptions } = useFeatProvenanceMutations()
   const [featPickerOpen, setFeatPickerOpen] = useState(false)
   const [featPickerLevel, setFeatLevel] = useState<number | null>(null)
@@ -80,7 +82,7 @@ export function useClassAsiFeatController({
   const isEpicBoonEditCurrent = (edit: EpicBoonEditContext | null | undefined) =>
     !!edit &&
     edit.character === character &&
-    edit.character === useCharacterStore.getState().activeCharacter &&
+    edit.character === editingStore.getState().activeCharacter &&
     edit.choiceId === epicBoonSlot?.choiceId &&
     edit.data === useGameDataStore.getState().gameData
   const setFeatPickerLevel = (level: number | null) => {
@@ -98,7 +100,7 @@ export function useClassAsiFeatController({
     setAsiLevel(level)
   }
   const currentOptions = (target: FeatOptionTarget) => {
-    const current = useCharacterStore.getState().activeCharacter
+    const current = editingStore.getState().activeCharacter
     return current
       ? getFeatSetupOwners(current, feats).find(
           (owner) =>
@@ -115,7 +117,7 @@ export function useClassAsiFeatController({
       !character ||
       !epicBoonSlot ||
       !selected ||
-      useCharacterStore.getState().activeCharacter !== character
+      editingStore.getState().activeCharacter !== character
     )
       return
     const feat = feats.find((row) => getFeatSelectionKey(row) === getFeatSelectionKey(selected))
@@ -373,7 +375,7 @@ export function useClassAsiFeatController({
     slot: EpicBoonSlot,
     replacement: Parameters<typeof replaceEpicBoonSelection>[2],
   ) => {
-    if (!character || useCharacterStore.getState().activeCharacter !== character) return false
+    if (!character || editingStore.getState().activeCharacter !== character) return false
     const catalogs = calculationContext?.classChoices.catalogs
     const next = replaceEpicBoonSelection(
       character,
@@ -430,7 +432,7 @@ export function useClassAsiFeatController({
         toast.info('Choose a currently eligible feat for this Epic Boon slot.')
         return
       }
-      const active = useCharacterStore.getState().activeCharacter
+      const active = editingStore.getState().activeCharacter
       if (active && active !== character && hasFeatOptions(live)) {
         setOptionsPendingFeat({
           ...live,
@@ -443,8 +445,7 @@ export function useClassAsiFeatController({
       return
     }
     if (revisedFeatSlot) {
-      if (useCharacterStore.getState().activeCharacter !== character || selectedFeats.length > 1)
-        return
+      if (editingStore.getState().activeCharacter !== character || selectedFeats.length > 1) return
       const selected = selectedFeats[0]
       if (selected) {
         const key = getFeatSelectionKey(selected)

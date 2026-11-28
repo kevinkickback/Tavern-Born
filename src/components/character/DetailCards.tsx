@@ -7,30 +7,45 @@ import { cn } from '@/lib/utils'
 export function CreatorEntityDetails({
   entity,
   subtitle,
+  titleActions,
   placeholder,
   children,
 }: {
   entity?: { name: string; source: string; page?: number }
   subtitle?: string
+  titleActions?: ReactNode
   placeholder: ReactNode
   children: ReactNode
 }) {
+  const source = entity && (
+    <div className="flex items-center gap-1.5 rounded-full border border-border bg-workspace-pane px-2.5 py-1 text-xs text-muted-foreground">
+      <BookOpen className="size-3.5" aria-hidden="true" />
+      <span className="font-mono">{entity.source}</span>
+      {entity.page && <span>p.{entity.page}</span>}
+    </div>
+  )
   return (
-    <div className="@container flex min-w-0 flex-col rounded-lg border border-border bg-workspace-canvas p-4 md:min-h-0 md:overflow-hidden sm:px-5">
+    <div className="@container flex min-w-0 flex-1 flex-col rounded-lg border border-border bg-workspace-canvas p-4 md:min-h-0 md:overflow-hidden sm:px-5">
       {entity ? (
         <>
           <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-2">
             <h3 className="break-words text-2xl font-semibold tracking-tight">
               {entity.name}
-              {subtitle && <span className="ml-1.5 text-primary">({subtitle})</span>}
+              {subtitle && <span className="text-primary"> ({subtitle})</span>}
             </h3>
-            <div className="flex items-center gap-1.5 rounded-full border border-border bg-workspace-pane px-2.5 py-1 text-xs text-muted-foreground">
-              <BookOpen className="size-3.5" aria-hidden="true" />
-              <span className="font-mono">{entity.source}</span>
-              {entity.page && <span>p.{entity.page}</span>}
-            </div>
+            {titleActions && (
+              <div className="ml-auto flex shrink-0 items-center gap-2">{titleActions}</div>
+            )}
           </div>
-          <div className="min-h-0 flex-1 space-y-4 py-3 md:overflow-y-auto md:pr-2">{children}</div>
+          <div
+            className={cn(
+              'min-h-0 flex-1 py-3',
+              titleActions ? 'flex flex-col' : 'space-y-4 md:overflow-y-auto md:pr-2',
+            )}
+          >
+            {children}
+          </div>
+          <footer className="flex shrink-0 justify-end pt-2">{source}</footer>
         </>
       ) : (
         <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">

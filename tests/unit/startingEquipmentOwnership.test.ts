@@ -8,7 +8,10 @@ import { parseClassDocument } from '@/lib/5etools/parsers/classes'
 import {
   buildItemLookup,
   getSelectedEquipmentPackage,
+  isStartingEquipmentItemChoiceComplete,
+  needsStartingEquipmentPackageChoice,
   resolveClassEquipmentBlocks,
+  resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import { createStartingEquipmentPolicy } from '@/lib/5etools/startingEquipmentPolicy'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -99,6 +102,48 @@ const actor = () => {
 }
 
 describe('starting equipment source, quantities and ownership', () => {
+  test('switching a later package keeps earlier fixed grants and implicit non-A defaults', () => {
+    const empty = makeCharacterFixture({
+      classProgression: [],
+      initialClass: undefined,
+      equipment: [],
+      currency: gp(5),
+    })
+    const defaultData = [
+      { _: ['Dagger|PHB'] },
+      { c: [{ value: 300 }], b: [{ value: 200 }] },
+      { a: [{ value: 400 }], b: [{ value: 800 }] },
+    ]
+    const cls = { ...fighter, startingEquipment: { defaultData } } as Class5e
+    const initial = apply(
+      empty,
+      applyClassSelectionCommand(empty, empty.provenance, cls, undefined, lookup),
+    )
+    expect(initial.currency).toEqual(gp(11))
+    const changed = apply(
+      initial,
+      applyClassEquipmentChoiceCommand(initial, initial.provenance, cls, 2, 'b', lookup),
+    )
+    expect(changed.classEquipmentChoices?.['Fighter|PHB']).toEqual(['', 'b', 'b'])
+    expect(changed.currency).toEqual(gp(15))
+    expect(changed.equipment).toEqual(initial.equipment)
+    expect(resolveEquipmentWithBlockChoices(defaultData, lookup, ['', '', 'b']).currency).toEqual(
+      gp(10),
+    )
+  })
+
+  test('an unavailable default package needs a different tab when an alternative is available', () => {
+    const [block] = resolveClassEquipmentBlocks(
+      { defaultData: [{ a: ['Missing Shield|PHB'], b: [{ value: 1000 }] }] },
+      lookup,
+    )
+    expect(block.options.a.fixedIssues).toEqual([
+      'Restore the exact item rules for Missing Shield.',
+    ])
+    expect(needsStartingEquipmentPackageChoice(block, [])).toBe(true)
+    expect(needsStartingEquipmentPackageChoice(block, ['b'])).toBe(false)
+  })
+
   test('equivalent filter ordering stays valid; unknown and conflicting constraints remain unresolved', () => {
     const c = actor()
     const pool = (text: string) => {
@@ -132,6 +177,12 @@ describe('starting equipment source, quantities and ownership', () => {
       { name: 'Longsword', source: 'PHB' },
       { name: 'Warhammer', source: 'PHB' },
     ])
+    expect(
+      isStartingEquipmentItemChoiceComplete(slot, [
+        { name: 'Longsword', source: 'PHB' },
+        { name: 'Longsword', source: 'XPHB' },
+      ]),
+    ).toBe(false)
     for (const refs of [
       [{ name: 'Dagger', source: 'PHB' }],
       [{ name: 'Enchanted Sword', source: 'PHB' }],

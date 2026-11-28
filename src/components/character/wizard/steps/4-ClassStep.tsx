@@ -10,17 +10,27 @@ import { getClassSummary } from '@/lib/calculations/entrySummary'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
-import { CreatorEntityDetails, DetailHtmlSection, DetailSection } from '../../DetailCards'
+import { DetailHtmlSection, DetailSection } from '../../DetailCards'
 import { TraitTooltip } from '../../TraitTooltip'
+import {
+  CreatorOriginChoiceDetails,
+  type CreatorOriginChoiceProps,
+} from '../CreatorOriginChoiceDetails'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
-interface ClassStepProps extends StepProps {
+interface ClassStepProps extends StepProps, CreatorOriginChoiceProps {
   classes: Class5e[]
   recursiveLookup: RecursiveLookup
 }
 
-export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassStepProps) {
+export function ClassStep({
+  data,
+  onChange,
+  classes,
+  recursiveLookup,
+  ...choiceProps
+}: ClassStepProps) {
   const [search, setSearch] = useState('')
   const filteredClasses = classes
   const orderedClasses = useMemo(() => sortCreatorOptions(classes), [classes])
@@ -134,73 +144,79 @@ export function ClassStep({ data, onChange, classes, recursiveLookup }: ClassSte
         </div>
       </div>
 
-      <CreatorEntityDetails entity={selectedClass} placeholder="Select a class to view details">
-        {selectedClass && (
-          <>
-            {classSummary && (
-              <div className="max-w-[72ch] space-y-1.5">
-                <p className="text-sm leading-relaxed text-muted-foreground">{classSummary}</p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
-              <DetailSection label="Hit Dice">d{selectedClass.hd?.faces ?? 6}</DetailSection>
-
-              <DetailSection label="Saving Throws">{savingThrows}</DetailSection>
-
-              <DetailSection label="Spellcasting Stat">{spellcastingStat}</DetailSection>
-            </div>
-
-            <div>
-              <h4 className="border-b border-border pb-2 text-sm font-semibold">Training</h4>
-              <DetailHtmlSection
-                label="Armor Proficiencies"
-                html={armorHtml}
-                recursiveLookup={recursiveLookup}
-              />
-              <DetailHtmlSection
-                label="Weapon Proficiencies"
-                html={weaponsHtml}
-                recursiveLookup={recursiveLookup}
-              />
-              <DetailHtmlSection
-                label="Tool Proficiencies"
-                html={toolsHtml}
-                recursiveLookup={recursiveLookup}
-              />
-            </div>
-
-            {classFeatures.length > 0 && (
-              <div className="border-t border-border pt-4">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Signature Features
-                  </span>
+      <CreatorOriginChoiceDetails
+        key={JSON.stringify([selectedClass?.name, selectedClass?.source])}
+        kind="Class"
+        entity={selectedClass}
+        {...choiceProps}
+        description={
+          selectedClass && (
+            <>
+              {classSummary && (
+                <div className="max-w-[72ch] space-y-1.5">
+                  <p className="text-sm leading-relaxed text-muted-foreground">{classSummary}</p>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {classFeatures.map((feature) => (
-                    <TraitTooltip
-                      key={`${feature.name}|${feature.source ?? ''}`}
-                      previewKey={JSON.stringify([
-                        'class-feature',
-                        selectedClass.name,
-                        selectedClass.source,
-                        feature.name,
-                        feature.source,
-                        feature.entries,
-                      ])}
-                      name={feature.name}
-                      source={feature.source}
-                      entries={feature.entries}
-                      recursiveLookup={recursiveLookup}
-                    />
-                  ))}
-                </div>
+              )}
+
+              <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
+                <DetailSection label="Hit Dice">d{selectedClass.hd?.faces ?? 6}</DetailSection>
+
+                <DetailSection label="Saving Throws">{savingThrows}</DetailSection>
+
+                <DetailSection label="Spellcasting Stat">{spellcastingStat}</DetailSection>
               </div>
-            )}
-          </>
-        )}
-      </CreatorEntityDetails>
+
+              <div>
+                <h4 className="border-b border-border pb-2 text-sm font-semibold">Training</h4>
+                <DetailHtmlSection
+                  label="Armor Proficiencies"
+                  html={armorHtml}
+                  recursiveLookup={recursiveLookup}
+                />
+                <DetailHtmlSection
+                  label="Weapon Proficiencies"
+                  html={weaponsHtml}
+                  recursiveLookup={recursiveLookup}
+                />
+                <DetailHtmlSection
+                  label="Tool Proficiencies"
+                  html={toolsHtml}
+                  recursiveLookup={recursiveLookup}
+                />
+              </div>
+
+              {classFeatures.length > 0 && (
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
+                      Signature Features
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {classFeatures.map((feature) => (
+                      <TraitTooltip
+                        key={`${feature.name}|${feature.source ?? ''}`}
+                        previewKey={JSON.stringify([
+                          'class-feature',
+                          selectedClass.name,
+                          selectedClass.source,
+                          feature.name,
+                          feature.source,
+                          feature.entries,
+                        ])}
+                        name={feature.name}
+                        source={feature.source}
+                        entries={feature.entries}
+                        recursiveLookup={recursiveLookup}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        }
+      />
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -21,7 +20,7 @@ import {
   type createCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { AbilityName, Character } from '@/types/character'
@@ -158,7 +157,6 @@ afterEach(() => {
 
 describe('representative character consumers', () => {
   test.each(REPRESENTATIVE_CHARACTER_FIXTURES)('$label', async (fixture) => {
-    const user = userEvent.setup()
     expect(characterPersistenceSchema.safeParse(fixture.character).success).toBe(true)
     activateFixture(fixture)
     let consumerSnapshot: ConsumerSnapshot | undefined
@@ -167,9 +165,9 @@ describe('representative character consumers', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
+      <MemoryRouter initialEntries={['/build/overview']}>
         <AppHeader />
-        <BuildReviewPage />
+        <BuildOverviewPage />
         <ConsumerProbe character={fixture.character} onSnapshot={onSnapshot} />
       </MemoryRouter>,
     )
@@ -276,7 +274,7 @@ describe('representative character consumers', () => {
       expect(calculation.abilityScores.total[abilityName]).toBe(expected)
       expect(viewModel.effectiveAbilityScores[abilityName]).toBe(expected)
       expect(snapshot.builderScores[abilityName]).toBe(expected)
-      expect(screen.getByTestId(`review-ability-${abilityName}`).textContent).toContain(
+      expect(screen.getByTestId(`overview-ability-${abilityName}`).textContent).toContain(
         String(expected),
       )
     }
@@ -288,19 +286,17 @@ describe('representative character consumers', () => {
     expect(Number(viewModel.carriedWeight)).toBe(fixture.expected.totalWeight)
     expect(snapshot.carryCapacity).toBe(fixture.expected.carryCapacity)
     expect(snapshot.totalWeight).toBe(fixture.expected.totalWeight)
-    expect(screen.getByTestId('header-ac-badge').getAttribute('aria-label')).toContain(
+    expect(screen.getByText('Armor Class', { exact: true }).nextElementSibling?.textContent).toBe(
       String(fixture.expected.armorClass),
     )
-    expect(screen.getByTestId('header-hp-badge').getAttribute('aria-label')).toContain(
+    expect(screen.getByText('Max HP', { exact: true }).nextElementSibling?.textContent).toBe(
       String(fixture.expected.maxHitPoints),
     )
-    expect(screen.getByTestId('review-movement-walk').textContent).toContain(
+    expect(screen.getByTestId('overview-movement-walk').textContent).toContain(
       String(fixture.expected.walkingSpeed),
     )
-    await user.click(screen.getByRole('tab', { name: /Needs attention/i }))
-    expect(
-      screen.getByText(expectedIssues.length ? 'Character needs attention' : 'Character is ready'),
-    ).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Needs attention' })).toBeTruthy()
+    if (!expectedIssues.length) expect(screen.getByText('No required actions')).toBeTruthy()
 
     expect(snapshot.profileIds).toEqual(fixture.expected.profileIds)
     expect(snapshot.sharedSlots).toEqual(fixture.expected.sharedSlots)

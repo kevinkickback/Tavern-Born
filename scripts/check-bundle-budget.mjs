@@ -54,7 +54,7 @@ function requireSingle(files, pattern, label) {
 export function measureBundle(files, bundledSrdFiles = []) {
   const initialScript = requireSingle(files, /^assets\/index-[^/]+\.js$/, 'initial renderer script')
   const initialStylesheet = requireSingle(files, /^assets\/index-[^/]+\.css$/, 'initial stylesheet')
-  const pdfWorker = requireSingle(files, /^assets\/pdf\.worker-[^/]+\.mjs$/, 'PDF worker')
+  const pdfWorker = requireSingle(files, /^assets\/pdf\.worker(?:\.min)?-[^/]+\.mjs$/, 'PDF worker')
   const rendererCodeFiles = files.filter(
     (file) =>
       file.path.startsWith('assets/') && ['.css', '.js', '.mjs'].includes(extname(file.path)),

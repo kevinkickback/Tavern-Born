@@ -14,6 +14,7 @@ import {
   withoutSheetDescriptions,
 } from '@/lib/pdf/characterSheetViewModel'
 import { DEFAULT_SHEET_PRESENTATION_OPTIONS } from '@/lib/pdf/types'
+import { getLevelUpProgressionChanges } from '@/pages/build/class/model/levelUpProgression'
 import type { Class5e, ClassFeature } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -116,6 +117,20 @@ test.each([
     ),
   })
   const rawOnly = lookups({ ...data, classes: [] })
+  const gains = (active: typeof current) =>
+    getLevelUpProgressionChanges(
+      createCharacterCalculationContext(at19, active, current),
+      createCharacterCalculationContext(at20, active, current),
+      { name: 'Druid', source: 'PHB' },
+      [],
+      20,
+    )
+  expect(gains(current)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ label: 'Wild Shape', from: '2', to: 'Unlimited' }),
+    ]),
+  )
+  expect(gains(absent).some((change) => change.to === 'Unlimited')).toBe(false)
   const verify = (saved: Character, active: typeof current, unlimited: boolean, max = 2) => {
     const view = createCharacterSheetViewModel(saved, current, active)
     const resource = view.classResourceRows.find((row) => row.label === 'Wild Shape')

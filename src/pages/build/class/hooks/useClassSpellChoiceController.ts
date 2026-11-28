@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useStore } from 'zustand'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { getManagedClassSpellRule } from '@/lib/5etools/classCastingRules'
@@ -10,6 +11,7 @@ import {
   isInvocationRitualTranscriptionSlot,
   isSelectedInvocationRitualSlot,
 } from '@/lib/5etools/selectedFeatureSpellIdentity'
+import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { scopeClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { getFeatureOwnerKey } from '@/lib/character/classChoiceIdentity'
 import { getManagedClassSpellFeatureLabel } from '@/lib/character/managedClassSpellIdentity'
@@ -19,161 +21,171 @@ import {
   getSelectedFeatureCantripSetups,
 } from '@/lib/character/selectedFeatureSpells'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
 import type { SpellGain } from '../model/levelsUtils'
+
+export function getClassSpellGainsByLevel(
+  character: Character | null,
+  calculation: CharacterCalculationContext | null,
+  viewingClassData: Class5e | undefined,
+  viewingSubclassData?: Subclass5e,
+) {
+  const choices = new Map<number, SpellGain>()
+  if (!viewingClassData) return choices
+  const entry = {
+    name: viewingClassData.name,
+    source: viewingClassData.source,
+    levels: 20,
+    subclass: viewingSubclassData?.name,
+    subclassSource: viewingSubclassData?.source,
+  }
+  const currentCatalogs = calculation?.classChoices.catalogs
+  const catalogs = currentCatalogs && { ...currentCatalogs }
+  const slots = getManagedClassSpellSlots(
+    entry,
+    character ?? undefined,
+    catalogs,
+    calculation?.classChoices.prerequisites,
+  )
+  if (!viewingSubclassData) {
+    // The exact saved owner remains editable when the selected subclass data is unavailable.
+    const saved = character?.classProgression.find(
+      (row) =>
+        normalizeOwnerIdentity(row.name) === normalizeOwnerIdentity(entry.name) &&
+        normalizeOwnerIdentity(row.source) === normalizeOwnerIdentity(entry.source),
+    )
+    if (saved) {
+      const savedEntry = { ...saved, levels: entry.levels }
+      slots.push(
+        ...getSavantSpellbookSlots(savedEntry),
+        ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
+          (slot) =>
+            getClericArcanaSpellRule(slot) ||
+            isArcaneDabblerSlot(slot) ||
+            slot[1] === 'subclass-spell-replacement',
+        ),
+      )
+    }
+  }
+  const ritualSetups =
+    character && slots.some(isSelectedInvocationRitualSlot)
+      ? getSelectedFeatureCantripSetups(
+          character,
+          catalogs,
+          calculation?.classChoices.prerequisites,
+        )
+      : []
+  const ritualRanks = new Map(
+    ritualSetups
+      .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
+      .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const),
+  )
+  if (character) {
+    for (const { slot } of getInvocationRitualTranscriptionOffers(character, entry, ritualSetups)) {
+      choices.set(slot[3], {
+        cantrips: 0,
+        spells: 0,
+        maxSpellLevel: 0,
+        canSwap: false,
+        canTranscribeRituals: true,
+      })
+    }
+  }
+  const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
+  for (const slot of slots) {
+    if (
+      dabbler &&
+      isArcaneDabblerSlot(slot) &&
+      slot[2] === dabbler.target &&
+      slot[4] >= dabbler.count
+    )
+      continue
+    const gain = choices.get(slot[3]) ?? {
+      cantrips: 0,
+      spells: 0,
+      maxSpellLevel: 0,
+      canSwap: false,
+    }
+    choices.set(slot[3], gain)
+    if (isInvocationRitualTranscriptionSlot(slot)) {
+      gain.hasTranscribedRituals = true
+      continue
+    }
+    const savant = getSavantSpellbookGain(slot)
+    if (savant) {
+      gain.savantSpellbook ??= {
+        name: getManagedClassSpellFeatureLabel(slot) ?? 'Savant',
+        count: 0,
+        maxSpellLevel: savant.tier,
+      }
+      gain.savantSpellbook.count++
+      continue
+    }
+    const domain = slot[1]
+    if (domain === 'subclass-spell-replacement') {
+      gain.canSwap = true
+      continue
+    }
+    if (domain === 'class-spellbook-specialty') {
+      gain.spellbookSpecialty ??= {
+        name: getManagedClassSpellFeatureLabel(slot) ?? 'Spellbook specialty',
+        count: 0,
+      }
+      gain.spellbookSpecialty.count++
+      continue
+    }
+    const owner = slot[0]
+    const scoped =
+      catalogs &&
+      scopeClassChoiceFeatureCatalogs(
+        catalogs,
+        owner[0] === 'subclass'
+          ? getFeatureOwnerKey(owner[1], owner[2], owner[3], owner[4])
+          : undefined,
+      )
+    const finite = getManagedClassSpellRule(slot)
+    const authority =
+      scoped && finite && domain !== 'feature-cantrip' && domain !== 'feature-prepared'
+        ? getClassCastingGainAuthority(
+            scoped,
+            owner,
+            slot[2],
+            finite.rule.declaration.level,
+            domain,
+            slot[3],
+          )
+        : undefined
+    gain.maxSpellLevel = Math.max(
+      gain.maxSpellLevel,
+      isSelectedInvocationRitualSlot(slot) ? (ritualRanks.get(slot[2]) ?? 0) : 0,
+      getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
+      dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
+        ? Math.max(...dabbler.ranks)
+        : 0,
+    )
+    gain.picksByDomain ??= {}
+    gain.picksByDomain[domain] = (gain.picksByDomain[domain] ?? 0) + 1
+    if (domain === 'class-cantrip' || domain === 'feature-cantrip') gain.cantrips++
+    else gain.spells++
+  }
+  return choices
+}
 
 export function useClassSpellChoiceController(
   viewingClassData?: Class5e,
   viewingSubclassData?: Subclass5e,
 ) {
+  const editingStore = useCharacterEditingStore()
   const [pickerLevel, setPickerLevel] = useState<number | null>(null)
-  const character = useCharacterStore((state) => state.activeCharacter)
+  const character = useStore(editingStore, (state) => state.activeCharacter)
   const calculation = useCharacterCalculationContext(character)
   const { finishClassSpellChoices } = useSpellProvenanceMutations()
-  const choicesByLevel = useMemo(() => {
-    const choices = new Map<number, SpellGain>()
-    if (!viewingClassData) return choices
-    const entry = {
-      name: viewingClassData.name,
-      source: viewingClassData.source,
-      levels: 20,
-      subclass: viewingSubclassData?.name,
-      subclassSource: viewingSubclassData?.source,
-    }
-    const currentCatalogs = calculation?.classChoices.catalogs
-    const catalogs = currentCatalogs && { ...currentCatalogs }
-    const slots = getManagedClassSpellSlots(
-      entry,
-      character ?? undefined,
-      catalogs,
-      calculation?.classChoices.prerequisites,
-    )
-    if (!viewingSubclassData) {
-      // The exact saved owner remains editable when the selected subclass data is unavailable.
-      const saved = character?.classProgression.find(
-        (row) =>
-          normalizeOwnerIdentity(row.name) === normalizeOwnerIdentity(entry.name) &&
-          normalizeOwnerIdentity(row.source) === normalizeOwnerIdentity(entry.source),
-      )
-      if (saved) {
-        const savedEntry = { ...saved, levels: entry.levels }
-        slots.push(
-          ...getSavantSpellbookSlots(savedEntry),
-          ...getManagedClassSpellSlots(savedEntry, character ?? undefined, catalogs).filter(
-            (slot) =>
-              getClericArcanaSpellRule(slot) ||
-              isArcaneDabblerSlot(slot) ||
-              slot[1] === 'subclass-spell-replacement',
-          ),
-        )
-      }
-    }
-    const ritualSetups =
-      character && slots.some(isSelectedInvocationRitualSlot)
-        ? getSelectedFeatureCantripSetups(
-            character,
-            catalogs,
-            calculation?.classChoices.prerequisites,
-          )
-        : []
-    const ritualRanks = new Map(
-      ritualSetups
-        .filter((setup) => setup.domain === 'feature-prepared' && setup.offered)
-        .map((setup) => [setup.producer, setup.choice?.filter?.level ?? 0] as const),
-    )
-    if (character) {
-      for (const { slot } of getInvocationRitualTranscriptionOffers(
-        character,
-        entry,
-        ritualSetups,
-      )) {
-        choices.set(slot[3], {
-          cantrips: 0,
-          spells: 0,
-          maxSpellLevel: 0,
-          canSwap: false,
-          canTranscribeRituals: true,
-        })
-      }
-    }
-    const dabbler = character && getArcaneDabbler(character, entry, catalogs?.classes)
-    for (const slot of slots) {
-      if (
-        dabbler &&
-        isArcaneDabblerSlot(slot) &&
-        slot[2] === dabbler.target &&
-        slot[4] >= dabbler.count
-      )
-        continue
-      const gain = choices.get(slot[3]) ?? {
-        cantrips: 0,
-        spells: 0,
-        maxSpellLevel: 0,
-        canSwap: false,
-      }
-      choices.set(slot[3], gain)
-      if (isInvocationRitualTranscriptionSlot(slot)) {
-        gain.hasTranscribedRituals = true
-        continue
-      }
-      const savant = getSavantSpellbookGain(slot)
-      if (savant) {
-        gain.savantSpellbook ??= {
-          name: getManagedClassSpellFeatureLabel(slot) ?? 'Savant',
-          count: 0,
-          maxSpellLevel: savant.tier,
-        }
-        gain.savantSpellbook.count++
-        continue
-      }
-      const domain = slot[1]
-      if (domain === 'subclass-spell-replacement') {
-        gain.canSwap = true
-        continue
-      }
-      if (domain === 'class-spellbook-specialty') {
-        gain.spellbookSpecialty ??= {
-          name: getManagedClassSpellFeatureLabel(slot) ?? 'Spellbook specialty',
-          count: 0,
-        }
-        gain.spellbookSpecialty.count++
-        continue
-      }
-      const owner = slot[0]
-      const scoped =
-        catalogs &&
-        scopeClassChoiceFeatureCatalogs(
-          catalogs,
-          owner[0] === 'subclass'
-            ? getFeatureOwnerKey(owner[1], owner[2], owner[3], owner[4])
-            : undefined,
-        )
-      const finite = getManagedClassSpellRule(slot)
-      const authority =
-        scoped && finite && domain !== 'feature-cantrip' && domain !== 'feature-prepared'
-          ? getClassCastingGainAuthority(
-              scoped,
-              owner,
-              slot[2],
-              finite.rule.declaration.level,
-              domain,
-              slot[3],
-            )
-          : undefined
-      gain.maxSpellLevel = Math.max(
-        gain.maxSpellLevel,
-        isSelectedInvocationRitualSlot(slot) ? (ritualRanks.get(slot[2]) ?? 0) : 0,
-        getClericArcanaSpellRule(slot)?.rank ?? authority?.maxSpellLevel ?? 0,
-        dabbler && isArcaneDabblerSlot(slot) && slot[2] === dabbler.target
-          ? Math.max(...dabbler.ranks)
-          : 0,
-      )
-      if (domain === 'class-cantrip' || domain === 'feature-cantrip') gain.cantrips++
-      else gain.spells++
-    }
-    return choices
-  }, [calculation, character, viewingClassData, viewingSubclassData])
+  const choicesByLevel = useMemo(
+    () => getClassSpellGainsByLevel(character, calculation, viewingClassData, viewingSubclassData),
+    [calculation, character, viewingClassData, viewingSubclassData],
+  )
 
   return {
     choicesByLevel,

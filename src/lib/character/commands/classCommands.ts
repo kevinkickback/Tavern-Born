@@ -14,6 +14,7 @@ import { refreshNativeRacialSpellState } from '@/lib/calculations/nativeRacialSp
 import {
   assertStartingEquipmentSelections,
   getClassDefaultEquipmentBlocks,
+  getDefaultStartingEquipmentBlockChoice,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import {
@@ -272,9 +273,6 @@ export function applyClassEquipmentChoiceCommand(
   const itemSelections =
     genericSelections ?? character.classEquipmentItemChoices?.[classChoiceKey] ?? {}
   const previousChoices = character.classEquipmentChoices?.[classChoiceKey] ?? []
-  const choices = [...previousChoices]
-  while (choices.length <= blockIndex) choices.push('a')
-  choices[blockIndex] = choice.toLowerCase()
 
   const blocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
   if (!Number.isSafeInteger(blockIndex) || blockIndex < 0 || blockIndex >= blocks.length)
@@ -286,6 +284,11 @@ export function applyClassEquipmentChoiceCommand(
     !Object.keys(block).some((key) => key.toLowerCase() === choice.toLowerCase())
   )
     throw new RangeError('Starting equipment package is unavailable.')
+  const choices = [...previousChoices]
+  while (choices.length <= blockIndex)
+    choices.push(getDefaultStartingEquipmentBlockChoice(blocks[choices.length]))
+  choices[blockIndex] = choice.toLowerCase()
+
   const policy =
     policyOverride ??
     createStartingEquipmentPolicy(character, { ...cls, kind: 'class' }, cls.startingEquipment, [
@@ -308,7 +311,8 @@ export function applyClassEquipmentChoiceCommand(
   )
   if (
     resolved.unavailablePackage &&
-    choices[blockIndex] !== (previousChoices[blockIndex]?.toLowerCase() ?? 'a')
+    choices[blockIndex] !==
+      (previousChoices[blockIndex]?.toLowerCase() || getDefaultStartingEquipmentBlockChoice(block))
   )
     throw new RangeError('Restore the exact starting equipment rules before switching packages.')
   assertStartingEquipmentSelections(
@@ -478,6 +482,30 @@ function computeClassSelectionEffects(
   })
 }
 
+export function getClassProgressionRestriction(
+  character: Character,
+  nextProgression: readonly CharacterClassEntry[],
+): string | undefined {
+  const isClassicOathbreaker = (entry: CharacterClassEntry) =>
+    normalizeKey(entry.name) === 'paladin' &&
+    normalizeKey(entry.source) === 'phb' &&
+    normalizeKey(entry.subclass ?? '') === 'oathbreaker' &&
+    normalizeKey(entry.subclassSource ?? '') === 'dmg'
+  const oathbreaker = nextProgression.find(isClassicOathbreaker)
+  const earlierOathbreaker = character.classProgression.find(isClassicOathbreaker)
+  if (
+    oathbreaker &&
+    (!earlierOathbreaker || (earlierOathbreaker.levels < 3 && oathbreaker.levels >= 3))
+  ) {
+    const alignment = normalizeKey(character.details?.alignment ?? '').replace(/\s+/g, '-')
+    if (
+      oathbreaker.levels < 3 ||
+      !['lawful-evil', 'neutral-evil', 'chaotic-evil'].includes(alignment)
+    )
+      return 'Oathbreaker requires Paladin level 3 and an evil alignment in Characteristics.'
+  }
+}
+
 /**
  * Apply a class progression update and reconcile derived class fields.
  *
@@ -493,26 +521,8 @@ export function applyClassProgressionUpdate(
   spellLookups?: ClassProgressionLookups,
 ): ClassCommandResult {
   const previousProgression = character.classProgression
-  const isClassicOathbreaker = (entry: CharacterClassEntry) =>
-    normalizeKey(entry.name) === 'paladin' &&
-    normalizeKey(entry.source) === 'phb' &&
-    normalizeKey(entry.subclass ?? '') === 'oathbreaker' &&
-    normalizeKey(entry.subclassSource ?? '') === 'dmg'
-  const oathbreaker = nextProgression.find(isClassicOathbreaker)
-  const earlierOathbreaker = previousProgression.find(isClassicOathbreaker)
-  if (
-    oathbreaker &&
-    (!earlierOathbreaker || (earlierOathbreaker.levels < 3 && oathbreaker.levels >= 3))
-  ) {
-    const alignment = normalizeKey(character.details?.alignment ?? '').replace(/\s+/g, '-')
-    if (
-      oathbreaker.levels < 3 ||
-      !['lawful-evil', 'neutral-evil', 'chaotic-evil'].includes(alignment)
-    )
-      throw new RangeError(
-        'Oathbreaker requires Paladin level 3 and an evil alignment in Characteristics.',
-      )
-  }
+  const restriction = getClassProgressionRestriction(character, nextProgression)
+  if (restriction) throw new RangeError(restriction)
   const removedEntries = previousProgression.filter(
     (old) =>
       !nextProgression.some((entry) => entry.name === old.name && entry.source === old.source),
@@ -656,6 +666,7 @@ export function applyClassProgressionUpdate(
     optionalClassFeatureAdoptions: retainEarnedOptionalClassAdoptions(character, nextProgression),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
+    hitPointLevelOverrides: retainHitPointLevelOverrides(character, nextProgression),
     feats: workingCharacter.feats,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
@@ -845,11 +856,12 @@ export function applyLevelUp(
   }
 }
 
-/** Remove the last earned level and clamp current HP after every grant has been reconciled. */
+/** Remove a class's highest level (or the last earned character level when no class is supplied). */
 export function applyLevelDown(
   character: Character,
   ledger: ProvenanceLedger,
   calculationContext: CharacterCalculationContext,
+  target?: Pick<CharacterClassEntry, 'name' | 'source'>,
 ): LevelDownResult {
   const progression = getCharacterClassEntries(character)
   if (getTotalCharacterLevel(character) <= 1 || progression.length === 0) {
@@ -866,9 +878,19 @@ export function applyLevelDown(
       ),
     )
   const fallback = progression[progression.length - 1]
-  const className = lastGain?.className ?? fallback.name
-  const classSource = lastGain?.classSource ?? fallback.source
-  const classLevel = lastGain?.classLevel ?? fallback.levels
+  const selected = target
+    ? progression.find((entry) => entry.name === target.name && entry.source === target.source)
+    : undefined
+  if (target && !selected) throw new RangeError('Could not find the class to level down.')
+  if (
+    selected?.levels === 1 &&
+    sameStartingReference(selected, character.initialClass ?? progression[0])
+  ) {
+    throw new RangeError('The starting class must keep its first level.')
+  }
+  const className = selected?.name ?? lastGain?.className ?? fallback.name
+  const classSource = selected?.source ?? lastGain?.classSource ?? fallback.source
+  const classLevel = selected?.levels ?? lastGain?.classLevel ?? fallback.levels
   const targetIndex = progression.findIndex(
     (entry) => entry.name === className && entry.source === classSource,
   )
@@ -910,15 +932,18 @@ export function applyLevelDown(
   }
 }
 
-/**
- * Apply a base class selection to a character.
- *
- * @param character - Active character
- * @param ledger - Current provenance ledger
- * @param className - Name of class to select
- * @param classSource - Source of the class
- * @returns { classEntity, characterPatch, provenanceUpdate } - Apply both atomically
- */
+function retainHitPointLevelOverrides(character: Character, progression: CharacterClassEntry[]) {
+  return character.hitPointLevelOverrides?.filter((override) =>
+    progression.some(
+      (entry) =>
+        entry.name === override.className &&
+        entry.source === override.classSource &&
+        entry.levels >= override.classLevel,
+    ),
+  )
+}
+
+/** Apply a base class selection and its grants atomically. */
 export function selectBaseClass(
   character: Character,
   ledger: ProvenanceLedger,
@@ -982,6 +1007,7 @@ export function selectBaseClass(
   const characterPatch: Partial<Character> = {
     proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
+    hitPointLevelOverrides: retainHitPointLevelOverrides(character, updatedProgression),
     ...(equipment !== character.equipment && { equipment }),
     hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
     initialClass: { name: className, source: classSource },

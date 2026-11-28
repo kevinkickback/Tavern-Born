@@ -1,6 +1,7 @@
-import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
@@ -9,7 +10,7 @@ import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping20
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { SourceDerivedEffects } from '@/pages/adjustments/components/DerivedMechanicsOverview'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
@@ -23,7 +24,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-test('actual Actions hook, Review and three PDF mappings share fixed totals across catalog replacement', async () => {
+test('actual Actions hook, Overview and three PDF mappings share fixed totals across catalog replacement', async () => {
   const character = characterWithWeapons()
   character.allowedSources = ['DMG']
   const publish = (items: Item5e[]) => {
@@ -53,8 +54,8 @@ test('actual Actions hook, Review and three PDF mappings share fixed totals acro
   expect(mapCharacterSheet2024(pdf).textFields.Text_67).toBe('+6')
   expect(mapCharacterSheet2024(pdf).textFields.Text_73).toBe('1d4 + 4 Piercing')
   render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
-      <BuildReviewPage />
+    <MemoryRouter initialEntries={['/build/overview']}>
+      <BuildOverviewPage />
     </MemoryRouter>,
   )
   fireEvent.click(screen.getByText('Attacks & actions'))
@@ -68,7 +69,7 @@ test('actual Actions hook, Review and three PDF mappings share fixed totals acro
   expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
 })
 
-test('unsupported weapon note is visible in source effects and Review and warns in PDF preflight even unattuned', () => {
+test('unsupported weapon note is visible in source effects and Overview and warns in PDF preflight even unattuned', async () => {
   const data: Item5e = { ...venom, name: 'Hazirawn', source: 'HotDQ', reqAttune: true }
   const character = characterWithWeapons([data])
   character.allowedSources = ['HotDQ']
@@ -96,13 +97,18 @@ test('unsupported weapon note is visible in source effects and Review and warns 
   ).toBeTruthy()
   cleanup()
   render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
-      <BuildReviewPage />
+    <MemoryRouter initialEntries={['/build/overview']}>
+      <RulesPreviewManager>
+        <BuildOverviewPage />
+      </RulesPreviewManager>
     </MemoryRouter>,
   )
   fireEvent.click(screen.getByText('Traits & features'))
+  const conditional = within(screen.getByText('Conditional notes').closest('section')!)
+  fireEvent.click(conditional.getByRole('button', { name: /Hazirawn/i }))
+  const preview = within(await screen.findByRole('dialog', { name: /Hazirawn.*preview/i }))
   expect(
-    screen.getByText('Its +1 unattuned and +2 attuned bonuses need manual handling.'),
+    preview.getByText('Its +1 unattuned and +2 attuned bonuses need manual handling.'),
   ).toBeTruthy()
   const pdf = createCurrentCharacterSheetViewModel(character, gameData.lookups!)
   expect(pdf.weaponRows[0]).toMatchObject({ attackBonus: '+5', damage: '1d4 + 3' })

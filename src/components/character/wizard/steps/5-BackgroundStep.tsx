@@ -1,21 +1,32 @@
 import { MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
+import { BackgroundAbilityBonusPanel } from '@/components/character/AbilityBonusPanels'
 import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
 import { extractProficiencyBlockNames } from '@/lib/5etools/proficiencyBlockNames'
 import { formatBackgroundAbilityPatterns } from '@/lib/calculations/abilityScoreDisplay'
-import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
+import {
+  type BackgroundAbilityData,
+  getBackgroundAbilityData,
+  isBackgroundAbilitySelectionComplete,
+} from '@/lib/calculations/abilityScores'
+import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
-import { CreatorEntityDetails, DetailSection } from '../../DetailCards'
+import { DetailSection } from '../../DetailCards'
+import {
+  CreatorOriginChoiceDetails,
+  type CreatorOriginChoiceProps,
+} from '../CreatorOriginChoiceDetails'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
 
-interface BackgroundStepProps extends StepProps {
+interface BackgroundStepProps extends StepProps, CreatorOriginChoiceProps {
+  backgroundAbilityData?: BackgroundAbilityData
   backgrounds: Background5e[]
   recursiveLookup: RecursiveLookup
 }
@@ -41,6 +52,8 @@ export function BackgroundStep({
   onChange,
   backgrounds,
   recursiveLookup,
+  backgroundAbilityData,
+  ...choiceProps
 }: BackgroundStepProps) {
   const [search, setSearch] = useState('')
   const filteredBackgrounds = backgrounds
@@ -111,6 +124,31 @@ export function BackgroundStep({
   )
   const originFeats = parseFeatGrantBlocks(originBackground?.feats)
 
+  const { blockIndex = 0, choices = [] } = data.backgroundAsi ?? {}
+  const block = backgroundAbilityData?.blocks[blockIndex]
+  const fixed = isFixedBackgroundAbilityBlock(block)
+  const hasAbilityChoice =
+    !!backgroundAbilityData && !!block && (!fixed || backgroundAbilityData.blocks.length > 1)
+  const abilitiesPending = !!(
+    hasAbilityChoice &&
+    !fixed &&
+    !isBackgroundAbilitySelectionComplete(backgroundAbilityData, blockIndex, choices)
+  )
+  const abilityChoices = hasAbilityChoice && (
+    <BackgroundAbilityBonusPanel
+      data={backgroundAbilityData}
+      block={block}
+      blockIndex={blockIndex}
+      choices={choices}
+      fixedAssignment={fixed}
+      markUnfilled
+      onChoicesChange={(index, picks) =>
+        onChange({ backgroundAsi: { blockIndex: index, choices: picks } })
+      }
+      onClear={() => onChange({ backgroundAsi: undefined })}
+    />
+  )
+
   return (
     <div className="grid min-w-0 gap-5 md:min-h-0 md:flex-1 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
       <div className="flex h-44 min-h-0 min-w-0 flex-col md:h-auto">
@@ -180,116 +218,121 @@ export function BackgroundStep({
         </div>
       </div>
 
-      <CreatorEntityDetails
+      <CreatorOriginChoiceDetails
+        key={JSON.stringify([selectedBackground?.name, selectedBackground?.source])}
+        kind="Background"
         entity={selectedBackground}
-        placeholder="Select a background to view details"
-      >
-        {selectedBackground && (
-          <>
-            <div className="max-w-[72ch] space-y-1.5">
-              {summary ? (
-                <GameContent
-                  entry={summary}
-                  recursiveLookup={recursiveLookup}
-                  className="text-sm text-muted-foreground leading-relaxed"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  No description available.
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
-              <DetailSection label="Skill Proficiencies" empty={skillProficiencies === 'None'}>
-                {skillProficiencies}
-              </DetailSection>
-              <DetailSection
-                label="Language Proficiencies"
-                empty={languageProficiencies === 'None'}
-              >
-                {languageProficiencies}
-              </DetailSection>
-              <DetailSection label="Tool Proficiencies" empty={toolProficiencies === 'None'}>
-                {toolProficiencies}
-              </DetailSection>
-            </div>
-
-            {(abilityPatterns.length > 0 || originFeats.length > 0) && (
-              <div className="space-y-3">
-                {abilityPatterns.length > 0 && (
-                  <section className="space-y-1.5">
-                    <h4 className="text-sm font-semibold">Ability Score Bonuses</h4>
-                    <p className="border-l-2 border-border bg-workspace-pane px-3 py-2 text-sm text-muted-foreground">
-                      {abilityPatterns.join(' or ')}
-                    </p>
-                  </section>
-                )}
-                {originFeats.length > 0 && (
-                  <section className="space-y-1.5">
-                    <h4 className="text-sm font-semibold">Origin Feat</h4>
-                    <ul className="divide-y divide-border border-y border-border text-sm [&>li]:py-2">
-                      {originFeats.map((feat, index) => (
-                        <li key={JSON.stringify([feat, index])}>
-                          {feat.type === 'fixed' ? (
-                            <GameContent
-                              entry={`{@feat ${feat.name}|${feat.source}${feat.variant ? `|${feat.name} (${feat.variant})` : ''}}`}
-                              recursiveLookup={recursiveLookup}
-                            />
-                          ) : (
-                            'Choose in the Builder'
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-              </div>
-            )}
-
-            {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
-              <div className="space-y-2 border-t border-border pt-4">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground">
-                    Details
-                  </span>
-                </div>
-                {featureEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No background feature details available.
-                  </p>
+        {...choiceProps}
+        abilitiesPending={abilitiesPending}
+        abilityChoices={abilityChoices}
+        description={
+          selectedBackground && (
+            <>
+              <div className="max-w-[72ch] space-y-1.5">
+                {summary ? (
+                  <GameContent
+                    entry={summary}
+                    recursiveLookup={recursiveLookup}
+                    className="text-sm text-muted-foreground leading-relaxed"
+                  />
                 ) : (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">
-                      Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
-                    </h4>
-                    {(() => {
-                      const entries = featureEntries
-                      const collisionCounts = new Map<string, number>()
-
-                      return entries.map((entry) => {
-                        const baseKey = getEntryBaseKey(entry)
-                        const seen = collisionCounts.get(baseKey) ?? 0
-                        collisionCounts.set(baseKey, seen + 1)
-                        const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
-
-                        return (
-                          <GameContent
-                            key={key}
-                            entry={entry}
-                            recursiveLookup={recursiveLookup}
-                            className="text-sm leading-relaxed"
-                          />
-                        )
-                      })
-                    })()}
-                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    No description available.
+                  </p>
                 )}
               </div>
-            )}
-          </>
-        )}
-      </CreatorEntityDetails>
+
+              <div className="grid grid-cols-1 border-y border-border @sm:grid-cols-3 @sm:divide-x @sm:divide-border">
+                <DetailSection label="Skill Proficiencies" empty={skillProficiencies === 'None'}>
+                  {skillProficiencies}
+                </DetailSection>
+                <DetailSection
+                  label="Language Proficiencies"
+                  empty={languageProficiencies === 'None'}
+                >
+                  {languageProficiencies}
+                </DetailSection>
+                <DetailSection label="Tool Proficiencies" empty={toolProficiencies === 'None'}>
+                  {toolProficiencies}
+                </DetailSection>
+              </div>
+
+              {(abilityPatterns.length > 0 || originFeats.length > 0) && (
+                <div className="space-y-3">
+                  {abilityPatterns.length > 0 && (
+                    <section className="space-y-1.5">
+                      <h4 className="text-sm font-semibold">Ability Score Bonuses</h4>
+                      <p className="border-l-2 border-border bg-workspace-pane px-3 py-2 text-sm text-muted-foreground">
+                        {abilityPatterns.join(' or ')}
+                      </p>
+                    </section>
+                  )}
+                  {originFeats.length > 0 && (
+                    <section className="space-y-1.5">
+                      <h4 className="text-sm font-semibold">Origin Feat</h4>
+                      <ul className="divide-y divide-border border-y border-border text-sm [&>li]:py-2">
+                        {originFeats.map((feat, index) => (
+                          <li key={JSON.stringify([feat, index])}>
+                            {feat.type === 'fixed' ? (
+                              <GameContent
+                                entry={`{@feat ${feat.name}|${feat.source}${feat.variant ? `|${feat.name} (${feat.variant})` : ''}}`}
+                                recursiveLookup={recursiveLookup}
+                              />
+                            ) : (
+                              'Choose on the Choices tab'
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {(selectedBackground.edition !== 'one' || featureEntries.length > 0) && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
+                      Details
+                    </span>
+                  </div>
+                  {featureEntries.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No background feature details available.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold">
+                        Feature: {backgroundFeature?.name ?? 'Unnamed Feature'}
+                      </h4>
+                      {(() => {
+                        const entries = featureEntries
+                        const collisionCounts = new Map<string, number>()
+
+                        return entries.map((entry) => {
+                          const baseKey = getEntryBaseKey(entry)
+                          const seen = collisionCounts.get(baseKey) ?? 0
+                          collisionCounts.set(baseKey, seen + 1)
+                          const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
+
+                          return (
+                            <GameContent
+                              key={key}
+                              entry={entry}
+                              recursiveLookup={recursiveLookup}
+                              className="text-sm leading-relaxed"
+                            />
+                          )
+                        })
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )
+        }
+      />
     </div>
   )
 }

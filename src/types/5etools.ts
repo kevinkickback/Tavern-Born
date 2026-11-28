@@ -34,6 +34,7 @@ export interface Race5e {
   conditionImmune?: string[]
   traitTags?: string[]
   subraces?: Race5e[]
+  overwrite?: { ability?: boolean; skillProficiencies?: boolean }
   /** Complete copy-engine version, presented as a nested lineage selection. */
   _isVersion?: boolean
   [key: string]: unknown

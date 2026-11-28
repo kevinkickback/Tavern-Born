@@ -70,6 +70,16 @@ function is2024OriginLanguageTag(tag: { sourceType?: string; sourceName?: string
   return tag.sourceType === 'manual' && tag.sourceName === ORIGIN_2024_LANGUAGE_SOURCE
 }
 
+export function is2024OriginLanguageChoice(
+  choice: Pick<ChoiceRecord, 'id' | 'domain' | 'sourceTag'>,
+) {
+  return (
+    choice.id === ORIGIN_2024_LANGUAGE_CHOICE_ID &&
+    choice.domain === 'languages' &&
+    is2024OriginLanguageTag(choice.sourceTag)
+  )
+}
+
 export function count2024OriginLanguageChoiceUnits(
   choices: Array<{
     domain: string

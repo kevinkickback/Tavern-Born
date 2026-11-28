@@ -1,17 +1,126 @@
 import { describe, expect, test } from 'vitest'
+import { getCreatorChoiceGroups } from '@/components/character/wizard/creatorChoiceGroups'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import { resolveFeatChoiceCommand } from '@/lib/character/commands/featCommands'
 import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
 import { makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
-import type { Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const resolveNoChoices = () => []
 
 describe('race commands', () => {
+  test('a child skill overwrite replaces the parent choice and leaves its other grants intact', () => {
+    const [parent] = parseRaces({
+      race: [
+        {
+          name: 'Half-Elf',
+          source: 'PHB',
+          skillProficiencies: [{ any: 2, perception: true }],
+          languageProficiencies: [{ anyStandard: 1 }],
+          subraces: [
+            {
+              name: 'Drow Descent',
+              source: 'SCAG',
+              skillProficiencies: [{ any: 2 }],
+              overwrite: { skillProficiencies: true },
+            },
+          ],
+        },
+      ],
+    }) as Race5e[]
+    const child = parent.subraces?.[0]
+    expect(child).toBeDefined()
+    const empty = makeCharacterFixture({ race: '', raceSource: '', originSystem: '2014' })
+    const newSelection = applyRaceSelectionCommand(
+      empty,
+      empty.provenance,
+      parent,
+      child,
+      0,
+      resolveNoChoices,
+    )
+    const starting = applyCharacterCommandResult(
+      empty,
+      applyRaceSelectionCommand(empty, empty.provenance, parent, undefined, 0, resolveNoChoices),
+    )
+    const changed = applyCharacterCommandResult(
+      starting,
+      applySubraceSelectionCommand(starting, starting.provenance, parent, child, resolveNoChoices),
+    )
+    for (const ledger of [newSelection.provenanceUpdate, changed.provenance]) {
+      expect(ledger.choices.filter((choice) => choice.domain === 'skills')).toEqual([
+        expect.objectContaining({
+          chooseCount: 2,
+          sourceTag: expect.objectContaining({ sourceType: 'subrace' }),
+        }),
+      ])
+      expect(ledger.proficiencies.skills.perception).toBeUndefined()
+      expect(ledger.choices.filter((choice) => choice.domain === 'languages')).toHaveLength(1)
+    }
+    expect(changed.proficiencies.skills).not.toContain('perception')
+    const restored = applySubraceSelectionCommand(
+      changed,
+      changed.provenance,
+      parent,
+      undefined,
+      resolveNoChoices,
+    )
+    expect(restored.characterPatch.proficiencies?.skills).toContain('perception')
+    expect(
+      restored.provenanceUpdate.choices.filter((choice) => choice.domain === 'skills'),
+    ).toEqual([
+      expect.objectContaining({
+        chooseCount: 2,
+        sourceTag: expect.objectContaining({ sourceType: 'race' }),
+      }),
+    ])
+  })
+
+  test('a racial feat requires setup only when the current catalog can fulfill it', () => {
+    const empty = makeCharacterFixture({ race: '', raceSource: '', originSystem: '2014' })
+    const race: Race5e = { name: 'Custom Lineage', source: 'TCE', feats: [{ any: 1 }] }
+    const feat: Feat5e = {
+      name: 'Linguist',
+      source: 'PHB',
+      languageProficiencies: [{ any: 3 }],
+    }
+    const character = applyCharacterCommandResult(
+      empty,
+      applyRaceSelectionCommand(empty, empty.provenance, race, undefined, 0, resolveNoChoices),
+    )
+    const [choice] = character.provenance.choices.filter(({ domain }) => domain === 'feats')
+    const selected = applyCharacterCommandResult(
+      character,
+      resolveFeatChoiceCommand(character, character.provenance, choice.id, feat),
+    )
+    const catalog = {
+      feats: [feat],
+      items: [],
+      itemsBase: [],
+      languages: [{ name: 'Common' }],
+      optionalfeatures: [],
+      spells: [],
+    }
+    expect(getCreatorChoiceGroups(character, catalog, 'race').hasPending).toBe(true)
+    expect(getCreatorChoiceGroups(selected, catalog, 'race').hasPending).toBe(false)
+    expect(
+      getCreatorChoiceGroups(
+        selected,
+        {
+          ...catalog,
+          languages: ['Common', 'Dwarvish', 'Elvish', 'Halfling'].map((name) => ({ name })),
+        },
+        'race',
+      ).pendingChoices.has(choice.id),
+    ).toBe(true)
+  })
+
   test('version selection replaces parent mechanics atomically and returning to the base restores them once', () => {
     const race = (
       parseRaces({

@@ -1,8 +1,15 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { synchronizeCreatorRaceChoices } from '@/lib/character/commands/creatorRaceChoices'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
+import {
+  commitFeatOptionsCommand,
+  resolveFeatChoiceCommand,
+} from '@/lib/character/commands/featCommands'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 
 const RACE: Race5e = { name: 'Human', source: 'XPHB' }
@@ -16,6 +23,63 @@ const BACKGROUND: Background5e = {
 const resolveRaceChoiceOptions = () => []
 
 describe('buildInitialCharacter', () => {
+  test('validates a new racial Skilled selection against choices already made elsewhere', () => {
+    const race: Race5e = { name: 'Human', source: 'PHB', feats: [{ any: 1 }] }
+    const initial = { name: 'Creator draft', originSystem: '2014' as const }
+    const before = buildInitialCharacter({ initial, race }, new Map(), resolveRaceChoiceOptions)
+    const complete = buildInitialCharacter(
+      {
+        initial,
+        race,
+        raceDraft: before,
+        background: { name: 'Acolyte', source: 'PHB', skillProficiencies: [{ perception: true }] },
+      },
+      new Map(),
+      resolveRaceChoiceOptions,
+    )
+    const choice = before.provenance.choices.find(({ domain }) => domain === 'feats')!
+    const feats = JSON.parse(
+      readFileSync('tests/fixtures/skilledFeatSources.json', 'utf8'),
+    ) as Feat5e[]
+    const skilled = feats.find(({ name, source }) => name === 'Skilled' && source === 'PHB')!
+    const pick = applyCharacterCommandResult(
+      before,
+      resolveFeatChoiceCommand(before, before.provenance, choice.id, skilled),
+    )
+    const prepare = (skill: string) => {
+      const edited = applyCharacterCommandResult(
+        pick,
+        commitFeatOptionsCommand(
+          pick,
+          pick.provenance,
+          { ...skilled, provenanceChoiceId: choice.id },
+          { skills: [skill] },
+        ),
+      )
+      return synchronizeCreatorRaceChoices(
+        complete,
+        edited,
+        before,
+        { parentRace: race, subraceData: undefined, mergedRace: race, subraceIsNested: false },
+        {
+          feats,
+          spells: [],
+          lookups: {},
+          toolPools: {
+            tool: [],
+            "artisan's tools": [],
+            'musical instrument': [],
+            'gaming set': [],
+          },
+          effectiveCharacter: (character) => character,
+        },
+      )
+    }
+    expect(() => prepare('perception')).toThrow(/options conflict/)
+    expect(complete.proficiencies.skills).toEqual(['perception'])
+    expect(prepare('insight').proficiencies.skills).toEqual(['perception', 'insight'])
+  })
+
   test('applying race, class, and background together does not throw', () => {
     expect(() =>
       buildInitialCharacter(

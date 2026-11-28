@@ -83,7 +83,10 @@ const buildFiles = (overrides: Partial<Record<string, number>> = {}) => [
     path: 'assets/vendor-build.js',
     size: overrides.largestLazyScript ?? BUNDLE_BUDGETS.largestLazyScript,
   },
-  { path: 'assets/pdf.worker-build.mjs', size: overrides.pdfWorker ?? BUNDLE_BUDGETS.pdfWorker },
+  {
+    path: 'assets/pdf.worker.min-build.mjs',
+    size: overrides.pdfWorker ?? BUNDLE_BUDGETS.pdfWorker,
+  },
   { path: 'assets/images/logo.png', size: overrides.staticAsset ?? 1_000 },
 ]
 

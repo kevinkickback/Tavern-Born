@@ -44,6 +44,7 @@ function getSpellSelectionContext(
   return {
     subraceIsNested: resolved.subraceData ? resolved.subraceIsNested : undefined,
     previousSubrace: previous.subraceData,
+    previousSubraceIsNested: previous.subraceIsNested,
   }
 }
 

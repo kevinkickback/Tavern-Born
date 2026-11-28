@@ -334,7 +334,11 @@ test('opens the wizard and a saved Builder character during catalog refresh', as
     await page.getByRole('button', { name: 'Builder' }).click()
     await expect(page.getByRole('complementary', { name: 'Builder navigation' })).toBeVisible()
     const builderMs = performance.now() - builderStarted
-    await expect(page.getByRole('banner').getByText(characterName, { exact: true })).toBeVisible()
+    await expect(
+      page
+        .getByRole('region', { name: 'Character overview' })
+        .getByRole('heading', { name: characterName, exact: true }),
+    ).toBeVisible()
     await expect(status).toHaveText('Checking for game data updates')
     await page.evaluate(() => {
       let previous = performance.now()

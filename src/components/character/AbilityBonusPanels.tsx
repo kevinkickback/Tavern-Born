@@ -12,11 +12,14 @@ import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
   type BackgroundAbilityData,
+  hasUnresolvedRaceAbilityChoices,
+  isBackgroundAbilitySelectionComplete,
   type RaceAbilityData,
   type RaceLineageAsiBlockIndex,
 } from '@/lib/calculations/abilityScores'
 import { updateRaceAsiChoices } from '@/lib/calculations/originAbilityChoices'
 import { cn } from '@/lib/utils'
+import { CreatorChoiceComplete, CreatorChoicePill } from './RaceChoiceRow'
 
 interface PanelFocus {
   sectionRef?: Ref<HTMLElement>
@@ -31,12 +34,14 @@ function BonusPanel({
   testId,
   sectionRef,
   highlighted,
+  complete,
 }: PanelFocus & {
   title: string
   description?: string
   controls?: ReactNode
   children: ReactNode
   testId: string
+  complete?: boolean
 }) {
   return (
     <section
@@ -49,7 +54,10 @@ function BonusPanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            {complete && <CreatorChoiceComplete />}
+          </div>
           {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
         </div>
         {controls}
@@ -106,6 +114,8 @@ function BonusSelect({
   abilities,
   taken,
   disabled,
+  pending,
+  showPill,
   onChange,
 }: {
   label: string
@@ -114,31 +124,48 @@ function BonusSelect({
   abilities: AbilityName[]
   taken: Set<string>
   disabled?: boolean
+  pending?: boolean
+  showPill?: boolean
   onChange: (ability: string) => void
 }) {
+  const selectedName = abilities.find((ability) => ability === selected)
   return (
-    <div className="flex min-w-44 items-center gap-2 rounded-md border border-border bg-background/35 p-1 pl-3">
+    <div
+      data-race-choice-pending={pending || undefined}
+      className="flex min-w-44 items-center gap-2 rounded-md border border-border bg-background/35 p-1 pl-3"
+    >
       <span className="shrink-0 text-xs font-semibold text-muted-foreground">+{amount}</span>
-      <Select value={selected} disabled={disabled} onValueChange={onChange}>
-        <SelectTrigger
-          className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus:ring-0"
-          aria-label={label}
+      {showPill && selectedName && !disabled ? (
+        <CreatorChoicePill
+          remove={{
+            label: `Remove ${ABILITY_ABBREVIATIONS[selectedName]} from ${label}`,
+            onClick: () => onChange(''),
+          }}
         >
-          <SelectValue placeholder="Ability…" />
-        </SelectTrigger>
-        <SelectContent>
-          {abilities.map((ability) => (
-            <SelectItem
-              key={ability}
-              value={ability}
-              disabled={taken.has(ability)}
-              className="text-xs"
-            >
-              {ABILITY_ABBREVIATIONS[ability]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          {ABILITY_ABBREVIATIONS[selectedName]}
+        </CreatorChoicePill>
+      ) : (
+        <Select value={selected} disabled={disabled} onValueChange={onChange}>
+          <SelectTrigger
+            className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus:ring-0"
+            aria-label={label}
+          >
+            <SelectValue placeholder="Ability…" />
+          </SelectTrigger>
+          <SelectContent>
+            {abilities.map((ability) => (
+              <SelectItem
+                key={ability}
+                value={ability}
+                disabled={taken.has(ability)}
+                className="text-xs"
+              >
+                {ABILITY_ABBREVIATIONS[ability]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   )
 }
@@ -154,6 +181,7 @@ export function RacialAbilityBonusPanel({
   distribution,
   onDistributionChange,
   onChoicesChange,
+  markUnfilled,
   ...focus
 }: PanelFocus & {
   data: RaceAbilityData
@@ -161,6 +189,7 @@ export function RacialAbilityBonusPanel({
   distribution: RaceLineageAsiBlockIndex
   onDistributionChange?: (value: RaceLineageAsiBlockIndex) => void
   onChoicesChange: (next: string[][]) => void
+  markUnfilled?: boolean
 }) {
   if (fixed.length === 0 && choices.length === 0) return null
 
@@ -168,6 +197,7 @@ export function RacialAbilityBonusPanel({
     <BonusPanel
       title="Racial bonuses"
       testId="race-ability-choices"
+      complete={markUnfilled && !hasUnresolvedRaceAbilityChoices({ fixed, choices }, selections)}
       {...focus}
       controls={
         onDistributionChange && (
@@ -204,6 +234,8 @@ export function RacialAbilityBonusPanel({
               label={`Racial ability bonus +${block.amount}, group ${blockIndex + 1}, choice ${slotIndex + 1}`}
               amount={block.amount}
               selected={selections[blockIndex]?.[slotIndex] ?? ''}
+              pending={markUnfilled && !selections[blockIndex]?.[slotIndex]}
+              showPill={markUnfilled}
               abilities={block.from}
               taken={taken}
               onChange={(ability) =>
@@ -225,6 +257,7 @@ export function BackgroundAbilityBonusPanel({
   fixedAssignment,
   onChoicesChange,
   onClear,
+  markUnfilled,
   ...focus
 }: PanelFocus & {
   data: BackgroundAbilityData
@@ -234,6 +267,7 @@ export function BackgroundAbilityBonusPanel({
   fixedAssignment?: boolean
   onChoicesChange: (index: number, choices: string[]) => void
   onClear?: () => void
+  markUnfilled?: boolean
 }) {
   const canClear = !fixedAssignment && choices.some(Boolean) && onClear
   if (data.blocks.length === 0 && !canClear) return null
@@ -247,6 +281,10 @@ export function BackgroundAbilityBonusPanel({
           : 'These bonuses are no longer available with the current source data.'
       }
       testId="background-ability-choices"
+      complete={
+        markUnfilled &&
+        (!!fixedAssignment || isBackgroundAbilitySelectionComplete(data, blockIndex, choices))
+      }
       {...focus}
       controls={
         <div className="flex flex-wrap items-center gap-2">
@@ -276,6 +314,8 @@ export function BackgroundAbilityBonusPanel({
           label={`Background ability bonus +${amount}${block.weights.filter((weight) => weight === amount).length > 1 ? `, choice ${slotIndex + 1}` : ''}`}
           amount={amount}
           selected={choices[slotIndex] ?? ''}
+          pending={markUnfilled && !choices[slotIndex]}
+          showPill={markUnfilled}
           abilities={block.from}
           taken={new Set(choices.filter((_, index) => index !== slotIndex))}
           disabled={fixedAssignment}

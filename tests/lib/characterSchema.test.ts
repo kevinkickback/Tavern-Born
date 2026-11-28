@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, expectTypeOf, test } from 'vitest'
+import { getEffectiveCharacterMovement } from '@/lib/calculations/movement'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Race5e } from '@/types/5etools'
@@ -178,11 +179,15 @@ describe('characterPersistenceSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  test('round-trips structured movement, adjustments, and overrides', () => {
+  test.each([
+    true,
+    false,
+  ])('keeps structured movement and discards a retired hover override of %s', (retiredOverride) => {
+    const baseHover = !retiredOverride
     const character = makeCharacterFixture({
       movement: {
-        speeds: { walk: 25, swim: 30 },
-        hover: false,
+        speeds: { walk: 25, swim: 30, fly: 30 },
+        hover: baseHover,
         other: { phase: 10, glide: true },
         source: { kind: 'race', name: 'River Dwarf', source: 'HB' },
       },
@@ -196,18 +201,20 @@ describe('characterPersistenceSchema', () => {
           createdAt: '2026-01-01T00:00:00.000Z',
         },
       ],
-      movementOverrides: { fly: 40 },
-      movementHoverOverride: true,
+      movementOverrides: { fly: 40, phase: 15 },
     })
 
     const result = characterPersistenceSchema.parse(
-      JSON.parse(JSON.stringify(character)) as unknown,
+      JSON.parse(
+        JSON.stringify({ ...character, movementHoverOverride: retiredOverride }),
+      ) as unknown,
     )
 
     expect(result.movement).toEqual(character.movement)
     expect(result.movementAdjustments).toEqual(character.movementAdjustments)
-    expect(result.movementOverrides).toEqual({ fly: 40 })
-    expect(result.movementHoverOverride).toBe(true)
+    expect(result.movementOverrides).toEqual({ fly: 40, phase: 15 })
+    expect(result).not.toHaveProperty('movementHoverOverride')
+    expect(getEffectiveCharacterMovement(result).hover).toBe(baseHover)
   })
 
   test('round-trips source-qualified class choice selections and slot ownership', () => {

@@ -63,7 +63,7 @@ import {
 import {
   getAutomaticToolFallback,
   getHistoricalProficiencyRule,
-  resolveHistoricalProficiencyChoice,
+  resolveAvailableHistoricalChoices,
 } from '@/lib/character/historicalProficiencyChoices'
 import {
   getMysticDisciplinesKnownBeforeAcquisition,
@@ -78,7 +78,7 @@ import { getOptionalClassPoolSelectionSection } from '@/lib/character/optionalCl
 import { createOptionalClassFeatureActivity } from '@/lib/character/optionalClassFeatureActivity'
 import { getOptionalPoolSelectionHandle } from '@/lib/character/optionalClassPoolSelections'
 import { getSubclassConfigurations } from '@/lib/character/subclassConfigurations'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e, Subclass5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry, FavoredEnemySetup } from '@/types/character'
@@ -124,6 +124,7 @@ export function useClassChoiceController({
   configurationPaused = false,
   races,
 }: ClassChoiceControllerParams) {
+  const editingStore = useCharacterEditingStore()
   const sourceData = useGameDataStore((state) => state.gameData)
   const character = useMemo(
     () =>
@@ -181,15 +182,16 @@ export function useClassChoiceController({
   )
   const choices = useMemo(
     () =>
-      viewingClassData && activity
-        ? getCharacterClassChoices(viewingClassData, viewingSubclassData, activity, catalogs)
-            .filter((choice) => choice.level <= viewingClassLevel)
-            .map((choice) =>
-              character ? resolveHistoricalProficiencyChoice(character, choice) : choice,
-            )
-            .filter(
-              (choice) => !getAutomaticToolFallback(choice.id) || choice.maximumSelections > 0,
-            )
+      viewingClassData && activity && character
+        ? resolveAvailableHistoricalChoices(
+            character,
+            getCharacterClassChoices(
+              viewingClassData,
+              viewingSubclassData,
+              activity,
+              catalogs,
+            ).filter((choice) => choice.level <= viewingClassLevel),
+          )
         : [],
     [
       activity,
@@ -765,7 +767,7 @@ export function useClassChoiceController({
         feat &&
         hasFeatOptions(feat) &&
         !hasClassFeatSpellSetup(
-          useCharacterStore.getState().activeCharacter,
+          editingStore.getState().activeCharacter,
           current.id,
           feat.name,
           feat.source,
@@ -784,7 +786,7 @@ export function useClassChoiceController({
     configurations,
     configureSubclass: (subclass: Subclass5e) => {
       if (!viewingClassData || !character) return
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (
         !hasCurrentCharacterSourceContext(
           latest,
@@ -847,7 +849,31 @@ export function useClassChoiceController({
           )
         : [],
     selectionByChoiceId,
+    optionViewsByChoiceId,
     selectedViewsByChoiceId,
+    removeOption: (choice: NormalizedCharacterChoice, optionKey: string, gain?: number) => {
+      const saved = savedCharacter?.classChoiceSelections?.find((row) => row.choiceId === choice.id)
+      if (!saved) return
+      const selections =
+        gain === undefined
+          ? saved.selected
+          : saved.selected.filter(
+              (option) =>
+                getProgressiveChoiceReviewLevel(choice, option.slotLevel, viewingClassLevel) ===
+                gain,
+            )
+      const remaining = selections.filter((option) => getClassChoiceOptionKey(option) !== optionKey)
+      if (selections.length - remaining.length !== 1) return
+      const expected = getOptionalPoolSelectionHandle(saved)
+      try {
+        const latest = editingStore.getState().activeCharacter
+        if (getOptionalPoolSelectionHandleForChoice(choice.id, latest) !== expected)
+          throw new RangeError('The saved choice changed. Review it before confirming.')
+        applyClassChoiceSelection(choice, remaining, undefined, expected, gain)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not remove this choice.')
+      }
+    },
     activeChoice: activeDisplayChoice,
     activeGainLevel,
     activeRemovalOnly,

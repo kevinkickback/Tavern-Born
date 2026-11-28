@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, Check, MagicWand } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import { useStore } from 'zustand'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -43,7 +44,7 @@ import { formatProficiencyLabel } from '@/lib/displayLabels'
 import { SELECTED_FEAT_ABILITY_BONUS } from '@/lib/featGrants'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
@@ -592,7 +593,8 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const editingStore = useCharacterEditingStore()
+  const activeCharacter = useStore(editingStore, (state) => state.activeCharacter)
   const calculation = useCharacterCalculationContext(activeCharacter)
   const ownedExpertise = isKnownFeatExpertiseTarget(feat)
   const { spells, optionalfeatures, languages, feats } = useFilteredGameData()

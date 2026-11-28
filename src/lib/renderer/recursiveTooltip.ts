@@ -605,9 +605,14 @@ export function getRecursiveTooltipData(
   }
 }
 
-function getItemPreviewEntries(item: Item5e, lookup: RecursiveLookup): unknown[] {
+export function getItemPreviewEntries(
+  item: Item5e,
+  lookup: RecursiveLookup,
+  savedDescription?: string,
+): unknown[] {
   const fields = buildCatalogItemDetailFields(item, lookup.itemPropertyByAbbr ?? {})
   const entries = getItemRulesEntries(item, lookup.itemTextContext)
+  if (!entries.length && savedDescription) entries.push(savedDescription)
   const group = getItemGroupPreviewEntry(item, lookup)
   if (group) entries.push(group)
   return [

@@ -8,6 +8,7 @@ import { parseRaces } from '@/lib/5etools/parsers/races'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { BuildRacePage } from '@/pages/build/race/RacePage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -292,12 +293,67 @@ describe('Race page summary', () => {
       '/build/ability-scores?focus=race-bonuses',
     )
 
-    const speedValue = screen.getByText(/^walk 30 ft/i)
+    const speedValue = screen.getByText('30 ft.', { exact: true })
     const speedCell = speedValue.closest('div.flex.min-h-16')
-    expect(speedCell?.textContent).toContain('Edit movement')
-    expect(screen.getByRole('button', { name: 'Edit movement' }).className).toContain(
-      'border-accent',
+    expect(speedCell?.textContent).toContain('Speed')
+    expect(screen.queryByRole('button', { name: /(?:edit|manage) movement/i })).toBeNull()
+  })
+
+  test('shows racial speeds without the character’s movement adjustments', () => {
+    const race = makeRaceFixture({
+      name: 'Aarakocra',
+      source: 'TEST',
+      speed: { walk: 25, fly: 50 },
+    })
+    const character = buildInitialCharacter(
+      {
+        initial: makeCharacterFixture({
+          originSystem: '2014',
+          allowedSources: ['TEST'],
+          movementAdjustments: [
+            {
+              id: 'swim-bonus',
+              label: 'Training',
+              mode: 'swim',
+              amount: 50,
+              sourceType: 'manual',
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          movementOverrides: { fly: 70 },
+        }),
+        race,
+      },
+      new Map(),
+      () => [],
     )
+    const gameData = makeGameDataFixture({ races: [race] })
+    useGameDataStore.setState({ gameData })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    expect(screen.getByText('25 ft., fly 50 ft.', { exact: true })).toBeTruthy()
+    expect(screen.queryByText(/swim 50 ft|fly 70 ft/i)).toBeNull()
+
+    rerender(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildOverviewPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    expect(screen.getByTestId('overview-movement-swim').textContent).toBe('Swim 50 ft.')
+    expect(screen.getByTestId('overview-movement-fly').textContent).toBe('Fly 70 ft.')
   })
 
   test('hides bonus editing after a parsed race choice is complete', () => {

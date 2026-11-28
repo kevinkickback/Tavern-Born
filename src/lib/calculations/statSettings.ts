@@ -3,6 +3,7 @@ import type {
   ArmorClassAdjustment,
   Character,
   HitPointAdjustment,
+  HitPointLevelOverride,
   MovementAdjustment,
 } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -15,6 +16,7 @@ export interface HitPointSettings {
   temporary: number
   adjustments: HitPointAdjustment[]
   maxOverride?: number
+  levelOverrides?: HitPointLevelOverride[]
 }
 
 export interface ArmorClassSettings {
@@ -25,7 +27,6 @@ export interface ArmorClassSettings {
 export interface MovementSettings {
   adjustments: MovementAdjustment[]
   overrides: Record<string, number>
-  hoverOverride?: boolean
 }
 
 function normalizePositiveInteger(value: number | undefined): number | undefined {
@@ -84,7 +85,6 @@ export function getMovementSettingsPatch(settings: MovementSettings) {
   return {
     movementAdjustments: settings.adjustments,
     movementOverrides: settings.overrides,
-    movementHoverOverride: settings.hoverOverride,
   }
 }
 

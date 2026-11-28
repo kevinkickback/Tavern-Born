@@ -253,7 +253,7 @@ export function validateCharacterData(character: unknown): string | null {
   return null
 }
 
-function parseCharacterUpdate(character: Character, updates: Partial<Character>) {
+export function parseCharacterUpdate(character: Character, updates: Partial<Character>) {
   const next = { ...character, ...updates, lastModified: new Date().toISOString() }
   if (updates.asiChoices) next.provenance = applyAsiChoices(next.provenance, updates.asiChoices)
   return parseCharacterData(next)

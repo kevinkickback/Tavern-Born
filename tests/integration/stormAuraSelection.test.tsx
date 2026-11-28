@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -39,7 +39,7 @@ function mount(
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="/build/class" element={<BuildClassPage />} />
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route path="/build/overview" element={<BuildOverviewPage />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -66,10 +66,10 @@ async function confirm() {
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 }
 
-test('Review chooses a real Storm child through the shared modal and strict reopen', async () => {
+test('Overview chooses a real Storm child through the shared modal and strict reopen', async () => {
   const f = makeStormAuraFixture()
-  mount(f, f.character, '/build/review')
-  fireEvent.click(screen.getByText('Finish Storm Aura').closest('button')!)
+  mount(f, f.character, '/build/overview')
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Storm Aura/ }))
   await screen.findByRole('dialog')
   fireEvent.click(await row('Sea'))
   await confirm()
@@ -121,9 +121,9 @@ test('fully pruned source uses shared saved recovery and restores without changi
     doc.subclassFeature = doc.subclassFeature.filter((row) => row.name !== 'Storm Aura')
     doc.subclassFeature.find((row) => row.name === 'Path of the Storm Herald')!.entries = []
   })
-  mount(missing, saved, '/build/review')
+  mount(missing, saved, '/build/overview')
   const before = JSON.stringify(active())
-  fireEvent.click(screen.getByText('Restore or remove Storm Aura').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Restore or remove Storm Aura/ }))
   await screen.findByRole('dialog')
   expect(dialog().getByRole('heading', { name: 'Review saved Storm Aura' })).toBeTruthy()
   await confirm()
@@ -167,8 +167,8 @@ test.each([
           ...cls,
           subclasses: cls.subclasses?.filter((sub) => sub.shortName !== 'Storm Herald'),
         }))
-  mount(missing, saved, '/build/review')
-  fireEvent.click(screen.getByText('Restore or remove Storm Aura').closest('button')!)
+  mount(missing, saved, '/build/overview')
+  fireEvent.click(screen.getByRole('link', { name: /^Restore or remove Storm Aura/ }))
   await screen.findByRole('dialog')
   expect(dialog().getByRole('heading', { name: 'Review saved Storm Aura' })).toBeTruthy()
   const bytes = JSON.stringify(active())

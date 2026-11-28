@@ -1,5 +1,5 @@
 import { Plus, Shield, Trash } from '@phosphor-icons/react'
-import { useEffect, useId, useState } from 'react'
+import { type ReactElement, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import { NumericEffectBreakdown } from '@/components/effects/NumericEffectBreakdown'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,6 +25,7 @@ import type { ArmorClassAdjustment } from '@/types/character'
 interface ArmorClassModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  trigger?: ReactElement
 }
 
 const DIRECT_ARMOR_CLASS_ADJUSTMENT_ID = 'manual-direct-armor-class'
@@ -38,7 +40,7 @@ function formatSigned(value: number): string {
   return `${value >= 0 ? '+' : ''}${value}`
 }
 
-export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
+export function ArmorClassModal({ open, onOpenChange, trigger }: ArmorClassModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
   const {
     baseBreakdown,
@@ -182,6 +184,7 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-workspace-detail sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

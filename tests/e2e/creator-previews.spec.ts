@@ -86,6 +86,7 @@ const GAME_DATA: GameData = {
       source: 'PHB',
       size: ['M'],
       speed: 30,
+      ability: [{ con: 1 }],
       entries: [
         {
           type: 'entries',

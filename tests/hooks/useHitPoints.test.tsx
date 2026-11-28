@@ -52,8 +52,7 @@ describe('useHitPoints hook', () => {
 
     const { result } = renderHook(() => useHitPoints())
 
-    expect(result.current.conMod).toBe(2)
-    expect(result.current.levelsHPBreakdown).toEqual([0, 10, 7, 7, 7, 7, 6, 6, 6])
+    expect(result.current.getLevelLog().map(({ hp }) => hp)).toEqual([10, 7, 7, 7, 7, 6, 6, 6])
     expect(result.current.calculatedMaxHP).toBe(56)
     expect(result.current.effectiveMaxHP).toBe(56)
   })
@@ -91,7 +90,6 @@ describe('useHitPoints hook', () => {
     const { result } = renderHook(() => useHitPoints())
 
     expect(result.current.calculatedMaxHP).toBe(13)
-    expect(result.current.adjustmentTotal).toBe(3)
     expect(result.current.effectiveMaxHP).toBe(16)
   })
 

@@ -8,6 +8,7 @@ interface WizardFooterProps {
   onRevisit: (step: number) => void
   onNext: () => void
   isPending?: boolean
+  nextBlocked?: boolean
 }
 
 export function WizardFooter({
@@ -16,6 +17,7 @@ export function WizardFooter({
   onRevisit,
   onNext,
   isPending = false,
+  nextBlocked = false,
 }: WizardFooterProps) {
   const totalSteps = WIZARD_STEPS.length
   return (
@@ -47,8 +49,9 @@ export function WizardFooter({
         <Button
           size="sm"
           onClick={onNext}
-          className="min-w-16 sm:min-w-24"
+          className="min-w-16 aria-disabled:opacity-55 sm:min-w-24"
           disabled={isPending}
+          aria-disabled={nextBlocked || undefined}
           aria-busy={isPending}
         >
           {isPending ? 'Creating…' : currentStep === totalSteps ? 'Create' : 'Next'}

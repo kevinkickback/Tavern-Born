@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, GameData, Race5e } from '@/types/5etools'
@@ -42,8 +42,8 @@ async function overview(
   useGameDataStore.setState({ gameData: data })
   setActiveCharacter(characterPersistenceSchema.parse(character))
   render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
-      <BuildReviewPage />
+    <MemoryRouter initialEntries={['/build/overview']}>
+      <BuildOverviewPage />
     </MemoryRouter>,
   )
   await userEvent.setup().click(screen.getByText('Spells & spellcasting'))

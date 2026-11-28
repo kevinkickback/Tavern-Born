@@ -53,9 +53,9 @@ const BuildProficienciesPage = lazy(() =>
 const BuildRacePage = lazy(() =>
   import('@/pages/build/race/RacePage').then((module) => ({ default: module.BuildRacePage })),
 )
-const BuildReviewPage = lazy(() =>
-  import('@/pages/build/review/ReviewPage').then((module) => ({
-    default: module.BuildReviewPage,
+const BuildOverviewPage = lazy(() =>
+  import('@/pages/build/overview/OverviewPage').then((module) => ({
+    default: module.BuildOverviewPage,
   })),
 )
 const AdjustmentsPage = lazy(() =>
@@ -255,15 +255,16 @@ function App() {
           >
             <Routes>
               <Route element={<RequireActiveCharacter />}>
-                <Route path="/build" element={<Navigate to="/build/race" replace />} />
+                <Route path="/build" element={<Navigate to="/build/overview" replace />} />
+                <Route path="/build/review" element={<Navigate to="/build/overview" replace />} />
                 <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
                 <Route element={workspaceRoute}>
+                  <Route path="/build/overview" element={<BuildOverviewPage />} />
                   <Route path="/build/race" element={<BuildRacePage />} />
                   <Route path="/build/class" element={<BuildClassPage />} />
                   <Route path="/build/background" element={<BuildBackgroundPage />} />
                   <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
                   <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-                  <Route path="/build/review" element={<BuildReviewPage />} />
                   <Route path="/build/adjustments" element={<AdjustmentsPage />} />
                   <Route path="/feats" element={<FeatsPage />} />
                   <Route path="/spells" element={<SpellsPage />} />

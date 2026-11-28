@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
+import { composeGameDataLayers } from '@/lib/5etools/contentLayers'
 import { parseOptionalFeatures } from '@/lib/5etools/parsers/basic'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -7,22 +8,60 @@ import { makeBundledClassCastingLayer } from '../fixtures/classCastingFixtures'
 import { makeOptionalDeclarationLayer } from '../fixtures/optionalClassDeclarationFixtures'
 import { readPersistedCharacters, seedAppState, selectCharacterFromHome } from './helpers/startup'
 
+test('Classic level gains show Warlock invocations and the Rogue Sneak Attack unlock once', async ({
+  page,
+}) => {
+  const gameData = composeGameDataLayers([
+    makeBundledClassCastingLayer('class/class-warlock.json'),
+    makeBundledClassCastingLayer('class/class-rogue.json'),
+  ])
+  gameData.optionalfeatures = parseOptionalFeatures(
+    JSON.parse(readFileSync('resources/srd/data/optionalfeatures.json', 'utf8')),
+  )
+  const actor = makeCharacterFixture({
+    name: 'Classic Warlock',
+    allowedSources: ['PHB'],
+    classProgression: [{ name: 'Warlock', source: 'PHB', levels: 1 }],
+  })
+  await page.goto('/')
+  await seedAppState(page, { sourcePath: 'e2e-classic-level-gains', gameData, characters: [actor] })
+  await page.reload()
+  await selectCharacterFromHome(page, actor.name)
+  await page.getByRole('button', { name: 'Level up character' }).click()
+  const wizard = page.getByRole('dialog', { name: 'Level Up', exact: true })
+  const gains = wizard.getByRole('region', { name: 'Level gains' })
+  const invocations = gains.getByText('Invocations Known', { exact: true }).locator('..')
+  await expect(invocations.locator('dd')).toHaveText('0 → 2')
+  await expect(gains.getByText(/Eldritch Invocations/)).toHaveCount(0)
+  const multiclass = wizard.getByRole('tab', { name: 'Multiclass' })
+  const ignore = wizard.getByRole('switch', { name: 'Ignore requirements' })
+  await multiclass.click()
+  const [tabs, toggle] = await Promise.all([multiclass.boundingBox(), ignore.boundingBox()])
+  expect(toggle!.y - (tabs!.y + tabs!.height)).toBeGreaterThanOrEqual(10)
+  await ignore.click()
+  await wizard.getByRole('combobox').click()
+  await page.getByRole('option', { name: /^Rogue\s*\(PHB\)/ }).click()
+  await expect(gains.getByText(/Sneak Attack/)).toHaveCount(1)
+  await expect(
+    gains.getByText('Sneak Attack', { exact: true }).locator('..').locator('dd'),
+  ).toHaveText('1d6')
+})
+
 async function openLevel(page: Page, level: number) {
   const trigger = page.getByRole('button', { name: new RegExp(`^Level ${level},`) })
   if ((await trigger.getAttribute('data-state')) === 'closed') await trigger.click()
   return page.locator(`[id="${await trigger.getAttribute('aria-controls')}"]`)
 }
 
-async function levelUp(page: Page, level: number) {
-  const dialog = page.getByRole('dialog', { name: 'Level Up Character' })
-  await page
-    .getByRole('banner')
-    .getByRole('button', { name: 'Level up character', exact: true })
+async function levelUp(page: Page, level: number, className: 'Sorcerer' | 'Warlock') {
+  await page.getByRole('link', { name: /^Overview\b/ }).click()
+  const controls = page.getByRole('complementary', { name: 'Manual Adjustments' })
+  await controls
+    .getByRole('button', { name: `Add a level to ${className}`, exact: true })
+    .first()
     .click()
-  await dialog.getByRole('button', { name: 'Level Up', exact: true }).first().click()
-  await expect(dialog.getByText(String(level), { exact: true })).toBeVisible()
-  await dialog.getByRole('button', { name: 'Close', exact: true }).first().click()
-  await expect(dialog).toBeHidden()
+  await expect(controls.getByText(new RegExp(`^Level ${level} ·`))).toBeVisible()
+  await page.getByRole('link', { name: 'Class', exact: true }).click()
 }
 
 async function chooseMetamagic(page: Page, level: number, names: string[]) {
@@ -113,7 +152,7 @@ for (const edition of ['2014', '2024'] as const) {
     await page.getByRole('link', { name: 'Class', exact: true }).click()
 
     for (let level = 10; level <= 18; level++) {
-      await levelUp(page, level)
+      await levelUp(page, level, 'Sorcerer')
       if (level === 10) await chooseMetamagic(page, 10, at10)
       if (level === 14) await openFeature(page, 14, 'Dragon Wings', wingsRules)
       if (level === 17) await chooseMetamagic(page, 17, at17)
@@ -229,8 +268,7 @@ test('@focused classic Battle Master chooses Maneuvers at the earned Fighter lev
   await seedAppState(page, { sourcePath: 'e2e-battle-master-gains', gameData, characters: [actor] })
   await page.reload()
   await selectCharacterFromHome(page, actor.name)
-  await page.getByRole('link', { name: /^Review/ }).click()
-  await page.getByRole('button', { name: /^Finish Maneuvers/ }).click()
+  await page.getByRole('link', { name: /^Finish Maneuvers/ }).click()
   const dialog = page.getByRole('dialog')
   const search = dialog.getByRole('textbox', { name: /search/i })
   await search.fill('Precision Attack')
@@ -338,7 +376,7 @@ for (const edition of ['2014', '2024'] as const) {
     await page.reload()
     await selectCharacterFromHome(page, actor.name)
     await page.getByRole('link', { name: 'Class', exact: true }).click()
-    await levelUp(page, 5)
+    await levelUp(page, 5, 'Warlock')
     const group = (await openLevel(page, 5)).getByRole('group', {
       name: 'Eldritch Invocations',
       exact: true,

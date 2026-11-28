@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { GuidedLevelChoices } from '@/components/modals/GuidedLevelChoices'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
@@ -383,7 +384,7 @@ describe('Class spell Finish and current-state adapter', () => {
     const character = classicWizard()
     installWizard(character)
     const before = JSON.stringify(character)
-    render(<Flow level={18} />)
+    const { rerender } = render(<Flow level={18} />)
 
     await choose(1, 'Shield', 'Spell')
     await choose(1, 'Shield', 'Spell Mastery')
@@ -393,13 +394,24 @@ describe('Class spell Finish and current-state adapter', () => {
     expect(mastery().getByText(/restore this spell in the draft spellbook/i)).toBeTruthy()
     await choose(1, 'Shield', 'Spell')
     expect(mastery().getByText('Chosen')).toBeTruthy()
+    await choose(2, 'Mirror Image', 'Spell')
+    await choose(2, 'Mirror Image', 'Spell Mastery')
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(before)
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
     expect(saved.managedClassSpellChoices?.map(({ slot, target }) => [slot[1], target])).toEqual([
       ['class-spellbook', { name: 'Shield', source: 'PHB' }],
+      ['class-spellbook', { name: 'Mirror Image', source: 'PHB' }],
       ['class-spellbook-specialty', { name: 'Shield', source: 'PHB' }],
+      ['class-spellbook-specialty', { name: 'Mirror Image', source: 'PHB' }],
     ])
+
+    rerender(<GuidedLevelChoices character={saved} entry={saved.classProgression[0]} />)
+    expect(screen.getByText('Complete')).toBeTruthy()
+    expect(screen.getByText('Shield · Spell Mastery')).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /^Remove Shield$/ })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit spells' }))
+    expect(mastery().getByText('Chosen')).toBeTruthy()
   })
 
   test('saved Spell Mastery distinguishes draft removal from a persisted unavailable spell', async () => {

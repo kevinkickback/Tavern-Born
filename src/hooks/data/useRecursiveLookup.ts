@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
+import { useStore } from 'zustand'
 import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData } from '@/types/5etools'
 import { useFilteredGameData } from './useFilteredGameData'
@@ -25,9 +26,11 @@ export function useRecursiveLookup(): RecursiveLookup {
   const itemTextContext = useItemTextContext()
   const filteredGameData = useFilteredGameData()
   const gameData = useGameDataStore((state) => state.gameData)
-  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
-  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
-  const preferNewerPrintings = useCharacterStore(
+  const store = useCharacterEditingStore()
+  const allowedSources = useStore(store, (state) => state.activeCharacter?.allowedSources)
+  const originSystem = useStore(store, (state) => state.activeCharacter?.originSystem)
+  const preferNewerPrintings = useStore(
+    store,
     (state) => state.activeCharacter?.variantRules?.preferNewerPrintings ?? false,
   )
   const filterKey = JSON.stringify([

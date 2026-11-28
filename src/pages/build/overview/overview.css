@@ -1,0 +1,135 @@
+@reference "../../../styles/main.css";
+
+@layer utilities {
+  .overview-summary {
+    @apply @min-[44rem]:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] @min-[64rem]:grid-cols-[minmax(0,1fr)_minmax(0,1.24fr)_minmax(0,1fr)] @min-[64rem]:grid-rows-[1fr_auto];
+  }
+
+  .overview-identity {
+    @apply @min-[64rem]:row-span-2;
+  }
+
+  .overview-portrait {
+    @apply aspect-[5/4] w-20 shrink-0 overflow-hidden rounded-lg bg-muted @min-[64rem]:w-24;
+  }
+
+  .overview-combat {
+    @apply contents @min-[64rem]:row-span-2 @min-[64rem]:grid @min-[64rem]:min-w-0 @min-[64rem]:grid-rows-subgrid @min-[64rem]:self-stretch @min-[64rem]:border-l @min-[64rem]:border-border @min-[64rem]:pl-3;
+  }
+
+  .overview-combat-values {
+    @apply grid min-w-0 grid-cols-2 content-center items-end gap-2 border-t border-border pt-2 @min-[25rem]:grid-cols-4 @min-[44rem]:border-t-0 @min-[44rem]:border-l @min-[44rem]:pt-0 @min-[44rem]:pl-3 @min-[64rem]:border-l-0 @min-[64rem]:pb-4 @min-[64rem]:pl-0;
+  }
+
+  .overview-movement {
+    @apply order-last col-span-full flex flex-wrap justify-center gap-x-3 gap-y-1 pt-1 text-xs @min-[64rem]:order-none @min-[64rem]:self-end @min-[64rem]:pt-0;
+  }
+
+  .overview-abilities {
+    @apply min-w-0 self-stretch border-t border-border pt-2 @min-[44rem]:col-span-2 @min-[64rem]:col-span-1 @min-[64rem]:row-span-2 @min-[64rem]:grid @min-[64rem]:grid-rows-subgrid @min-[64rem]:border-t-0 @min-[64rem]:border-l @min-[64rem]:pt-0 @min-[64rem]:pl-2;
+  }
+
+  .overview-ability-values {
+    @apply grid grid-cols-3 content-center gap-2 @min-[31rem]:grid-cols-6;
+  }
+
+  .overview-passives {
+    @apply mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-primary tabular-nums @min-[64rem]:mt-0;
+  }
+
+  .overview-panels {
+    @apply grid auto-rows-fr gap-3 @min-[46rem]:grid-cols-[minmax(0,1fr)_clamp(22rem,34%,26rem)] [&>*]:max-h-80 [&>*]:min-h-48;
+  }
+
+  .overview-details {
+    @apply grid items-start gap-x-5 gap-y-1 @min-[46rem]:grid-cols-2;
+  }
+
+  .overview-proficiencies {
+    @apply grid gap-x-3 gap-y-2 pb-2 sm:grid-cols-2 @min-[64rem]:grid-cols-[1fr_1fr_1fr_1.5fr];
+  }
+
+  .overview-skills {
+    @apply mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm @min-[64rem]:grid-cols-3;
+  }
+
+  .overview-detail-grid {
+    @apply grid grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))] gap-1;
+  }
+
+  .overview-detail-trigger {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 font-semibold transition-colors marker:hidden hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary [&::-webkit-details-marker]:hidden;
+  }
+
+  .overview-detail-item {
+    @apply relative min-w-0 py-1 pl-3 before:absolute before:top-3 before:left-0.5 before:size-1 before:rounded-full before:bg-primary/65;
+  }
+
+  .overview-rules-preview {
+    @apply max-w-full cursor-help text-left text-sm underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 hover:decoration-accent;
+  }
+
+  .overview-attention[data-tone="required"] {
+    @apply border-l-warning/75;
+
+    .overview-attention-header {
+      @apply border-warning/25;
+    }
+  }
+
+  .overview-attention[data-tone="suggestions"] {
+    @apply border-l-info/60;
+
+    .overview-attention-header {
+      @apply border-info/20;
+    }
+  }
+
+  .overview-attention[data-tone="clear"] {
+    @apply border-l-success/45;
+
+    .overview-attention-header {
+      @apply border-success/15;
+    }
+  }
+
+  .overview-attention-status {
+    @apply text-foreground/75;
+  }
+
+  .overview-action[data-required] {
+    @apply border-warning/30;
+
+    .overview-action-arrow {
+      @apply text-warning-foreground/80;
+    }
+  }
+
+  .overview-action:not([data-required]) {
+    @apply border-info/25;
+
+    .overview-action-arrow {
+      @apply text-info-foreground/75;
+    }
+  }
+
+  .overview-choose-equipment {
+    @apply border-warning/35;
+  }
+
+  .overview-background-label {
+    @apply hidden @min-[30rem]/attention:inline;
+  }
+
+  .overview-adjustment-tabs {
+    @apply [&_[data-state=active]]:rounded-none [&_[data-state=active]]:border-x-0 [&_[data-state=active]]:border-t-0 [&_[data-state=active]]:border-b-primary [&_[data-state=active]]:bg-transparent [&_[data-state=active]]:shadow-none [&_button]:h-auto [&_button]:flex-none [&_button]:text-xs [&_svg]:hidden @min-[34rem]:[&_svg]:block;
+  }
+
+  .overview-adjustment-tab {
+    @apply col-start-1 row-start-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-2 data-[state=inactive]:invisible data-[state=inactive]:opacity-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+  }
+
+  .overview-list-dialog {
+    @apply grid-rows-[auto_minmax(0,1fr)];
+  }
+}

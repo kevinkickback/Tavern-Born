@@ -1,59 +1,15 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { isHintDismissed, resetAllHints, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
-vi.mock('@/components/modals/LevelUpModal', () => ({
-  LevelUpModal: () => null,
-}))
-
-vi.mock('@/components/modals/ArmorClassModal', () => ({
-  ArmorClassModal: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="armor-class-modal-mock" /> : null,
-}))
-
-vi.mock('@/components/modals/HitPointsModal', () => ({
-  HitPointsModal: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="hit-points-modal-mock" /> : null,
-}))
-
-vi.mock('@/hooks/character/useArmorClass', () => ({
-  useArmorClass: () => ({
-    calculatedAC: 17,
-    effectiveAC: 18,
-    setAC: vi.fn(),
-  }),
-}))
-
-vi.mock('@/hooks/character/useHitPoints', () => ({
-  useHitPoints: () => ({
-    hitPoints: { current: 37, temporary: 0 },
-    calculatedMaxHP: 40,
-    effectiveMaxHP: 42,
-    hitDie: 10,
-    conMod: 2,
-    levelsHPBreakdown: [0, 12, 8, 8, 7, 7],
-    setCurrentHP: vi.fn(),
-    setTempHP: vi.fn(),
-    heal: vi.fn(),
-    damage: vi.fn(),
-  }),
-}))
-
-vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
-  useAnchoredHintPosition: ({ enabled }: { enabled: boolean }) =>
-    enabled ? { reference: document.body, gap: 12, placement: 'bottom' } : null,
-}))
-
 describe('app header character summary', () => {
   beforeEach(() => {
-    setHintDismissed('header-stat-management-menus', false)
     const character = makeCharacterFixture({
       name: 'Aelar',
       race: 'Elf',
@@ -70,10 +26,7 @@ describe('app header character summary', () => {
     })
   })
 
-  afterEach(() => {
-    cleanup()
-    vi.clearAllMocks()
-  })
+  afterEach(cleanup)
 
   test.each([
     ['/build/background', 'Background'],
@@ -160,43 +113,15 @@ describe('app header character summary', () => {
     )
   })
 
-  test('should show current AC and max HP in icon badges', () => {
+  test('keeps the stat controls in Overview instead of the page header', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/build/overview']}>
         <AppHeader />
       </MemoryRouter>,
     )
 
-    expect(screen.getByTestId('header-ac-badge').textContent).toContain('Armor Class 18')
-    expect(screen.getByTestId('header-hp-badge').textContent).toContain('Maximum Hit Points 42')
-    expect(screen.getByTestId('header-ac-badge').className).toContain('cursor-pointer')
-    expect(screen.getByTestId('header-hp-badge').className).toContain('cursor-pointer')
-    expect(screen.getByText('18')).toBeTruthy()
-    expect(screen.getByText('42')).toBeTruthy()
-  })
-
-  test('opens hit-point management from the heart badge', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Manage hit points. Maximum 42' }))
-    expect(screen.getByTestId('hit-points-modal-mock')).toBeTruthy()
-  })
-
-  test('opens Armor Class management from the shield badge', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Manage Armor Class. Current 18' }))
-    expect(screen.getByTestId('armor-class-modal-mock')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Manage Armor Class/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Manage Hit Points/i })).toBeNull()
   })
 
   test('keeps rest controls out of the builder header', () => {
@@ -207,63 +132,6 @@ describe('app header character summary', () => {
     )
 
     expect(screen.queryByRole('button', { name: 'Preview a rest' })).toBeNull()
-  })
-
-  test('introduces the shield and heart menus once on the Race page', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={['/build/race']}>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-
-    expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to review Armor Class and Hit Point sources',
-    )
-    await user.click(
-      screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
-    )
-    expect(screen.queryByRole('status')).toBeNull()
-  })
-
-  test('shows the persistent header hint again immediately after hints are reset', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={['/build/race']}>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-
-    await user.click(
-      screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
-    )
-    act(() => resetAllHints())
-
-    expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to review Armor Class and Hit Point sources',
-    )
-  })
-
-  test('does not dismiss the Race-page hint when stat controls are used elsewhere first', async () => {
-    const user = userEvent.setup()
-    const firstView = render(
-      <MemoryRouter initialEntries={['/equipment']}>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Manage hit points. Maximum 42' }))
-    expect(isHintDismissed('header-stat-management-menus')).toBe(false)
-    firstView.unmount()
-
-    render(
-      <MemoryRouter initialEntries={['/build/race']}>
-        <AppHeader />
-      </MemoryRouter>,
-    )
-    expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to review Armor Class and Hit Point sources',
-    )
   })
 
   test('keeps level up contextual while leaving save persistently visible', () => {

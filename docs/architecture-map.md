@@ -31,7 +31,11 @@ domain libraries remain independent of React and Zustand.
 
 ## From startup to export
 
-Electron authorizes local file access and runs the catalog utility. The renderer opens a usable catalog before handing off the workspace. The wizard uses its draft rules and sources. The Builder opens a saved character as a draft, applies commands in memory, then saves through the durable library queue. Review and PDF export use the shared calculation context.
+Electron authorizes local file access and runs the catalog utility. The renderer opens a usable
+catalog before handing off the workspace. The wizard uses its draft rules and sources. The Builder
+opens a saved character as a draft, applies commands in memory, then saves through the durable
+library queue. Overview and PDF export use the shared calculation context. Existing Builder Review
+links redirect to Overview at `/build/overview`.
 
 Read [catalog startup](data-ingestion.md#startup-and-update-checks), [durable writes](state-management.md#saved-library-transactions), and [PDF projection](pdf-generation.md#pipeline) for those boundaries. The Compendium uses the global catalog rather than the character filter.
 
@@ -42,6 +46,10 @@ behave alike. Documentation assets belong under `docs/assets/`; packaging artwor
 source belong under `build/`. Content pages use the shared
 centered width convention; `SplitPane` owns compact one-pane behavior and desktop collapse state.
 
+The renderer stylesheet generates shared Tailwind utilities from the application sources.
+The lazy Overview route loads its own layout and panel styles with the page. Those selectors
+are scoped to Overview and Manual Adjustments so navigation preserves global utility precedence.
+
 ## Large selection lists
 
 `SelectionModal` virtualizes the complete filtered result set with stable item IDs. Search, filters
@@ -49,6 +57,10 @@ and virtualizer state stay local; canonical catalogs stay in `gameDataStore`. In
 must not replace the full virtual range. Use `Number.POSITIVE_INFINITY` for an uncapped category.
 
 The shared workspace components own scroll and responsive pane behavior. Compact details selection does not toggle desktop collapse. Use the shared keyboard and ARIA behavior for tab lists. Portrait pan uses the card’s logical coordinates and commits once at drag end.
+
+Shared dialogs and confirmations fit inside a viewport that leaves an 8 px gap below the scaled
+workspace title bar or the native overlay, whichever extends farther. Dialogs can scroll their panel
+or keep scrolling in their own body when they have a fixed header and footer.
 
 ## Rules preview manager
 

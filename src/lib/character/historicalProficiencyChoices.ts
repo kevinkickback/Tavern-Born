@@ -60,3 +60,12 @@ export function resolveHistoricalProficiencyChoice(
     selectionCountByLevel: Array(20).fill(0),
   }
 }
+
+export function resolveAvailableHistoricalChoices(
+  character: Character,
+  choices: readonly NormalizedCharacterChoice[],
+) {
+  return choices
+    .map((choice) => resolveHistoricalProficiencyChoice(character, choice))
+    .filter((choice) => !getAutomaticToolFallback(choice.id) || choice.maximumSelections > 0)
+}

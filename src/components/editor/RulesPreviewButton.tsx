@@ -7,10 +7,12 @@ export function RulesPreviewButton({
   children,
   className,
   descriptor,
+  label,
 }: {
   children: ReactNode
   className?: string
   descriptor: RulesPreviewDescriptor
+  label?: string
 }) {
   const { cancelClose, openPreview, pinPreview, scheduleClose } = useRulesPreview()
 
@@ -19,6 +21,7 @@ export function RulesPreviewButton({
       type="button"
       aria-haspopup="dialog"
       aria-expanded={false}
+      aria-label={label}
       className={className}
       onMouseEnter={(event) => openPreview(descriptor, event.currentTarget)}
       onMouseMove={cancelClose}

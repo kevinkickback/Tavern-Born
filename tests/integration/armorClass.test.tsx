@@ -1,14 +1,11 @@
-import { renderHook } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
-import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
-import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 /**
  * Integration tests for armor class behavior.
  *
- * These tests cover equipment-based calculation, overrides, and hook-level AC access.
+ * These tests cover equipment-based calculation, overrides, and changes to ability scores.
  */
 
 describe('Armor Class Behavior', () => {
@@ -335,42 +332,6 @@ describe('Armor Class Behavior', () => {
         characterWithChainShirt.abilityScores,
       )
       expect(acChainShirt).toBe(15) // 13 + min(+2 dex, +2) = 15
-    })
-  })
-
-  describe('Known limitation: AC ownership not consolidated', () => {
-    test('useArmorClass hook requires separate sync logic', () => {
-      const character = makeCharacterFixture()
-
-      useCharacterStore.setState({
-        activeCharacter: character,
-        characters: [character],
-      })
-
-      const { result } = renderHook(() => useArmorClass())
-
-      expect(result.current).toBeDefined()
-    })
-
-    test('dual AC sync pattern: equipment updates and AC field updates are separate', () => {
-      const character = makeCharacterFixture({
-        abilityScores: {
-          strength: 10,
-          dexterity: 14,
-          constitution: 10,
-          intelligence: 10,
-          wisdom: 10,
-          charisma: 10,
-        },
-        equipment: [],
-      })
-
-      useCharacterStore.setState({
-        activeCharacter: character,
-        characters: [character],
-      })
-
-      expect(character.equipment).toHaveLength(0)
     })
   })
 })

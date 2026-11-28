@@ -1,8 +1,9 @@
-@import "tailwindcss";
+@import "tailwindcss" source("../");
 
 @import "./theme.css";
 @import "./index.css";
 @import "tw-animate-css";
+
 /*
   ---break---
 */
@@ -33,7 +34,7 @@
 */
 :root {
   --radius: 0.625rem;
-  --workspace-titlebar-height: 3rem;
+  --workspace-titlebar-height: 2rem;
   --workspace-toolbar-height: 2.75rem;
   --workspace-rail-width: 3.5rem;
   --workspace-context-width: 14rem;

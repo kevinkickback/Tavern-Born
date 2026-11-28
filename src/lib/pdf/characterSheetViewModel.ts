@@ -36,7 +36,7 @@ import {
   type ProficiencyCheckNoteRow,
 } from '@/lib/calculations/proficiencyCheckNotes'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
-import { getRaceTraits } from '@/lib/calculations/raceUtils'
+import { getEffectiveRaceSize, getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import {
@@ -1220,7 +1220,12 @@ export function createCharacterSheetViewModel(
       calculationContext.effects.declarations,
       calculationContext.effects.resolutionContext,
     ),
-    sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
+    sizeSummary:
+      getEffectiveRaceSize(
+        raceResolution.mergedRace,
+        character.raceSize,
+        !!raceResolution.parentRace && (!character.subrace || !!raceResolution.subraceData),
+      ) ?? '',
     appearanceSummary: buildAppearanceSummary(character),
     backstorySummary,
     historyAndPersonalitySummary: [personalitySummary, backstorySummary]

@@ -23,6 +23,7 @@ import {
 } from '@/lib/character/selectedFeatureSpells'
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { validateSpells } from '@/lib/readiness/spellReadiness'
+import { getCreatorClassSpellStatus } from '@/pages/build/class/model/creatorClassSpellStatus'
 import type { Class5e, ClassFeature, GameData, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -286,6 +287,30 @@ function verifyOrder(path: string, order: OrderCase) {
     provenance: result.provenanceUpdate,
   })
   expect(calculate(saved).managedClassSpellStatuses[0]).toMatchObject({ active: true })
+  const limitToGuidance = (context: ReturnType<typeof calculate>) => ({
+    ...context,
+    classChoices: {
+      ...context.classChoices,
+      spellContext: {
+        ...context.classChoices.spellContext,
+        spellsByKey: Object.fromEntries(
+          Object.entries(context.classChoices.spellContext?.spellsByKey ?? {}).filter(
+            ([, spell]) => spell.name === 'Guidance' && spell.source === 'XPHB',
+          ),
+        ),
+      },
+    },
+  })
+  expect(
+    getCreatorClassSpellStatus(
+      thaumaturge,
+      thaumaturge.classProgression[0],
+      limitToGuidance(calculation),
+    ),
+  ).toMatchObject({ available: true, pending: true })
+  expect(
+    getCreatorClassSpellStatus(saved, saved.classProgression[0], limitToGuidance(calculate(saved))),
+  ).toEqual({ available: true, pending: false, complete: false })
   const withoutLeaf = {
     ...catalogs,
     classFeatures: catalogs.classFeatures.filter((row) => row.name !== order.caster),

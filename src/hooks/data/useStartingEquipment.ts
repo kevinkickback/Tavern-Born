@@ -8,7 +8,7 @@ import {
 } from '@/lib/5etools/startingEquipmentPolicy'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { sameStartingReference } from '@/lib/character/startingEquipmentGrants'
-import { useCharacterStore } from '@/store/characterStore'
+import { useEditingCharacter } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character } from '@/types/character'
 
@@ -21,7 +21,7 @@ type StartingOwner = {
 
 /** One named adapter supplies raw exact dependencies and the current character-filtered view. */
 export function useStartingEquipmentAuthority() {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const activeCharacter = useEditingCharacter()
   const calculation = useCharacterCalculationContext(activeCharacter)
   const raw = useGameDataStore((state) => state.gameData)
   const filtered = useFilteredGameData()
@@ -73,7 +73,7 @@ export function useStartingEquipmentAuthority() {
 }
 
 export function useStartingEquipmentPolicy(kind: 'class' | 'background', owner?: StartingOwner) {
-  const character = useCharacterStore((state) => state.activeCharacter)
+  const character = useEditingCharacter()
   const { getPolicy } = useStartingEquipmentAuthority()
   return useMemo(
     () => (character && owner ? getPolicy(character, kind, owner) : undefined),

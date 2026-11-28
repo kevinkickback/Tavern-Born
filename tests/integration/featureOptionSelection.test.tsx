@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -41,7 +41,7 @@ function mount(
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="/build/class" element={<BuildClassPage />} />
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route path="/build/overview" element={<BuildOverviewPage />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -85,10 +85,10 @@ async function confirm() {
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 }
 
-test('Review chooses ancestry through the real shared selector and strictly reopens the same owner, target and slot', async () => {
+test('Overview chooses ancestry through the real shared selector and strictly reopens the same owner, target and slot', async () => {
   const fixture = makeFeatureOptionFixture()
-  const view = mount(fixture, fixture.character, '/build/review')
-  fireEvent.click(screen.getByText('Finish Dragon Ancestor').closest('button')!)
+  const view = mount(fixture, fixture.character, '/build/overview')
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Dragon Ancestor/ }))
   await screen.findByRole('dialog')
   const before = JSON.stringify(active())
   fireEvent.click(await row('Red'))
@@ -161,9 +161,9 @@ test('fully pruned source routes to shared removal-only recovery; unchanged and 
   const fixture = makeFeatureOptionFixture()
   const saved = selectFeatureOption(fixture)
   const missing = makeFeatureOptionFixture(1, pruneFeatureOptionDeclaration)
-  const view = mount(missing, saved, '/build/review')
+  const view = mount(missing, saved, '/build/overview')
   const bytes = JSON.stringify(active())
-  fireEvent.click(screen.getByText('Restore or remove Dragon Ancestor').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Restore or remove Dragon Ancestor/ }))
   await screen.findByRole('dialog')
   expect(dialog().getByRole('heading', { name: 'Review saved Dragon Ancestor' })).toBeTruthy()
   expect(dialog().getByText(/Keep or remove saved choices/)).toBeTruthy()

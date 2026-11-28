@@ -98,6 +98,14 @@ Complete versions own their entire mechanics and suppress parent mechanics. Swit
 from a version rebuilds both owners together. An ordinary child change preserves unrelated
 parent choices. Changing only ability distribution preserves nonability setup.
 
+### Racial size
+
+Creator records an optional `raceSize` when the selected rules offer a choice. The character's
+exact race and subrace identify the grant. Replacing a complete version clears its selection.
+Ordinary subrace changes retain a parent-owned size when both subraces inherit it. Builder Race
+and the size-capable PDF layouts use the saved value, retaining it through catalog withdrawal
+and falling back to the first catalog size for older characters without a saved selection.
+
 ### Racial defenses
 
 `racialDefenses` binds the exact selected context to fixed grants and actual field owners.

@@ -1,20 +1,11 @@
 import {
-  BackgroundAbilityBonusPanel,
-  RacialAbilityBonusPanel,
-} from '@/components/character/AbilityBonusPanels'
-import {
   AbilityScoreEditor,
   AbilityScoreMethodTabs,
 } from '@/components/character/AbilityScoreEditor'
 import { Tabs } from '@/components/ui/tabs'
 import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
-import {
-  type AbilityName,
-  type BackgroundAbilityData,
-  hasFlexibleRaceOriginAsi,
-} from '@/lib/calculations/abilityScores'
-import { isFixedBackgroundAbilityBlock } from '@/lib/calculations/originAbilityChoices'
+import type { AbilityName, BackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { projectDraftAbilityBonuses } from '../projectDraftAbilityBonuses'
 import type { CharacterWizardData, StepProps } from '../types'
 
@@ -30,13 +21,7 @@ export function AbilityScoresStep({
   backgroundAbilityData,
 }: AbilityScoresStepProps) {
   const method = data.abilityScoreMethod
-  const { blockIndex = 0, choices = [] } = data.backgroundAsi ?? {}
-  const backgroundBlock = backgroundAbilityData?.blocks[blockIndex]
-  const fixedBackgroundAssignment = isFixedBackgroundAbilityBlock(backgroundBlock)
-  const { abilityBonuses, raceAsiData, raceSelection, showRaceOriginBonuses } =
-    projectDraftAbilityBonuses(data, raceResolution, backgroundAbilityData)
-  const isLineageRaceAsiFallback =
-    showRaceOriginBonuses && hasFlexibleRaceOriginAsi(raceSelection.race, raceSelection.subrace)
+  const { abilityBonuses } = projectDraftAbilityBonuses(data, raceResolution, backgroundAbilityData)
 
   const setAllScores = (next: CharacterWizardData['abilityScores']) => {
     onChange({ abilityScores: next })
@@ -67,31 +52,6 @@ export function AbilityScoresStep({
             />
           </div>
         </div>
-        {showRaceOriginBonuses ? (
-          <RacialAbilityBonusPanel
-            data={raceAsiData}
-            selections={data.raceAsiChoices}
-            distribution={data.raceAsiBlockIndex}
-            onDistributionChange={
-              isLineageRaceAsiFallback
-                ? (value) => onChange({ raceAsiBlockIndex: value, raceAsiChoices: [] })
-                : undefined
-            }
-            onChoicesChange={(raceAsiChoices) => onChange({ raceAsiChoices })}
-          />
-        ) : backgroundAbilityData ? (
-          <BackgroundAbilityBonusPanel
-            data={backgroundAbilityData}
-            block={backgroundBlock}
-            fixedAssignment={fixedBackgroundAssignment}
-            blockIndex={blockIndex}
-            choices={choices}
-            onChoicesChange={(blockIndex, choices) =>
-              onChange({ backgroundAsi: { blockIndex, choices } })
-            }
-            onClear={() => onChange({ backgroundAsi: undefined })}
-          />
-        ) : null}
       </Tabs>
     </div>
   )

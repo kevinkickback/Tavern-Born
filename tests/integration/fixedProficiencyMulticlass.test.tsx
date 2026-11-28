@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
-import { LevelUpModal } from '@/components/modals/LevelUpModal'
+import { ManualAdjustments } from '@/components/character/ManualAdjustments'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -28,7 +28,8 @@ test('actual multiclass UI keeps newly derived Scout grants with matching owners
   useGameDataStore.setState({ gameData: f.data })
   setActiveCharacter(f.character)
   const user = userEvent.setup()
-  render(<LevelUpModal open onOpenChange={() => {}} />)
+  render(<ManualAdjustments />)
+  await user.click(screen.getByRole('tab', { name: 'Multiclass' }))
   await user.click(screen.getByRole('combobox'))
   await user.click(await screen.findByRole('option', { name: /Fighter\s*\(PHB\)/ }))
   await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -51,7 +52,8 @@ test('actual multiclass UI keeps newly derived Scout grants with matching owners
     method: 'average',
   })
   expect(characterPersistenceSchema.safeParse(current).success).toBe(true)
-  await user.click(screen.getByRole('button', { name: /Remove last level/ }))
+  await user.click(screen.getByRole('tab', { name: 'Levels' }))
+  await user.click(screen.getByRole('button', { name: 'Remove a level from Fighter' }))
   await user.click(screen.getByRole('button', { name: /^Remove$/ }))
   const restored = useCharacterStore.getState().activeCharacter!
   expect(restored.classProgression).toEqual(f.character.classProgression)

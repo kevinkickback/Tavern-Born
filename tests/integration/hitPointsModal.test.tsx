@@ -2,8 +2,18 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { HitPointsModal } from '@/components/modals/HitPointsModal'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { useCharacterStore } from '@/store/characterStore'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+function renderLevelLogModal() {
+  render(
+    <TooltipProvider>
+      <HitPointsModal open onOpenChange={() => {}} />
+    </TooltipProvider>,
+  )
+}
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
@@ -39,6 +49,67 @@ describe('HitPointsModal', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test('edits starting HP and rerolls a later level while preserving the earned record', async () => {
+    const gain = {
+      className: 'Fighter',
+      classSource: 'PHB',
+      classLevel: 2,
+      characterLevel: 2,
+      hitDie: 10,
+      dieResult: 6,
+      method: 'average' as const,
+    }
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+      hitPointGains: [gain],
+      hitPoints: { current: 14, temporary: 3 },
+      hitPointsInitialized: true,
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacter: character,
+      activeCharacterId: character.id,
+    })
+    const user = userEvent.setup()
+    renderLevelLogModal()
+    await user.click(screen.getByRole('tab', { name: 'Level log' }))
+    const roll = screen.getByRole('button', { name: 'Roll d10 for Fighter level 2 (PHB)' })
+    await user.hover(roll)
+    expect((await screen.findByRole('tooltip')).textContent).toContain(
+      'Roll a d10 and replace this level’s hit die result.',
+    )
+    const starting = screen.getByLabelText(
+      'Hit die result for Fighter level 1 (PHB)',
+    ) as HTMLInputElement
+    expect(starting.value).toBe('10')
+    await user.clear(starting)
+    await user.type(starting, '11')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(useCharacterStore.getState().activeCharacter).toBe(character)
+    await user.clear(starting)
+    await user.type(starting, '8')
+    const seededRoll = vi.spyOn(Math, 'random').mockReturnValue(0.9)
+    try {
+      await user.click(roll)
+      expect(screen.queryByRole('button', { name: /Reset hit die/ })).toBeNull()
+    } finally {
+      seededRoll.mockRestore()
+    }
+    await user.click(screen.getByRole('tab', { name: 'Overview' }))
+    expect((screen.getByLabelText('Current HP') as HTMLInputElement).value).toBe('16')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    const saved = useCharacterStore.getState().activeCharacter
+    expect(saved?.hitPointGains).toEqual([gain])
+    expect(saved?.hitPointLevelOverrides).toEqual([
+      expect.objectContaining({ classLevel: 1, dieResult: 8, method: 'manual' }),
+      expect.objectContaining({ classLevel: 2, dieResult: 10, method: 'rolled' }),
+    ])
+    expect(saved?.hitPoints).toEqual({ current: 16, temporary: 3 })
+    expect(characterPersistenceSchema.safeParse(JSON.parse(JSON.stringify(saved))).success).toBe(
+      true,
+    )
   })
 
   test('keeps the common lasting HP change flow simple', async () => {
@@ -88,6 +159,41 @@ describe('HitPointsModal', () => {
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.hitPoints.current).toBe(10)
     expect(updated?.hitPointsInitialized).toBe(true)
+  })
+
+  test('keeps an edited offline hit die available while repairing an invalid draft', async () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'OFFLINE', levels: 1 }],
+      hitPointLevelOverrides: [
+        {
+          className: 'Fighter',
+          classSource: 'OFFLINE',
+          classLevel: 1,
+          hitDie: 10,
+          dieResult: 7,
+          method: 'manual',
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacter: character,
+      activeCharacterId: character.id,
+    })
+    const user = userEvent.setup()
+    renderLevelLogModal()
+    await user.click(screen.getByRole('tab', { name: 'Level log' }))
+    const result = screen.getByLabelText('Hit die result for Fighter level 1 (OFFLINE)')
+    await user.clear(result)
+    expect(result.getAttribute('aria-invalid')).toBe('true')
+    expect(
+      screen.getByRole('button', { name: 'Roll d10 for Fighter level 1 (OFFLINE)' }),
+    ).toBeTruthy()
+    await user.type(result, '6')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(
+      useCharacterStore.getState().activeCharacter?.hitPointLevelOverrides?.[0].dieResult,
+    ).toBe(6)
   })
 
   test('lets a manual Current HP edit replace the automatic maximum change', async () => {

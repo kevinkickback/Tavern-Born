@@ -2,7 +2,9 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { LevelUpModal } from '@/components/modals/LevelUpModal'
+import { ManualAdjustments } from '@/components/character/ManualAdjustments'
+import { buildGameDataLookups } from '@/lib/5etools/lookups'
+import { setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
@@ -52,7 +54,7 @@ function resetCharacterStoreWith(character = makeCharacterFixture()) {
   })
 }
 
-describe('level up modal multiclass requirement text', () => {
+describe('Manual Adjustments multiclass requirements', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
@@ -92,27 +94,38 @@ describe('level up modal multiclass requirement text', () => {
     vi.clearAllMocks()
   })
 
-  test('shows canonical ability names instead of legacy abbreviations', () => {
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+  test('shows canonical ability names instead of legacy abbreviations', async () => {
+    render(<ManualAdjustments />)
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Multiclass' }))
 
     expect(screen.getByText(/\(Strength 13\)/)).toBeTruthy()
     expect(screen.queryByText(/\(STR 13\+\)/)).toBeNull()
   })
 
-  test('shows combined OR and base requirements with canonical text', () => {
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+  test('directs a classless character to Class before offering multiclassing', () => {
+    resetCharacterStoreWith(makeCharacterFixture({ classProgression: [] }))
+    render(<ManualAdjustments />)
+
+    expect(screen.getByText('Choose your first class on the Class page.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
+  })
+
+  test('shows combined OR and base requirements with canonical text', async () => {
+    render(<ManualAdjustments />)
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Multiclass' }))
 
     expect(screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/)).toBeTruthy()
   })
 
-  test('keeps class printings distinct by source', () => {
+  test('keeps class printings distinct by source', async () => {
     mockClasses = [
       ...mockClasses,
       makeClassFixture({ name: 'Wizard', source: 'PHB' }),
       makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
     ]
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    render(<ManualAdjustments />)
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Multiclass' }))
 
     expect(screen.getAllByText('Wizard')).toHaveLength(2)
     expect(screen.getByText('(XPHB)')).toBeTruthy()
@@ -121,7 +134,7 @@ describe('level up modal multiclass requirement text', () => {
   test.each([
     'Wizard',
     ' WIZARD ',
-  ])('marks only the selected printing as taken after catalog refresh %s', (name) => {
+  ])('marks only the selected printing as taken after catalog refresh %s', async (name) => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
@@ -131,13 +144,14 @@ describe('level up modal multiclass requirement text', () => {
       makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
     ]
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    render(<ManualAdjustments />)
 
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Multiclass' }))
     expect(screen.getAllByText('(already taken)')).toHaveLength(1)
   })
 })
 
-describe('level up hit-point choices', () => {
+describe('Manual Adjustments level changes', () => {
   beforeEach(() => {
     mockClasses = [
       makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } }),
@@ -148,6 +162,97 @@ describe('level up hit-point choices', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test('increments and decrements one level per action', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        variantRules: { averageHitPoints: true },
+        hitPointGains: [],
+      }),
+    )
+    render(<ManualAdjustments />)
+
+    expect(screen.queryByRole('spinbutton')).toBeNull()
+    const add = screen.getByRole('button', { name: 'Add a level to Fighter' })
+    await user.click(add)
+    await user.click(add)
+    await user.click(add)
+    expect(
+      useCharacterStore
+        .getState()
+        .activeCharacter?.hitPointGains?.map((gain) => [gain.classLevel, gain.dieResult]),
+    ).toEqual([
+      [2, 6],
+      [3, 6],
+      [4, 6],
+    ])
+
+    const remove = screen.getByRole('button', { name: 'Remove a level from Fighter' })
+    for (let step = 0; step < 2; step++) {
+      await user.click(remove)
+      await user.click(screen.getByRole('button', { name: 'Remove' }))
+    }
+    expect(useCharacterStore.getState().activeCharacter?.classProgression[0].levels).toBe(2)
+    expect(
+      useCharacterStore.getState().activeCharacter?.hitPointGains?.map((gain) => gain.classLevel),
+    ).toEqual([2])
+  })
+
+  test('the minus button removes the named class level and preserves later gains from another class', async () => {
+    const user = userEvent.setup()
+    const fighter = { name: 'Fighter', source: 'PHB' }
+    const rogue = { name: 'Rogue', source: 'PHB' }
+    const rogueGain = {
+      className: rogue.name,
+      classSource: rogue.source,
+      classLevel: 1,
+      characterLevel: 3,
+      hitDie: 8,
+      dieResult: 5,
+      method: 'average' as const,
+    }
+    mockClasses.push(makeClassFixture({ ...rogue, hd: { faces: 8, number: 1 } }))
+    useGameDataStore.getState().setGameData(makeGameDataFixture({ classes: mockClasses }))
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        initialClass: fighter,
+        classProgression: [
+          { ...fighter, levels: 2 },
+          { ...rogue, levels: 1 },
+        ],
+        hitPoints: { current: 21, temporary: 0 },
+        hitPointGains: [
+          {
+            ...rogueGain,
+            className: fighter.name,
+            classLevel: 2,
+            characterLevel: 2,
+            hitDie: 10,
+            dieResult: 6,
+          },
+          rogueGain,
+        ],
+      }),
+    )
+    render(<ManualAdjustments />)
+
+    const minus = screen.getByRole('button', { name: 'Remove a level from Fighter' })
+    await user.click(minus)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(useCharacterStore.getState().activeCharacter?.classProgression[0].levels).toBe(2)
+    await user.click(minus)
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    const character = useCharacterStore.getState().activeCharacter
+    expect(character?.initialClass).toEqual(fighter)
+    expect(character?.classProgression).toEqual([
+      { ...fighter, levels: 1 },
+      { ...rogue, levels: 1 },
+    ])
+    expect(character?.hitPointGains).toEqual([{ ...rogueGain, characterLevel: 2 }])
+    expect((minus as HTMLButtonElement).disabled).toBe(true)
   })
 
   test.each([
@@ -162,7 +267,9 @@ describe('level up hit-point choices', () => {
       hd: { faces: 10, number: 1 },
     })
     mockClasses = []
-    useGameDataStore.setState({ gameData: makeGameDataFixture({ classes: [fighter] }) })
+    const data = makeGameDataFixture({ classes: [fighter] })
+    data.lookups = buildGameDataLookups(data)
+    useGameDataStore.setState({ gameData: data })
     resetCharacterStoreWith(
       makeCharacterFixture({
         classProgression: [{ name: 'Fighter', source: classSource, levels: 1 }],
@@ -170,13 +277,17 @@ describe('level up hit-point choices', () => {
       }),
     )
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    render(<ManualAdjustments />)
+    await user.click(screen.getByRole('button', { name: 'Add a level to Fighter' }))
 
-    expect(screen.getByRole('button', { name: /Roll d10/ })).toBeTruthy()
+    expect(useCharacterStore.getState().activeCharacter?.hitPointGains?.[0]).toMatchObject({
+      hitDie: 10,
+      dieResult: 6,
+      method: 'average',
+    })
   })
 
-  test('asks for and persists a manual roll when fixed average is disabled', async () => {
+  test('uses the fixed average even when the wizard rule uses manually entered HP', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
@@ -195,14 +306,10 @@ describe('level up hit-point choices', () => {
       }),
     )
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    render(<ManualAdjustments />)
+    await user.click(screen.getByRole('button', { name: 'Add a level to Fighter' }))
 
-    expect(screen.getByRole('heading', { name: 'Hit Point Increase' })).toBeTruthy()
-    await user.type(screen.getByLabelText('Enter a roll'), '7')
-    expect(screen.getByText('+9 HP')).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Confirm Level Up' }))
-
+    expect(screen.queryByRole('dialog')).toBeNull()
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.classProgression?.[0]?.levels).toBe(2)
     expect(updated?.hitPointGains).toEqual([
@@ -211,11 +318,11 @@ describe('level up hit-point choices', () => {
         classLevel: 2,
         characterLevel: 2,
         hitDie: 10,
-        dieResult: 7,
-        method: 'manual',
+        dieResult: 6,
+        method: 'average',
       }),
     ])
-    expect(updated?.hitPoints).toEqual({ current: 21, temporary: 0 })
+    expect(updated?.hitPoints).toEqual({ current: 20, temporary: 0 })
     expect(updated?.hitPointsInitialized).toBe(true)
   })
 
@@ -230,8 +337,8 @@ describe('level up hit-point choices', () => {
       }),
     )
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    render(<ManualAdjustments />)
+    await user.click(screen.getByRole('button', { name: 'Add a level to Fighter' }))
 
     expect(screen.queryByRole('heading', { name: 'Hit Point Increase' })).toBeNull()
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([
@@ -240,44 +347,32 @@ describe('level up hit-point choices', () => {
     expect(useCharacterStore.getState().activeCharacter?.hitPoints.current).toBe(16)
   })
 
-  test('can roll the class hit die and persist the generated result', async () => {
+  test('remembers skipping removal confirmation only after confirming', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-        variantRules: { averageHitPoints: false },
-        hitPoints: { current: 0, temporary: 0 },
-        hitPointGains: [],
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
       }),
     )
-
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
-    await user.click(screen.getByRole('button', { name: 'Roll d10' }))
-    await user.click(screen.getByRole('button', { name: 'Confirm Level Up' }))
-
-    const gain = useCharacterStore.getState().activeCharacter?.hitPointGains?.[0]
-    expect(gain?.method).toBe('rolled')
-    expect(gain?.dieResult).toBeGreaterThanOrEqual(1)
-    expect(gain?.dieResult).toBeLessThanOrEqual(10)
-  })
-
-  test('cancelling the hit-point dialog does not add the level', async () => {
-    const user = userEvent.setup()
-    resetCharacterStoreWith(
-      makeCharacterFixture({
-        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-        variantRules: { averageHitPoints: false },
-        hitPointGains: [],
-      }),
-    )
-
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    expect(useCharacterStore.getState().activeCharacter?.classProgression[0]?.levels).toBe(1)
-    expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
+    render(<ManualAdjustments />)
+    const minus = screen.getByRole('button', { name: 'Remove a level from Fighter' })
+    try {
+      await user.click(minus)
+      await user.click(screen.getByRole('checkbox', { name: 'Don’t ask me again' }))
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(useCharacterStore.getState().activeCharacter?.classProgression[0].levels).toBe(3)
+      await user.click(minus)
+      const optOut = screen.getByRole('checkbox', { name: 'Don’t ask me again' })
+      expect(optOut.getAttribute('aria-checked')).toBe('false')
+      await user.click(optOut)
+      await user.click(screen.getByRole('button', { name: 'Remove' }))
+      expect(useCharacterStore.getState().activeCharacter?.classProgression[0].levels).toBe(2)
+      await user.click(minus)
+      expect(screen.queryByRole('alertdialog')).toBeNull()
+      expect(useCharacterStore.getState().activeCharacter?.classProgression[0].levels).toBe(1)
+    } finally {
+      setHintDismissed('quick-actions-remove-level', false)
+    }
   })
 
   test('clamps current hit points to the new maximum when a level is removed', async () => {
@@ -309,8 +404,8 @@ describe('level up hit-point choices', () => {
       }),
     )
 
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByText('Remove last level'))
+    render(<ManualAdjustments />)
+    await user.click(screen.getByRole('button', { name: 'Remove a level from Fighter' }))
     await user.click(screen.getByRole('button', { name: 'Remove' }))
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -339,20 +434,14 @@ describe('level up hit-point choices', () => {
       makeClassFixture({ name: 'Wizard', source: 'PHB' }),
     ]
     resetCharacterStoreWith(fighter)
-    function CharacterScopedLevelUpModal() {
+    function CharacterScopedManualAdjustments() {
       const activeCharacterId = useCharacterStore((state) => state.activeCharacter?.id)
-      return (
-        <LevelUpModal
-          key={activeCharacterId ?? 'no-character'}
-          open={true}
-          onOpenChange={() => {}}
-        />
-      )
+      return <ManualAdjustments key={activeCharacterId ?? 'no-character'} />
     }
 
-    render(<CharacterScopedLevelUpModal />)
+    render(<CharacterScopedManualAdjustments />)
 
-    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    await user.click(screen.getByRole('button', { name: 'Add a level to Fighter' }))
     const updatedFighter = useCharacterStore.getState().activeCharacter
     act(() => {
       useCharacterStore.setState({
@@ -361,7 +450,7 @@ describe('level up hit-point choices', () => {
         activeCharacter: wizard,
       })
     })
-    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove a level from Wizard' }))
     await user.click(screen.getByRole('button', { name: 'Remove' }))
 
     expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([

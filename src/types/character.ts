@@ -40,6 +40,11 @@ export interface HitPointGain {
   method: HitPointGainMethod
 }
 
+/** An edited die result without an assertion about when the class level was earned. */
+export interface HitPointLevelOverride extends Omit<HitPointGain, 'characterLevel' | 'method'> {
+  method: 'rolled' | 'manual'
+}
+
 type HitPointAdjustmentMode = 'flat' | 'per-level'
 type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
 type HitPointAdjustmentSource = AdjustmentSource
@@ -165,6 +170,8 @@ export interface OptionalClassFeatureAdoption {
   earnedLevel: number
 }
 
+export type RaceSize = 'T' | 'S' | 'M' | 'L' | 'H' | 'G'
+
 export interface Character {
   id: string
   schemaVersion: number
@@ -174,6 +181,7 @@ export interface Character {
   raceSource?: string
   subrace?: string
   subraceSource?: string
+  raceSize?: RaceSize
   background: string
   backgroundSource?: string
   currency?: Currency
@@ -195,6 +203,7 @@ export interface Character {
   hitPointsInitialized?: boolean
   /** Per-level hit-die results. Constitution is deliberately applied at calculation time. */
   hitPointGains?: HitPointGain[]
+  hitPointLevelOverrides?: HitPointLevelOverride[]
   /** Permanent flat or per-character-level changes to maximum HP. */
   hitPointAdjustments?: HitPointAdjustment[]
   /** Exact maximum HP override. When set, derived HP and adjustments do not change the maximum. */
@@ -209,8 +218,6 @@ export interface Character {
   movementAdjustments?: MovementAdjustment[]
   /** Exact per-mode values applied after base movement and adjustments. */
   movementOverrides?: Record<string, number>
-  /** Exact hover override applied after the base movement profile. */
-  movementHoverOverride?: boolean
 
   /** Current fixed racial defenses and their exact owners; independent grants are typed effects. */
   racialDefenses?: RacialDefenseState

@@ -1,6 +1,7 @@
 import type { NativeSpellLookups } from '@/lib/calculations/nativeRacialSpellChoices'
 import {
   deriveNativeRacialSpellProfiles,
+  rebaseParentRacialSpellProfile,
   reconcileNativeRacialSpellLedger,
 } from '@/lib/calculations/nativeRacialSpells'
 import type { RaceSpellSelectionOptions } from '@/lib/calculations/raceSpellSelection'
@@ -15,6 +16,7 @@ export function reconcileRaceSpellProfileCommand(
   race: Race5e,
   subrace: Race5e | undefined,
   options?: Pick<RaceSpellSelectionOptions, 'subraceIsNested'> & NativeSpellLookups,
+  retainParentFrom?: { subrace?: Race5e; isNested: boolean },
 ) {
   const projected = {
     ...character,
@@ -23,13 +25,25 @@ export function reconcileRaceSpellProfileCommand(
     subrace: subrace?.name,
     subraceSource: subrace?.source,
   }
+  const resolution = {
+    parentRace: race,
+    subraceData: subrace,
+    subraceIsNested: options?.subraceIsNested ?? false,
+  }
   const native = deriveNativeRacialSpellProfiles(
-    projected,
-    {
-      parentRace: race,
-      subraceData: subrace,
-      subraceIsNested: options?.subraceIsNested ?? false,
-    },
+    retainParentFrom
+      ? rebaseParentRacialSpellProfile(
+          character,
+          projected,
+          {
+            parentRace: race,
+            subraceData: retainParentFrom.subrace,
+            subraceIsNested: retainParentFrom.isNested,
+          },
+          resolution,
+        )
+      : projected,
+    resolution,
     undefined,
     options,
   )

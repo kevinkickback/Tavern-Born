@@ -113,11 +113,17 @@ classes/subclasses, feats, equipment, rules metadata, typed effects, and effecti
 React consumers use `useCharacterCalculationContext`.
 
 Effective ability scores compose allocated scores, origin bonuses, class ASIs, feat choices, active
-effects, then supported exact overrides. Each layer produces a fresh value. Readiness may inspect
-allocated scores directly when validating allocation; ordinary UI/export code may not.
+effects, then supported exact overrides. Each layer produces a fresh value. Readiness reads
+allocated scores directly to validate allocation. The Creator also compares allocations when
+synchronizing its private draft. Ordinary display and export use effective scores.
 
 HP and AC management display calculation traces but do not own class or equipment mutations.
-Carrying capacity, prerequisites, Review, actions, and PDFs consume the same effective values.
+Carrying capacity, prerequisites, Overview, actions, and PDFs consume the same effective values.
+
+Movement uses the character’s base movement profile for hover capability. Character loading
+accepts and drops the retired manual hover setting. The movement editor shares its five modes
+between new manual speed changes and exact speed overrides. Previously saved custom-mode speeds
+and adjustments remain supported.
 
 Draconic Resilience requires the current native subclass's gain level, selected intro, and exact
 nested feature. Class layering retains the intro from the layer that supplied the selected subclass.
@@ -146,6 +152,12 @@ change semantics. Do not sequence a materialized write and a later provenance wr
 
 ## Class progression
 
+Creator keeps Race edits in a private draft and carries Class and Background edits forward in
+one complete draft. Same-race edits replay exact owned changes into that complete draft. Class
+and Background replacements use their normal commands. An earlier proficiency that overlaps a
+later fixed grant returns to its owner when a distinct replacement is available. The final save
+combines the completed draft with the chosen base ability scores and calculates starting HP.
+
 `character.classProgression` is authoritative for class identity, subclass identity, level, and
 multiclass math. There are no top-level class mirrors.
 
@@ -166,6 +178,10 @@ multiclass math. There are no top-level class mirrors.
 - Optional-feature variant reconciliation scopes persisted choices against the complete loaded class
   catalog, but activates only choices that remain available after character source filtering.
 - Level-down/class removal retracts choices, grants, ASIs and numeric spell choices owned by removed levels.
+- `hitPointGains` records earned character-level order. Manage Hit Points stores later die edits
+  separately in `hitPointLevelOverrides`, keyed by class name, source, and class level. HP
+  calculations use the edited raw result with the current Constitution modifier. Removing the
+  underlying class level removes its edit. Legacy saves keep their original HP defaults.
 - Subclass changes remove selections owned by the previous subclass while preserving choices owned
   by the base class. Materialized subclass-feature selections follow the same ownership boundary.
 
@@ -187,7 +203,7 @@ independent daily/racial/Bonus state use `character.spells.spellProfiles`.
   effective view requires current exact class/declaration/target/list and own-level access.
 - `createCharacterCalculationContext` derives current spell knowledge before guarded feature
   closure, then effective abilities and learned preparation capacity. Its character and matching
-  provenance feed Class, Spells, readiness, prerequisites, Actions, Review and PDF.
+  provenance feed Class, Spells, readiness, prerequisites, Actions, Overview and PDF.
 
 `useSpellSlots` is read-only. `useSpellProfileMutations` owns Spells-page writes.
 `useSpellProvenanceMutations` exposes the addressed batch Finish adapter. Clear and preparation
@@ -209,7 +225,7 @@ proficiencies, slot ownership, raw-rule absence and physical snapshots.
 ## Fixed weapon bonuses
 
 See [Fixed weapon bonuses](equipment.md#fixed-weapon-bonuses) for numeric fields,
-conditional-item exclusions, attunement and shared Action/Review/PDF projection.
+conditional-item exclusions, attunement and shared projection across Actions, Overview and PDF.
 
 ## Character transfers
 

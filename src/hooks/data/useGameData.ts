@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
+import { useStore } from 'zustand'
 import { sortByName } from '@/lib/5etools/filters'
 import type { ItemTextContext } from '@/lib/5etools/itemTypeEntries'
 import { buildItemPropertyLookup } from '@/lib/5etools/lookups'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
@@ -82,8 +83,9 @@ export function useItemLookup() {
 }
 
 export function useItemTextContext(): ItemTextContext {
-  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
-  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
+  const store = useCharacterEditingStore()
+  const allowedSources = useStore(store, (state) => state.activeCharacter?.allowedSources)
+  const originSystem = useStore(store, (state) => state.activeCharacter?.originSystem)
   const sourceCatalog = useGameDataStore((state) => state.gameData?.sources)
   return useMemo(
     () => ({ allowedSources, originSystem, sourceCatalog }),

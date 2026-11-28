@@ -243,7 +243,7 @@ test('multiclass character persists both classes after reload', async ({ page })
   await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
 })
 
-test('multiclass character total level shows in character header', async ({ page }) => {
+test('multiclass character total level shows in the Overview summary', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
   await seedCharacter(page)
@@ -252,8 +252,9 @@ test('multiclass character total level shows in character header', async ({ page
 
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
 
-  // The header or character summary should reflect total level 8 (5+3)
-  await expect(page.getByText('Level 8')).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Character overview' }).getByText(/\bLevel 8\b/),
+  ).toBeVisible()
 })
 
 test('@focused multiclass spellcasting shows the persisted shared slot pool', async ({ page }) => {

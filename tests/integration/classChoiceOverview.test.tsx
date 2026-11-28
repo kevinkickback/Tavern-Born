@@ -2,13 +2,14 @@ import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { normalizeClassChoices } from '@/lib/5etools/classChoiceNormalization'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { OPTIONAL_CLASS_FEATURE_RULES } from '@/lib/5etools/optionalClassFeatureRules'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { resetCharacterStore, setActiveCharacter } from '../fixtures/characterStoreFixtures'
@@ -24,6 +25,7 @@ afterEach(() => {
 })
 
 test('Overview derives passive adopted roots/earned children and suspends them without mutating saved features', async () => {
+  const user = userEvent.setup()
   const { data, catalogs } = makeOptionalClassSourceData()
   let character = createEmptyCharacter({
     name: 'Adopted Ranger',
@@ -53,16 +55,28 @@ test('Overview derives passive adopted roots/earned children and suspends them w
   useGameDataStore.setState({ gameData: data })
   setActiveCharacter(character)
   render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
-      <BuildReviewPage />
+    <MemoryRouter initialEntries={['/build/overview']}>
+      <RulesPreviewManager>
+        <BuildOverviewPage />
+      </RulesPreviewManager>
     </MemoryRouter>,
   )
-  await userEvent.setup().click(screen.getByText('Traits & features'))
+  await user.click(screen.getByText('Traits & features'))
   const section = within(screen.getByText('Class, subclass & other features').closest('section')!)
   expect(section.getByText('Favored Foe')).toBeTruthy()
   expect(section.getByText('Spellcasting Focus')).toBeTruthy()
-  expect(section.getByText('Roving')).toBeTruthy()
-  expect(section.getByText('Tireless')).toBeTruthy()
+  for (const [level, benefit] of [
+    [6, 'Roving'],
+    [10, 'Tireless'],
+  ] as const) {
+    await user.click(
+      section.getByRole('button', {
+        name: `Deft Explorer Improvement, Ranger ${level} · TCE`,
+      }),
+    )
+    expect(within(screen.getByRole('dialog')).getByText(benefit)).toBeTruthy()
+    await user.keyboard('{Escape}')
+  }
   act(() => setActiveCharacter({ ...character, variantRules: { optionalClassFeatures: false } }))
   expect(section.queryByText('Favored Foe')).toBeNull()
   expect(section.queryByText('Spellcasting Focus')).toBeNull()
@@ -73,6 +87,7 @@ test('Overview derives passive adopted roots/earned children and suspends them w
 })
 
 test('Overview renders and removes independently selected same-label complete feature targets', async () => {
+  const user = userEvent.setup()
   const targets = ['Wizard', 'Bard'].map((className) => ({
     name: 'Beacon',
     source: 'PHB',
@@ -129,21 +144,28 @@ test('Overview renders and removes independently selected same-label complete fe
   setActiveCharacter(character)
   const errors = vi.spyOn(console, 'error')
   render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
-      <BuildReviewPage />
+    <MemoryRouter initialEntries={['/build/overview']}>
+      <RulesPreviewManager>
+        <BuildOverviewPage />
+      </RulesPreviewManager>
     </MemoryRouter>,
   )
-  await userEvent.setup().click(screen.getByText('Traits & features'))
+  await user.click(screen.getByText('Traits & features'))
   const section = within(screen.getByText('Feature choices').closest('section')!)
-  expect(section.getAllByText('Beacon (PHB)')).toHaveLength(2)
-  expect(section.getByText('Wizard beacon rules.')).toBeTruthy()
-  expect(section.getByText('Bard beacon rules.')).toBeTruthy()
-  expect(section.queryByText('Unresolved source')).toBeNull()
+  const training = section.getByRole('button', { name: 'Training' })
+  await user.click(training)
+  const dialog = () => within(screen.getByRole('dialog', { name: 'Training preview' }))
+  expect(dialog().getAllByText('Beacon (PHB)')).toHaveLength(2)
+  expect(dialog().getByText('Wizard beacon rules.')).toBeTruthy()
+  expect(dialog().getByText('Bard beacon rules.')).toBeTruthy()
+  expect(dialog().queryByText('Unresolved source')).toBeNull()
+  await user.keyboard('{Escape}')
   apply([descriptor.options[1]])
   act(() => setActiveCharacter(character))
-  expect(section.getAllByText('Beacon (PHB)')).toHaveLength(1)
-  expect(section.queryByText('Wizard beacon rules.')).toBeNull()
-  expect(section.getByText('Bard beacon rules.')).toBeTruthy()
+  await user.click(training)
+  expect(dialog().getAllByText('Beacon (PHB)')).toHaveLength(1)
+  expect(dialog().queryByText('Wizard beacon rules.')).toBeNull()
+  expect(dialog().getByText('Bard beacon rules.')).toBeTruthy()
   expect(
     errors.mock.calls.filter((call) => call.some((value) => /same key/i.test(String(value)))),
   ).toEqual([])

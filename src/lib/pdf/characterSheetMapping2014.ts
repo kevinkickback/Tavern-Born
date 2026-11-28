@@ -275,7 +275,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Faith/Deity': character.details.faith || '',
     Lifestyle: character.details.lifestyle || '',
     Vision: viewModel.visionSummary,
-    'Size Category': normalizeSize(viewModel.mergedRace?.size?.[0]),
+    'Size Category': normalizeSize(viewModel.sizeSummary),
     'AC Armor Bonus': equippedArmor?.ac != null ? String(equippedArmor.ac) : '',
     'AC Armor Description': equippedArmor?.name ?? '',
     'AC Armor Weight': equippedArmor?.weight != null ? String(equippedArmor.weight) : '',

@@ -51,7 +51,7 @@ export function applyRaceGrants(
         ability?: unknown[]
         feats?: unknown[]
         additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
-        overwrite?: { ability?: boolean }
+        overwrite?: { ability?: boolean; skillProficiencies?: boolean }
         _isVersion?: unknown
       }
     | undefined,
@@ -67,13 +67,15 @@ export function applyRaceGrants(
   let result = ledger
   const raceTag = makeSourceTag('race', race.name, 'fixed', race.source)
 
-  result = applyProficiencyBlocks(
-    result,
-    'skills',
-    toProficiencyBlocks(race.skillProficiencies),
-    raceTag,
-    `race:${normalizeKey(race.name)}`,
-  )
+  if (!subrace?.overwrite?.skillProficiencies) {
+    result = applyProficiencyBlocks(
+      result,
+      'skills',
+      toProficiencyBlocks(race.skillProficiencies),
+      raceTag,
+      `race:${normalizeKey(race.name)}`,
+    )
+  }
 
   if (!options?.suppressLanguageGrants) {
     result = applyProficiencyBlocks(
