@@ -84,15 +84,37 @@ export function planSheetContent(
   templateId: CharacterSheetTemplateId,
   choices: SheetContentChoices = {},
   pages: CharacterSheetPageOptions = {},
-  spellLayout?: SheetPresentationOptions['spellLayout'],
+  text: Pick<SheetPresentationOptions, 'spellLayout' | 'combinedSpellcastingAbility'> = {},
 ) {
   const template = getCharacterSheetTemplate(templateId)
-  const combined = spellLayout === 'combined'
+  const combined = text.spellLayout === 'combined'
   const spellcastingSources = combined
     ? [...vm.spellcastingSources].sort(
         (a, b) => (b.classDetail?.classLevel ?? 0) - (a.classDetail?.classLevel ?? 0),
       )
     : vm.spellcastingSources
+  const spellcastingAbilities = [
+    ...new Set(
+      spellcastingSources.flatMap(({ spellcastingAbility }) =>
+        spellcastingAbility ? [spellcastingAbility] : [],
+      ),
+    ),
+  ]
+  const chosenCasterIndex =
+    combined && spellcastingAbilities.length > 1 && text.combinedSpellcastingAbility
+      ? spellcastingSources.findIndex(
+          (source) => source.spellcastingAbility === text.combinedSpellcastingAbility,
+        )
+      : -1
+  if (chosenCasterIndex > 0) {
+    const [caster] = spellcastingSources.splice(chosenCasterIndex, 1)
+    spellcastingSources.unshift(caster)
+  }
+  // A combined 2014 page can show racial casting numbers alongside the class slot grid.
+  const combinedSpellSlotSource =
+    combined && template.edition === '2014' && spellcastingSources[0]?.sourceType === 'racial'
+      ? spellcastingSources.find((source) => source.sourceType === 'class')
+      : undefined
   const mpmb = template.id === '2014-custom'
   const capacity =
     CHARACTER_SHEET_CAPACITIES[
@@ -312,7 +334,7 @@ export function planSheetContent(
   if (combined || template.edition === '2024') {
     const printsPact =
       template.edition === '2014' &&
-      spellcastingSources[0]?.classDetail?.casterProgression === 'pact'
+      (combinedSpellSlotSource ?? spellcastingSources[0])?.classDetail?.casterProgression === 'pact'
     const hiddenSlots = Object.entries(
       printsPact ? vm.spellSlots.mergedSharedWithUsage : vm.spellSlots.mergedPactWithUsage,
     ).filter(([, slot]) => slot?.max)
@@ -370,6 +392,7 @@ export function planSheetContent(
       })
   }
   return {
+    spellcastingAbilities,
     groups: groups.filter((group) => group.entries.length > 0),
     overflow: spellsOmitted
       ? overflow.filter(
@@ -387,6 +410,7 @@ export function planSheetContent(
       spellRows: printableSpells,
       spellRowsForSheet: printableSpells,
       markUnpreparedSpells: combined,
+      combinedSpellSlotSource,
       spellcastingSources,
       spellcastingPages: (combined ? [] : vm.spellcastingPages).map((page) => ({
         ...page,

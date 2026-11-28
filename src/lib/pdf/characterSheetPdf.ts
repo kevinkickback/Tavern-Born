@@ -9,7 +9,7 @@ import {
   mapOfficial2014SpellPage,
   paginateOfficial2014SpellPages,
 } from '@/lib/pdf/characterSheetMapping2014Official'
-import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
+import { mapCharacterSheet2024, WEAPON_NOTES_START_2024 } from '@/lib/pdf/characterSheetMapping2024'
 import {
   getCharacterSheetTemplate,
   getDefaultCharacterSheetTemplateId,
@@ -94,7 +94,7 @@ export async function generateFilledCharacterSheetPdf(
     templateId,
     options.content,
     options.pages,
-    options.text?.spellLayout,
+    options.text,
   )
   const original = viewModel
   const paragraphsReservedForOverflow =
@@ -198,6 +198,13 @@ export async function generateFilledCharacterSheetPdf(
   const overflow: SheetOverflowSection[] = [...selection.overflow, ...actionDetails]
   const shortened: string[] = []
   const noteReferences: string[] = []
+  const compactWeaponNotes = new Map<string, CharacterSheetViewModel['weaponRows'][number]>(
+    template.edition === '2024'
+      ? viewModel.weaponRows.flatMap((row, index) =>
+          row.compactNotes ? [[`Text_${WEAPON_NOTES_START_2024 + index}`, row] as const] : [],
+        )
+      : [],
+  )
   const representedMainTexts: string[] = []
   const printedFeatureTexts: string[] = []
   const clippedResourceLabels = new Set<string>()
@@ -301,6 +308,15 @@ export async function generateFilledCharacterSheetPdf(
       spellPageIndex: 0,
       paragraphsReservedForOverflow: part.id === 'main' ? paragraphsReservedForOverflow : undefined,
       onTextTruncated: (name) => {
+        const weapon = part.id === 'main' ? compactWeaponNotes.get(name) : undefined
+        if (weapon) {
+          overflow.push({
+            id: `weapon-notes:${name}`,
+            title: `${weapon.name} weapon notes`,
+            text: weapon.notes,
+          })
+          return
+        }
         const extra = /^SpellPage(\d+)__(.*)$/.exec(name)
         const value = extra
           ? additionalSpellPages?.[Number(extra[1]) - 2]?.textFields[extra[2]]
@@ -383,6 +399,7 @@ export async function generateFilledCharacterSheetPdf(
   const requiredNotes = uniqueOverflow.filter(
     (section) =>
       section.id.startsWith('unknown-spell-levels:') ||
+      section.id.startsWith('weapon-notes:') ||
       (options.text?.spellLayout === 'combined' && isCombinedSpellOverflow(section.id)) ||
       section.id === 'capacity:spellcasting-profiles' ||
       section.id === 'resource-counter-details' ||

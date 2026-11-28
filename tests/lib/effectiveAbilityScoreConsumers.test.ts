@@ -37,9 +37,7 @@ describe('effective ability score consumers', () => {
     expect(mapCharacterSheet2014(restricted).textFields['Attack.1.Description']).toContain(
       'Disadvantage on attack rolls (Heavy requires Strength 13)',
     )
-    expect(mapCharacterSheet2024(restricted).textFields.Text_79).toContain(
-      'Disadvantage on attack rolls (Heavy requires Strength 13)',
-    )
+    expect(mapCharacterSheet2024(restricted).textFields.Text_79).toBe('Heavy disadv. Str<13')
     const qualified = createCurrentCharacterSheetViewModel(
       {
         ...actor,

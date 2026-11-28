@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ABILITY_ABBREV_TO_TITLE, ABILITY_FULL_TO_ABBREV } from '@/lib/calculations/abilityNames'
 import type { SheetContentGroup } from '@/lib/pdf/sheetContent'
 import {
   type CharacterSheetEdition,
@@ -28,6 +29,7 @@ import {
   type SheetContentChoices,
   type SheetPresentationOptions,
 } from '@/lib/pdf/types'
+import type { AbilityName } from '@/types/character'
 
 function SheetOption<T extends string>({
   label,
@@ -84,6 +86,7 @@ export function SheetContentDialog({
   onTextChange,
   supportsImages,
   spellLayoutEdition,
+  spellcastingAbilities,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -95,9 +98,11 @@ export function SheetContentDialog({
   onTextChange: (text: SheetPresentationOptions) => void
   supportsImages: boolean
   spellLayoutEdition?: CharacterSheetEdition
+  spellcastingAbilities: readonly AbilityName[]
 }) {
   const overflow = text.overflow ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.overflow
   const separateSpellPages = spellLayoutEdition === '2014'
+  const ability = text.combinedSpellcastingAbility
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -160,8 +165,8 @@ export function SheetContentDialog({
                 label="Spell layout"
                 description={
                   separateSpellPages
-                    ? 'Combined uses the highest-level caster’s save DC and attack bonus.'
-                    : 'Combined adds unprepared spells. Highest-level caster sets DC and attack.'
+                    ? 'Combined puts every caster’s spells on one page.'
+                    : 'Combined includes unprepared spells.'
                 }
                 value={text.spellLayout ?? DEFAULT_SHEET_PRESENTATION_OPTIONS.spellLayout}
                 choices={[
@@ -172,6 +177,26 @@ export function SheetContentDialog({
                   ['combined', separateSpellPages ? 'Combined spell page' : 'Combined spell list'],
                 ]}
                 onChange={(spellLayout) => onTextChange({ ...text, spellLayout })}
+              />
+            )}
+            {text.spellLayout === 'combined' && spellcastingAbilities.length > 1 && (
+              <SheetOption<AbilityName | 'automatic'>
+                label="Spellcasting ability"
+                description="Sets the combined sheet’s spell save DC and attack bonus."
+                value={ability && spellcastingAbilities.includes(ability) ? ability : 'automatic'}
+                choices={[
+                  ['automatic', 'Automatic'],
+                  ...spellcastingAbilities.map(
+                    (name) =>
+                      [name, ABILITY_ABBREV_TO_TITLE[ABILITY_FULL_TO_ABBREV[name]]] as const,
+                  ),
+                ]}
+                onChange={(value) =>
+                  onTextChange({
+                    ...text,
+                    combinedSpellcastingAbility: value === 'automatic' ? undefined : value,
+                  })
+                }
               />
             )}
           </div>

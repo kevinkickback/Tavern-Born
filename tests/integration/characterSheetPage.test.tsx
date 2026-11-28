@@ -914,6 +914,7 @@ describe('CharacterSheetPage', () => {
     expect(spellLayout.textContent).toBe(standardLabel)
     spellLayout.focus()
     await user.keyboard('{Enter}{End}{Enter}')
+    expect(screen.queryByRole('combobox', { name: 'Spellcasting ability' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByText('PDF preview')).toBeNull()
     first.unmount()

@@ -1,3 +1,4 @@
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import {
   type CharacterSheetPageOptions,
   DEFAULT_SHEET_PRESENTATION_OPTIONS,
@@ -30,6 +31,9 @@ export function readSheetExportPreferences(): Record<string, SheetExportPreferen
             ([, ids]) => Array.isArray(ids) && ids.every((id) => typeof id === 'string'),
           ),
         ) as SheetContentChoices
+        const storedAbility = value.text?.combinedSpellcastingAbility
+        const combinedSpellcastingAbility =
+          typeof storedAbility === 'string' ? toAbilityName(storedAbility) : null
         const text: SheetPresentationOptions = {
           descriptions: value.text?.descriptions === 'names' ? 'names' : 'full',
           overflow:
@@ -41,6 +45,7 @@ export function readSheetExportPreferences(): Record<string, SheetExportPreferen
               ? value.text.images
               : 'color',
           spellLayout: value.text?.spellLayout === 'combined' ? 'combined' : 'standard',
+          ...(combinedSpellcastingAbility && { combinedSpellcastingAbility }),
         }
         return [[context, { pages, content, text }]]
       }),

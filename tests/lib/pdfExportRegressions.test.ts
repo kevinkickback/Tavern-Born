@@ -23,7 +23,7 @@ import {
 } from '@/lib/pdf/characterSheetMapping2014Official'
 import { buildCharacterSheetFieldMap } from '@/lib/pdf/characterSheetPdf'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
+import { getPdfDownloadPreflight, getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
 import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
@@ -384,7 +384,7 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
       }),
     )
     for (const template of ['2014-official', '2024-official'] as const) {
-      const planned = planSheetContent(vm, template, {}, {}, 'combined').viewModel
+      const planned = planSheetContent(vm, template, {}, {}, { spellLayout: 'combined' }).viewModel
       await generateTestCharacterSheet(vm, template, {
         text: { spellLayout: 'combined' },
         onReport: (report) => {
@@ -400,6 +400,52 @@ describe.runIf(hasCorpus)('PDF export review regressions', () => {
         },
       })
     }
+    const text = { spellLayout: 'combined', combinedSpellcastingAbility: 'charisma' } as const
+    const withPact = await PDFDocument.load(
+      await generateTestCharacterSheet(vm, '2014-official', {
+        text,
+        onReport: (report) => {
+          expect(report.preserved).toContainEqual(
+            expect.objectContaining({
+              id: 'combined-spells:slots',
+              text: 'Level 1: 4 total; 0 expended\nLevel 2: 2 total; 0 expended',
+            }),
+          )
+        },
+      }),
+    )
+    const form = withPact.getForm()
+    expect(form.getTextField('Spellcasting Class 2').getText()).toBe('Warlock (Pact Magic)')
+    expect(form.getTextField('SpellcastingAbility 2').getText()).toBe('Charisma')
+    expect(form.getTextField('SlotsTotal 19').getText()).toBeFalsy()
+    expect(form.getTextField('SlotsTotal 20').getText()).toBe('2')
+    expect(form.getTextField('SlotsRemaining 20').getText()).toBe('1')
+    const pages = { notes: false }
+    const planned = planSheetContent(vm, '2014-official', {}, pages, text).viewModel
+    await generateTestCharacterSheet(vm, '2014-official', {
+      pages,
+      text,
+      onReport: (report) => {
+        const preflight = getPdfExportPreflight(
+          '2014-official',
+          vm,
+          null,
+          [],
+          {},
+          [],
+          pages,
+          report,
+          planned,
+        )
+        expect(getPdfDownloadPreflight(preflight).issues).toContainEqual(
+          expect.objectContaining({
+            id: 'combined-spells:slots',
+            category: 'unsupported',
+            detail: expect.stringContaining('Level 1: 4 total; 0 expended'),
+          }),
+        )
+      },
+    })
   })
 
   test('maps distinct printing rows and preparation flags and warns per level', () => {

@@ -675,7 +675,7 @@ function getHeavyWeaponDisadvantage(
   properties: readonly ItemPropertyReference[],
   typeCodes: readonly string[],
   context: WeaponActionProjectionContext,
-): string | undefined {
+): { reason: string; compact: string } | undefined {
   if (character.variantRules?.ignoreHeavyWeaponRequirements) return
   const propertyUids = properties.map((property) =>
     getItemPropertyUid(property)
@@ -690,8 +690,11 @@ function getHeavyWeaponDisadvantage(
         ? 'strength'
         : undefined
     const score = ability && context.abilityScores?.[ability]
-    if (typeof score === 'number' && score < 13)
-      return ability === 'dexterity' ? 'Heavy requires Dexterity 13' : 'Heavy requires Strength 13'
+    if (typeof score === 'number' && score < 13) {
+      return ability === 'dexterity'
+        ? { reason: 'Heavy requires Dexterity 13', compact: 'Heavy disadv. Dex<13' }
+        : { reason: 'Heavy requires Strength 13', compact: 'Heavy disadv. Str<13' }
+    }
   } else if (propertyUids.includes('H') || propertyUids.includes('H|PHB')) {
     const resolved = context.raceResolution
     const size = getEffectiveRaceSize(
@@ -701,8 +704,13 @@ function getHeavyWeaponDisadvantage(
         ? !!resolved.parentRace && (!character.subrace || !!resolved.subraceData)
         : !!context.race,
     )
-    if (size === 'S') return 'Heavy weapon used by a Small creature'
-    if (size === 'T') return 'Heavy weapon used by a Tiny creature'
+    if (size === 'S' || size === 'T') {
+      const sizeName = size === 'S' ? 'Small' : 'Tiny'
+      return {
+        reason: `Heavy weapon used by a ${sizeName} creature`,
+        compact: `Heavy disadv. ${sizeName}`,
+      }
+    }
   }
 }
 
@@ -853,7 +861,10 @@ export function deriveWeaponActions(
       ability,
       proficient,
       attackBonus,
-      ...(disadvantage && { attackDisadvantage: `Disadvantage on attack rolls (${disadvantage})` }),
+      ...(disadvantage && {
+        attackDisadvantage: `Disadvantage on attack rolls (${disadvantage.reason})`,
+        compactAttackDisadvantage: disadvantage.compact,
+      }),
       range: item.range,
       damage: [{ dice: item.dmg1, bonus: damageBonus, damageType: item.dmgType }],
       properties: propertyLabels,

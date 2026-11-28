@@ -327,6 +327,93 @@ test('MPMB preview and download honor the three image modes', async ({ page }, i
   await expect(page.getByRole('combobox', { name: 'Images' })).toHaveText('No images')
 })
 
+for (const edition of ['2014', '2024'] as const) {
+  test(`@focused chooses and remembers the combined spellcasting ability for ${edition}`, async ({
+    page,
+  }) => {
+    const source = edition === '2014' ? 'PHB' : 'XPHB'
+    const fixture = characterPersistenceSchema.parse(
+      JSON.parse(fs.readFileSync('tests/fixtures/equipment-e2e.tbc', 'utf8')),
+    )
+    const character = characterPersistenceSchema.parse({
+      ...fixture,
+      name: 'Combined Spellcasting Test',
+      originSystem: edition,
+      initialClass: { name: 'Wizard', source },
+      classProgression: [
+        { name: 'Wizard', source, levels: 3 },
+        { name: 'Sorcerer', source, levels: 6 },
+      ],
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 14,
+        wisdom: 10,
+        charisma: 18,
+      },
+      spells: {
+        spellProfiles: fixture.spells.spellProfiles.filter(({ type }) => type === 'special'),
+        spellSlots: {},
+      },
+    })
+    const { data } = makeManagedClassSpellFixtures()
+    const sourcePath = `e2e-combined-spellcasting-${edition}`
+    await page.goto('/')
+    await seedAppState(page, { sourcePath, characters: [character], gameData: data })
+    await page.reload()
+    await ensureStartupPromptResolved(page, sourcePath)
+    await selectCharacterFromHome(page, character.name)
+    await page.goto(`/#/character-sheet/${edition}/official`)
+
+    const open = page.getByRole('button', { name: 'Customize PDF' })
+    const dialog = page.getByRole('dialog', { name: 'Customize PDF' })
+    const ability = dialog.getByRole('combobox', { name: 'Spellcasting ability' })
+    const generate = page.getByRole('button', { name: 'Generate Preview' })
+    const downloadButton = page.getByRole('button', { name: 'Download PDF', exact: true })
+    await open.click()
+    await expect(ability).toHaveCount(0)
+    await dialog.getByRole('combobox', { name: 'Spell layout' }).click()
+    await page.getByRole('option', { name: /^Combined spell/ }).click()
+    await expect(ability).toHaveText('Automatic')
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await generate.click()
+    await expect(page.locator('canvas').first()).toBeAttached({ timeout: 30_000 })
+
+    await open.click()
+    await ability.click()
+    await expect(page.getByRole('option', { name: 'Charisma', exact: true })).toBeVisible()
+    await page.getByRole('option', { name: 'Intelligence', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await expect(downloadButton).toBeDisabled()
+    await generate.click()
+    await expect(page.locator('canvas').first()).toBeAttached({ timeout: 30_000 })
+
+    const download = page.waitForEvent('download')
+    await downloadButton.click()
+    const preflight = page.getByRole('alertdialog', { name: 'Before you download' })
+    if (await preflight.isVisible()) {
+      await preflight.getByRole('button', { name: 'Download PDF' }).click()
+    }
+    const pdf = await PDFDocument.load(fs.readFileSync(await (await download).path()))
+    const fields =
+      edition === '2014'
+        ? ['SpellcastingAbility 2', 'SpellSaveDC  2', 'SpellAtkBonus 2']
+        : ['Text_230', 'Text_86', 'Text_87']
+    expect(fields.map((field) => pdf.getForm().getTextField(field).getText())).toEqual([
+      'Intelligence',
+      '14',
+      '+6',
+    ])
+
+    await page.reload()
+    await selectCharacterFromHome(page, character.name)
+    await page.goto(`/#/character-sheet/${edition}/official`)
+    await open.click()
+    await expect(ability).toHaveText('Intelligence')
+  })
+}
+
 test('@focused exports every official and custom character-sheet template', async ({
   page,
 }, testInfo) => {
