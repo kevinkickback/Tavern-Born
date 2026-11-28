@@ -32,6 +32,7 @@ import { OFFICIAL_2014_SECTION_LIMITS } from '@/lib/pdf/official2014Text'
 import { getOfficial2024FontBounds } from '@/lib/pdf/official2024Text'
 import { asFieldWithInternals, findAttachedWidgetLocation } from '@/lib/pdf/pdfFieldInternals'
 import { fillCharacterSheetPdf } from '@/lib/pdf/pdfFormAdapter'
+import { planSheetContent } from '@/lib/pdf/sheetContent'
 import type { Background5e, Class5e, Creature5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -145,10 +146,40 @@ describe('characterSheetPdf', () => {
       const character = { ...selected, ...bonus.characterPatch, provenance: bonus.provenanceUpdate }
       const before = JSON.stringify(character)
       const vm = createCurrentCharacterSheetViewModel(character, fixture.lookups)
+      const unavailable = planSheetContent(
+        vm,
+        id,
+        {},
+        {},
+        {
+          spellLayout: 'combined',
+          combinedSpellcastingAbility: 'wisdom',
+        },
+      ).viewModel
+      expect(unavailable.spellcastingSources[0]?.spellcastingAbility).toBe('charisma')
+      const standardWithPreference = planSheetContent(
+        vm,
+        id,
+        {},
+        {},
+        {
+          spellLayout: 'standard',
+          combinedSpellcastingAbility: 'charisma',
+        },
+      ).viewModel
+      expect(standardWithPreference.spellcastingSources[0]?.spellcastingAbility).toBe(
+        'intelligence',
+      )
       const pages = { companion: false, notes: false }
       const standard = await PDFDocument.load(await generateTestCharacterSheet(vm, id, { pages }))
       const combined = await PDFDocument.load(
         await generateTestCharacterSheet(vm, id, { pages, text: { spellLayout: 'combined' } }),
+      )
+      const selectedAbility = await PDFDocument.load(
+        await generateTestCharacterSheet(vm, id, {
+          pages,
+          text: { spellLayout: 'combined', combinedSpellcastingAbility: 'intelligence' },
+        }),
       )
       const fieldNames = revised
         ? ['Text_230', 'Text_86', 'Text_87']
@@ -162,6 +193,8 @@ describe('characterSheetPdf', () => {
         )
       expect(readNumbers(standard)).toEqual(['Intelligence', '14', '+6'])
       expect(readNumbers(combined)).toEqual(['Charisma', '16', '+8'])
+      expect(readNumbers(selectedAbility)).toEqual(['Intelligence', '14', '+6'])
+      expect(selectedAbility.getPageCount()).toBe(combined.getPageCount())
       if (!revised) {
         expect(combined.getPageCount()).toBe(standard.getPageCount() - 1)
         const form = combined.getForm()

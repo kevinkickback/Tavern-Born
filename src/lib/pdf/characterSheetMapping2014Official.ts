@@ -204,9 +204,16 @@ function titleCaseAbility(ability: string | undefined): string {
 
 export function getOfficial2014SpellPages(viewModel: CharacterSheetViewModel) {
   if (viewModel.spellcastingPages.length <= 1) {
-    return [{ detail: viewModel.spellcastingSources[0], spellRows: viewModel.spellRows }]
+    const detail = viewModel.spellcastingSources[0]
+    return [
+      {
+        detail,
+        slotDetail: viewModel.combinedSpellSlotSource ?? detail,
+        spellRows: viewModel.spellRows,
+      },
+    ]
   }
-  return viewModel.spellcastingPages
+  return viewModel.spellcastingPages.map((page) => ({ ...page, slotDetail: page.detail }))
 }
 
 /** Continue a caster's list without mixing classes or dropping a spell level's excess rows. */
@@ -228,7 +235,7 @@ export function paginateOfficial2014SpellPages(viewModel: CharacterSheetViewMode
       ),
     )
     return Array.from({ length: count }, (_, index) => ({
-      detail: page.detail,
+      ...page,
       spellRows: [
         ...(index === 0
           ? page.spellRows.filter((row) => row.level !== 'C' && !/^[1-9]$/.test(row.level))
@@ -246,9 +253,10 @@ export function mapOfficial2014SpellPage(
   viewModel: CharacterSheetViewModel,
   page = getOfficial2014SpellPages(viewModel)[0],
 ): CharacterSheetFieldMap {
-  const { detail, spellRows } = page
-  const pact = detail?.classDetail?.casterProgression === 'pact'
-  const label = detail ? `${detail.sourceName}${pact ? ' (Pact Magic)' : ''}` : ''
+  const { detail, slotDetail, spellRows } = page
+  const pact = slotDetail?.classDetail?.casterProgression === 'pact'
+  const slotLabel = pact ? (slotDetail === detail ? ' (Pact Magic)' : ' (Pact Magic slots)') : ''
+  const label = detail ? `${detail.sourceName}${slotLabel}` : ''
   const textFields: Record<string, string> = {
     'Spellcasting Class 2': label,
     'SpellcastingAbility 2': titleCaseAbility(detail?.spellcastingAbility),
@@ -272,7 +280,7 @@ export function mapOfficial2014SpellPage(
       const slots = pact
         ? viewModel.spellSlots.mergedPactWithUsage
         : viewModel.spellSlots.mergedSharedWithUsage
-      const slot = detail?.sourceType === 'class' ? slots[level] : undefined
+      const slot = slotDetail?.sourceType === 'class' ? slots[level] : undefined
       textFields[`SlotsTotal ${level + 18}`] = slot?.max ? String(slot.max) : ''
       textFields[`SlotsRemaining ${level + 18}`] = slot?.max ? String(slot.used) : ''
     }

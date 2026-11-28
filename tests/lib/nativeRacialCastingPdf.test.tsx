@@ -15,6 +15,7 @@ import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingD
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeSpellFixture } from '../fixtures/gameDataFixtures'
+import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { makeNativeRacialCharacter } from '../fixtures/nativeRacialCharacter'
 import {
   createCurrentCharacterSheetViewModel,
@@ -169,6 +170,33 @@ test('community 2014 and both 2024 summaries keep actual owners and report secon
   expect(
     planSheetContent(vm, '2014-official', undefined, { spells: false }).overflow,
   ).not.toContainEqual(unknown)
+})
+
+test('a selected racial ability uses its own numbers and keeps the combined 2014 class slots', () => {
+  const character = caster()
+  character.classProgression = [{ name: 'Wizard', source: 'PHB', levels: 3 }]
+  const vm = createCurrentCharacterSheetViewModel(
+    character,
+    makeManagedClassSpellFixtures().lookups,
+  )
+  const plan = planSheetContent(
+    vm,
+    '2014-official',
+    {},
+    {},
+    {
+      spellLayout: 'combined',
+      combinedSpellcastingAbility: 'wisdom',
+    },
+  )
+  expect(plan.spellcastingAbilities).toEqual(['intelligence', 'wisdom'])
+  const fields = mapOfficial2014SpellPage(plan.viewModel).textFields
+  expect(fields['Spellcasting Class 2']).toBe('Parent (Child)')
+  expect(fields['SpellcastingAbility 2']).toBe('Wisdom')
+  expect(fields['SpellSaveDC  2']).toBe('17')
+  expect(fields['SpellAtkBonus 2']).toBe('+9')
+  expect(fields['SlotsTotal 19']).toBe('4')
+  expect(fields['SlotsRemaining 19']).toBe('2')
 })
 
 test.each([

@@ -94,7 +94,7 @@ export async function generateFilledCharacterSheetPdf(
     templateId,
     options.content,
     options.pages,
-    options.text?.spellLayout,
+    options.text,
   )
   const original = viewModel
   const paragraphsReservedForOverflow =

@@ -1,3 +1,5 @@
+import type { AbilityName } from '@/types/character'
+
 export type CharacterSheetEdition = '2014' | '2024'
 type CharacterSheetVariant = 'official' | 'custom'
 
@@ -16,13 +18,14 @@ export interface SheetPresentationOptions {
   overflow?: 'notes' | 'ellipsis'
   images?: SheetImageMode
   spellLayout?: 'standard' | 'combined'
+  combinedSpellcastingAbility?: AbilityName
 }
 export const DEFAULT_SHEET_PRESENTATION_OPTIONS = {
   descriptions: 'full',
   overflow: 'ellipsis',
   images: 'color',
   spellLayout: 'standard',
-} as const satisfies Required<SheetPresentationOptions>
+} as const satisfies Required<Omit<SheetPresentationOptions, 'combinedSpellcastingAbility'>>
 export interface SheetOverflowSection {
   id: string
   title: string
