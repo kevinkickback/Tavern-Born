@@ -9,9 +9,11 @@ import { createEmptyGameData } from '@/lib/5etools/emptyGameData'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseItemProperties, parseItems, parseItemTypes } from '@/lib/5etools/parsers/basic'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
+import { RulesPage } from '@/pages/rules/RulesPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { GameData, Item5e } from '@/types/5etools'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 const canonicalItem: Item5e = {
@@ -315,6 +317,49 @@ describe('EquipmentPage item details', () => {
     const statistics = screen.getByRole('region', { name: 'Item statistics' })
     expect(within(statistics).getByText('Ammunition, Heavy, Two-Handed')).toBeTruthy()
     expect(within(statistics).queryByText('A, H, 2H')).toBeNull()
+  })
+
+  test('shares the Heavy toggle with Rules and preserves armor and inventory', () => {
+    const original = useCharacterStore.getState().activeCharacter!
+    const character = {
+      ...original,
+      variantRules: { ignoreEquipRestrictions: true, allowAbilityScoresAbove20: true },
+    }
+    useCharacterStore.setState({ characters: [character], activeCharacter: character })
+
+    const equipment = renderPage()
+    const heavy = screen.getByRole('button', {
+      name: 'Ignore Heavy Weapon Requirements',
+      pressed: false,
+    })
+    fireEvent.click(heavy)
+    expect(heavy.getAttribute('aria-pressed')).toBe('true')
+    const saved = characterPersistenceSchema.parse(useCharacterStore.getState().activeCharacter)
+    expect(saved.variantRules).toMatchObject({
+      ignoreEquipRestrictions: true,
+      allowAbilityScoresAbove20: true,
+      ignoreHeavyWeaponRequirements: true,
+    })
+    expect(saved.equipment).toEqual(character.equipment)
+    equipment.unmount()
+
+    const rules = render(
+      <MemoryRouter initialEntries={['/rules?section=character-options']}>
+        <RulesPage />
+      </MemoryRouter>,
+    )
+    fireEvent.click(
+      screen.getByRole('switch', { name: 'Ignore Heavy Weapon Requirements', checked: true }),
+    )
+    rules.unmount()
+
+    renderPage()
+    expect(
+      screen.getByRole('button', { name: 'Ignore Heavy Weapon Requirements', pressed: false }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Toggle equipment restrictions', pressed: true }),
+    ).toBeTruthy()
   })
 
   test('unequips invalid armor when restrictions are enabled', () => {
