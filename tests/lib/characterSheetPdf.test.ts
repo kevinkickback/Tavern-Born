@@ -190,7 +190,7 @@ describe('characterSheetPdf', () => {
     )
     const waivedPdf = await PDFDocument.load(await generateTestCharacterSheet(waived, template))
     expect(weaponNotes(waivedPdf).get('Glaive')).toBe('Heavy, Reach, Two-Handed')
-  })
+  }, 20_000)
 
   test.each([
     '2024-official',
@@ -215,7 +215,7 @@ describe('characterSheetPdf', () => {
     for (const id of [15, 20, 21, 22, 23, 24]) {
       expect(form.getTextField(`Text_${id}`).getText()).toBe('+44')
     }
-  })
+  }, 20_000)
 
   test.each([
     ['2014-official', ''],

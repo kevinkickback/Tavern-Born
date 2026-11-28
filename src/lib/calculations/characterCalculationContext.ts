@@ -67,6 +67,7 @@ import {
   getOwnedSubclassSkillModifiers,
 } from '@/lib/character/classProficiencyAuthority'
 import { resolveClassProficiencyState } from '@/lib/character/classProficiencySelections'
+import { getFeatOptionGrantName } from '@/lib/character/commands/featCommandIdentity'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
@@ -332,11 +333,11 @@ function getFeatIncreasesWithHigherCap(
     const ability = normalizeAbilityName(bonus.ability)
     if (!ability) return []
     const feat = sourceTag.sourceRef
-      ? resolveFeat?.(sourceTag.sourceName, sourceTag.sourceRef)
+      ? resolveFeat?.(getFeatOptionGrantName(sourceTag), sourceTag.sourceRef)
       : undefined
     // Retain saved gains within the previous ceiling while their exact source limit is unknown.
-    if (!feat && value > 0 && maximumScore > ABILITY_SCORE_ABSOLUTE_MAX) {
-      return [{ ability, value, maximum: ABILITY_SCORE_ABSOLUTE_MAX }]
+    if (!feat && value > 0) {
+      return [{ ability, value, maximum: Math.min(ABILITY_SCORE_ABSOLUTE_MAX, maximumScore) }]
     }
     const maximum = feat?.ability?.reduce((highest, block) => {
       if (!(typeof block.max === 'number' && block.max > highest)) return highest

@@ -172,7 +172,7 @@ export function ReviewStep({
               return (
                 <div
                   key={row.label}
-                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0"
+                  className="flex items-center justify-between gap-2 border-b border-border/40 py-1.5 last:border-0 @4xl:py-1"
                 >
                   <span className="text-xs text-muted-foreground">{row.label}</span>
                   <Badge

@@ -1206,6 +1206,9 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await dialog.getByLabel('Character Name').fill('Character Desk Hero')
   await next.click()
   await dialog.getByRole('button', { name: /5.5e Revised/ }).click()
+  await expect(
+    dialog.getByRole('switch', { name: 'Allow Ability Scores Above 20' }),
+  ).not.toBeChecked()
   for (const title of [
     'Choose sourcebooks',
     'Choose a race',
@@ -1270,15 +1273,15 @@ test('revised background bonuses update review, starting HP, and the saved chara
   await dialog.getByRole('spinbutton', { name: 'constitution base score' }).fill('30')
   await expect(
     dialog.getByRole('heading', { name: 'constitution', exact: true }).locator('..'),
-  ).toContainText('Total 30')
+  ).toContainText('Total 20')
   await next.click()
-  await expect(dialog.getByText('30+1 (capped)', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('20+1 (capped)', { exact: true })).toBeVisible()
   await dialog.screenshot({ path: info.outputPath('review.png') })
   await expect(dialog.getByRole('button', { name: /^Edit\b/ })).toHaveCount(0)
   await dialog.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(dialog.getByRole('heading', { name: 'Set ability scores' })).toBeVisible()
   await expect(dialog.getByRole('spinbutton', { name: 'constitution base score' })).toHaveValue(
-    '30',
+    '20',
   )
   await dialog.getByRole('tab', { name: 'Standard Array' }).click()
   await dialog.getByRole('combobox', { name: 'constitution base score' }).click()

@@ -5,9 +5,13 @@ import { buildClassLookup, buildFeatLookup, buildRaceLookup } from '@/lib/5etool
 import { buildPrerequisiteSnapshot, checkPrerequisite } from '@/lib/calculations/prerequisites'
 import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceFeatureCatalogs'
 import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
-import { replaceFeatSelectionsCommand } from '@/lib/character/commands/featCommands'
+import {
+  commitFeatOptionsCommand,
+  replaceFeatSelectionsCommand,
+} from '@/lib/character/commands/featCommands'
 import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
+import { applyFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import type { Feat5e, Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -155,6 +159,100 @@ describe('effective ability score consumers', () => {
       spellSaveDC: 54,
       spellAttackBonus: 46,
     })
+  })
+
+  test('keeps the fallback limit for unavailable feat grants with either score cap', () => {
+    const feat: Feat5e = { name: 'Test Feat', source: 'XPHB', ability: [{ cha: 1 }] }
+    const base = makeCharacterFixture()
+    const selected = applyCharacterCommandResult(
+      base,
+      replaceFeatSelectionsCommand(base, base.provenance, [feat]),
+    )
+    const actor = characterPersistenceSchema.parse({
+      ...selected,
+      abilityScores: { ...selected.abilityScores, charisma: 20 },
+      variantRules: { allowAbilityScoresAbove20: false },
+      provenance: {
+        ...selected.provenance,
+        abilityBonuses: [
+          {
+            ability: 'charisma',
+            value: 1,
+            sourceTag: {
+              sourceType: 'feat',
+              sourceName: feat.name,
+              sourceRef: feat.source,
+              grantType: 'fixed',
+              label: feat.name,
+            },
+          },
+        ],
+      },
+    })
+    expect(createCurrentCharacterSheetViewModel(actor, {}).effectiveAbilityScores.charisma).toBe(21)
+    const wrongPrinting = { featsByKey: buildFeatLookup([{ ...feat, source: 'PHB' }]) }
+    expect(
+      createCurrentCharacterSheetViewModel(actor, wrongPrinting).effectiveAbilityScores.charisma,
+    ).toBe(21)
+    const exactPrinting = { featsByKey: buildFeatLookup([feat]) }
+    expect(
+      createCurrentCharacterSheetViewModel(actor, exactPrinting).effectiveAbilityScores.charisma,
+    ).toBe(20)
+
+    const extended = {
+      ...actor,
+      abilityScores: { ...actor.abilityScores, charisma: 30 },
+      variantRules: { allowAbilityScoresAbove20: true },
+    }
+    expect(createCurrentCharacterSheetViewModel(extended, {}).effectiveAbilityScores.charisma).toBe(
+      30,
+    )
+  })
+
+  test('uses the exact feat limit for a fixed variant ability grant', () => {
+    const feat: Feat5e = { name: 'Training', source: 'HOMEBREW', ability: [{ cha: 1 }] }
+    const base = makeCharacterFixture({ background: 'Acolyte', backgroundSource: 'XPHB' })
+    const ledger = applyFeatGrantBlocks(
+      base.provenance,
+      [{ 'Training; Stalwart|HOMEBREW': true }],
+      'background',
+      'Acolyte',
+      'XPHB',
+    )
+    const selected = applyCharacterCommandResult(
+      base,
+      commitFeatOptionsCommand(
+        base,
+        ledger,
+        { ...feat, fixedGrant: true, grantVariant: 'Stalwart' },
+        { abilityScore: 'Charisma' },
+        [],
+      ),
+    )
+    const actor = characterPersistenceSchema.parse({
+      ...selected,
+      abilityScores: { ...selected.abilityScores, charisma: 20 },
+      variantRules: { allowAbilityScoresAbove20: false },
+    })
+    const literalNameMatch = { ...feat, name: 'Training; Stalwart', ability: [{ cha: 1, max: 30 }] }
+    const exactPrinting = { featsByKey: buildFeatLookup([feat, literalNameMatch]) }
+    expect(
+      createCurrentCharacterSheetViewModel(actor, exactPrinting).effectiveAbilityScores.charisma,
+    ).toBe(20)
+    expect(createCurrentCharacterSheetViewModel(actor, {}).effectiveAbilityScores.charisma).toBe(21)
+
+    const extended = {
+      ...actor,
+      abilityScores: { ...actor.abilityScores, charisma: 24 },
+      variantRules: { allowAbilityScoresAbove20: true },
+    }
+    const higherCapPrinting = {
+      featsByKey: buildFeatLookup([{ ...feat, ability: [{ cha: 1, max: 24 }] }, literalNameMatch]),
+    }
+    expect(
+      createCurrentCharacterSheetViewModel(extended, higherCapPrinting).effectiveAbilityScores
+        .charisma,
+    ).toBe(24)
   })
 
   test.skipIf(!existsSync('data/feats.json'))(
