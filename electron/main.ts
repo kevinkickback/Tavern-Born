@@ -52,6 +52,7 @@ import {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const RENDERER_ROOT_URL = rendererRootFileUrl(join(__dirname, '../dist') + sep)
+const WINDOWS_TITLE_BAR_BACKGROUND = '#00000000'
 
 let mainWindow: BrowserWindow | null = null
 let desktopState: 'starting' | 'ready' | 'closing' = 'starting'
@@ -186,7 +187,7 @@ async function createWindow(): Promise<void> {
       : {
           titleBarStyle: 'hidden' as const,
           titleBarOverlay: {
-            color: '#111113',
+            color: process.platform === 'win32' ? WINDOWS_TITLE_BAR_BACKGROUND : '#111113',
             symbolColor: '#fafafa',
             height: 32,
           },
@@ -533,7 +534,12 @@ async function initializeDesktop(): Promise<void> {
       const hexColor = /^#[0-9a-f]{6}$/i
       if (!hexColor.test(color) || !hexColor.test(symbolColor)) return
 
-      senderWindow.setTitleBarOverlay({ color, symbolColor, height })
+      // Let the renderer's startup frame show through the native caption buttons.
+      senderWindow.setTitleBarOverlay({
+        color: process.platform === 'win32' ? WINDOWS_TITLE_BAR_BACKGROUND : color,
+        symbolColor,
+        height,
+      })
     },
   )
 
