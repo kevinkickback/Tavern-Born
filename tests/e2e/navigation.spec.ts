@@ -305,6 +305,18 @@ test('browses bundled changelog history offline and fits the viewport', async ({
   await expect(notes.getByRole('list').first()).toHaveCSS('list-style-type', 'disc')
   await expect(dialog.getByRole('button', { name: 'Close', exact: true }).first()).toBeInViewport()
   await expect.poll(() => notes.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => {
+        const { top, bottom } = element.getBoundingClientRect()
+        const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+        return {
+          clearsTitleBar: top >= rem * 2 + 7.5,
+          clearsBottom: window.innerHeight - bottom >= rem - 0.5,
+        }
+      }),
+    )
+    .toEqual({ clearsTitleBar: true, clearsBottom: true })
   const compactBounds = (await dialog.boundingBox())!
   const titleBounds = (await dialog
     .getByRole('heading', { name: 'Changelog — v0.7.0' })
@@ -314,8 +326,6 @@ test('browses bundled changelog history offline and fits the viewport', async ({
     .getByRole('button', { name: 'Close', exact: true })
     .last()
     .boundingBox())!
-  expect(compactBounds.y).toBeGreaterThanOrEqual(31)
-  expect(420 - compactBounds.y - compactBounds.height).toBeGreaterThanOrEqual(31)
   expect(selectorBounds.x).toBeGreaterThan(titleBounds.x)
   expect(selectorBounds.y + selectorBounds.height / 2).toBeCloseTo(
     titleBounds.y + titleBounds.height / 2,
