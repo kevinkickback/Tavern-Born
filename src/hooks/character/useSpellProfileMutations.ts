@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
+import { useStore } from 'zustand'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import {
   type CharacterCalculationContext,
@@ -30,7 +31,7 @@ import {
   isManagedClassSpellProfile,
   managedClassSpellId,
 } from '@/lib/character/managedClassSpellIdentity'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Character, SpellProfile } from '@/types/character'
 import type { ManagedClassSpellChoice } from '@/types/classCasting'
@@ -38,7 +39,8 @@ import { useSpellProvenanceMutations } from './useSpellProvenanceMutations'
 
 /** Mutations start from latest saved intent, never a filtered display array. */
 export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
-  const character = useCharacterStore((state) => state.activeCharacter)
+  const editingStore = useCharacterEditingStore()
+  const character = useStore(editingStore, (state) => state.activeCharacter)
   const sourceData = useGameDataStore((state) => state.gameData)
   const calculation = useCharacterCalculationContext(character)
   const { finishClassSpellChoices } = useSpellProvenanceMutations()
@@ -47,7 +49,7 @@ export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
       command: (base: Character, current?: CharacterCalculationContext) => SpellCommandResult,
       requiresCurrent = false,
     ) => {
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (!latest || !character || latest.id !== character.id) return
       try {
         const fresh =
@@ -94,7 +96,7 @@ export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
           }
         const result = command(base, current)
         if (Object.keys(result.characterPatch).length)
-          useCharacterStore.getState().updateCharacter(latest.id, {
+          editingStore.getState().updateCharacter(latest.id, {
             ...result.characterPatch,
             provenance: result.provenanceUpdate,
           })
@@ -102,7 +104,7 @@ export function useSpellProfileMutations(spellProfiles: SpellProfile[]) {
         toast.error(error instanceof Error ? error.message : 'The spell change could not be saved.')
       }
     },
-    [character, calculation, sourceData],
+    [character, calculation, editingStore, sourceData],
   )
   const choiceFor = (profileId: string, reference: string) => {
     if (reference.includes('|') && !isSourceQualifiedSpellReference(reference)) return undefined

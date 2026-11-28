@@ -6,11 +6,37 @@ import { mapCharacterSheet2014Official } from '@/lib/pdf/characterSheetMapping20
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeManagedClassSpellFixtures } from '../fixtures/managedClassSpellFixtures'
 import { createCurrentCharacterSheetViewModel } from '../fixtures/pdfTemplates'
 
 describe('createCharacterSheetViewModel', () => {
+  test('renders the saved racial size in either layout and uses the legacy default when unset', () => {
+    const race = { name: 'Human', source: 'XPHB', size: ['S', 'M'] }
+    const saved = characterPersistenceSchema.parse(
+      makeCharacterFixture({
+        race: race.name,
+        raceSource: race.source,
+        raceSize: 'M',
+      }),
+    )
+    const viewModel = createCurrentCharacterSheetViewModel(saved, {
+      racesByKey: buildRaceLookup([race]),
+    })
+    expect(mapCharacterSheet2014(viewModel).textFields['Size Category']).toBe('Medium')
+    expect(mapCharacterSheet2024(viewModel).textFields.Text_18).toBe('Medium')
+    expect(createCurrentCharacterSheetViewModel(saved, {}).sizeSummary).toBe('M')
+    expect(
+      createCurrentCharacterSheetViewModel(
+        { ...saved, raceSize: undefined },
+        {
+          racesByKey: buildRaceLookup([race]),
+        },
+      ).sizeSummary,
+    ).toBe('S')
+  })
+
   test('excludes ancestry Age prose from PDF traits while keeping the character Age field', () => {
     const character = makeCharacterFixture({
       race: 'Elf',

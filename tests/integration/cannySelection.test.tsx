@@ -11,6 +11,7 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { useSkills } from '@/hooks/character/useSkills'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { parseClassDocument } from '@/lib/5etools/parsers/classes'
@@ -18,8 +19,8 @@ import { buildClassChoiceFeatureCatalogs } from '@/lib/character/classChoiceOpti
 import { applySkillExpertiseActionCommand } from '@/lib/character/commands/skillExpertiseCommands'
 import { getSkillExpertiseChoices } from '@/lib/character/skillExpertiseChoices'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { BuildProficienciesPage } from '@/pages/build/proficiencies/ProficienciesPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, ClassFeature } from '@/types/5etools'
@@ -68,7 +69,14 @@ function mount(f: Fixture, saved = f.character, route = '/build/class') {
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="/build/class" element={<BuildClassPage />} />
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route
+          path="/build/overview"
+          element={
+            <RulesPreviewManager>
+              <BuildOverviewPage />
+            </RulesPreviewManager>
+          }
+        />
         <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
       </Routes>
     </MemoryRouter>,
@@ -230,11 +238,12 @@ test('the additional focus feature is a separate opt-in and creates no item, pro
   expect(active().spells).toEqual(before.spells)
 })
 
-test('Review routes the real Canny requirement to shared picker and strictly saves the selected proficient skill', async () => {
+test('Overview routes the real Canny requirement to shared picker and strictly saves the selected proficient skill', async () => {
   const f = makeCannyFixture()
-  mount(f, f.character, '/build/review')
-  fireEvent.click(screen.getByText('Finish Canny expertise').closest('button')!)
-  await screen.findByRole('dialog')
+  mount(f, f.character, '/build/overview')
+  fireEvent.click(screen.getByRole('button', { name: /^View all \d+ actions$/ }))
+  const allActions = await screen.findByRole('dialog', { name: 'Character setup' })
+  fireEvent.click(within(allActions).getByRole('link', { name: /^Finish Canny expertise/ }))
   fireEvent.click(await option('Survival'))
   await confirm()
   const saved = characterPersistenceSchema.parse(JSON.parse(JSON.stringify(active())))
@@ -451,20 +460,17 @@ test('actual Languages rows use effective arrays and ownership through source lo
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
 })
 
-test('Review retains raw Canny detail context with an explicit source-unavailable badge and no read writes', async () => {
+test('Overview retains raw Canny detail context with an explicit source-unavailable badge and no read writes', async () => {
   const f = makeCannyFixture(),
     saved = { ...configured(f), allowedSources: ['PHB'] }
-  mount(f, saved, '/build/review')
+  mount(f, saved, '/build/overview')
   const before = JSON.stringify(active())
-  fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
   fireEvent.click(screen.getByText('Traits & features', { selector: 'span' }).closest('summary')!)
-  const features = screen.getByRole('heading', { name: 'Feature choices' }).parentElement!
-  const expertise = within(features)
-    .getByText('Canny expertise', { selector: 'span' })
-    .closest('li')!
-  expect(within(expertise).getByText('Source unavailable')).toBeTruthy()
-  expect(within(expertise).getByText(/Double your proficiency bonus/)).toBeTruthy()
-  expect(within(features).queryByText('Unresolved source')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /^Canny expertise$/ }))
+  const expertise = within(await screen.findByRole('dialog', { name: 'Canny expertise preview' }))
+  expect(expertise.getByText('Source unavailable')).toBeTruthy()
+  expect(expertise.getByText(/Double your proficiency bonus/)).toBeTruthy()
+  expect(expertise.queryByText('Unresolved source')).toBeNull()
   expect(JSON.stringify(active())).toBe(before)
   expect(useCharacterStore.getState().isActiveCharacterDirty).toBe(false)
 })

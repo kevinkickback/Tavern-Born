@@ -11,7 +11,12 @@ import {
 import { ABILITY_SCORE_ABSOLUTE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
 import { getOriginSystemLabel } from '@/lib/calculations/originSystem'
 import { getRaceDisplayName } from '@/lib/calculations/raceDisplay'
-import { getSpeedDisplay, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
+import {
+  getRaceSizeOptions,
+  getSpeedDisplay,
+  mergeRaceWithSubrace,
+  RACE_SIZE_LABELS,
+} from '@/lib/calculations/raceUtils'
 import type { VariantRuleContentAvailability } from '@/lib/calculations/variantRuleAvailability'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
@@ -68,7 +73,15 @@ export function ReviewStep({
   const hasDarkvision = displayRace?.darkvision !== undefined && displayRace.darkvision > 0
 
   const speedValue = getSpeedDisplay(displayRace)
-  const sizeValue = displayRace?.size?.join(', ') || 'Not specified'
+  const sizeOptions = getRaceSizeOptions(displayRace)
+  const sizeValue =
+    data.raceSize && sizeOptions.includes(data.raceSize)
+      ? RACE_SIZE_LABELS[data.raceSize]
+      : sizeOptions.length > 1
+        ? 'Not selected'
+        : (sizeOptions[0] && RACE_SIZE_LABELS[sizeOptions[0]]) ||
+          displayRace?.size?.[0] ||
+          'Not specified'
 
   const variantRuleRows = [
     {

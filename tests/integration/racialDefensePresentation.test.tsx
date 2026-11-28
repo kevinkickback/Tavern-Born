@@ -4,7 +4,7 @@ import { afterEach, expect, test } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { AdjustmentsPage } from '@/pages/adjustments/AdjustmentsPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
@@ -42,13 +42,13 @@ afterEach(async () => {
   useGameDataStore.setState({ gameData: null })
 })
 
-test('Review and PDF keep independent fire while exact refresh removes acid/poisoned, then stay coherent offline', async () => {
+test('Overview and PDF keep independent fire while exact refresh removes acid/poisoned, then stay coherent offline', async () => {
   const { race } = await start()
   const removedChild = defenseSelection({ resist: [], immune: null, conditionImmune: [] }).child
   render(
     <TooltipProvider>
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
+      <MemoryRouter initialEntries={['/build/overview']}>
+        <BuildOverviewPage />
       </MemoryRouter>
     </TooltipProvider>,
   )

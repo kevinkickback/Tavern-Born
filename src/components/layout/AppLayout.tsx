@@ -28,7 +28,7 @@ export function AppLayout({ children, onOpenAppUpdate }: AppLayoutProps) {
     <div
       id={APP_INTERACTIVE_CONTENT_ID}
       className={cn(
-        'grid h-screen grid-rows-[2rem_minmax(0,1fr)_2.25rem] overflow-hidden bg-app-shell transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none',
+        'grid h-screen grid-rows-[var(--workspace-titlebar-height)_minmax(0,1fr)_2.25rem] overflow-hidden bg-app-shell transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none',
         secondarySidebarOpen
           ? 'grid-cols-[4rem_14rem_minmax(0,1fr)]'
           : 'grid-cols-[4rem_0.75rem_minmax(0,1fr)]',

@@ -1,5 +1,5 @@
 import type { AbilityScoreMethod } from '@/lib/calculations/abilityScoreMethods'
-import type { AbilityScores, OriginSystem, PortraitTransform } from '@/types/character'
+import type { AbilityScores, OriginSystem, PortraitTransform, RaceSize } from '@/types/character'
 
 export type WizardStepId =
   | 'basics'
@@ -31,6 +31,7 @@ export interface CharacterWizardData {
   raceSource: string
   subrace: string
   subraceSource: string
+  raceSize?: RaceSize
   class: string
   classSource: string
   background: string

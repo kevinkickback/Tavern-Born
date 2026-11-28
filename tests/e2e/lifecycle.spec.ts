@@ -140,9 +140,9 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
     'page',
   )
   await page.goBack()
+  const builder = page.getByRole('complementary', { name: 'Builder navigation' })
   await selectCharacterFromHome(page, fixture.name)
-  await page.getByRole('button', { name: 'Details' }).click()
-  await page.getByRole('link', { name: 'Portrait' }).click()
+  await builder.getByRole('link', { name: 'Portrait' }).click()
   await expect(page).toHaveURL(/\/details\/portrait$/)
 
   const placeholderButton = page
@@ -198,7 +198,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await page.getByRole('button', { name: 'Characters' }).click()
   await expect(page).toHaveURL(/\/$/)
   await selectCharacterFromHome(page, fixture.name)
-  await page.getByRole('link', { name: 'Portrait' }).click()
+  await builder.getByRole('link', { name: 'Portrait' }).click()
   await expect(page).toHaveURL(/\/details\/portrait$/)
 
   await expect(page.getByRole('button', { name: 'Clear' })).toBeEnabled()

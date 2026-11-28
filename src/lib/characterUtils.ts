@@ -6,6 +6,7 @@ import type {
   CharacterClassEntry,
   HitPointAdjustment,
   HitPointGain,
+  HitPointLevelOverride,
 } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import {
@@ -19,6 +20,8 @@ export interface HitPointCalculationOptions {
   averageHp?: boolean
   classesData?: readonly Class5e[]
   hitPointGains?: HitPointGain[]
+  hitPointLevelOverrides?: HitPointLevelOverride[]
+  initialClass?: Character['initialClass']
 }
 
 export function getCharacterClassEntries(
@@ -45,57 +48,72 @@ export function getTotalCharacterLevel(
   return getTotalClassLevels(getCharacterClassEntries(character))
 }
 
-/**
- * Per-level HP breakdown for a character.
- *
- * Index 0 is always 0 (unused sentinel). Index n contains the HP gained at level n.
- * Rules: full hit die at level 1 of the primary class, then a recorded result
- * or the fixed average at subsequent levels; minimum 1 per level. Characters
- * Pass `classesData` for accurate per-class hit dice; without it, falls back to
- * `entry.hitDice` string or d8.
- */
-export function calculateHPBreakdown(
+export function getHitPointLevelKey({
+  className,
+  classSource,
+  classLevel,
+}: Pick<HitPointGain, 'className' | 'classSource' | 'classLevel'>) {
+  return JSON.stringify([className, classSource, classLevel])
+}
+
+/** Resolve class-level HP without inferring the order of unrecorded multiclass levels. */
+export function getHitPointLevelLog(
   entries: readonly CharacterClassEntry[] | undefined | null,
   conModifier: number,
-  options?: HitPointCalculationOptions,
-): number[] {
-  const { averageHp = true, classesData, hitPointGains } = options ?? {}
-  const breakdown: number[] = [0]
-  const classes = entries ?? []
-  let firstLevel = true
-
-  for (const entry of classes) {
-    const classLevels = Math.max(0, entry.levels || 0)
-    if (classLevels <= 0) continue
-
+  {
+    averageHp = true,
+    classesData,
+    hitPointGains,
+    hitPointLevelOverrides,
+    initialClass,
+  }: HitPointCalculationOptions = {},
+) {
+  const classes = (entries ?? []).filter(({ levels }) => levels > 0)
+  const startingClass = findClassReference(initialClass ?? {}, classes) ?? classes[0]
+  const edited = new Map(hitPointLevelOverrides?.map((gain) => [getHitPointLevelKey(gain), gain]))
+  return classes.flatMap((entry, classIndex) => {
     const classData = findClassReference(entry, classesData)
-    const die = getHitDiceFromClass(classData)
-    const avgRoll = Math.floor(die / 2) + 1
-
-    for (let lv = 1; lv <= classLevels; lv++) {
-      if (firstLevel && lv === 1) {
-        breakdown.push(Math.max(1, die + conModifier))
-        firstLevel = false
-      } else {
-        const recordedGain = hitPointGains?.find(
-          (gain) =>
-            gain.className === entry.name &&
-            gain.classLevel === lv &&
-            gain.classSource === entry.source,
-        )
-        const dieResult = recordedGain?.dieResult ?? (averageHp ? avgRoll : die)
-        breakdown.push(Math.max(1, dieResult + conModifier))
+    const catalogDie = classData?.hd?.faces
+    const knownDie =
+      typeof catalogDie === 'number' && Number.isInteger(catalogDie) && catalogDie > 0
+    const ambiguous =
+      classes.filter((row) => row.name === entry.name && row.source === entry.source).length > 1
+    return Array.from({ length: entry.levels }, (_, index) => {
+      const owner = { className: entry.name, classSource: entry.source, classLevel: index + 1 }
+      const key = getHitPointLevelKey(owner)
+      const startingLevel = entry === startingClass && index === 0
+      const original = startingLevel
+        ? undefined
+        : hitPointGains?.find((gain) => getHitPointLevelKey(gain) === key)
+      const override = ambiguous ? undefined : edited.get(key)
+      const recorded = override ?? original
+      const hitDie = recorded?.hitDie ?? (knownDie ? catalogDie : getHitDiceFromClass(undefined))
+      const useFullDie = startingLevel || !averageHp
+      const dieResult = recorded?.dieResult ?? (useFullDie ? hitDie : Math.floor(hitDie / 2) + 1)
+      return {
+        key,
+        rowKey: ambiguous ? JSON.stringify([key, classIndex]) : key,
+        ...owner,
+        characterLevel: startingLevel
+          ? 1
+          : (original?.characterLevel ?? (classes.length === 1 ? index + 1 : undefined)),
+        hitDie,
+        dieResult,
+        method: recorded?.method ?? (useFullDie ? ('full' as const) : ('average' as const)),
+        hp: Math.max(1, dieResult + conModifier),
+        canEdit:
+          !ambiguous &&
+          !!entry.source &&
+          (!!recorded || (knownDie && !classData?.sourceIdentityConflict)),
       }
-    }
-  }
-
-  return breakdown
+    })
+  })
 }
 
 /**
  * Calculate maximum hit points for a character.
  *
- * Sums the per-level breakdown from {@link calculateHPBreakdown}.
+ * Sums the per-level contributions from {@link getHitPointLevelLog}.
  * Returns at least 1 even with no class data.
  *
  * Pass `classesData` (from the game data store) for accurate per-class hit dice;
@@ -106,8 +124,8 @@ export function calculateMaxHP(
   conModifier: number,
   options?: HitPointCalculationOptions,
 ): number {
-  const breakdown = calculateHPBreakdown(entries, conModifier, options)
-  const total = breakdown.reduce((sum, v) => sum + v, 0)
+  const log = getHitPointLevelLog(entries, conModifier, options)
+  const total = log.reduce((sum, { hp }) => sum + hp, 0)
   return Math.max(1, total)
 }
 
@@ -150,6 +168,8 @@ export function getEffectiveMaxHP(
     averageHp,
     classesData,
     hitPointGains: character.hitPointGains,
+    hitPointLevelOverrides: character.hitPointLevelOverrides,
+    initialClass: character.initialClass,
   })
   const characterLevel = getTotalCharacterLevel(character)
   const resolved = resolveNumericEffect(

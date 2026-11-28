@@ -3,6 +3,8 @@ import { join, relative } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 const EXPECTED_RAW_SCORE_READS = new Map<string, number>([
+  // Creator compares allocated inputs while synchronizing its private origin draft.
+  ['src/components/character/wizard/CharacterCreationWizard.tsx', 1],
   ['src/hooks/character/useAbilityScores.ts', 2],
   ['src/lib/calculations/characterCalculationContext.ts', 1],
   ['src/lib/calculations/prerequisiteRules.ts', 1],

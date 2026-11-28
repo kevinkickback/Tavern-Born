@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
+import { useStore } from 'zustand'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
@@ -19,13 +20,15 @@ import { projectProficiencyCommandResult } from '@/lib/character/commands/profic
 import { canChangeFeatExpertise } from '@/lib/character/featExpertiseSelections'
 import { canChangeSkilledSkills } from '@/lib/character/featSkillSelections'
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
+import { emptyProvenance } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
 export function useFeatProvenanceMutations() {
-  const character = useCharacterStore((state) => state.activeCharacter)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const editingStore = useCharacterEditingStore()
+  const character = useStore(editingStore, (state) => state.activeCharacter)
+  const updateCharacter = useStore(editingStore, (state) => state.updateCharacter)
   const { feats } = useFilteredGameData()
   const calculation = useCharacterCalculationContext(character)
   const ledger = useMemo<ProvenanceLedger>(

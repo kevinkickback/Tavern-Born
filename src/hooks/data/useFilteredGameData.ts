@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
+import { useStore } from 'zustand'
 import { type FilterParams, filterGameData } from '@/lib/5etools/filterGameData'
 import { getEffectiveSources } from '@/lib/sourceCompatibility'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 /** Filter by explicit source parameters without depending on the active character. */
@@ -37,9 +38,11 @@ export function useCharacterGameDataParams({
 
 /** Game data filtered by the active character's source settings. */
 export function useFilteredGameData() {
-  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
-  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
-  const preferNewerPrintings = useCharacterStore(
+  const store = useCharacterEditingStore()
+  const allowedSources = useStore(store, (state) => state.activeCharacter?.allowedSources)
+  const originSystem = useStore(store, (state) => state.activeCharacter?.originSystem)
+  const preferNewerPrintings = useStore(
+    store,
     (state) => state.activeCharacter?.variantRules?.preferNewerPrintings ?? false,
   )
   return useCharacterGameDataParams({ allowedSources, originSystem, preferNewerPrintings })

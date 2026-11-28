@@ -1,7 +1,7 @@
 import { Sparkle } from '@phosphor-icons/react'
 import type { PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl

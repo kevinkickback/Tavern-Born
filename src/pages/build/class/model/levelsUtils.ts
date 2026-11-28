@@ -1,9 +1,11 @@
+import type { ManagedClassSpellDomain } from '@/types/classCasting'
 import type { ClassFeatureDisplay } from '../components/DetailsPanel'
 
 export interface SpellGain {
   cantrips: number
   spells: number
   maxSpellLevel: number
+  picksByDomain?: Partial<Record<ManagedClassSpellDomain, number>>
   canSwap: boolean
   canTranscribeRituals?: true
   hasTranscribedRituals?: true

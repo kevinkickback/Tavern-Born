@@ -23,10 +23,14 @@ import {
 } from '@/lib/character/raceAbilityState'
 import { buildRacialDefenseState } from '@/lib/character/racialDefenseState'
 import {
+  applyProficiencyBlocks,
   applyRaceGrants,
+  makeSourceTag,
   reconcileRaceChange,
   reconcileSubraceChange,
+  removeGrantsBySourceRef,
   resolveRaceAsiChoicesInLedger,
+  toProficiencyBlocks,
 } from '@/lib/provenance'
 import { normalizeKey, normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import { getSelectedRaceAbilityChoices } from '@/lib/provenance/raceOwnership'
@@ -40,6 +44,7 @@ export type ResolveRaceChoiceOptions = (domain: 'armor' | 'weapons', fromFilter:
 export type RaceSelectionCommandOptions = Pick<RaceSpellSelectionOptions, 'subraceIsNested'> &
   NativeSpellLookups & {
     previousSubrace?: Race5e
+    previousSubraceIsNested?: boolean
   }
 
 function removeSourceProficiencies(
@@ -75,9 +80,11 @@ function buildRaceMaterializedPatch(
   const racialDefenses = buildRacialDefenseState(race, subrace)
   race = getRaceSelectionParent(race, subrace)
   let proficiencies = removeSourceProficiencies(character, ledger, retainedLedger)
-  const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
-    includeAnyStandard: false,
-  }).filter((name) => !name.toLowerCase().startsWith('choose '))
+  const raceSkills = subrace?.overwrite?.skillProficiencies
+    ? []
+    : extractProficiencyBlockNames(race.skillProficiencies ?? [], {
+        includeAnyStandard: false,
+      }).filter((name) => !name.toLowerCase().startsWith('choose '))
   const raceLanguages = extractProficiencyBlockNames(deriveEffectiveRaceLanguageBlocks(race), {
     includeAnyStandard: false,
   }).filter((name) => !name.toLowerCase().startsWith('choose '))
@@ -188,6 +195,13 @@ export function applyRaceSelectionCommand(
       raceSource: race.source || undefined,
       subrace: subrace?.name,
       subraceSource: subrace?.source || undefined,
+      raceSize:
+        character.race === race.name &&
+        character.raceSource === race.source &&
+        character.subrace === subrace?.name &&
+        character.subraceSource === subrace?.source
+          ? character.raceSize
+          : undefined,
       raceAsiBlockIndex,
       raceAsiChoices: [],
       movement,
@@ -246,11 +260,43 @@ export function applySubraceSelectionCommand(
     { sourceType: 'subrace', sourceName: oldSubraceName, sourceRef: character.subraceSource ?? '' },
   ])
   const workingCharacter = { ...character, ...retracted.characterPatch }
-  const retainedProvenance = reconcileSubraceChange(retracted.provenanceUpdate, {
+  let retainedProvenance = reconcileSubraceChange(retracted.provenanceUpdate, {
     name: oldSubraceName,
     source: character.subraceSource,
   })
+  if (normalized.subrace?.overwrite?.skillProficiencies) {
+    retainedProvenance = removeGrantsBySourceRef(
+      retainedProvenance,
+      'race',
+      race.name,
+      race.source,
+      undefined,
+      { normalizeIdentity: true, preserve: (_, domain) => domain !== 'skills' },
+    )
+    retainedProvenance = {
+      ...retainedProvenance,
+      choices: retainedProvenance.choices.filter(
+        ({ domain, sourceTag }) =>
+          domain !== 'skills' ||
+          sourceTag.sourceType !== 'race' ||
+          normalizeOwnerIdentity(sourceTag.sourceName) !== normalizeOwnerIdentity(race.name) ||
+          normalizeOwnerIdentity(sourceTag.sourceRef) !== normalizeOwnerIdentity(race.source),
+      ),
+    }
+  }
   let provenanceUpdate = retainedProvenance
+  if (
+    previous?.overwrite?.skillProficiencies &&
+    !normalized.subrace?.overwrite?.skillProficiencies
+  ) {
+    provenanceUpdate = applyProficiencyBlocks(
+      provenanceUpdate,
+      'skills',
+      toProficiencyBlocks(normalized.race.skillProficiencies),
+      makeSourceTag('race', race.name, 'fixed', race.source),
+      `race:${normalizeKey(race.name)}`,
+    )
+  }
   if (normalized.subrace) {
     provenanceUpdate = applyRaceGrants(
       {
@@ -288,6 +334,9 @@ export function applySubraceSelectionCommand(
     race,
     subrace,
     options,
+    options?.previousSubraceIsNested === undefined
+      ? undefined
+      : { subrace: previous, isNested: options.previousSubraceIsNested },
   )
   provenanceUpdate = racialSpells.provenanceUpdate
 
@@ -295,6 +344,11 @@ export function applySubraceSelectionCommand(
     characterPatch: {
       subrace: subrace?.name,
       subraceSource: subrace?.source || undefined,
+      raceSize:
+        (character.subrace === subrace?.name && character.subraceSource === subrace?.source) ||
+        (!previous?.size && !subrace?.size)
+          ? character.raceSize
+          : undefined,
       raceAsiChoices: [],
       movement,
       spells: racialSpells.spells,

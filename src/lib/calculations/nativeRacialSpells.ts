@@ -137,6 +137,53 @@ function uniqueReferences(references: readonly string[]): string[] {
   ]
 }
 
+/** Bridge an unchanged parent suite across an ordinary child replacement. */
+export function rebaseParentRacialSpellProfile(
+  previous: Character,
+  next: Character,
+  previousResolution: RaceResolution,
+  nextResolution: RaceResolution,
+): Character {
+  const oldOwner = getNativeRacialSpellOwners(previous, previousResolution)?.find(
+    (owner) => owner.ownerType === 'race',
+  )
+  const newOwner = getNativeRacialSpellOwners(next, nextResolution)?.find(
+    (owner) => owner.ownerType === 'race',
+  )
+  if (
+    !oldOwner ||
+    !newOwner ||
+    oldOwner.id === newOwner.id ||
+    oldOwner.name !== newOwner.name ||
+    oldOwner.source !== newOwner.source
+  )
+    return next
+  const profile = previous.spells.spellProfiles.find((row) => row.id === oldOwner.id)
+  if (!profile?.racial?.suite) return next
+  const suite = oldOwner.suites.find((row) => row.id === profile.racial?.suite?.id)
+  const retained =
+    suite && newOwner.suites.find((row) => blockKey(row.block) === blockKey(suite.block))
+  if (!retained) return next
+  return {
+    ...next,
+    spells: {
+      ...next.spells,
+      spellProfiles: [
+        ...next.spells.spellProfiles,
+        {
+          ...profile,
+          id: newOwner.id,
+          racial: {
+            ...profile.racial,
+            context: newOwner.context,
+            suite: { ...profile.racial.suite, id: retained.id },
+          },
+        },
+      ],
+    },
+  }
+}
+
 /** Rebuild only a saved applied relation; never evaluate a schedule or infer targets here. */
 export function materializeNativeRacialProfile(profile: SpellProfile): SpellProfile {
   if (profile.type !== 'racial' || !profile.racial) return profile

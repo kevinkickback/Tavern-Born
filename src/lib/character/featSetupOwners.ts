@@ -36,6 +36,7 @@ export function getFeatSetupFocusKey(
 }
 
 interface FeatSetupOwner {
+  provider?: SourceTag
   target: FeatOptionTarget & { source: string }
   focusKey: string
   label: string
@@ -62,6 +63,7 @@ export function getFeatSetupOwners(
       (feat) => getFeatSelectionKey(feat) === getFeatSelectionKey(target),
     )
     rows.push({
+      provider,
       target: { ...target, source: target.source },
       focusKey,
       label,

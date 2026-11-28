@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import {
   type ArmorClassBaseBreakdown,
-  calculateArmorClassAdjustmentTotal,
   getArmorClassBaseBreakdown,
 } from '@/lib/calculations/armorClass'
 import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
@@ -12,14 +11,8 @@ import { useCharacterStore } from '@/store/characterStore'
 
 export interface ArmorClassState {
   calculatedAC: number
-  adjustmentTotal: number
-  adjustedAC: number
-  overrideAC?: number
   effectiveAC: number
-  resolution: ResolvedNumericEffect
   baseBreakdown: ArmorClassBaseBreakdown
-  setAC: (ac: number) => void
-  clearOverride: () => void
   previewArmorClassSettings: (settings: ArmorClassSettings) => ResolvedNumericEffect
   saveArmorClassSettings: (settings: ArmorClassSettings) => void
 }
@@ -40,8 +33,6 @@ export function useArmorClass(): ArmorClassState {
     [character?.equipment, dexMod],
   )
   const calculatedAC = baseBreakdown.total
-  const adjustmentTotal = calculateArmorClassAdjustmentTotal(character?.armorClassAdjustments)
-  const adjustedAC = Math.max(0, calculatedAC + adjustmentTotal)
   const resolution = useMemo(
     () =>
       resolveNumericEffect(
@@ -55,20 +46,8 @@ export function useArmorClass(): ArmorClassState {
 
   return {
     calculatedAC,
-    adjustmentTotal,
-    adjustedAC,
-    overrideAC: character?.armorClassOverride,
     effectiveAC: Math.max(0, Math.trunc(resolution.value)),
-    resolution,
     baseBreakdown,
-    setAC: (ac) => {
-      if (!character) return
-      updateCharacter(character.id, { armorClassOverride: Math.max(0, ac) })
-    },
-    clearOverride: () => {
-      if (!character) return
-      updateCharacter(character.id, { armorClassOverride: undefined })
-    },
     previewArmorClassSettings: (settings) =>
       character
         ? resolveArmorClassSettings(

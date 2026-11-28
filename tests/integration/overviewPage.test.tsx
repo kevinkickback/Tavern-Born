@@ -2,9 +2,13 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
-import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import type { CharacterReadinessIssue } from '@/lib/readiness/types'
+import { BuildBackgroundPage } from '@/pages/build/background/BackgroundPage'
+import { OverviewAttention } from '@/pages/build/overview/OverviewAttention'
+import { BuildOverviewPage as OverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, Race5e } from '@/types/5etools'
@@ -15,7 +19,15 @@ import {
   makeSpellFixture,
 } from '../fixtures/gameDataFixtures'
 
-describe('BuildReviewPage', () => {
+function BuildOverviewPage() {
+  return (
+    <RulesPreviewManager>
+      <OverviewPage />
+    </RulesPreviewManager>
+  )
+}
+
+describe('BuildOverviewPage', () => {
   beforeEach(() => {
     const race = { name: 'Test Race', source: 'TEST', speed: 35 } as Race5e
     const testClass = {
@@ -118,19 +130,115 @@ describe('BuildReviewPage', () => {
     useCharacterStore.setState({ activeCharacter: character })
     render(
       <MemoryRouter>
-        <BuildReviewPage />
+        <BuildOverviewPage />
       </MemoryRouter>,
     )
 
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Character overview' }))
+    await userEvent.setup().click(screen.getByText('Proficiencies & skills', { exact: true }))
     expect(screen.getByText('Deep Speech, Draconic (SRD), iSpeak (NPC)')).toBeTruthy()
-    expect(screen.getByTestId('review-movement-walk').textContent).toBe('Walk 35 ft.')
+    expect(screen.getByTestId('overview-movement-walk').textContent).toBe('Walk 35 ft.')
     expect(screen.getByText(/Strength \+2/)).toBeTruthy()
     expect(useCharacterStore.getState().activeCharacter).toBe(character)
   })
 
-  test('shows one additional-content note across tabs until the exact rules return', async () => {
+  test('shares the Background equipment picker and updates readiness from Overview', async () => {
     const user = userEvent.setup()
+    const current = useGameDataStore.getState().gameData!
+    const gameData = {
+      ...current,
+      backgrounds: current.backgrounds.map((background) => ({
+        ...background,
+        startingEquipment: [{ a: [{ value: 100 }], b: [{ value: 200 }] }],
+      })),
+    }
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
+    const saved = useCharacterStore.getState().activeCharacter!
+    const before = { ...saved, background: ` ${saved.background} `, backgroundSource: ' TEST ' }
+    useCharacterStore.setState({ activeCharacter: before, characters: [before] })
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/build/overview']}>
+          <Routes>
+            <Route path="/build/overview" element={<BuildOverviewPage />} />
+            <Route path="/build/background" element={<BuildBackgroundPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Choose equipment here' })
+    expect(screen.getByRole('link', { name: 'Open Background' }).getAttribute('href')).toBe(
+      '/build/background?attention=starting-equipment%3Abackground',
+    )
+    await user.click(trigger)
+    const dialog = () =>
+      within(screen.getByRole('dialog', { name: 'Background starting equipment' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+    expect(useCharacterStore.getState().activeCharacter).toBe(before)
+    await user.click(trigger)
+    await user.click(dialog().getByRole('tab', { name: 'Package B' }))
+    expect(dialog().getByText('Equipment choice resolved.')).toBeTruthy()
+    await user.click(dialog().getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('button', { name: 'Choose equipment here' })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter?.backgroundEquipmentChoices).toEqual(['b'])
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Needs attention' }))
+  })
+
+  test('links to Background from the full setup list when fixed equipment rules are missing', async () => {
+    const user = userEvent.setup()
+    const current = useGameDataStore.getState().gameData!
+    const gameData = {
+      ...current,
+      backgrounds: current.backgrounds.map((background) => ({
+        ...background,
+        startingEquipment: [{ _: [{ item: 'Unavailable Item|TEST' }] }],
+      })),
+    }
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
+    render(
+      <MemoryRouter>
+        <BuildOverviewPage />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByRole('button', { name: /View all .* actions/ }))
+    const setup = within(screen.getByRole('dialog', { name: 'Character setup' }))
+    expect(setup.getByText(/Restore the exact item rules for unavailable item/i)).toBeTruthy()
+    expect(setup.queryByRole('button', { name: 'Choose equipment here' })).toBeNull()
+    expect(setup.getByRole('link', { name: /^Finish Background starting equipment/ })).toBeTruthy()
+  })
+
+  test('confirms a fixed package application while the Overview dialog stays open', async () => {
+    const user = userEvent.setup()
+    const current = useGameDataStore.getState().gameData!
+    const gameData = {
+      ...current,
+      backgrounds: current.backgrounds.map((background) => ({
+        ...background,
+        startingEquipment: [{ _: [{ value: 100 }] }],
+      })),
+    }
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildOverviewPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Choose equipment here' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Background starting equipment' }))
+    await user.click(dialog.getByRole('button', { name: 'Apply current package' }))
+    expect(dialog.getByText('Equipment choice resolved.')).toBeTruthy()
+    expect(dialog.queryByText(/rules are unavailable/)).toBeNull()
+  })
+
+  test('shows one additional-content note on Overview until the exact rules return', async () => {
     const exact = useGameDataStore.getState().gameData!
     const other = { ...exact, races: exact.races.map((race) => ({ ...race, source: 'OTHER' })) }
     other.lookups = buildGameDataLookups(other)
@@ -140,21 +248,18 @@ describe('BuildReviewPage', () => {
     useGameDataStore.setState({ gameData: other })
     render(
       <MemoryRouter>
-        <BuildReviewPage />
+        <BuildOverviewPage />
       </MemoryRouter>,
     )
 
     const note = () => screen.getByRole('complementary', { name: 'Unavailable saved content' })
     expect(within(note()).getByText('Additional content')).toBeTruthy()
     expect(note().textContent).toContain('Your choices are still saved')
-    const summary = within(screen.getByTestId('readiness-summary'))
     expect(
-      screen.getByRole('tab', {
-        name: new RegExp(`Needs attention\\s*${summary.getAllByRole('button').length}`),
-      }),
-    ).toBeTruthy()
-    await user.click(screen.getByRole('tab', { name: 'Character overview' }))
-    expect(within(note()).getByText('Additional content')).toBeTruthy()
+      screen.getAllByRole('complementary', { name: 'Unavailable saved content' }),
+    ).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: filteredCharacter.name })).toBeTruthy()
+    expect(screen.getByRole('list', { name: 'Setup items' })).toBeTruthy()
     await act(() => useGameDataStore.setState({ gameData: exact }))
     expect(screen.queryByRole('complementary', { name: 'Unavailable saved content' })).toBeNull()
     expect(useCharacterStore.getState().activeCharacter).toBe(filteredCharacter)
@@ -203,145 +308,115 @@ describe('BuildReviewPage', () => {
     useCharacterStore.setState({ characters: [character], activeCharacter: character })
     const unchanged = JSON.stringify(character)
     render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
+      <MemoryRouter initialEntries={['/build/overview']}>
+        <BuildOverviewPage />
       </MemoryRouter>,
     )
     await user.click(screen.getByText('Equipment'))
-    expect(screen.getByText('Exact review rules.')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /^Review Relic ×1, MISSING/ }))
     expect(screen.getByText('Unavailable saved rules.')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: /^Review Relic ×1, TEST/ }))
+    expect(screen.getByText('Exact review rules.')).toBeTruthy()
     expect(screen.queryByText('Other printing rules.')).toBeNull()
+    await user.keyboard('{Escape}')
     await act(() => publish(false))
+    await user.click(screen.getByRole('button', { name: /^Review Relic ×1, TEST/ }))
     expect(screen.queryByText('Exact review rules.')).toBeNull()
     expect(screen.getByText('Saved review fallback.')).toBeTruthy()
     expect(screen.queryByText('Other printing rules.')).toBeNull()
+    await user.keyboard('{Escape}')
     await act(() => publish(true))
+    await user.click(screen.getByRole('button', { name: /^Review Relic ×1, TEST/ }))
     expect(screen.getByText('Exact review rules.')).toBeTruthy()
     expect(JSON.stringify(useCharacterStore.getState().activeCharacter)).toBe(unchanged)
   })
 
-  test('separates attention items from the character overview and preserves issue links', async () => {
+  test('shows character details alongside readiness and preserves issue links', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/build/review']}>
+      <MemoryRouter initialEntries={['/build/overview']}>
         <Routes>
-          <Route path="/build/review" element={<BuildReviewPage />} />
+          <Route path="/build/overview" element={<BuildOverviewPage />} />
           <Route path="/build/proficiencies" element={<ProficiencyDestination />} />
         </Routes>
       </MemoryRouter>,
     )
 
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual([
-      expect.stringContaining('Needs attention'),
-      'Character overview',
-    ])
-    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('Character needs attention')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Character overview' })).toBeNull()
-    expect(screen.queryByRole('link', { name: 'Open character sheet' })).toBeNull()
-    const issueCount = within(screen.getByTestId('readiness-summary')).getAllByRole('button').length
-    expect(screen.getByText(new RegExp(`^${issueCount} items? to review`))).toBeTruthy()
-    expect(screen.getByText(/You can still save and print this character sheet/)).toBeTruthy()
-    expect(screen.queryByText('Calculated totals')).toBeNull()
-    const blocked = screen.getByRole('button', { name: /Finish Test language choice/i })
-    const suggestion = screen.getByRole('button', { name: /Add a portrait/i })
+    expect(screen.getByRole('heading', { name: 'Needs attention' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Test Character' })).toBeTruthy()
+    const issues = within(screen.getByRole('list', { name: 'Setup items' }))
+    const blocked = issues.getByRole('link', { name: /Finish Test language choice/i })
     expect(within(blocked).queryByText('Needs attention')).toBeNull()
-    expect(within(suggestion).getByText('Suggestion')).toBeTruthy()
+    expect(issues.queryByText('Suggestion', { exact: true })).toBeNull()
     expect(blocked.querySelectorAll('svg')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: /View all .* actions/ }))
+    const fullList = within(screen.getByRole('dialog', { name: 'Character setup' }))
+    const suggestion = fullList.getByRole('link', { name: /Add a portrait/i })
+    expect(within(suggestion).getByText('Suggestion')).toBeTruthy()
     expect(suggestion.querySelectorAll('svg')).toHaveLength(1)
+    await user.keyboard('{Escape}')
 
-    await user.click(screen.getByRole('tab', { name: 'Character overview' }))
-
-    expect(screen.getByText('Proficiencies & skills').closest('details')?.open).toBe(true)
+    expect(screen.getByText('Proficiencies & skills').closest('details')?.open).toBe(false)
     expect(screen.getByText('Attacks & actions').closest('details')?.open).toBe(false)
     await user.click(screen.getByText('Attacks & actions'))
     expect(screen.getAllByText('Test Manual Action')).toHaveLength(2)
     expect(screen.getByText('+4 to hit')).toBeTruthy()
     await user.click(screen.getByText('Content sources'))
-    expect(screen.getByText('Test Source').closest('ul')?.className).toContain('list-disc')
+    expect(screen.getByText('Test Source').closest('li')?.textContent).toContain('TEST')
     expect(screen.queryByText('Rules & reminders')).toBeNull()
     expect(screen.getByText('Walk 35 ft.')).toBeTruthy()
 
-    await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
-
-    await user.click(screen.getByRole('button', { name: /Finish Test language choice/i }))
+    await user.click(blocked)
     expect(screen.getByText('Proficiency destination')).toBeTruthy()
     expect(screen.getByTestId('destination-search').textContent).toBe(
       '?attention=choice%3Atest-language-choice',
     )
   })
 
-  test.each([
-    '2014',
-    '2024',
-  ] as const)('a ready %s character can open the PDF page from Review', async (originSystem) => {
+  test('keeps required work in the preview when a suggestion precedes a blocker', async () => {
     const user = userEvent.setup()
     const character = useCharacterStore.getState().activeCharacter!
-    const gameData = useGameDataStore.getState().gameData!
-    const data = {
-      ...gameData,
-      races: gameData.races.map((race) => ({ ...race, ability: [{ str: 2, dex: 1 }] })),
+    const blockingIssues: CharacterReadinessIssue[] = [
+      'Choose a class',
+      'Finish point buy',
+      'Choose a skill',
+      'Restore unavailable equipment',
+    ].map((title, index) => ({
+      id: `blocking-${index}`,
+      severity: 'blocking',
+      section: 'equipment',
+      title,
+      explanation: 'This choice is required.',
+      navigationTarget: '/equipment',
+    }))
+    const recommendation: CharacterReadinessIssue = {
+      id: 'prepare-spells',
+      severity: 'recommendation',
+      section: 'spells',
+      title: 'Prepare spells',
+      explanation: 'This choice is optional.',
+      navigationTarget: '/spells',
     }
-    useGameDataStore.setState({ gameData: { ...data, lookups: buildGameDataLookups(data) } })
-    useCharacterStore.setState({
-      activeCharacter: {
-        ...character,
-        originSystem,
-        ...(originSystem === '2024' && { backgroundAsiChoices: ['strength', 'dexterity'] }),
-        provenance: { ...character.provenance!, choices: [] },
-      },
-    })
     render(
-      <MemoryRouter initialEntries={['/build/review']}>
-        <Routes>
-          <Route path="/build/review" element={<BuildReviewPage />} />
-          <Route path={`/character-sheet/${originSystem}`} element={<p>PDF destination</p>} />
-        </Routes>
+      <MemoryRouter>
+        <OverviewAttention
+          character={character}
+          background={undefined}
+          readiness={{
+            status: 'incomplete',
+            issues: [...blockingIssues.slice(0, 3), recommendation, blockingIssues[3]],
+            blockingIssues,
+            recommendations: [recommendation],
+          }}
+        />
       </MemoryRouter>,
     )
-    const summary = within(screen.getByTestId('readiness-summary'))
-    expect(summary.getByRole('heading', { name: 'Character is ready' })).toBeTruthy()
-    expect(summary.queryByText('Complete')).toBeNull()
-    expect(summary.queryByRole('button', { name: 'Character overview' })).toBeNull()
-    expect(summary.getByRole('button', { name: /Add a portrait/ })).toBeTruthy()
-    const overview = screen.getByRole('tab', { name: 'Character overview' })
-    await user.click(overview)
-    expect(overview.getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByText('Proficiencies & skills')).toBeTruthy()
-    await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
-    await user.click(
-      within(screen.getByTestId('readiness-summary')).getByRole('link', {
-        name: 'Open character sheet',
-      }),
-    )
-    expect(screen.getByText('PDF destination')).toBeTruthy()
-  })
-
-  test('moves keyboard focus between review tabs and labels the selected panel', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={['/build/review']}>
-        <BuildReviewPage />
-      </MemoryRouter>,
-    )
-
-    const attention = screen.getByRole('tab', { name: /Needs attention/ })
-    attention.focus()
-    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([0, -1])
-
-    await user.keyboard('{ArrowRight}')
-    const overview = screen.getByRole('tab', { name: 'Character overview' })
-    expect(document.activeElement).toBe(overview)
-    expect(overview.getAttribute('aria-selected')).toBe('true')
-    const panel = document.getElementById(overview.getAttribute('aria-controls')!)
-    expect(panel?.getAttribute('role')).toBe('tabpanel')
-    expect(panel?.getAttribute('aria-labelledby')).toBe(overview.id)
-    expect(screen.getAllByRole('tab').map((tab) => tab.tabIndex)).toEqual([-1, 0])
-
-    await user.keyboard('{ArrowRight}')
-    expect(document.activeElement).toBe(attention)
-    expect(attention.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('link', { name: /Restore unavailable equipment/ })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Prepare spells/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'View all 5 actions' }))
+    const complete = within(screen.getByRole('dialog', { name: 'Character setup' }))
+    expect(complete.getByRole('link', { name: /Prepare spells/ })).toBeTruthy()
   })
 
   test('shows the complete character snapshot in expandable gameplay sections', async () => {
@@ -367,7 +442,7 @@ describe('BuildReviewPage', () => {
       ],
       spells: [makeSpellFixture({ source: 'TEST', entries: ['Three glowing darts.'] })],
       items: [
-        { name: 'Magic Wand', source: 'TEST', type: 'WD', entries: ['A carved wand.'] },
+        { name: 'Magic Wand', source: 'TEST', type: 'WD', weight: 1, entries: ['A carved wand.'] },
         { name: 'Choice Relic', source: 'TEST', type: 'W', entries: ['A chosen relic.'] },
       ],
     }
@@ -383,7 +458,12 @@ describe('BuildReviewPage', () => {
         personality: 'Secret backstory should stay off the overview.',
         organizationSelectionKey: 'The Harpers|TEST',
       },
-      proficiencies: { ...current.proficiencies, skills: ['perception'], languages: ['Common'] },
+      proficiencies: {
+        ...current.proficiencies,
+        skills: ['perception', 'investigation'],
+        expertise: ['investigation'],
+        languages: ['Common'],
+      },
       features: [
         {
           id: 'feature-1',
@@ -399,6 +479,7 @@ describe('BuildReviewPage', () => {
           name: 'Magic Wand',
           source: 'TEST',
           type: 'WD',
+          rarity: 'none',
           quantity: 1,
           equipped: true,
         },
@@ -438,8 +519,8 @@ describe('BuildReviewPage', () => {
     useCharacterStore.setState({ characters: [character], activeCharacter: character })
 
     render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
+      <MemoryRouter initialEntries={['/build/overview']}>
+        <BuildOverviewPage />
       </MemoryRouter>,
     )
 
@@ -447,11 +528,47 @@ describe('BuildReviewPage', () => {
       name: 'Test Character portrait',
     }) as HTMLImageElement
     expect(portrait.className).toContain('object-cover')
-    expect(portrait.parentElement?.className).toContain('aspect-[3/2]')
     expect(portrait.style.transform).toBe('')
-    expect(screen.getByText('Current HP').parentElement?.textContent).toContain('7')
-    expect(screen.getByText('Temporary HP').parentElement?.textContent).toContain('3')
-    expect(screen.getByText('Armor Class')).toBeTruthy()
+    expect(screen.queryByText('Current HP')).toBeNull()
+    expect(screen.queryByText('Temp HP')).toBeNull()
+    const summary = within(screen.getByRole('region', { name: 'Character overview' }))
+    const passives = within(summary.getByRole('region', { name: 'Passive scores' }))
+    expect(passives.getByText('Passive Perception 12')).toBeTruthy()
+    expect(passives.getByText('Passive Investigation 15')).toBeTruthy()
+    expect(passives.getByText('Passive Insight 10')).toBeTruthy()
+    const armorCard = screen.getByText('Armor Class', { exact: true }).parentElement!
+    const hpCard = screen.getByText('Max HP', { exact: true }).parentElement!
+    expect(armorCard.nextElementSibling).toBe(hpCard)
+    expect(within(armorCard).queryByRole('button')).toBeNull()
+    expect(within(hpCard).queryByRole('button')).toBeNull()
+    const manualAdjustments = within(
+      screen.getByRole('complementary', { name: 'Manual Adjustments' }),
+    )
+    expect(
+      screen.queryByRole('button', { name: /^Manage (Armor Class|Hit Points|Movement)$/ }),
+    ).toBeNull()
+    await user.click(manualAdjustments.getByRole('tab', { name: 'Stats' }))
+    const stats = within(manualAdjustments.getByRole('tabpanel', { name: 'Stats' }))
+    const armorButton = stats.getByRole('button', { name: 'Manage Armor Class' })
+    const hpButton = stats.getByRole('button', { name: 'Manage Hit Points' })
+    const movementButton = stats.getByRole('button', { name: 'Manage Movement' })
+    await user.click(armorButton)
+    expect(screen.getByRole('dialog', { name: 'Manage Armor Class' })).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(document.activeElement).toBe(armorButton)
+    await user.click(hpButton)
+    const hp = within(screen.getByRole('dialog', { name: 'Manage Hit Points' }))
+    expect((hp.getByLabelText('Current HP') as HTMLInputElement).value).toBe('7')
+    await user.keyboard('{Escape}')
+    expect(document.activeElement).toBe(hpButton)
+    await user.click(movementButton)
+    expect(screen.getByRole('dialog', { name: 'Manage Movement' })).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(document.activeElement).toBe(movementButton)
+    const skillsSummary = screen.getByText('Proficiencies & skills', { exact: true })
+    await user.click(skillsSummary)
+    expect(within(skillsSummary.closest('details')!).queryByText(/Passive Perception/)).toBeNull()
+    expect(screen.getByText('◆ Expertise · ● Proficient')).toBeTruthy()
     expect(screen.getByText('Common')).toBeTruthy()
     expect(screen.queryByText(/Secret backstory/)).toBeNull()
     for (const section of [
@@ -461,7 +578,6 @@ describe('BuildReviewPage', () => {
       'Spells & spellcasting',
       'Equipment',
       'Resources & conditions',
-      'Organization',
       'Content sources',
     ]) {
       expect(screen.getByText(section).closest('details')?.open).toBe(false)
@@ -471,23 +587,41 @@ describe('BuildReviewPage', () => {
     expect(featureSection.open).toBe(false)
     await user.click(screen.getByText('Traits & features'))
     expect(featureSection.open).toBe(true)
+    expect(screen.queryByText('Full feature details remain visible without truncation.')).toBeNull()
+    await user.click(within(featureSection).getByRole('button', { name: 'Second Wind' }))
     expect(screen.getByText('Full feature details remain visible without truncation.')).toBeTruthy()
-    expect(screen.getByText('Fighting Style')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Fighting Style' }))
     expect(screen.getByText('No option selected.')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Relic choice' }))
     expect(screen.getByText('A chosen relic.')).toBeTruthy()
+    await user.keyboard('{Escape}')
 
     await user.click(screen.getByText('Feats'))
+    await user.click(screen.getByRole('button', { name: 'Alert' }))
     expect(screen.getByText('Always ready for danger.')).toBeTruthy()
+    await user.keyboard('{Escape}')
     await user.click(screen.getByText('Spells & spellcasting'))
-    expect(screen.getAllByText('Three glowing darts.').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Magic Missile' }))
+    expect(screen.getByText('Three glowing darts.')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    const attacksHeading = screen.getByText('Attacks & actions')
+    await user.click(attacksHeading)
+    const attacks = within(attacksHeading.closest('details')!)
+    expect(attacks.queryByText('Magic Missile')).toBeNull()
+    expect(attacks.getByText('Test action description.')).toBeTruthy()
     await user.click(screen.getByText('Equipment'))
+    await user.click(screen.getByRole('button', { name: 'Magic Wand ×1' }))
     expect(screen.getByText('A carved wand.')).toBeTruthy()
+    expect(screen.getByText('1 lb each')).toBeTruthy()
+    expect(
+      within(screen.getByRole('dialog', { name: 'Magic Wand ×1 preview' })).queryByText('None'),
+    ).toBeNull()
+    await user.keyboard('{Escape}')
     await user.click(screen.getByText('Resources & conditions'))
     expect(screen.getByText('Poisoned')).toBeTruthy()
-    await user.click(screen.getByText('Organization'))
-    expect(screen.getByText('The Harpers')).toBeTruthy()
-    expect(screen.getByText('A secret network of allies.')).toBeTruthy()
-    expect(screen.getByRole('img', { name: 'The Harpers emblem' })).toBeTruthy()
+    expect(screen.queryByText('Organization')).toBeNull()
 
     const restrictedCharacter = { ...character, allowedSources: ['OTHER'] }
     await act(() => {
@@ -496,42 +630,17 @@ describe('BuildReviewPage', () => {
         characters: [restrictedCharacter],
       })
     })
-    expect(screen.getAllByText(/Source unavailable/).length).toBeGreaterThanOrEqual(3)
-    expect(screen.getByText('Always ready for danger.')).toBeTruthy()
-    expect(screen.getAllByText('Three glowing darts.').length).toBeGreaterThan(0)
-    expect(screen.getByText('A carved wand.')).toBeTruthy()
-  })
-
-  test('shows custom organization details and falls back to an icon if its image fails', async () => {
-    const user = userEvent.setup()
-    const current = useCharacterStore.getState().activeCharacter!
-    const character = {
-      ...current,
-      details: {
-        ...current.details,
-        organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
-        organizationCustomName: 'The Lantern Circle',
-        organizationCustomDescription: 'A local group of night watch volunteers.',
-        organizationCustomImage: 'data:image/png;base64,custom-emblem',
-      },
+    for (const [name, description] of [
+      ['Alert', 'Always ready for danger.'],
+      ['Magic Missile', 'Three glowing darts.'],
+      ['Magic Wand ×1', 'A carved wand.'],
+    ]) {
+      await user.click(screen.getByRole('button', { name }))
+      const preview = within(await screen.findByRole('dialog', { name: `${name} preview` }))
+      expect(preview.getByText(/Source unavailable/)).toBeTruthy()
+      expect(preview.getByText(description)).toBeTruthy()
+      await user.keyboard('{Escape}')
     }
-    useCharacterStore.setState({ characters: [character], activeCharacter: character })
-
-    render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByText('Organization'))
-    expect(screen.getByText('The Lantern Circle')).toBeTruthy()
-    expect(screen.getByText('A local group of night watch volunteers.')).toBeTruthy()
-    const emblem = screen.getByRole('img', { name: 'The Lantern Circle emblem' })
-    expect(emblem.getAttribute('src')).toBe('data:image/png;base64,custom-emblem')
-    const iconContainer = emblem.parentElement
-    fireEvent.error(emblem)
-    expect(screen.queryByRole('img', { name: 'The Lantern Circle emblem' })).toBeNull()
-    expect(iconContainer?.querySelector('svg')).not.toBeNull()
   })
 
   test.each([
@@ -617,96 +726,35 @@ describe('BuildReviewPage', () => {
       activeCharacter: character,
     })
     render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
+      <MemoryRouter initialEntries={['/build/overview']}>
+        <BuildOverviewPage />
       </MemoryRouter>,
     )
-    const loadedOption = screen.getByText('Scholar Option (SUPP)').closest('li')!
-    const missingOption = screen.getByText('Unloaded Option (SUPP)').closest('li')!
-    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
-    expect(within(loadedOption).queryByText('Source unavailable')).toBeNull()
-    expect(within(missingOption).getByText('Unresolved source')).toBeTruthy()
-
+    fireEvent.click(screen.getByText('Traits & features'))
+    const inspect = (restricted: boolean) => {
+      fireEvent.click(screen.getByRole('button', { name: 'Scholar Choice' }))
+      const preview = within(screen.getByRole('dialog', { name: 'Scholar Choice preview' }))
+      expect(preview.getByText('Scholar Option (SUPP)')).toBeTruthy()
+      expect(preview.getByText('Unloaded Option (SUPP)')).toBeTruthy()
+      expect(preview.getByText('Retained subclass option details.')).toBeTruthy()
+      expect(preview.getAllByText('Unresolved source')).toHaveLength(1)
+      expect(!!preview.queryByText('Source unavailable')).toBe(restricted)
+      fireEvent.keyDown(document.body, { key: 'Escape' })
+    }
+    inspect(false)
     await act(() => {
       const restricted = { ...character, allowedSources: [] }
       useCharacterStore.setState({ characters: [restricted], activeCharacter: restricted })
     })
-    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
-    expect(within(loadedOption).getByText('Source unavailable')).toBeTruthy()
-    expect(within(loadedOption).queryByText('Unresolved source')).toBeNull()
-    expect(within(missingOption).getByText('Unresolved source')).toBeTruthy()
+    inspect(true)
     expect(useCharacterStore.getState().activeCharacter?.classChoiceSelections).toEqual(
       character.classChoiceSelections,
     )
-
     await act(() => {
       useCharacterStore.setState({ characters: [character], activeCharacter: character })
     })
-    expect(within(loadedOption).getByText('Retained subclass option details.')).toBeTruthy()
-    expect(within(loadedOption).queryByText('Source unavailable')).toBeNull()
+    inspect(false)
     expect(useGameDataStore.getState().gameData).toBe(data)
-  })
-
-  test('shows unnamed custom organization details under the editor fallback title', async () => {
-    const user = userEvent.setup()
-    const current = useCharacterStore.getState().activeCharacter!
-    const character = {
-      ...current,
-      details: {
-        ...current.details,
-        faction: 'Old Faction',
-        organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
-        organizationCustomName: '',
-        organizationCustomDescription: 'A group without a name yet.',
-        organizationCustomImage: 'data:image/png;base64,custom-emblem',
-      },
-    }
-    useCharacterStore.setState({ characters: [character], activeCharacter: character })
-
-    render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByText('Organization'))
-    expect(screen.getByText('Custom Organization')).toBeTruthy()
-    expect(screen.getByText('A group without a name yet.')).toBeTruthy()
-    expect(screen.getByRole('img', { name: 'Custom Organization emblem' })).toBeTruthy()
-    expect(screen.queryByText('Old Faction')).toBeNull()
-  })
-
-  test('renders catalog organization descriptions as game content', async () => {
-    const user = userEvent.setup()
-    const data = useGameDataStore.getState().gameData!
-    const organization = {
-      name: 'Arcane Lodge',
-      source: 'TEST',
-      description: 'Members use {@spell magic missile|phb}.',
-    }
-    const updatedData = { ...data, organizations: [organization] }
-    updatedData.lookups = buildGameDataLookups(updatedData)
-    useGameDataStore.setState({ gameData: updatedData })
-    const current = useCharacterStore.getState().activeCharacter!
-    const character = {
-      ...current,
-      details: {
-        ...current.details,
-        organizationSelectionKey: getOrganizationKey(organization.name, organization.source),
-      },
-    }
-    useCharacterStore.setState({ characters: [character], activeCharacter: character })
-
-    render(
-      <MemoryRouter initialEntries={['/build/review?section=overview']}>
-        <BuildReviewPage />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getByText('Organization'))
-    expect(screen.getByText('Arcane Lodge')).toBeTruthy()
-    expect(screen.getByText(/magic missile/i)).toBeTruthy()
-    expect(screen.queryByText(/\{@spell/)).toBeNull()
   })
 })
 

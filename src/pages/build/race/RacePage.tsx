@@ -13,7 +13,6 @@ import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
-import { MovementModal } from '@/components/modals/MovementModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
@@ -43,7 +42,6 @@ import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { formatAbilityBonus, getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
 import { hasUnresolvedRaceAbilityChoices } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
-import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -54,10 +52,13 @@ import {
   getAvailableSubraces,
   getDamageTraitDisplay,
   getDarkvisionDisplay,
+  getEffectiveRaceSize,
   getLanguageDisplay,
+  getRaceSizeOptions,
   getRaceTraits,
   getSpeedDisplay,
   mergeRaceWithSubrace,
+  RACE_SIZE_LABELS,
   requiresDraconicAncestry,
 } from '@/lib/calculations/raceUtils'
 import { getFeatChoiceSelectedRefs } from '@/lib/character/commands/featCommandSupport'
@@ -94,7 +95,6 @@ export function BuildRacePage() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [featModalOpen, setFeatModalOpen] = useState(false)
-  const [movementModalOpen, setMovementModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
@@ -167,6 +167,13 @@ export function BuildRacePage() {
   const hasResolvedRaceSelection =
     Boolean(calculationContext?.raceResolution.parentRace) &&
     (!character?.subrace || Boolean(calculationContext?.raceResolution.subraceData))
+  const sizeOptions = getRaceSizeOptions(displayRace)
+  const effectiveSize = getEffectiveRaceSize(
+    displayRace,
+    character?.raceSize,
+    hasResolvedRaceSelection,
+  )
+  const effectiveSizeOption = sizeOptions.find((size) => size === effectiveSize)
   const asi = hasResolvedRaceSelection
     ? getAsiDisplay(
         calculationContext?.abilityScores.normalizedRaceSelection.race,
@@ -562,27 +569,38 @@ export function BuildRacePage() {
                               <ArrowsOutCardinal className="size-4 text-primary" weight="fill" />
                             ),
                             label: 'Size',
-                            value: displayRace.size?.join(', ') ?? '—',
-                            action: undefined,
+                            value: effectiveSizeOption
+                              ? RACE_SIZE_LABELS[effectiveSizeOption]
+                              : (effectiveSize ?? '—'),
+                            action:
+                              catalogRace && hasResolvedRaceSelection && sizeOptions.length > 1 ? (
+                                <Select
+                                  value={character.raceSize ?? ''}
+                                  onValueChange={(value) => {
+                                    const raceSize = sizeOptions.find((size) => size === value)
+                                    const store = useCharacterStore.getState()
+                                    if (raceSize && store.activeCharacter === character)
+                                      store.updateCharacter(character.id, { raceSize })
+                                  }}
+                                >
+                                  <SelectTrigger aria-label="Racial size" className="h-7 text-xs">
+                                    <SelectValue placeholder="Choose size" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {sizeOptions.map((value) => (
+                                      <SelectItem key={value} value={value}>
+                                        {RACE_SIZE_LABELS[value]}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : undefined,
                           },
                           {
                             icon: <Lightning className="size-4 text-primary" weight="fill" />,
                             label: 'Speed',
-                            value: calculationContext
-                              ? formatEffectiveMovement(calculationContext.movement)
-                              : getSpeedDisplay(displayRace),
-                            action: (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="accentOutline"
-                                className="h-7 px-2 text-xs"
-                                onClick={() => setMovementModalOpen(true)}
-                              >
-                                <PencilSimple className="size-3" />
-                                Edit movement
-                              </Button>
-                            ),
+                            value: getSpeedDisplay(displayRace),
+                            action: undefined,
                           },
                           {
                             icon: <Eye className="size-4 text-primary" weight="fill" />,
@@ -721,8 +739,6 @@ export function BuildRacePage() {
           onDismiss={() => setOptionsPendingFeat(null)}
         />
       )}
-
-      <MovementModal open={movementModalOpen} onOpenChange={setMovementModalOpen} />
     </WorkspacePage>
   )
 }

@@ -1,10 +1,17 @@
 import { describe, expect, test } from 'vitest'
+import { getCreatorRacialSpellPending } from '@/components/character/wizard/creatorChoiceGroups'
 import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { applyCharacterCommandResult } from '@/lib/character/commands/featCommandSupport'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
-import { applyRaceSelectionCommand } from '@/lib/character/commands/raceCommands'
+import {
+  applyRaceSelectionCommand,
+  applySubraceSelectionCommand,
+} from '@/lib/character/commands/raceCommands'
+import { setRacialCastingAbility } from '@/lib/character/commands/spellCommands'
 import type { Class5e, Race5e } from '@/types/5etools'
 import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeSpellFixture } from '../fixtures/gameDataFixtures'
 
 function applyRaceAtLevel(race: Race5e, child?: Race5e, level = 1) {
   const initial = buildInitialCharacter(
@@ -46,6 +53,83 @@ function applyRaceAtLevel(race: Race5e, child?: Race5e, level = 1) {
 }
 
 describe('native racial spell suites and actual owners', () => {
+  test('another printing of an already selected cantrip cannot keep a Creator pick pending', () => {
+    const character = applyRaceAtLevel({
+      name: 'Cantrip lineage',
+      source: 'PHB',
+      additionalSpells: [
+        {
+          known: { 1: { _: [{ choose: 'level=0|class=Wizard', count: 2 }] } },
+          ability: 'int',
+        },
+      ],
+    })
+    const profile = character.spells.spellProfiles.find(({ type }) => type === 'racial')!
+    const [choice] = profile.choices!
+    const selected = { ...profile, choices: [{ ...choice, selected: ['Light|PHB'] }] }
+    const cantrip = (name: string, source: string) =>
+      makeSpellFixture({
+        name,
+        source,
+        level: 0,
+        classes: { fromClassList: [{ name: 'Wizard', source: 'PHB' }] },
+      })
+    expect(
+      getCreatorRacialSpellPending(selected, [cantrip('Light', 'PHB'), cantrip('Light', 'XPHB')])
+        .picks.size,
+    ).toBe(0)
+    expect(
+      getCreatorRacialSpellPending(selected, [
+        cantrip('Light', 'PHB'),
+        cantrip('Mage Hand', 'PHB'),
+      ]).picks.has(choice.id),
+    ).toBe(true)
+  })
+
+  test('retains an unchanged parent casting choice and size across ordinary child replacement', () => {
+    const west = { name: 'West', source: 'PHB' }
+    const east = { name: 'East', source: 'PHB' }
+    const version = { name: 'Version', source: 'PHB', _isVersion: true, size: ['S', 'M'] }
+    const parent: Race5e = {
+      name: 'Parent',
+      source: 'PHB',
+      size: ['S', 'M'],
+      additionalSpells: [{ known: { 1: ['light#c'] }, ability: { choose: ['int', 'cha'] } }],
+      subraces: [west, east, version],
+    }
+    const base = { ...applyRaceAtLevel(parent, west), raceSize: 'M' as const }
+    const profile = base.spells.spellProfiles.find(({ type }) => type === 'racial')!
+    const picked = applyCharacterCommandResult(
+      base,
+      setRacialCastingAbility(base, base.provenance, profile.id, 'cha', {
+        parentRace: parent,
+        subraceData: west,
+        mergedRace: undefined,
+        subraceIsNested: true,
+      }),
+    )
+    const replace = (character: typeof picked, previousSubrace: Race5e, next: Race5e) =>
+      applyCharacterCommandResult(
+        character,
+        applySubraceSelectionCommand(character, character.provenance, parent, next, () => [], {
+          previousSubrace,
+          previousSubraceIsNested: true,
+          subraceIsNested: true,
+        }),
+      )
+    const eastCharacter = replace(picked, west, east)
+    expect(eastCharacter.raceSize).toBe('M')
+    expect(eastCharacter.spells.spellProfiles.find(({ type }) => type === 'racial')).toMatchObject({
+      castingAbility: 'cha',
+      cantrips: ['light|PHB'],
+      racial: { context: { child: east } },
+    })
+    expect(characterPersistenceSchema.safeParse(eastCharacter).success).toBe(true)
+    const versionCharacter = replace(eastCharacter, east, version)
+    expect(versionCharacter.raceSize).toBeUndefined()
+    expect(versionCharacter.spells.spellProfiles.some(({ type }) => type === 'racial')).toBe(false)
+  })
+
   test('unselected Astral Elf alternatives declare no active spell or descriptor ownership', () => {
     // Native Astral Elf/AAG has three alternative one-cantrip blocks.
     const character = applyRaceAtLevel({

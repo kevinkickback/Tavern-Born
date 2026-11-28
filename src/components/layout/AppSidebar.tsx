@@ -101,7 +101,7 @@ const workspaces: Workspace[] = [
   {
     id: 'build',
     label: 'Builder',
-    path: '/build/race',
+    path: '/build/overview',
     icon: Wrench,
     requiresCharacter: true,
     matches: (pathname) =>
@@ -109,6 +109,7 @@ const workspaces: Workspace[] = [
         pathname.startsWith(prefix),
       ),
     groups: [
+      { items: [{ label: 'Overview', path: '/build/overview', icon: ClipboardText }] },
       {
         label: 'Core',
         items: [
@@ -130,10 +131,6 @@ const workspaces: Workspace[] = [
           { label: 'Conditions', path: '/details/conditions', icon: Heartbeat },
           { label: 'Actions & Effects', path: '/build/adjustments', icon: HandFist },
         ],
-      },
-      {
-        label: 'Finish',
-        items: [{ label: 'Review', path: '/build/review', icon: ClipboardText }],
       },
     ],
   },
@@ -437,7 +434,7 @@ export function AppSidebar({ libraryControlsRef }: { libraryControlsRef?: Ref<HT
                             weight={active ? 'fill' : 'regular'}
                           />
                           <span className="truncate">{item.label}</span>
-                          {item.path === '/build/review' && activeCharacter && (
+                          {item.path === '/build/overview' && activeCharacter && (
                             <Suspense fallback={null}>
                               <CharacterReadinessBadge
                                 character={activeCharacter}

@@ -20,7 +20,7 @@ import {
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
@@ -46,7 +46,7 @@ const loadItemTypeText: typeof loadCategoryText = (
 
 vi.unmock('@/lib/storage/idb-storage')
 
-function show(element: ReactElement, route = '/build/review?section=overview') {
+function show(element: ReactElement, route = '/build/overview') {
   return render(
     <MemoryRouter initialEntries={[route]}>
       <TooltipProvider>
@@ -249,12 +249,21 @@ describe('category-text display contexts and storage boundary', () => {
     })
     expect(screen.getByText('Instrument category guidance.')).toBeTruthy()
     cleanup()
-    show(<BuildReviewPage />)
+    show(<BuildOverviewPage />)
     fireEvent.click(screen.getByText('Equipment'))
-    expect(screen.getAllByText('Native additional guidance.')).toHaveLength(2)
-    expect(screen.getAllByText('Instrument category guidance.')).toHaveLength(2)
-    expect(screen.getAllByText('Standard instrument rules.')).toHaveLength(2)
-    expect(screen.queryByText('Player notes.')).toBeNull()
+    for (const quantity of [2, 3]) {
+      fireEvent.click(
+        screen.getByRole('button', { name: new RegExp(`^Horn of Blasting ×${quantity}`) }),
+      )
+      const preview = within(
+        await screen.findByRole('dialog', { name: `Horn of Blasting ×${quantity} preview` }),
+      )
+      expect(preview.getByText('Native additional guidance.')).toBeTruthy()
+      expect(preview.getByText('Instrument category guidance.')).toBeTruthy()
+      expect(preview.getByText('Standard instrument rules.')).toBeTruthy()
+      expect(preview.queryByText('Player notes.')).toBeNull()
+      fireEvent.keyDown(document.body, { key: 'Escape' })
+    }
     cleanup()
     useCharacterStore.getState().updateCharacter(added.id, { allowedSources: [] })
     const entry = buildCompendiumEntries(data).find((row) => row.name === horn.name)!

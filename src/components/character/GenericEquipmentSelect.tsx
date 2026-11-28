@@ -9,12 +9,14 @@ import {
 } from '@/lib/5etools/startingEquipment'
 import { startingItemKey } from '@/lib/5etools/startingEquipmentPolicy'
 import type { StartingItemReference } from '@/types/character'
+import { CreatorChoiceComplete } from './RaceChoiceRow'
 
 export interface GenericEquipmentSelectProps {
   choice: GenericEquipmentChoice
   value: readonly StartingItemReference[]
   onChange: (items: StartingItemReference[]) => void
   ariaLabel?: string
+  showCompletion?: boolean
 }
 
 export function GenericEquipmentSelect({
@@ -22,8 +24,10 @@ export function GenericEquipmentSelect({
   value,
   onChange,
   ariaLabel = 'Choose a specific item',
+  showCompletion,
 }: GenericEquipmentSelectProps) {
   const [open, setOpen] = useState(false)
+  const trigger = useRef<HTMLButtonElement>(null)
   const confirmation = useRef(onChange)
   const lookup = useItemLookup()
   const textContext = useItemTextContext()
@@ -52,14 +56,20 @@ export function GenericEquipmentSelect({
     <>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-foreground">
-            {formatEquipmentChoiceLabel(choice.token)}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-xs font-medium text-foreground">
+              {formatEquipmentChoiceLabel(choice.token)}
+            </p>
+            {showCompletion && value.length === choice.quantity && unavailable.size === 0 && (
+              <CreatorChoiceComplete />
+            )}
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {value.length} / {choice.quantity} selected
           </p>
         </div>
         <Button
+          ref={trigger}
           type="button"
           variant={value.length ? 'outline' : 'default'}
           size="sm"
@@ -84,6 +94,7 @@ export function GenericEquipmentSelect({
       <SelectionModal
         open={open}
         onOpenChange={setOpen}
+        returnFocusRef={trigger}
         title="Starting items"
         items={items}
         getItemId={startingItemKey}

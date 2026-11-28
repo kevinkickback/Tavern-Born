@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useStore } from 'zustand'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import { useStartingEquipmentAuthority } from '@/hooks/data/useStartingEquipment'
@@ -15,15 +16,17 @@ import {
 } from '@/lib/character/commands/classCommands'
 import { setHistoricalProficiencySetupCommand } from '@/lib/character/commands/historicalProficiencyCommands'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterEditingStore } from '@/store/characterEditingContext'
+import { emptyProvenance } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { FavoredEnemySetup, StartingEquipmentItemChoices } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 
 export function useClassProvenanceMutations() {
-  const character = useCharacterStore((s) => s.activeCharacter)
+  const editingStore = useCharacterEditingStore()
+  const character = useStore(editingStore, (s) => s.activeCharacter)
   const sourceData = useGameDataStore((state) => state.gameData)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const updateCharacter = useStore(editingStore, (s) => s.updateCharacter)
   const itemLookup = useItemLookup()
   const calculationContext = useCharacterCalculationContext(character)
   const { getPolicy: getEquipmentPolicy } = useStartingEquipmentAuthority()
@@ -53,7 +56,7 @@ export function useClassProvenanceMutations() {
       },
       subclass?: { name: string; source?: string },
     ) => {
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (
         !hasCurrentCharacterSourceContext(
           latest,
@@ -84,7 +87,15 @@ export function useClassProvenanceMutations() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, updateCharacter, itemLookup, calculationContext, getEquipmentPolicy, sourceData],
+    [
+      editingStore,
+      character,
+      updateCharacter,
+      itemLookup,
+      calculationContext,
+      getEquipmentPolicy,
+      sourceData,
+    ],
   )
 
   const applyClassEquipmentChoice = useCallback(
@@ -98,7 +109,7 @@ export function useClassProvenanceMutations() {
       choice: string,
       genericSelections?: Readonly<StartingEquipmentItemChoices>,
     ) => {
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (
         !hasCurrentCharacterSourceContext(
           latest,
@@ -129,7 +140,7 @@ export function useClassProvenanceMutations() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, itemLookup, updateCharacter, sourceData, getEquipmentPolicy],
+    [editingStore, character, itemLookup, updateCharacter, sourceData, getEquipmentPolicy],
   )
 
   const applyClassChoiceSelection = useCallback(
@@ -140,7 +151,7 @@ export function useClassProvenanceMutations() {
       expectedSelectionHandle?: string,
       progressionGainLevel?: number,
     ) => {
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (
         !hasCurrentCharacterSourceContext(
           latest,
@@ -174,13 +185,13 @@ export function useClassProvenanceMutations() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, sourceData, updateCharacter, calculationContext],
+    [editingStore, character, sourceData, updateCharacter, calculationContext],
   )
 
   const retainSavedFeatureOptions = useCallback(
     (choiceId: string, keys: readonly string[], expectedSelectionHandle?: string) => {
       if (!character) return
-      const latest = useCharacterStore.getState().activeCharacter
+      const latest = editingStore.getState().activeCharacter
       if (!latest || latest.id !== character.id)
         throw new RangeError('The active character changed. Review the saved choice.')
       const current =
@@ -211,7 +222,7 @@ export function useClassProvenanceMutations() {
         provenance: result.provenanceUpdate,
       })
     },
-    [character, sourceData, updateCharacter, calculationContext],
+    [editingStore, character, sourceData, updateCharacter, calculationContext],
   )
 
   return {

@@ -10,6 +10,8 @@ import { useCharacterStore } from '@/store/characterStore'
 export interface SkillsState {
   skills: SkillResult[]
   passivePerception: number
+  passiveInvestigation: number
+  passiveInsight: number
 }
 
 export function useSkills(): SkillsState {
@@ -65,13 +67,18 @@ export function useSkills(): SkillsState {
     ],
   )
 
-  const passivePerception = useMemo(() => {
-    const perception = skills.find((s) => s.name === 'perception')
-    return 10 + (perception?.modifier ?? abilityModifiers.wisdom ?? 0)
-  }, [skills, abilityModifiers.wisdom])
+  const passives = useMemo(() => {
+    const passiveScore = (name: string, ability: AbilityName) =>
+      10 + (skills.find((skill) => skill.name === name)?.modifier ?? abilityModifiers[ability])
+    return {
+      passivePerception: passiveScore('perception', 'wisdom'),
+      passiveInvestigation: passiveScore('investigation', 'intelligence'),
+      passiveInsight: passiveScore('insight', 'wisdom'),
+    }
+  }, [skills, abilityModifiers])
 
   return {
     skills,
-    passivePerception,
+    ...passives,
   }
 }

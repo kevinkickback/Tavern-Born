@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { clear, get } from 'idb-keyval'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
@@ -18,7 +18,7 @@ import {
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -55,7 +55,7 @@ function catalog(fragments = resistanceFragments) {
 
 function show(element: ReactElement) {
   return render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
+    <MemoryRouter initialEntries={['/build/overview']}>
       <TooltipProvider>
         <RulesPreviewManager>{element}</RulesPreviewManager>
       </TooltipProvider>
@@ -76,7 +76,7 @@ describe('shared item text consumers and persistence', () => {
     useGameDataStore.setState({ gameData: null })
   })
 
-  test('item details, Review, Compendium and PDF descriptions share loaded text', async () => {
+  test('item details, Overview, Compendium and PDF descriptions share loaded text', async () => {
     const data = await catalog()
     const item = data.items[0]
     const character = makeCharacterFixture({
@@ -111,10 +111,12 @@ describe('shared item text consumers and persistence', () => {
     show(<EquipmentPage />)
     expect(screen.getByText(expected)).toBeTruthy()
     cleanup()
-    show(<BuildReviewPage />)
+    show(<BuildOverviewPage />)
     fireEvent.click(screen.getByText('Equipment'))
-    expect(screen.getByText(expected)).toBeTruthy()
-    expect(screen.queryByText('Player-written description.')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: `${item.name} ×1` }))
+    const preview = within(await screen.findByRole('dialog', { name: `${item.name} ×1 preview` }))
+    expect(preview.getByText(expected)).toBeTruthy()
+    expect(preview.queryByText('Player-written description.')).toBeNull()
     cleanup()
     const entry = buildCompendiumEntries(data).find((entry) => entry.name === item.name)!
     expect(entry.description).toContain('resistance to fire damage')

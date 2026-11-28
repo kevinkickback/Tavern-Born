@@ -160,6 +160,20 @@ const hitPointGainSchema = z
     path: ['dieResult'],
   })
 
+const hitPointLevelOverrideSchema = z
+  .strictObject({
+    className: z.string().min(1),
+    classSource: z.string().min(1),
+    classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+    hitDie: finiteInteger().positive(),
+    dieResult: finiteInteger().positive(),
+    method: z.enum(['rolled', 'manual']),
+  })
+  .refine((entry) => entry.dieResult <= entry.hitDie, {
+    message: 'Hit-point die result cannot exceed the hit die.',
+    path: ['dieResult'],
+  })
+
 const hitPointAdjustmentSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -999,6 +1013,7 @@ export const characterSchema = z
     raceSource: z.string().optional(),
     subrace: z.string().optional(),
     subraceSource: z.string().optional(),
+    raceSize: z.enum(['T', 'S', 'M', 'L', 'H', 'G']).optional(),
     background: z.string(),
     backgroundSource: z.string().optional(),
     currency: currencySchema.optional(),
@@ -1039,6 +1054,10 @@ export const characterSchema = z
     hitPoints: hitPointsSchema,
     hitPointsInitialized: z.boolean().optional(),
     hitPointGains: z.array(hitPointGainSchema).optional(),
+    hitPointLevelOverrides: z
+      .array(hitPointLevelOverrideSchema)
+      .max(MAX_CHARACTER_LEVEL)
+      .optional(),
     hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
     maxHitPointsOverride: finiteInteger().min(1).optional(),
     armorClassOverride: finiteInteger().min(0).optional(),
@@ -1046,6 +1065,7 @@ export const characterSchema = z
     movement: characterMovementSchema,
     movementAdjustments: z.array(movementAdjustmentSchema).optional(),
     movementOverrides: z.record(z.string(), finiteInteger().nonnegative()).optional(),
+    // Accept old saves that used the retired toggle and discard it after validation.
     movementHoverOverride: z.boolean().optional(),
     racialDefenses: racialDefenseStateSchema.optional(),
     details: characterDetailsSchema,
@@ -1096,6 +1116,21 @@ export const characterSchema = z
   })
   .strict()
   .superRefine((char, ctx) => {
+    const editedHitDice = new Set<string>()
+    char.hitPointLevelOverrides?.forEach((entry, index) => {
+      const { className, classSource, classLevel } = entry
+      const key = JSON.stringify([className, classSource, classLevel])
+      const owners = char.classProgression.filter(
+        (row) => row.name === className && row.source === classSource,
+      )
+      if (editedHitDice.has(key) || owners.length !== 1 || owners[0].levels < classLevel)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['hitPointLevelOverrides', index],
+          message: 'An edited hit die must belong to a unique earned class level.',
+        })
+      editedHitDice.add(key)
+    })
     const inscriptions = new Set<string>()
     char.equipment.forEach((item, index) => {
       item.weaponInscriptions?.forEach((mark, markIndex) => {
@@ -1263,6 +1298,13 @@ export const characterSchema = z
         path: ['race'],
       })
     }
+    if (char.raceSize && (!char.race.trim() || !char.raceSource?.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A selected size requires a source-qualified race.',
+        path: ['raceSize'],
+      })
+    }
     for (const path of getInvalidNativeRacialSpellPaths(char as Character)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -1340,6 +1382,7 @@ export const characterSchema = z
       }
     }
   })
+  .transform(({ movementHoverOverride: _retiredHoverOverride, ...character }) => character)
 
 export const characterPersistenceSchema = characterSchema
 

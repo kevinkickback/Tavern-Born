@@ -22,7 +22,7 @@ import {
   readGameDataCache,
   writeGameDataCache,
 } from '@/lib/storage/dataCache'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -62,7 +62,7 @@ function fixture() {
 }
 function show(element: React.ReactNode) {
   return render(
-    <MemoryRouter initialEntries={['/build/review?section=overview']}>
+    <MemoryRouter initialEntries={['/build/overview']}>
       <TooltipProvider>
         <RulesPreviewManager>{element}</RulesPreviewManager>
       </TooltipProvider>
@@ -109,7 +109,7 @@ test('actual source-filtered selection/add/equip, details and PDF share concrete
   expect(useCharacterStore.getState().activeCharacter!.equipment).toEqual(current.equipment)
 })
 
-test('command-produced equipped shields share Review and Compendium rules without saved mutation', async () => {
+test('command-produced equipped shields share Overview and Compendium rules without saved mutation', async () => {
   const data = await loadFixedShields(),
     c = fixture()
   const item = data.items.find((x) => x.name === '+2 Shield' && x.source === 'XDMG')!
@@ -130,9 +130,11 @@ test('command-produced equipped shields share Review and Compendium rules withou
     activeCharacter: current,
     activeCharacterId: current.id,
   })
-  show(<BuildReviewPage />)
+  show(<BuildOverviewPage />)
   fireEvent.click(screen.getByText('Equipment'))
-  expect(screen.getByText('While holding this shield, gain +2 AC.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '+2 Shield ×2' }))
+  const preview = await screen.findByRole('dialog', { name: '+2 Shield ×2 preview' })
+  expect(within(preview).getByText('While holding this shield, gain +2 AC.')).toBeTruthy()
   cleanup()
   const entry = buildCompendiumEntries(data).find(
     (x) => x.name === '+2 Shield' && x.source === 'XDMG',
@@ -174,8 +176,7 @@ test('durable current-format reopen, cache recomposition and exact missing/resto
   expect(
     composeGameDataLayers([cached!.data]).items.filter((x) => x.magicVariantGenerated),
   ).toHaveLength(6)
-  show(<BuildReviewPage />)
-  fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
+  show(<BuildOverviewPage />)
   for (const [catalog, expected] of [
     [await loadFixedShields([]), 12],
     [data, 13],
@@ -208,9 +209,15 @@ test('durable current-format reopen, cache recomposition and exact missing/resto
     expect(readiness.recommendations.filter((x) => x.section === 'equipment')).toHaveLength(
       expected === 12 ? 2 : 0,
     )
-    expect(screen.queryAllByText('Restore rules for +1 Shield')).toHaveLength(
+    const preview = within(screen.getByTestId('overview-attention'))
+    const showAll = preview.queryByRole('button', { name: /^View all \d+ actions$/ })
+    if (showAll) fireEvent.click(showAll)
+    const dialog = showAll ? await screen.findByRole('dialog', { name: 'Character setup' }) : null
+    const actions = dialog ? within(dialog) : preview
+    expect(actions.queryAllByText('Restore rules for +1 Shield')).toHaveLength(
       expected === 12 ? 2 : 0,
     )
+    if (dialog) fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
     const vm = createCurrentCharacterSheetViewModel(current, catalog.lookups!)
     expect(vm.magicItems[0].description).toBe('Player shield note')
     expect(

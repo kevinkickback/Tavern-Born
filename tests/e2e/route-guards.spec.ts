@@ -3,6 +3,8 @@ import { ensureStartupPromptResolved, MINIMAL_GAME_DATA, seedAppState } from './
 
 const CHARACTER_ROUTES = [
   '/build',
+  '/build/overview',
+  '/build/review',
   '/build/race',
   '/build/class',
   '/build/background',

@@ -3,6 +3,31 @@ import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calc
 import { getRaceDefenseField, RACE_DEFENSE_FIELDS } from '@/lib/calculations/raceDefenseFields'
 import { normalizeOwnerIdentity } from '@/lib/provenance/normalization'
 import type { Race5e } from '@/types/5etools'
+import type { RaceSize } from '@/types/character'
+
+export const RACE_SIZE_LABELS: Record<RaceSize, string> = {
+  T: 'Tiny',
+  S: 'Small',
+  M: 'Medium',
+  L: 'Large',
+  H: 'Huge',
+  G: 'Gargantuan',
+}
+
+export function getRaceSizeOptions(race?: Pick<Race5e, 'size'>): RaceSize[] {
+  const codes = Object.keys(RACE_SIZE_LABELS)
+  return [...new Set(race?.size?.filter((size): size is RaceSize => codes.includes(size)))]
+}
+
+export function getEffectiveRaceSize(
+  race: Pick<Race5e, 'size'> | undefined,
+  selected: RaceSize | undefined,
+  selectionResolved = !!race,
+): string | undefined {
+  if (selected && (!selectionResolved || getRaceSizeOptions(race).includes(selected)))
+    return selected
+  return race?.size?.[0]
+}
 
 type RaceTraitEntry = {
   type?: string

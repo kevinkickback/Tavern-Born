@@ -11,6 +11,9 @@ references can fill multiple units. Validate the exact count, group, mundane or 
 and proficiency clauses against the current declaration. Unknown or ambiguous rules leave
 setup pending. Groups are choice pools and cannot become inventory rows.
 
+In the Character Creator, the active package tab selects the package in the draft. Its fixed
+grants apply immediately. Any required item picks still have to be filled for that package.
+
 Each grant lot retains its role, entry address, exact target and physical inventory ID.
 Remaining owned quantity is issued minus cumulative consumption, floored at zero. Refresh
 preserves consumption when an unchanged address still matches. A unique fixed printing that
@@ -41,7 +44,7 @@ fallback, including explicit absence of a bonus.
 
 The audited source exception registry separates fixed baselines from conditional or alternate-form
 rules. Special bearer, charge, target, ability or weapon-form mechanics stay manual unless
-explicitly supported. Actions, Review and PDF share one effect projection and preserve player
+explicitly supported. Actions, Overview and PDF share one effect projection and preserve player
 prose and manual adjustments.
 
 ## Subclass weapon inscriptions

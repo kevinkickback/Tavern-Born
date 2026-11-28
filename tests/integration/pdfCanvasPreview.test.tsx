@@ -10,7 +10,7 @@ vi.mock('pdfjs-dist', () => ({
   getDocument: pdfMocks.getDocument,
 }))
 
-vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({ default: 'mock-worker.js' }))
+vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({ default: 'mock-worker.js' }))
 
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 

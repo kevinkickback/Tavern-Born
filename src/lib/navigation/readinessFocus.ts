@@ -108,7 +108,7 @@ export function isSourceReadinessFocus(readinessFocus: string | null | undefined
   return readinessFocus?.startsWith('source:') ?? false
 }
 
-/** Adds a Review issue target without disturbing page-specific deep-link parameters. */
+/** Adds a readiness issue target without disturbing page-specific deep-link parameters. */
 export function addReadinessFocus(target: string, issueId: string): string {
   const [pathname, search = ''] = target.split('?')
   const params = new URLSearchParams(search)

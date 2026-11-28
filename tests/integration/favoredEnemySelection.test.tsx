@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -26,9 +26,9 @@ function mount(f: ReturnType<typeof makeFavoredEnemyFixture>, c = f.character) {
   useGameDataStore.setState({ gameData: f.data })
   setActiveCharacter(c)
   return render(
-    <MemoryRouter initialEntries={['/build/review']}>
+    <MemoryRouter initialEntries={['/build/overview']}>
       <Routes>
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route path="/build/overview" element={<BuildOverviewPage />} />
         <Route path="/build/class" element={<BuildClassPage />} />
       </Routes>
     </MemoryRouter>,
@@ -50,10 +50,10 @@ async function open() {
   )
   await screen.findByRole('dialog')
 }
-test('Review routes to shared compound setup; save partial, confirm pair/language, Cancel, strict reopen and Clear', async () => {
+test('Overview routes to shared compound setup; save partial, confirm pair/language, Cancel, strict reopen and Clear', async () => {
   const f = makeFavoredEnemyFixture(1)
   mount(f)
-  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Favored Enemy/ }))
   await screen.findByRole('dialog')
   fireEvent.mouseDown(dialog().getByRole('tab', { name: 'Two humanoid races' }), {
     button: 0,
@@ -107,7 +107,7 @@ test('source-unavailable intent has targeted recovery, exact restoration without
     )
   })
   mount(missing, saved)
-  fireEvent.click(screen.getByText('Restore or remove Favored Enemy').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Restore or remove Favored Enemy/ }))
   await screen.findByRole('dialog')
   expect(dialog().queryByRole('button', { name: 'Confirm' })).toBeNull()
   fireEvent.click(dialog().getByRole('button', { name: 'Cancel' }))
@@ -132,7 +132,7 @@ test('autocomplete, single suggestion, Show all and saved-language preservation 
     { name: 'Elf', source: 'PHB', languageProficiencies: [{ common: true, elvish: true }] },
   ]
   mount(f)
-  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Favored Enemy/ }))
   await screen.findByRole('dialog')
   const before = JSON.stringify(active())
   const type = dialog().getByRole('combobox', { name: 'Creature type' })
@@ -205,7 +205,7 @@ test('known languages are excluded before defaults and Show all; editing and Cle
     },
   ]
   mount(f)
-  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Favored Enemy/ }))
   await screen.findByRole('dialog')
   fireEvent.change(dialog().getByRole('combobox', { name: 'Creature type' }), {
     target: { value: 'Dragon' },
@@ -240,7 +240,7 @@ test('when all found languages are known, remaining options stay available and s
     },
   ]
   mount(f)
-  fireEvent.click(screen.getByText('Finish Favored Enemy').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Favored Enemy/ }))
   await screen.findByRole('dialog')
   fireEvent.change(dialog().getByRole('combobox', { name: 'Creature type' }), {
     target: { value: 'Dragon' },

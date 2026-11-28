@@ -5,13 +5,56 @@ import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { RaceStep } from '@/components/character/wizard/steps/3-RaceStep'
 import { validateStep } from '@/components/character/wizard/validation'
 import { parseRaces } from '@/lib/5etools/parsers/races'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
+import { createCharacterEditingDraft } from '@/store/characterEditingContext'
 import type { Race5e } from '@/types/5etools'
 
 describe('RaceStep', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  test.each([
+    false,
+    true,
+  ])('offers racial weapon choice only when there is a concrete option (%s)', (available) => {
+    const race: Race5e = {
+      name: 'Test Lineage',
+      source: 'VGM',
+      ability: [{ con: 1 }],
+      weaponProficiencies: [{ choose: { fromFilter: 'type=martial weapon', count: 1 } }],
+    }
+    const data = { ...INITIAL_CHARACTER_DATA, race: race.name, raceSource: race.source }
+    const character = buildInitialCharacter(
+      { initial: { name: 'Test character', originSystem: '2014' }, race },
+      new Map(),
+      () => (available ? ['longsword'] : []),
+    )
+    expect(character.provenance.choices.some((choice) => choice.domain === 'weapons')).toBe(true)
+    const { queryByRole } = render(
+      <RaceStep
+        data={data}
+        onChange={vi.fn()}
+        races={[race]}
+        recursiveLookup={buildRecursiveLookup({})}
+        raceDraft={{
+          store: createCharacterEditingDraft(character),
+          reset: () => undefined,
+          error: undefined,
+        }}
+        choiceCatalog={{
+          feats: [],
+          items: [],
+          itemsBase: [],
+          languages: [],
+          optionalfeatures: [],
+          spells: [],
+        }}
+      />,
+    )
+    expect(Boolean(queryByRole('tab', { name: 'Choices' }))).toBe(available)
   })
 
   test('shortens complete lineage labels while selection values and opening stay unchanged', () => {
@@ -42,6 +85,7 @@ describe('RaceStep', () => {
       />,
     )
     expect(getByRole('heading', { name: /Dragonborn\s*\(Draconblood: Brass\)/ })).toBeTruthy()
+    fireEvent.mouseDown(getByRole('tab', { name: 'Choices' }), { button: 0 })
     expect(getByRole('button', { name: 'Draconblood: Brass · EGW' })).toBeTruthy()
     expect(
       getAllByRole('button', { name: /^(Forest|Draconblood: Brass|Zinc)/ }).map(
@@ -53,11 +97,12 @@ describe('RaceStep', () => {
     expect(onChange).toHaveBeenCalledWith({
       subrace: child.name,
       subraceSource: 'DMG',
+      raceSize: undefined,
       raceAsiChoices: [],
     })
   })
 
-  test('defaults to a source-backed ancestry for the 2014 Dragonborn and keeps later choices', () => {
+  test('requires an explicit source-backed 2014 Dragonborn ancestry and keeps later choices', () => {
     const races = parseRaces(
       JSON.parse(readFileSync('resources/srd/data/races.json', 'utf-8')),
     ) as Race5e[]
@@ -72,11 +117,12 @@ describe('RaceStep', () => {
         races={[parent]}
       />
     )
-    const { getByRole, getByText, queryByRole, rerender } = render(step(data))
-    expect(getByText('Draconic Ancestry', { selector: 'span' })).toBeTruthy()
+    const { getByRole, queryByRole, rerender } = render(step(data))
+    fireEvent.mouseDown(getByRole('tab', { name: 'Choices' }), { button: 0 })
+    expect(getByRole('heading', { name: 'Draconic Ancestry' })).toBeTruthy()
     expect(queryByRole('button', { name: 'Default' })).toBeNull()
     const firstAncestry = { subrace: 'Dragonborn (Black)', subraceSource: 'PHB' }
-    expect(onChange).toHaveBeenLastCalledWith(firstAncestry)
+    expect(onChange).not.toHaveBeenCalled()
     const pools = { races: [dragonborn], classes: [], backgrounds: [] }
     expect(validateStep('race', data, pools)).toMatchObject({ valid: false })
     expect(validateStep('review', data, pools)).toMatchObject({ valid: false })
@@ -84,7 +130,11 @@ describe('RaceStep', () => {
 
     fireEvent.click(getByRole('button', { name: 'Green' }))
     const chosen = { subrace: 'Dragonborn (Green)', subraceSource: 'PHB' }
-    expect(onChange).toHaveBeenLastCalledWith({ ...chosen, raceAsiChoices: [] })
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...chosen,
+      raceSize: undefined,
+      raceAsiChoices: [],
+    })
     expect(validateStep('race', { ...data, ...chosen }, pools).valid).toBe(true)
     expect(validateStep('review', { ...data, ...chosen, subraceSource: 'XPHB' }, pools).valid).toBe(
       false,
@@ -127,7 +177,7 @@ describe('RaceStep', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  test('defaults to the first available subrace when none is selected', async () => {
+  test('leaves multiple subraces unselected and keeps the parent description visible', () => {
     const onChange = vi.fn()
     const races: Race5e[] = [
       {
@@ -157,12 +207,7 @@ describe('RaceStep', () => {
       />,
     )
 
-    await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith({
-        subrace: 'Default',
-        subraceSource: 'PHB',
-      })
-    })
+    expect(onChange).not.toHaveBeenCalled()
 
     expect(document.body.textContent?.includes('diverse and ambitious')).toBe(true)
   })
@@ -190,6 +235,7 @@ describe('RaceStep', () => {
         raceSource: 'TCE',
         subrace: '',
         subraceSource: '',
+        raceSize: undefined,
         raceAsiChoices: [],
         raceAsiBlockIndex: 0,
       })
@@ -245,7 +291,7 @@ describe('RaceStep', () => {
   test('describes the chosen flexible mode alongside ordinary child fixed bonuses', () => {
     const child = { name: 'Child', source: 'TEST', ability: [{ con: 1 }] } as Race5e
     const parent = { name: 'Parent', source: 'TEST', lineage: true, subraces: [child] } as Race5e
-    const { getByText } = render(
+    const { getByText, getByRole } = render(
       <RaceStep
         recursiveLookup={buildRecursiveLookup({})}
         data={{
@@ -262,6 +308,12 @@ describe('RaceStep', () => {
       />,
     )
     expect(getByText('CON +1 · Choose 3 abilities (+1 each)')).toBeTruthy()
+    fireEvent.mouseDown(getByRole('tab', { name: 'Choices' }), { button: 0 })
+    expect(
+      getByRole('region', { name: 'Race choices' }).contains(
+        getByRole('combobox', { name: 'Racial ability bonus +1, group 1, choice 1' }),
+      ),
+    ).toBe(true)
   })
 
   test('renders the filtered race collection supplied by the wizard controller', () => {

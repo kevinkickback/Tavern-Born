@@ -19,7 +19,7 @@ import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/option
 import { validateClassChoices } from '@/lib/readiness/classReadiness'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e, ClassFeature } from '@/types/5etools'
@@ -81,21 +81,21 @@ function dragonContext(level = 3, revisedOwner = true) {
   return { classes, data, character }
 }
 
-test('Review navigates to the offered shared ancestry selector at the earned level without changing the save', async () => {
+test('Overview navigates to the offered shared ancestry selector at the earned level without changing the save', async () => {
   const { data, character } = dragonContext(1, false)
   useGameDataStore.setState({ gameData: data })
   setActiveCharacter(character)
   const saved = JSON.stringify(useCharacterStore.getState().activeCharacter)
   render(
-    <MemoryRouter initialEntries={['/build/review']}>
+    <MemoryRouter initialEntries={['/build/overview']}>
       <LocationProbe />
       <Routes>
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route path="/build/overview" element={<BuildOverviewPage />} />
         <Route path="/build/class" element={<BuildClassPage />} />
       </Routes>
     </MemoryRouter>,
   )
-  const issue = screen.getByText('Finish Dragon Ancestor').closest('button')!
+  const issue = screen.getByRole('link', { name: /^Finish Dragon Ancestor/ })
   expect(issue).toBeTruthy()
   fireEvent.click(issue)
   const route = screen.getByLabelText('Current route').textContent!
@@ -275,7 +275,7 @@ test('class controller, Builder and readiness share filtered optional replacemen
 test.each([
   'Favored Foe',
   'Deft Explorer',
-])('production Review and Builder preserve %s ambiguity through exact restoration', async (name) => {
+])('production Overview and Builder preserve %s ambiguity through exact restoration', async (name) => {
   const doc = structuredClone(optionalClassSources)
   const original = doc.classFeature.find((row) => row.name === name && row.source === 'TCE')!
   const duplicateDoc = {
@@ -299,9 +299,9 @@ test.each([
   setActiveCharacter(character)
   const saved = JSON.stringify(useCharacterStore.getState().activeCharacter)
   render(
-    <MemoryRouter initialEntries={['/build/review']}>
+    <MemoryRouter initialEntries={['/build/overview']}>
       <Routes>
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route path="/build/overview" element={<BuildOverviewPage />} />
         <Route path="/build/class" element={<BuildClassPage />} />
       </Routes>
     </MemoryRouter>,
@@ -311,7 +311,7 @@ test.each([
     useGameDataStore.setState({ gameData: exact })
   })
   expect(screen.queryByText(`Restore or clear ${name}`)).toBeNull()
-  fireEvent.click(screen.getByText('Finish Canny expertise').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Finish Canny expertise/ }))
   expect(await screen.findByRole('heading', { name: 'Choose Canny expertise' })).toBeTruthy()
   fireEvent.click(within(screen.getByRole('dialog')).getByText('Cancel', { selector: 'button' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

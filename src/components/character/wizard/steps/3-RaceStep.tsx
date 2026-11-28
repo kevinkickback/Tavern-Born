@@ -1,7 +1,20 @@
 import { MagnifyingGlass, X } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { RacialAbilityBonusPanel } from '@/components/character/AbilityBonusPanels'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getAsiDisplay } from '@/lib/calculations/abilityScoreDisplay'
+import {
+  getRaceAbilityData,
+  hasFlexibleRaceOriginAsi,
+  hasUnresolvedRaceAbilityChoices,
+} from '@/lib/calculations/abilityScores'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
 import {
   normalizeRaceSelectionForOriginSystem,
@@ -15,33 +28,60 @@ import {
   getAvailableSubraces,
   getDamageTraitDisplay,
   getLanguageDisplay,
+  getRaceSizeOptions,
   getRaceTraits,
   getSkillProfDisplay,
   getSpeedDisplay,
   mergeRaceWithSubrace,
+  RACE_SIZE_LABELS,
   requiresDraconicAncestry,
 } from '@/lib/calculations/raceUtils'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
+import { CharacterEditingContext } from '@/store/characterEditingContext'
 import type { Race5e } from '@/types/5etools'
-import { CreatorEntityDetails, DetailRow } from '../../DetailCards'
+import type { Character } from '@/types/character'
+import { DetailRow } from '../../DetailCards'
+import { CreatorChoicePill, RaceChoiceRow } from '../../RaceChoiceRow'
 import { TraitTooltip } from '../../TraitTooltip'
+import { CreatorChoiceDetails, type CreatorChoiceReviewProps } from '../CreatorChoiceDetails'
+import { CreatorChoices } from '../CreatorChoices'
+import { type CreatorChoiceCatalog, getCreatorChoiceGroups } from '../creatorChoiceGroups'
 import { sortCreatorOptions } from '../sortCreatorOptions'
 import type { StepProps } from '../types'
+import type { useCreatorRaceDraft } from '../useCreatorRaceDraft'
 
-interface RaceStepProps extends StepProps {
+interface RaceStepProps extends StepProps, CreatorChoiceReviewProps {
   races: Race5e[]
   recursiveLookup: RecursiveLookup
+  raceDraft?: ReturnType<typeof useCreatorRaceDraft>
+  choiceCatalog?: CreatorChoiceCatalog
+  laterOriginDraft?: Character
 }
+
+const subscribeToEmptyDraft = () => () => undefined
 
 function getWizardSubraces(race?: Race5e) {
-  return requiresDraconicAncestry(race)
-    ? getAvailableSubraces(race)
-    : (race?.subraces ?? []).filter((subrace) => Boolean(subrace.name))
+  return getAvailableSubraces(race)
 }
 
-export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepProps) {
+export function RaceStep({
+  data,
+  onChange,
+  races,
+  recursiveLookup,
+  raceDraft,
+  choiceCatalog,
+  laterOriginDraft,
+  onChoicesPendingChange,
+  choicesReviewRef,
+}: RaceStepProps) {
   const [search, setSearch] = useState('')
+  const [viewReset, resetView] = useState(0)
+  const raceCharacter = useSyncExternalStore(
+    raceDraft?.store?.subscribe ?? subscribeToEmptyDraft,
+    () => raceDraft?.store?.getState().activeCharacter,
+  )
   const filteredRaces = races
   const orderedRaces = useMemo(() => sortCreatorOptions(races), [races])
 
@@ -73,12 +113,14 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
     const firstRace = orderedRaces[0]
     if (!firstRace) return
 
-    const firstSubrace = getWizardSubraces(firstRace)[0]
+    const subraces = getWizardSubraces(firstRace)
+    const child = subraces.length === 1 ? subraces[0] : undefined
     onChange({
       race: firstRace.name,
       raceSource: firstRace.source ?? '',
-      subrace: firstSubrace?.name ?? '',
-      subraceSource: firstSubrace?.source ?? '',
+      subrace: child?.name ?? '',
+      subraceSource: child?.source ?? '',
+      raceSize: undefined,
       raceAsiChoices: [],
       raceAsiBlockIndex: 0,
     })
@@ -94,19 +136,20 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   )
 
   useEffect(() => {
-    if (!selectedRace || (requiresAncestry && data.subrace)) return
-    if (subraces.length === 0) {
+    if (!selectedRace || selectedSubrace || (requiresAncestry && data.subrace)) return
+    if (subraces.length !== 1) {
       if (data.subrace || data.subraceSource) {
-        onChange({ subrace: '', subraceSource: '' })
+        onChange({ subrace: '', subraceSource: '', raceSize: undefined, raceAsiChoices: [] })
       }
       return
     }
-    if (selectedSubrace) return
     const firstSubrace = subraces[0]
     if (!firstSubrace) return
     onChange({
       subrace: firstSubrace.name,
       subraceSource: firstSubrace.source ?? '',
+      raceSize: undefined,
+      raceAsiChoices: [],
     })
   }, [
     data.subrace,
@@ -129,37 +172,87 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
       : normalizedSelection.subrace || normalizedSelection.race
 
   const handleSelectRace = (race: Race5e) => {
-    if (requiresDraconicAncestry(race) && race === selectedRace) return
-    const firstSubrace = getWizardSubraces(race)[0]
+    resetView((version) => version + 1)
+    if (race === selectedRace) return
+    const subraces = getWizardSubraces(race)
+    const child = subraces.length === 1 ? subraces[0] : undefined
     onChange({
       race: race.name,
       raceSource: race.source ?? '',
-      subrace: firstSubrace?.name ?? '',
-      subraceSource: firstSubrace?.source ?? '',
+      subrace: child?.name ?? '',
+      subraceSource: child?.source ?? '',
+      raceSize: undefined,
       raceAsiChoices: [],
       raceAsiBlockIndex: 0,
     })
   }
 
   const handleSelectSubrace = (subrace: Race5e) => {
+    if (subrace === selectedSubrace) return
+    const next = normalizeRaceSelectionForOriginSystem(selectedRace, subrace, data.originSystem)
+    const before = getRaceAbilityData(
+      normalizedSelection.race,
+      normalizedSelection.subrace,
+      data.raceAsiBlockIndex,
+    )
+    const after = getRaceAbilityData(next.race, next.subrace, data.raceAsiBlockIndex)
+    const raceAsiChoices = after.choices.map((choice, index) => {
+      const previous = before.choices[index]
+      return choice.source === 'race' &&
+        previous?.source === 'race' &&
+        choice.count === previous.count &&
+        choice.amount === previous.amount &&
+        choice.from.join() === previous.from.join()
+        ? (data.raceAsiChoices[index] ?? [])
+        : []
+    })
     onChange({
       subrace: subrace.name,
       subraceSource: subrace.source ?? '',
-      raceAsiChoices: [],
+      raceSize:
+        selectedSubrace?._isVersion || subrace._isVersion || selectedSubrace?.size || subrace.size
+          ? undefined
+          : data.raceSize,
+      raceAsiChoices: raceAsiChoices.some((choices) => choices.length) ? raceAsiChoices : [],
     })
   }
 
   const showsRaceBonuses = usesRaceOriginBenefits(data.originSystem)
   const asi = showsRaceBonuses
-    ? getAsiDisplay(
+    ? getRaceAbilityData(
         normalizedSelection.race,
-        data.raceAsiBlockIndex,
-        data.raceAsiChoices,
         normalizedSelection.subrace,
+        data.raceAsiBlockIndex,
       )
-    : []
+    : undefined
   const size = displayRace?.size ?? []
+  const sizeOptions = getRaceSizeOptions(displayRace)
+  const hasSubraceChoice = subraces.length > 1
+  const hasSizeChoice = sizeOptions.length > 1
+  const selectedSize =
+    data.raceSize && sizeOptions.includes(data.raceSize) ? data.raceSize : undefined
+  const hasAbilityChoice = !!asi?.choices.length
+  const groups =
+    raceCharacter &&
+    choiceCatalog &&
+    getCreatorChoiceGroups(raceCharacter, choiceCatalog, 'race', laterOriginDraft ?? raceCharacter)
+  const hasChoices =
+    hasSubraceChoice ||
+    hasSizeChoice ||
+    hasAbilityChoice ||
+    !!(
+      groups &&
+      (groups.choices.length || groups.racialProfiles.length || groups.fixedFeatOwners.length)
+    )
+  const subracePending = hasSubraceChoice && !selectedSubrace
+  const sizePending = !subracePending && hasSizeChoice && !selectedSize
+  const abilitiesPending =
+    !subracePending && !!asi && hasUnresolvedRaceAbilityChoices(asi, data.raceAsiChoices)
+  const choicesPending = subracePending || sizePending || abilitiesPending || !!groups?.hasPending
   const speed = getSpeedDisplay(displayRace)
+  const parent = normalizedSelection.race
+  const child = normalizedSelection.subrace
+  const asiSummary = getAsiDisplay(parent, data.raceAsiBlockIndex, data.raceAsiChoices, child)
   const languages = getLanguageDisplay(displayRace)
   const skills = getSkillProfDisplay(displayRace)
   const traits = getRaceTraits(displayRace)
@@ -167,6 +260,93 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
   const immunities = getDamageTraitDisplay(displayRace?.immune)
   const conditionImmunities = getDamageTraitDisplay(displayRace?.conditionImmune)
   const raceSummary = getRaceSummary(displayRace)
+  const subtitle =
+    selectedRace && selectedSubrace
+      ? getSubraceDisplayName(selectedRace.name, selectedSubrace.name)
+      : undefined
+
+  const description = selectedRace && (
+    <>
+      {raceSummary && (
+        <div className="max-w-[72ch] space-y-1.5">
+          <p className="text-sm leading-relaxed text-muted-foreground">{raceSummary}</p>
+        </div>
+      )}
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border bg-workspace-pane">
+        <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">Size</span>
+          <span className="mt-0.5 text-sm font-semibold">
+            {sizeOptions.map((value) => RACE_SIZE_LABELS[value]).join(' / ') ||
+              size.join(' / ') ||
+              '—'}
+          </span>
+        </div>
+        <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">Speed</span>
+          <span className="mt-0.5 text-sm font-semibold">{speed || '—'}</span>
+        </div>
+        <div className="flex min-w-0 flex-col px-2.5 py-2.5">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">Darkvision</span>
+          <span className="mt-0.5 text-sm font-semibold">
+            {displayRace?.darkvision ? `${displayRace.darkvision} ft.` : '—'}
+          </span>
+        </div>
+      </div>
+
+      <div className="border-t border-border">
+        {showsRaceBonuses && (
+          <DetailRow label="Ability Scores">
+            <p className="text-sm text-muted-foreground">{asiSummary.join(' · ') || 'None'}</p>
+          </DetailRow>
+        )}
+        <DetailRow label="Languages">
+          <p className="text-sm text-muted-foreground">{languages || 'None'}</p>
+        </DetailRow>
+        <DetailRow label="Skill Proficiencies">
+          <p className="text-sm text-muted-foreground">{skills.join(', ') || 'None'}</p>
+        </DetailRow>
+        <DetailRow label="Resistances">
+          <p className="text-sm text-muted-foreground">
+            {resistances === '—' ? 'None' : resistances}
+          </p>
+        </DetailRow>
+        <DetailRow label="Immunities">
+          <p className="text-sm text-muted-foreground">
+            {[
+              immunities !== '—' && immunities,
+              conditionImmunities !== '—' && `${conditionImmunities} (condition)`,
+            ]
+              .filter(Boolean)
+              .join(', ') || 'None'}
+          </p>
+        </DetailRow>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-4">
+        <h4 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
+          Racial Traits
+        </h4>
+        {traits.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No traits available</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {traits.map((trait) => (
+              <TraitTooltip
+                key={trait.key}
+                previewKey={JSON.stringify(['race-trait', trait.key])}
+                name={trait.name}
+                source={displayRace?.source}
+                entries={trait.entries}
+                recursiveLookup={recursiveLookup}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
 
   return (
     <div className="grid min-w-0 gap-5 md:min-h-0 md:flex-1 md:grid-cols-[minmax(13rem,1fr)_minmax(0,2.6fr)] md:gap-6">
@@ -237,36 +417,26 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
         </div>
       </div>
 
-      {/* Right: Race details */}
-      <CreatorEntityDetails
+      <CreatorChoiceDetails
+        key={JSON.stringify([selectedRace?.name, selectedRace?.source, viewReset])}
+        kind="Race"
         entity={selectedRace}
-        subtitle={
-          selectedRace && selectedSubrace
-            ? getSubraceDisplayName(selectedRace.name, selectedSubrace.name)
-            : undefined
-        }
-        placeholder="Select a race to view details"
-      >
-        {selectedRace && (
-          <>
-            {raceSummary && (
-              <div className="max-w-[72ch] space-y-1.5">
-                <p className="text-sm leading-relaxed text-muted-foreground">{raceSummary}</p>
-              </div>
-            )}
-
-            {/* Subrace selector */}
-            {(subraces.length > 0 || requiresAncestry) && (
-              <div className="rounded-lg border border-border bg-card/50 p-3">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  {requiresAncestry ? 'Draconic Ancestry' : 'Subrace'}
-                </span>
-                {requiresAncestry && subraces.length === 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    No draconic ancestries are available from the selected content.
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
+        subtitle={subtitle}
+        description={description}
+        pending={choicesPending}
+        onChoicesPendingChange={onChoicesPendingChange}
+        choicesReviewRef={choicesReviewRef}
+        choices={
+          hasChoices &&
+          selectedRace && (
+            <section aria-label="Race choices" className="space-y-2">
+              {hasSubraceChoice && (
+                <RaceChoiceRow
+                  title={requiresAncestry ? 'Draconic Ancestry' : 'Subrace'}
+                  detail="Choose a lineage"
+                  pending={subracePending}
+                  complete={!!selectedSubrace}
+                >
                   {orderedSubraces.map((sr) => {
                     const name = getSubraceDisplayName(selectedRace.name, sr.name)
                     const isActive =
@@ -275,12 +445,13 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                       <button
                         key={`${sr.name}|${sr.source ?? ''}`}
                         type="button"
+                        aria-pressed={isActive}
                         onClick={() => handleSelectSubrace(sr)}
                         className={cn(
-                          'px-3 py-1.5 rounded-md text-xs font-semibold transition-all border',
+                          'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
                           isActive
-                            ? 'bg-accent text-accent-foreground border-accent'
-                            : 'bg-card border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
+                            ? 'border-primary/50 bg-primary/15 text-primary'
+                            : 'border-border bg-workspace-pane text-muted-foreground hover:border-primary/35 hover:text-foreground',
                         )}
                       >
                         {name}
@@ -294,86 +465,78 @@ export function RaceStep({ data, onChange, races, recursiveLookup }: RaceStepPro
                       </button>
                     )
                   })}
-                </div>
-              </div>
-            )}
-
-            {/* Quick stats */}
-            <div className="grid grid-cols-3 divide-x divide-border border-y border-border bg-workspace-pane">
-              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Size</span>
-                <span className="text-sm font-semibold mt-0.5">{size.join(' / ') || '—'}</span>
-              </div>
-              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Speed</span>
-                <span className="text-sm font-semibold mt-0.5">{speed || '—'}</span>
-              </div>
-              <div className="flex min-w-0 flex-col px-2.5 py-2.5">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  Darkvision
-                </span>
-                <span className="text-sm font-semibold mt-0.5">
-                  {displayRace?.darkvision ? `${displayRace.darkvision} ft.` : '—'}
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t border-border">
-              {showsRaceBonuses && (
-                <DetailRow label="Ability Scores">
-                  <p className="text-sm text-muted-foreground">{asi.join(' · ') || 'None'}</p>
-                </DetailRow>
+                </RaceChoiceRow>
               )}
-              <DetailRow label="Languages">
-                <p className="text-sm text-muted-foreground">{languages || 'None'}</p>
-              </DetailRow>
-              <DetailRow label="Skill Proficiencies">
-                <p className="text-sm text-muted-foreground">{skills.join(', ') || 'None'}</p>
-              </DetailRow>
-              <DetailRow label="Resistances">
-                <p className="text-sm text-muted-foreground">
-                  {resistances === '—' ? 'None' : resistances}
+              {!subracePending && hasSizeChoice && (
+                <RaceChoiceRow
+                  title="Size"
+                  detail="Choose your character’s size"
+                  pending={sizePending}
+                  complete={!!selectedSize}
+                >
+                  {selectedSize ? (
+                    <CreatorChoicePill
+                      remove={{
+                        label: `Remove ${RACE_SIZE_LABELS[selectedSize]} as racial size`,
+                        onClick: () => onChange({ raceSize: undefined }),
+                      }}
+                    >
+                      {RACE_SIZE_LABELS[selectedSize]}
+                    </CreatorChoicePill>
+                  ) : (
+                    <Select
+                      value={selectedSize ?? ''}
+                      onValueChange={(value) => {
+                        const raceSize = sizeOptions.find((size) => size === value)
+                        if (raceSize) onChange({ raceSize })
+                      }}
+                    >
+                      <SelectTrigger aria-label="Racial size" className="min-w-40">
+                        <SelectValue placeholder="Choose size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sizeOptions.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {RACE_SIZE_LABELS[value]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </RaceChoiceRow>
+              )}
+              {!subracePending && hasAbilityChoice && asi && (
+                <div className="pt-2 [&_[data-testid=race-ability-choices]]:mt-0 [&_[data-testid=race-ability-choices]]:max-w-none">
+                  <RacialAbilityBonusPanel
+                    data={{ ...asi, fixed: [] }}
+                    selections={data.raceAsiChoices}
+                    distribution={data.raceAsiBlockIndex}
+                    markUnfilled
+                    onDistributionChange={
+                      hasFlexibleRaceOriginAsi(parent, child)
+                        ? (value) => onChange({ raceAsiBlockIndex: value, raceAsiChoices: [] })
+                        : undefined
+                    }
+                    onChoicesChange={(raceAsiChoices) => onChange({ raceAsiChoices })}
+                  />
+                </div>
+              )}
+              {raceDraft?.error ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {raceDraft.error}
                 </p>
-              </DetailRow>
-              <DetailRow label="Immunities">
-                <p className="text-sm text-muted-foreground">
-                  {[
-                    immunities !== '—' && immunities,
-                    conditionImmunities !== '—' && `${conditionImmunities} (condition)`,
-                  ]
-                    .filter(Boolean)
-                    .join(', ') || 'None'}
-                </p>
-              </DetailRow>
-            </div>
-
-            {/* Traits */}
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">
-                  Racial Traits
-                </span>
-              </div>
-              {traits.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No traits available</p>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {traits.map((trait) => (
-                    <TraitTooltip
-                      key={trait.key}
-                      previewKey={JSON.stringify(['race-trait', trait.key])}
-                      name={trait.name}
-                      source={displayRace?.source}
-                      entries={trait.entries}
-                      recursiveLookup={recursiveLookup}
-                    />
-                  ))}
-                </div>
+                !subracePending &&
+                raceDraft?.store && (
+                  <CharacterEditingContext.Provider value={raceDraft.store}>
+                    <CreatorChoices scope="race" groups={groups || undefined} />
+                  </CharacterEditingContext.Provider>
+                )
               )}
-            </div>
-          </>
-        )}
-      </CreatorEntityDetails>
+            </section>
+          )
+        }
+      />
     </div>
   )
 }

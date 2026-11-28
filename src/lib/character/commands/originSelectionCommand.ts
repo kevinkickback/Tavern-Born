@@ -26,8 +26,11 @@ import {
 
 export interface InitialCharacterSelections {
   initial: Partial<Character>
+  /** A Creator draft containing only the selected race and its configured grants. */
+  raceDraft?: Character
   race?: Race5e
   subrace?: Race5e
+  subraceIsNested?: boolean
   classEntity?: Class5e
   background?: Background5e
   raceAsiBlockIndex?: 0 | 1
@@ -52,43 +55,62 @@ function applyPatch(character: Character, patch: Partial<Character>): Character 
   return { ...character, ...patch }
 }
 
+export function getInitialEquipmentPolicy(
+  character: Character,
+  owner: Class5e | Background5e,
+  kind: 'class' | 'background',
+  authority: InitialCharacterLookups['startingEquipment'],
+) {
+  if (!authority) return undefined
+  const owners = (kind === 'class' ? authority.classes : authority.backgrounds).filter((row) =>
+    sameStartingReference(row, owner),
+  )
+  const current = kind === 'class' ? owners[0] : owner
+  return createStartingEquipmentPolicy(
+    character,
+    {
+      name: owner.name,
+      source: owner.source,
+      kind,
+      sourceIdentityConflict:
+        owners.length > 1 ||
+        owner.sourceIdentityConflict === true ||
+        owners[0]?.sourceIdentityConflict === true,
+      entries: Array.isArray(current?.entries) ? current.entries : undefined,
+    },
+    current?.startingEquipment,
+    authority.rawItems,
+    authority.availableItems,
+    authority.itemTypes,
+    owners.length > 0,
+  )
+}
+
 export function buildInitialCharacter(
   selections: InitialCharacterSelections,
   itemLookup: Map<string, Item5e>,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
   spellLookups?: InitialCharacterLookups,
 ): Character {
+  const { raceDraft, race, subrace } = selections
+  if (
+    raceDraft &&
+    (raceDraft.originSystem !== selections.initial.originSystem ||
+      raceDraft.race !== race?.name ||
+      raceDraft.raceSource !== race.source ||
+      raceDraft.subrace !== subrace?.name ||
+      raceDraft.subraceSource !== subrace?.source ||
+      raceDraft.background ||
+      raceDraft.classProgression.length)
+  ) {
+    throw new RangeError('Review the choices for your selected race.')
+  }
   let character = createEmptyCharacter({
+    ...raceDraft,
     ...selections.initial,
-    raceAsiChoices: selections.raceAsiChoices ?? selections.initial.raceAsiChoices,
+    raceAsiChoices: selections.raceAsiChoices ?? selections.initial.raceAsiChoices ?? [],
   })
   let ledger = character.provenance ?? emptyProvenance()
-  const equipmentPolicy = (owner: Class5e | Background5e, kind: 'class' | 'background') => {
-    const authority = spellLookups?.startingEquipment
-    if (!authority) return undefined
-    const owners = (kind === 'class' ? authority.classes : authority.backgrounds).filter((row) =>
-      sameStartingReference(row, owner),
-    )
-    const current = kind === 'class' ? owners[0] : owner
-    return createStartingEquipmentPolicy(
-      character,
-      {
-        name: owner.name,
-        source: owner.source,
-        kind,
-        sourceIdentityConflict:
-          owners.length > 1 ||
-          owner.sourceIdentityConflict === true ||
-          owners[0]?.sourceIdentityConflict === true,
-        entries: Array.isArray(current?.entries) ? current.entries : undefined,
-      },
-      current?.startingEquipment,
-      authority.rawItems,
-      authority.availableItems,
-      authority.itemTypes,
-      owners.length > 0,
-    )
-  }
   const raceResolution = selections.race
     ? {
         parentRace: selections.race,
@@ -96,14 +118,10 @@ export function buildInitialCharacter(
         mergedRace: selections.subrace
           ? mergeRaceWithSubrace(selections.race, selections.subrace)
           : selections.race,
-        subraceIsNested: false,
+        subraceIsNested: selections.subraceIsNested ?? false,
       }
     : undefined
 
-  // Background is applied before race: under the 2024 origin system, the race and
-  // background commands each independently re-validate the full origin invariant set
-  // (e.g. "exactly one background origin feat"), so background's grant must already
-  // be in the ledger by the time the race command's check runs.
   if (selections.background) {
     const result = applyBackgroundSelectionCommand(
       character,
@@ -112,7 +130,12 @@ export function buildInitialCharacter(
       selections.backgroundEquipmentChoices ?? [],
       itemLookup,
       undefined,
-      equipmentPolicy(selections.background, 'background'),
+      getInitialEquipmentPolicy(
+        character,
+        selections.background,
+        'background',
+        spellLookups?.startingEquipment,
+      ),
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
@@ -144,7 +167,7 @@ export function buildInitialCharacter(
     ledger = result.provenanceUpdate
   }
 
-  if (selections.race) {
+  if (selections.race && !raceDraft) {
     const result = applyRaceSelectionCommand(
       character,
       ledger,
@@ -152,11 +175,12 @@ export function buildInitialCharacter(
       selections.subrace,
       selections.raceAsiBlockIndex ?? 0,
       resolveRaceChoiceOptions,
-      spellLookups,
+      { ...spellLookups, subraceIsNested: selections.subraceIsNested },
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
-
+  }
+  if (selections.race) {
     const raceAsiResult = applyRaceAsiChoicesCommand(
       character,
       ledger,
@@ -183,7 +207,12 @@ export function buildInitialCharacter(
       {
         ...spellLookups,
         raceResolution,
-        startingEquipmentPolicy: equipmentPolicy(selections.classEntity, 'class'),
+        startingEquipmentPolicy: getInitialEquipmentPolicy(
+          character,
+          selections.classEntity,
+          'class',
+          spellLookups?.startingEquipment,
+        ),
       },
     )
     character = applyPatch(character, result.characterPatch)

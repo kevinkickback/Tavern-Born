@@ -1,6 +1,6 @@
 import { Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
+import { type ReactNode, type RefObject, useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Accordion,
@@ -54,6 +54,7 @@ export interface CategoryLimit<T> {
 export interface SelectionModalProps<T> {
   open: boolean
   onOpenChange: (open: boolean) => void
+  returnFocusRef?: RefObject<HTMLElement | null>
   title: string
   items: T[]
   getItemId: (item: T) => string
@@ -135,7 +136,7 @@ function SelectionModalInner<T>({
   closeOnConfirm = true,
   quantitySelection,
   onClose,
-}: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange'> & {
+}: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange' | 'returnFocusRef'> & {
   onClose: () => void
 }) {
   const [search, setSearch] = useState('')
@@ -704,11 +705,19 @@ function SelectionModalInner<T>({
 }
 
 export function SelectionModal<T>(props: SelectionModalProps<T>) {
-  const { open, onOpenChange, ...rest } = props
+  const { open, onOpenChange, returnFocusRef, ...rest } = props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,56rem)] w-full flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 sm:max-w-5xl">
+      <DialogContent
+        className="flex h-[min(90vh,56rem)] w-full flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 sm:max-w-5xl"
+        onCloseAutoFocus={(event) => {
+          const trigger = returnFocusRef?.current
+          if (!trigger?.isConnected) return
+          event.preventDefault()
+          trigger.focus()
+        }}
+      >
         <SelectionModalInner key={String(open)} {...rest} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

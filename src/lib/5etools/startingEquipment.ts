@@ -13,6 +13,7 @@ import type {
   Equipment,
   StartingEquipmentItemChoices,
   StartingEquipmentReference,
+  StartingItemReference,
 } from '@/types/character'
 import {
   getRevisedDruidPackageIssues,
@@ -475,7 +476,11 @@ function resolveEntries(
         item: item._unresolved ? undefined : item,
       })
       resolved.push(item)
-      if (item._unresolved) issues.push(`Restore the exact item rules for ${item.name}.`)
+      if (item._unresolved) {
+        const diagnostic = `Restore the exact item rules for ${item.name}.`
+        issues.push(diagnostic)
+        fixedIssues.push(diagnostic)
+      }
     }
   })
 
@@ -604,6 +609,40 @@ export function getEquipmentBlockSelection(
   return { optionKey: block.choiceKeys[0], needsReselection: Boolean(selected) }
 }
 
+export function isStartingEquipmentPackageAvailable(option: BackgroundStartingPackage): boolean {
+  return (
+    !option.unavailablePackage &&
+    !option.fixedIssues?.length &&
+    !option.genericChoices?.some((choice) => !choice.candidates.length)
+  )
+}
+
+export function isStartingEquipmentItemChoiceComplete(
+  choice: GenericEquipmentChoice,
+  selected: readonly StartingItemReference[] = [],
+): boolean {
+  return (
+    selected.length === choice.quantity &&
+    selected.every((ref) =>
+      choice.candidates.some(
+        ({ name, source }) => source && startingItemKey({ name, source }) === startingItemKey(ref),
+      ),
+    )
+  )
+}
+
+export function needsStartingEquipmentPackageChoice(
+  block: ResolvedEquipmentBlock,
+  choices: readonly string[],
+): boolean {
+  if (block.isFixed) return false
+  const { optionKey, needsReselection } = getEquipmentBlockSelection(block, choices)
+  return (
+    (needsReselection || !isStartingEquipmentPackageAvailable(block.options[optionKey])) &&
+    block.choiceKeys.some((key) => isStartingEquipmentPackageAvailable(block.options[key]))
+  )
+}
+
 /** Reuse the already-resolved view when deriving the selected UI package; do not rescan catalogs. */
 export function getSelectedEquipmentPackage(
   blocks: readonly ResolvedEquipmentBlock[],
@@ -636,6 +675,11 @@ function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
     }
   }
   return keys.sort()
+}
+
+export function getDefaultStartingEquipmentBlockChoice(rawBlock: unknown): string {
+  const block = normalizeChoiceBlock(rawBlock)
+  return (block && getBlockChoiceKeys(block)[0]) || ''
 }
 
 export function hasInvalidStartingEquipmentPackage(
@@ -699,7 +743,7 @@ export function resolveEquipmentWithBlockChoices(
     if (!block) return
 
     const choiceKeys = getBlockChoiceKeys(block)
-    const wantedKey = (blockChoices[i] ?? choiceKeys[0] ?? 'a').toLowerCase()
+    const wantedKey = (blockChoices[i] || choiceKeys[0] || 'a').toLowerCase()
 
     const actualKey = choiceKeys.length
       ? (Object.keys(block).find((k) => k !== '_' && k.toLowerCase() === wantedKey) ??
@@ -862,16 +906,7 @@ export function assertStartingEquipmentSelections(
     if (
       selected.length > choice.quantity ||
       (JSON.stringify(selected) !== JSON.stringify(previous[choice.key] ?? []) &&
-        (selected.length !== choice.quantity ||
-          selected.some(
-            (ref) =>
-              !choice.candidates.some(
-                (item) =>
-                  item.source &&
-                  startingItemKey({ name: item.name, source: item.source }) ===
-                    startingItemKey(ref),
-              ),
-          )))
+        !isStartingEquipmentItemChoiceComplete(choice, selected))
     ) {
       throw new RangeError(
         'A selected starting item no longer fits this choice. Review its current rules.',

@@ -1,7 +1,7 @@
 import type { CharacterEffect } from '@/types/effects'
 import { type EffectResolutionContext, isCharacterEffectActive } from './effects'
 
-/** One active union for Review and export; independent equal-valued owners remain declarations. */
+/** Overview and export share active traits while keeping independent declarations intact. */
 export function getEffectiveDefensiveTraits(
   effects: readonly CharacterEffect[],
   context: EffectResolutionContext,

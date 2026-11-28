@@ -1,5 +1,5 @@
 import { Lightning, Plus, Trash } from '@phosphor-icons/react'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,10 +9,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useMovement } from '@/hooks/character/useMovement'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { capitalizeLabel } from '@/lib/displayLabels'
@@ -22,6 +29,7 @@ import type { MovementAdjustment, MovementMode } from '@/types/character'
 interface MovementModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  trigger?: ReactNode
 }
 
 const MOVEMENT_MODES: readonly MovementMode[] = ['walk', 'climb', 'swim', 'fly', 'burrow']
@@ -33,13 +41,12 @@ function parseInteger(value: string): number | undefined {
   return Number.isInteger(parsed) ? parsed : undefined
 }
 
-export function MovementModal({ open, onOpenChange }: MovementModalProps) {
+export function MovementModal({ open, onOpenChange, trigger }: MovementModalProps) {
   const {
     adjustments: persistedAdjustments,
     baseMovement,
     baseMovementSourceLabel,
     effectiveMovement,
-    hoverOverride,
     overrides: persistedOverrides,
     previewMovementSettings,
     saveMovementSettings,
@@ -49,14 +56,9 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
   const [newLabel, setNewLabel] = useState('')
   const [newMode, setNewMode] = useState('walk')
   const [newAmount, setNewAmount] = useState('')
-  const [hoverOverrideEnabled, setHoverOverrideEnabled] = useState(false)
-  const [hoverValue, setHoverValue] = useState(false)
   const labelId = useId()
   const modeId = useId()
   const amountId = useId()
-  const modeOptionsId = useId()
-  const hoverOverrideId = useId()
-  const hoverValueId = useId()
   const overrideIdPrefix = useId()
 
   useEffect(() => {
@@ -72,12 +74,10 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
         Object.entries(persistedOverrides).map(([mode, value]) => [mode, String(value)]),
       ),
     )
-    setHoverOverrideEnabled(hoverOverride !== undefined)
-    setHoverValue(hoverOverride ?? false)
     setNewLabel('')
     setNewMode('walk')
     setNewAmount('')
-  }, [open, persistedAdjustments, persistedOverrides, hoverOverride])
+  }, [open, persistedAdjustments, persistedOverrides])
 
   const resolvedAdjustments = useMemo(
     () =>
@@ -97,32 +97,22 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
       ),
     [overrides],
   )
-  const draftHover = hoverOverrideEnabled ? hoverValue : undefined
   const preview = useMemo(
     () =>
       open
         ? previewMovementSettings({
             adjustments: resolvedAdjustments,
             overrides: resolvedOverrides,
-            hoverOverride: draftHover,
           })
         : effectiveMovement,
-    [
-      open,
-      previewMovementSettings,
-      resolvedAdjustments,
-      resolvedOverrides,
-      draftHover,
-      effectiveMovement,
-    ],
+    [open, previewMovementSettings, resolvedAdjustments, resolvedOverrides, effectiveMovement],
   )
 
   const addAdjustment = () => {
     const label = newLabel.trim()
-    const mode = newMode.trim().toLowerCase()
     const amount = parseInteger(newAmount)
-    if (!label || !mode) {
-      toast.error('Describe the movement change and choose a movement mode.')
+    if (!label) {
+      toast.error('Describe what caused the movement change.')
       return
     }
     if (amount === undefined) {
@@ -134,7 +124,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
       {
         id: crypto.randomUUID(),
         label,
-        mode,
+        mode: newMode,
         amount: String(amount),
         sourceType: 'manual',
         createdAt: new Date().toISOString(),
@@ -156,7 +146,6 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
     saveMovementSettings({
       adjustments: resolvedAdjustments,
       overrides: resolvedOverrides,
-      hoverOverride: draftHover,
     })
     onOpenChange(false)
     toast.success('Movement updated.')
@@ -164,6 +153,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-workspace-detail sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -171,8 +161,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
             Manage Movement
           </DialogTitle>
           <DialogDescription>
-            Source-derived movement remains the base. Use this focused editor for multiple movement
-            modes, hover, table rulings, and exact overrides that source data cannot express.
+            Review your character’s movement, add speed bonuses or penalties, and set exact speeds.
           </DialogDescription>
         </DialogHeader>
 
@@ -189,14 +178,9 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
           </section>
 
           <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">Add a manual movement change</h3>
-              <p className="text-xs text-muted-foreground">
-                The mode may be a standard mode or a custom homebrew movement name.
-              </p>
-            </div>
+            <h3 className="text-sm font-semibold">Add a manual movement change</h3>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem_7rem_auto] sm:items-end">
-              <div className="space-y-1.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor={labelId}>What caused it?</Label>
                 <Input
                   id={labelId}
@@ -205,21 +189,25 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
                   onChange={(event) => setNewLabel(event.target.value)}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor={modeId}>Mode</Label>
-                <Input
-                  id={modeId}
-                  list={modeOptionsId}
-                  value={newMode}
-                  onChange={(event) => setNewMode(event.target.value)}
-                />
-                <datalist id={modeOptionsId}>
-                  {MOVEMENT_MODES.map((mode) => (
-                    <option key={mode} value={mode} />
-                  ))}
-                </datalist>
+                <Select value={newMode} onValueChange={setNewMode}>
+                  <SelectTrigger
+                    id={modeId}
+                    className="w-full border-border-strong bg-surface-raised/55 data-[size=default]:h-[var(--control-height-md)]"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOVEMENT_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode}>
+                        {capitalizeLabel(mode)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-1.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor={amountId}>Feet</Label>
                 <Input
                   id={amountId}
@@ -314,26 +302,6 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
                     </div>
                   )
                 })}
-              </div>
-              <div className="space-y-3 rounded-md border border-border p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor={hoverOverrideId}>Override hover capability</Label>
-                  <Switch
-                    id={hoverOverrideId}
-                    checked={hoverOverrideEnabled}
-                    onCheckedChange={setHoverOverrideEnabled}
-                  />
-                </div>
-                {hoverOverrideEnabled && (
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor={hoverValueId}>Can hover</Label>
-                    <Switch
-                      id={hoverValueId}
-                      checked={hoverValue}
-                      onCheckedChange={setHoverValue}
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </details>

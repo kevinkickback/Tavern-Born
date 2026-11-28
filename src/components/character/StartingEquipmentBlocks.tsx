@@ -9,10 +9,14 @@ import {
   type BackgroundStartingPackage,
   formatEquipmentOptionEntries,
   getEquipmentBlockSelection,
+  isStartingEquipmentItemChoiceComplete,
+  isStartingEquipmentPackageAvailable,
+  needsStartingEquipmentPackageChoice,
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
 import { resolveRecursiveEntity } from '@/lib/renderer/recursiveTooltip'
 import type { StartingEquipmentItemChoices, StartingItemReference } from '@/types/character'
+import { CreatorChoiceComplete } from './RaceChoiceRow'
 
 interface StartingEquipmentBlocksProps {
   blocks: readonly ResolvedEquipmentBlock[]
@@ -23,6 +27,7 @@ interface StartingEquipmentBlocksProps {
   onItemChange: (block: number, option: string, key: string, items: StartingItemReference[]) => void
   needsApplication?: boolean
   onApply?: () => void
+  markUnfilled?: boolean
 }
 
 export function StartingEquipmentBlocks({
@@ -34,9 +39,15 @@ export function StartingEquipmentBlocks({
   onItemChange,
   needsApplication,
   onApply,
+  markUnfilled,
 }: StartingEquipmentBlocksProps) {
   const recursiveLookup = useRecursiveLookup()
-  const contents = (block: number, option: string, pkg: BackgroundStartingPackage) => {
+  const contents = (
+    block: number,
+    option: string,
+    pkg: BackgroundStartingPackage,
+    markItems = true,
+  ) => {
     const currency = formatEquipmentOptionEntries({ ...pkg, items: [], genericChoices: [] })
     return (
       <div className="space-y-2.5">
@@ -46,13 +57,24 @@ export function StartingEquipmentBlocks({
           </p>
         ))}
         {pkg.genericChoices?.map((choice) => (
-          <GenericEquipmentSelect
+          <div
             key={choice.key}
-            choice={choice}
-            value={itemChoices[choice.key] ?? []}
-            ariaLabel={`${label} choice ${block + 1} specific items`}
-            onChange={(items) => onItemChange(block, option, choice.key, items)}
-          />
+            data-race-choice-pending={
+              (markUnfilled &&
+                markItems &&
+                choice.candidates.length > 0 &&
+                !isStartingEquipmentItemChoiceComplete(choice, itemChoices[choice.key])) ||
+              undefined
+            }
+          >
+            <GenericEquipmentSelect
+              choice={choice}
+              value={itemChoices[choice.key] ?? []}
+              showCompletion={markUnfilled}
+              ariaLabel={`${label} choice ${block + 1} specific items`}
+              onChange={(items) => onItemChange(block, option, choice.key, items)}
+            />
+          </div>
         ))}
         {(pkg.items.length > 0 || currency.length > 0) && (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground">
@@ -104,10 +126,18 @@ export function StartingEquipmentBlocks({
     needsApplication &&
     onApply &&
     !decisions.some((block) => getEquipmentBlockSelection(block, choices).needsReselection)
+  const changePackage = (index: number, value: string) => {
+    try {
+      onBlockChange(index, value)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'The package could not be applied.')
+    }
+  }
   return (
     <div className="space-y-2">
       {canApplyCurrentPackage && (
         <Button
+          data-race-choice-pending={markUnfilled || undefined}
           type="button"
           variant="outline"
           size="sm"
@@ -143,6 +173,10 @@ export function StartingEquipmentBlocks({
             </fieldset>
           )
         const { optionKey, needsReselection } = getEquipmentBlockSelection(block, choices)
+        const packagePending = !!markUnfilled && needsStartingEquipmentPackageChoice(block, choices)
+        const selectedPackage = block.options[optionKey]
+        const canUsePackage =
+          !needsReselection && isStartingEquipmentPackageAvailable(selectedPackage)
         return (
           <fieldset
             key={block.index}
@@ -153,38 +187,41 @@ export function StartingEquipmentBlocks({
               value={needsReselection ? '' : optionKey}
               activationMode="manual"
               className="gap-2.5"
-              onValueChange={(value) => {
-                try {
-                  onBlockChange(block.index, value)
-                } catch (error) {
-                  toast.error(
-                    error instanceof Error ? error.message : 'The package could not be applied.',
-                  )
-                }
-              }}
+              onValueChange={(value) => changePackage(block.index, value)}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Backpack
-                    className="h-4 w-4 shrink-0 text-teal-600/80 dark:text-teal-400/70"
-                    weight="duotone"
-                  />
-                  <span>Choice {block.index + 1}</span>
+              <div className="space-y-2" data-race-choice-pending={packagePending || undefined}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                    <Backpack
+                      className="h-4 w-4 shrink-0 text-teal-600/80 dark:text-teal-400/70"
+                      weight="duotone"
+                    />
+                    <span>Choice {block.index + 1}</span>
+                    {markUnfilled &&
+                      !packagePending &&
+                      canUsePackage &&
+                      !selectedPackage.issues?.length && <CreatorChoiceComplete />}
+                  </div>
+                  <TabsList
+                    aria-label={`${label} choice ${block.index + 1}`}
+                    className="ml-auto h-7 max-w-full overflow-x-auto border-teal-600/25 bg-teal-950/10 dark:border-teal-400/20 dark:bg-teal-950/35"
+                  >
+                    {block.choiceKeys.map((key) => (
+                      <TabsTrigger
+                        key={key}
+                        value={key}
+                        data-creator-choice-control={
+                          (packagePending &&
+                            isStartingEquipmentPackageAvailable(block.options[key])) ||
+                          undefined
+                        }
+                        className="text-xs text-teal-900/65 hover:text-teal-950 focus-visible:border-teal-500/50 focus-visible:ring-teal-500/35 data-[state=active]:border-teal-600/35 data-[state=active]:bg-teal-500/20 data-[state=active]:text-teal-950 dark:text-teal-100/60 dark:hover:text-teal-50 dark:data-[state=active]:border-teal-400/35 dark:data-[state=active]:text-teal-50"
+                      >
+                        Package {key.toUpperCase()}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
                 </div>
-                <TabsList
-                  aria-label={`${label} choice ${block.index + 1}`}
-                  className="h-7 max-w-full overflow-x-auto border-teal-600/25 bg-teal-950/10 dark:border-teal-400/20 dark:bg-teal-950/35"
-                >
-                  {block.choiceKeys.map((key) => (
-                    <TabsTrigger
-                      key={key}
-                      value={key}
-                      className="text-xs text-teal-900/65 hover:text-teal-950 focus-visible:border-teal-500/50 focus-visible:ring-teal-500/35 data-[state=active]:border-teal-600/35 data-[state=active]:bg-teal-500/20 data-[state=active]:text-teal-950 dark:text-teal-100/60 dark:hover:text-teal-50 dark:data-[state=active]:border-teal-400/35 dark:data-[state=active]:text-teal-50"
-                    >
-                      Package {key.toUpperCase()}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
               </div>
               {needsReselection && (
                 <p className="text-xs text-muted-foreground">
@@ -193,7 +230,7 @@ export function StartingEquipmentBlocks({
               )}
               {block.choiceKeys.map((key) => (
                 <TabsContent key={key} value={key} className="m-0">
-                  {contents(block.index, key, block.options[key])}
+                  {contents(block.index, key, block.options[key], !packagePending)}
                 </TabsContent>
               ))}
             </Tabs>

@@ -1,10 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { deriveConditionalProficiencyNotes } from '@/lib/character/conditionalProficiencyNotes'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { BuildProficienciesPage } from '@/pages/build/proficiencies/ProficienciesPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -28,7 +29,7 @@ afterEach(() => {
 })
 function mount(
   f: ReturnType<typeof makeConditionalCharacterFixture>,
-  page: 'class' | 'proficiencies' | 'review',
+  page: 'class' | 'proficiencies' | 'overview',
 ) {
   useGameDataStore.setState({ gameData: f.data })
   setActiveCharacter(f.character)
@@ -39,7 +40,9 @@ function mount(
       ) : page === 'proficiencies' ? (
         <BuildProficienciesPage />
       ) : (
-        <BuildReviewPage />
+        <RulesPreviewManager>
+          <BuildOverviewPage />
+        </RulesPreviewManager>
       )}
     </MemoryRouter>,
   )
@@ -90,16 +93,18 @@ test('Proficiencies Sources shows the complete conditional rule without filled E
   expect(screen.getByText('Conditional proficiency:')).toBeTruthy()
 })
 
-test('Review conditional notes follow source suppression and exact restoration', () => {
+test('Overview conditional notes follow source suppression and exact restoration', () => {
   const f = makeConditionalCharacterFixture('Fighter', 'XPHB')
   f.character = f.select(['Fire Rune'])
   const note = deriveConditionalProficiencyNotes(f.character, f.catalogs)[0]
-  mount(f, 'review')
-  fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
+  mount(f, 'overview')
+  fireEvent.click(screen.getByText('Traits & features', { exact: true }))
   expect(screen.getByText('Conditional notes')).toBeTruthy()
-  expect(
-    screen.getByText(note.operation.kind === 'conditional-note' ? note.operation.note : ''),
-  ).toBeTruthy()
+  const openNote = () => fireEvent.click(screen.getByRole('button', { name: note.label }))
+  const description = note.operation.kind === 'conditional-note' ? note.operation.note : ''
+  openNote()
+  expect(within(screen.getByRole('dialog')).getByText(description)).toBeTruthy()
+  fireEvent.keyDown(document.body, { key: 'Escape' })
   act(() => {
     useCharacterStore.getState().updateCharacter(f.character.id, { suppressedEffectIds: [note.id] })
   })
@@ -108,4 +113,6 @@ test('Review conditional notes follow source suppression and exact restoration',
     useCharacterStore.getState().updateCharacter(f.character.id, { suppressedEffectIds: [] })
   })
   expect(screen.getByText('Conditional notes')).toBeTruthy()
+  openNote()
+  expect(within(screen.getByRole('dialog')).getByText(description)).toBeTruthy()
 })

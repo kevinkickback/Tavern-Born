@@ -2,9 +2,10 @@ import { existsSync } from 'node:fs'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { setOptionalClassAdoptionCommand } from '@/lib/character/commands/optionalClassFeatureCommands'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
-import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
+import { BuildOverviewPage } from '@/pages/build/overview/OverviewPage'
 import { RulesPage } from '@/pages/rules/RulesPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -42,7 +43,14 @@ function mount(
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="/build/class" element={<BuildClassPage />} />
-        <Route path="/build/review" element={<BuildReviewPage />} />
+        <Route
+          path="/build/overview"
+          element={
+            <RulesPreviewManager>
+              <BuildOverviewPage />
+            </RulesPreviewManager>
+          }
+        />
         <Route path="/rules" element={<RulesPage />} />
       </Routes>
     </MemoryRouter>,
@@ -90,10 +98,18 @@ async function confirm() {
   fireEvent.click(button)
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 }
-test('Review finishes an actual terrain with the shared modal and strict reopen', async () => {
+async function overviewActions() {
+  const preview = within(screen.getByTestId('overview-attention'))
+  const showAll = preview.queryByRole('button', { name: /^View all \d+ actions$/ })
+  if (!showAll) return preview
+  fireEvent.click(showAll)
+  return within(await screen.findByRole('dialog', { name: 'Character setup' }))
+}
+
+test('Overview finishes an actual terrain with the shared modal and strict reopen', async () => {
   const f = makeNaturalExplorerFixture(1)
-  mount(f, f.character, '/build/review')
-  fireEvent.click(screen.getByText('Finish Natural Explorer').closest('button')!)
+  mount(f, f.character, '/build/overview')
+  fireEvent.click((await overviewActions()).getByRole('link', { name: /^Finish Natural Explorer/ }))
   await screen.findByRole('dialog')
   fireEvent.click(await row('Forest'))
   await confirm()
@@ -158,9 +174,9 @@ test.each([
       doc.classFeature = doc.classFeature.filter((feature) => feature.name !== 'Natural Explorer')
   })
   if (kind === 'class') missing.data.classes = []
-  mount(missing, saved, '/build/review')
+  mount(missing, saved, '/build/overview')
   const before = JSON.stringify(active())
-  fireEvent.click(screen.getByText('Restore or remove Natural Explorer').closest('button')!)
+  fireEvent.click(screen.getByRole('link', { name: /^Restore or remove Natural Explorer/ }))
   await screen.findByRole('dialog')
   expect(dialog().getByRole('heading', { name: 'Review saved Natural Explorer' })).toBeTruthy()
   await confirm()
@@ -304,10 +320,17 @@ test.skipIf(!existsSync('data/class/class-ranger.json'))(
       ...adoption.characterPatch,
       provenance: adoption.provenanceUpdate,
     })
-    mount(f, saved, '/build/review')
-    fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
-    expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0)
-    expect(screen.queryByText(/When you make an Intelligence or Wisdom check/)).toBeNull()
+    mount(f, saved, '/build/overview')
+    fireEvent.click(screen.getByText('Traits & features', { exact: true }))
+    const checkInactive = async () => {
+      const choices = within(screen.getByText('Feature choices').closest('section')!)
+      fireEvent.click(choices.getByRole('button', { name: /^Natural Explorer$/ }))
+      const notice = within(await screen.findByRole('dialog', { name: 'Natural Explorer preview' }))
+      expect(notice.getAllByText(/Inactive/).length).toBeGreaterThan(0)
+      expect(notice.queryByText(/When you make an Intelligence or Wisdom check/)).toBeNull()
+      fireEvent.keyDown(document.body, { key: 'Escape' })
+    }
+    await checkInactive()
     const before = JSON.stringify(active())
     const missing = makeNaturalExplorerFixture(
       1,
@@ -322,47 +345,43 @@ test.skipIf(!existsSync('data/class/class-ranger.json'))(
     await act(async () => {
       await useGameDataStore.setState({ gameData: missing.data })
     })
-    expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0)
-    fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
     expect(screen.getByText('Restore or clear Deft Explorer')).toBeTruthy()
-    fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
-    const clause =
-      "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in."
-    expect(screen.queryByText(clause)).toBeNull()
+    await checkInactive()
     expect(JSON.stringify(active())).toBe(before)
     await act(async () => {
       useGameDataStore.setState({ gameData: f.data })
     })
-    fireEvent.click(screen.getByRole('tab', { name: /Needs attention/ }))
     expect(screen.queryByText('Restore or clear Deft Explorer')).toBeNull()
-    fireEvent.click(screen.getByRole('tab', { name: 'Character overview' }))
-    expect(screen.queryByText(clause)).toBeNull()
+    await checkInactive()
     expect(JSON.stringify(active())).toBe(before)
   },
 )
 
-test('Review retains all unavailable gain warnings and routes the middle grant to level6', async () => {
+test('Overview retains all unavailable gain warnings and routes the middle grant to level6', async () => {
   const f = makeNaturalExplorerFixture(10, (doc) => {
     doc.classFeature = doc.classFeature.filter((row) => row.name !== 'Natural Explorer')
   })
-  mount(f, f.character, '/build/review')
-  const warnings = screen.getAllByText('Review unresolved Natural Explorer choice')
+  mount(f, f.character, '/build/overview')
+  const warnings = (await overviewActions()).getAllByText(
+    'Review unresolved Natural Explorer choice',
+  )
   expect(warnings).toHaveLength(3)
-  fireEvent.click(warnings[1].closest('button')!)
+  fireEvent.click(warnings[1].closest('a')!)
   const level = await levelButton(6)
   expect(level.getAttribute('data-state')).toBe('open')
 })
 
-test('saved gain recovery suppresses only its matching generic warning in Review and Builder', async () => {
+test('saved gain recovery suppresses only its matching generic warning in Overview and Builder', async () => {
   const f = makeNaturalExplorerFixture(10),
     saved = selectNaturalExplorer(f, 6, 'Coast')
   const missing = makeNaturalExplorerFixture(10, (doc) => {
     doc.classFeature = doc.classFeature.filter((row) => row.name !== 'Natural Explorer')
   })
-  mount(missing, saved, '/build/review')
-  expect(screen.getAllByText('Restore or remove Natural Explorer')).toHaveLength(1)
-  expect(screen.getAllByText('Review unresolved Natural Explorer choice')).toHaveLength(2)
-  fireEvent.click(screen.getByText('Restore or remove Natural Explorer').closest('button')!)
+  mount(missing, saved, '/build/overview')
+  const actions = await overviewActions()
+  expect(actions.getAllByText('Restore or remove Natural Explorer')).toHaveLength(1)
+  expect(actions.getAllByText('Review unresolved Natural Explorer choice')).toHaveLength(2)
+  fireEvent.click(actions.getByRole('link', { name: /^Restore or remove Natural Explorer/ }))
   await within(await screen.findByRole('dialog')).findByRole('heading', {
     name: 'Review saved Natural Explorer',
   })

@@ -51,7 +51,6 @@ export function useMovement() {
     effectiveMovement,
     adjustments: character?.movementAdjustments ?? EMPTY_ADJUSTMENTS,
     overrides: character?.movementOverrides ?? EMPTY_OVERRIDES,
-    hoverOverride: character?.movementHoverOverride,
     previewMovementSettings,
     saveMovementSettings: (settings: MovementSettings) => {
       if (!character) return

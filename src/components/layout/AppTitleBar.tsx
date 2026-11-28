@@ -16,6 +16,9 @@ export function AppTitleBar() {
   }, [appearance, uiScale])
 
   return (
-    <div className="app-drag col-[2/4] row-start-1 h-8 shrink-0 bg-app-shell" aria-hidden="true" />
+    <div
+      className="app-drag col-[2/4] row-start-1 h-(--workspace-titlebar-height) shrink-0 bg-app-shell"
+      aria-hidden="true"
+    />
   )
 }

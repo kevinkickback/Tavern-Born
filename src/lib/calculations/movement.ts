@@ -97,7 +97,6 @@ export function getEffectiveCharacterMovement(
         | 'equipment'
         | 'manualEffects'
         | 'movementAdjustments'
-        | 'movementHoverOverride'
         | 'movementOverrides'
         | 'suppressedEffectIds'
       >
@@ -143,7 +142,7 @@ export function getEffectiveCharacterMovement(
 
   return {
     speeds,
-    hover: character.movementHoverOverride ?? base.hover ?? false,
+    hover: base.hover ?? false,
     other: Object.fromEntries(
       Object.entries(base.other ?? {}).filter(([, value]) => typeof value === 'boolean'),
     ),

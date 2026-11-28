@@ -20,6 +20,12 @@ materialization. Retain exact unavailable picks and their revisions for recovery
 declaration cannot supply new capacity. Class, Spells, readiness and PDF use the same current
 casting projection. [Managed spell command tests](../tests/lib/managedClassSpellCommands.test.ts)
 
+In the Character Creator, removing a spell pill clears that exact choice from the draft. When
+all choices in a class or racial spell row are filled, its picker button is hidden until a
+choice opens. Guided Level Up shares this interaction for earned spell picks. Its dedicated
+editor remains available for linked spellbook specialties, optional replacements and ritual
+transcription. Wizard choices stay in the level-up draft until Apply.
+
 The loader discovers a class copy's eligible casting rules from its declared parent, exact
 feature roots and unchanged casting fields. The selected copy supplies its own spell routes.
 Other class fields, such as equipment and proficiencies, have separate authority. A renamed
@@ -109,6 +115,6 @@ verify it again before a preparation has an effect.
 ## Shared effective view
 
 One effective character supplies current spell profiles and matching provenance for Actions,
-prerequisites, readiness, Review and PDF. Racial casting uses its own active owner and ability.
+prerequisites, readiness, Overview and PDF. Racial casting uses its own active owner and ability.
 Generic Bonus and native edits cannot create managed class rows. PDF receives the current
 filtered authority separately from retained descriptions. [Consumer tests](../tests/lib/managedClassSpellConsumers.test.ts)

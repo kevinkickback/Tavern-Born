@@ -143,6 +143,18 @@ async function importCharacter(page, fixture, name) {
   await expect(page.getByRole('heading', { name, exact: true, level: 3 })).toBeVisible({ timeout })
 }
 
+async function openCurrentCharacterLevels(page) {
+  await page.getByRole('heading', { name: currentName, exact: true, level: 3 }).click()
+  await expect(page.getByRole('banner').getByText(currentName, { exact: true })).toBeVisible({
+    timeout,
+  })
+  await page.getByRole('button', { name: 'Builder', exact: true }).click()
+  await page.getByRole('link', { name: /^Overview\b/ }).click()
+  const adjustments = page.getByRole('complementary', { name: 'Manual Adjustments' })
+  await adjustments.getByRole('tab', { name: 'Levels', exact: true }).click()
+  return adjustments.getByRole('tabpanel', { name: 'Levels', exact: true })
+}
+
 async function configureLaunch(version) {
   let executable = exe
   let resources = join(dirname(executable), 'resources')
@@ -335,16 +347,10 @@ try {
     )
   })
   await withVersion('0.7.0', async (page) => {
-    await page.getByRole('heading', { name: currentName, exact: true, level: 3 }).click({ timeout })
-    await page.getByRole('button', { name: 'Builder', exact: true }).click()
-    await page
-      .getByRole('banner')
-      .getByRole('button', { name: 'Level up character', exact: true })
-      .click()
-    const levelUp = page.getByRole('dialog', { name: 'Level Up Character' })
-    await levelUp.getByRole('button', { name: 'Level Up', exact: true }).first().click()
-    await expect(levelUp.getByText('2', { exact: true })).toBeVisible()
-    await levelUp.getByRole('button', { name: 'Close', exact: true }).first().click()
+    const levels = await openCurrentCharacterLevels(page)
+    await expect(levels.getByText('Level 1 · PHB', { exact: true })).toBeVisible()
+    await levels.getByRole('button', { name: 'Add a level to Fighter', exact: true }).click()
+    await expect(levels.getByText('Level 2 · PHB', { exact: true })).toBeVisible()
     return install(page, '0.7.1', false)
   })
   assertFeedServed('0.7.1')
@@ -352,18 +358,8 @@ try {
   await expectAppImageReplaced('0.7.0')
   if (kind === 'deb') await closeDebianRelaunch()
   await withVersion('0.7.1', async (page) => {
-    await page.getByRole('heading', { name: currentName, exact: true, level: 3 }).click()
-    await expect(page.getByRole('banner').getByText(currentName, { exact: true })).toBeVisible({
-      timeout,
-    })
-    await page.getByRole('button', { name: 'Builder', exact: true }).click()
-    await page
-      .getByRole('banner')
-      .getByRole('button', { name: 'Level up character', exact: true })
-      .click()
-    await expect(
-      page.getByRole('dialog', { name: 'Level Up Character' }).getByText('2', { exact: true }),
-    ).toBeVisible()
+    const levels = await openCurrentCharacterLevels(page)
+    await expect(levels.getByText('Level 2 · PHB', { exact: true })).toBeVisible()
   })
   console.log(
     `${kind}: published v0.6.0 → staged v0.7.0 → staged v0.7.1, legacy backup and compatible reopen passed.`,
